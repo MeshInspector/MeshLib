@@ -34,8 +34,24 @@ void* _ZnamRKSt9nothrow_t( size_t n, const void* tag ); // new[] nothrow
 namespace
 {
 
+// dyld applies only the interposes whose replacements are in this image, so every one forwards to MRMimalloc here
+void* mr_malloc( size_t size ) { return mi_malloc( size ); }
+void* mr_calloc( size_t count, size_t size ) { return mi_calloc( count, size ); }
+void* mr_realloc( void* p, size_t newsize ) { return mi_realloc( p, newsize ); }
+char* mr_strdup( const char* s ) { return mi_strdup( s ); }
+char* mr_strndup( const char* s, size_t n ) { return mi_strndup( s, n ); }
+char* mr_realpath( const char* fname, char* resolved ) { return mi_realpath( fname, resolved ); }
+int mr_posix_memalign( void** p, size_t alignment, size_t size ) { return mi_posix_memalign( p, alignment, size ); }
+void* mr_reallocf( void* p, size_t newsize ) { return mi_reallocf( p, newsize ); }
+void* mr_valloc( size_t size ) { return mi_valloc( size ); }
+void* mr_aligned_alloc( size_t alignment, size_t size ) { return mi_aligned_alloc( alignment, size ); }
 // mi_malloc_size is defined only in mimalloc's override builds
-size_t mi_malloc_size_checked( const void* p ) { return mi_is_in_heap_region( p ) ? mi_usable_size( p ) : 0; }
+size_t mr_malloc_size( const void* p ) { return mi_is_in_heap_region( p ) ? mi_usable_size( p ) : 0; }
+size_t mr_malloc_good_size( size_t size ) { return mi_malloc_good_size( size ); }
+void mr_free( void* p ) { mi_free( p ); }
+void mr_free_size( void* p, size_t n ) { mi_free_size( p, n ); }
+void* mr_new( size_t n ) { return mi_new( n ); }
+void* mr_new_nothrow( size_t n, const void* ) { return mi_new_nothrow( n ); }
 
 malloc_zone_t* mi_get_default_zone();
 bool is_mimalloc_zone( malloc_zone_t* zone );
@@ -206,34 +222,35 @@ struct Interpose
 };
 
 #define MR_INTERPOSE( oldfun, newfun ) { (const void*)&newfun, (const void*)&oldfun }
+#define MR_INTERPOSE_MR( fun ) MR_INTERPOSE( fun, mr_##fun )
 #define MR_INTERPOSE_MI( fun ) MR_INTERPOSE( fun, mi_##fun )
 #define MR_INTERPOSE_ZONE( fun ) MR_INTERPOSE( malloc_##fun, fun )
 
 __attribute__(( used, section( "__DATA,__interpose" ) )) const Interpose interposes[] = {
-    MR_INTERPOSE_MI( malloc ),
-    MR_INTERPOSE_MI( calloc ),
-    MR_INTERPOSE_MI( realloc ),
-    MR_INTERPOSE_MI( strdup ),
-    MR_INTERPOSE_MI( strndup ),
-    MR_INTERPOSE_MI( realpath ),
-    MR_INTERPOSE_MI( posix_memalign ),
-    MR_INTERPOSE_MI( reallocf ),
-    MR_INTERPOSE_MI( valloc ),
-    MR_INTERPOSE_MI( aligned_alloc ),
-    MR_INTERPOSE( malloc_size, mi_malloc_size_checked ),
-    MR_INTERPOSE_MI( malloc_good_size ),
+    MR_INTERPOSE_MR( malloc ),
+    MR_INTERPOSE_MR( calloc ),
+    MR_INTERPOSE_MR( realloc ),
+    MR_INTERPOSE_MR( strdup ),
+    MR_INTERPOSE_MR( strndup ),
+    MR_INTERPOSE_MR( realpath ),
+    MR_INTERPOSE_MR( posix_memalign ),
+    MR_INTERPOSE_MR( reallocf ),
+    MR_INTERPOSE_MR( valloc ),
+    MR_INTERPOSE_MR( aligned_alloc ),
+    MR_INTERPOSE_MR( malloc_size ),
+    MR_INTERPOSE_MR( malloc_good_size ),
     // malloc_default_zone is interposed below, so mi_free is safe
-    MR_INTERPOSE_MI( free ),
-    MR_INTERPOSE( vfree, mi_free ),
+    MR_INTERPOSE_MR( free ),
+    MR_INTERPOSE( vfree, mr_free ),
 
-    MR_INTERPOSE( _ZdlPv, mi_free ),
-    MR_INTERPOSE( _ZdaPv, mi_free ),
-    MR_INTERPOSE( _ZdlPvm, mi_free_size ),
-    MR_INTERPOSE( _ZdaPvm, mi_free_size ),
-    MR_INTERPOSE( _Znwm, mi_new ),
-    MR_INTERPOSE( _Znam, mi_new ),
-    MR_INTERPOSE( _ZnwmRKSt9nothrow_t, mi_new_nothrow ),
-    MR_INTERPOSE( _ZnamRKSt9nothrow_t, mi_new_nothrow ),
+    MR_INTERPOSE( _ZdlPv, mr_free ),
+    MR_INTERPOSE( _ZdaPv, mr_free ),
+    MR_INTERPOSE( _ZdlPvm, mr_free_size ),
+    MR_INTERPOSE( _ZdaPvm, mr_free_size ),
+    MR_INTERPOSE( _Znwm, mr_new ),
+    MR_INTERPOSE( _Znam, mr_new ),
+    MR_INTERPOSE( _ZnwmRKSt9nothrow_t, mr_new_nothrow ),
+    MR_INTERPOSE( _ZnamRKSt9nothrow_t, mr_new_nothrow ),
 
     MR_INTERPOSE_MI( malloc_create_zone ),
     MR_INTERPOSE_MI( malloc_default_purgeable_zone ),

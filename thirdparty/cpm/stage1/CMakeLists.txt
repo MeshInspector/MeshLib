@@ -132,11 +132,16 @@ if(NOT TBB_FOUND)
   add_onetbb()
 endif()
 
-# shared and with malloc override: the executables and MeshLib libraries use this one copy
+# shared and without malloc override: MeshLib libraries use it, and MR_MIMALLOC_OVERRIDE executables forward malloc to it,
+# see mr_find_mimalloc in cmake/Modules/Mimalloc.cmake
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   find_package(mimalloc 3.5 CONFIG QUIET)
   if(NOT mimalloc_FOUND)
     function(add_mimalloc)
+      set(MI_OVERRIDE OFF)
+      # dlopen-safe thread-locals, for a plain Python loading MeshLib late
+      set(MI_LOCAL_DYNAMIC_TLS ON)
+      set(CMAKE_BUILD_TYPE Release)
       set(MI_USE_CXX ON)
       set(MI_BUILD_STATIC OFF)
       set(MI_BUILD_OBJECT OFF)

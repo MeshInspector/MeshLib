@@ -23,8 +23,10 @@ ELSE()
   )
 ENDIF()
 
-include(Mimalloc)
-mr_enable_mimalloc(${PROJECT_NAME})
+IF(MR_MIMALLOC_OVERRIDE)
+  include(Mimalloc)
+  mr_enable_mimalloc(${PROJECT_NAME})
+ENDIF()
 
 install(
   TARGETS ${PROJECT_NAME}

@@ -9,6 +9,10 @@ find_dependency(phmap 2.0)
 find_dependency(spdlog 1.9)
 find_dependency(TBB 2020.1)
 find_dependency(tl-expected)
+# MR::Allocator, see MRAllocator.h
+if(NOT "@MR_STD_ALLOCATOR@")
+  find_dependency(mimalloc)
+endif()
 
 # static builds require to find private dependencies
 if(EMSCRIPTEN)

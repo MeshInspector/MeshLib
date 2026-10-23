@@ -40,7 +40,6 @@ void* mr_calloc( size_t count, size_t size ) { return mi_calloc( count, size ); 
 void* mr_realloc( void* p, size_t newsize ) { return mi_realloc( p, newsize ); }
 char* mr_strdup( const char* s ) { return mi_strdup( s ); }
 char* mr_strndup( const char* s, size_t n ) { return mi_strndup( s, n ); }
-char* mr_realpath( const char* fname, char* resolved ) { return mi_realpath( fname, resolved ); }
 int mr_posix_memalign( void** p, size_t alignment, size_t size ) { return mi_posix_memalign( p, alignment, size ); }
 void* mr_reallocf( void* p, size_t newsize ) { return mi_reallocf( p, newsize ); }
 void* mr_valloc( size_t size ) { return mi_valloc( size ); }
@@ -232,7 +231,7 @@ __attribute__(( used, section( "__DATA,__interpose" ) )) const Interpose interpo
     MR_INTERPOSE_MR( realloc ),
     MR_INTERPOSE_MR( strdup ),
     MR_INTERPOSE_MR( strndup ),
-    MR_INTERPOSE_MR( realpath ),
+    // not realpath: mi_realpath calls it, and MRMimalloc's calls are interposed too
     MR_INTERPOSE_MR( posix_memalign ),
     MR_INTERPOSE_MR( reallocf ),
     MR_INTERPOSE_MR( valloc ),

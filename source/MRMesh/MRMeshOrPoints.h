@@ -6,6 +6,7 @@
 #include "MRId.h"
 #include <cfloat>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <variant>
 
@@ -51,6 +52,11 @@ public:
     /// returns std::nullopt if it was terminated by the callback
     [[nodiscard]] MRMESH_API std::optional<VertBitSet> pointsGridSampling( float voxelSize, size_t maxVoxels = 500000,
         const ProgressCallback & cb = {} ) const;
+
+    /// performs grid sampling as pointsGridSampling, but a mesh with triangles too big for the sampling is sampled from its dense point cloud
+    /// (see meshToDensePointCloud) returned in (cloud) with Mesh::pseudonormal in every point, and then the ids refer to the points of that cloud;
+    /// otherwise (cloud) is reset and the ids refer to the points of this object
+    [[nodiscard]] MRMESH_API VertBitSet surfaceGridSampling( float voxelSize, std::shared_ptr<PointCloud> & cloud ) const;
 
     /// gives access to points-vector (which can include invalid points as well)
     [[nodiscard]] MRMESH_API const VertCoords & points() const;

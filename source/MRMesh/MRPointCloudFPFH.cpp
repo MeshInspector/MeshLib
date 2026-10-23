@@ -6,6 +6,7 @@
 #include "MRConstants.h"
 #include "MRTimer.h"
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 #include <numeric>
 
@@ -51,6 +52,37 @@ void addPair( FPFHDescriptor & h, const Vector3f & p, const Vector3f & n, const 
     h[binIndex( theta, -PI_F, PI_F )] += 1;
     h[FPFHBins + binIndex( alpha, -1.0f, 1.0f )] += 1;
     h[2 * FPFHBins + binIndex( phi, -1.0f, 1.0f )] += 1;
+}
+
+float distanceSq( const FPFHDescriptor & a, const FPFHDescriptor & b )
+{
+    float res = 0;
+    for ( int i = 0; i < FPFHDescriptorSize; ++i )
+        res += sqr( a[i] - b[i] );
+    return res;
+}
+
+// for every point in `from` finds the point in `to` with the closest descriptor
+bool findClosestDescriptors( const FPFHDescriptors & fromDescriptors, const VertBitSet & from,
+    const FPFHDescriptors & toDescriptors, const VertBitSet & to, VertMap & closest, const ProgressCallback & progress )
+{
+    MR_TIMER;
+    closest.resize( from.find_last() + 1 );
+    return BitSetParallelFor( from, [&]( VertId v )
+    {
+        const auto & d = fromDescriptors[v];
+        auto bestDistSq = FLT_MAX;
+        VertId best;
+        for ( auto u : to )
+        {
+            if ( const auto distSq = distanceSq( d, toDescriptors[u] ); distSq < bestDistSq )
+            {
+                bestDistSq = distSq;
+                best = u;
+            }
+        }
+        closest[v] = best;
+    }, progress );
 }
 
 // makes each of three histograms sum to 1, or leaves it zero
@@ -104,7 +136,7 @@ Expected<FPFHDescriptors> computeFPFH( const PointCloud& pointCloud, float radiu
         {
             const auto weight = std::exp( expCoef * found.distSq );
             const auto & nh = spfh[found.vId];
-            for ( int i = 0; i < 3 * FPFHBins; ++i )
+            for ( int i = 0; i < FPFHDescriptorSize; ++i )
                 h[i] += weight * nh[i];
             return Processing::Continue;
         } );
@@ -112,6 +144,83 @@ Expected<FPFHDescriptors> computeFPFH( const PointCloud& pointCloud, float radiu
     }, fpfhProgress ) )
         return unexpectedOperationCanceled();
 
+    return res;
+}
+
+VertBitSet findUniqueFPFHPoints( const FPFHDescriptors & descriptors, const VertBitSet & points, float beta )
+{
+    MR_TIMER;
+    const auto num = points.count();
+    if ( num == 0 )
+        return {};
+
+    std::array<double, FPFHDescriptorSize> mean{};
+    for ( auto v : points )
+        for ( int i = 0; i < FPFHDescriptorSize; ++i )
+            mean[i] += descriptors[v][i];
+    for ( auto & x : mean )
+        x /= double( num );
+
+    VertScalars dist( points.find_last() + 1 );
+    BitSetParallelFor( points, [&]( VertId v )
+    {
+        double sum = 0;
+        for ( int i = 0; i < FPFHDescriptorSize; ++i )
+            sum += sqr( descriptors[v][i] - mean[i] );
+        dist[v] = float( std::sqrt( sum ) );
+    } );
+
+    double sum = 0, sumSq = 0;
+    for ( auto v : points )
+    {
+        sum += dist[v];
+        sumSq += sqr( double( dist[v] ) );
+    }
+    const auto mu = sum / double( num );
+    const auto sigma = std::sqrt( std::max( 0.0, sumSq / double( num ) - sqr( mu ) ) );
+
+    // the floor ignores float rounding in the distances of equal descriptors
+    const auto threshold = std::max( beta * sigma, 1e-6 );
+    VertBitSet res( dist.size() );
+    BitSetParallelFor( points, [&]( VertId v )
+    {
+        if ( std::abs( dist[v] - mu ) > threshold )
+            res.set( v );
+    } );
+    return res;
+}
+
+Expected<VertBitSet> findUniqueFPFHPoints( const PointCloud& pointCloud, float radius, float beta, const ProgressCallback & progress )
+{
+    MR_TIMER;
+    auto descriptors = computeFPFH( pointCloud, radius, progress );
+    if ( !descriptors )
+        return unexpected( std::move( descriptors.error() ) );
+    return findUniqueFPFHPoints( *descriptors, pointCloud.validPoints, beta );
+}
+
+Expected<std::vector<VertPair>> findFPFHMatches(
+    const FPFHDescriptors & srcDescriptors, const VertBitSet & srcPoints,
+    const FPFHDescriptors & tgtDescriptors, const VertBitSet & tgtPoints,
+    bool mutual, const ProgressCallback & progress )
+{
+    MR_TIMER;
+    std::vector<VertPair> res;
+    if ( srcPoints.none() || tgtPoints.none() )
+        return res;
+
+    auto [srcProgress, tgtProgress] = splitProgress( progress, mutual ? 0.5f : 1.0f );
+    VertMap src2tgt;
+    if ( !findClosestDescriptors( srcDescriptors, srcPoints, tgtDescriptors, tgtPoints, src2tgt, srcProgress ) )
+        return unexpectedOperationCanceled();
+
+    VertMap tgt2src;
+    if ( mutual && !findClosestDescriptors( tgtDescriptors, tgtPoints, srcDescriptors, srcPoints, tgt2src, tgtProgress ) )
+        return unexpectedOperationCanceled();
+
+    for ( auto v : srcPoints )
+        if ( !mutual || tgt2src[src2tgt[v]] == v )
+            res.emplace_back( v, src2tgt[v] );
     return res;
 }
 

@@ -1341,86 +1341,6 @@ void prepareFacesMap( const MeshTopology& topology, FaceMap& new2OldMap )
         new2OldMap[f] = f;
 }
 
-// the walks along the hole loops of getBadFacesAfterCut that one thread makes; edge bits are of the new edges, from the first new one
-struct LoopWalks
-{
-    EdgeBitSet simple; // the edges of the simple loops walked, so each of them is walked once
-    EdgeBitSet notSimple; // the edges of the loops found not simple, as far as walked, so their path edges there need no walk
-    std::vector<int> longWalkOf; // for every new undirected edge, the number of the last long walk meeting it
-    int numLongWalks = 0;
-    std::vector<UndirectedEdgeId> oldEdges; // met in the current long walk
-    std::vector<std::pair<int, int>> starts; // pathId and edgeId of the path edges of the loops that are not simple
-};
-
-// a loop with more edges is checked by finishLoopWalk
-constexpr int maxShortLoopEdges = 32;
-
-// the walk from e0 stopped at e, after the n edges in loop: at an edge met twice, or at maxShortLoopEdges edges;
-// then a long loop (not found before as not simple) is walked on to its end, with longWalkOf and oldEdges finding an edge met twice;
-// if the loop is not simple, its walked edges go from simple to notSimple, and the path edge to starts
-void finishLoopWalk( const MeshTopology& topology, LoopWalks& w, const EdgeId* loop, int n, EdgeId e0, EdgeId e,
-    UndirectedEdgeId firstNewEdge, int pathId, int edgeId )
-{
-    const EdgeId firstNewE( firstNewEdge );
-    bool simple = false;
-    if ( n == maxShortLoopEdges && !( e0 >= firstNewE && w.notSimple.test( EdgeId( e0 - firstNewE ) ) ) )
-    {
-        if ( w.longWalkOf.empty() )
-            w.longWalkOf.resize( topology.undirectedEdgeSize() - firstNewEdge );
-        const int walk = ++w.numLongWalks;
-        w.oldEdges.clear();
-        for ( int i = 0; i < n; ++i )
-        {
-            if ( loop[i] >= firstNewE )
-                w.longWalkOf[loop[i].undirected() - firstNewEdge] = walk;
-            else
-                w.oldEdges.push_back( loop[i].undirected() );
-        }
-        simple = true;
-        do
-        {
-            const auto ue = e.undirected();
-            if ( e >= firstNewE )
-            {
-                auto& walkOfE = w.longWalkOf[ue - firstNewEdge];
-                if ( walkOfE == walk )
-                {
-                    simple = false;
-                    break;
-                }
-                walkOfE = walk;
-                w.simple.set( EdgeId( e - firstNewE ) );
-            }
-            else
-            {
-                // a loop along many old edges is not taken for simple
-                if ( w.oldEdges.size() == maxShortLoopEdges || std::find( w.oldEdges.begin(), w.oldEdges.end(), ue ) != w.oldEdges.end() )
-                {
-                    simple = false;
-                    break;
-                }
-                w.oldEdges.push_back( ue );
-            }
-            ++n;
-            e = topology.prev( e.sym() );
-        } while ( e != e0 );
-    }
-    if ( simple )
-        return;
-    if ( w.notSimple.size() != w.simple.size() )
-        w.notSimple.resize( w.simple.size() );
-    auto x = e0;
-    for ( int i = 0; i < n; ++i, x = topology.prev( x.sym() ) )
-    {
-        if ( x >= firstNewE )
-        {
-            w.simple.reset( EdgeId( x - firstNewE ) );
-            w.notSimple.set( EdgeId( x - firstNewE ) );
-        }
-    }
-    w.starts.emplace_back( pathId, edgeId );
-}
-
 // Checks if cut mesh has valid loops in intersections
 // if error occurs returns bad faces bit set, otherwise returns empty one
 FaceBitSet getBadFacesAfterCut( const MeshTopology& topology, const PreCutResult& preRes,
@@ -1428,100 +1348,37 @@ FaceBitSet getBadFacesAfterCut( const MeshTopology& topology, const PreCutResult
 {
     MR_TIMER;
     FaceBitSet badFacesBS( topology.getValidFaces().size() );
-    // the walk from a path edge with a removed face goes along the hole loop left of e0: the path edge, or its sym if it had a face on the right only
-    auto startEdge = [] ( EdgeId e, const PathsEdgeIndex& info )
-    {
-        return !info.hasLeft && info.hasRight ? e.sym() : e;
-    };
-
-    // only a loop passing an edge both ways can be bad, so first all loops are walked in parallel to find the ones that are not simple
-    // (passing an edge, old or new, both ways), and the walks below start only from their path edges; being simple is a property of a loop,
-    // so these are all path edges of such loops, and the walks give the same faces; a simple loop walked below too gives no face
-    std::vector<size_t> pathStarts( preRes.paths.size() + 1 ); // the index of the first edge of every path among all path edges
-    for ( size_t i = 0; i < preRes.paths.size(); ++i )
-        pathStarts[i + 1] = pathStarts[i] + preRes.paths[i].size();
-    const EdgeId firstNewE( firstNewEdge );
-    const size_t numNewEdges = topology.edgeSize() - firstNewE;
-    tbb::enumerable_thread_specific<LoopWalks> threadWalks;
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, pathStarts.back(), 256 ), [&] ( const tbb::blocked_range<size_t>& range )
-    {
-        auto& w = threadWalks.local();
-        if ( w.simple.size() != numNewEdges )
-            w.simple.resize( numNewEdges );
-        EdgeId loop[maxShortLoopEdges];
-        for ( auto pathId = size_t( std::upper_bound( pathStarts.begin(), pathStarts.end(), range.begin() ) - pathStarts.begin() ) - 1;
-            pathStarts[pathId] < range.end(); ++pathId )
-        {
-            // pointers to the data of the path, not to read them again after every write of a bit
-            const auto* path = preRes.paths[pathId].data();
-            const auto* removedFaces = preRes.removedFaces[pathId].data();
-            const auto* edgesInfo = preRes.oldEdgesInfo[pathId].data();
-            const int edgeEnd = int( std::min( range.end(), pathStarts[pathId + 1] ) - pathStarts[pathId] );
-            for ( int edgeId = int( std::max( range.begin(), pathStarts[pathId] ) - pathStarts[pathId] ); edgeId < edgeEnd; ++edgeId )
-            {
-                if ( !removedFaces[edgeId].f.valid() )
-                    continue;
-                const auto e0 = startEdge( path[edgeId], edgesInfo[edgeId] );
-                if ( e0 >= firstNewE && w.simple.test( EdgeId( e0 - firstNewE ) ) )
-                    continue;
-                // an edge is met again if the bit of its id in met is set and it is in loop
-                std::uint64_t met[4] = {};
-                int n = 0;
-                bool simple = true;
-                auto e = e0;
-                do
-                {
-                    if ( n == maxShortLoopEdges )
-                    {
-                        simple = false;
-                        break;
-                    }
-                    const int ue = e.undirected();
-                    auto& word = met[( ue >> 6 ) & 3];
-                    const auto bit = std::uint64_t( 1 ) << ( ue & 63 );
-                    if ( ( word & bit ) && std::any_of( loop, loop + n, [ue] ( EdgeId x ) { return int( x.undirected() ) == ue; } ) )
-                    {
-                        simple = false;
-                        break;
-                    }
-                    word |= bit;
-                    loop[n++] = e;
-                    if ( e >= firstNewE )
-                        w.simple.set( EdgeId( e - firstNewE ) );
-                    e = topology.prev( e.sym() );
-                } while ( e != e0 );
-                if ( !simple )
-                    finishLoopWalk( topology, w, loop, n, e0, e, firstNewEdge, int( pathId ), edgeId );
-            }
-        }
-    } );
-    std::vector<std::pair<int, int>> starts;
-    for ( const auto& w : threadWalks )
-        starts.insert( starts.end(), w.starts.begin(), w.starts.end() );
-    if ( starts.empty() )
-        return badFacesBS;
-    std::sort( starts.begin(), starts.end() );
-
     EdgeBitSet visited( topology.edgeSize() );
     // a loop is bad if it passes an edge both ways, as a contour crossing others in its face, whatever edge it starts from:
     // such an edge is a new one inside the face, met twice in the walk from e0, which walkOf keeps for every new edge
     std::vector<EdgeId> walkOf( topology.undirectedEdgeSize() - firstNewEdge );
-    for ( auto [pathId, edgeId] : starts )
+    for ( int pathId = 0; pathId < preRes.paths.size(); ++pathId )
     {
-        const auto e0 = startEdge( preRes.paths[pathId][edgeId], preRes.oldEdgesInfo[pathId][edgeId] );
-        if ( visited.test( e0 ) )
-            continue;
-        for ( auto e : leftRing( topology, e0 ) )
+        const auto& path = preRes.paths[pathId];
+        for ( int edgeId = 0; edgeId < path.size(); ++edgeId )
         {
-            visited.set( e );
-            if ( e == e0.sym() )
-                badFacesBS.autoResizeSet( oldFaces[pathId][edgeId].f );
-            else if ( e.undirected() >= firstNewEdge )
+            auto e0 = path[edgeId];
+            if ( !preRes.removedFaces[pathId][edgeId].f.valid() )
+                continue;
+
+            if ( !preRes.oldEdgesInfo[pathId][edgeId].hasLeft &&
+                 preRes.oldEdgesInfo[pathId][edgeId].hasRight )
+                e0 = e0.sym();
+
+            if ( visited.test( e0 ) )
+                continue;
+            for ( auto e : leftRing( topology, e0 ) )
             {
-                auto& w = walkOf[e.undirected() - firstNewEdge];
-                if ( w == e0 )
+                visited.set( e );
+                if ( e == e0.sym() )
                     badFacesBS.autoResizeSet( oldFaces[pathId][edgeId].f );
-                w = e0;
+                else if ( e.undirected() >= firstNewEdge )
+                {
+                    auto& w = walkOf[e.undirected() - firstNewEdge];
+                    if ( w == e0 )
+                        badFacesBS.autoResizeSet( oldFaces[pathId][edgeId].f );
+                    w = e0;
+                }
             }
         }
     }

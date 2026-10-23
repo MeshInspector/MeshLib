@@ -50,10 +50,9 @@ function(mr_find_mimalloc)
 
     if(MR_MIMALLOC_OVERRIDE)
       # malloc, new and the rest of glibc's allocation functions, for mr_enable_mimalloc
-      set(_override_dir ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../../source/MRMimallocOverride)
-      add_library(MRMimallocOverride SHARED ${_override_dir}/MRMimallocOverride.c ${_override_dir}/MRMimallocNewDelete.cpp)
+      add_library(MRMimallocOverride SHARED ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../../source/MRMimallocOverride/MRMimallocOverride.cpp)
       target_link_libraries(MRMimallocOverride PRIVATE mimalloc)
-      set_source_files_properties(${_override_dir}/MRMimallocOverride.c PROPERTIES COMPILE_OPTIONS -fno-builtin)
+      target_compile_options(MRMimallocOverride PRIVATE -fno-builtin)
       install(TARGETS MRMimallocOverride LIBRARY DESTINATION "${MR_MAIN_LIB_DIR}")
     endif()
   endif()

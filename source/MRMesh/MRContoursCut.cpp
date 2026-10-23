@@ -1089,34 +1089,92 @@ void prepareFacesMap( const MeshTopology& topology, FaceMap& new2OldMap )
 // Checks if cut mesh has valid loops in intersections
 // if error occurs returns bad faces bit set, otherwise returns empty one
 FaceBitSet getBadFacesAfterCut( const MeshTopology& topology, const PreCutResult& preRes,
-                               const FullRemovedFacesInfo& oldFaces )
+                               const FullRemovedFacesInfo& oldFaces, UndirectedEdgeId firstNewEdge )
 {
     MR_TIMER;
-    FaceBitSet badFacesBS( topology.getValidFaces().size() );
-    EdgeBitSet visited( topology.edgeSize() );
-    for ( int pathId = 0; pathId < preRes.paths.size(); ++pathId )
+    // every path edge with a removed face walks in parallel the hole loop left of e0: the path edge, or its sym if it had a face on the right only;
+    // a loop is bad if it passes an edge both ways, as a contour crossing others in its face: e0.sym() or a new edge inside the face met twice,
+    // then the old face of the path edge is bad
+    std::vector<size_t> pathStarts( preRes.paths.size() + 1 ); // the index of the first edge of every path among all path edges
+    for ( size_t i = 0; i < preRes.paths.size(); ++i )
+        pathStarts[i + 1] = pathStarts[i] + preRes.paths[i].size();
+    const EdgeId firstNewE( firstNewEdge );
+    struct ThreadData
     {
-        const auto& path = preRes.paths[pathId];
-        for ( int edgeId = 0; edgeId < path.size(); ++edgeId )
+        EdgeBitSet good; // the new edges (from firstNewE) of the loops this thread found good, whose other path edges need no walk
+        std::vector<std::uint16_t> walkOf; // for every new undirected edge, the number of the last walk of this thread meeting it
+        std::uint16_t numWalks = 0;
+        FaceBitSet badFaces; // the bad faces this thread found, made at the first one
+    };
+    tbb::enumerable_thread_specific<ThreadData> threadData;
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, pathStarts.back(), 256 ), [&] ( const tbb::blocked_range<size_t>& range )
+    {
+        auto& td = threadData.local();
+        if ( td.walkOf.empty() )
         {
-            auto e0 = path[edgeId];
-            if ( !preRes.removedFaces[pathId][edgeId].f.valid() )
-                continue;
-
-            if ( !preRes.oldEdgesInfo[pathId][edgeId].hasLeft &&
-                 preRes.oldEdgesInfo[pathId][edgeId].hasRight )
-                e0 = e0.sym();
-
-            if ( visited.test( e0 ) || visited.test( e0.sym() ) )
-                continue;
-            for ( auto e : leftRing( topology, e0 ) )
+            td.good.resize( topology.edgeSize() - firstNewE );
+            td.walkOf.resize( topology.undirectedEdgeSize() - firstNewEdge );
+        }
+        for ( auto pathId = size_t( std::upper_bound( pathStarts.begin(), pathStarts.end(), range.begin() ) - pathStarts.begin() ) - 1;
+            pathStarts[pathId] < range.end(); ++pathId )
+        {
+            // pointers to the data of the path, not to read them again after every write of a bit
+            const auto* path = preRes.paths[pathId].data();
+            const auto* removedFaces = preRes.removedFaces[pathId].data();
+            const auto* edgesInfo = preRes.oldEdgesInfo[pathId].data();
+            const auto* faces = oldFaces[pathId].data();
+            const int edgeEnd = int( std::min( range.end(), pathStarts[pathId + 1] ) - pathStarts[pathId] );
+            for ( int edgeId = int( std::max( range.begin(), pathStarts[pathId] ) - pathStarts[pathId] ); edgeId < edgeEnd; ++edgeId )
             {
-                visited.set( e );
-                if ( e == e0.sym() )
-                    badFacesBS.autoResizeSet( oldFaces[pathId][edgeId].f );
+                if ( !removedFaces[edgeId].f.valid() )
+                    continue;
+                const auto e0 = !edgesInfo[edgeId].hasLeft && edgesInfo[edgeId].hasRight ? path[edgeId].sym() : path[edgeId];
+                const auto f = faces[edgeId].f;
+                if ( ( e0 >= firstNewE && td.good.test( EdgeId( e0 - firstNewE ) ) ) || td.badFaces.test( f ) )
+                    continue;
+                if ( ++td.numWalks == 0 )
+                {
+                    // the walk numbers start again
+                    std::fill( td.walkOf.begin(), td.walkOf.end(), std::uint16_t( 0 ) );
+                    td.numWalks = 1;
+                }
+                bool bad = false;
+                auto e = e0;
+                do
+                {
+                    if ( e == e0.sym() )
+                    {
+                        bad = true;
+                        break;
+                    }
+                    if ( e >= firstNewE )
+                    {
+                        auto& walk = td.walkOf[e.undirected() - firstNewEdge];
+                        if ( walk == td.numWalks )
+                        {
+                            bad = true;
+                            break;
+                        }
+                        walk = td.numWalks;
+                        td.good.set( EdgeId( e - firstNewE ) );
+                    }
+                    e = topology.prev( e.sym() );
+                } while ( e != e0 );
+                if ( !bad )
+                    continue;
+                // the edges walked up to e are not of a good loop
+                for ( auto x = e0; x != e; x = topology.prev( x.sym() ) )
+                    if ( x >= firstNewE )
+                        td.good.reset( EdgeId( x - firstNewE ) );
+                if ( td.badFaces.empty() )
+                    td.badFaces.resize( topology.getValidFaces().size() );
+                td.badFaces.autoResizeSet( f );
             }
         }
-    }
+    } );
+    FaceBitSet badFacesBS( topology.getValidFaces().size() );
+    for ( const auto& td : threadData )
+        badFacesBS |= td.badFaces;
     return badFacesBS;
 }
 
@@ -1303,7 +1361,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     connectLoneContours( mesh, contours, loneFaces, preRes, firstNewEdge, params.sortData, params.new2oldEdgesMap, badLoneFaces );
     fixOrphans( mesh, preRes.paths, preRes.removedFaces, params.new2OldMap, params.new2oldEdgesMap );
 
-    res.fbsWithContourIntersections = getBadFacesAfterCut( mesh.topology, preRes, preRes.removedFaces ) | badLoneFaces;
+    res.fbsWithContourIntersections = getBadFacesAfterCut( mesh.topology, preRes, preRes.removedFaces, firstNewEdge ) | badLoneFaces;
     if ( params.forceFillMode == CutMeshParameters::ForceFill::None && res.fbsWithContourIntersections.any() )
         return res;
 

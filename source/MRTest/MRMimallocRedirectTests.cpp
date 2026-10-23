@@ -124,7 +124,8 @@ TEST( MRMesh, MimallocSharedLibrary )
 #else
     EXPECT_EQ( counts.overrides, 0 );
 #endif
-    EXPECT_EQ( mi_version(), MI_MALLOC_VERSION );
+    // the same major and minor version; Homebrew's mimalloc.h of another patch release can come first in the include path
+    EXPECT_EQ( mi_version() / 100, MI_MALLOC_VERSION / 100 );
 }
 #endif
 

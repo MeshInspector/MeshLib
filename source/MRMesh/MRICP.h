@@ -3,6 +3,7 @@
 #include "MRPch/MRBindingMacros.h"
 #include "MRICPEnums.h"
 #include "MRMeshOrPoints.h"
+#include "MRPointCloud.h"
 #include "MRMatrix3.h"
 #include "MRId.h"
 #include "MRConstants.h"
@@ -284,6 +285,14 @@ public:
 
     /// returns current pairs formed from samples on reference object and projections on floating object
     [[nodiscard]] const PointPairs & getRef2FltPairs() const { return ref2fltPairs_; }
+
+    /// returns the samples on floating object in its local space, with normals if the object has them;
+    /// i-th point of the cloud is the source of i-th pair in getFlt2RefPairs()
+    [[nodiscard]] MRMESH_API PointCloud getFltSamplesCloud() const;
+
+    /// returns the samples on reference object in its local space, with normals if the object has them;
+    /// i-th point of the cloud is the source of i-th pair in getRef2FltPairs()
+    [[nodiscard]] MRMESH_API PointCloud getRefSamplesCloud() const;
 
     /// runs ICP algorithm given input objects, transformations, and parameters;
     /// \return adjusted transformation of the floating object to match reference object

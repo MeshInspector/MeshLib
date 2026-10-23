@@ -26,8 +26,9 @@ namespace
 // unites the parts of origin separated by the cut (by their roots in unionFind) by the winding numbers of the other mesh around them,
 // from 0 in every set of parts linked by the paths (crossing a path from its left to its right leaves the other mesh on mesh A, and enters
 // it on mesh B): the ones inside the other mesh in leftRoot on mesh A and in rightRoot on mesh B, the others in the other root;
+// a part reached with two numbers (as by crossings in a face not reported bad, which are not split) keeps the first one;
 // unites nothing and returns false if every part is only to the left or only to the right of the paths (as where the other mesh
-// does not cross itself), or if the paths contradict one another
+// does not cross itself)
 bool uniteByWindings( const MeshTopology& topology, const std::vector<EdgePath>& cutPaths, BaseUnionFind<FaceId>& unionFind, bool originIsA,
     FaceId& leftRoot, FaceId& rightRoot )
 {
@@ -54,7 +55,7 @@ bool uniteByWindings( const MeshTopology& topology, const std::vector<EdgePath>&
                 links[rr].emplace_back( lr, -step );
             }
 
-    // a part on both sides of the paths makes a number above 1 in its set, unless the paths contradict one another
+    // a part on both sides of the paths makes a number above 1 in its set
     HashMap<FaceId, int> windings;
     std::vector<std::pair<FaceId, int>> linked; // the parts of one set with their numbers
     for ( const auto& [start, unused] : links )
@@ -68,10 +69,8 @@ bool uniteByWindings( const MeshTopology& topology, const std::vector<EdgePath>&
             const auto [x, wx] = linked[i];
             minW = std::min( minW, wx );
             for ( const auto& [y, d] : links.at( x ) )
-                if ( const auto [it, inserted] = windings.insert( { y, wx + d } ); inserted )
+                if ( windings.insert( { y, wx + d } ).second )
                     linked.emplace_back( y, wx + d );
-                else if ( it->second != wx + d )
-                    return false;
         }
         for ( const auto& [x, w] : linked )
             windings[x] = w - minW;
@@ -103,7 +102,10 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
         for ( const auto& path : cutPaths )
             for ( auto e : path )
                 cutEdges.set( e );
-        if ( intParams.graphCutSeparation )
+        // under force, the graph cut completes open paths (as on a mesh with holes); closed paths alone bound the parts,
+        // and the winding numbers below decide the parts on both sides of them
+        if ( intParams.graphCutSeparation && std::any_of( cutPaths.begin(), cutPaths.end(),
+            [&] ( const EdgePath& p ) { return !p.empty() && origin.topology.org( p.front() ) != origin.topology.dest( p.back() ); } ) )
         {
             auto left = fillContourLeftByGraphCut( origin.topology, cutPaths, edgeAbsCurvMetric( origin ) );
             cutEdges |= findRegionBoundaryUndirectedEdgesInsideMesh( origin.topology, left );

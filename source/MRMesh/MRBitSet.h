@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRAllocator.h"
 #include "MRId.h"
 #include "MRphmap.h"
 #include "MRVector.h"
@@ -9,17 +10,6 @@
 #include <functional>
 #include <iosfwd>
 #include <iterator>
-#if !defined( __EMSCRIPTEN__ ) && !defined( MR_MIMALLOC_OVERRIDE )
-#include <mimalloc.h>
-#if defined( _MSC_VER ) && !defined( MR_USE_CMAKE_CONFIGURE_FILE )
-// BitSet's inline mi_stl_allocator calls mimalloc from every binary using MRMesh; MeshLib's CMake targets link it instead
-#ifdef _DEBUG
-#pragma comment( lib, "mimalloc-debug.dll.lib" )
-#else
-#pragma comment( lib, "mimalloc.dll.lib" )
-#endif
-#endif
-#endif
 
 namespace MR
 {
@@ -82,11 +72,7 @@ class BitSet
 public:
     using block_type = std::uint64_t;
     // mrbind ignores custom allocators, so the members exposing Blocks are hidden from the bindings
-#if defined( __EMSCRIPTEN__ ) || defined( MR_MIMALLOC_OVERRIDE )
-    using Blocks = std::vector<block_type>; // malloc is mimalloc already: -sMALLOC=mimalloc, mr_enable_mimalloc
-#else
-    using Blocks = std::vector<block_type, mi_stl_allocator<block_type>>;
-#endif
+    using Blocks = std::vector<block_type, Allocator<block_type>>;
     inline static constexpr size_t bits_per_block = sizeof( block_type ) * 8;
     inline static constexpr size_t npos = (size_t)-1;
 

@@ -320,6 +320,7 @@
     <ClInclude Include="MREdgeIterator.h" />
     <ClInclude Include="MRAffineXf3.h" />
     <ClInclude Include="MRBestFit.h" />
+    <ClInclude Include="MRAllocator.h" />
     <ClInclude Include="MRBitSet.h" />
     <ClInclude Include="MRBox.h" />
     <ClInclude Include="MRCube.h" />

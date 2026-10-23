@@ -1,11 +1,10 @@
 # MeshLib libraries allocate some containers (e.g. BitSet::Blocks) explicitly with mimalloc and never override malloc,
 # so they can be loaded into any process (Python, .NET, Java).
-# An application overriding malloc in its executables with mr_enable_mimalloc sets MR_MIMALLOC_OVERRIDE=ON;
-# MeshLib libraries then use the standard allocators and do not link mimalloc, and MRTest and MeshViewer override malloc too.
-# On Linux the libraries keep MRMimalloc, and the executables' override forwards to it (MRMimallocOverride).
+# An application overriding malloc in its executables with mr_enable_mimalloc sets MR_MIMALLOC_OVERRIDE=ON,
+# and MRTest and MeshViewer override malloc too; the override uses the same mimalloc as the libraries.
 # Emscripten builds get mimalloc from -sMALLOC=mimalloc instead, see ConfigureEmscripten.cmake.
-option(MR_MIMALLOC_OVERRIDE "Executables override malloc with mimalloc instead of MeshLib libraries using it explicitly" OFF)
-if(EMSCRIPTEN OR (MR_MIMALLOC_OVERRIDE AND (WIN32 OR APPLE)))
+option(MR_MIMALLOC_OVERRIDE "Executables override malloc with the mimalloc of MeshLib libraries" OFF)
+if(EMSCRIPTEN)
   set(MR_MIMALLOC_IN_LIBRARIES OFF)
 else()
   set(MR_MIMALLOC_IN_LIBRARIES ON)
@@ -49,8 +48,13 @@ function(mr_find_mimalloc)
     install(TARGETS mimalloc LIBRARY DESTINATION "${MR_MAIN_LIB_DIR}" RUNTIME DESTINATION "${MR_BIN_DIR}")
 
     if(MR_MIMALLOC_OVERRIDE)
-      # malloc, new and the rest of glibc's allocation functions, for mr_enable_mimalloc
-      add_library(MRMimallocOverride SHARED ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../../source/MRMimallocOverride/MRMimallocOverride.cpp)
+      # malloc, new and the rest of the system allocation functions, for mr_enable_mimalloc
+      if(APPLE)
+        set(_override_source MRMimallocOverrideMacOS.cpp)
+      else()
+        set(_override_source MRMimallocOverride.cpp)
+      endif()
+      add_library(MRMimallocOverride SHARED ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../../source/MRMimallocOverride/${_override_source})
       target_link_libraries(MRMimallocOverride PRIVATE mimalloc)
       target_compile_options(MRMimallocOverride PRIVATE -fno-builtin)
       install(TARGETS MRMimallocOverride LIBRARY DESTINATION "${MR_MAIN_LIB_DIR}")
@@ -85,20 +89,14 @@ function(mr_enable_mimalloc target)
       set_property(TARGET ${target} PROPERTY LINK_LIBRARIES mimalloc)
     endif()
     target_link_options(${target} PRIVATE "/INCLUDE:mi_version")
-  elseif(NOT APPLE AND NOT EMSCRIPTEN)
-    # Linux: malloc and new forward to the libraries' MRMimalloc, so the process has one mimalloc;
-    # first in the link order, before libstdc++ and libc
+  elseif(NOT EMSCRIPTEN)
+    # malloc and new forward to the libraries' MRMimalloc, so the process has one mimalloc;
+    # first in the link order, before libstdc++ and libc on Linux; dyld interposes it on macOS
     get_target_property(_existing_libs ${target} LINK_LIBRARIES)
     if(_existing_libs)
       set_property(TARGET ${target} PROPERTY LINK_LIBRARIES MRMimallocOverride ${_existing_libs})
     else()
       set_property(TARGET ${target} PROPERTY LINK_LIBRARIES MRMimallocOverride)
     endif()
-  elseif(APPLE)
-    # macOS: the dependencies' shared mimalloc loaded at launch replaces malloc for the whole process;
-    # >= 3.5 (thirdparty/vcpkg/ports-unix, thirdparty/cpm on Ubuntu):
-    # a dynamic 3.4.3 aborts at launch on macOS 13 (dyld thread-local bootstrap during libSystem init)
-    find_package(mimalloc 3.5 CONFIG REQUIRED)
-    target_link_libraries(${target} PRIVATE mimalloc)
   endif()
 endfunction()

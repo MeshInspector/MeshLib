@@ -11,6 +11,9 @@
 
 #ifdef __linux__
 #include <link.h>
+#elif defined( __APPLE__ )
+#include <mach-o/dyld.h>
+#include <malloc/malloc.h>
 #endif
 
 #ifdef __EMSCRIPTEN__
@@ -46,6 +49,13 @@ TEST( MRMesh, MimallocRedirectActive )
 
     auto q = std::make_unique<int[]>( 16 );
     EXPECT_TRUE( mi_is_in_heap_region( q.get() ) );
+
+#ifdef __APPLE__
+    // CoreFoundation and Objective-C allocate from the default malloc zone
+    void* z = malloc_zone_malloc( malloc_default_zone(), 64 );
+    EXPECT_TRUE( mi_is_in_heap_region( z ) );
+    malloc_zone_free( malloc_default_zone(), z );
+#endif
 }
 #else
 // MeshLib's own executables keep the system allocator, except in Emscripten builds
@@ -80,7 +90,7 @@ TEST( MRMesh, MimallocBitSet )
 }
 #endif
 
-#ifdef __linux__
+#if defined( __linux__ ) || defined( __APPLE__ )
 // The process must have only one mimalloc, of the version in mimalloc.h
 TEST( MRMesh, MimallocSharedLibrary )
 {
@@ -88,18 +98,25 @@ TEST( MRMesh, MimallocSharedLibrary )
     {
         int mimallocs = 0;
         int overrides = 0;
+        void add( std::string_view path )
+        {
+            const auto name = path.substr( path.find_last_of( '/' ) + 1 );
+            if ( name.starts_with( "libmimalloc" ) || name.starts_with( "libMRMimalloc." ) )
+                ++mimallocs;
+            if ( name.starts_with( "libMRMimallocOverride." ) )
+                ++overrides;
+        }
     } counts;
+#ifdef __linux__
     dl_iterate_phdr( []( dl_phdr_info* info, size_t, void* data )
     {
-        const std::string_view path = info->dlpi_name;
-        const auto name = path.substr( path.find_last_of( '/' ) + 1 );
-        auto& c = *static_cast<Counts*>( data );
-        if ( name.starts_with( "libmimalloc" ) || name.starts_with( "libMRMimalloc." ) )
-            ++c.mimallocs;
-        if ( name.starts_with( "libMRMimallocOverride." ) )
-            ++c.overrides;
+        static_cast<Counts*>( data )->add( info->dlpi_name );
         return 0;
     }, &counts );
+#else
+    for ( uint32_t i = 0; i < _dyld_image_count(); ++i )
+        counts.add( _dyld_get_image_name( i ) );
+#endif
     EXPECT_EQ( counts.mimallocs, 1 );
 #ifdef MR_MIMALLOC_OVERRIDE
     // forwards malloc and new to the libraries' mimalloc, see mr_enable_mimalloc

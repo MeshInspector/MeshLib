@@ -9,6 +9,7 @@
 #include "MRBitSetParallelFor.h"
 #include "MRMeshToPointCloud.h"
 #include "MRPointCloud.h"
+#include "MRParallelFor.h"
 #include <numeric>
 
 namespace MR
@@ -158,6 +159,36 @@ void ICP::setRefSamples( const VertBitSet& refSamples )
 void ICP::sampleRefPoints( float samplingVoxelSize, bool nonVertexSamples )
 {
     setupPairs( ref2fltPairs_, gridSamples( ref_.obj, samplingVoxelSize, nonVertexSamples, refSamplesCloud_ ), {} );
+}
+
+static PointCloud samplesCloud( const PointPairs & pairs, const MeshOrPoints & src )
+{
+    MR_TIMER;
+    const auto & points = src.points();
+    const auto normals = src.normals();
+    PointCloud res;
+    res.points.resizeNoInit( pairs.vec.size() );
+    if ( normals )
+        res.normals.resizeNoInit( pairs.vec.size() );
+    ParallelFor( res.points, [&]( VertId v )
+    {
+        const auto s = pairs.vec[v].srcVertId;
+        res.points[v] = points[s];
+        if ( normals )
+            res.normals[v] = normals( s );
+    } );
+    res.validPoints.resize( res.points.size(), true );
+    return res;
+}
+
+PointCloud ICP::getFltSamplesCloud() const
+{
+    return samplesCloud( flt2refPairs_, fltSamplesCloud_ ? MeshOrPoints( *fltSamplesCloud_ ) : flt_.obj );
+}
+
+PointCloud ICP::getRefSamplesCloud() const
+{
+    return samplesCloud( ref2fltPairs_, refSamplesCloud_ ? MeshOrPoints( *refSamplesCloud_ ) : ref_.obj );
 }
 
 void ICP::updatePointPairs()

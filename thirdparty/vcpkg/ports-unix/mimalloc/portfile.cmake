@@ -1,3 +1,11 @@
+# MeshLib (macOS and Linux): the mimalloc of MeshLib libraries, without the malloc override,
+# release-built also for Debug builds, as it can be the allocator of the whole process (mr_enable_mimalloc)
+set(VCPKG_BUILD_TYPE release)
+if(VCPKG_TARGET_IS_LINUX)
+    # dlopen-safe thread-locals, for a plain Python loading MeshLib late
+    set(MESHLIB_MIMALLOC_OPTIONS -DMI_LOCAL_DYNAMIC_TLS=ON)
+endif()
+
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO microsoft/mimalloc
@@ -26,6 +34,7 @@ vcpkg_cmake_configure(
         -DMI_BUILD_STATIC=${MI_BUILD_STATIC}
         -DMI_BUILD_SHARED=${MI_BUILD_SHARED}
         -DMI_INSTALL_TOPLEVEL=ON
+        ${MESHLIB_MIMALLOC_OPTIONS}
     OPTIONS_DEBUG
         -DMI_DEBUG_FULL=ON
     OPTIONS_RELEASE

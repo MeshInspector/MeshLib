@@ -216,6 +216,7 @@ jobs:
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=OFF
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DMRVOXELS_UNITY_BUILD=ON
+            -DMR_MIMALLOC_OVERRIDE=ON
 
       - name: Wait for C bindings
         if: ${{ inputs.mrbind_c }}

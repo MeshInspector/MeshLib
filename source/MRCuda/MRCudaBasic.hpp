@@ -72,8 +72,8 @@ DynamicArray<T>& DynamicArray<T>::operator=( DynamicArray&& other )
 
 #ifndef __CUDACC__
 template<typename T>
-template<typename U>
-DynamicArray<T>::DynamicArray( const std::vector<U>& vec )
+template<typename U, typename A>
+DynamicArray<T>::DynamicArray( const std::vector<U, A>& vec )
 {
     fromVector( vec );
 }

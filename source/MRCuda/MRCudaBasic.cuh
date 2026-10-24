@@ -34,8 +34,8 @@ public:
 
 #ifndef __CUDACC__
     // copy given vector to GPU
-    template <typename U>
-    explicit DynamicArray( const std::vector<U>& vec );
+    template <typename U, typename A>
+    explicit DynamicArray( const std::vector<U, A>& vec );
 
     // copy given vector to GPU
     template <typename U, typename I>

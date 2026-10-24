@@ -131,7 +131,7 @@ Below is a summary of all modules and their dependencies, so you can see what ea
 
 ### Bundled executables
 
-The Windows distribution ships its executables (MeshViewer, meshconv, MRTest) with the mimalloc allocator enabled, and the Linux one ships it as a shared library replacing the system allocator in MeshViewer and MRTest; WebAssembly builds embed Emscripten's bundled copy of it.
+MeshLib libraries allocate some containers (e.g. BitSet) with the mimalloc allocator explicitly, and MeshLib's executables (MeshViewer, MRTest) replace the system allocator with the same mimalloc; the distributions ship it as a shared library, and WebAssembly builds embed Emscripten's bundled copy of it instead.
 
 |Name                                                                              |Description                                                                  |License                                    |
 |-----------------------------------------------------------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|

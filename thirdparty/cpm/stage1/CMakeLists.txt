@@ -132,7 +132,8 @@ if(NOT TBB_FOUND)
   add_onetbb()
 endif()
 
-# shared and with malloc override: the executables and MeshLib libraries use this one copy
+# mimalloc.h for MeshLib headers outside its CMake targets (MRPch, the bindings, installed packages);
+# MeshLib libraries and executables link their own MRMimalloc, see cmake/Modules/Mimalloc.cmake
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   find_package(mimalloc 3.5 CONFIG QUIET)
   if(NOT mimalloc_FOUND)

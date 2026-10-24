@@ -7,6 +7,7 @@ list(REMOVE_ITEM SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/MRPchCreate.cpp")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
+include(Mimalloc)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
 # Emscripten's Boost package doesn't contain CMake config files
@@ -58,6 +59,12 @@ if(NOT libzip_FOUND)
   add_library(libzip::zip ALIAS PkgConfig::libzip)
 endif()
 target_link_libraries(${PROJECT_NAME} PRIVATE libzip::zip)
+
+# MR::Allocator, see MRAllocator.h
+IF(NOT EMSCRIPTEN)
+  mr_find_mimalloc()
+  target_link_libraries(${PROJECT_NAME} PUBLIC mimalloc)
+ENDIF()
 
 IF(APPLE)
   # for Boost.Stacktrace
@@ -117,6 +124,7 @@ configure_package_config_file(
   ${PROJECT_NAME}Config.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
   INSTALL_DESTINATION ${MR_CONFIG_DIR}
+  PATH_VARS MR_MAIN_LIB_DIR
 )
 install(
   FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake

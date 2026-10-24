@@ -68,7 +68,8 @@ struct CutMeshParameters
   */
 struct CutMeshResult
 {
-    /// Paths of new edges on mesh, they represent same contours as input, but already cut
+    /// Paths of new edges on mesh, they represent same contours as input, but already cut;
+    /// a contour going from a mesh vertex to a point and back has an edge followed by its sym there
     std::vector<EdgePath> resultCut;
     /// Bitset of bad triangles - triangles where input contours have intersections and cannot be cut and filled in a good way
     /// \sa \ref MR::CutMeshParameters

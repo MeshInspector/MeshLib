@@ -153,8 +153,8 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
     const auto totalExpectedVerts = topology.vertSize() + numVerts;
     const auto totalExpectedEdges = topology.edgeSize() + numEdges;
 
-    // the fill of the holes adds about 0.5 times as many edges and 0.6 times as many faces as the cut adds edges: reserving for both here
-    // copies the topology of the whole mesh to the larger buffers once, not again before the fill
+    // the fill of the holes adds about 0.5 times as many edges and 0.6 times as many faces as the cut adds edges: reserving for both here,
+    // as many as the cut adds for headroom, copies the topology of the whole mesh to the larger buffers once, not again before the fill
     topology.vertReserve( totalExpectedVerts );
     topology.edgeReserve( totalExpectedEdges + numEdges );
     topology.faceReserve( topology.faceSize() + numEdges );
@@ -167,7 +167,7 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
     const auto oldEdgesSize = topology.edgeSize();
 
     // find the old face of every path edge before the topology changes;
-    // the faces of path edges at mesh vertices are removed here (the others by cutOneEdge),
+    // the faces of path edges at mesh vertices are removed here (the others by cutOneEdge or connectLoneContours),
     // and their edges show where to splice the path edges around the vertices
     HashMap<FaceId, std::array<EdgeId, 3>> vertFaces;
     for ( int contourId = 0; contourId < contours.size(); ++contourId )
@@ -198,7 +198,8 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
                 const auto e = va ? pe->sym() : *pe;
                 const auto v = va ? *va : vb ? *vb : VertId{};
                 // precondition: a mesh vertex at the other end is the third vertex of that face, so the contour does not fold back
-                // at the edge; else the path edge goes in the other face, where Release still gets a valid topology
+                // at the edge; a fold puts the path edge in the other face, where Release still gets a valid topology
+                // (a mesh vertex that is no corner of these faces is not handled)
                 const bool fold = v && ( !topology.left( e ) || topology.dest( topology.next( e ) ) != v );
                 assert( !fold );
                 faces[i].left = faces[i].right = topology.left( fold ? e.sym() : e );

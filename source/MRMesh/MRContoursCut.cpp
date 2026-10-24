@@ -85,7 +85,41 @@ PreciseVertCoords preciseOtherVert( VertId v, const SortIntersectionsData& sortD
     return preciseVert( v, sortData.otherMesh, sortData.isOtherA, sortData );
 }
 
-PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
+/// the exact definition of intersection i of contour c inside a triangle of the mesh with given edges, counterclockwise,
+/// and verts[k] = org( edges[k] ) before the cut: a corner, a side of the triangle crossing a triangle of the other mesh,
+/// or an edge of the other mesh crossing the triangle
+PreciseCutPoint preciseCutPoint( const Mesh& mesh, const OneMeshContours& contours, int c, int i,
+    const std::array<EdgeId, 3>& edges, const ThreeVertIds& verts, const SortIntersectionsData& sortData )
+{
+    auto ownVert = [&] ( VertId v ) { return preciseVert( v, mesh, !sortData.isOtherA, sortData ); };
+    PreciseCutPoint res;
+    const auto& prim = contours[c].intersections[i].primitiveId;
+    const auto& et = sortData.contours[c][i];
+    const auto& otherTopology = sortData.otherMesh.topology;
+    if ( const auto pe = std::get_if<EdgeId>( &prim ) )
+    {
+        for ( int k = 0; k < 3; ++k )
+            if ( edges[k].undirected() == pe->undirected() )
+                res.seg = { ownVert( verts[k] ), ownVert( verts[( k + 1 ) % 3] ) };
+        const auto t = otherTopology.getTriVerts( et.tri() );
+        res.tri = { preciseOtherVert( t[0], sortData ), preciseOtherVert( t[1], sortData ), preciseOtherVert( t[2], sortData ) };
+    }
+    else if ( std::holds_alternative<FaceId>( prim ) )
+    {
+        // the third vertices of the triangles of the edge tell apart the crossings of a multiple edge
+        const EdgeId e = et.edge;
+        res.seg = { preciseOtherVert( otherTopology.org( e ), sortData ), preciseOtherVert( otherTopology.dest( e ), sortData ) };
+        res.tri = { ownVert( verts[0] ), ownVert( verts[1] ), ownVert( verts[2] ) };
+        if ( otherTopology.left( e ) && otherTopology.right( e ) )
+            res.wedge = { preciseOtherVert( otherTopology.getLeftTriVerts( e )[2], sortData ),
+                preciseOtherVert( otherTopology.getLeftTriVerts( e.sym() )[2], sortData ) };
+    }
+    else
+        res.seg[0] = ownVert( std::get<VertId>( prim ) );
+    return res;
+}
+
+PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const SortIntersectionsData* sortData )
 {
     MR_TIMER;
     auto& topology = mesh.topology;
@@ -172,22 +206,67 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
     for ( const auto& [f, edges] : vertFaces )
         topology.setLeft( edges[0], {} );
 
-    // splices path edge e from mesh vertex v in the place of old face f around v
-    auto spliceAtVert = [&] ( VertId v, FaceId f, EdgeId e )
+    // the contour and intersection at the other end of every path edge spliced at a mesh vertex, by the path edge from the vertex
+    HashMap<EdgeId, std::pair<int, int>> spliceEnds;
+    CutTrianglePredicates preds;
+    // splices path edge e from mesh vertex v to intersection i of contour c in the place of old face f around v,
+    // after the path edges already there that go before it counterclockwise: by the exact predicates if sortData is given
+    auto spliceAtVert = [&] ( VertId v, FaceId f, EdgeId e, int c, int i )
     {
         const auto it = vertFaces.find( f );
         assert( it != vertFaces.end() );
         if ( it == vertFaces.end() )
             return;
-        for ( auto x : it->second )
+        const auto& fe = it->second;
+        const ThreeVertIds fv{ topology.org( fe[0] ), topology.org( fe[1] ), topology.org( fe[2] ) };
+        const auto k = fv[0] == v ? 0 : fv[1] == v ? 1 : 2;
+        assert( fv[k] == v );
+        spliceEnds[e] = { c, i };
+        auto x = fe[k];
+        if ( topology.next( x ) < oldEdgesSize ) // no path edges there yet
         {
-            if ( topology.org( x ) == v )
-            {
-                topology.splice( x, e );
-                return;
-            }
+            topology.splice( x, e );
+            return;
         }
-        assert( false );
+
+        // point 0 is v, point 1 is the end of e, points 2... are the ends of the path edges there
+        bool exact = false;
+        if ( sortData )
+        {
+            auto ownVert = [&] ( VertId u ) { return preciseVert( u, mesh, !sortData->isOtherA, *sortData ); };
+            preds.reset( { ownVert( fv[0] ), ownVert( fv[1] ), ownVert( fv[2] ) } );
+            PreciseCutPoint corner;
+            corner.seg[0] = ownVert( v );
+            preds.addPoint( VertId( 0 ), corner );
+            preds.addPoint( VertId( 1 ), preciseCutPoint( mesh, contours, c, i, fe, fv, *sortData ) );
+            int n = 2;
+            for ( auto y = topology.next( x ); y >= oldEdgesSize; y = topology.next( y ) )
+            {
+                const auto [yc, yi] = spliceEnds.at( y );
+                preds.addPoint( VertId( n++ ), preciseCutPoint( mesh, contours, yc, yi, fe, fv, *sortData ) );
+            }
+            exact = !preds.failed();
+        }
+        const auto& pv = mesh.points[v];
+        const auto normal = cross( mesh.points[fv[( k + 1 ) % 3]] - pv, mesh.points[fv[( k + 2 ) % 3]] - pv );
+        const auto p = contours[c].intersections[i].coordinate - pv;
+        int n = 2;
+        for ( auto y = topology.next( x ); y >= oldEdgesSize; y = topology.next( y ), ++n )
+        {
+            if ( exact )
+            {
+                if ( !preds.ccw( VertId( 0 ), VertId( n ), VertId( 1 ) ) )
+                    break;
+            }
+            else
+            {
+                const auto [yc, yi] = spliceEnds.at( y );
+                if ( !( dot( cross( contours[yc].intersections[yi].coordinate - pv, p ), normal ) > 0 ) )
+                    break;
+            }
+            x = y;
+        }
+        topology.splice( x, e );
     };
 
     for ( int contourId = 0; contourId < contours.size(); ++contourId )
@@ -214,9 +293,9 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
             if ( vert )
             {
                 if ( out && out >= oldEdgesSize )
-                    spliceAtVert( *vert, faces[i].left, out );
+                    spliceAtVert( *vert, faces[i].left, out, contourId, i + 1 );
                 if ( in && in >= oldEdgesSize )
-                    spliceAtVert( *vert, faces[i - 1].left, in );
+                    spliceAtVert( *vert, faces[i - 1].left, in, contourId, i - 1 );
                 continue;
             }
             if ( closed && i + 1 == inContour.size() )
@@ -408,39 +487,14 @@ void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const std
     // the exact definition of a vertex on the loops of a lone face
     auto pointOf = [&] ( const LoneFace& lf, VertId v )
     {
-        PreciseCutPoint res;
         const auto it = vertInters.find( v );
         if ( it == vertInters.end() )
         {
+            PreciseCutPoint res;
             res.seg[0] = ownVert( v ); // a corner of the face
             return res;
         }
-        const auto [c, i] = it->second;
-        const auto& prim = contours[c].intersections[i].primitiveId;
-        const auto& et = sortData->contours[c][i];
-        const auto& otherTopology = sortData->otherMesh.topology;
-        if ( const auto pe = std::get_if<EdgeId>( &prim ) )
-        {
-            // a side of the face crosses a triangle of the other mesh
-            for ( int k = 0; k < 3; ++k )
-                if ( lf.edges[k].undirected() == pe->undirected() )
-                    res.seg = { ownVert( lf.verts[k] ), ownVert( lf.verts[( k + 1 ) % 3] ) };
-            const auto t = otherTopology.getTriVerts( et.tri() );
-            res.tri = { preciseOtherVert( t[0], *sortData ), preciseOtherVert( t[1], *sortData ), preciseOtherVert( t[2], *sortData ) };
-        }
-        else if ( std::holds_alternative<FaceId>( prim ) )
-        {
-            // an edge of the other mesh crosses the face; the third vertices of its triangles tell apart the crossings of a multiple edge
-            const EdgeId e = et.edge;
-            res.seg = { preciseOtherVert( otherTopology.org( e ), *sortData ), preciseOtherVert( otherTopology.dest( e ), *sortData ) };
-            res.tri = { ownVert( lf.verts[0] ), ownVert( lf.verts[1] ), ownVert( lf.verts[2] ) };
-            if ( otherTopology.left( e ) && otherTopology.right( e ) )
-                res.wedge = { preciseOtherVert( otherTopology.getLeftTriVerts( e )[2], *sortData ),
-                    preciseOtherVert( otherTopology.getLeftTriVerts( e.sym() )[2], *sortData ) };
-        }
-        else
-            res.seg[0] = ownVert( std::get<VertId>( prim ) );
-        return res;
+        return preciseCutPoint( mesh, contours, it->second.first, it->second.second, lf.edges, lf.verts, *sortData );
     };
 
     // the boundaries of the hole of every lone face
@@ -1150,7 +1204,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
 
     const auto loneFaces = findLoneFaces( mesh.topology, contours );
     const auto firstNewEdge = UndirectedEdgeId( mesh.topology.undirectedEdgeSize() );
-    auto preRes = doPreCutMesh( mesh, contours );
+    auto preRes = doPreCutMesh( mesh, contours, params.sortData );
 
     if ( params.new2oldEdgesMap )
     {

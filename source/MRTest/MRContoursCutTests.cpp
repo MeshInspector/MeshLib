@@ -11,6 +11,7 @@
 #include <MRMesh/MRVector2.h>
 #include <MRMesh/MRMakePlane.h>
 #include <MRMesh/MRMeshComponents.h>
+#include <MRMesh/MRFillContour.h>
 #include <cmath>
 #include <random>
 
@@ -435,6 +436,54 @@ TEST( MRMesh, CutMeshContourTurnsInsideFace )
         // the part of (A,B,C) between B, C and the new point was not filled
         EXPECT_EQ( cut.topology.findNumHoles(), 1 );
         EXPECT_NEAR( cut.area(), mesh.area(), 1e-5f );
+    }
+}
+
+// a closed contour leaves a mesh vertex into a face and comes back from the same face,
+// so both its edges at the vertex go in the place of that face, in the order of their directions
+TEST( MRMesh, CutMeshContourLeavesAndEntersVertexInOneFace )
+{
+    // 3x3 squares in XY plane, vertex 4 * y + x is at ( x, y )
+    Mesh mesh;
+    Triangulation t;
+    for ( int y = 0; y < 4; ++y )
+        for ( int x = 0; x < 4; ++x )
+            mesh.points.push_back( Vector3f( float( x ), float( y ), 0.0f ) );
+    for ( int y = 0; y < 3; ++y )
+    {
+        for ( int x = 0; x < 3; ++x )
+        {
+            const VertId v( 4 * y + x );
+            t.push_back( { v, v + 1, v + 5 } );
+            t.push_back( { v, v + 5, v + 4 } );
+        }
+    }
+    mesh.topology = MeshBuilder::fromTriangles( t );
+
+    // face (5, 6, 10) and two points in it
+    const auto v = 5_v;
+    const auto f = mesh.topology.left( mesh.topology.findEdge( v, 6_v ) );
+    const Vector3f p( 1.8f, 1.2f, 0.0f ), q( 1.8f, 1.6f, 0.0f );
+    for ( bool ccw : { true, false } )
+    {
+        OneMeshContour contour;
+        contour.closed = true;
+        contour.intersections = {
+            { v, mesh.points[v] },
+            { f, ccw ? p : q },
+            { f, ccw ? q : p },
+            { v, mesh.points[v] } };
+
+        Mesh cut = mesh;
+        auto res = cutMesh( cut, { contour } );
+        EXPECT_TRUE( cut.topology.checkValidity() ) << ccw;
+        EXPECT_TRUE( res.fbsWithContourIntersections.none() ) << ccw;
+        ASSERT_EQ( res.resultCut.size(), 1 );
+        EXPECT_EQ( cut.topology.findNumHoles(), 1 ) << ccw;
+        EXPECT_NEAR( cut.area(), mesh.area(), 1e-5f ) << ccw;
+        // the triangle (v, p, q) is on the left of a counterclockwise contour
+        const auto inside = fillContourLeft( cut.topology, res.resultCut[0] );
+        EXPECT_NEAR( cut.area( ccw ? inside : cut.topology.getValidFaces() - inside ), 0.16f, 1e-5f ) << ccw;
     }
 }
 

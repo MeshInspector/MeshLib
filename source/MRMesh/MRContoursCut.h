@@ -68,7 +68,8 @@ struct CutMeshParameters
   */
 struct CutMeshResult
 {
-    /// Paths of new edges on mesh, they represent same contours as input, but already cut
+    /// Paths of new edges on mesh, they represent same contours as input, but already cut;
+    /// a contour going from a mesh vertex to a point and back has an edge followed by its sym there
     std::vector<EdgePath> resultCut;
     /// Bitset of bad triangles - triangles where input contours have intersections and cannot be cut and filled in a good way
     /// \sa \ref MR::CutMeshParameters
@@ -86,6 +87,10 @@ struct CutMeshResult
   * \return New edges that correspond to given contours, find more \ref MR::CutMeshResult
   * \parblock
   * \warning Input contours should have no intersections, faces where contours intersects (`bad faces`) will not be allowed for fill
+  * \endparblock
+  * \parblock
+  * \warning Every two consecutive intersections of a contour should lie in one face, and a contour should not fold back
+  * at a point inside an edge: a mesh vertex next to such a point is the third vertex of the face the contour goes in there
   * \endparblock
   * \parblock
   * \warning Input mesh will be changed in any case, if `bad faces` are in mesh, mesh will be spoiled, \n

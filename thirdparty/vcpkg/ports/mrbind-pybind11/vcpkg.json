@@ -1,7 +1,7 @@
 {
   "name": "mrbind-pybind11",
   "version-string": "2.14.0-meshlib",
-  "port-version": 3,
+  "port-version": 4,
   "homepage": "https://github.com/MeshInspector/mrbind-pybind11",
   "description": "pybind11 fork that builds stable-ABI Python modules",
   "license": "BSD-3-Clause",
@@ -18,5 +18,13 @@
       "name": "python3",
       "platform": "(osx | windows)"
     }
-  ]
+  ],
+  "features": {
+    "vcpkg-python": {
+      "description": "Build the shim against vcpkg's python3 on Linux too, instead of the system Python",
+      "dependencies": [
+        "python3"
+      ]
+    }
+  }
 }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRMeshFwd.h"
+#include "config.h"
 #include <memory>
 
 // mr_enable_mimalloc executables forward malloc to the same mimalloc; MRMESH_NO_MIMALLOC, see cmake/Modules/Mimalloc.cmake

@@ -11,6 +11,7 @@
 #include <MRMesh/MRVector2.h>
 #include <MRMesh/MRMakePlane.h>
 #include <MRMesh/MRMeshComponents.h>
+#include <MRMesh/MRFillContour.h>
 #include <cmath>
 #include <random>
 
@@ -84,6 +85,25 @@ int checkOffsetContoursAndCut( const Mesh& mesh, const OneMeshContours& contours
     EXPECT_EQ( res.resultCut.size(), contours.size() );
     EXPECT_EQ( cut.topology.findNumHoles(), topology.findNumHoles() );
     return numOpen;
+}
+
+// 3x3 squares in XY plane, vertex 4 * y + x is at ( x, y ), with faces ( v, v + 1, v + 5 ) and ( v, v + 5, v + 4 ) in square v
+Mesh makeSquares3x3()
+{
+    Mesh mesh;
+    Triangulation t;
+    for ( int y = 0; y < 4; ++y )
+        for ( int x = 0; x < 4; ++x )
+            mesh.points.push_back( Vector3f( float( x ), float( y ), 0.0f ) );
+    for ( int y = 0; y < 3; ++y )
+        for ( int x = 0; x < 3; ++x )
+        {
+            const VertId v( 4 * y + x );
+            t.push_back( { v, v + 1, v + 5 } );
+            t.push_back( { v, v + 5, v + 4 } );
+        }
+    mesh.topology = MeshBuilder::fromTriangles( t );
+    return mesh;
 }
 
 } //anonymous namespace
@@ -392,22 +412,7 @@ TEST( MRMesh, ContourTouchesBoundaryAtEarTip )
 // the contour goes along edge A-B of face (A,B,C), then back into that face to a point on edge A-C
 TEST( MRMesh, CutMeshContourTurnsInsideFace )
 {
-    // 3x3 squares in XY plane, vertex 4 * y + x is at ( x, y )
-    Mesh mesh;
-    Triangulation t;
-    for ( int y = 0; y < 4; ++y )
-        for ( int x = 0; x < 4; ++x )
-            mesh.points.push_back( Vector3f( float( x ), float( y ), 0.0f ) );
-    for ( int y = 0; y < 3; ++y )
-    {
-        for ( int x = 0; x < 3; ++x )
-        {
-            const VertId v( 4 * y + x );
-            t.push_back( { v, v + 1, v + 5 } );
-            t.push_back( { v, v + 5, v + 4 } );
-        }
-    }
-    mesh.topology = MeshBuilder::fromTriangles( t );
+    const Mesh mesh = makeSquares3x3();
     const auto& topology = mesh.topology;
 
     // inside the mesh, and with B-C on the boundary
@@ -435,6 +440,128 @@ TEST( MRMesh, CutMeshContourTurnsInsideFace )
         // the part of (A,B,C) between B, C and the new point was not filled
         EXPECT_EQ( cut.topology.findNumHoles(), 1 );
         EXPECT_NEAR( cut.area(), mesh.area(), 1e-5f );
+    }
+}
+
+// a closed contour leaves a mesh vertex into a face and comes back from the same face,
+// so both its edges at the vertex go in the place of that face, in the order of their directions
+TEST( MRMesh, CutMeshContourLeavesAndEntersVertexInOneFace )
+{
+    const Mesh mesh = makeSquares3x3();
+
+    // face (5, 6, 10) and two points in it
+    const auto v = 5_v;
+    const auto f = mesh.topology.left( mesh.topology.findEdge( v, 6_v ) );
+    const Vector3f p( 1.8f, 1.2f, 0.0f ), q( 1.8f, 1.6f, 0.0f );
+    for ( bool ccw : { true, false } )
+    {
+        OneMeshContour contour;
+        contour.closed = true;
+        contour.intersections = {
+            { v, mesh.points[v] },
+            { f, ccw ? p : q },
+            { f, ccw ? q : p },
+            { v, mesh.points[v] } };
+
+        Mesh cut = mesh;
+        auto res = cutMesh( cut, { contour } );
+        EXPECT_TRUE( cut.topology.checkValidity() ) << ccw;
+        EXPECT_TRUE( res.fbsWithContourIntersections.none() ) << ccw;
+        ASSERT_EQ( res.resultCut.size(), 1 );
+        EXPECT_EQ( cut.topology.findNumHoles(), 1 ) << ccw;
+        EXPECT_NEAR( cut.area(), mesh.area(), 1e-5f ) << ccw;
+        // the triangle (v, p, q) is on the left of a counterclockwise contour
+        const auto inside = fillContourLeft( cut.topology, res.resultCut[0] );
+        EXPECT_NEAR( cut.area( ccw ? inside : cut.topology.getValidFaces() - inside ), 0.16f, 1e-5f ) << ccw;
+    }
+}
+
+// a closed contour goes from a mesh vertex to a point in a face and back to the vertex, then around a loop in the next face or not,
+// starting at every point (at the touched point too: x, v, ..., v, x and x, v, x): the cut goes along one edge to the point and back,
+// with no hole of two edges between them to fill
+TEST( MRMesh, CutMeshContourTouchesPointFromVertex )
+{
+    const Mesh mesh = makeSquares3x3();
+
+    // faces (5, 6, 10) and (5, 10, 9)
+    const auto v = 5_v;
+    const auto f = mesh.topology.left( mesh.topology.findEdge( v, 6_v ) );
+    const auto g = mesh.topology.left( mesh.topology.findEdge( v, 10_v ) );
+    const OneMeshIntersection iv{ v, mesh.points[v] }, ix{ f, Vector3f( 1.8f, 1.2f, 0.0f ) };
+    for ( const auto& points : { std::vector{ iv, ix, iv, OneMeshIntersection{ g, Vector3f( 1.6f, 1.8f, 0.0f ) },
+        OneMeshIntersection{ g, Vector3f( 1.2f, 1.6f, 0.0f ) } }, std::vector{ iv, ix } } )
+    {
+        const int n = int( points.size() );
+        for ( int start = 0; start < n; ++start )
+        {
+            SCOPED_TRACE( testing::Message() << n << " points, start " << start );
+            OneMeshContour contour;
+            contour.closed = true;
+            for ( int i = 0; i <= n; ++i )
+                contour.intersections.push_back( points[( start + i ) % n] );
+
+            Mesh cut = mesh;
+            auto res = cutMesh( cut, { contour } );
+            EXPECT_TRUE( cut.topology.checkValidity() );
+            EXPECT_TRUE( res.fbsWithContourIntersections.none() );
+            ASSERT_EQ( res.resultCut.size(), 1 );
+            ASSERT_EQ( res.resultCut[0].size(), n );
+            // the path edges from v to x and back
+            const int vx = ( n - start ) % n;
+            EXPECT_EQ( res.resultCut[0][( vx + 1 ) % n], res.resultCut[0][vx].sym() );
+            EXPECT_EQ( cut.topology.findNumHoles(), 1 );
+            EXPECT_NEAR( cut.area(), mesh.area(), 1e-5f );
+            // only the points of the contour other than v are new vertices
+            EXPECT_EQ( cut.topology.numValidVerts(), mesh.topology.numValidVerts() + ( n == 2 ? 1 : 3 ) );
+        }
+    }
+}
+
+// open contours touching a point from a mesh vertex, going along an edge of the mesh and back, or ending inside faces,
+// where the edges to the end are a spike in the hole of their face; that hole is filled with the rest of the face, whichever part is filled
+TEST( MRMesh, CutMeshOpenContourTouchesPoint )
+{
+    const Mesh mesh = makeSquares3x3();
+    const auto& topology = mesh.topology;
+
+    // faces (5, 6, 10) and (5, 10, 9), with edge 5 -> 10 between them, f on its right
+    const auto v = 5_v;
+    const auto f = topology.left( topology.findEdge( v, 6_v ) );
+    const auto e = topology.findEdge( v, 10_v );
+    const auto g = topology.left( e );
+    ASSERT_EQ( topology.right( e ), f );
+    const OneMeshIntersection iv{ v, mesh.points[v] }, ix{ f, Vector3f( 1.8f, 1.2f, 0.0f ) }, ix2{ f, Vector3f( 1.8f, 1.6f, 0.0f ) },
+        iy{ g, Vector3f( 1.2f, 1.6f, 0.0f ) }, ip{ 1_v, mesh.points[1_v] }, iq{ 9_v, mesh.points[9_v] }, ie{ e, Vector3f( 1.5f, 1.5f, 0.0f ) };
+    const std::pair<std::vector<OneMeshIntersection>, int> cases[] = {
+        { { ip, iv, ix, iv, iq }, 1 },
+        { { iv, ix, iv }, 1 },
+        { { ip, iv, ix }, 1 },
+        { { ip, iv, ix, ix2 }, 2 },
+        { { ip, iv, ip }, 0 },
+        { { iv, ix }, 1 },
+        { { ix, ie, iy }, 3 },
+        // a point touched from both ends: two new vertices at one position, two spikes in one hole
+        { { ix, iv, ix }, 2 } };
+    for ( const auto& [points, numNewVerts] : cases )
+    {
+        for ( auto part : { CutMeshParameters::FillPart::Both, CutMeshParameters::FillPart::Left, CutMeshParameters::FillPart::Right } )
+        {
+            SCOPED_TRACE( testing::Message() << points.size() << " points, fill part " << int( part ) );
+            OneMeshContour contour;
+            contour.intersections = points;
+
+            Mesh cut = mesh;
+            auto res = cutMesh( cut, { contour }, { .fillPart = part } );
+            EXPECT_TRUE( cut.topology.checkValidity() );
+            EXPECT_TRUE( res.fbsWithContourIntersections.none() );
+            ASSERT_EQ( res.resultCut.size(), 1 );
+            EXPECT_EQ( res.resultCut[0].size() + 1, points.size() );
+            EXPECT_EQ( cut.topology.numValidVerts(), mesh.topology.numValidVerts() + numNewVerts );
+            if ( part != CutMeshParameters::FillPart::Both )
+                continue;
+            EXPECT_EQ( cut.topology.findNumHoles(), 1 );
+            EXPECT_NEAR( cut.area(), mesh.area(), 1e-5f );
+        }
     }
 }
 

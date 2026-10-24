@@ -129,7 +129,7 @@ set(MESHLIB_PACKAGE_mbedtls
   GIT_TAG v3.5.0
 )
 
-# the same version as thirdparty/vcpkg/ports-unix/mimalloc, see mr_enable_mimalloc
+# the same version as the vcpkg mimalloc port, see mr_enable_mimalloc
 set(MESHLIB_PACKAGE_mimalloc
   GIT_REPOSITORY https://github.com/microsoft/mimalloc.git
   GIT_TAG v3.5.3

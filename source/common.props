@@ -51,6 +51,11 @@
     <PythonVersionMinor>12</PythonVersionMinor>
     <PythonIncludePath>$(VcpkgCurrentInstalledDir)\include\python3.12\</PythonIncludePath>
   </PropertyGroup>
+  <PropertyGroup Label="Globals" Condition="Exists('$(VcpkgCurrentInstalledDir)\include\python3.14')">
+    <PythonVersion>314</PythonVersion>
+    <PythonVersionMinor>14</PythonVersionMinor>
+    <PythonIncludePath>$(VcpkgCurrentInstalledDir)\include\python3.14\</PythonIncludePath>
+  </PropertyGroup>
   <PropertyGroup Label="Globals">
     <PythonLibPath>$(VcpkgCurrentInstalledDir)\lib\python3.lib</PythonLibPath>
     <PythonDllPath>$(VcpkgCurrentInstalledDir)\bin\python$(PythonVersion).dll</PythonDllPath>

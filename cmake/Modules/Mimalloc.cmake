@@ -25,7 +25,7 @@ function(mr_enable_mimalloc target)
     target_link_options(${target} PRIVATE "/INCLUDE:mi_version")
   elseif(NOT EMSCRIPTEN)
     # macOS and Linux: the shared mimalloc loaded at launch replaces malloc for the whole process, and MeshLib libraries
-    # linking the same target share this one copy; >= 3.5 (thirdparty/vcpkg/ports-unix, thirdparty/cpm on Ubuntu):
+    # linking the same target share this one copy; >= 3.5 (vcpkg, thirdparty/cpm on Ubuntu):
     # a dynamic 3.4.3 aborts at launch on macOS 13 (dyld thread-local bootstrap during libSystem init)
     find_package(mimalloc 3.5 CONFIG REQUIRED)
     target_link_libraries(${target} PRIVATE mimalloc)

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "config.h"
+#include "MRPch/MRBindingMacros.h"
 #include <memory>
 
 // mr_enable_mimalloc executables forward malloc to the same mimalloc; MRMESH_NO_MIMALLOC, see cmake/Modules/Mimalloc.cmake
@@ -33,9 +34,10 @@ using AllocatorBase = std::allocator<T>;
 
 /// allocator of MeshLib containers that benefit from mimalloc: mimalloc explicitly,
 /// std::allocator in Emscripten builds, where malloc is mimalloc already (-sMALLOC=mimalloc), and with MRMESH_NO_MIMALLOC;
-/// a class rather than an alias, so that container types are spelled the same on all platforms (e.g. in the C bindings generated once)
+/// a class rather than an alias, so that container types are spelled the same on all platforms (e.g. in the C bindings generated once);
+/// the bindings only see it as a template argument of containers
 template <typename T>
-struct Allocator : AllocatorBase<T>
+struct MR_BIND_IGNORE Allocator : AllocatorBase<T>
 {
     using value_type = T;
     template <typename U>

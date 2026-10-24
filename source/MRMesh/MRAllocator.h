@@ -4,8 +4,8 @@
 #include <memory>
 
 // MR_MIMALLOC_OVERRIDE executables forward malloc to the same mimalloc, see mr_enable_mimalloc;
-// MR_STD_ALLOCATOR in macOS Homebrew builds, see cmake/Modules/Mimalloc.cmake
-#if !defined( __EMSCRIPTEN__ ) && !defined( MR_STD_ALLOCATOR )
+// MRMESH_NO_MIMALLOC, see cmake/Modules/Mimalloc.cmake
+#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_MIMALLOC )
 #define MR_ALLOCATOR_IS_MIMALLOC
 #endif
 
@@ -25,7 +25,7 @@ namespace MR
 {
 
 /// allocator of MeshLib containers that benefit from mimalloc: mimalloc explicitly,
-/// std::allocator in Emscripten builds, where malloc is mimalloc already (-sMALLOC=mimalloc), and in macOS Homebrew builds
+/// std::allocator in Emscripten builds, where malloc is mimalloc already (-sMALLOC=mimalloc), and with MRMESH_NO_MIMALLOC
 #ifdef MR_ALLOCATOR_IS_MIMALLOC
 template <typename T>
 using Allocator = mi_stl_allocator<T>;

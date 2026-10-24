@@ -118,7 +118,7 @@ TEST( MRMesh, MimallocSharedLibrary )
         counts.add( _dyld_get_image_name( i ) );
 #endif
     EXPECT_EQ( counts.mimallocs, 1 );
-#if defined( MR_MIMALLOC_OVERRIDE ) && !defined( MR_STD_ALLOCATOR )
+#if defined( MR_MIMALLOC_OVERRIDE ) && !defined( MRMESH_NO_MIMALLOC )
     // forwards malloc and new to the libraries' mimalloc, see mr_enable_mimalloc
     EXPECT_EQ( counts.overrides, 1 );
 #else

@@ -2,18 +2,20 @@
 # so they can be loaded into any process (Python, .NET, Java).
 # An application overriding malloc in its executables with mr_enable_mimalloc sets MR_MIMALLOC_OVERRIDE=ON,
 # and MRTest and MeshViewer override malloc too; the override uses the same mimalloc as the libraries.
-# Emscripten builds get mimalloc from -sMALLOC=mimalloc instead, see ConfigureEmscripten.cmake.
-# macOS Homebrew builds use std::allocator: Homebrew's mimalloc.h of any version comes first in the include path there.
+# Without it (MRMESH_NO_MIMALLOC) MeshLib libraries use std::allocator: by default in Emscripten builds, which get mimalloc
+# from -sMALLOC=mimalloc (see ConfigureEmscripten.cmake), and in macOS Homebrew builds, where Homebrew's mimalloc.h
+# of any version comes first in the include path.
 option(MR_MIMALLOC_OVERRIDE "Executables override malloc with the mimalloc of MeshLib libraries" OFF)
 if(EMSCRIPTEN OR (APPLE AND MESHLIB_USE_HOMEBREW))
-  set(MR_STD_ALLOCATOR ON)
+  set(_mr_no_mimalloc_default ON)
 else()
-  set(MR_STD_ALLOCATOR OFF)
+  set(_mr_no_mimalloc_default OFF)
 endif()
+option(MRMESH_NO_MIMALLOC "MeshLib libraries use std::allocator instead of mimalloc" ${_mr_no_mimalloc_default})
 
 # mr_find_mimalloc()
 #
-# Provides the `mimalloc` target for MeshLib libraries (unless MR_STD_ALLOCATOR).
+# Provides the `mimalloc` target for MeshLib libraries (unless MRMESH_NO_MIMALLOC).
 # Windows: vcpkg's mimalloc[override], whose redirect engages only in mr_enable_mimalloc executables.
 # macOS and Linux: MeshLib's own non-override mimalloc, named MRMimalloc: an override one crashes a plain Python loading it late.
 set(MR_MIMALLOC_PACKAGE_LOCK ${CMAKE_CURRENT_LIST_DIR}/../../thirdparty/cpm/package-lock.cmake)
@@ -95,8 +97,8 @@ function(mr_enable_mimalloc target)
     target_link_options(${target} PRIVATE "/INCLUDE:mi_version")
   elseif(EMSCRIPTEN)
     # -sMALLOC=mimalloc, see ConfigureEmscripten.cmake
-  elseif(MR_STD_ALLOCATOR)
-    # macOS Homebrew: its shared mimalloc loaded at launch replaces malloc for the whole process;
+  elseif(MRMESH_NO_MIMALLOC)
+    # e.g. macOS Homebrew: its shared mimalloc loaded at launch replaces malloc for the whole process;
     # MeshLib libraries use std::allocator there
     find_package(mimalloc 3.5 CONFIG REQUIRED)
     target_link_libraries(${target} PRIVATE mimalloc)

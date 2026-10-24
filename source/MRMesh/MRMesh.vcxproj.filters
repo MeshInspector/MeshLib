@@ -150,6 +150,9 @@
     <ClInclude Include="MRIteratorRange.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MRAllocator.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
     <ClInclude Include="MRBitSet.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>

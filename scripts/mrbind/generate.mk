@@ -650,6 +650,11 @@ COMPILER_FLAGS_LIBCLANG := $(call load_file,$(makefile_dir)parser_only_flags.txt
 COMPILER := $(CXX_FOR_BINDINGS) $(subst $(lf), ,$(call load_file,$(makefile_dir)compiler_only_flags.txt)) -I$(makefile_dir)
 # Need whitespace to handle `~` correctly.
 COMPILER_FLAGS += -I $(MRBIND_SOURCE)/include
+# MeshLib configured with MR_MIMALLOC_OVERRIDE (see `cmake/Modules/Mimalloc.cmake`): `BitSet::Blocks` must match MRMesh's.
+override mimalloc_config_header := $(makefile_dir)../../source/MRMesh/config_cmake.h
+ifneq ($(findstring define MR_MIMALLOC_OVERRIDE,$(if $(wildcard $(mimalloc_config_header)),$(call load_file,$(mimalloc_config_header)))),)
+COMPILER_FLAGS += -DMR_MIMALLOC_OVERRIDE
+endif
 
 COMPILER_FLAGS_LIBCLANG += -DMR_PARSING_FOR_ANY_BINDINGS
 COMPILER += -DMR_COMPILING_ANY_BINDINGS

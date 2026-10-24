@@ -47,16 +47,13 @@ struct CutMeshParameters
         Right
     } fillPart{ FillPart::Both };
 
-    /// This enum defines the MR::cutMesh behaviour in case of bad faces acure
+    /// This flag defines the MR::cutMesh behaviour in case of bad faces acure
     /// basicaly MR::cutMesh removes all faces which contours pass through, adds new edges to topology and fills all removed parts
+    /// If bad faces occur, nothing is filled unless this flag is set; then with sortData, the contours are split where they cross in bad faces
+    /// (see \ref CutMeshResult::resultCut); otherwise, and where the split fails, their fill may have self-intersections or tunnels
     /// 
     /// \note Bad faces here mean faces where contours have intersections and cannot be cut and filled in an good way
-    enum class ForceFill
-    {
-        None, //< if bad faces occur does not fill anything
-        Good, //< fills all faces except bad ones
-        All   //< fills all faces with bad ones, but on bad faces triangulation can also be bad (may have self-intersections or tunnels)
-    } forceFillMode{ ForceFill::None };
+    bool forceFill{ false };
 
     /// Optional output map for each new edge introduced after cut maps edge from old topology or old face
     NewEdgesMap* new2oldEdgesMap{ nullptr };
@@ -68,7 +65,8 @@ struct CutMeshParameters
   */
 struct CutMeshResult
 {
-    /// Paths of new edges on mesh, they represent same contours as input, but already cut
+    /// Paths of new edges on mesh, they represent same contours as input, but already cut;
+    /// with \ref CutMeshParameters::forceFill and sortData, a path also passes the vertices where its contour crosses others (or itself) in bad faces
     std::vector<EdgePath> resultCut;
     /// Bitset of bad triangles - triangles where input contours have intersections and cannot be cut and filled in a good way
     /// \sa \ref MR::CutMeshParameters
@@ -85,7 +83,8 @@ struct CutMeshResult
   * \param params Parameters describing some cut options, find more \ref MR::CutMeshParameters
   * \return New edges that correspond to given contours, find more \ref MR::CutMeshResult
   * \parblock
-  * \warning Input contours should have no intersections, faces where contours intersects (`bad faces`) will not be allowed for fill
+  * \warning Input contours should have no intersections, faces where contours intersects (`bad faces`) will not be allowed for fill,
+  * unless \ref CutMeshParameters::forceFill is set
   * \endparblock
   * \parblock
   * \warning Input mesh will be changed in any case, if `bad faces` are in mesh, mesh will be spoiled, \n

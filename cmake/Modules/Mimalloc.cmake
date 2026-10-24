@@ -3,11 +3,17 @@
 # An application overriding malloc in its executables with mr_enable_mimalloc sets MR_MIMALLOC_OVERRIDE=ON,
 # and MRTest and MeshViewer override malloc too; the override uses the same mimalloc as the libraries.
 # Emscripten builds get mimalloc from -sMALLOC=mimalloc instead, see ConfigureEmscripten.cmake.
+# macOS Homebrew builds use std::allocator: Homebrew's mimalloc.h of any version comes first in the include path there.
 option(MR_MIMALLOC_OVERRIDE "Executables override malloc with the mimalloc of MeshLib libraries" OFF)
+if(EMSCRIPTEN OR (APPLE AND MESHLIB_USE_HOMEBREW))
+  set(MR_STD_ALLOCATOR ON)
+else()
+  set(MR_STD_ALLOCATOR OFF)
+endif()
 
 # mr_find_mimalloc()
 #
-# Provides the `mimalloc` target for MeshLib libraries (not in Emscripten builds).
+# Provides the `mimalloc` target for MeshLib libraries (unless MR_STD_ALLOCATOR).
 # Windows: vcpkg's mimalloc[override], whose redirect engages only in mr_enable_mimalloc executables.
 # macOS and Linux: MeshLib's own non-override mimalloc, named MRMimalloc: an override one crashes a plain Python loading it late.
 set(MR_MIMALLOC_PACKAGE_LOCK ${CMAKE_CURRENT_LIST_DIR}/../../thirdparty/cpm/package-lock.cmake)
@@ -87,7 +93,14 @@ function(mr_enable_mimalloc target)
       set_property(TARGET ${target} PROPERTY LINK_LIBRARIES mimalloc)
     endif()
     target_link_options(${target} PRIVATE "/INCLUDE:mi_version")
-  elseif(NOT EMSCRIPTEN)
+  elseif(EMSCRIPTEN)
+    # -sMALLOC=mimalloc, see ConfigureEmscripten.cmake
+  elseif(MR_STD_ALLOCATOR)
+    # macOS Homebrew: its shared mimalloc loaded at launch replaces malloc for the whole process;
+    # MeshLib libraries use std::allocator there
+    find_package(mimalloc 3.5 CONFIG REQUIRED)
+    target_link_libraries(${target} PRIVATE mimalloc)
+  else()
     # malloc and new forward to the libraries' MRMimalloc, so the process has one mimalloc;
     # first in the link order, before libstdc++ and libc on Linux; dyld interposes it on macOS
     get_target_property(_existing_libs ${target} LINK_LIBRARIES)

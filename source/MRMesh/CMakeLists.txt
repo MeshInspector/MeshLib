@@ -61,7 +61,10 @@ endif()
 target_link_libraries(${PROJECT_NAME} PRIVATE libzip::zip)
 
 # MR::Allocator, see MRAllocator.h
-IF(NOT EMSCRIPTEN)
+IF(MR_STD_ALLOCATOR)
+  # also for code built against installed MeshLib, which does not see config_cmake.h
+  target_compile_definitions(${PROJECT_NAME} PUBLIC MR_STD_ALLOCATOR=1)
+ELSE()
   mr_find_mimalloc()
   target_link_libraries(${PROJECT_NAME} PUBLIC mimalloc)
 ENDIF()

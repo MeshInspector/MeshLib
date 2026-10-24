@@ -3,8 +3,9 @@
 #include "MRMeshFwd.h"
 #include <memory>
 
-// MR_MIMALLOC_OVERRIDE executables forward malloc to the same mimalloc, see mr_enable_mimalloc
-#ifndef __EMSCRIPTEN__
+// MR_MIMALLOC_OVERRIDE executables forward malloc to the same mimalloc, see mr_enable_mimalloc;
+// MR_STD_ALLOCATOR in macOS Homebrew builds, see cmake/Modules/Mimalloc.cmake
+#if !defined( __EMSCRIPTEN__ ) && !defined( MR_STD_ALLOCATOR )
 #define MR_ALLOCATOR_IS_MIMALLOC
 #endif
 
@@ -24,7 +25,7 @@ namespace MR
 {
 
 /// allocator of MeshLib containers that benefit from mimalloc: mimalloc explicitly,
-/// std::allocator in Emscripten builds, where malloc is mimalloc already (-sMALLOC=mimalloc)
+/// std::allocator in Emscripten builds, where malloc is mimalloc already (-sMALLOC=mimalloc), and in macOS Homebrew builds
 #ifdef MR_ALLOCATOR_IS_MIMALLOC
 template <typename T>
 using Allocator = mi_stl_allocator<T>;

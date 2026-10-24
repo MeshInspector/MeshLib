@@ -79,7 +79,7 @@ if ($dumpbin) {
     # but not in MeshViewer.exe (so failures there are invisible to the
     # current Start-and-Exit smoke test).
     foreach ($target in 'MeshViewer.exe','MRMesh.dll','MRTest.exe',
-                        'python312.dll','python3.dll',
+                        'python312.dll','python314.dll','python3.dll',
                         'MREmbeddedPython.dll','MRPython.dll',
                         'pybind11nonlimitedapi_stubs.dll') {
         if (Test-Path $target) {

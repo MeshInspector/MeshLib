@@ -129,7 +129,7 @@ set(MESHLIB_PACKAGE_mbedtls
   GIT_TAG v3.5.0
 )
 
-# MRMimalloc (see mr_find_mimalloc in cmake/Modules/Mimalloc.cmake), the same version as thirdparty/vcpkg/ports-unix/mimalloc
+# MRMimalloc (see mr_find_mimalloc in cmake/Modules/Mimalloc.cmake), the same version as the vcpkg mimalloc port
 set(MESHLIB_PACKAGE_mimalloc
   GIT_REPOSITORY https://github.com/microsoft/mimalloc.git
   GIT_TAG v3.5.3

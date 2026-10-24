@@ -188,10 +188,12 @@ jobs:
 
       - name: Create virtualenv
         run: |
+          PYTHON=python3.12
           if [ "${{ matrix.lib-source }}" = "vcpkg" ] ; then
             PATH="$PWD/vcpkg_installed/${VCPKG_TRIPLET}/tools/python3:$PATH"
+            PYTHON=python3
           fi
-          python3.12 -m venv .venv
+          $PYTHON -m venv .venv
           . .venv/bin/activate
           echo PATH=$PATH >> $GITHUB_ENV
 
@@ -273,7 +275,7 @@ jobs:
           make -f scripts/mrbind/generate.mk \
             -B --trace \
             MODE=none \
-            PYTHON_PKGCONF_NAME=python-3.12-embed \
+            PYTHON_PKGCONF_NAME=python-$(python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])')-embed \
             MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin \
             DEPS_BASE_DIR=${DEPS_BASE_DIR}
 

@@ -15,7 +15,7 @@ endif()
 #
 # Provides the `mimalloc` target for MeshLib libraries (unless MR_STD_ALLOCATOR).
 # Windows: vcpkg's mimalloc[override], whose redirect engages only in mr_enable_mimalloc executables.
-# macOS and Linux: the dependencies' mimalloc 3.5 without the malloc override (thirdparty/cpm, thirdparty/vcpkg/ports-unix):
+# macOS and Linux: the dependencies' mimalloc 3.5 without the malloc override (thirdparty/cpm, vcpkg with MeshLib's triplets):
 # an override one crashes a plain Python loading it late, and a dynamic 3.4.3 aborts at launch on macOS 13.
 function(mr_find_mimalloc)
   if(WIN32)

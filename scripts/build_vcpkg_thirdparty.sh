@@ -24,8 +24,6 @@ fi
 if [ -n "${CI}" ] ; then
   VCPKG_INSTALL_FLAGS=--debug
 fi
-# mimalloc 3.5.3 for MeshLib libraries on macOS and Linux, without the malloc override, see the port
-VCPKG_INSTALL_FLAGS="${VCPKG_INSTALL_FLAGS} --overlay-ports=${BASE_DIR}/thirdparty/vcpkg/ports-unix"
 
 vcpkg install \
     --x-manifest-root=${BASE_DIR}/thirdparty/vcpkg \

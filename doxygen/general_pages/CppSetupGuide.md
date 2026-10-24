@@ -107,7 +107,7 @@ git clone https://github.com/microsoft/vcpkg.git
    4. **Navigate to the** `vcpkg` **directory**:
 ```cmd
 cd vcpkg
-git checkout 2026.07.29
+git checkout 2026.10.16
 ```
    5. **Run the bootstrap script to build the** `vcpkg` **executable**:
 ```cmd

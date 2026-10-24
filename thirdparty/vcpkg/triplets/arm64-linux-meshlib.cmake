@@ -8,6 +8,12 @@ if(PORT STREQUAL "zlib-ng")
   set(VCPKG_LIBRARY_LINKAGE static)
 endif()
 
+# the mimalloc of MeshLib libraries (no malloc override, see vcpkg.json): dlopen-safe thread-locals,
+# for a plain Python loading MeshLib late
+if(PORT STREQUAL "mimalloc")
+  set(VCPKG_CMAKE_CONFIGURE_OPTIONS -DMI_LOCAL_DYNAMIC_TLS=ON)
+endif()
+
 set(VCPKG_CMAKE_SYSTEM_NAME Linux)
 set(VCPKG_BUILD_TYPE release)
 

@@ -635,6 +635,185 @@ TEST( MRMesh, CutMeshClosedContourStartsAtTouchedPoint )
     EXPECT_EQ( cut.topology.numValidVerts(), mesh.topology.numValidVerts() + 3 );
 }
 
+// the same with the touched point on an edge, the vertex in the face on the left of the contour's edge or on its right
+TEST( MRMesh, CutMeshClosedContourStartsAtTouchedEdgePoint )
+{
+    // 3x3 squares in XY plane, vertex 4 * y + x is at ( x, y )
+    Mesh mesh;
+    Triangulation t;
+    for ( int y = 0; y < 4; ++y )
+        for ( int x = 0; x < 4; ++x )
+            mesh.points.push_back( Vector3f( float( x ), float( y ), 0.0f ) );
+    for ( int y = 0; y < 3; ++y )
+    {
+        for ( int x = 0; x < 3; ++x )
+        {
+            const VertId v( 4 * y + x );
+            t.push_back( { v, v + 1, v + 5 } );
+            t.push_back( { v, v + 5, v + 4 } );
+        }
+    }
+    mesh.topology = MeshBuilder::fromTriangles( t );
+    const auto& topology = mesh.topology;
+
+    // faces (5, 6, 10) and (5, 10, 9); edge 6-10 is a side of (5, 6, 10) opposite to v
+    const auto v = 5_v;
+    const auto g = topology.left( topology.findEdge( v, 10_v ) );
+    const Vector3f x( 2.0f, 1.5f, 0.0f );
+    for ( bool vOnRight : { true, false } )
+    {
+        const auto e = vOnRight ? topology.findEdge( 10_v, 6_v ) : topology.findEdge( 6_v, 10_v );
+        ASSERT_EQ( topology.dest( topology.next( vOnRight ? e.sym() : e ) ), v );
+        OneMeshContour contour;
+        contour.closed = true;
+        contour.intersections = {
+            { e, x },
+            { v, mesh.points[v] },
+            { g, Vector3f( 1.6f, 1.8f, 0.0f ) },
+            { g, Vector3f( 1.2f, 1.6f, 0.0f ) },
+            { v, mesh.points[v] },
+            { e, x } };
+
+        Mesh cut = mesh;
+        auto res = cutMesh( cut, { contour } );
+        EXPECT_TRUE( cut.topology.checkValidity() ) << vOnRight;
+        EXPECT_TRUE( res.fbsWithContourIntersections.none() ) << vOnRight;
+        ASSERT_EQ( res.resultCut.size(), 1 );
+        ASSERT_EQ( res.resultCut[0].size(), 5 );
+        EXPECT_EQ( res.resultCut[0][4], res.resultCut[0][0].sym() ) << vOnRight;
+        EXPECT_EQ( cut.topology.findNumHoles(), 1 ) << vOnRight;
+        EXPECT_NEAR( cut.area(), mesh.area(), 1e-5f ) << vOnRight;
+        EXPECT_EQ( cut.topology.numValidVerts(), mesh.topology.numValidVerts() + 3 ) << vOnRight;
+    }
+}
+
+// an open contour from a mesh vertex ends at a point on an edge, or starts there and goes to the vertex,
+// the vertex in the face on the left of the edge or on its right: the path edge is on the side of the vertex at the point
+TEST( MRMesh, CutMeshOpenContourEndsAtEdgePoint )
+{
+    // 3x3 squares in XY plane, vertex 4 * y + x is at ( x, y )
+    Mesh mesh;
+    Triangulation t;
+    for ( int y = 0; y < 4; ++y )
+        for ( int x = 0; x < 4; ++x )
+            mesh.points.push_back( Vector3f( float( x ), float( y ), 0.0f ) );
+    for ( int y = 0; y < 3; ++y )
+    {
+        for ( int x = 0; x < 3; ++x )
+        {
+            const VertId v( 4 * y + x );
+            t.push_back( { v, v + 1, v + 5 } );
+            t.push_back( { v, v + 5, v + 4 } );
+        }
+    }
+    mesh.topology = MeshBuilder::fromTriangles( t );
+    const auto& topology = mesh.topology;
+
+    // edge 6-10 with face (5, 6, 10) on its left and (6, 11, 10) on its right
+    const auto e = topology.findEdge( 6_v, 10_v );
+    ASSERT_EQ( topology.dest( topology.next( e ) ), 5_v );
+    ASSERT_EQ( topology.dest( topology.prev( e ) ), 11_v );
+    const Vector3f x( 2.0f, 1.5f, 0.0f );
+    for ( auto v : { 5_v, 11_v } )
+    {
+        for ( bool ends : { true, false } )
+        {
+            OneMeshContour contour;
+            contour.closed = false;
+            contour.intersections = { { v, mesh.points[v] }, { e, x } };
+            if ( !ends )
+                std::swap( contour.intersections[0], contour.intersections[1] );
+
+            Mesh cut = mesh;
+            auto res = cutMesh( cut, { contour } );
+            SCOPED_TRACE( std::string( v == 5_v ? "vertex on the left" : "vertex on the right" ) + ( ends ? ", ends at the point" : ", starts at the point" ) );
+            EXPECT_TRUE( cut.topology.checkValidity() );
+            EXPECT_TRUE( res.fbsWithContourIntersections.none() );
+            EXPECT_EQ( res.resultCut.size(), 1 );
+            EXPECT_EQ( cut.topology.findNumHoles(), 1 );
+            EXPECT_NEAR( cut.area(), mesh.area(), 1e-5f );
+            EXPECT_EQ( cut.topology.numValidVerts(), mesh.topology.numValidVerts() + 1 );
+        }
+    }
+}
+
+// a closed contour around a triangle in one face touches a side of the face at point x from a corner of the face and a point inside it:
+// both path edges at x are in that face, in either order around x; in both directions, starting at every point of the contour;
+// in the face on the left of the side's edge and on its right
+TEST( MRMesh, CutMeshContourFoldsAtEdgePointInOneFace )
+{
+    // 3x3 squares in XY plane, vertex 4 * y + x is at ( x, y )
+    Mesh mesh;
+    Triangulation t;
+    for ( int y = 0; y < 4; ++y )
+        for ( int x = 0; x < 4; ++x )
+            mesh.points.push_back( Vector3f( float( x ), float( y ), 0.0f ) );
+    for ( int y = 0; y < 3; ++y )
+    {
+        for ( int x = 0; x < 3; ++x )
+        {
+            const VertId v( 4 * y + x );
+            t.push_back( { v, v + 1, v + 5 } );
+            t.push_back( { v, v + 5, v + 4 } );
+        }
+    }
+    mesh.topology = MeshBuilder::fromTriangles( t );
+    const auto& topology = mesh.topology;
+
+    // edge 6-10 with face (5, 6, 10) on its left and (6, 11, 10) on its right
+    const auto e = topology.findEdge( 6_v, 10_v );
+    ASSERT_EQ( topology.dest( topology.next( e ) ), 5_v );
+    ASSERT_EQ( topology.dest( topology.prev( e ) ), 11_v );
+    const auto fl = topology.left( e ), fr = topology.right( e );
+    const Vector3f x( 2.0f, 1.5f, 0.0f );
+    struct Case
+    {
+        VertId v;
+        FaceId f;
+        Vector3f q;
+        bool fromQ; // the contour goes from q to x, otherwise from x to q
+    };
+    std::vector<Case> cases;
+    // on the left, q before 5 counterclockwise around x and after it
+    for ( auto q : { Vector3f( 1.6f, 1.5f, 0.0f ), Vector3f( 1.8f, 1.3f, 0.0f ) } )
+        for ( bool fromQ : { true, false } )
+            cases.push_back( { 5_v, fl, q, fromQ } );
+    // on the right, q before 11 counterclockwise around x and after it; a path edge from x into the face on the right of its edge
+    // to a point inside the face is taken in the face on the left, so only the direction from q to x
+    for ( auto q : { Vector3f( 2.2f, 1.4f, 0.0f ), Vector3f( 2.4f, 1.8f, 0.0f ) } )
+        cases.push_back( { 11_v, fr, q, true } );
+
+    for ( const auto& c : cases )
+    {
+        std::vector<OneMeshIntersection> tri{ { c.v, mesh.points[c.v] }, { e, x }, { c.f, c.q } };
+        if ( c.fromQ )
+            std::swap( tri[1], tri[2] );
+        const auto& p0 = tri[0].coordinate;
+        const auto triArea = 0.5f * cross( tri[1].coordinate - p0, tri[2].coordinate - p0 ).z;
+        for ( int start = 0; start < 3; ++start )
+        {
+            SCOPED_TRACE( "v" + std::to_string( int( c.v ) ) + " q( " + std::to_string( c.q.x ) + ", " + std::to_string( c.q.y ) + " )"
+                + ( c.fromQ ? " from q" : " to q" ) + ", start " + std::to_string( start ) );
+            OneMeshContour contour;
+            contour.closed = true;
+            for ( int i = 0; i <= 3; ++i )
+                contour.intersections.push_back( tri[( start + i ) % 3] );
+
+            Mesh cut = mesh;
+            auto res = cutMesh( cut, { contour } );
+            EXPECT_TRUE( cut.topology.checkValidity() );
+            EXPECT_TRUE( res.fbsWithContourIntersections.none() );
+            ASSERT_EQ( res.resultCut.size(), 1 );
+            EXPECT_EQ( cut.topology.findNumHoles(), 1 );
+            EXPECT_NEAR( cut.area(), mesh.area(), 1e-5f );
+            EXPECT_EQ( cut.topology.numValidVerts(), mesh.topology.numValidVerts() + 2 );
+            // the triangle is on the left of a counterclockwise contour
+            const auto inside = fillContourLeft( cut.topology, res.resultCut[0] );
+            EXPECT_NEAR( cut.area( triArea > 0 ? inside : cut.topology.getValidFaces() - inside ), std::abs( triArea ), 1e-5f );
+        }
+    }
+}
+
 // a contour inside one triangle (a lone contour) is connected with the rest of the triangle by the cut, near the origin and far from it,
 // also where the contour fills most of the triangle; a closed contour is an island in the hole of the triangle, an open one a slit
 TEST( MRMesh, CutMeshLoneContour )

@@ -577,7 +577,7 @@ void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSe
         }
         else
         {
-            assert( plan.numTris >= 3 );
+            assert( plan.numTris >= 2 );
             fillHoleTrivially( mesh, a0, outNewFaces );
         }
     }
@@ -684,10 +684,16 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
         ++loopEdgesCounter;
     } while ( a != a0 );
 
-    if ( loopEdgesCounter <= 3 )
+    if ( loopEdgesCounter == 3 )
     {
         // no new edges, one triangle
         res.numTris = 1;
+        return res;
+    }
+    if ( loopEdgesCounter < 3 )
+    {
+        // "trivial" fill: no triangle can be made on the hole's vertices alone
+        res.numTris = loopEdgesCounter;
         return res;
     }
 

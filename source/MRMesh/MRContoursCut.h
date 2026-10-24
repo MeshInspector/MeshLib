@@ -89,6 +89,10 @@ struct CutMeshResult
   * \warning Input contours should have no intersections, faces where contours intersects (`bad faces`) will not be allowed for fill
   * \endparblock
   * \parblock
+  * \warning Every two consecutive intersections of a contour should lie in one face, and a contour should not fold back
+  * at a point inside an edge: a mesh vertex next to such a point is the third vertex of the face the contour goes in there
+  * \endparblock
+  * \parblock
   * \warning Input mesh will be changed in any case, if `bad faces` are in mesh, mesh will be spoiled, \n
   * so if you cannot guarantee contours without intersections better make copy of mesh, before using this function
   * \endparblock

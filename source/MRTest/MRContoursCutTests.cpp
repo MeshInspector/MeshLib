@@ -539,7 +539,9 @@ TEST( MRMesh, CutMeshOpenContourTouchesPoint )
         { { ip, iv, ix, ix2 }, 2 },
         { { ip, iv, ip }, 0 },
         { { iv, ix }, 1 },
-        { { ix, ie, iy }, 3 } };
+        { { ix, ie, iy }, 3 },
+        // a point touched from both ends: two new vertices at one position, two spikes in one hole
+        { { ix, iv, ix }, 2 } };
     for ( const auto& [points, numNewVerts] : cases )
     {
         for ( auto part : { CutMeshParameters::FillPart::Both, CutMeshParameters::FillPart::Left, CutMeshParameters::FillPart::Right } )

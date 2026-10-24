@@ -684,16 +684,10 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
         ++loopEdgesCounter;
     } while ( a != a0 );
 
-    if ( loopEdgesCounter == 3 )
+    if ( loopEdgesCounter <= 3 )
     {
-        // no new edges, one triangle
-        res.numTris = 1;
-        return res;
-    }
-    if ( loopEdgesCounter < 3 )
-    {
-        // "trivial" fill: no triangle can be made on the hole's vertices alone
-        res.numTris = loopEdgesCounter;
+        // no new edges: one triangle, or a "trivial" fill if no triangle can be made on the hole's vertices alone
+        res.numTris = loopEdgesCounter == 3 ? 1 : loopEdgesCounter;
         return res;
     }
 

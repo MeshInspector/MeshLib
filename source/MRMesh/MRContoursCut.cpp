@@ -142,8 +142,12 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
     const auto totalExpectedVerts = topology.vertSize() + numVerts;
     const auto totalExpectedEdges = topology.edgeSize() + numEdges;
 
+    // the fill of the holes adds about half as many edges and a bit more faces than the cut adds edges: reserving for both here,
+    // the topology of the whole mesh is copied to the larger buffers once, not again before the fill
     topology.vertReserve( totalExpectedVerts );
-    topology.edgeReserve( totalExpectedEdges );
+    topology.edgeReserve( totalExpectedEdges + numEdges );
+    topology.faceReserve( topology.faceSize() + numEdges );
+    mesh.points.reserve( totalExpectedVerts );
 
     PreCutResult res;
     res.paths.resize( contours.size() );

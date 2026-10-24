@@ -9,9 +9,11 @@ vcpkg_from_github(
 )
 
 set(EXTRA_OPTIONS "")
+# Pin the vcpkg Python; otherwise FindPython may pick a host installation of another version.
 if(VCPKG_TARGET_IS_WINDOWS)
-    # Pin the vcpkg Python; otherwise FindPython may pick a host installation.
     list(APPEND EXTRA_OPTIONS "-DPython_EXECUTABLE=${CURRENT_INSTALLED_DIR}/tools/python3/python.exe")
+elseif(VCPKG_TARGET_IS_OSX OR "vcpkg-python" IN_LIST FEATURES)
+    list(APPEND EXTRA_OPTIONS "-DPython_EXECUTABLE=${CURRENT_INSTALLED_DIR}/tools/python3/python3")
 endif()
 
 vcpkg_cmake_configure(

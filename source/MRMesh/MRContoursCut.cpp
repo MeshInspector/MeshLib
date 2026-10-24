@@ -288,13 +288,21 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
             if ( i + 1 < inContour.size() )
             {
                 const auto nextVert = std::get_if<VertId>( &inContour[i + 1].primitiveId );
-                out = path[i] = vert && nextVert ? topology.findEdge( *vert, *nextVert ) : topology.makeEdge();
+                const auto prevVert = i > 0 ? std::get_if<VertId>( &inContour[i - 1].primitiveId ) : nullptr;
+                if ( vert && nextVert )
+                    out = topology.findEdge( *vert, *nextVert );
+                else if ( !vert && nextVert && prevVert && *prevVert == *nextVert )
+                    out = in; // the contour touches this point from a mesh vertex and goes back along the same edge
+                else
+                    out = topology.makeEdge();
+                path[i] = out;
             }
             if ( vert )
             {
-                if ( out && out >= oldEdgesSize )
+                // a path edge with an origin is already in place: an edge of the old mesh, or the edge back from a touched point
+                if ( out && !topology.org( out ) )
                     spliceAtVert( *vert, faces[i].left, out, contourId, i + 1 );
-                if ( in && in >= oldEdgesSize )
+                if ( in && !topology.org( in ) )
                     spliceAtVert( *vert, faces[i - 1].left, in, contourId, i - 1 );
                 continue;
             }
@@ -1028,6 +1036,9 @@ FaceBitSet getBadFacesAfterCut( const MeshTopology& topology, const PreCutResult
             if ( !oldf )
                 continue;
             if ( visited.test( e0 ) || visited.test( e0.sym() ) )
+                continue;
+            // the hole meets the sym of an edge to a touched point and back by itself
+            if ( ( edgeId > 0 && path[edgeId - 1] == e0.sym() ) || ( edgeId + 1 < path.size() && path[edgeId + 1] == e0.sym() ) )
                 continue;
             for ( auto e : leftRing( topology, e0 ) )
             {

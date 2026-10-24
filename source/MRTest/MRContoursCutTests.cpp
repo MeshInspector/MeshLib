@@ -487,6 +487,54 @@ TEST( MRMesh, CutMeshContourLeavesAndEntersVertexInOneFace )
     }
 }
 
+// a closed contour goes from a mesh vertex to a point in a face and back to the vertex, then around a loop in the next face:
+// the cut goes along one edge to the point and back, with no hole of two edges between them to fill
+TEST( MRMesh, CutMeshContourTouchesPointFromVertex )
+{
+    // 3x3 squares in XY plane, vertex 4 * y + x is at ( x, y )
+    Mesh mesh;
+    Triangulation t;
+    for ( int y = 0; y < 4; ++y )
+        for ( int x = 0; x < 4; ++x )
+            mesh.points.push_back( Vector3f( float( x ), float( y ), 0.0f ) );
+    for ( int y = 0; y < 3; ++y )
+    {
+        for ( int x = 0; x < 3; ++x )
+        {
+            const VertId v( 4 * y + x );
+            t.push_back( { v, v + 1, v + 5 } );
+            t.push_back( { v, v + 5, v + 4 } );
+        }
+    }
+    mesh.topology = MeshBuilder::fromTriangles( t );
+
+    // faces (5, 6, 10) and (5, 10, 9)
+    const auto v = 5_v;
+    const auto f = mesh.topology.left( mesh.topology.findEdge( v, 6_v ) );
+    const auto g = mesh.topology.left( mesh.topology.findEdge( v, 10_v ) );
+    OneMeshContour contour;
+    contour.closed = true;
+    contour.intersections = {
+        { v, mesh.points[v] },
+        { f, Vector3f( 1.8f, 1.2f, 0.0f ) },
+        { v, mesh.points[v] },
+        { g, Vector3f( 1.6f, 1.8f, 0.0f ) },
+        { g, Vector3f( 1.2f, 1.6f, 0.0f ) },
+        { v, mesh.points[v] } };
+
+    Mesh cut = mesh;
+    auto res = cutMesh( cut, { contour } );
+    EXPECT_TRUE( cut.topology.checkValidity() );
+    EXPECT_TRUE( res.fbsWithContourIntersections.none() );
+    ASSERT_EQ( res.resultCut.size(), 1 );
+    ASSERT_EQ( res.resultCut[0].size(), 5 );
+    EXPECT_EQ( res.resultCut[0][1], res.resultCut[0][0].sym() );
+    EXPECT_EQ( cut.topology.findNumHoles(), 1 );
+    EXPECT_NEAR( cut.area(), mesh.area(), 1e-5f );
+    // only the three points of the contour are new vertices
+    EXPECT_EQ( cut.topology.numValidVerts(), mesh.topology.numValidVerts() + 3 );
+}
+
 // a contour inside one triangle (a lone contour) is connected with the rest of the triangle by the cut, near the origin and far from it,
 // also where the contour fills most of the triangle; a closed contour is an island in the hole of the triangle, an open one a slit
 TEST( MRMesh, CutMeshLoneContour )

@@ -792,8 +792,9 @@ TEST( MRMesh, CutMeshContourFoldsAtEdgePointInOneFace )
         const auto triArea = 0.5f * cross( tri[1].coordinate - p0, tri[2].coordinate - p0 ).z;
         for ( int start = 0; start < 3; ++start )
         {
-            SCOPED_TRACE( "v" + std::to_string( int( c.v ) ) + " q( " + std::to_string( c.q.x ) + ", " + std::to_string( c.q.y ) + " )"
-                + ( c.fromQ ? " from q" : " to q" ) + ", start " + std::to_string( start ) );
+            // streamed, since GCC 12 takes a concatenation of std::string here for an overflow (-Wstringop-overflow)
+            SCOPED_TRACE( testing::Message() << "v" << int( c.v ) << " q( " << c.q.x << ", " << c.q.y << " )"
+                << ( c.fromQ ? " from q" : " to q" ) << ", start " << start );
             OneMeshContour contour;
             contour.closed = true;
             for ( int i = 0; i <= 3; ++i )

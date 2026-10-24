@@ -174,7 +174,6 @@ jobs:
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=OFF
             -DMRVIEWER_NO_GTK=ON
             -DMRVIEWER_WITH_BUNDLED_CURL=ON
-            -DMR_MIMALLOC_OVERRIDE=ON
             -DCMAKE_CXX_FLAGS=${{ matrix.compiler == 'Clang' && format('--gcc-install-dir={0}', matrix.gcc-install-dir) || '' }}
 
       - name: Wait for C bindings

@@ -26,7 +26,6 @@ extern "C" bool mi_is_in_heap_region( const void* p );
 namespace MR
 {
 
-#ifdef MR_MIMALLOC_OVERRIDE
 // Verifies mimalloc replaced the system allocator for this executable, see mr_enable_mimalloc
 // in MeshLib/cmake/Modules/Mimalloc.cmake. Skipped on Windows when MIMALLOC_DISABLE_REDIRECT=1
 // (mimalloc's own runtime kill-switch).
@@ -57,25 +56,6 @@ TEST( MRMesh, MimallocRedirectActive )
     malloc_zone_free( malloc_default_zone(), z );
 #endif
 }
-#else
-// MeshLib's own executables keep the system allocator, except in Emscripten builds
-TEST( MRMesh, MimallocMallocOverride )
-{
-#ifdef __EMSCRIPTEN__
-    constexpr bool expected = true;
-#else
-    constexpr bool expected = false;
-#endif
-#ifdef _WIN32
-    EXPECT_FALSE( mi_is_redirected() );
-#endif
-
-    void* p = std::malloc( 64 );
-    ASSERT_NE( p, nullptr );
-    EXPECT_EQ( mi_is_in_heap_region( p ), expected );
-    std::free( p );
-}
-#endif
 
 #ifdef MR_ALLOCATOR_IS_MIMALLOC
 // BitSet allocates with mimalloc explicitly, see BitSet::Blocks
@@ -118,7 +98,7 @@ TEST( MRMesh, MimallocSharedLibrary )
         counts.add( _dyld_get_image_name( i ) );
 #endif
     EXPECT_EQ( counts.mimallocs, 1 );
-#if defined( MR_MIMALLOC_OVERRIDE ) && !defined( MR_STD_ALLOCATOR )
+#ifndef MRMESH_NO_MIMALLOC
     // forwards malloc and new to the libraries' mimalloc, see mr_enable_mimalloc
     EXPECT_EQ( counts.overrides, 1 );
 #else

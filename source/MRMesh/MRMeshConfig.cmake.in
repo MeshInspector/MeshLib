@@ -10,7 +10,7 @@ find_dependency(spdlog 1.9)
 find_dependency(TBB 2020.1)
 find_dependency(tl-expected)
 # MR::Allocator, see MRAllocator.h
-if(NOT "@MR_STD_ALLOCATOR@" AND NOT TARGET mimalloc)
+if(NOT "@MRMESH_NO_MIMALLOC@" AND NOT TARGET mimalloc)
   if(WIN32)
     find_dependency(mimalloc)
   else()

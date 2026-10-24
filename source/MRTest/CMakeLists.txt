@@ -2,8 +2,8 @@ project(MRTest CXX)
 
 file(GLOB SOURCES "*.cpp")
 include(Mimalloc)
-# no mimalloc in the process
-IF((EMSCRIPTEN AND NOT MR_EMSCRIPTEN_MIMALLOC) OR (NOT EMSCRIPTEN AND MR_STD_ALLOCATOR AND NOT MR_MIMALLOC_OVERRIDE))
+# malloc is not mimalloc
+IF((EMSCRIPTEN AND NOT MR_EMSCRIPTEN_MIMALLOC) OR (NOT EMSCRIPTEN AND MRMESH_NO_MIMALLOC AND NOT (APPLE AND MESHLIB_USE_HOMEBREW)))
   list(FILTER SOURCES EXCLUDE REGEX "MRMimallocRedirectTests\.cpp$")
 ENDIF()
 
@@ -35,11 +35,7 @@ ELSE()
   )
 ENDIF()
 
-IF(MR_MIMALLOC_OVERRIDE)
-  mr_enable_mimalloc(${PROJECT_NAME})
-  # for MRMimallocRedirectTests.cpp
-  target_compile_definitions(${PROJECT_NAME} PRIVATE MR_MIMALLOC_OVERRIDE)
-ENDIF()
+mr_enable_mimalloc(${PROJECT_NAME})
 
 add_test(
   NAME ${PROJECT_NAME}

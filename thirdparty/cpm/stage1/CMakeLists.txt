@@ -132,7 +132,7 @@ if(NOT TBB_FOUND)
   add_onetbb()
 endif()
 
-# shared and without malloc override: MeshLib libraries use it, and MR_MIMALLOC_OVERRIDE executables forward malloc to it,
+# shared and without malloc override: MeshLib libraries use it, and mr_enable_mimalloc executables forward malloc to it,
 # see mr_find_mimalloc in cmake/Modules/Mimalloc.cmake
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   find_package(mimalloc 3.5 CONFIG QUIET)

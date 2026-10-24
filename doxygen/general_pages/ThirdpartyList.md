@@ -131,7 +131,7 @@ Below is a summary of all modules and their dependencies, so you can see what ea
 
 ### Bundled executables
 
-MeshLib libraries allocate some containers (e.g. BitSet) with the mimalloc allocator explicitly and leave the system allocator in place; the distributions ship it as a shared library, and WebAssembly builds embed Emscripten's bundled copy of it instead.
+MeshLib libraries allocate some containers (e.g. BitSet) with the mimalloc allocator explicitly, and MeshLib's executables (MeshViewer, MRTest) replace the system allocator with the same mimalloc; the distributions ship it as a shared library, and WebAssembly builds embed Emscripten's bundled copy of it instead.
 
 |Name                                                                              |Description                                                                  |License                                    |
 |-----------------------------------------------------------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|

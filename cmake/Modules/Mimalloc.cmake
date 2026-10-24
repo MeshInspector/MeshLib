@@ -1,11 +1,9 @@
 # MeshLib libraries allocate some containers (e.g. BitSet::Blocks) explicitly with mimalloc and never override malloc,
-# so they can be loaded into any process (Python, .NET, Java).
-# An application overriding malloc in its executables with mr_enable_mimalloc sets MR_MIMALLOC_OVERRIDE=ON,
-# and MRTest and MeshViewer override malloc too; the override uses the same mimalloc as the libraries.
+# so they can be loaded into any process (Python, .NET, Java); executables override malloc with the same mimalloc,
+# see mr_enable_mimalloc.
 # Without it (MRMESH_NO_MIMALLOC) MeshLib libraries use std::allocator: by default in Emscripten builds, which get mimalloc
 # from -sMALLOC=mimalloc (see ConfigureEmscripten.cmake), and in macOS Homebrew builds, where Homebrew's mimalloc.h
 # of any version comes first in the include path.
-option(MR_MIMALLOC_OVERRIDE "Executables override malloc with the mimalloc of MeshLib libraries" OFF)
 if(EMSCRIPTEN OR (APPLE AND MESHLIB_USE_HOMEBREW))
   set(_mr_no_mimalloc_default ON)
 else()
@@ -37,10 +35,8 @@ function(mr_find_mimalloc)
     set(MI_BUILD_OBJECT OFF)
     set(MI_BUILD_TESTS OFF)
     set(MI_INSTALL_TOPLEVEL ON)
-    if(MR_MIMALLOC_OVERRIDE)
-      # the allocator of the whole process: release-built in every build type
-      set(CMAKE_BUILD_TYPE Release)
-    endif()
+    # the allocator of the whole process in mr_enable_mimalloc executables: release-built in every build type
+    set(CMAKE_BUILD_TYPE Release)
     FetchContent_Declare(mimalloc ${MESHLIB_PACKAGE_mimalloc})
     # not the headers of another mimalloc version, e.g. Homebrew's from the directory's include_directories
     get_directory_property(_include_dirs INCLUDE_DIRECTORIES)
@@ -53,18 +49,16 @@ function(mr_find_mimalloc)
     set_target_properties(mimalloc PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${_mimalloc_includes}")
     install(TARGETS mimalloc LIBRARY DESTINATION "${MR_MAIN_LIB_DIR}" RUNTIME DESTINATION "${MR_BIN_DIR}")
 
-    if(MR_MIMALLOC_OVERRIDE)
-      # malloc, new and the rest of the system allocation functions, for mr_enable_mimalloc
-      if(APPLE)
-        set(_override_source MRMimallocOverrideMacOS.cpp)
-      else()
-        set(_override_source MRMimallocOverride.cpp)
-      endif()
-      add_library(MRMimallocOverride SHARED ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../../source/MRMimallocOverride/${_override_source})
-      target_link_libraries(MRMimallocOverride PRIVATE mimalloc)
-      target_compile_options(MRMimallocOverride PRIVATE -fno-builtin)
-      install(TARGETS MRMimallocOverride LIBRARY DESTINATION "${MR_MAIN_LIB_DIR}")
+    # malloc, new and the rest of the system allocation functions, for mr_enable_mimalloc
+    if(APPLE)
+      set(_override_source MRMimallocOverrideMacOS.cpp)
+    else()
+      set(_override_source MRMimallocOverride.cpp)
     endif()
+    add_library(MRMimallocOverride SHARED ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../../source/MRMimallocOverride/${_override_source})
+    target_link_libraries(MRMimallocOverride PRIVATE mimalloc)
+    target_compile_options(MRMimallocOverride PRIVATE -fno-builtin)
+    install(TARGETS MRMimallocOverride LIBRARY DESTINATION "${MR_MAIN_LIB_DIR}")
   endif()
 endfunction()
 
@@ -72,9 +66,6 @@ endfunction()
 #
 # Replace the system allocator of an executable with mimalloc for the whole process.
 function(mr_enable_mimalloc target)
-  if(NOT WIN32 AND NOT MR_MIMALLOC_OVERRIDE)
-    message(FATAL_ERROR "mr_enable_mimalloc(${target}) requires MR_MIMALLOC_OVERRIDE=ON")
-  endif()
   if(WIN32)
     # Two conditions must hold for mimalloc's redirect to engage at runtime:
     #   1. /INCLUDE:mi_version pulls mimalloc.dll into the EXE's import table.

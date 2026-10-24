@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRSuppressWarning.h"
+#include "MRMesh/MRAllocator.h"
 
 MR_SUPPRESS_WARNING_PUSH
 #if defined(__EMSCRIPTEN__)

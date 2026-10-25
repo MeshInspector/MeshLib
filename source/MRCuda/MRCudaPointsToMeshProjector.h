@@ -24,7 +24,7 @@ public:
     /// <param name="refObjXf">transform applied to referencing mesh</param>
     /// <param name="upDistLimitSq">maximal squared distance from point to mesh</param>
     /// <param name="loDistLimitSq">minimal squared distance from point to mesh</param>
-    MRCUDA_API void findProjections( std::vector<MR::MeshProjectionResult>& res, const std::vector<Vector3f>& points, const AffineXf3f* objXf, const AffineXf3f* refObjXf, float upDistLimitSq, float loDistLimitSq ) override;
+    MRCUDA_API void findProjections( std::vector<MR::MeshProjectionResult>& res, const VertCoords& points, const AffineXf3f* objXf, const AffineXf3f* refObjXf, float upDistLimitSq, float loDistLimitSq ) override;
 
     /// Returns amount of additional memory needed to compute projections
     MRCUDA_API size_t projectionsHeapBytes( size_t numProjections ) const override;

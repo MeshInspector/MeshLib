@@ -41,7 +41,7 @@ std::optional<VertCoords> findShrinkwrapPositions( const Mesh & mesh, const Mesh
         params.projector->updateMeshData( &refMesh );
         // the projections outside of the region are computed as well to keep one batch call here
         std::vector<MeshProjectionResult> projs( mesh.points.size() );
-        params.projector->findProjections( projs, mesh.points.vec, params.xf, params.refXf, params.upDistLimitSq, params.loDistLimitSq );
+        params.projector->findProjections( projs, mesh.points, params.xf, params.refXf, params.upDistLimitSq, params.loDistLimitSq );
 
         if ( !ParallelFor( 0_v, mesh.points.endId(), [&] ( VertId v )
         {

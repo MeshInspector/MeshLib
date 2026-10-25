@@ -14,7 +14,7 @@ void PointsToMeshProjector::updateMeshData( const Mesh* mesh )
     mesh_ = mesh;
 }
 
-void PointsToMeshProjector::findProjections( std::vector<MeshProjectionResult>& result, const std::vector<Vector3f>& points, const AffineXf3f* objXf, const AffineXf3f* refObjXf, float upDistLimitSq, float loDistLimitSq )
+void PointsToMeshProjector::findProjections( std::vector<MeshProjectionResult>& result, const VertCoords& points, const AffineXf3f* objXf, const AffineXf3f* refObjXf, float upDistLimitSq, float loDistLimitSq )
 {
     MR_TIMER;
     if ( !mesh_ )
@@ -56,7 +56,7 @@ VertScalars findSignedDistances(
     {
         projector->updateMeshData( &refMesh );
         std::vector<MeshProjectionResult> mpRes( testPoints.size() );
-        projector->findProjections( mpRes, testPoints.vec, params.xf, params.refXf, params.upDistLimitSq, params.loDistLimitSq );
+        projector->findProjections( mpRes, testPoints, params.xf, params.refXf, params.upDistLimitSq, params.loDistLimitSq );
 
         ParallelFor( 0_v, testPoints.endId(), [&] ( VertId v )
         {

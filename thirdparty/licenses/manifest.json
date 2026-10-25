@@ -21,7 +21,7 @@
     "no registry port can have moved and the check needs no network; when it differs,",
     "--update-versions re-resolves them and names the ports that actually changed."
   ],
-  "vcpkg_registry_baseline": "9e593bb18ea69cc5095e012465dcd675a822ed0d",
+  "vcpkg_registry_baseline": "9eec002df1cd109f8f104cd966a763daf9751489",
   "components": [
     {
       "id": "Boost",
@@ -49,18 +49,18 @@
         ]
       },
       "version": {
-        "boost-algorithm": "1.91.0#0",
-        "boost-dynamic-bitset": "1.91.0#0",
-        "boost-functional": "1.91.0#0",
-        "boost-integer": "1.91.0#0",
-        "boost-locale": "1.91.0#0",
-        "boost-move": "1.91.0#0",
-        "boost-program-options": "1.91.0#0",
-        "boost-range": "1.91.0#0",
-        "boost-serialization": "1.91.0#0",
-        "boost-signals2": "1.91.0#0",
-        "boost-stacktrace": "1.91.0#0",
-        "boost-url": "1.91.0#0"
+        "boost-algorithm": "1.92.0#0",
+        "boost-dynamic-bitset": "1.92.0#0",
+        "boost-functional": "1.92.0#0",
+        "boost-integer": "1.92.0#0",
+        "boost-locale": "1.92.0#0",
+        "boost-move": "1.92.0#0",
+        "boost-program-options": "1.92.0#0",
+        "boost-range": "1.92.0#0",
+        "boost-serialization": "1.92.0#0",
+        "boost-signals2": "1.92.0#0",
+        "boost-stacktrace": "1.92.0#0",
+        "boost-url": "1.92.0#0"
       }
     },
     {
@@ -274,7 +274,7 @@
         ]
       },
       "version": {
-        "libpng": "1.6.58#0"
+        "libpng": "1.6.59#0"
       }
     },
     {
@@ -409,7 +409,7 @@
       ],
       "license": "PSF-2.0",
       "upstream": "https://www.python.org",
-      "license_source": "https://raw.githubusercontent.com/python/cpython/3.12/LICENSE",
+      "license_source": "https://raw.githubusercontent.com/python/cpython/3.14/LICENSE",
       "source": {
         "type": "vcpkg-registry",
         "ports": [
@@ -417,7 +417,7 @@
         ]
       },
       "version": {
-        "python3": "3.12.13#1"
+        "python3": "3.14.8#0"
       }
     },
     {
@@ -512,7 +512,7 @@
         ]
       },
       "version": {
-        "glfw3": "3.4#1"
+        "glfw3": "3.5.1#0"
       }
     },
     {
@@ -681,7 +681,7 @@
         ]
       },
       "version": {
-        "mimalloc": "3.4.3#0"
+        "mimalloc": "3.5.3#0"
       }
     }
   ]

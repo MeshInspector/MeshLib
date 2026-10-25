@@ -153,8 +153,8 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
     const auto totalExpectedVerts = topology.vertSize() + numVerts;
     const auto totalExpectedEdges = topology.edgeSize() + numEdges;
 
-    // the fill of the holes adds about 0.5 times as many edges and 0.6 times as many faces as the cut adds edges: reserving for both here
-    // copies the topology of the whole mesh to the larger buffers once, not again before the fill
+    // the fill of the holes adds about 0.5 times as many edges and 0.6 times as many faces as the cut adds edges: reserving for both here,
+    // as many as the cut adds for headroom, copies the topology of the whole mesh to the larger buffers once, not again before the fill
     topology.vertReserve( totalExpectedVerts );
     topology.edgeReserve( totalExpectedEdges + numEdges );
     topology.faceReserve( topology.faceSize() + numEdges );
@@ -167,7 +167,7 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
     const auto oldEdgesSize = topology.edgeSize();
 
     // find the old face of every path edge before the topology changes;
-    // the faces of path edges at mesh vertices are removed here (the others by cutOneEdge),
+    // the faces of path edges at mesh vertices are removed here (the others by cutOneEdge or connectLoneContours),
     // and their edges show where to splice the path edges around the vertices
     HashMap<FaceId, std::array<EdgeId, 3>> vertFaces;
     for ( int contourId = 0; contourId < contours.size(); ++contourId )
@@ -198,7 +198,8 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
                 const auto e = va ? pe->sym() : *pe;
                 const auto v = va ? *va : vb ? *vb : VertId{};
                 // precondition: a mesh vertex at the other end is the third vertex of that face, so the contour does not fold back
-                // at the edge; else the path edge goes in the other face, where Release still gets a valid topology
+                // at the edge; a fold puts the path edge in the other face, where Release still gets a valid topology
+                // (a mesh vertex that is no corner of these faces is not handled)
                 const bool fold = v && ( !topology.left( e ) || topology.dest( topology.next( e ) ) != v );
                 assert( !fold );
                 faces[i].left = faces[i].right = topology.left( fold ? e.sym() : e );
@@ -384,68 +385,6 @@ void triangulateContour( Mesh& mesh, EdgeId e, FaceId oldFace, FaceMap* new2OldM
 {
     auto plan = getPlanarHoleFillPlan( mesh, e );
     executeTriangulateContourPlan( mesh, e, plan, oldFace, new2OldMap, new2OldEdgeMap );
-}
-
-/* this function triangulate holes where first and last edge are the same but sym
-       / \
-     /___  \
-   /         \      hole starts with central edge going to triangle and finishes with it (shape can be any, not only triangle)
- /_____________\
-
-edges should be already cut */
-void fixOrphans( Mesh& mesh, const std::vector<EdgePath>& paths, const PathsOldFaces& oldFaces, FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
-{
-
-    MR_TIMER;
-    auto fixOrphan = [&]( EdgeId e, FaceId oldF )
-    {
-        if ( mesh.topology.left( e ).valid() ||
-             mesh.topology.right( e ).valid() )
-            return;
-
-        auto next = mesh.topology.next( e.sym() );
-        auto newEdge = mesh.topology.makeEdge();
-        if ( new2OldEdgeMap )
-            new2OldEdgeMap->map[newEdge.undirected()] = oldF;
-        mesh.topology.splice( e, newEdge );
-        mesh.topology.splice( next.sym(), newEdge.sym() );
-
-        triangulateContour( mesh, e, oldF, new2OldMap, new2OldEdgeMap );
-        triangulateContour( mesh, e.sym(), oldF, new2OldMap, new2OldEdgeMap );
-    };
-    for ( int i = 0; i < paths.size(); ++i )
-    {
-        const auto& path = paths[i];
-        if(path.size() < 2)
-            continue;
-
-        FaceId oldF;
-        // front
-        auto e = path.front();
-        if ( e == mesh.topology.next( e ) )
-        {
-            for ( int j = 0; j < path.size(); ++j )
-            {
-                oldF = oldFaces[i][j].left;
-                if ( oldF.valid() )
-                    break;
-            }
-            fixOrphan( e, oldF );
-        }
-
-        // back
-        e = path.back().sym();
-        if ( e == mesh.topology.next( e ) )
-        {
-            for ( int j = int( path.size() ) - 1; j >= 0; --j )
-            {
-                oldF = oldFaces[i][j].left;
-                if ( oldF.valid() )
-                    break;
-            }
-            fixOrphan( e, oldF );
-        }
-    }
 }
 
 // a lone contour is inside one face crossing none of its edges (e.g. where a tip of the other mesh pokes through it),
@@ -1048,6 +987,19 @@ FaceBitSet getBadFacesAfterCut( const MeshTopology& topology, const PreCutResult
     MR_TIMER;
     FaceBitSet badFacesBS( topology.getValidFaces().size() );
     EdgeBitSet visited( topology.edgeSize() );
+    // whether the path from e on through the points of two edges ends at a point of one edge
+    auto dangles = [&] ( EdgeId e )
+    {
+        for ( auto d = e.sym();; )
+        {
+            const auto n = topology.next( d );
+            if ( n == d )
+                return true;
+            if ( n == e || topology.next( n ) != d )
+                return false;
+            d = n.sym();
+        }
+    };
     for ( int pathId = 0; pathId < preRes.paths.size(); ++pathId )
     {
         const auto& path = preRes.paths[pathId];
@@ -1059,7 +1011,9 @@ FaceBitSet getBadFacesAfterCut( const MeshTopology& topology, const PreCutResult
                 continue;
             if ( visited.test( e0 ) || visited.test( e0.sym() ) )
                 continue;
-            // the hole meets the sym of an edge to a touched point and back by itself (around the start of a closed path too)
+            // the hole meets the sym of a path edge by itself where the path goes along the edge and back (to a touched point
+            // or along an edge of the mesh, also around the start of the path: then it ends where it starts, closed or not),
+            // and where the edge dangles in the hole (at the end of an open contour inside a face, or in a slit)
             const auto prev = edgeId > 0 ? path[edgeId - 1] : path.back();
             const auto next = edgeId + 1 < path.size() ? path[edgeId + 1] : path.front();
             if ( prev == e0.sym() || next == e0.sym() )
@@ -1067,7 +1021,7 @@ FaceBitSet getBadFacesAfterCut( const MeshTopology& topology, const PreCutResult
             for ( auto e : leftRing( topology, e0 ) )
             {
                 visited.set( e );
-                if ( e == e0.sym() )
+                if ( e == e0.sym() && !dangles( e0 ) && !dangles( e0.sym() ) )
                     badFacesBS.autoResizeSet( oldf );
             }
         }
@@ -1256,7 +1210,6 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     cutEdgesIntoPieces( mesh, std::move( preRes.edgeData ), contours, params.sortData, params.new2OldMap, params.new2oldEdgesMap );
     FaceBitSet badLoneFaces;
     connectLoneContours( mesh, contours, loneFaces, preRes, firstNewEdge, params.sortData, params.new2oldEdgesMap, badLoneFaces );
-    fixOrphans( mesh, preRes.paths, preRes.oldEdgesInfo, params.new2OldMap, params.new2oldEdgesMap );
 
     res.fbsWithContourIntersections = getBadFacesAfterCut( mesh.topology, preRes ) | badLoneFaces;
     if ( params.forceFillMode == CutMeshParameters::ForceFill::None && res.fbsWithContourIntersections.any() )

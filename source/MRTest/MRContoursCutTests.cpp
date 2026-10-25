@@ -517,6 +517,54 @@ TEST( MRMesh, CutMeshContourTouchesPointFromVertex )
     }
 }
 
+// open contours touching a point from a mesh vertex, going along an edge of the mesh and back, or ending inside faces,
+// where the edges to the end are a spike in the hole of their face; that hole is filled with the rest of the face, whichever part is filled
+TEST( MRMesh, CutMeshOpenContourTouchesPoint )
+{
+    const Mesh mesh = makeSquares3x3();
+    const auto& topology = mesh.topology;
+
+    // faces (5, 6, 10) and (5, 10, 9), with edge 5 -> 10 between them, f on its right
+    const auto v = 5_v;
+    const auto f = topology.left( topology.findEdge( v, 6_v ) );
+    const auto e = topology.findEdge( v, 10_v );
+    const auto g = topology.left( e );
+    ASSERT_EQ( topology.right( e ), f );
+    const OneMeshIntersection iv{ v, mesh.points[v] }, ix{ f, Vector3f( 1.8f, 1.2f, 0.0f ) }, ix2{ f, Vector3f( 1.8f, 1.6f, 0.0f ) },
+        iy{ g, Vector3f( 1.2f, 1.6f, 0.0f ) }, ip{ 1_v, mesh.points[1_v] }, iq{ 9_v, mesh.points[9_v] }, ie{ e, Vector3f( 1.5f, 1.5f, 0.0f ) };
+    const std::pair<std::vector<OneMeshIntersection>, int> cases[] = {
+        { { ip, iv, ix, iv, iq }, 1 },
+        { { iv, ix, iv }, 1 },
+        { { ip, iv, ix }, 1 },
+        { { ip, iv, ix, ix2 }, 2 },
+        { { ip, iv, ip }, 0 },
+        { { iv, ix }, 1 },
+        { { ix, ie, iy }, 3 },
+        // a point touched from both ends: two new vertices at one position, two spikes in one hole
+        { { ix, iv, ix }, 2 } };
+    for ( const auto& [points, numNewVerts] : cases )
+    {
+        for ( auto part : { CutMeshParameters::FillPart::Both, CutMeshParameters::FillPart::Left, CutMeshParameters::FillPart::Right } )
+        {
+            SCOPED_TRACE( testing::Message() << points.size() << " points, fill part " << int( part ) );
+            OneMeshContour contour;
+            contour.intersections = points;
+
+            Mesh cut = mesh;
+            auto res = cutMesh( cut, { contour }, { .fillPart = part } );
+            EXPECT_TRUE( cut.topology.checkValidity() );
+            EXPECT_TRUE( res.fbsWithContourIntersections.none() );
+            ASSERT_EQ( res.resultCut.size(), 1 );
+            EXPECT_EQ( res.resultCut[0].size() + 1, points.size() );
+            EXPECT_EQ( cut.topology.numValidVerts(), mesh.topology.numValidVerts() + numNewVerts );
+            if ( part != CutMeshParameters::FillPart::Both )
+                continue;
+            EXPECT_EQ( cut.topology.findNumHoles(), 1 );
+            EXPECT_NEAR( cut.area(), mesh.area(), 1e-5f );
+        }
+    }
+}
+
 // a contour inside one triangle (a lone contour) is connected with the rest of the triangle by the cut, near the origin and far from it,
 // also where the contour fills most of the triangle; a closed contour is an island in the hole of the triangle, an open one a slit
 TEST( MRMesh, CutMeshLoneContour )

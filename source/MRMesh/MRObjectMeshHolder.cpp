@@ -101,11 +101,11 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     default:
         root["ColoringType"] = "Solid";
     }
-    serializeToJson( data_.faceColors.vec, root["FaceColors"] );
+    serializeToJson( data_.faceColors, root["FaceColors"] );
 
     const auto meshSaver = MeshSave::getMeshSaver( std::string( "*" ) + actualSerializeFormat() );
     if ( !meshSaver.capabilities.storesVertexColors )
-        serializeToJson( data_.vertColors.vec, root["VertColors"] );
+        serializeToJson( data_.vertColors, root["VertColors"] );
 
     // texture
     if ( !textures_.empty() )
@@ -116,9 +116,9 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     }
 
     // texture id per face id
-    serializeToJson( data_.texturePerFace.vec, root["TexturePerFace"] );
+    serializeToJson( data_.texturePerFace, root["TexturePerFace"] );
 
-    serializeToJson( data_.uvCoordinates.vec, root["UVCoordinates"] );
+    serializeToJson( data_.uvCoordinates, root["UVCoordinates"] );
     // edges
     serializeToJson( Vector4f( edgesColor_.get() ), root["Colors"]["Edges"] );
     // vertices
@@ -196,8 +196,8 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
         else if ( stype == "PerFace" )
             setColoringType( ColoringType::FacesColorMap );
     }
-    deserializeFromJson( root["FaceColors"], data_.faceColors.vec );
-    deserializeFromJson( root["VertColors"], data_.vertColors.vec );
+    deserializeFromJson( root["FaceColors"], data_.faceColors );
+    deserializeFromJson( root["VertColors"], data_.vertColors );
 
     Vector4f resVec;
     deserializeFromJson( selectionColor["Diffuse"], resVec );
@@ -221,10 +221,10 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
     }
 
     if ( root["TexturePerFace"].isObject() )
-        deserializeFromJson( root["TexturePerFace"], data_.texturePerFace.vec );
+        deserializeFromJson( root["TexturePerFace"], data_.texturePerFace );
 
     if ( root["UVCoordinates"].isObject() )
-        deserializeFromJson( root["UVCoordinates"], data_.uvCoordinates.vec );
+        deserializeFromJson( root["UVCoordinates"], data_.uvCoordinates );
     // edges
     deserializeFromJson( root["Colors"]["Edges"], resVec );
     edgesColor_.set( Color( resVec ) );

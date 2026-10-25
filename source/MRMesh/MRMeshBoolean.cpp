@@ -217,6 +217,21 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
 
         auto& cs = contours[s];
         auto& ics = intContours[s].intersections;
+        auto clearPair = [&]
+        {
+            cs.clear();
+            cf.clear();
+            ics.clear();
+            icf.clear();
+        };
+
+        // close the contour through the third vertices of the faces where it starts and ends (a fold at a vertex shared by both sheets);
+        // a contour that runs out to the mesh boundary has no such face, TODO: support this case
+        if ( !mesh.topology.right( cf.front().edge ) || !mesh.topology.left( cf.back().edge ) )
+        {
+            clearPair();
+            return;
+        }
 
         auto prev = mesh.topology.prev( cf.front().edge );
         auto next = mesh.topology.next( cf.back().edge );
@@ -229,10 +244,7 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
             !( fvId == triBVerts[0] || fvId == triBVerts[1] || fvId == triBVerts[2] ) )
         {
             // complex disjointed contour, TODO: support this case
-            cs.clear();
-            cf.clear();
-            ics.clear();
-            icf.clear();
+            clearPair();
             return;
         }
 

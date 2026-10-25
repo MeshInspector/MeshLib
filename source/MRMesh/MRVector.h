@@ -2,6 +2,7 @@
 
 #include "MRMacros.h"
 #include "MRMeshFwd.h"
+#include "MRAllocator.h"
 #include "MRResizeNoInit.h"
 #include "MRPch/MRBindingMacros.h"
 #include <cassert>
@@ -19,17 +20,18 @@ template <typename T, typename I>
 class Vector
 {
 public:
-    using value_type = typename std::vector<T>::value_type;
-    using reference = typename std::vector<T>::reference;
-    using const_reference = typename std::vector<T>::const_reference;
-    using iterator = typename std::vector<T>::iterator;
-    using const_iterator = typename std::vector<T>::const_iterator;
-    using reverse_iterator MR_BIND_IGNORE = typename std::vector<T>::reverse_iterator;
-    using const_reverse_iterator MR_BIND_IGNORE = typename std::vector<T>::const_reverse_iterator;
-    using size_type = typename std::vector<T>::size_type;
-    using difference_type = typename std::vector<T>::difference_type;
-    using pointer = typename std::vector<T>::pointer;
-    using const_pointer = typename std::vector<T>::const_pointer;
+    using StdVector = std::vector<T, Allocator<T>>;
+    using value_type = typename StdVector::value_type;
+    using reference = typename StdVector::reference;
+    using const_reference = typename StdVector::const_reference;
+    using iterator = typename StdVector::iterator;
+    using const_iterator = typename StdVector::const_iterator;
+    using reverse_iterator MR_BIND_IGNORE = typename StdVector::reverse_iterator;
+    using const_reverse_iterator MR_BIND_IGNORE = typename StdVector::const_reverse_iterator;
+    using size_type = typename StdVector::size_type;
+    using difference_type = typename StdVector::difference_type;
+    using pointer = typename StdVector::pointer;
+    using const_pointer = typename StdVector::const_pointer;
 
     /// creates empty vector
     Vector() = default;
@@ -215,7 +217,7 @@ public:
     friend size_t erase_if( Vector<T, I> & a, Pred pred ) { return std::erase_if( a.vec, pred ); }
 
     /// The user can directly manipulate the vector, they can't break anything anyway.
-    std::vector<T> vec;
+    StdVector vec;
 
 #if defined( MR_PARSING_FOR_ANY_BINDINGS ) || defined( MR_COMPILING_ANY_BINDINGS )
     static_assert( sizeof(T) > 0 );
@@ -233,7 +235,7 @@ template <typename T>
 template <typename T, typename I>
 [[nodiscard]] inline T getAt( const Vector<T, I> & a, I id, T def = {} )
 {
-    return getAt( a.vec, size_t( id ), def );
+    return size_t( id ) < a.size() ? a[id] : def;
 }
 
 } // namespace MR

@@ -232,7 +232,7 @@ void serializeToJson( const MeshTexture& texture, Json::Value& root )
     root["Data"] = encode64( ( const uint8_t* )texture.pixels.data(), texture.pixels.size() * sizeof( Color ) );
 }
 
-void serializeToJson( const std::vector<TextureId>& texturePerFace, Json::Value& root )
+void serializeToJson( const std::vector<TextureId, Allocator<TextureId>>& texturePerFace, Json::Value& root )
 {
     if ( texturePerFace.empty() )
         return;
@@ -240,7 +240,7 @@ void serializeToJson( const std::vector<TextureId>& texturePerFace, Json::Value&
     root["Data"] = encode64( ( const uint8_t* )texturePerFace.data(), texturePerFace.size() * sizeof( TextureId ) );
 }
 
-void serializeToJson( const std::vector<UVCoord>& uvCoords, Json::Value& root )
+void serializeToJson( const std::vector<UVCoord, Allocator<UVCoord>>& uvCoords, Json::Value& root )
 {
     if ( uvCoords.empty() )
         return;
@@ -248,7 +248,7 @@ void serializeToJson( const std::vector<UVCoord>& uvCoords, Json::Value& root )
     root["Data"] = encode64( ( const uint8_t* )uvCoords.data(), uvCoords.size() * sizeof( UVCoord ) );
 }
 
-void serializeToJson( const std::vector<Color>& colors, Json::Value& root )
+void serializeToJson( const std::vector<Color, Allocator<Color>>& colors, Json::Value& root )
 {
     if ( colors.empty() )
         return;
@@ -519,7 +519,7 @@ void deserializeFromJson( const Json::Value& root, MeshTexture& texture )
     }
 }
 
-void deserializeFromJson( const Json::Value& root, std::vector<TextureId>& texturePerFace )
+void deserializeFromJson( const Json::Value& root, std::vector<TextureId, Allocator<TextureId>>& texturePerFace )
 {
     if ( root["Data"].isString() && root["Size"].isInt() )
     {
@@ -530,7 +530,7 @@ void deserializeFromJson( const Json::Value& root, std::vector<TextureId>& textu
     }
 }
 
-void deserializeFromJson( const Json::Value& root, std::vector<UVCoord>& uvCoords )
+void deserializeFromJson( const Json::Value& root, std::vector<UVCoord, Allocator<UVCoord>>& uvCoords )
 {
     if ( root["Data"].isString() && root["Size"].isInt() )
     {
@@ -541,7 +541,7 @@ void deserializeFromJson( const Json::Value& root, std::vector<UVCoord>& uvCoord
     }
 }
 
-void deserializeFromJson( const Json::Value& root, std::vector<Color>& colors )
+void deserializeFromJson( const Json::Value& root, std::vector<Color, Allocator<Color>>& colors )
 {
     if ( root["Data"].isString() && root["Size"].isUInt64() )
     {

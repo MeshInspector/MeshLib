@@ -134,7 +134,7 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         evec[ue] = x;
     } );
     erase_if( evec, []( const EdgeLength & x ) { return !x; } );
-    std::priority_queue<EdgeLength> queue( std::less<EdgeLength>(), std::move( evec.vec ) );
+    std::priority_queue<EdgeLength, decltype( evec )::StdVector> queue( std::less<EdgeLength>(), std::move( evec.vec ) );
 
     if ( settings.progressCallback && !settings.progressCallback( 0.25f ) )
         return 0;

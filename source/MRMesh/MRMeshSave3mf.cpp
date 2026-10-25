@@ -28,19 +28,20 @@ constexpr const char * sUnitNames[(int)LengthUnit::_count] =
     "foot"
 };
 
-std::vector<int> makePalette( const std::vector<Color> & colors, const BitSet & validColors, std::ostream & out )
+template<typename I>
+Vector<int, I> makePalette( const Vector<Color, I>& colors, const TypedBitSet<I>& validColors, std::ostream& out )
 {
     MR_TIMER;
-    std::vector<int> res( colors.size() );
+    Vector<int, I> res( colors.size() );
 
     HashMap<Color, int> hmap;
     int nextPaletteCell = 0;
     out << "    <m:colorgroup id=\"1\">\n";
-    for ( size_t i : validColors )
+    for ( I i : validColors )
     {
-        if ( i >= colors.size() )
+        if ( i >= colors.endId() )
             break;
-        const auto& c = getAt( colors, i );
+        const auto& c = colors[i];
         auto [it, inserted] = hmap.insert( { c, nextPaletteCell } );
         if ( inserted )
         {
@@ -52,14 +53,6 @@ std::vector<int> makePalette( const std::vector<Color> & colors, const BitSet & 
     }
     out << "    </m:colorgroup>\n";
 
-    return res;
-}
-
-template<typename I>
-Vector<int, I> makePalette( const Vector<Color, I>& colors, const TypedBitSet<I>& validColors, std::ostream& out )
-{
-    Vector<int, I> res;
-    res.vec = makePalette( colors.vec, validColors, out );
     return res;
 }
 
@@ -104,7 +97,7 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
     }
     else if ( savePrimColors )
     {
-        facePalette.vec = makePalette( *settings.primitiveColors, mesh.topology.getValidFaces(), out );
+        facePalette = makePalette( *settings.primitiveColors, mesh.topology.getValidFaces(), out );
         out << "    <object id=\"2\" type=\"model\">\n";
     }
     else if ( settings.solidColor )

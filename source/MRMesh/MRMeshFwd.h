@@ -611,8 +611,10 @@ MR_CANONICAL_TYPEDEFS( (template <typename T, typename I> struct MRMESH_CLASS), 
     ( WholeEdgeBMap, BMap<EdgeId, UndirectedEdgeId> )
 )
 
+template <typename T> struct MR_BIND_IGNORE Allocator;
+
 template <typename T, typename Hash = phmap::priv::hash_default_hash<T>, typename Eq = phmap::priv::hash_default_eq<T>>
-using HashSet = phmap::flat_hash_set<T, Hash, Eq>;
+using HashSet = phmap::flat_hash_set<T, Hash, Eq, Allocator<T>>;
 template <typename T, typename Hash = phmap::priv::hash_default_hash<T>, typename Eq = phmap::priv::hash_default_eq<T>>
 using ParallelHashSet = phmap::parallel_flat_hash_set<T, Hash, Eq>;
 
@@ -622,7 +624,7 @@ using VertHashSet = HashSet<VertId>;
 using EdgeHashSet = HashSet<EdgeId>;
 
 template <typename K, typename V, typename Hash = phmap::priv::hash_default_hash<K>, typename Eq = phmap::priv::hash_default_eq<K>>
-using HashMap = phmap::flat_hash_map<K, V, Hash, Eq>;
+using HashMap = phmap::flat_hash_map<K, V, Hash, Eq, Allocator<std::pair<const K, V>>>;
 template <typename K, typename V, typename Hash = phmap::priv::hash_default_hash<K>, typename Eq = phmap::priv::hash_default_eq<K>>
 using ParallelHashMap = phmap::parallel_flat_hash_map<K, V, Hash, Eq>;
 

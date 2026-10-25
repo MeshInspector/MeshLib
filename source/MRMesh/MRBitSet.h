@@ -71,7 +71,6 @@ class BitSet
 {
 public:
     using block_type = std::uint64_t;
-    // mrbind ignores custom allocators, so the members exposing Blocks are hidden from the bindings
     using Blocks = std::vector<block_type, Allocator<block_type>>;
     inline static constexpr size_t bits_per_block = sizeof( block_type ) * 8;
     inline static constexpr size_t npos = (size_t)-1;
@@ -86,7 +85,7 @@ public:
     explicit BitSet( size_t numBits, bool fillValue = false ) { resize( numBits, fillValue ); }
 
     /// creates bitset from the given blocks of bits
-    MR_BIND_IGNORE static BitSet fromBlocks( Blocks && blocks )
+    static BitSet fromBlocks( Blocks && blocks )
     {
         BitSet res;
         res.blocks_ = std::move( blocks );
@@ -147,7 +146,7 @@ public:
     void pop_back() { assert( numBits_ > 0 ); { if ( bitIndex_( numBits_ ) == 1 ) blocks_.pop_back(); else reset( numBits_ - 1 ); } --numBits_; }
 
     /// read-only access to all bits stored as a vector of uint64 blocks
-    [[nodiscard]] MR_BIND_IGNORE const auto & bits() const { return blocks_; }
+    [[nodiscard]] const auto & bits() const { return blocks_; }
 
     MRMESH_API BitSet & operator &= ( const BitSet & b );
     MRMESH_API BitSet & operator |= ( const BitSet & b );

@@ -1,6 +1,7 @@
 #pragma once
 
-#include "MRMeshFwd.h"
+#include "config.h"
+#include "MRPch/MRBindingMacros.h"
 #include <memory>
 
 // mr_enable_mimalloc executables forward malloc to the same mimalloc; MRMESH_NO_MIMALLOC, see cmake/Modules/Mimalloc.cmake
@@ -23,14 +24,32 @@
 namespace MR
 {
 
-/// allocator of MeshLib containers that benefit from mimalloc: mimalloc explicitly,
-/// std::allocator in Emscripten builds, where malloc is mimalloc already (-sMALLOC=mimalloc), and with MRMESH_NO_MIMALLOC
 #ifdef MR_ALLOCATOR_IS_MIMALLOC
 template <typename T>
-using Allocator = mi_stl_allocator<T>;
+using AllocatorBase = mi_stl_allocator<T>;
 #else
 template <typename T>
-using Allocator = std::allocator<T>;
+using AllocatorBase = std::allocator<T>;
 #endif
+
+/// allocator of MeshLib containers that benefit from mimalloc: mimalloc explicitly,
+/// std::allocator in Emscripten builds, where malloc is mimalloc already (-sMALLOC=mimalloc), and with MRMESH_NO_MIMALLOC;
+/// a class rather than an alias, so that container types are spelled the same on all platforms (e.g. in the C bindings generated once);
+/// the bindings only see it as a template argument of containers
+template <typename T>
+struct MR_BIND_IGNORE Allocator : AllocatorBase<T>
+{
+    using value_type = T;
+    template <typename U>
+    struct rebind { using other = Allocator<U>; };
+
+    Allocator() noexcept = default;
+    template <typename U>
+    Allocator( const Allocator<U> & ) noexcept {}
+    [[nodiscard]] Allocator select_on_container_copy_construction() const noexcept { return *this; }
+};
+
+template <typename T, typename U>
+[[nodiscard]] inline bool operator ==( const Allocator<T> &, const Allocator<U> & ) noexcept { return true; }
 
 } // namespace MR

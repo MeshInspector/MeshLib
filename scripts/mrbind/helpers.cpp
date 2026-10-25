@@ -68,7 +68,7 @@ namespace MR::Extra
         PointsToMeshProjector projector;
         projector.updateMeshData( &refMesh );
         std::vector<MeshProjectionResult> mpRes( mesh.points.size() );
-        projector.findProjections( mpRes, mesh.points.vec, xf, refXf, upDistLimitSq, loDistLimitSq );
+        projector.findProjections( mpRes, mesh.points, xf, refXf, upDistLimitSq, loDistLimitSq );
         VertScalars res( mesh.topology.lastValidVert() + 1, std::sqrt( upDistLimitSq ) );
 
         AffineXf3f fullXf;

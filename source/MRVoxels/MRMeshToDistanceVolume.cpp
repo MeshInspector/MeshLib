@@ -313,10 +313,10 @@ Expected<std::array<SimpleVolumeMinMax, 3>> meshToDirectionVolume( const MeshToD
     };
 
     {
-        std::vector<Vector3f> points( indexer.size() );
+        VertCoords points( indexer.size() );
         for ( auto i = VoxelId( size_t( 0 ) ); i < indexer.size(); ++i )
         {
-            points[i] = getPoint( i );
+            points[VertId( size_t( i ) )] = getPoint( i );
         }
         params.projector->findProjections( projs, points );
     }

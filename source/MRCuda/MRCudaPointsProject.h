@@ -20,7 +20,7 @@ public:
 
     /// computes the closest points on point cloud to given points
     MRCUDA_API Expected<void> findProjections( std::vector<MR::PointsProjectionResult>& results,
-        const std::vector<Vector3f>& points, const FindProjectionOnPointsSettings& settings ) const override;
+        const VertCoords& points, const FindProjectionOnPointsSettings& settings ) const override;
 
     /// Returns amount of additional memory needed to compute projections
     MRCUDA_API size_t projectionsHeapBytes( size_t numProjections ) const override;
@@ -31,7 +31,7 @@ private:
 
 /// computes the closest points on point cloud to given points
 MRCUDA_API Expected<std::vector<MR::PointsProjectionResult>> findProjectionOnPoints( const PointCloud& pointCloud,
-    const std::vector<Vector3f>& points, const FindProjectionOnPointsSettings& settings = {} );
+    const VertCoords& points, const FindProjectionOnPointsSettings& settings = {} );
 
 /// returns the minimal amount of free GPU memory required for \ref MR::Cuda::findProjectionOnPoints
 MRCUDA_API size_t findProjectionOnPointsHeapBytes( const PointCloud& pointCloud, size_t pointsCount );

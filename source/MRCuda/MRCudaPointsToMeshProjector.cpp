@@ -50,7 +50,7 @@ void PointsToMeshProjector::updateMeshData( const MR::Mesh* mesh )
 }
 
 void PointsToMeshProjector::findProjections(
-      std::vector<MR::MeshProjectionResult>& res, const std::vector<Vector3f>& points, const AffineXf3f* objXf, const AffineXf3f* refObjXf, float upDistLimitSq, float loDistLimitSq )
+      std::vector<MR::MeshProjectionResult>& res, const VertCoords& points, const AffineXf3f* objXf, const AffineXf3f* refObjXf, float upDistLimitSq, float loDistLimitSq )
 {
     MR_TIMER;
     if ( !mesh_ )

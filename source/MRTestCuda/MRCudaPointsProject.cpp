@@ -24,7 +24,7 @@ TEST( MRCuda, PointsProjector )
     {
         PointsProjector cpuProjector;
         ASSERT_EXPECTED( cpuProjector.setPointCloud( torusPoints ) );
-        ASSERT_EXPECTED( cpuProjector.findProjections( cpuResults, cube.points.vec, {} ) );
+        ASSERT_EXPECTED( cpuProjector.findProjections( cpuResults, cube.points, {} ) );
     }
     ASSERT_EQ( cpuResults.size(), cube.points.size() );
     for ( auto i = 0; i < cube.points.size(); ++i )
@@ -34,7 +34,7 @@ TEST( MRCuda, PointsProjector )
     {
         Cuda::PointsProjector cudaProjector;
         ASSERT_EXPECTED( cudaProjector.setPointCloud( torusPoints ) );
-        ASSERT_EXPECTED( cudaProjector.findProjections( cudaResults, cube.points.vec, {} ) );
+        ASSERT_EXPECTED( cudaProjector.findProjections( cudaResults, cube.points, {} ) );
     }
     ASSERT_EQ( cudaResults.size(), cube.points.size() );
     for ( auto i = 0; i < cube.points.size(); ++i )

@@ -365,30 +365,38 @@ TEST( MRMesh, SelfBooleanLoneContour )
 }
 
 // open fan of three triangles around 0_v: the last one crosses the first one from the shared vertex 0_v to its boundary edge 3_v-4_v;
-// the boundary walks from that edge reach 0_v and 2_v, vertices of the first triangle, so the open contour must not be closed through them
+// the boundary walks from that edge reach 0_v and 2_v, vertices of the first triangle, so the open contour must not be closed through them;
+// edge 3_v-4_v crosses the first triangle downward or upward, so the missing face is on the right of the contour's first edge or on the left of its last one
 TEST( MRMesh, SelfBooleanContourToBoundary )
 {
-    Mesh mesh;
-    mesh.points = VertCoords
+    for ( float z : { 0.5f, -0.5f } )
     {
-        { 0.0f, 0.0f, 0.0f },
-        { 1.0f, 0.0f, 0.0f },
-        { 0.0f, 1.0f, 0.0f },
-        { -0.2f, 0.6f, 0.5f },
-        { 0.6f, 0.2f, -0.5f }
-    };
-    Triangulation t =
-    {
-        { 0_v, 1_v, 2_v },
-        { 0_v, 2_v, 3_v },
-        { 0_v, 3_v, 4_v }
-    };
-    mesh.topology = MeshBuilder::fromTriangles( t );
+        Mesh mesh;
+        mesh.points = VertCoords
+        {
+            { 0.0f, 0.0f, 0.0f },
+            { 1.0f, 0.0f, 0.0f },
+            { 0.0f, 1.0f, 0.0f },
+            { -0.2f, 0.6f, z },
+            { 0.6f, 0.2f, -z }
+        };
+        Triangulation t =
+        {
+            { 0_v, 1_v, 2_v },
+            { 0_v, 2_v, 3_v },
+            { 0_v, 3_v, 4_v }
+        };
+        mesh.topology = MeshBuilder::fromTriangles( t );
 
-    const auto res = selfBoolean( mesh );
-    ASSERT_TRUE( res.has_value() ) << res.error();
-    EXPECT_TRUE( res->topology.checkValidity() );
-    EXPECT_EQ( res->topology.numValidFaces(), 3 ); // contours running out to the boundary are not cut yet
+        const auto res = selfBoolean( mesh );
+        ASSERT_TRUE( res.has_value() ) << res.error();
+        EXPECT_TRUE( res->topology.checkValidity() );
+        // contours running out to the boundary are not cut yet
+        EXPECT_EQ( res->topology.numValidFaces(), 3 );
+        EXPECT_EQ( res->topology.numValidVerts(), 5 );
+        for ( auto v : mesh.topology.getValidVerts() )
+            EXPECT_LT( ( res->points[v] - mesh.points[v] ).length(), 1e-6f ); // only the round trip through integer coordinates
+    }
 }
 
 // closed mesh of two parts (apexes 3_v and 6_v) stitched along their common boundary, which passes through all vertices of triangle 0_v, 2_v, 1_v

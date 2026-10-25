@@ -1131,4 +1131,106 @@ TEST( MRMesh, SurfaceOffsetAlongOpenBorder )
     EXPECT_LT( numOpen, int( res->size() ) ); // the inner offset is closed
 }
 
+namespace
+{
+
+// the faces of the crossings
+FaceBitSet crossingFaces( const std::vector<ContoursCrossing>& crossings )
+{
+    FaceBitSet res;
+    for ( const auto& x : crossings )
+        res.autoResizeSet( x.face );
+    return res;
+}
+
+} //anonymous namespace
+
+// an open contour across triangle 0_f of the square at y = 2, and a contour from the bottom side up to a point inside 0_f and back:
+// with the point above the first contour, they cross twice, which leaves valid hole loops, so the cut does not report it
+TEST( MRMesh, FindContoursCrossingsEven )
+{
+    const auto square = makeSquareOfTwoTriangles();
+    const OneMeshContour across{ .intersections = {
+        onSquareSide( square, 1_v, 2_v, Vector3f( 10, 2, 0 ) ), onSquareSide( square, 0_v, 2_v, Vector3f( 2, 2, 0 ) ) } };
+    auto tent = [&] ( float top )
+    {
+        const Vector3f peak( 5, top, 0 );
+        return OneMeshContour{ .intersections = { onSquareSide( square, 0_v, 1_v, Vector3f( 4, 0, 0 ) ),
+            { .primitiveId = 0_f, .coordinate = peak }, onSquareSide( square, 1_v, 0_v, Vector3f( 6, 0, 0 ) ) } };
+    };
+    for ( float top : { 1.5f, 3.0f } )
+    {
+        const auto crossings = findContoursCrossings( square, { across, tent( top ) } );
+        if ( top < 2 )
+        {
+            EXPECT_TRUE( crossings.empty() );
+            continue;
+        }
+        const std::vector<ContoursCrossing> expected{ { 0_f, 0, 0, 1, 0 }, { 0_f, 0, 0, 1, 1 } };
+        EXPECT_EQ( crossings, expected );
+
+        Mesh cut = square;
+        EXPECT_TRUE( cutMesh( cut, { across, tent( top ) } ).fbsWithContourIntersections.none() );
+    }
+}
+
+// one contour that crosses itself inside triangle 0_f: its first and third segments cross, the ones that follow each other do not
+TEST( MRMesh, FindContoursCrossingsSelf )
+{
+    const auto square = makeSquareOfTwoTriangles();
+    auto inside = [] ( float x, float y ) { return OneMeshIntersection{ .primitiveId = 0_f, .coordinate = Vector3f( x, y, 0 ) }; };
+    const OneMeshContour loop{ .intersections = { onSquareSide( square, 0_v, 1_v, Vector3f( 4, 0, 0 ) ),
+        inside( 8, 3 ), inside( 8, 1 ), inside( 5, 3 ), onSquareSide( square, 0_v, 2_v, Vector3f( 4, 4, 0 ) ) } };
+    const std::vector<ContoursCrossing> expected{ { 0_f, 0, 0, 0, 2 } };
+    EXPECT_EQ( findContoursCrossings( square, { loop } ), expected );
+}
+
+namespace
+{
+
+// finds the crossings of the contours of the intersection with mesh B on mesh A by the exact predicates of the boolean,
+// and checks that every bad face of the cut of A is among their faces
+std::vector<ContoursCrossing> findBooleanCrossings( const Mesh& meshA, const Mesh& meshB )
+{
+    const auto converters = getVectorConverters( meshA, meshB );
+    const auto contours = orderIntersectionContours( meshA.topology, meshB.topology,
+        findCollidingEdgeTrisPrecise( meshA, meshB, converters.toInt ) );
+    OneMeshContours contoursA;
+    getOneMeshIntersectionContours( meshA, meshB, contours, &contoursA, nullptr, converters );
+    const SortIntersectionsData dataForA{ meshB, contours, converters.toInt, nullptr, meshA.topology.vertSize(), false };
+    auto res = findContoursCrossings( meshA, contoursA, &dataForA );
+
+    Mesh cut = meshA;
+    const auto bad = cutMesh( cut, contoursA, { .sortData = &dataForA } ).fbsWithContourIntersections;
+    const auto faces = crossingFaces( res );
+    for ( auto f : bad )
+        EXPECT_TRUE( f < faces.size() && faces.test( f ) ) << "bad face " << f << " without crossings";
+    return res;
+}
+
+} //anonymous namespace
+
+// the top of a cube crossed by two overlapping boxes of mesh B, whose two closed contours there cross twice, on the exact predicates:
+// axis-aligned, where the coordinates leave most pairs open, and rotated
+TEST( MRMesh, FindContoursCrossingsBoolean )
+{
+    const auto cube = makeCube( Vector3f::diagonal( 1 ), Vector3f() );
+    auto boxes = makeCube( Vector3f( 0.4f, 0.4f, 1 ), Vector3f( 0.2f, 0.2f, 0.5f ) );
+    boxes.addMesh( makeCube( Vector3f( 0.4f, 0.4f, 1 ), Vector3f( 0.4f, 0.4f, 0.5f ) ) );
+    for ( bool rotated : { false, true } )
+    {
+        SCOPED_TRACE( rotated ? "rotated" : "axis-aligned" );
+        auto b = boxes;
+        if ( rotated )
+            b.transform( AffineXf3f::xfAround( Matrix3f::rotation( Vector3f( 0.1f, 0.2f, 1 ).normalized(), 0.3f ), Vector3f::diagonal( 0.5f ) ) );
+        const auto crossings = findBooleanCrossings( cube, b );
+        ASSERT_EQ( crossings.size(), 2 );
+        for ( const auto& x : crossings )
+            EXPECT_NE( x.contour0, x.contour1 );
+
+        // a single box crosses nothing
+        EXPECT_TRUE( findBooleanCrossings( cube, makeCube( Vector3f( 0.4f, 0.4f, 1 ), Vector3f( 0.2f, 0.2f, 0.5f ) ) ).empty() );
+    }
+}
+
 } //namespace MR

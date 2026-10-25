@@ -611,7 +611,7 @@ MR_CANONICAL_TYPEDEFS( (template <typename T, typename I> struct MRMESH_CLASS), 
     ( WholeEdgeBMap, BMap<EdgeId, UndirectedEdgeId> )
 )
 
-template <typename T> struct MR_BIND_IGNORE Allocator; // see MRAllocator.h
+template <typename T> struct MR_BIND_IGNORE Allocator;
 
 template <typename T, typename Hash = phmap::priv::hash_default_hash<T>, typename Eq = phmap::priv::hash_default_eq<T>>
 using HashSet = phmap::flat_hash_set<T, Hash, Eq, Allocator<T>>;

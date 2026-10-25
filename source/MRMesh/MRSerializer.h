@@ -60,6 +60,9 @@ MRMESH_API void serializeToJson( const MeshTexture& texture, Json::Value& root )
 MRMESH_API void serializeToJson( const std::vector<TextureId>& texturePerFace, Json::Value& root );
 MRMESH_API void serializeToJson( const std::vector<UVCoord>& uvCoords, Json::Value& root );
 MRMESH_API void serializeToJson( const std::vector<Color>& colors, Json::Value& root );
+/// saves typed vector (e.g. VertColors, TexturePerFace, VertUVCoords) same as std::vector with its elements
+template <typename T, typename I>
+void serializeToJson( const Vector<T, I>& vec, Json::Value& root ) { serializeToJson( vec.vec, root ); }
 /// this version takes topology to convert MeshTriPoint in its representation relative a face;
 /// also beware that de-serialization will work only if faces are not renumbered (so please pack mesh before saving)
 MRMESH_API void serializeToJson( const MeshTriPoint& mtp, const MeshTopology& topology, Json::Value& root );
@@ -89,6 +92,8 @@ MRMESH_API void deserializeFromJson( const Json::Value& root, MeshTexture& textu
 MRMESH_API void deserializeFromJson( const Json::Value& root, std::vector<TextureId>& texturePerFace );
 MRMESH_API void deserializeFromJson( const Json::Value& root, std::vector<UVCoord>& uvCoords );
 MRMESH_API void deserializeFromJson( const Json::Value& root, std::vector<Color>& colors );
+template <typename T, typename I>
+void deserializeFromJson( const Json::Value& root, Vector<T, I>& vec ) { deserializeFromJson( root, vec.vec ); }
 /// this version takes topology to construct MeshTriPoint from its representation relative a face;
 /// also beware that de-serialization will work only if faces are not renumbered (so please pack mesh before saving)
 MRMESH_API void deserializeFromJson( const Json::Value& root, MeshTriPoint& mtp, const MeshTopology& topology );

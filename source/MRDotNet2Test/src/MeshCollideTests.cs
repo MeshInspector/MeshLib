@@ -37,20 +37,20 @@ namespace MRTest
             Assert.That(contours[1].size(), Is.EqualTo((nuint)7).Or.EqualTo((nuint)9));
             Assert.That(contours[2].size(), Is.EqualTo((nuint)69).Or.EqualTo((nuint)71));
             Assert.That(contours[3].size(), Is.EqualTo((nuint)9).Or.EqualTo((nuint)7));
-            var aConts = new Std.Vector_MROneMeshContour();
+            var aConts = new Vector_MROneMeshContour();
             getOneMeshIntersectionContours(meshA, meshB, contours, aConts, null, conv);
             Assert.That(aConts.size(), Is.EqualTo((nuint)4));
-            var bConts = new Std.Vector_MROneMeshContour();
+            var bConts = new Vector_MROneMeshContour();
             getOneMeshIntersectionContours(meshA, meshB, contours, null, bConts, conv);
             Assert.That(bConts.size(), Is.EqualTo((nuint)4));
 
-            nuint posCount = 0;
-            for (nuint i = 0; i < aConts.size(); i++)
+            ulong posCount = 0;
+            for (ulong i = 0; i < aConts.size(); i++)
             {
                 posCount += aConts[i].intersections.size();
             }
 
-            Assert.That(posCount, Is.EqualTo((nuint)156) );
+            Assert.That(posCount, Is.EqualTo((ulong)156) );
 
         }
 

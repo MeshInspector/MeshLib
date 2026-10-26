@@ -7,10 +7,10 @@ namespace MR
 {
 
 struct OneMeshContour;
-using OneMeshContours = std::vector<OneMeshContour>;
+using OneMeshContours = Vector<OneMeshContour>;
 
-using ContinuousContour = std::vector<VarEdgeTri>;
-using ContinuousContours = std::vector<ContinuousContour>;
+using ContinuousContour = Vector<VarEdgeTri>;
+using ContinuousContours = Vector<ContinuousContour>;
 
 /// Combines unordered input intersections (and flips orientation of intersected edges from mesh B) into ordered oriented contours with the properties:
 /// 1. Each contour is

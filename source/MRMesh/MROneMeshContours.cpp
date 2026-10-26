@@ -482,7 +482,7 @@ SurfacePath formatSurfacePath( const MeshTopology& topology, const  SurfacePath&
 void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceHashMap* new2oldMap /*= nullptr */ )
 {
     MR_TIMER;
-    HashMap<FaceId, std::vector<int>> face2contoursMap;
+    HashMap<FaceId, Vector<int>> face2contoursMap;
     for ( int i = 0; i < contours.size(); ++i )
     {
         FaceId f = std::get<FaceId>( contours[i].intersections.front().primitiveId );
@@ -723,7 +723,7 @@ Expected<OneMeshContour> surfaceLineToMeshContour( const Mesh& mesh, const std::
         meshTriPoints.resize( meshTriPoints.size() - 1 );
     size_t sizeMTP = closed ? meshTriPoints.size() : meshTriPoints.size() - 1;
 
-    std::vector<int> sameEdgeMTPs;
+    Vector<int> sameEdgeMTPs;
     Box3f box;
     for ( int i = 0; i < sizeMTP; ++i )
     {
@@ -770,7 +770,7 @@ Expected<OneMeshContour> surfaceLineToMeshContour( const Mesh& mesh, const std::
     sizeMTP = closed ? meshTriPoints.size() : meshTriPoints.size() - 1;
 
     OneMeshContour res;
-    std::vector<OneMeshContour> surfacePaths( sizeMTP );
+    Vector<OneMeshContour> surfacePaths( sizeMTP );
     for ( int i = 0; i < sizeMTP; ++i )
     {
         while ( sameMtpsNavigator < sameEdgeMTPs.size() && pivotNavigator == sameEdgeMTPs[sameMtpsNavigator] )
@@ -834,7 +834,7 @@ Expected<OneMeshContour> surfaceLineToMeshContour( const Mesh& mesh, const std::
     }
 
     const int numMtps = int( meshTriPoints.size() );
-    std::vector<int> realPivots; // index in meshTriPointsOrg of every meshTriPoints[i]
+    Vector<int> realPivots; // index in meshTriPointsOrg of every meshTriPoints[i]
     if ( pivotIndices )
     {
         realPivots.resize( numMtps );
@@ -878,8 +878,8 @@ Expected<OneMeshContour> surfaceLineToMeshContour( const Mesh& mesh, const std::
             firstMtpStart = int( res.intersections.size() );
         const int realPivotIndex = pivotIndices ? realPivots[i] : -1;
 
-        std::vector<OneMeshIntersection>* prevInter = ( closed || i > 0 ) ? &surfacePaths[( i + int( meshTriPoints.size() ) - 1 ) % meshTriPoints.size()].intersections : nullptr;
-        const std::vector<OneMeshIntersection>* nextInter = ( i < sizeMTP ) ? &surfacePaths[i].intersections : nullptr;
+        Vector<OneMeshIntersection>* prevInter = ( closed || i > 0 ) ? &surfacePaths[( i + int( meshTriPoints.size() ) - 1 ) % meshTriPoints.size()].intersections : nullptr;
+        const Vector<OneMeshIntersection>* nextInter = ( i < sizeMTP ) ? &surfacePaths[i].intersections : nullptr;
         OneMeshIntersection lastPrev;
         OneMeshIntersection firstNext;
         if ( prevInter )

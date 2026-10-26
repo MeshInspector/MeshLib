@@ -371,7 +371,8 @@ MR_ON_INIT{
                 "`forwardDir`, so it does not have to be exactly perpendicular, but it must not be parallel. "
                 "`fit` (default `visible`) refits the camera after reorientation: `visible` fits the geometry of all "
                 "visible objects, `selected` fits the selected objects, `none` keeps the zoom and the camera's distance "
-                "to the scene center (the camera turns around that center, so its position still changes). "
+                "to the point it looks at, which is the center of the last fit (the camera turns around that point, so "
+                "its position still changes). "
                 "The fit uses the geometry itself, so it frames tighter than `viewer_fit` with `objectIds`, which "
                 "fits the objects' bounding boxes. `factor` (default 1.0) is the same framing margin as in `viewer_fit`.",
         /*input_schema*/Schema::Object{}

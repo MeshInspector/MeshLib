@@ -540,6 +540,14 @@ MR_ON_INIT{
             .addMember( "rotation",    Schema::Array( Schema::Number{} ) )
             .addMember( "scale",       Schema::Array( Schema::Number{} ) );
     };
+    // `scene_setObjectState` input: every component is optional, see parseTransform().
+    static const auto transformInputSchema = []
+    {
+        return Schema::Object{}
+            .addMemberOpt( "translation", Schema::Array( Schema::Number{} ) )
+            .addMemberOpt( "rotation",    Schema::Array( Schema::Number{} ) )
+            .addMemberOpt( "scale",       Schema::AnyOf( { Schema::Number{}, Schema::Array( Schema::Number{} ) } ) );
+    };
     static const auto entrySchema = []
     {
         return Schema::Object{}
@@ -611,7 +619,7 @@ MR_ON_INIT{
             .addMemberOpt( "name",      Schema::String{} )
             .addMemberOpt( "visible",   Schema::Bool{} )
             .addMemberOpt( "selected",  Schema::Bool{} )
-            .addMemberOpt( "transform", transformSchema() )
+            .addMemberOpt( "transform", transformInputSchema() )
             .addMemberOpt( "visualization", Schema::Object{}
                 .addMemberOpt( "selectedColor",   Schema::Array( Schema::Number{} ) )
                 .addMemberOpt( "unselectedColor", Schema::Array( Schema::Number{} ) )

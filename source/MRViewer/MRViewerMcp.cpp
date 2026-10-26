@@ -357,7 +357,7 @@ MR_ON_INIT{
                 "The camera angle is preserved (no canonical-view snapping).",
         /*input_schema*/Schema::Object{}
             .addMemberOpt( "objectIds", Schema::Array( Schema::Number{} ) )
-            .addMemberOpt( "points",    Schema::Array( Schema::Array( Schema::Number{} ) ) )
+            .addMemberOpt( "points",    Schema::Array( Schema::Base( Schema::Array( Schema::Number{} ) ) ) )
             .addMemberOpt( "factor",    Schema::Number{} ),
         /*output_schema*/Schema::Object{},
         /*func*/mcpViewerFit
@@ -370,13 +370,14 @@ MR_ON_INIT{
                 "the subject). `upDir` sets the screen-up direction; it is automatically orthogonalized against "
                 "`forwardDir`, so it does not have to be exactly perpendicular, but it must not be parallel. "
                 "`fit` (default `visible`) refits the camera after reorientation: `visible` fits the geometry of all "
-                "visible objects, `selected` fits the selected objects, `none` keeps the current position and zoom. "
+                "visible objects, `selected` fits the selected objects, `none` keeps the zoom and the camera's distance "
+                "to the scene center (the camera turns around that center, so its position still changes). "
                 "The fit uses the geometry itself, so it frames tighter than `viewer_fit` with `objectIds`, which "
                 "fits the objects' bounding boxes. `factor` (default 1.0) is the same framing margin as in `viewer_fit`.",
         /*input_schema*/Schema::Object{}
             .addMember(    "forwardDir", Schema::Array( Schema::Number{} ) )
             .addMember(    "upDir",      Schema::Array( Schema::Number{} ) )
-            .addMemberOpt( "fit",        Schema::String{} )
+            .addMemberOpt( "fit",        Schema::String( std::vector<std::string>{ "visible", "selected", "none" } ) )
             .addMemberOpt( "factor",     Schema::Number{} ),
         /*output_schema*/Schema::Object{},
         /*func*/mcpViewerSetupCamera

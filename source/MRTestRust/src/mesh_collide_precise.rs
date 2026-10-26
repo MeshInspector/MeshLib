@@ -17,7 +17,7 @@ fn mesh_collide_precise()
 
     let contours = meshlib::order_intersection_contours(mesh_a.topology(), mesh_b.topology(), &intersections);
     assert_eq!(contours.size(), 4);
-    let sizes: Vec<u64> = (0..4).map(|i| contours.index(i).size()).collect();
+    let sizes: Vec<usize> = (0..4).map(|i| contours.index(i).size()).collect();
     assert!(sizes[0] == 69 || sizes[0] == 71); // Apple Debug
     assert!(sizes[1] == 9 || sizes[1] == 7); // Apple Debug
     assert!(sizes[2] == 69 || sizes[2] == 71); // with or without the FMA instruction
@@ -28,6 +28,6 @@ fn mesh_collide_precise()
     meshlib::get_one_mesh_intersection_contours(&mesh_a, &mesh_b, &contours, Some(&mut contours_a), Some(&mut contours_b), &conv, None, None, None);
     assert_eq!(contours_a.size(), 4);
     assert_eq!(contours_b.size(), 4);
-    let pos_count: u64 = (0..contours_a.size()).map(|i| contours_a.index(i).intersections().size()).sum();
+    let pos_count: usize = (0..contours_a.size()).map(|i| contours_a.index(i).intersections().size()).sum();
     assert_eq!(pos_count, 156);
 }

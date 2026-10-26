@@ -44,13 +44,13 @@ namespace MRTest
             getOneMeshIntersectionContours(meshA, meshB, contours, null, bConts, conv);
             Assert.That(bConts.size(), Is.EqualTo((nuint)4));
 
-            ulong posCount = 0;
-            for (ulong i = 0; i < aConts.size(); i++)
+            nuint posCount = 0;
+            for (nuint i = 0; i < aConts.size(); i++)
             {
                 posCount += aConts[i].intersections.size();
             }
 
-            Assert.That(posCount, Is.EqualTo((ulong)156) );
+            Assert.That(posCount, Is.EqualTo((nuint)156) );
 
         }
 

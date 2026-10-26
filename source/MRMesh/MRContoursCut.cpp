@@ -7,7 +7,6 @@
 #include "MRMeshDelone.h"
 #include "MR2DContoursTriangulation.h"
 #include "MRCutTrianglePredicates.h"
-#include "MRPrecisePredicates3Poly.h"
 #include "MRRingIterator.h"
 #include "MRMeshFillHole.h"
 #include "MRTimer.h"
@@ -1044,24 +1043,131 @@ FaceBitSet getBadFacesAfterCut( const MeshTopology& topology, const PreCutResult
     return badFacesBS;
 }
 
-// a run of consecutive segments of one contour inside one face
-struct ContourPiece
+// segment i of contour c, from intersection i to i + 1, in face f, which is invalid for a segment along an edge of the mesh
+struct FaceSegment
 {
     FaceId f;
     int c = -1;
-    int first = -1; // the first segment
-    int num = 0; // the number of segments, which wrap past the end of a closed contour
+    int i = -1;
 };
 
-// the pieces of all contours, sorted by faces
-std::vector<ContourPiece> findContourPieces( const MeshTopology& topology, const OneMeshContours& contours )
+// the buffers of the search in one face, kept for the next face of the thread
+struct FaceCrossingsBuffers
+{
+    std::vector<std::pair<std::int64_t, int>> keys; // the key of every end of a segment (see pointKey) and the end, 2 * segment + k
+    std::vector<int> defs; // an end at every point
+    std::vector<std::array<int, 2>> ends; // the points of every segment
+    std::vector<int> active;
+    std::vector<Vector2d> xy; // the projected coordinates of the points without sortData
+    CutTrianglePredicates preds;
+};
+
+// the key of intersection j of contour c, the same for one point: a mesh vertex, or an intersection, the last one of a closed contour as its first one
+std::int64_t pointKey( const OneMeshContours& contours, int c, int j )
+{
+    const auto& in = contours[c].intersections;
+    if ( const auto v = std::get_if<VertId>( &in[j].primitiveId ) )
+        return -1 - std::int64_t( *v );
+    return ( std::int64_t( c ) << 32 ) + ( contours[c].closed && j + 1 == int( in.size() ) ? 0 : j );
+}
+
+// whether two segments have a common end
+bool shareEnd( const std::array<int, 2>& s, const std::array<int, 2>& t )
+{
+    return s[0] == t[0] || s[0] == t[1] || s[1] == t[0] || s[1] == t[1];
+}
+
+// whether two segments cross, by a sweep over their ends oriented and sorted by less, testing the segments that share no end
+template <typename Less, typename Cross>
+bool sweepCrosses( std::vector<std::array<int, 2>>& ends, std::vector<int>& active, Less less, Cross cross )
+{
+    for ( auto& e : ends )
+        if ( less( e[1], e[0] ) )
+            std::swap( e[0], e[1] );
+    std::sort( ends.begin(), ends.end(), [&] ( const auto& s, const auto& t ) { return less( s[0], t[0] ); } );
+    active.clear();
+    for ( int t = 0; t < int( ends.size() ); ++t )
+    {
+        std::erase_if( active, [&] ( int s ) { return less( ends[s][1], ends[t][0] ); } );
+        for ( int s : active )
+            if ( !shareEnd( ends[s], ends[t] ) && cross( ends[s][0], ends[s][1], ends[t][0], ends[t][1] ) )
+                return true;
+        active.push_back( t );
+    }
+    return false;
+}
+
+// whether two segments of one face cross: by the exact predicates consistent with the boolean, which make the face bad if they fail too
+// (with sortData), or by the coordinates projected on the plane of the two axes least aligned with the normal of the face
+bool crossesInFace( FaceCrossingsBuffers& buf, const Mesh& mesh, const OneMeshContours& contours, const SortIntersectionsData* sortData,
+    std::span<const FaceSegment> segs )
+{
+    // one id per point, so that segments touching at a common end are never tested
+    buf.keys.clear();
+    for ( int s = 0; s < int( segs.size() ); ++s )
+        for ( int k = 0; k < 2; ++k )
+            buf.keys.emplace_back( pointKey( contours, segs[s].c, segs[s].i + k ), 2 * s + k );
+    std::sort( buf.keys.begin(), buf.keys.end() );
+    buf.defs.clear();
+    buf.ends.resize( segs.size() );
+    for ( size_t x = 0; x < buf.keys.size(); ++x )
+    {
+        if ( x == 0 || buf.keys[x].first != buf.keys[x - 1].first )
+            buf.defs.push_back( buf.keys[x].second );
+        buf.ends[buf.keys[x].second / 2][buf.keys[x].second % 2] = int( buf.defs.size() ) - 1;
+    }
+    // nothing to test if every two segments share an end, as two consecutive segments of a contour
+    bool apart = false;
+    for ( size_t s = 0; s < buf.ends.size() && !apart; ++s )
+        for ( size_t t = s + 1; t < buf.ends.size() && !apart; ++t )
+            apart = !shareEnd( buf.ends[s], buf.ends[t] );
+    if ( !apart )
+        return false;
+
+    std::array<EdgeId, 3> edges;
+    mesh.topology.getTriEdges( segs[0].f, edges[0], edges[1], edges[2] );
+    const ThreeVertIds verts{ mesh.topology.org( edges[0] ), mesh.topology.org( edges[1] ), mesh.topology.org( edges[2] ) };
+    if ( sortData )
+    {
+        auto& preds = buf.preds;
+        preds.reset( preciseOwnTri( verts, mesh, *sortData ) );
+        for ( int p = 0; p < int( buf.defs.size() ); ++p )
+        {
+            const auto& s = segs[buf.defs[p] / 2];
+            preds.addPoint( VertId( p ), preciseCutPoint( mesh, contours, s.c, s.i + buf.defs[p] % 2, edges, verts, *sortData ) );
+        }
+        auto ccw = [&] ( int a, int b, int c ) { return preds.ccw( VertId( a ), VertId( b ), VertId( c ) ); };
+        return preds.failed() || sweepCrosses( buf.ends, buf.active, [&] ( int p, int q ) { return preds.less( VertId( p ), VertId( q ) ); },
+            [&] ( int a, int b, int c, int d ) { return ccw( a, b, c ) != ccw( a, b, d ) && ccw( c, d, a ) != ccw( c, d, b ); } ) || preds.failed();
+    }
+
+    // drop the axis most aligned with the normal
+    const auto n = dirDblArea( Vector3d( mesh.points[verts[0]] ), Vector3d( mesh.points[verts[1]] ), Vector3d( mesh.points[verts[2]] ) );
+    const int drop = std::abs( n.x ) >= std::abs( n.y ) && std::abs( n.x ) >= std::abs( n.z ) ? 0 : std::abs( n.y ) >= std::abs( n.z ) ? 1 : 2;
+    auto& xy = buf.xy;
+    xy.resize( buf.defs.size() );
+    for ( size_t p = 0; p < xy.size(); ++p )
+    {
+        const auto& s = segs[buf.defs[p] / 2];
+        const auto& q = contours[s.c].intersections[s.i + buf.defs[p] % 2].coordinate;
+        xy[p] = { q[drop == 0 ? 1 : 0], q[drop == 2 ? 1 : 2] };
+    }
+    // a zero orientation is touching, not crossing
+    auto side = [&] ( int a, int b, int c ) { return cross( xy[b] - xy[a], xy[c] - xy[a] ); };
+    return sweepCrosses( buf.ends, buf.active, [&] ( int p, int q ) { return std::tie( xy[p].x, xy[p].y ) < std::tie( xy[q].x, xy[q].y ); },
+        [&] ( int a, int b, int c, int d ) { return side( a, b, c ) * side( a, b, d ) < 0 && side( c, d, a ) * side( c, d, b ) < 0; } );
+}
+
+// finds the faces of the mesh where two segments of the contours cross, before the cut; two segments with a common end,
+// which follow each other along a contour or meet at a mesh vertex, do not cross
+FaceBitSet findCrossingFaces( const Mesh& mesh, const OneMeshContours& contours, const SortIntersectionsData* sortData )
 {
     MR_TIMER;
-    // the faces of the segments of all contours in one array, contour c from firstSeg[c]
+    // the segments of all contours in one array, contour c from firstSeg[c]
     std::vector<int> firstSeg( contours.size() + 1, 0 );
     for ( int c = 0; c < contours.size(); ++c )
         firstSeg[c + 1] = firstSeg[c] + std::max( int( contours[c].intersections.size() ) - 1, 0 );
-    std::vector<FaceId> segFaces( firstSeg.back() );
+    std::vector<FaceSegment> segs( firstSeg.back() );
     // in parallel over all segments, since one contour can have most of them, and they read the topology at random;
     // over ranges, not by ParallelFor, so that each range finds its first contour once
     tbb::parallel_for( tbb::blocked_range<int>( 0, firstSeg.back() ), [&] ( const tbb::blocked_range<int>& range )
@@ -1071,357 +1177,30 @@ std::vector<ContourPiece> findContourPieces( const MeshTopology& topology, const
         {
             while ( k >= firstSeg[c + 1] )
                 ++c;
-            segFaces[k] = segmentFace( topology, contours[c].intersections, k - firstSeg[c] );
+            const int i = k - firstSeg[c];
+            segs[k] = { segmentFace( mesh.topology, contours[c].intersections, i ), c, i };
         }
     } );
-
-    tbb::enumerable_thread_specific<std::vector<ContourPiece>> threadPieces;
-    ParallelFor( contours, threadPieces, [&] ( size_t c, std::vector<ContourPiece>& pieces )
+    std::erase_if( segs, [] ( const FaceSegment& s ) { return !s.f; } );
+    tbb::parallel_sort( segs.begin(), segs.end(), [] ( const FaceSegment& a, const FaceSegment& b )
     {
-        const int numSegs = firstSeg[c + 1] - firstSeg[c];
-        const auto* faces = segFaces.data() + firstSeg[c];
-        // the runs of segments in one face; a closed contour starts them after a change of the face, so that no run is split at the end
-        int start = 0;
-        if ( contours[c].closed )
-        {
-            while ( start < numSegs && faces[start] == faces[( start + numSegs - 1 ) % numSegs] )
-                ++start;
-            if ( start == numSegs )
-                start = 0; // the whole contour is in one face
-        }
-        for ( int k = 0; k < numSegs; )
-        {
-            const int first = ( start + k ) % numSegs;
-            const auto f = faces[first];
-            int num = 1;
-            while ( k + num < numSegs && faces[( first + num ) % numSegs] == f )
-                ++num;
-            k += num;
-            if ( f ) // not along an edge of the mesh
-                pieces.push_back( { f, int( c ), first, num } );
-        }
+        return std::tie( a.f, a.c, a.i ) < std::tie( b.f, b.c, b.i );
     } );
-    std::vector<ContourPiece> res;
-    size_t total = 0;
-    for ( const auto& pieces : threadPieces )
-        total += pieces.size();
-    res.reserve( total );
-    for ( const auto& pieces : threadPieces )
-        res.insert( res.end(), pieces.begin(), pieces.end() );
-    tbb::parallel_sort( res.begin(), res.end(), [] ( const ContourPiece& a, const ContourPiece& b )
+
+    // the segments of the faces with two segments at least
+    std::vector<std::span<const FaceSegment>> faces;
+    for ( size_t i = 0; i < segs.size(); )
     {
-        return std::tie( a.f, a.c, a.first ) < std::tie( b.f, b.c, b.first );
-    } );
-    return res;
-}
-
-// a segment of a contour in a face, projected on the plane of the two axes least aligned with the normal of the face
-struct FaceSegment
-{
-    int c = -1;
-    int i = -1; // from intersection i to i + 1
-    int p = -1; // the index of intersection i among the points of the face, and p + 1 of intersection i + 1
-    Vector2d a, b;
-    Box2d box;
-    bool loose = false; // an end may be far from its coordinate, and the box is around its exact point then
-};
-
-// 1 if point c is on the left of line ab for sure, -1 if on the right, 0 if the errors of the coordinates, below tol along each axis, may change it
-int approxSide( const Vector2d& a, const Vector2d& b, const Vector2d& c, double tol )
-{
-    const double ux = b.x - a.x, uy = b.y - a.y, wx = c.x - a.x, wy = c.y - a.y;
-    const double l = ux * wy, r = uy * wx;
-    const double area = l - r;
-    // the differences move by 2 tol, and the products and their difference add rounding errors below 2^-52 of the sum of the products
-    const double err = 2 * tol * ( std::abs( ux ) + std::abs( uy ) + std::abs( wx ) + std::abs( wy ) ) + 8 * tol * tol
-        + 0x1p-50 * ( std::abs( l ) + std::abs( r ) );
-    return int( area > err ) - int( area < -err );
-}
-
-// 1 if two segments cross for sure, -1 if they do not, 0 if the errors of the coordinates, below tol along each axis, may change the answer;
-// for tol = 0, the coordinates decide, and 0 means that an end of a segment is on the line of the other one, or within rounding of it
-int approxCross( const FaceSegment& s, const FaceSegment& t, double tol )
-{
-    const int sc = approxSide( s.a, s.b, t.a, tol ), sd = approxSide( s.a, s.b, t.b, tol );
-    if ( sc != 0 && sc == sd )
-        return -1;
-    const int ta = approxSide( t.a, t.b, s.a, tol ), tb = approxSide( t.a, t.b, s.b, tol );
-    if ( ta != 0 && ta == tb )
-        return -1;
-    return sc != 0 && sd != 0 && ta != 0 && tb != 0 ? 1 : 0;
-}
-
-// the largest absolute value of the coordinates of a point
-float maxAbsCoord( const Vector3f& p )
-{
-    return std::max( { std::abs( p.x ), std::abs( p.y ), std::abs( p.z ) } );
-}
-
-// finds whether two segments of the contours cross inside a face, one face at a time, keeping its buffers for the next face: the coordinates
-// decide the pairs that their conservative error bounds allow, the exact predicates consistent with the boolean decide the others (with sortData)
-class FaceCrossingsFinder
-{
-public:
-    FaceCrossingsFinder( const Mesh& mesh, const OneMeshContours& contours, const SortIntersectionsData* sortData )
-        : mesh_( mesh ), contours_( contours ), sortData_( sortData )
-    {
-        // the points of mesh B move to mesh A by rigidB2A, and the coordinates of the contours of mesh B back by its inverse
-        if ( sortData && sortData->rigidB2A )
-        {
-            ( sortData->isOtherA ? own2A_ : other2own_ ) = *sortData->rigidB2A;
-            if ( sortData->isOtherA )
-                other2own_ = sortData->rigidB2A->inverse();
-        }
-    }
-
-    // whether two segments of the pieces of one face cross
-    bool find( std::span<const ContourPiece> pieces )
-    {
-        setFace_( pieces.front().f );
-        makeSegments_( pieces );
-        predsReady_ = false;
-        return sweep_();
-    }
-
-private:
-    // sets the face, the bound of the errors of the coordinates in it, the projection, and the exact corners
-    void setFace_( FaceId f )
-    {
-        mesh_.topology.getTriEdges( f, edges_[0], edges_[1], edges_[2] );
-        verts_ = { mesh_.topology.org( edges_[0] ), mesh_.topology.org( edges_[1] ), mesh_.topology.org( edges_[2] ) };
-        for ( int k = 0; k < 3; ++k )
-            corners_[k] = mesh_.points[verts_[k]];
-
-        tol_ = 0;
-        if ( sortData_ )
-        {
-            float maxAbs = 0;
-            for ( const auto& p : corners_ )
-                maxAbs = std::max( { maxAbs, maxAbsCoord( p ), maxAbsCoord( own2A_( p ) ) } );
-            tol_ = tolOf_( maxAbs );
-            for ( int k = 0; k < 3; ++k )
-                ownInt_[k] = preciseOwnVert( verts_[k], mesh_, *sortData_ ).pt;
-        }
-
-        // drop the axis most aligned with the normal
-        const auto n = dirDblArea( Vector3d( corners_[0] ), Vector3d( corners_[1] ), Vector3d( corners_[2] ) );
-        const int drop = std::abs( n.x ) >= std::abs( n.y ) && std::abs( n.x ) >= std::abs( n.z ) ? 0 : std::abs( n.y ) >= std::abs( n.z ) ? 1 : 2;
-        kx_ = drop == 0 ? 1 : 0;
-        ky_ = drop == 2 ? 1 : 2;
-    }
-
-    // the bound of the errors along each axis of the coordinates of the intersections and of the vertices moved into this mesh
-    // from their exact points, near points whose coordinates in both meshes are below m = maxAbs by absolute value; with u = 2^-24:
-    // the integer grid adds half a unit (below one after a rotation), the rounding of the intersections to float u m, rigidB2A in float
-    // on a vertex of mesh B below 11 u m, and its inverse in float (the entries of its matrix are off by up to 10 u) below 37 u m < 2^-18 m
-    double tolOf_( float maxAbs ) const
-    {
-        const double unit = 1 / sortData_->converter.invRange;
-        return 2 * unit + 0x1p-18 * ( maxAbs + unit );
-    }
-
-    Vector2d project_( const Vector3f& p ) const
-    {
-        return { p[kx_], p[ky_] };
-    }
-
-    // a box of the exact intersection i of contour c if it is a loose point, otherwise nothing: findTriangleSegmentIntersectionPrecise
-    // takes the middle of the part of the segment inside the triangle if both ends of the segment are exactly in the plane of the triangle,
-    // which can be far from the exact point; the exact point is on the segment and inside the triangle, so in the boxes of the coordinates
-    // of their vertices moved into this mesh as the contours are, each expanded by the bound of the errors of its vertices
-    std::optional<Box2d> looseBox_( int c, int i ) const
-    {
-        if ( !sortData_ )
-            return {};
-        const auto& prim = contours_[c].intersections[i].primitiveId;
-        const auto& et = sortData_->contours[c][i];
-        const auto& other = sortData_->otherMesh;
-        // the intersection of the given box of this mesh with the box of the vertices vs of the other mesh
-        auto withOther = [&] ( const Box2d& own, std::span<const VertId> vs )
-        {
-            Box2d res;
-            float maxAbs = 0;
-            for ( auto v : vs )
-            {
-                const auto q = other2own_( other.points[v] );
-                maxAbs = std::max( { maxAbs, maxAbsCoord( other.points[v] ), maxAbsCoord( q ) } );
-                res.include( project_( q ) );
-            }
-            res = own.intersection( res.expanded( Vector2d::diagonal( tolOf_( maxAbs ) ) ) );
-            assert( res.valid() ); // both boxes contain the exact point
-            return res;
-        };
-        // the box of num corners of the face from corner k
-        auto ownBox = [&] ( int k, int num )
-        {
-            Box2d res;
-            for ( int j = 0; j < num; ++j )
-                res.include( project_( corners_[( k + j ) % 3] ) );
-            return res.expanded( Vector2d::diagonal( tol_ ) );
-        };
-        if ( const auto pe = std::get_if<EdgeId>( &prim ) )
-        {
-            // side k of this face crossing a triangle of the other mesh
-            int k = 0;
-            while ( k < 3 && edges_[k].undirected() != pe->undirected() )
-                ++k;
-            if ( k == 3 )
-                return ownBox( 0, 3 ); // not a side, which breaks a precondition
-            const auto t = other.topology.getTriVerts( et.tri() );
-            const auto a = preciseOtherVert( t[0], *sortData_ ).pt, b = preciseOtherVert( t[1], *sortData_ ).pt;
-            const auto d = preciseOtherVert( t[2], *sortData_ ).pt;
-            for ( int j = 0; j < 2; ++j )
-                if ( detail::orient3dVolume( a, b, d, ownInt_[( k + j ) % 3] ) != 0 )
-                    return {};
-            return withOther( ownBox( k, 2 ), t );
-        }
-        if ( std::holds_alternative<FaceId>( prim ) )
-        {
-            // an edge of the other mesh crossing this face
-            const std::array<VertId, 2> e{ other.topology.org( et.edge ), other.topology.dest( et.edge ) };
-            for ( auto v : e )
-                if ( detail::orient3dVolume( ownInt_[0], ownInt_[1], ownInt_[2], preciseOtherVert( v, *sortData_ ).pt ) != 0 )
-                    return {};
-            return withOther( ownBox( 0, 3 ), e );
-        }
-        return {}; // a corner
-    }
-
-    // makes the projected segments of the pieces, numbering the points of the face piece by piece
-    void makeSegments_( std::span<const ContourPiece> pieces )
-    {
-        segs_.clear();
-        int numPoints = 0;
-        for ( const auto& p : pieces )
-        {
-            const auto& inContour = contours_[p.c].intersections;
-            const int numSegs = int( inContour.size() ) - 1;
-            auto looseA = looseBox_( p.c, p.first );
-            for ( int k = 0; k < p.num; ++k )
-            {
-                auto& s = segs_.emplace_back();
-                s.c = p.c;
-                s.i = ( p.first + k ) % numSegs;
-                s.p = numPoints + k;
-                s.a = project_( inContour[s.i].coordinate );
-                s.b = project_( inContour[s.i + 1].coordinate );
-                const auto looseB = looseBox_( p.c, s.i + 1 );
-                s.box = looseA.value_or( Box2d( s.a, s.a ) );
-                s.box.include( looseB.value_or( Box2d( s.b, s.b ) ) );
-                s.loose = looseA || looseB;
-                looseA = looseB;
-            }
-            numPoints += p.num + 1;
-        }
-    }
-
-    // whether two segments touch at their common end, so that they do not cross: they follow each other along a contour or meet at a mesh vertex
-    bool touch_( const FaceSegment& s, const FaceSegment& t ) const
-    {
-        if ( s.c == t.c )
-        {
-            const int numSegs = int( contours_[s.c].intersections.size() ) - 1;
-            const int d = std::abs( s.i - t.i );
-            if ( d == 1 || ( contours_[s.c].closed && d == numSegs - 1 ) )
-                return true;
-        }
-        for ( int sk = 0; sk < 2; ++sk )
-            if ( const auto sv = std::get_if<VertId>( &contours_[s.c].intersections[s.i + sk].primitiveId ) )
-                for ( int tk = 0; tk < 2; ++tk )
-                    if ( const auto tv = std::get_if<VertId>( &contours_[t.c].intersections[t.i + tk].primitiveId ); tv && *tv == *sv )
-                        return true;
-        return false;
-    }
-
-    // whether two segments cross by the exact predicates, which get all points of the face on the first pair that the coordinates leave open,
-    // so that the shifts of the points defined alike (see CutTrianglePredicates), and so the answers, do not depend on the order of the pairs;
-    // a failure (points that break a precondition, or that the predicates cannot tell apart) makes the face bad anyway
-    bool exactCross_( const FaceSegment& s, const FaceSegment& t )
-    {
-        if ( !predsReady_ )
-        {
-            preds_.reset( preciseOwnTri( verts_, mesh_, *sortData_ ) );
-            for ( size_t k = 0; k < segs_.size(); ++k )
-            {
-                const auto& x = segs_[k];
-                preds_.addPoint( VertId( x.p ), preciseCutPoint( mesh_, contours_, x.c, x.i, edges_, verts_, *sortData_ ) );
-                if ( k + 1 == segs_.size() || segs_[k + 1].p != x.p + 1 ) // the last segment of a piece
-                    preds_.addPoint( VertId( x.p + 1 ), preciseCutPoint( mesh_, contours_, x.c, x.i + 1, edges_, verts_, *sortData_ ) );
-            }
-            predsReady_ = true;
-        }
-        if ( preds_.failed() )
-            return true;
-        const VertId a( s.p ), b( s.p + 1 ), c( t.p ), d( t.p + 1 );
-        return ( preds_.ccw( a, b, c ) != preds_.ccw( a, b, d ) && preds_.ccw( c, d, a ) != preds_.ccw( c, d, b ) ) || preds_.failed();
-    }
-
-    // whether two segments cross, by a sweep along the first axis over their boxes, till the first crossing
-    bool sweep_()
-    {
-        order_.resize( segs_.size() );
-        std::iota( order_.begin(), order_.end(), 0 );
-        std::sort( order_.begin(), order_.end(), [&] ( int x, int y ) { return segs_[x].box.min.x < segs_[y].box.min.x; } );
-        active_.clear();
-        for ( int j : order_ )
-        {
-            const auto& t = segs_[j];
-            std::erase_if( active_, [&] ( int i ) { return segs_[i].box.max.x + 2 * tol_ < t.box.min.x; } );
-            const auto tBox = t.box.expanded( Vector2d::diagonal( 2 * tol_ ) );
-            for ( int i : active_ )
-            {
-                const auto& s = segs_[i];
-                if ( !s.box.intersects( tBox ) || touch_( s, t ) )
-                    continue;
-                // without sortData, tol is zero, and 0 means that an end of a segment is on the line of the other one: touching, no crossing;
-                // the coordinates of a loose point tell nothing
-                const int r = s.loose || t.loose ? 0 : approxCross( s, t, tol_ );
-                if ( r > 0 || ( r == 0 && sortData_ && exactCross_( s, t ) ) )
-                    return true;
-            }
-            active_.push_back( j );
-        }
-        return false;
-    }
-
-    const Mesh& mesh_;
-    const OneMeshContours& contours_;
-    const SortIntersectionsData* sortData_ = nullptr;
-    AffineXf3f own2A_, other2own_; // move the points of this mesh to mesh A, and those of the other mesh into the coordinates of the contours
-    std::array<EdgeId, 3> edges_; // counterclockwise
-    ThreeVertIds verts_; // verts_[k] = org( edges_[k] )
-    std::array<Vector3f, 3> corners_;
-    double tol_ = 0; // the bound of the errors of the coordinates of the intersections along each axis
-    int kx_ = 0, ky_ = 1; // the projection axes
-    std::array<Vector3i, 3> ownInt_; // the exact corners, if sortData is given
-    std::vector<FaceSegment> segs_;
-    std::vector<int> order_, active_; // the buffers of the sweep
-    CutTrianglePredicates preds_;
-    bool predsReady_ = false; // whether preds_ have the points of the face
-};
-
-// finds the faces of the mesh where two segments of the contours cross, before the cut; the segments of one face are checked
-// only if it has two pieces of the contours or a piece of three segments; two segments that follow each other along a contour
-// or have a common mesh vertex do not cross
-FaceBitSet findCrossingFaces( const Mesh& mesh, const OneMeshContours& contours, const SortIntersectionsData* sortData )
-{
-    MR_TIMER;
-    const auto pieces = findContourPieces( mesh.topology, contours );
-    // the pieces of the faces with two pieces or with a piece of three segments, where two segments may cross
-    std::vector<std::span<const ContourPiece>> faces;
-    for ( int i = 0; i < pieces.size(); )
-    {
-        int j = i + 1;
-        while ( j < pieces.size() && pieces[j].f == pieces[i].f )
+        size_t j = i + 1;
+        while ( j < segs.size() && segs[j].f == segs[i].f )
             ++j;
-        if ( j > i + 1 || pieces[i].num >= 3 )
-            faces.emplace_back( pieces.data() + i, j - i );
+        if ( j > i + 1 )
+            faces.emplace_back( segs.data() + i, j - i );
         i = j;
     }
-
-    tbb::enumerable_thread_specific<FaceCrossingsFinder> finders( [&] { return FaceCrossingsFinder( mesh, contours, sortData ); } );
+    tbb::enumerable_thread_specific<FaceCrossingsBuffers> buffers;
     std::vector<char> crossed( faces.size() ); // not in a bit set yet, since its neighbor faces share words
-    ParallelFor( faces, finders, [&] ( size_t k, FaceCrossingsFinder& finder ) { crossed[k] = finder.find( faces[k] ); } );
+    ParallelFor( faces, buffers, [&] ( size_t k, FaceCrossingsBuffers& buf ) { crossed[k] = crossesInFace( buf, mesh, contours, sortData, faces[k] ); } );
     FaceBitSet res( mesh.topology.faceSize() );
     for ( size_t k = 0; k < faces.size(); ++k )
         if ( crossed[k] )

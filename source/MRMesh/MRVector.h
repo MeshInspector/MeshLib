@@ -43,12 +43,14 @@ public:
     /// the canonical standard iterator types don't always mention the allocator (e.g. libc++'s `std::__wrap_iter<T *>`)
     struct iterator : StdVector::iterator
     {
+        using element_type = T; // for std::pointer_traits, some libc++ versions hard-error without it
         iterator() = default;
         MR_BIND_IGNORE iterator( typename StdVector::iterator it ) : StdVector::iterator( it ) {}
         MR_VECTOR_ITERATOR_OPS( iterator, typename StdVector::iterator )
     };
     struct const_iterator : StdVector::const_iterator
     {
+        using element_type = const T;
         const_iterator() = default;
         MR_BIND_IGNORE const_iterator( typename StdVector::const_iterator it ) : StdVector::const_iterator( it ) {}
         MR_BIND_IGNORE const_iterator( typename StdVector::iterator it ) : StdVector::const_iterator( it ) {}

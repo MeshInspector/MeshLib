@@ -17,6 +17,7 @@
 #include "MRSurfaceDistance.h"
 #include "MRExtractIsolines.h"
 #include "MRParallelFor.h"
+#include "MRBitSetParallelFor.h"
 #include "MRMeshIntersect.h"
 #include "MRSurfacePath.h"
 #include "MRphmap.h"
@@ -1061,15 +1062,26 @@ std::vector<ContourPiece> findContourPieces( const MeshTopology& topology, const
     for ( int c = 0; c < contours.size(); ++c )
         firstSeg[c + 1] = firstSeg[c] + std::max( int( contours[c].intersections.size() ) - 1, 0 );
     std::vector<FaceId> segFaces( firstSeg.back() );
+    // in parallel over all segments, since one contour can have most of them, and they read the topology at random;
+    // each sub-range of one thread is done at its first segment, which finds its contour once
+    BitSetParallel::forAllRanged( { size_t( 0 ), segFaces.size() }, [&] ( size_t i, const BitSetParallel::Range& range )
+    {
+        if ( i != range.begin() )
+            return;
+        int c = int( std::upper_bound( firstSeg.begin(), firstSeg.end(), int( i ) ) - firstSeg.begin() ) - 1;
+        for ( int k = int( range.begin() ); k < int( range.end() ); ++k )
+        {
+            while ( k >= firstSeg[c + 1] )
+                ++c;
+            segFaces[k] = segmentFace( topology, contours[c].intersections, k - firstSeg[c] );
+        }
+    } );
+
     tbb::enumerable_thread_specific<std::vector<ContourPiece>> threadPieces;
     ParallelFor( contours, threadPieces, [&] ( size_t c, std::vector<ContourPiece>& pieces )
     {
-        // the faces of the segments in parallel too, since one contour can have most of them, and they read the topology at random;
-        // while waiting here, this thread may run other contours, which only append to pieces before this one does
         const int numSegs = firstSeg[c + 1] - firstSeg[c];
-        auto* faces = segFaces.data() + firstSeg[c];
-        ParallelFor( 0, numSegs, [&] ( int k ) { faces[k] = segmentFace( topology, contours[c].intersections, k ); } );
-
+        const auto* faces = segFaces.data() + firstSeg[c];
         // the runs of segments in one face; a closed contour starts them after a change of the face, so that no run is split at the end
         int start = 0;
         if ( contours[c].closed )

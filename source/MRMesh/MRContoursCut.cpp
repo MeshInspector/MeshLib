@@ -1056,10 +1056,10 @@ struct FaceCrossingsBuffers
 {
     std::vector<std::pair<std::int64_t, int>> keys; // the key of every end of a segment (see pointKey) and the end, 2 * segment + k
     std::vector<int> defs; // an end at every point
-    std::vector<std::array<int, 2>> ends; // the points of every segment
-    std::vector<int> active;
-    std::vector<Vector2d> xy; // the projected coordinates of the points without sortData
+    std::vector<TwoVertIds> ends; // the points of every segment
+    Contour2f xy; // the projected coordinates of the points without sortData
     CutTrianglePredicates preds;
+    std::unique_ptr<PlanarTriangulation::ISweepLineCache> cache = PlanarTriangulation::makeSweepLineCache();
 };
 
 // the key of intersection j of contour c, the same for one point: a mesh vertex, or an intersection, the last one of a closed contour as its first one
@@ -1069,32 +1069,6 @@ std::int64_t pointKey( const OneMeshContours& contours, int c, int j )
     if ( const auto v = std::get_if<VertId>( &in[j].primitiveId ) )
         return -1 - std::int64_t( *v );
     return ( std::int64_t( c ) << 32 ) + ( contours[c].closed && j + 1 == int( in.size() ) ? 0 : j );
-}
-
-// whether two segments have a common end
-bool shareEnd( const std::array<int, 2>& s, const std::array<int, 2>& t )
-{
-    return s[0] == t[0] || s[0] == t[1] || s[1] == t[0] || s[1] == t[1];
-}
-
-// whether two segments cross, by a sweep over their ends oriented and sorted by less, testing the segments that share no end
-template <typename Less, typename Cross>
-bool sweepCrosses( std::vector<std::array<int, 2>>& ends, std::vector<int>& active, Less less, Cross cross )
-{
-    for ( auto& e : ends )
-        if ( less( e[1], e[0] ) )
-            std::swap( e[0], e[1] );
-    std::sort( ends.begin(), ends.end(), [&] ( const auto& s, const auto& t ) { return less( s[0], t[0] ); } );
-    active.clear();
-    for ( int t = 0; t < int( ends.size() ); ++t )
-    {
-        std::erase_if( active, [&] ( int s ) { return less( ends[s][1], ends[t][0] ); } );
-        for ( int s : active )
-            if ( !shareEnd( ends[s], ends[t] ) && cross( ends[s][0], ends[s][1], ends[t][0], ends[t][1] ) )
-                return true;
-        active.push_back( t );
-    }
-    return false;
 }
 
 // whether two segments of one face cross: by the exact predicates consistent with the boolean, which make the face bad if they fail too
@@ -1114,14 +1088,10 @@ bool crossesInFace( FaceCrossingsBuffers& buf, const Mesh& mesh, const OneMeshCo
     {
         if ( x == 0 || buf.keys[x].first != buf.keys[x - 1].first )
             buf.defs.push_back( buf.keys[x].second );
-        buf.ends[buf.keys[x].second / 2][buf.keys[x].second % 2] = int( buf.defs.size() ) - 1;
+        buf.ends[buf.keys[x].second / 2][buf.keys[x].second % 2] = VertId( int( buf.defs.size() ) - 1 );
     }
-    // nothing to test if every two segments share an end, as two consecutive segments of a contour
-    bool apart = false;
-    for ( size_t s = 0; s < buf.ends.size() && !apart; ++s )
-        for ( size_t t = s + 1; t < buf.ends.size() && !apart; ++t )
-            apart = !shareEnd( buf.ends[s], buf.ends[t] );
-    if ( !apart )
+    // every two segments among three points share an end, as two consecutive segments of a contour
+    if ( buf.defs.size() <= 3 )
         return false;
 
     std::array<EdgeId, 3> edges;
@@ -1136,9 +1106,7 @@ bool crossesInFace( FaceCrossingsBuffers& buf, const Mesh& mesh, const OneMeshCo
             const auto& s = segs[buf.defs[p] / 2];
             preds.addPoint( VertId( p ), preciseCutPoint( mesh, contours, s.c, s.i + buf.defs[p] % 2, edges, verts, *sortData ) );
         }
-        auto ccw = [&] ( int a, int b, int c ) { return preds.ccw( VertId( a ), VertId( b ), VertId( c ) ); };
-        return preds.failed() || sweepCrosses( buf.ends, buf.active, [&] ( int p, int q ) { return preds.less( VertId( p ), VertId( q ) ); },
-            [&] ( int a, int b, int c, int d ) { return ccw( a, b, c ) != ccw( a, b, d ) && ccw( c, d, a ) != ccw( c, d, b ); } ) || preds.failed();
+        return preds.failed() || PlanarTriangulation::hasCrossing( buf.ends, preds, buf.cache.get() );
     }
 
     // drop the axis most aligned with the normal
@@ -1152,10 +1120,7 @@ bool crossesInFace( FaceCrossingsBuffers& buf, const Mesh& mesh, const OneMeshCo
         const auto& q = contours[s.c].intersections[s.i + buf.defs[p] % 2].coordinate;
         xy[p] = { q[drop == 0 ? 1 : 0], q[drop == 2 ? 1 : 2] };
     }
-    // a zero orientation is touching, not crossing
-    auto side = [&] ( int a, int b, int c ) { return cross( xy[b] - xy[a], xy[c] - xy[a] ); };
-    return sweepCrosses( buf.ends, buf.active, [&] ( int p, int q ) { return std::tie( xy[p].x, xy[p].y ) < std::tie( xy[q].x, xy[q].y ); },
-        [&] ( int a, int b, int c, int d ) { return side( a, b, c ) * side( a, b, d ) < 0 && side( c, d, a ) * side( c, d, b ) < 0; } );
+    return PlanarTriangulation::hasCrossing( buf.ends, xy, buf.cache.get() );
 }
 
 // finds the faces of the mesh where two segments of the contours cross, before the cut; two segments with a common end,
@@ -1200,7 +1165,11 @@ FaceBitSet findCrossingFaces( const Mesh& mesh, const OneMeshContours& contours,
     }
     tbb::enumerable_thread_specific<FaceCrossingsBuffers> buffers;
     std::vector<char> crossed( faces.size() ); // not in a bit set yet, since its neighbor faces share words
-    ParallelFor( faces, buffers, [&] ( size_t k, FaceCrossingsBuffers& buf ) { crossed[k] = crossesInFace( buf, mesh, contours, sortData, faces[k] ); } );
+    ParallelFor( faces, buffers, [&] ( size_t k, FaceCrossingsBuffers& buf )
+    {
+        // isolate keeps the nested parallel loops of the sweep from stealing this thread onto another face with the same buffers
+        tbb::this_task_arena::isolate( [&] { crossed[k] = crossesInFace( buf, mesh, contours, sortData, faces[k] ); } );
+    } );
     FaceBitSet res( mesh.topology.faceSize() );
     for ( size_t k = 0; k < faces.size(); ++k )
         if ( crossed[k] )

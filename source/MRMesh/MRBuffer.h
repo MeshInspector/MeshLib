@@ -2,6 +2,7 @@
 
 #include "MRMacros.h"
 #include "MRAllocator.h"
+#include "MRFinally.h"
 #include "MRNoDefInit.h"
 #include "MRId.h"
 #include <cassert>
@@ -77,9 +78,11 @@ public:
         if ( newSize > capacity_.val )
         {
             clear();
-            static_assert( std::is_nothrow_default_constructible_v<T> ); // else p leaks if the construction below throws
             T * p = Allocator<T>().allocate( newSize );
-            std::uninitialized_default_construct_n( p, newSize ); // leaves the elements uninitialized
+            {
+                MR_FINALLY_ON_THROW { Allocator<T>().deallocate( p, newSize ); };
+                std::uninitialized_default_construct_n( p, newSize ); // leaves the elements uninitialized
+            }
             data_ = std::unique_ptr<T[], Deleter>( p, Deleter{ newSize } );
             capacity_.val = newSize;
         }

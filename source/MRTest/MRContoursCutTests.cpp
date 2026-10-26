@@ -1164,6 +1164,8 @@ TEST( MRMesh, FindContoursCrossingsEven )
         if ( top < 2 )
         {
             EXPECT_TRUE( crossings.empty() );
+            Mesh cut = square;
+            EXPECT_TRUE( cutMesh( cut, { across, tent( top ) }, { .forceFillMode = CutMeshParameters::ForceFill::All } ).fbsWithContourIntersections.none() );
             continue;
         }
         const std::vector<ContoursCrossing> expected{ { 0_f, 0, 0, 1, 0 }, { 0_f, 0, 0, 1, 1 } };
@@ -1171,6 +1173,11 @@ TEST( MRMesh, FindContoursCrossingsEven )
 
         Mesh cut = square;
         EXPECT_TRUE( cutMesh( cut, { across, tent( top ) } ).fbsWithContourIntersections.none() );
+        // under force fill, the face of the crossings is bad
+        cut = square;
+        const auto forced = cutMesh( cut, { across, tent( top ) }, { .forceFillMode = CutMeshParameters::ForceFill::All } ).fbsWithContourIntersections;
+        EXPECT_EQ( forced.count(), 1 );
+        EXPECT_TRUE( forced.test( 0_f ) );
     }
 }
 
@@ -1205,6 +1212,13 @@ std::vector<ContoursCrossing> findBooleanCrossings( const Mesh& meshA, const Mes
     const auto faces = crossingFaces( res );
     for ( auto f : bad )
         EXPECT_TRUE( f < faces.size() && faces.test( f ) ) << "bad face " << f << " without crossings";
+
+    // the forced cut reports exactly the faces of the crossings
+    cut = meshA;
+    const auto forced = cutMesh( cut, contoursA, { .sortData = &dataForA, .forceFillMode = CutMeshParameters::ForceFill::All } ).fbsWithContourIntersections;
+    EXPECT_EQ( forced.count(), faces.count() );
+    for ( auto f : faces )
+        EXPECT_TRUE( forced.test( f ) );
     return res;
 }
 

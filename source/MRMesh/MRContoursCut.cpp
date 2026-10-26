@@ -7,6 +7,7 @@
 #include "MRMeshDelone.h"
 #include "MR2DContoursTriangulation.h"
 #include "MRCutTrianglePredicates.h"
+#include "MRPrecisePredicates3Poly.h"
 #include "MRRingIterator.h"
 #include "MRMeshFillHole.h"
 #include "MRTimer.h"
@@ -1125,15 +1126,6 @@ struct FaceSegment
     bool loose = false; // an end may be far from its coordinate, and the box is around its exact point then
 };
 
-// whether point x may be in the plane through point a with normal n of exact integers, by a filtered dot product in double:
-// the difference of the points, below 2^31, is exact, and the rounding of n and of the products and their sum moves the result
-// by less than 2^-50 of the sum of the absolute products
-bool mayBeInPlane( const Vector3i64& n, const Vector3i& a, const Vector3i& x )
-{
-    const Vector3d d = Vector3d( x ) - Vector3d( a ), nd( n );
-    return std::abs( dot( nd, d ) ) <= 0x1p-50 * ( std::abs( nd.x * d.x ) + std::abs( nd.y * d.y ) + std::abs( nd.z * d.z ) );
-}
-
 // 1 if point c is on the left of line ab for sure, -1 if on the right, 0 if the errors of the coordinates, below tol along each axis, may change it
 int approxSide( const Vector2d& a, const Vector2d& b, const Vector2d& c, double tol )
 {
@@ -1209,7 +1201,6 @@ private:
             tol_ = tolOf_( maxAbs );
             for ( int k = 0; k < 3; ++k )
                 ownInt_[k] = preciseOwnVert( verts_[k], mesh_, *sortData_ ).pt;
-            ownNormal_ = dirDblArea( Vector3i64( ownInt_[0] ), Vector3i64( ownInt_[1] ), Vector3i64( ownInt_[2] ) );
         }
 
         // drop the axis most aligned with the normal
@@ -1219,13 +1210,14 @@ private:
         ky_ = drop == 2 ? 1 : 2;
     }
 
-    // the bound of the errors along each axis of the coordinates near points whose coordinates in both meshes are below maxAbs
-    // by absolute value: the coordinates of the intersections are the exact points rounded to the integer grid of the converter,
-    // then to float, and moved back by the inverse of rigidB2A in float on mesh B; the vertices have a part of these errors
+    // the bound of the errors along each axis of the coordinates of the intersections and of the vertices moved into this mesh
+    // from their exact points, near points whose coordinates in both meshes are below m = maxAbs by absolute value; with u = 2^-24:
+    // the integer grid adds half a unit (below one after a rotation), the rounding of the intersections to float u m, rigidB2A in float
+    // on a vertex of mesh B below 11 u m, and its inverse in float (the entries of its matrix are off by up to 10 u) below 37 u m < 2^-18 m
     double tolOf_( float maxAbs ) const
     {
         const double unit = 1 / sortData_->converter.invRange;
-        return 2 * unit + 0x1p-20 * ( maxAbs + unit );
+        return 2 * unit + 0x1p-18 * ( maxAbs + unit );
     }
 
     Vector2d project_( const Vector3f& p ) const
@@ -1233,8 +1225,8 @@ private:
         return { p[kx_], p[ky_] };
     }
 
-    // a box of the exact intersection i of contour c if it may be a loose point, otherwise nothing: findTriangleSegmentIntersectionPrecise
-    // takes the middle of the part of the segment inside the triangle if both ends of the segment are in the plane of the triangle,
+    // a box of the exact intersection i of contour c if it is a loose point, otherwise nothing: findTriangleSegmentIntersectionPrecise
+    // takes the middle of the part of the segment inside the triangle if both ends of the segment are exactly in the plane of the triangle,
     // which can be far from the exact point; the exact point is on the segment and inside the triangle, so in the boxes of the coordinates
     // of their vertices moved into this mesh as the contours are, each expanded by the bound of the errors of its vertices
     std::optional<Box2d> looseBox_( int c, int i ) const
@@ -1244,7 +1236,8 @@ private:
         const auto& prim = contours_[c].intersections[i].primitiveId;
         const auto& et = sortData_->contours[c][i];
         const auto& other = sortData_->otherMesh;
-        auto otherBox = [&] ( std::span<const VertId> vs )
+        // the intersection of the given box of this mesh with the box of the vertices vs of the other mesh
+        auto withOther = [&] ( const Box2d& own, std::span<const VertId> vs )
         {
             Box2d res;
             float maxAbs = 0;
@@ -1254,7 +1247,9 @@ private:
                 maxAbs = std::max( { maxAbs, maxAbsCoord( other.points[v] ), maxAbsCoord( q ) } );
                 res.include( project_( q ) );
             }
-            return res.expanded( Vector2d::diagonal( tolOf_( maxAbs ) ) );
+            res = own.intersection( res.expanded( Vector2d::diagonal( tolOf_( maxAbs ) ) ) );
+            assert( res.valid() ); // both boxes contain the exact point
+            return res;
         };
         // the box of num corners of the face from corner k
         auto ownBox = [&] ( int k, int num )
@@ -1267,27 +1262,27 @@ private:
         if ( const auto pe = std::get_if<EdgeId>( &prim ) )
         {
             // side k of this face crossing a triangle of the other mesh
-            const auto t = other.topology.getTriVerts( et.tri() );
-            const auto a = preciseOtherVert( t[0], *sortData_ ).pt;
-            const auto n = dirDblArea( Vector3i64( a ), Vector3i64( preciseOtherVert( t[1], *sortData_ ).pt ),
-                Vector3i64( preciseOtherVert( t[2], *sortData_ ).pt ) );
             int k = 0;
             while ( k < 3 && edges_[k].undirected() != pe->undirected() )
                 ++k;
             if ( k == 3 )
                 return ownBox( 0, 3 ); // not a side, which breaks a precondition
-            if ( !mayBeInPlane( n, a, ownInt_[k] ) || !mayBeInPlane( n, a, ownInt_[( k + 1 ) % 3] ) )
-                return {};
-            return ownBox( k, 2 ).intersection( otherBox( t ) );
+            const auto t = other.topology.getTriVerts( et.tri() );
+            const auto a = preciseOtherVert( t[0], *sortData_ ).pt, b = preciseOtherVert( t[1], *sortData_ ).pt;
+            const auto d = preciseOtherVert( t[2], *sortData_ ).pt;
+            for ( int j = 0; j < 2; ++j )
+                if ( detail::orient3dVolume( a, b, d, ownInt_[( k + j ) % 3] ) != 0 )
+                    return {};
+            return withOther( ownBox( k, 2 ), t );
         }
         if ( std::holds_alternative<FaceId>( prim ) )
         {
             // an edge of the other mesh crossing this face
             const std::array<VertId, 2> e{ other.topology.org( et.edge ), other.topology.dest( et.edge ) };
-            if ( !mayBeInPlane( ownNormal_, ownInt_[0], preciseOtherVert( e[0], *sortData_ ).pt )
-                || !mayBeInPlane( ownNormal_, ownInt_[0], preciseOtherVert( e[1], *sortData_ ).pt ) )
-                return {};
-            return ownBox( 0, 3 ).intersection( otherBox( e ) );
+            for ( auto v : e )
+                if ( detail::orient3dVolume( ownInt_[0], ownInt_[1], ownInt_[2], preciseOtherVert( v, *sortData_ ).pt ) != 0 )
+                    return {};
+            return withOther( ownBox( 0, 3 ), e );
         }
         return {}; // a corner
     }
@@ -1399,7 +1394,6 @@ private:
     double tol_ = 0; // the bound of the errors of the coordinates of the intersections along each axis
     int kx_ = 0, ky_ = 1; // the projection axes
     std::array<Vector3i, 3> ownInt_; // the exact corners, if sortData is given
-    Vector3i64 ownNormal_;
     std::vector<FaceSegment> segs_;
     std::vector<int> order_, active_; // the buffers of the sweep
     CutTrianglePredicates preds_;

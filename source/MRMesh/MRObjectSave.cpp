@@ -2,10 +2,12 @@
 #include "MRBitSetParallelFor.h"
 #include "MRDistanceMap.h"
 #include "MRDistanceMapSave.h"
+#include "MRGcodeSave.h"
 #include "MRIOFormatsRegistry.h"
 #include "MRLinesSave.h"
 #include "MRMeshSave.h"
 #include "MRObjectDistanceMap.h"
+#include "MRObjectGcode.h"
 #include "MRObjectLines.h"
 #include "MRObjectMesh.h"
 #include "MRObjectPoints.h"
@@ -178,6 +180,22 @@ Expected<void> toAnySupportedFormat( const Object& object, const std::filesystem
             return DistanceMapSave::toAnySupportedFormat( {}, file );
 
         return DistanceMapSave::toAnySupportedFormat( *objDmap->getDistanceMap(), file, { .xf = &objDmap->getToWorldParameters() } );
+    }
+    else if ( findFilter( GcodeSave::Filters, extension ) )
+    {
+        const auto* objGcode = dynamic_cast<const ObjectGcode*>( &object );
+        if ( !objGcode )
+        {
+            const auto objGcodes = getAllObjectsInTree<ObjectGcode>( const_cast<Object*>( &object ), ObjectSelectivityType::Selectable );
+            if ( objGcodes.size() > 1 )
+                return unexpected( "Multiple G-code objects in the given object" );
+            if ( !objGcodes.empty() )
+                objGcode = objGcodes.front().get();
+        }
+        if ( !objGcode || !objGcode->gcodeSource() )
+            return GcodeSave::toAnySupportedFormat( {}, file, settings.progress );
+
+        return GcodeSave::toAnySupportedFormat( *objGcode->gcodeSource(), file, settings.progress );
     }
     else
     {

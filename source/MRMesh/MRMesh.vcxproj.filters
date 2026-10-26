@@ -873,6 +873,9 @@
     <ClInclude Include="MRGcodeLoad.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
+    <ClInclude Include="MRGcodeSave.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
     <ClInclude Include="MRFile.h">
       <Filter>Source Files\System</Filter>
     </ClInclude>
@@ -1998,6 +2001,9 @@
       <Filter>Source Files\Gcode</Filter>
     </ClCompile>
     <ClCompile Include="MRGcodeLoad.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRGcodeSave.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRFile.cpp">

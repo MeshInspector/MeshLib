@@ -16,5 +16,6 @@
 --skip-mentions-of Json::Value
 --skip-mentions-of '/(std|tl)::expected<Json::Value, .*>/'
 --skip-mentions-of '/std::initializer_list<.*>/'
+--skip-mentions-of '/std::vector<.*>::(const_)?iterator/'
 --adjust-comments 's@(^|(^///\s*)? )\\([{}]|(def|in|addto)group\s+).*@@g'
 --infer-lifetime-constructors

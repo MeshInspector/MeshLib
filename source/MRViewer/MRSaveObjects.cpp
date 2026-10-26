@@ -10,8 +10,10 @@
 #include "MRMesh/MRPointsSave.h"
 #include "MRMesh/MRLinesSave.h"
 #include "MRMesh/MRDistanceMapSave.h"
+#include "MRMesh/MRGcodeSave.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectDistanceMap.h"
+#include "MRMesh/MRObjectGcode.h"
 #include "MRMesh/MRDistanceMap.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSerializer.h"
@@ -92,7 +94,7 @@ Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path&
             if ( objMesh->getColoringType() == ColoringType::VertsColorMap )
                 saveSettings.colors = &objMesh->getVertsColorMap();
             else if ( objMesh->getColoringType() == ColoringType::PrimitivesColorMap )
-                saveSettings.primitiveColors = &objMesh->getFacesColorMap().vec;
+                saveSettings.primitiveColors = &objMesh->getFacesColorMap();
             if ( objMesh->getUVCoords().size() >= objMesh->meshPtr()->topology.lastValidVert() )
                 saveSettings.uvMap = &objMesh->getUVCoords();
             if ( !objMesh->getTexture().pixels.empty() )
@@ -113,6 +115,13 @@ Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path&
         {
             result = unexpected( std::string( "ObjectDistanceMap has no DistanceMap in it" ) );
         }
+    }
+    else if ( auto objGcode = obj.asType<ObjectGcode>() )
+    {
+        if ( objGcode->gcodeSource() )
+            result = GcodeSave::toAnySupportedFormat( *objGcode->gcodeSource(), filename, settings.callback );
+        else
+            result = unexpected( std::string( "ObjectGcode has no G-code in it" ) );
     }
 #ifndef MRVIEWER_NO_VOXELS
     else if ( auto objVoxels = obj.asType<ObjectVoxels>() )

@@ -125,11 +125,11 @@ IF(MESHLIB_PYTHON_SUPPORT AND NOT MR_EMSCRIPTEN)
     ELSEIF(DEFINED MR_LINUX_DISTRO)
       IF(${MR_LINUX_DISTRO} STREQUAL "Ubuntu")
         set(MESHLIB_PYTHON_VERSION "3.8")
-        IF(${MR_PLATFORM} STREQUAL "Ubuntu_22")
+        IF(MR_PLATFORM MATCHES "^Ubuntu_22(_|$)")
           set(MESHLIB_PYTHON_VERSION "3.10")
-        ELSEIF(${MR_PLATFORM} STREQUAL "Ubuntu_24")
+        ELSEIF(MR_PLATFORM MATCHES "^Ubuntu_24(_|$)")
           set(MESHLIB_PYTHON_VERSION "3.12")
-        ELSEIF(${MR_PLATFORM} STREQUAL "Ubuntu_26")
+        ELSEIF(MR_PLATFORM MATCHES "^Ubuntu_26(_|$)")
           set(MESHLIB_PYTHON_VERSION "3.14")
         ENDIF()
       ENDIF()
@@ -227,6 +227,13 @@ endif()
 
 if(MESHLIB_USE_VCPKG)
   set(VCPKG_TRIPLET_DIR "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
+  # headers of private dependencies, not reachable from MeshLib's public headers
+  set(VCPKG_PRIVATE_HEADERS
+    opencascade xercesc openssl curl cpr
+    gdcm[^/]* socketxx openjph openjpeg-[^/]*
+    E57Format hpdf[^/]* tiff[^/]* tinyxml2\\.h tiny_?gltf[^/]* stb_[^/]*
+  )
+  list(JOIN VCPKG_PRIVATE_HEADERS "|" VCPKG_PRIVATE_HEADERS)
   install(
     DIRECTORY
       "$<$<PLATFORM_ID:Windows>:${VCPKG_TRIPLET_DIR}/bin>"
@@ -236,6 +243,14 @@ if(MESHLIB_USE_VCPKG)
     DESTINATION .
     PATTERN "pkgconfig" EXCLUDE
     PATTERN "__pycache__" EXCLUDE
+    # OpenSSL looks for its modules only in the build-time vcpkg path
+    PATTERN "ossl-modules" EXCLUDE
+    REGEX "/${VCPKG_TARGET_TRIPLET}/include/(${VCPKG_PRIVATE_HEADERS})$" EXCLUDE
+    # vcpkg bookkeeping
+    PATTERN "vcpkg_abi_info.txt" EXCLUDE
+    PATTERN "vcpkg.spdx.json" EXCLUDE
+    PATTERN "vcpkg-spdx-resources.json" EXCLUDE
+    REGEX "/share/[^/]+/usage$" EXCLUDE
   )
 endif()
 

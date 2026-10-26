@@ -2,12 +2,30 @@
 
 #include "MRMacros.h"
 #include "MRMeshFwd.h"
+#include "MRAllocator.h"
 #include "MRResizeNoInit.h"
 #include "MRPch/MRBindingMacros.h"
 #include <cassert>
+#include <memory>
 
 namespace MR
 {
+
+// Operators of `Vector::iterator` / `Vector::const_iterator` returning the derived type, which C++20 iterator concepts require;
+// `*` and `==` are repeated for the bindings, `->` avoids MSVC's dereferenceability check in `std::to_address( end )`
+#define MR_VECTOR_ITERATOR_OPS( Self, Base ) \
+    [[nodiscard]] typename std::iterator_traits<Base>::reference operator *() const { return *static_cast<const Base &>( *this ); } \
+    [[nodiscard]] MR_BIND_IGNORE typename std::iterator_traits<Base>::pointer operator ->() const { return std::to_address( static_cast<const Base &>( *this ) ); } \
+    [[nodiscard]] bool operator ==( const Self & b ) const { return static_cast<const Base &>( *this ) == static_cast<const Base &>( b ); } \
+    Self & operator ++() { ++static_cast<Base &>( *this ); return *this; } \
+    Self operator ++( int ) { Self res = *this; ++*this; return res; } \
+    Self & operator --() { --static_cast<Base &>( *this ); return *this; } \
+    Self operator --( int ) { Self res = *this; --*this; return res; } \
+    Self & operator +=( difference_type n ) { static_cast<Base &>( *this ) += n; return *this; } \
+    Self & operator -=( difference_type n ) { static_cast<Base &>( *this ) -= n; return *this; } \
+    [[nodiscard]] friend Self operator +( Self it, difference_type n ) { return it += n; } \
+    [[nodiscard]] friend Self operator +( difference_type n, Self it ) { return it += n; } \
+    [[nodiscard]] friend Self operator -( Self it, difference_type n ) { return it -= n; }
 
 /**
  * \brief std::vector<T>-like container that requires specific indexing type,
@@ -19,17 +37,36 @@ template <typename T, typename I>
 class Vector
 {
 public:
-    using value_type = typename std::vector<T>::value_type;
-    using reference = typename std::vector<T>::reference;
-    using const_reference = typename std::vector<T>::const_reference;
-    using iterator = typename std::vector<T>::iterator;
-    using const_iterator = typename std::vector<T>::const_iterator;
-    using reverse_iterator MR_BIND_IGNORE = typename std::vector<T>::reverse_iterator;
-    using const_reverse_iterator MR_BIND_IGNORE = typename std::vector<T>::const_reverse_iterator;
-    using size_type = typename std::vector<T>::size_type;
-    using difference_type = typename std::vector<T>::difference_type;
-    using pointer = typename std::vector<T>::pointer;
-    using const_pointer = typename std::vector<T>::const_pointer;
+    using StdVector = std::vector<T, Allocator<T>>;
+    using value_type = typename StdVector::value_type;
+    using reference = typename StdVector::reference;
+    using const_reference = typename StdVector::const_reference;
+    using size_type = typename StdVector::size_type;
+    using difference_type = typename StdVector::difference_type;
+
+    /// derived from `StdVector::iterator` rather than an alias of it, so that the bindings spell it through `Vector`:
+    /// the canonical standard iterator types don't always mention the allocator (e.g. libc++'s `std::__wrap_iter<T *>`)
+    struct iterator : StdVector::iterator
+    {
+        using element_type = T; // for std::pointer_traits, some libc++ versions hard-error without it
+        iterator() = default;
+        MR_BIND_IGNORE iterator( typename StdVector::iterator it ) : StdVector::iterator( it ) {}
+        MR_VECTOR_ITERATOR_OPS( iterator, typename StdVector::iterator )
+    };
+    struct const_iterator : StdVector::const_iterator
+    {
+        using element_type = const T;
+        const_iterator() = default;
+        MR_BIND_IGNORE const_iterator( typename StdVector::const_iterator it ) : StdVector::const_iterator( it ) {}
+        MR_BIND_IGNORE const_iterator( typename StdVector::iterator it ) : StdVector::const_iterator( it ) {}
+        const_iterator( iterator it ) : StdVector::const_iterator( it ) {}
+        MR_VECTOR_ITERATOR_OPS( const_iterator, typename StdVector::const_iterator )
+        [[nodiscard]] MR_BIND_IGNORE friend bool operator ==( const const_iterator & a, const iterator & b ) { return a == const_iterator( b ); } // else ambiguous with libc++
+    };
+    using reverse_iterator MR_BIND_IGNORE = typename StdVector::reverse_iterator;
+    using const_reverse_iterator MR_BIND_IGNORE = typename StdVector::const_reverse_iterator;
+    using pointer = typename StdVector::pointer;
+    using const_pointer = typename StdVector::const_pointer;
 
     /// creates empty vector
     Vector() = default;
@@ -201,10 +238,10 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] size_t heapBytes() const { return capacity() * sizeof(T); }
 
-    [[nodiscard]] MR_BIND_IGNORE_PY friend auto begin( const Vector<T, I> & a ) { return a.vec.begin(); }
-    [[nodiscard]] MR_BIND_IGNORE_PY friend auto begin( Vector<T, I> & a ) { return a.vec.begin(); }
-    [[nodiscard]] MR_BIND_IGNORE_PY friend auto end( const Vector<T, I> & a ) { return a.vec.end(); }
-    [[nodiscard]] MR_BIND_IGNORE_PY friend auto end( Vector<T, I> & a ) { return a.vec.end(); }
+    [[nodiscard]] MR_BIND_IGNORE_PY friend const_iterator begin( const Vector<T, I> & a ) { return a.vec.begin(); }
+    [[nodiscard]] MR_BIND_IGNORE_PY friend iterator begin( Vector<T, I> & a ) { return a.vec.begin(); }
+    [[nodiscard]] MR_BIND_IGNORE_PY friend const_iterator end( const Vector<T, I> & a ) { return a.vec.end(); }
+    [[nodiscard]] MR_BIND_IGNORE_PY friend iterator end( Vector<T, I> & a ) { return a.vec.end(); }
 
     /// removes all elements equal to \p value, returns the number of removed elements
     template <typename U>
@@ -215,11 +252,23 @@ public:
     friend size_t erase_if( Vector<T, I> & a, Pred pred ) { return std::erase_if( a.vec, pred ); }
 
     /// The user can directly manipulate the vector, they can't break anything anyway.
-    std::vector<T> vec;
+    StdVector vec;
 
 #if defined( MR_PARSING_FOR_ANY_BINDINGS ) || defined( MR_COMPILING_ANY_BINDINGS )
     static_assert( sizeof(T) > 0 );
 #endif
+};
+
+/// std::vector allocating with MR::Allocator, for the containers indexed by size_t
+template <typename T>
+class Vector<T, size_t> : public std::vector<T, Allocator<T>>
+{
+public:
+    using std::vector<T, Allocator<T>>::vector;
+
+    [[nodiscard]] size_t beginId() const { return 0; }
+    [[nodiscard]] size_t backId() const { assert( !this->empty() ); return this->size() - 1; }
+    [[nodiscard]] size_t endId() const { return this->size(); }
 };
 
 /// given some std::vector and a key, returns the value associated with the key, or default value if key is invalid or outside the std::vector
@@ -233,7 +282,9 @@ template <typename T>
 template <typename T, typename I>
 [[nodiscard]] inline T getAt( const Vector<T, I> & a, I id, T def = {} )
 {
-    return getAt( a.vec, size_t( id ), def );
+    return size_t( id ) < a.size() ? a[id] : def;
 }
+
+#undef MR_VECTOR_ITERATOR_OPS
 
 } // namespace MR

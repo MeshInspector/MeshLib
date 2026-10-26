@@ -27,6 +27,7 @@
 #include <filesystem>
 #include <fstream>
 #include <future>
+#include <optional>
 #include <stdexcept>
 
 namespace MR::Mcp
@@ -137,15 +138,46 @@ static nlohmann::json mcpViewerSetupCamera( const nlohmann::json& args )
         throw std::runtime_error( "`upDir` is parallel to `forwardDir`; provide a non-parallel up vector." );
     up = up.normalized();
 
+    const std::string fit = args.value( "fit", std::string( "visible" ) );
+    std::optional<FitMode> fitMode;
+    if ( fit == "visible" )
+        fitMode = FitMode::Visible;
+    else if ( fit == "selected" )
+        fitMode = FitMode::SelectedObjects;
+    else if ( fit != "none" )
+        throw std::runtime_error( fmt::format( "Unknown `fit` `{}` (expected `visible`/`selected`/`none`).", fit ) );
+    const float factor = args.value( "factor", 1.0f );
+
     MR::CommandLoop::runCommandFromGUIThread( [&]
     {
         auto& vp = getViewerInstance().viewport();
         vp.cameraLookAlong( fwdN, up );
-        // preciseFitDataToScreenBorder defaults to snapView=false — keeps the user's direction.
-        vp.preciseFitDataToScreenBorder();
+        // snapView=false keeps the user's direction.
+        if ( fitMode )
+            vp.preciseFitDataToScreenBorder( { factor, false, *fitMode } );
     } );
     skipFramesAfterInput();
     return nlohmann::json::object();
+}
+
+static nlohmann::json mcpViewerGetCamera( const nlohmann::json& )
+{
+    nlohmann::json out;
+    MR::CommandLoop::runCommandFromGUIThread( [&]
+    {
+        const auto& vp = getViewerInstance().viewport();
+        const auto vec = []( const Vector3f& v ) { return nlohmann::json::array( { v.x, v.y, v.z } ); };
+        const auto& params = vp.getParameters();
+        out = nlohmann::json::object( {
+            { "forwardDir",   vec( -vp.getBackwardDirection() ) },
+            { "upDir",        vec( vp.getUpDirection() ) },
+            { "position",     vec( vp.getCameraPoint() ) },
+            { "orthographic", params.orthographic },
+            { "zoom",         params.cameraZoom },
+            { "viewAngle",    params.cameraViewAngle },
+        } );
+    } );
+    return out;
 }
 
 static nlohmann::json mcpViewerCaptureScreenshot( const nlohmann::json& args )
@@ -302,11 +334,12 @@ static nlohmann::json mcpViewerSendKeyboardEvent( const nlohmann::json& args )
     return nlohmann::json::object();
 }
 
-static nlohmann::json mcpViewerShutdown( const nlohmann::json& )
+static nlohmann::json mcpViewerShutdown( const nlohmann::json& args )
 {
+    const bool force = args.value( "force", false );
     MR::CommandLoop::runCommandFromGUIThread( [&]
     {
-        MR::getViewerInstance().stopEventLoop();
+        MR::getViewerInstance().stopEventLoop( 0, !force );
     } );
     return nlohmann::json::object();
 }
@@ -324,7 +357,7 @@ MR_ON_INIT{
                 "The camera angle is preserved (no canonical-view snapping).",
         /*input_schema*/Schema::Object{}
             .addMemberOpt( "objectIds", Schema::Array( Schema::Number{} ) )
-            .addMemberOpt( "points",    Schema::Array( Schema::Array( Schema::Number{} ) ) )
+            .addMemberOpt( "points",    Schema::Array( Schema::Base( Schema::Array( Schema::Number{} ) ) ) )
             .addMemberOpt( "factor",    Schema::Number{} ),
         /*output_schema*/Schema::Object{},
         /*func*/mcpViewerFit
@@ -335,13 +368,38 @@ MR_ON_INIT{
         /*name*/"Set camera forward and up directions",
         /*desc*/"Point the camera along `forwardDir` (a world-space direction vector pointing from the camera toward "
                 "the subject). `upDir` sets the screen-up direction; it is automatically orthogonalized against "
-                "`forwardDir`, so it does not have to be exactly perpendicular, but it must not be parallel. The "
-                "camera is always refit to the whole scene after reorientation.",
+                "`forwardDir`, so it does not have to be exactly perpendicular, but it must not be parallel. "
+                "`fit` (default `visible`) refits the camera after reorientation: `visible` fits the geometry of all "
+                "visible objects, `selected` fits the selected objects, `none` keeps the zoom and the camera's distance "
+                "to the point it looks at, which is the center of the last fit (the camera turns around that point, so "
+                "its position still changes). "
+                "The fit uses the geometry itself, so it frames tighter than `viewer_fit` with `objectIds`, which "
+                "fits the objects' bounding boxes. `factor` (default 1.0) is the same framing margin as in `viewer_fit`.",
         /*input_schema*/Schema::Object{}
-            .addMember( "forwardDir", Schema::Array( Schema::Number{} ) )
-            .addMember( "upDir",      Schema::Array( Schema::Number{} ) ),
+            .addMember(    "forwardDir", Schema::Array( Schema::Number{} ) )
+            .addMember(    "upDir",      Schema::Array( Schema::Number{} ) )
+            .addMemberOpt( "fit",        Schema::String( std::vector<std::string>{ "visible", "selected", "none" } ) )
+            .addMemberOpt( "factor",     Schema::Number{} ),
         /*output_schema*/Schema::Object{},
         /*func*/mcpViewerSetupCamera
+    );
+
+    server.addTool(
+        /*id*/  "viewer_getCamera",
+        /*name*/"Get camera state",
+        /*desc*/"Read the active viewport's camera. `forwardDir` and `upDir` are unit world-space vectors in the same "
+                "convention as `viewer_setupCamera` accepts, so passing them back with `fit: none` restores the "
+                "orientation. `position` is the camera point in world space, `orthographic` is the projection mode, "
+                "`zoom` is the camera zoom factor and `viewAngle` the vertical field of view in degrees.",
+        /*input_schema*/Schema::Object{},
+        /*output_schema*/Schema::Object{}
+            .addMember( "forwardDir",   Schema::Array( Schema::Number{} ) )
+            .addMember( "upDir",        Schema::Array( Schema::Number{} ) )
+            .addMember( "position",     Schema::Array( Schema::Number{} ) )
+            .addMember( "orthographic", Schema::Bool{} )
+            .addMember( "zoom",         Schema::Number{} )
+            .addMember( "viewAngle",    Schema::Number{} ),
+        /*func*/mcpViewerGetCamera
     );
 
     server.addTool(
@@ -413,8 +471,9 @@ MR_ON_INIT{
                 "response can flush before the server socket closes; the actual shutdown happens on the next frame. "
                 "After this call the gateway's `launch` tool can bring MeshInspector back up. "
                 "If the scene has unsaved changes, an `Application Close` modal is raised instead of exiting; "
-                "check `ui_listEntries` for the modal and dismiss it with the `Cancel` / `Don't Save` / `Save` buttons.",
-        /*input_schema*/Schema::Object{},
+                "check `ui_listEntries` for the modal and dismiss it with the `Cancel` / `Don't Save` / `Save` buttons. "
+                "Pass `force: true` to discard unsaved changes and exit without the modal.",
+        /*input_schema*/Schema::Object{}.addMemberOpt( "force", Schema::Bool{} ),
         /*output_schema*/Schema::Object{},
         /*func*/mcpViewerShutdown
     );

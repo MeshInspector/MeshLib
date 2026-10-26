@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRAllocator.h"
 #include "MRVector2.h"
 #include "MRVector3.h"
 #include "MRVector4.h"
@@ -57,9 +58,9 @@ MRMESH_API Expected<void> serializeToJson( const Mesh& mesh, Json::Value& root )
 MRMESH_API void serializeToJson( const Plane3f& plane, Json::Value& root );
 MRMESH_API void serializeToJson( const TriPointf& tp, Json::Value& root );
 MRMESH_API void serializeToJson( const MeshTexture& texture, Json::Value& root );
-MRMESH_API void serializeToJson( const std::vector<TextureId>& texturePerFace, Json::Value& root );
-MRMESH_API void serializeToJson( const std::vector<UVCoord>& uvCoords, Json::Value& root );
-MRMESH_API void serializeToJson( const std::vector<Color>& colors, Json::Value& root );
+MRMESH_API void serializeToJson( const std::vector<TextureId, Allocator<TextureId>>& texturePerFace, Json::Value& root );
+MRMESH_API void serializeToJson( const std::vector<UVCoord, Allocator<UVCoord>>& uvCoords, Json::Value& root );
+MRMESH_API void serializeToJson( const std::vector<Color, Allocator<Color>>& colors, Json::Value& root );
 /// saves typed vector (e.g. VertColors, TexturePerFace, VertUVCoords) same as std::vector with its elements
 template <typename T, typename I>
 void serializeToJson( const Vector<T, I>& vec, Json::Value& root ) { serializeToJson( vec.vec, root ); }
@@ -89,9 +90,9 @@ MRMESH_API Expected<Mesh> deserializeFromJson( const Json::Value& root, VertColo
 MRMESH_API void deserializeFromJson( const Json::Value& root, Plane3f& plane );
 MRMESH_API void deserializeFromJson( const Json::Value& root, TriPointf& tp );
 MRMESH_API void deserializeFromJson( const Json::Value& root, MeshTexture& texture );
-MRMESH_API void deserializeFromJson( const Json::Value& root, std::vector<TextureId>& texturePerFace );
-MRMESH_API void deserializeFromJson( const Json::Value& root, std::vector<UVCoord>& uvCoords );
-MRMESH_API void deserializeFromJson( const Json::Value& root, std::vector<Color>& colors );
+MRMESH_API void deserializeFromJson( const Json::Value& root, std::vector<TextureId, Allocator<TextureId>>& texturePerFace );
+MRMESH_API void deserializeFromJson( const Json::Value& root, std::vector<UVCoord, Allocator<UVCoord>>& uvCoords );
+MRMESH_API void deserializeFromJson( const Json::Value& root, std::vector<Color, Allocator<Color>>& colors );
 template <typename T, typename I>
 void deserializeFromJson( const Json::Value& root, Vector<T, I>& vec ) { deserializeFromJson( root, vec.vec ); }
 /// this version takes topology to construct MeshTriPoint from its representation relative a face;

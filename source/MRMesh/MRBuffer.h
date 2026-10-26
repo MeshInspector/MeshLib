@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMacros.h"
+#include "MRAllocator.h"
 #include "MRNoDefInit.h"
 #include "MRId.h"
 #include <cassert>
@@ -75,11 +76,11 @@ public:
             return;
         if ( newSize > capacity_.val )
         {
-#if __cpp_lib_smart_ptr_for_overwrite >= 202002L
-            data_ = std::make_unique_for_overwrite<T[]>( capacity_.val = newSize );
-#else
-            data_.reset( new T[capacity_.val = newSize] );
-#endif
+            clear();
+            T * p = Allocator<T>().allocate( newSize );
+            std::uninitialized_default_construct_n( p, newSize ); // leaves the elements uninitialized
+            data_ = std::unique_ptr<T[], Deleter>( p, Deleter{ newSize } );
+            capacity_.val = newSize;
         }
         size_.val = newSize;
     }
@@ -116,7 +117,12 @@ public:
     [[nodiscard]] friend auto end( Buffer & a ) { return a.data() + a.size(); }
 
 private:
-    std::unique_ptr<T[]> data_;
+    struct Deleter
+    {
+        size_t n = 0;
+        void operator()( T * p ) const { std::destroy_n( p, n ); Allocator<T>().deallocate( p, n ); }
+    };
+    std::unique_ptr<T[], Deleter> data_;
     ZeroOnMove<size_t> capacity_, size_;
 };
 

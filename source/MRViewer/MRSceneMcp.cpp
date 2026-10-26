@@ -13,6 +13,7 @@
 #include "MRMesh/MRConstants.h"
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRMatrix3Decompose.h"
+#include "MRMesh/MRMesh.h"
 #include "MRMesh/MROnInit.h"
 #include "MRMesh/MRObject.h"
 #include "MRMesh/MRObjectLinesHolder.h"
@@ -125,6 +126,33 @@ static Color parseColor( const nlohmann::json& j, std::string_view field )
     return Color{ r, g, b, a }; // the float ctor clamps to [0, 1]
 }
 
+// Geometry counts and measures of mesh and point-cloud objects, in object-local units;
+// the same numbers as the `info` lines. Empty for other object types.
+static nlohmann::json statsToJson( const Object& obj )
+{
+    nlohmann::json stats = nlohmann::json::object();
+    if ( const auto* mh = dynamic_cast<const ObjectMeshHolder*>( &obj ); mh && mh->meshPtr() )
+    {
+        const auto& topology = mh->meshPtr()->topology;
+        stats["vertices"]          = topology.numValidVerts();
+        stats["triangles"]         = topology.numValidFaces();
+        stats["selectedTriangles"] = mh->numSelectedFaces();
+        stats["edges"]             = mh->numUndirectedEdges();
+        stats["components"]        = mh->numComponents();
+        stats["holes"]             = mh->numHoles();
+        stats["area"]              = mh->totalArea();
+        if ( mh->numHoles() == 0 )
+            stats["volume"] = mh->volume();
+        stats["avgEdgeLength"]     = mh->avgEdgeLen();
+    }
+    else if ( const auto* ph = dynamic_cast<const ObjectPointsHolder*>( &obj ); ph && ph->pointCloudPtr() )
+    {
+        stats["points"]         = ph->numValidPoints();
+        stats["selectedPoints"] = ph->numSelectedPoints();
+    }
+    return stats;
+}
+
 // Per-object visualization properties (colors, alpha, size, flags). Fields only present if the
 // object type supports them.
 static nlohmann::json visualizationToJson( const Object& obj )
@@ -223,6 +251,7 @@ static nlohmann::json mcpSceneGetObjectInfo( const nlohmann::json& args )
         info.push_back( vec3Line( "rotation deg", tfJson["rotation"] ) );
         info.push_back( vec3Line( "scale",        tfJson["scale"] ) );
         out["info"] = std::move( info );
+        out["stats"] = statsToJson( *obj );
 
         out["visualization"] = visualizationToJson( *obj );
     } );
@@ -511,6 +540,14 @@ MR_ON_INIT{
             .addMember( "rotation",    Schema::Array( Schema::Number{} ) )
             .addMember( "scale",       Schema::Array( Schema::Number{} ) );
     };
+    // `scene_setObjectState` input: every component is optional, see parseTransform().
+    static const auto transformInputSchema = []
+    {
+        return Schema::Object{}
+            .addMemberOpt( "translation", Schema::Array( Schema::Number{} ) )
+            .addMemberOpt( "rotation",    Schema::Array( Schema::Number{} ) )
+            .addMemberOpt( "scale",       Schema::AnyOf( { Schema::Number{}, Schema::Array( Schema::Number{} ) } ) );
+    };
     static const auto entrySchema = []
     {
         return Schema::Object{}
@@ -543,7 +580,11 @@ MR_ON_INIT{
         /*desc*/std::string( kSceneIdSemantics ) +
                 "Return a single object's row (same shape as `scene_listObjectTree` entries) plus `childIds` (direct "
                 "children), `worldBox` (axis-aligned world-space bounding box), `info` (human-readable property "
-                "lines - e.g. vertex/face counts, area - from the UI's info panel), and `visualization` (current "
+                "lines - e.g. vertex/face counts, area - from the UI's info panel), `stats` (the same numbers as fields: "
+                "for meshes `vertices`, `triangles`, `selectedTriangles`, `edges`, `components`, `holes`, `area`, "
+                "`volume` (only for closed meshes), `avgEdgeLength`; for point clouds `points`, `selectedPoints`; "
+                "empty for other types; lengths, area and volume are in object-local units, before `transform`), "
+                "and `visualization` (current "
                 "render-time properties — colors, alpha, size, flags; see `scene_setObjectState` for field semantics; "
                 "fields that don't apply to this object's type are omitted).",
         /*input_schema*/Schema::Object{}.addMember( "id", Schema::Number{} ),
@@ -553,6 +594,7 @@ MR_ON_INIT{
                 .addMember( "min", Schema::Array( Schema::Number{} ) )
                 .addMember( "max", Schema::Array( Schema::Number{} ) ) )
             .addMember( "info",     Schema::Array( Schema::String{} ) )
+            .addMember( "stats",    Schema::Object{} )
             .addMember( "visualization", Schema::Object{} ),
         /*func*/mcpSceneGetObjectInfo
     );
@@ -577,7 +619,7 @@ MR_ON_INIT{
             .addMemberOpt( "name",      Schema::String{} )
             .addMemberOpt( "visible",   Schema::Bool{} )
             .addMemberOpt( "selected",  Schema::Bool{} )
-            .addMemberOpt( "transform", transformSchema() )
+            .addMemberOpt( "transform", transformInputSchema() )
             .addMemberOpt( "visualization", Schema::Object{}
                 .addMemberOpt( "selectedColor",   Schema::Array( Schema::Number{} ) )
                 .addMemberOpt( "unselectedColor", Schema::Array( Schema::Number{} ) )

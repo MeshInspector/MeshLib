@@ -6,6 +6,7 @@
 #include "MRConstants.h"
 #include "MRTimer.h"
 #include <algorithm>
+#include <cassert>
 #include <cfloat>
 #include <cmath>
 #include <numeric>
@@ -147,7 +148,7 @@ Expected<FPFHDescriptors> computeFPFH( const PointCloud& pointCloud, float radiu
     return res;
 }
 
-VertBitSet findUniqueFPFHPoints( const FPFHDescriptors & descriptors, const VertBitSet & points, float beta )
+VertScalars computeFPFHUniqueness( const FPFHDescriptors & descriptors, const VertBitSet & points )
 {
     MR_TIMER;
     const auto num = points.count();
@@ -179,12 +180,24 @@ VertBitSet findUniqueFPFHPoints( const FPFHDescriptors & descriptors, const Vert
     const auto mu = sum / double( num );
     const auto sigma = std::sqrt( std::max( 0.0, sumSq / double( num ) - sqr( mu ) ) );
 
-    // the floor ignores float rounding in the distances of equal descriptors
-    const auto threshold = std::max( beta * sigma, 1e-6 );
-    VertBitSet res( dist.size() );
     BitSetParallelFor( points, [&]( VertId v )
     {
-        if ( std::abs( dist[v] - mu ) > threshold )
+        // the floor ignores float rounding in the distances of equal descriptors
+        const auto dev = dist[v] - mu;
+        dist[v] = std::abs( dev ) > 1e-6 ? float( dev / sigma ) : 0.0f;
+    } );
+    return dist;
+}
+
+VertBitSet findUniqueFPFHPoints( const FPFHDescriptors & descriptors, const VertBitSet & points, float beta )
+{
+    MR_TIMER;
+    assert( beta >= 0 );
+    const auto uniqueness = computeFPFHUniqueness( descriptors, points );
+    VertBitSet res( uniqueness.size() );
+    BitSetParallelFor( points, [&]( VertId v )
+    {
+        if ( std::abs( uniqueness[v] ) > beta )
             res.set( v );
     } );
     return res;

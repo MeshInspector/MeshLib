@@ -3,6 +3,7 @@
 #include "config.h"
 #include "MRPch/MRBindingMacros.h"
 #include <memory>
+#include <new>
 
 // mr_enable_mimalloc executables forward malloc to the same mimalloc; MRMESH_NO_MIMALLOC, see cmake/Modules/Mimalloc.cmake
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_MIMALLOC )
@@ -46,6 +47,21 @@ struct MR_BIND_IGNORE Allocator : AllocatorBase<T>
     Allocator() noexcept = default;
     template <typename U>
     Allocator( const Allocator<U> & ) noexcept {}
+
+#ifdef MR_ALLOCATOR_IS_MIMALLOC
+    // mi_stl_allocator ignores the alignment of over-aligned types
+    [[nodiscard]] T * allocate( std::size_t n )
+    {
+        if constexpr ( alignof( T ) > __STDCPP_DEFAULT_NEW_ALIGNMENT__ )
+        {
+            if ( n > std::size_t( -1 ) / sizeof( T ) )
+                throw std::bad_array_new_length();
+            return static_cast<T *>( mi_new_aligned( n * sizeof( T ), alignof( T ) ) );
+        }
+        else
+            return AllocatorBase<T>::allocate( n );
+    }
+#endif
     [[nodiscard]] Allocator select_on_container_copy_construction() const noexcept { return *this; }
 };
 

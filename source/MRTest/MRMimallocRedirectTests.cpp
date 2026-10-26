@@ -1,10 +1,12 @@
 #include <MRMesh/config.h>
 #include <MRMesh/MRAllocator.h>
 #include <MRMesh/MRBitSet.h>
+#include <MRMesh/MRBuffer.h>
 #include <MRMesh/MRCube.h>
 #include <MRMesh/MRMesh.h>
 #include <gtest/gtest.h>
 
+#include <cstdint>
 #include <cstdlib>
 #include <memory>
 #include <string_view>
@@ -67,6 +69,18 @@ TEST( MRMesh, MimallocBitSet )
     // allocated inside MRMesh
     const auto mesh = makeCube();
     EXPECT_TRUE( mi_is_in_heap_region( mesh.topology.getValidFaces().bits().data() ) );
+}
+
+TEST( MRMesh, MimallocAllocator )
+{
+    Buffer<int> buf( 1000 );
+    EXPECT_TRUE( mi_is_in_heap_region( buf.data() ) );
+
+    // mi_stl_allocator alone ignores alignas
+    struct alignas( 64 ) Aligned { char c = 0; };
+    std::vector<Aligned, Allocator<Aligned>> v( 3 );
+    EXPECT_TRUE( mi_is_in_heap_region( v.data() ) );
+    EXPECT_EQ( reinterpret_cast<std::uintptr_t>( v.data() ) % 64, 0 );
 }
 #endif
 

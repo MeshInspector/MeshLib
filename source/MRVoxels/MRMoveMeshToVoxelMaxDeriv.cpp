@@ -88,7 +88,7 @@ float MeshOnVoxelsT<MeshType, VolumeType>::indexFromPseudoIndex( float pseudoInd
 { return pseudoIndex + ( count - 1 ) * 0.5f; }
 
 template <typename MeshType, typename VolumeType>
-void MeshOnVoxelsT<MeshType, VolumeType>::getPoints( std::vector<Vector3f>& result, const Vector3f& pos, const Vector3f& offset ) const
+void MeshOnVoxelsT<MeshType, VolumeType>::getPoints( VertCoords& result, const Vector3f& pos, const Vector3f& offset ) const
 {
     Vector3f p = pos - ( offset * ( ( result.size() - 1 ) * 0.5f ) );
     for ( auto& v : result )

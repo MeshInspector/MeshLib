@@ -1409,9 +1409,8 @@ Expected<OneMeshContours> offsetSurfaceLineToMeshContours( const Mesh& mesh, con
 
     Mesh meshAfterCut = mesh;
     NewEdgesMap nEM;
-    // .forceFillMode = CutMeshParameters::ForceFill::All
-    // because we don't really care about intermediate mesh quality
-    auto cutRes = cutMesh( meshAfterCut, initCutContoursVec, { .forceFillMode = CutMeshParameters::ForceFill::All,.new2oldEdgesMap = &nEM } );
+    // force fill because we don't really care about intermediate mesh quality
+    auto cutRes = cutMesh( meshAfterCut, initCutContoursVec, { .forceFill = true, .new2oldEdgesMap = &nEM } );
 
     const auto& initCutContours = initCutContoursVec[0];
 
@@ -1537,8 +1536,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         prepareFacesMap( mesh.topology, *params.new2OldMap );
 
     // under force fill, bad faces are the faces where the contours really cross (touching is fine), found before the cut
-    const bool forceFill = params.forceFillMode != CutMeshParameters::ForceFill::None;
-    if ( forceFill )
+    if ( params.forceFill )
     {
         res.fbsWithContourIntersections.resize( mesh.topology.faceSize() );
         for ( const auto& c : findContoursCrossings( mesh, contours, params.sortData ) )
@@ -1565,7 +1563,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     FaceBitSet badLoneFaces;
     connectLoneContours( mesh, contours, loneFaces, preRes, firstNewEdge, params.sortData, params.new2oldEdgesMap, badLoneFaces );
 
-    if ( forceFill )
+    if ( params.forceFill )
     {
         // a lone contour that cannot be connected with the rest of its face (e.g. a degenerate one) is bad too
         res.fbsWithContourIntersections |= badLoneFaces;
@@ -1616,8 +1614,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         for ( int edgeId = 0; edgeId < path.size(); ++edgeId )
         {
             const FaceId oldf = oldEdgesInfo[edgeId].left;
-            if ( !oldf.valid() ||
-                ( params.forceFillMode == CutMeshParameters::ForceFill::Good && res.fbsWithContourIntersections.test( oldf ) ) )
+            if ( !oldf.valid() )
                 continue;
             const FaceId oldRightF = oldEdgesInfo[edgeId].right;
             bool addLeftDesc = !mesh.topology.left( path[edgeId] ).valid();

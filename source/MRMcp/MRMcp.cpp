@@ -238,11 +238,6 @@ void Server::State::handleToolsCall( const httplib::Request& req, httplib::Respo
         return;
     }
 
-    // Analytics: one event per genuine tool invocation. Emit the tool id only
-    // (bounded, low-cardinality) — never args, which can carry file paths or
-    // object names. Consumed by the host application's telemetry listener.
-    TelemetrySignal( "MCP Tool: " + toolId );
-
     nlohmann::json args = nlohmann::json::object();
     if ( isGet )
     {
@@ -292,7 +287,7 @@ void Server::State::handleToolsCall( const httplib::Request& req, httplib::Respo
     }
     catch ( const std::exception& e )
     {
-        TelemetrySignal( "MCP Tool Failed: " + toolId );
+        // "MCP Tool Failed" is emitted by the tool wrapper in `addTool()`.
         writeJsonError( res, 500, e.what(), RpcErrorCode::InternalError );
         return;
     }
@@ -348,7 +343,17 @@ bool Server::addTool( std::string id, std::string name, std::string desc, Schema
             if ( auto res = statePtr->toolValidator( id ); !res )
                 throw std::runtime_error( std::move( res.error() ) );
         }
-        return inner( reifyStringEncodedArgs( args, schema ) );
+        // Analytics: tool id only, never args or error text (may carry file paths or object names).
+        TelemetrySignal( "MCP Tool: " + id );
+        try
+        {
+            return inner( reifyStringEncodedArgs( args, schema ) );
+        }
+        catch ( const std::exception& )
+        {
+            TelemetrySignal( "MCP Tool Failed: " + id );
+            throw;
+        }
     };
     state_->toolManager.register_tool( fastmcpp::tools::Tool( id, std::move( schemaJson ), std::move( outputSchema ).asJson(), std::move( wrapped ), name, desc, {} ) );
     return true;

@@ -31,15 +31,10 @@ EMSCRIPTEN_BINDINGS( meshlib_contours_cut )
         .value( "Left", CutMeshParameters::FillPart::Left )
         .value( "Right", CutMeshParameters::FillPart::Right );
 
-    emscripten::enum_<CutMeshParameters::ForceFill>( "ForceFill" )
-        .value( "None", CutMeshParameters::ForceFill::None )
-        .value( "Good", CutMeshParameters::ForceFill::Good )
-        .value( "All", CutMeshParameters::ForceFill::All );
-
     emscripten::class_<CutMeshParameters>( "CutMeshParameters" )
         .constructor<>()
         .property( "fillPart", &CutMeshParameters::fillPart )
-        .property( "forceFillMode", &CutMeshParameters::forceFillMode );
+        .property( "forceFill", &CutMeshParameters::forceFill );
 
     emscripten::function( "cutMesh", +[]( std::shared_ptr<Mesh> mesh, const OneMeshContours& contours, const CutMeshParameters& params )
     {

@@ -117,6 +117,8 @@ def fetch_page(url, headers, attempts=3, cooldown=30):
     for attempt in range(1, attempts + 1):
         try:
             resp = requests.get(url, headers=headers)
+            if resp.status_code >= 500:
+                resp.raise_for_status()
         except requests.exceptions.RequestException as e:
             if attempt == attempts:
                 raise
@@ -127,7 +129,7 @@ def fetch_page(url, headers, attempts=3, cooldown=30):
         return resp
 
 def fetch_jobs(repo: str, run_id: str):
-    url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs?per_page=100'
+    url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs?per_page=30'
     headers = {
         'Accept': 'application/vnd.github.v3+json',
         'Authorization': f'Bearer {os.environ.get("GITHUB_TOKEN")}',

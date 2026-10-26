@@ -227,6 +227,13 @@ endif()
 
 if(MESHLIB_USE_VCPKG)
   set(VCPKG_TRIPLET_DIR "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
+  # headers of private dependencies, not reachable from MeshLib's public headers
+  set(VCPKG_PRIVATE_HEADERS
+    opencascade xercesc openssl curl cpr
+    gdcm[^/]* socketxx openjph openjpeg-[^/]*
+    E57Format hpdf[^/]* tiff[^/]* tinyxml2\\.h tiny_?gltf[^/]* stb_[^/]*
+  )
+  list(JOIN VCPKG_PRIVATE_HEADERS "|" VCPKG_PRIVATE_HEADERS)
   install(
     DIRECTORY
       "$<$<PLATFORM_ID:Windows>:${VCPKG_TRIPLET_DIR}/bin>"
@@ -236,6 +243,12 @@ if(MESHLIB_USE_VCPKG)
     DESTINATION .
     PATTERN "pkgconfig" EXCLUDE
     PATTERN "__pycache__" EXCLUDE
+    REGEX "/${VCPKG_TARGET_TRIPLET}/include/(${VCPKG_PRIVATE_HEADERS})$" EXCLUDE
+    # vcpkg bookkeeping
+    PATTERN "vcpkg_abi_info.txt" EXCLUDE
+    PATTERN "vcpkg.spdx.json" EXCLUDE
+    PATTERN "vcpkg-spdx-resources.json" EXCLUDE
+    REGEX "/share/[^/]+/usage$" EXCLUDE
   )
 endif()
 

@@ -307,13 +307,31 @@ void sharpenMarchingCubesMesh( const MeshPart& ref, Mesh& vox, Vector<VoxelId, F
                 continue; //sharpPt shifts (nearly) within the surface plane
         }
 
-        // the triangles connecting the new vertex with the patch boundary must not fold
-        if ( std::any_of( boundary.begin(), boundary.end(), [&]( EdgeId be )
+        // the triangles connecting the new vertex with the patch boundary must not fold:
+        // find the range of the displacement fraction, where every triangle faces along sumDirArea, and shorten the displacement
+        const auto shift = sharpPt - avgPt;
+        float minPart = 0, maxPart = FLT_MAX;
+        for ( auto be : boundary )
         {
             const auto o = vox.orgPnt( be );
-            return dot( cross( vox.destPnt( be ) - o, sharpPt - o ), sumDirArea ) <= 0;
-        } ) )
+            const auto m = cross( sumDirArea, vox.destPnt( be ) - o );
+            const auto a = dot( avgPt - o, m );
+            const auto b = dot( shift, m );
+            if ( b > 0 )
+                minPart = std::max( minPart, -a / b );
+            else if ( b < 0 )
+                maxPart = std::min( maxPart, a / -b );
+            else if ( a <= 0 )
+                maxPart = -1;
+        }
+        if ( maxPart <= minPart || minPart >= 1 )
             continue;
+        if ( maxPart < 1 )
+        {
+            sharpPt = avgPt + ( minPart + 0.9f * ( maxPart - minPart ) ) * shift;
+            if ( ( sharpPt - avgPt ).lengthSq() < sqr( settings.minNewVertDev ) )
+                continue; //too little deviation of new point to introduce a vertex in mesh
+        }
 
         auto v = vox.splitFace( f, sharpPt );
         assert( v == dirs.size() + firstNewVert );

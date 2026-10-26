@@ -10,6 +10,18 @@
 namespace MR
 {
 
+// Operators of `Vector::iterator` / `Vector::const_iterator` returning the derived type, which C++20 iterator concepts require.
+#define MR_VECTOR_ITERATOR_OPS( Self, Base ) \
+    Self & operator ++() { ++static_cast<Base &>( *this ); return *this; } \
+    Self operator ++( int ) { Self res = *this; ++*this; return res; } \
+    Self & operator --() { --static_cast<Base &>( *this ); return *this; } \
+    Self operator --( int ) { Self res = *this; --*this; return res; } \
+    Self & operator +=( difference_type n ) { static_cast<Base &>( *this ) += n; return *this; } \
+    Self & operator -=( difference_type n ) { static_cast<Base &>( *this ) -= n; return *this; } \
+    [[nodiscard]] friend Self operator +( Self it, difference_type n ) { return it += n; } \
+    [[nodiscard]] friend Self operator +( difference_type n, Self it ) { return it += n; } \
+    [[nodiscard]] friend Self operator -( Self it, difference_type n ) { return it -= n; }
+
 /**
  * \brief std::vector<T>-like container that requires specific indexing type,
  * \tparam T type of stored elements
@@ -24,12 +36,27 @@ public:
     using value_type = typename StdVector::value_type;
     using reference = typename StdVector::reference;
     using const_reference = typename StdVector::const_reference;
-    using iterator = typename StdVector::iterator;
-    using const_iterator = typename StdVector::const_iterator;
-    using reverse_iterator MR_BIND_IGNORE = typename StdVector::reverse_iterator;
-    using const_reverse_iterator MR_BIND_IGNORE = typename StdVector::const_reverse_iterator;
     using size_type = typename StdVector::size_type;
     using difference_type = typename StdVector::difference_type;
+
+    /// derived from `StdVector::iterator` rather than an alias of it, so that the bindings spell it through `Vector`:
+    /// the canonical standard iterator types don't always mention the allocator (e.g. libc++'s `std::__wrap_iter<T *>`)
+    struct iterator : StdVector::iterator
+    {
+        iterator() = default;
+        MR_BIND_IGNORE iterator( typename StdVector::iterator it ) : StdVector::iterator( it ) {}
+        MR_VECTOR_ITERATOR_OPS( iterator, typename StdVector::iterator )
+    };
+    struct const_iterator : StdVector::const_iterator
+    {
+        const_iterator() = default;
+        MR_BIND_IGNORE const_iterator( typename StdVector::const_iterator it ) : StdVector::const_iterator( it ) {}
+        MR_BIND_IGNORE const_iterator( typename StdVector::iterator it ) : StdVector::const_iterator( it ) {}
+        const_iterator( iterator it ) : StdVector::const_iterator( it ) {}
+        MR_VECTOR_ITERATOR_OPS( const_iterator, typename StdVector::const_iterator )
+    };
+    using reverse_iterator MR_BIND_IGNORE = typename StdVector::reverse_iterator;
+    using const_reverse_iterator MR_BIND_IGNORE = typename StdVector::const_reverse_iterator;
     using pointer = typename StdVector::pointer;
     using const_pointer = typename StdVector::const_pointer;
 
@@ -203,10 +230,10 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] size_t heapBytes() const { return capacity() * sizeof(T); }
 
-    [[nodiscard]] MR_BIND_IGNORE_PY friend auto begin( const Vector<T, I> & a ) { return a.vec.begin(); }
-    [[nodiscard]] MR_BIND_IGNORE_PY friend auto begin( Vector<T, I> & a ) { return a.vec.begin(); }
-    [[nodiscard]] MR_BIND_IGNORE_PY friend auto end( const Vector<T, I> & a ) { return a.vec.end(); }
-    [[nodiscard]] MR_BIND_IGNORE_PY friend auto end( Vector<T, I> & a ) { return a.vec.end(); }
+    [[nodiscard]] MR_BIND_IGNORE_PY friend const_iterator begin( const Vector<T, I> & a ) { return a.vec.begin(); }
+    [[nodiscard]] MR_BIND_IGNORE_PY friend iterator begin( Vector<T, I> & a ) { return a.vec.begin(); }
+    [[nodiscard]] MR_BIND_IGNORE_PY friend const_iterator end( const Vector<T, I> & a ) { return a.vec.end(); }
+    [[nodiscard]] MR_BIND_IGNORE_PY friend iterator end( Vector<T, I> & a ) { return a.vec.end(); }
 
     /// removes all elements equal to \p value, returns the number of removed elements
     template <typename U>
@@ -237,5 +264,7 @@ template <typename T, typename I>
 {
     return size_t( id ) < a.size() ? a[id] : def;
 }
+
+#undef MR_VECTOR_ITERATOR_OPS
 
 } // namespace MR

@@ -183,7 +183,7 @@ public:
     MRVOXELS_API static float indexFromPseudoIndex( float pseudoIndex, int count );
 
     // Get row of points with `offset` stride
-    MRVOXELS_API void getPoints( std::vector<Vector3f>& result, const Vector3f& pos, const Vector3f& offset ) const;
+    MRVOXELS_API void getPoints( VertCoords& result, const Vector3f& pos, const Vector3f& offset ) const;
 
     // Get volume values for a row of points
     MRVOXELS_API void getValues( std::vector<float>& result, const Vector3f& pos, const Vector3f& offset ) const;

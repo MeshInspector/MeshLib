@@ -10,6 +10,7 @@ namespace MR
 
 struct PreciseVertCoords;
 struct PreciseCutPoint;
+class CutTrianglePredicates;
 
 namespace PlanarTriangulation
 {
@@ -164,6 +165,16 @@ MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const 
 ///         on the points
 MR_BIND_IGNORE MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops,
     const std::array<PreciseVertCoords, 3>& tri, const std::function<PreciseCutPoint( VertId )>& pointOf );
+
+/// whether two of the segments between the points of \p preds cross, found by the sweep of \ref triangulateDisjointContours,
+/// which stops at the first crossing; segments with a common end only touch, and a repeated segment is taken once
+/// \param segments the ends of every segment, as the ids of the points in \p preds, which are all set and not failed
+/// \return true also if the predicates fail during the sweep
+MR_BIND_IGNORE MRMESH_API bool hasCrossing( const std::vector<TwoVertIds>& segments, const CutTrianglePredicates& preds, ISweepLineCache* cache = nullptr );
+
+/// same as above for the points that \p segments index given by their coordinates, which the sweep rounds to integers
+/// as \ref triangulateDisjointContours does; points rounded to the same position are merged, so the segments through them touch there
+MR_BIND_IGNORE MRMESH_API bool hasCrossing( const std::vector<TwoVertIds>& segments, const Contour2f& points, ISweepLineCache* cache = nullptr );
 
 }
 }

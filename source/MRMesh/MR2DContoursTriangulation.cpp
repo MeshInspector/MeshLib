@@ -803,27 +803,24 @@ void SweepLineQueue::triangulate()
 
 void SweepLineQueue::setupStartVertices_()
 {
+    // whether no edge of v goes left
+    auto isStart = [&] ( VertId v )
+    {
+        for ( auto e : orgRing( tp_, v ) )
+            if ( predicates_.less( tp_.dest( e ), v ) )
+                return false;
+        return true;
+    };
+    // a parallel loop over one block of the bit set runs in one thread anyway, only slower, as in the many small runs of hasCrossing
+    const bool parallel = tp_.vertSize() > VertBitSet::bits_per_block;
     auto& startVertices = startVerticesCache_;
     startVertices.clear();
     startVertices.resize( tp_.vertSize() );
-    BitSetParallelFor( tp_.getValidVerts(), [&] ( VertId v )
-    {
-        bool startVert = true;
-        for ( auto e : orgRing( tp_, v ) )
-        {
-            if ( predicates_.less( tp_.dest( e ), v ) )
-            {
-                startVert = false;
-                break;
-            }
-        }
-        if ( startVert )
-            startVertices.set( v );
-    } );
+    if ( parallel )
+        BitSetParallelFor( tp_.getValidVerts(), [&] ( VertId v ) { startVertices.set( v, isStart( v ) ); } );
     // all vertices are sorted already
-    startVerts_.reserve( startVertices.count() );
     for ( auto v : sortedVerts_ )
-        if ( startVertices.test( v ) )
+        if ( parallel ? startVertices.test( v ) : tp_.hasVert( v ) && isStart( v ) )
             startVerts_.push_back( v );
     startVertLowestRight_.resize( startVerts_.size() );
 }
@@ -1999,12 +1996,11 @@ bool hasCrossing( const std::vector<TwoVertIds>& segments, const CutTrianglePred
     std::optional<SweepLineQueue::Cache> localCache;
     auto& cacheImpl = cache ? static_cast<SweepLineQueue::Cache&>( *cache ) : localCache.emplace();
     // the points are distinct, so none is merged, and the run stops at the first crossing
-    SweepLinePredicates p;
-    p.less = [&] ( VertId l, VertId r ) { return preds.less( l, r ); };
-    p.ccw = [&] ( VertId a, VertId b, VertId c ) { return preds.ccw( a, b, c ); };
-    p.ccwFromBehind = [&] ( VertId b, VertId pivot ) { return preds.ccwFromBehind( b, pivot ); };
-    p.failed = [&] { return preds.failed(); };
-    return !SweepLineQueue( cacheImpl, std::move( p ), segments, { .abortWhenIntersect = true, .allowMerge = false } ).findIntersections();
+    return !SweepLineQueue( cacheImpl, {
+        .less = [&] ( VertId l, VertId r ) { return preds.less( l, r ); },
+        .ccw = [&] ( VertId a, VertId b, VertId c ) { return preds.ccw( a, b, c ); },
+        .ccwFromBehind = [&] ( VertId b, VertId pivot ) { return preds.ccwFromBehind( b, pivot ); },
+        .failed = [&] { return preds.failed(); } }, segments, { .abortWhenIntersect = true, .allowMerge = false } ).findIntersections();
 }
 
 bool hasCrossing( const std::vector<TwoVertIds>& segments, const Contour2f& points, ISweepLineCache* cache )

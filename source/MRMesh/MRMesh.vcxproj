@@ -146,6 +146,7 @@
     <ClInclude Include="MRFillContours2D.h" />
     <ClInclude Include="MRGcodeProcessor.h" />
     <ClInclude Include="MRGcodeLoad.h" />
+    <ClInclude Include="MRGcodeSave.h" />
     <ClInclude Include="MRGraph.h" />
     <ClInclude Include="MRGridSettings.h" />
     <ClInclude Include="MRHeapBytes.h" />
@@ -581,6 +582,7 @@
     <ClCompile Include="MRFixSelfIntersections.cpp" />
     <ClCompile Include="MRGcodeProcessor.cpp" />
     <ClCompile Include="MRGcodeLoad.cpp" />
+    <ClCompile Include="MRGcodeSave.cpp" />
     <ClCompile Include="MRHistoryAction.cpp" />
     <ClCompile Include="MRImage.cpp" />
     <ClCompile Include="MRScalarConvert.cpp" />

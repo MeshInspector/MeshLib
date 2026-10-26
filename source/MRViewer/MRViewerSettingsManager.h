@@ -51,6 +51,7 @@ public:
         Points,
         Voxels,
         DistanceMap,
+        Gcode,
         Count
     };
     MRVIEWER_API const std::string & getLastExtention( ObjType objType );

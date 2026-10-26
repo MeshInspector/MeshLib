@@ -1044,12 +1044,13 @@ FaceBitSet getBadFacesAfterCut( const MeshTopology& topology, const PreCutResult
     return badFacesBS;
 }
 
-// segment i of contour c, from intersection i to i + 1, in face f, which is invalid for a segment along an edge of the mesh
+// segments i to i + n - 1 of contour c, segment i from intersection i to i + 1, in face f, which is invalid for a segment along an edge of the mesh
 struct FaceSegment
 {
     FaceId f;
     int c = -1;
     int i = -1;
+    int n = 1;
 };
 
 // the buffers of the search in one face, kept for the next face of the thread
@@ -1058,6 +1059,7 @@ struct FaceCrossingsBuffers
     std::vector<std::pair<std::int64_t, int>> keys; // the key of every end of a segment (see pointKey) and the end, 2 * segment + k
     std::vector<int> defs; // an end at every point
     std::vector<TwoVertIds> ends; // the points of every segment
+    std::vector<FaceSegment> segs; // the segments of the face, one by one
     Contour2f xy; // the projected coordinates of the points without sortData
     CutTrianglePredicates preds;
     std::unique_ptr<PlanarTriangulation::ISweepLineCache> cache = PlanarTriangulation::makeSweepLineCache();
@@ -1167,20 +1169,31 @@ FaceBitSet findCrossingFaces( const Mesh& mesh, const OneMeshContours& contours,
             segs[k] = { segmentFace( mesh.topology, contours[c].intersections, i ), c, i };
         }
     } );
-    std::erase_if( segs, [] ( const FaceSegment& s ) { return !s.f; } );
+    // the runs of consecutive segments of a contour in one face, which sort as one
+    size_t numRuns = 0;
+    for ( const auto& s : segs )
+    {
+        if ( !s.f )
+            continue;
+        if ( numRuns > 0 && segs[numRuns - 1].f == s.f && segs[numRuns - 1].c == s.c && segs[numRuns - 1].i + segs[numRuns - 1].n == s.i )
+            ++segs[numRuns - 1].n;
+        else
+            segs[numRuns++] = s;
+    }
+    segs.resize( numRuns );
     tbb::parallel_sort( segs.begin(), segs.end(), [] ( const FaceSegment& a, const FaceSegment& b )
     {
         return std::tie( a.f, a.c, a.i ) < std::tie( b.f, b.c, b.i );
     } );
 
-    // the segments of the faces with two segments at least
+    // the runs of the faces with two segments at least
     std::vector<std::span<const FaceSegment>> faces;
     for ( size_t i = 0; i < segs.size(); )
     {
         size_t j = i + 1;
         while ( j < segs.size() && segs[j].f == segs[i].f )
             ++j;
-        if ( j > i + 1 )
+        if ( j > i + 1 || segs[i].n > 1 )
             faces.emplace_back( segs.data() + i, j - i );
         i = j;
     }
@@ -1188,8 +1201,12 @@ FaceBitSet findCrossingFaces( const Mesh& mesh, const OneMeshContours& contours,
     std::vector<char> crossed( faces.size() ); // not in a bit set yet, since its neighbor faces share words
     ParallelFor( faces, buffers, [&] ( size_t k, FaceCrossingsBuffers& buf )
     {
+        buf.segs.clear();
+        for ( const auto& r : faces[k] )
+            for ( int j = 0; j < r.n; ++j )
+                buf.segs.push_back( { r.f, r.c, r.i + j } );
         // isolate keeps the nested parallel loops of the sweep from stealing this thread onto another face with the same buffers
-        tbb::this_task_arena::isolate( [&] { crossed[k] = crossesInFace( buf, mesh, contours, sortData, faces[k] ); } );
+        tbb::this_task_arena::isolate( [&] { crossed[k] = crossesInFace( buf, mesh, contours, sortData, buf.segs ); } );
     } );
     FaceBitSet res( mesh.topology.faceSize() );
     for ( size_t k = 0; k < faces.size(); ++k )

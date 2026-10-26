@@ -617,22 +617,18 @@ std::string GetDetailedOSName()
 
 std::string getOSNoSpaces()
 {
-    #ifdef _WIN32
-    return "Windows";
-    #else
-    #ifdef __EMSCRIPTEN__
+#if defined( __EMSCRIPTEN__ )
     return "Wasm";
-    #else
-    // get platform from cmake variables
-    #ifdef MR_PLATFORM
+#elif defined( MR_PLATFORM )
+    // from DetectPlatform.cmake or common.props, with the CPU architecture on Arm and macOS
     std::string platform = MR_PLATFORM;
-    std::replace(platform.begin(), platform.end(), ' ', '_');
+    std::replace( platform.begin(), platform.end(), ' ', '_' );
     return platform;
-    #else
+#elif defined( _WIN32 )
+    return "Windows";
+#else
     return "UNKNOWN";
-    #endif
-    #endif
-    #endif
+#endif
 }
 
 void setNewHandlerIfNeeded()

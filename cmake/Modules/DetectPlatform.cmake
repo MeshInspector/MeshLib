@@ -28,6 +28,11 @@ IF(NOT MR_PLATFORM)
   ENDIF()
 ENDIF()
 
+# macOS names carry the architecture already; elsewhere add it on Arm, also to a name given with -DMR_PLATFORM
+IF(NOT APPLE AND NOT MR_EMSCRIPTEN AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64|ARM64)$" AND NOT MR_PLATFORM MATCHES "_arm64$")
+  set(MR_PLATFORM "${MR_PLATFORM}_arm64")
+ENDIF()
+
 add_compile_definitions(MR_PLATFORM="${MR_PLATFORM}")
 message("platform: ${MR_PLATFORM}")
 

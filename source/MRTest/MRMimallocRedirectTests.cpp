@@ -2,6 +2,7 @@
 #include <MRMesh/MRAllocator.h>
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRBuffer.h>
+#include <MRMesh/MRVector.h>
 #include <MRMesh/MRCube.h>
 #include <MRMesh/MRMesh.h>
 #include <gtest/gtest.h>
@@ -78,7 +79,7 @@ TEST( MRMesh, MimallocAllocator )
 
     // mi_stl_allocator alone ignores alignas
     struct alignas( 64 ) Aligned { char c = 0; };
-    std::vector<Aligned, Allocator<Aligned>> v( 3 );
+    Vector<Aligned> v( 3 );
     EXPECT_TRUE( mi_is_in_heap_region( v.data() ) );
     EXPECT_EQ( reinterpret_cast<std::uintptr_t>( v.data() ) % 64, 0 );
 }

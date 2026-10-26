@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MRMacros.h"
-#include "MRAllocator.h"
+#include "MRVector.h"
 #include "MRTimer.h"
 #include <vector>
 #include <algorithm>
@@ -15,7 +15,7 @@ class PriorityQueue
 {
 public:
     using value_type = T;
-    using Container = std::vector<T, Allocator<T>>;
+    using Container = Vector<T>;
     using size_type = typename Container::size_type;
 
     /// constructs empty queue

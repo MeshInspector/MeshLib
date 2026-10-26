@@ -26,10 +26,12 @@
 #include "MRMesh/MRDistanceMapSave.h"
 #include "MRMesh/MRDistanceMapLoad.h"
 #include "MRMesh/MRGcodeLoad.h"
+#include "MRMesh/MRGcodeSave.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectDistanceMap.h"
+#include "MRMesh/MRObjectGcode.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRViewer/MRRibbonMenu.h"
 #include "MRViewer/MRViewer.h"
@@ -579,6 +581,7 @@ std::optional<SaveInfo> getSaveInfo( const std::vector<std::shared_ptr<T>> & obj
     || checkObjects.template operator()<ObjectLines>( { ViewerSettingsManager::ObjType::Lines, LinesSave::getFilters() } )
     || checkObjects.template operator()<ObjectPoints>( { ViewerSettingsManager::ObjType::Points, PointsSave::getFilters() } )
     || checkObjects.template operator()<ObjectDistanceMap>( { ViewerSettingsManager::ObjType::DistanceMap, DistanceMapSave::getFilters() } )
+    || checkObjects.template operator()<ObjectGcode>( { ViewerSettingsManager::ObjType::Gcode, GcodeSave::Filters } )
 #ifndef MESHLIB_NO_VOXELS
     || checkObjects.template operator()<ObjectVoxels>( { ViewerSettingsManager::ObjType::Voxels, VoxelsSave::getFilters() } )
 #endif

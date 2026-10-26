@@ -1,3 +1,5 @@
+#include <MRMesh/MRGcodeLoad.h>
+#include <MRMesh/MRGcodeSave.h>
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMeshLoadObj.h>
 #include <MRMesh/MRMeshSave.h>
@@ -9,13 +11,16 @@
 #include <MRMesh/MRImageLoad.h>
 #include <MRMesh/MRImageSave.h>
 #include <MRMesh/MRIOFormatsRegistry.h>
+#include <MRMesh/MRObjectGcode.h>
 #include <MRMesh/MRObjectMesh.h>
+#include <MRMesh/MRObjectSave.h>
 #include <MRMesh/MRStringConvert.h>
 #include <MRMesh/MRUniqueTemporaryFolder.h>
 #include <MRMesh/MRphmap.h>
 #include <gtest/gtest.h>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 
 namespace MR
 {
@@ -905,6 +910,28 @@ TEST(MRMesh, LoadObjConsecutiveObjectNames)
         auto res = MeshLoad::fromSceneObjFile( dir / "model.obj", false );
         ASSERT_TRUE( res.has_value() ) << res.error();
         EXPECT_EQ( namedFaceCounts( *res ), expected );
+    }
+}
+
+TEST(MRMesh, GcodeSaveLoad)
+{
+    // exportToolPathToGCode keeps line ends, GcodeLoad strips them
+    const GcodeSource src{ "G0 X1 Y2 Z3\n", "G1 X4 F500" };
+    const GcodeSource expected{ "G0 X1 Y2 Z3", "G1 X4 F500" };
+
+    std::stringstream ss;
+    ASSERT_TRUE( GcodeSave::toAnySupportedFormat( src, ss, "*.gcode" ) );
+    EXPECT_EQ( ss.str(), "G0 X1 Y2 Z3\nG1 X4 F500\n" );
+
+    UniqueTemporaryFolder dir;
+    ObjectGcode obj;
+    obj.setGcodeSource( std::make_shared<GcodeSource>( src ) );
+    for ( const char* name : { "path.gcode", "path.NC", "path.txt" } )
+    {
+        ASSERT_TRUE( ObjectSave::toAnySupportedFormat( obj, dir / name ) );
+        auto res = GcodeLoad::fromAnySupportedFormat( dir / name );
+        ASSERT_TRUE( res ) << res.error();
+        EXPECT_EQ( *res, expected );
     }
 }
 

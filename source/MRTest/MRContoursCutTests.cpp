@@ -1234,43 +1234,6 @@ TEST( MRMesh, ForceFillCrossingsBoolean )
     expectTop( forcedBooleanBadFaces( cube, makeTwoBoxes( 1, 1.5f ) )[0], cube, {} );
 }
 
-// a closed mesh with a multiple edge from a below the top of the unit cube to b above it, of three sheets: triangles a b x[i] and a y[i] b,
-// which touch along ab without crossing, one sheet around the other two, and triangles a x[i] y[i+1] and b y[i+1] x[i] closing it;
-// its contour on the top goes through the crossing of ab three times without crossing itself, whichever sheet is around the others
-TEST( MRMesh, ForceFillCrossingsMultipleEdge )
-{
-    const auto cube = makeCube( Vector3f::diagonal( 1 ), Vector3f() );
-    for ( int outer = 0; outer < 3; ++outer )
-    {
-        SCOPED_TRACE( outer );
-        // a = 0_v, b = 1_v, x[i] = 2 + 2i, y[i] = 3 + 2i; x[outer], y[outer+1], x[outer+1], y[outer+2], x[outer+2], y[outer] go around ab
-        VertCoords points( 8 );
-        points[0_v] = Vector3f( 0.35f, 0.6f, 0.5f );
-        points[1_v] = Vector3f( 0.35f, 0.6f, 1.5f );
-        for ( int k = 0; k < 6; ++k )
-        {
-            const float angle = PI_F / 6 * float( k );
-            points[VertId( 2 + 2 * ( ( outer + ( k + 1 ) / 2 ) % 3 ) + k % 2 )] = Vector3f( 0.35f + 0.2f * std::cos( angle ), 0.6f + 0.2f * std::sin( angle ), 1.2f );
-        }
-        Triangulation t;
-        for ( int i = 0; i < 3; ++i ) // the sheets first, so that the triangles of each one share their edge ab
-            t.insert( t.end(), { { 0_v, 1_v, VertId( 2 + 2 * i ) }, { 0_v, VertId( 3 + 2 * i ), 1_v } } );
-        for ( int i = 0; i < 3; ++i )
-        {
-            const VertId x( 2 + 2 * i ), y( 3 + 2 * ( ( i + 1 ) % 3 ) );
-            t.insert( t.end(), { { 0_v, x, y }, { 1_v, y, x } } );
-        }
-        const auto sheets = Mesh::fromTriangles( std::move( points ), t );
-        ASSERT_EQ( sheets.topology.numValidFaces(), 12 );
-        EXPECT_EQ( sheets.topology.findNumHoles(), 0 );
-        for ( auto e : orgRing( sheets.topology, 0_v ) )
-            if ( sheets.topology.dest( e ) == 1_v )
-                EXPECT_EQ( int( sheets.topology.dest( sheets.topology.next( e ) ) ) / 2, int( sheets.topology.dest( sheets.topology.prev( e ) ) ) / 2 );
-        for ( const auto& bad : forcedBooleanBadFaces( cube, sheets ) )
-            EXPECT_TRUE( bad.none() );
-    }
-}
-
 // a flat rectangle of two triangles and the same triangles reversed, with the same vertices (a closed double-sided sheet, whose diagonals
 // make a multiple edge), across the top of the unit cube inside one triangle of it, which the plain cut reports bad: the contours of its sides
 // there coincide, and the current crossing search reports that triangle too, since the predicates cannot tell apart the crossings

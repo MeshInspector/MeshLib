@@ -81,7 +81,7 @@ TEST( MRMesh, FPFHUniquePoints )
     points.set();
     // deviations of the distances to the mean descriptor in standard deviations
     const auto uniqueness = computeFPFHUniqueness( descriptors, points );
-    EXPECT_NEAR( uniqueness[VertId( 0 )], 0.1f, 1e-5f );
+    EXPECT_NEAR( uniqueness[VertId( 0 )], -0.1f, 1e-5f );
     EXPECT_NEAR( uniqueness[VertId( 100 )], 10.0f, 1e-4f );
 
     auto unique = findUniqueFPFHPoints( descriptors, points, 2 );

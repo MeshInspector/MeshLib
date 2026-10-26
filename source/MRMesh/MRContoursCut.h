@@ -3,7 +3,6 @@
 #include "MRBitSet.h"
 #include "MRAffineXf3.h"
 #include "MROneMeshContours.h"
-#include <compare>
 
 namespace MR
 {
@@ -70,8 +69,8 @@ struct CutMeshResult
     /// a contour going from a mesh vertex to a point and back has an edge followed by its sym there
     std::vector<EdgePath> resultCut;
     /// Bitset of bad triangles - triangles where input contours have intersections and cannot be cut and filled in a good way;
-    /// under force fill, only the triangles where two segments of the contours cross (see \ref findContoursCrossings),
-    /// and the triangles of lone contours that cannot be connected with the rest of the triangle
+    /// under force fill, only the triangles where two segments of the contours cross (segments that follow each other along a contour
+    /// or have a common mesh vertex do not), and the triangles of lone contours that cannot be connected with the rest of the triangle
     /// \sa \ref MR::CutMeshParameters
     FaceBitSet fbsWithContourIntersections;
 };
@@ -99,26 +98,6 @@ struct CutMeshResult
   * \endparblock
   */
 MRMESH_API CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMeshParameters& params = {} );
-
-/// two segments of contours crossing inside a face of the mesh: segment i of contour c goes from its intersection i to i + 1
-struct ContoursCrossing
-{
-    FaceId face;
-    int contour0 = -1;
-    int segment0 = -1;
-    int contour1 = -1; ///< ( contour0, segment0 ) < ( contour1, segment1 )
-    int segment1 = -1;
-
-    auto operator <=>( const ContoursCrossing& ) const = default;
-};
-
-/// finds every two segments of the contours that cross inside a face of \p mesh, before \ref cutMesh, sorted;
-/// the segments of one face are checked only if it has two pieces of the contours or a piece of three segments,
-/// with conservative bounds of the errors of the coordinates of the intersections, so that only the pairs that come
-/// close are decided by the exact predicates consistent with the boolean, if \p sortData is given, or by the coordinates otherwise;
-/// two segments of one contour that follow each other or have a common mesh vertex do not cross
-[[nodiscard]] MRMESH_API std::vector<ContoursCrossing> findContoursCrossings( const Mesh& mesh, const OneMeshContours& contours,
-    const SortIntersectionsData* sortData = nullptr );
 
 
 /// Cuts \p mesh by \p contour by projecting all the points

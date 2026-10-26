@@ -1137,241 +1137,300 @@ bool mayBeInPlane( const Vector3i64& n, const Vector3i& a, const Vector3i& x )
     return std::abs( dot( nd, d ) ) <= 0x1p-50 * ( std::abs( nd.x * d.x ) + std::abs( nd.y * d.y ) + std::abs( nd.z * d.z ) );
 }
 
-// the normal of a triangle of exact integers, below 2^31 * 2^31 * 2 = 2^63 by absolute value
-Vector3i64 exactNormal( const Vector3i& a, const Vector3i& b, const Vector3i& c )
+// 1 if point c is on the left of line ab for sure, -1 if on the right, 0 if the errors of the coordinates, below tol along each axis, may change it
+int approxSide( const Vector2d& a, const Vector2d& b, const Vector2d& c, double tol )
 {
-    return cross( Vector3i64( b ) - Vector3i64( a ), Vector3i64( c ) - Vector3i64( a ) );
+    const double ux = b.x - a.x, uy = b.y - a.y, wx = c.x - a.x, wy = c.y - a.y;
+    const double l = ux * wy, r = uy * wx;
+    const double area = l - r;
+    // the differences move by 2 tol, and the products and their difference add rounding errors below 2^-52 of the sum of the products
+    const double err = 2 * tol * ( std::abs( ux ) + std::abs( uy ) + std::abs( wx ) + std::abs( wy ) ) + 8 * tol * tol
+        + 0x1p-50 * ( std::abs( l ) + std::abs( r ) );
+    return int( area > err ) - int( area < -err );
 }
 
 // 1 if two segments cross for sure, -1 if they do not, 0 if the errors of the coordinates, below tol along each axis, may change the answer;
 // for tol = 0, the coordinates decide, and 0 means that an end of a segment is on the line of the other one
 int approxCross( const FaceSegment& s, const FaceSegment& t, double tol )
 {
-    const double gap = 2 * tol;
-    if ( s.box.min.x > t.box.max.x + gap || t.box.min.x > s.box.max.x + gap || s.box.min.y > t.box.max.y + gap || t.box.min.y > s.box.max.y + gap )
+    if ( !s.box.intersects( t.box.expanded( Vector2d::diagonal( 2 * tol ) ) ) )
         return -1;
-    // the side of c from line ab
-    auto side = [tol] ( const Vector2d& a, const Vector2d& b, const Vector2d& c )
-    {
-        const double ux = b.x - a.x, uy = b.y - a.y, wx = c.x - a.x, wy = c.y - a.y;
-        const double l = ux * wy, r = uy * wx;
-        const double area = l - r;
-        // the differences move by 2 tol, and the products and their difference add rounding errors below 2^-52 of the sum of the products
-        const double err = 2 * tol * ( std::abs( ux ) + std::abs( uy ) + std::abs( wx ) + std::abs( wy ) ) + 8 * tol * tol
-            + 0x1p-50 * ( std::abs( l ) + std::abs( r ) );
-        return int( area > err ) - int( area < -err );
-    };
-    const int sc = side( s.a, s.b, t.a ), sd = side( s.a, s.b, t.b );
+    const int sc = approxSide( s.a, s.b, t.a, tol ), sd = approxSide( s.a, s.b, t.b, tol );
     if ( sc != 0 && sc == sd )
         return -1;
-    const int ta = side( t.a, t.b, s.a ), tb = side( t.a, t.b, s.b );
+    const int ta = approxSide( t.a, t.b, s.a, tol ), tb = approxSide( t.a, t.b, s.b, tol );
     if ( ta != 0 && ta == tb )
         return -1;
     return sc != 0 && sd != 0 && ta != 0 && tb != 0 ? 1 : 0;
 }
 
-struct CrossingsLocal
+// two segments of contours crossing inside a face of the mesh: segment i of contour c goes from its intersection i to i + 1
+struct ContoursCrossing
 {
-    std::vector<FaceSegment> segs;
-    std::vector<int> order, active;
-    CutTrianglePredicates preds;
-    std::vector<VertId> predPoints; // the points of the face in preds, if added
-    std::vector<ContoursCrossing> res;
+    FaceId face;
+    int contour0 = -1;
+    int segment0 = -1;
+    int contour1 = -1; // ( contour0, segment0 ) < ( contour1, segment1 )
+    int segment1 = -1;
+
+    auto operator <=>( const ContoursCrossing& ) const = default;
 };
 
-// finds the crossings of the segments of the pieces of one face
-void findFaceCrossings( const Mesh& mesh, const OneMeshContours& contours, const SortIntersectionsData* sortData,
-    std::span<const ContourPiece> pieces, CrossingsLocal& local )
+// finds the crossings of the segments of the contours inside one face at a time, keeping its buffers for the next face: the coordinates
+// decide the pairs that their conservative error bounds allow, the exact predicates consistent with the boolean decide the others (with sortData)
+class FaceCrossingsFinder
 {
-    const auto f = pieces.front().f;
-    std::array<EdgeId, 3> edges;
-    mesh.topology.getTriEdges( f, edges[0], edges[1], edges[2] );
-    const ThreeVertIds verts{ mesh.topology.org( edges[0] ), mesh.topology.org( edges[1] ), mesh.topology.org( edges[2] ) };
-    const std::array<Vector3f, 3> corners{ mesh.points[verts[0]], mesh.points[verts[1]], mesh.points[verts[2]] };
+public:
+    FaceCrossingsFinder( const Mesh& mesh, const OneMeshContours& contours, const SortIntersectionsData* sortData )
+        : mesh_( mesh ), contours_( contours ), sortData_( sortData ) {}
 
-    // the coordinates of the intersections are the exact points rounded to the integer grid of the converter, then to float,
-    // and moved back by the inverse of rigidB2A in float on mesh B: below tol from the exact points along each axis
-    double tol = 0;
-    if ( sortData )
+    // the crossings found in all faces so far
+    std::vector<ContoursCrossing> crossings;
+
+    // finds the crossings of the segments of the pieces of one face
+    void find( std::span<const ContourPiece> pieces )
     {
-        float maxAbs = 0;
-        for ( const auto& p : corners )
+        setFace_( pieces.front().f );
+        makeSegments_( pieces );
+        predsReady_ = false;
+        sweep_();
+    }
+
+private:
+    // sets the face, the bound of the errors of the coordinates in it, the projection, and the exact corners
+    void setFace_( FaceId f )
+    {
+        f_ = f;
+        mesh_.topology.getTriEdges( f, edges_[0], edges_[1], edges_[2] );
+        verts_ = { mesh_.topology.org( edges_[0] ), mesh_.topology.org( edges_[1] ), mesh_.topology.org( edges_[2] ) };
+        const std::array<Vector3f, 3> corners{ mesh_.points[verts_[0]], mesh_.points[verts_[1]], mesh_.points[verts_[2]] };
+
+        // the coordinates of the intersections are the exact points rounded to the integer grid of the converter, then to float,
+        // and moved back by the inverse of rigidB2A in float on mesh B: below tol from the exact points along each axis
+        tol_ = 0;
+        if ( sortData_ )
         {
-            maxAbs = std::max( { maxAbs, std::abs( p.x ), std::abs( p.y ), std::abs( p.z ) } );
-            if ( sortData->isOtherA && sortData->rigidB2A )
+            float maxAbs = 0;
+            for ( const auto& p : corners )
             {
-                const auto q = ( *sortData->rigidB2A )( p );
-                maxAbs = std::max( { maxAbs, std::abs( q.x ), std::abs( q.y ), std::abs( q.z ) } );
+                maxAbs = std::max( { maxAbs, std::abs( p.x ), std::abs( p.y ), std::abs( p.z ) } );
+                if ( sortData_->isOtherA && sortData_->rigidB2A )
+                {
+                    const auto q = ( *sortData_->rigidB2A )( p );
+                    maxAbs = std::max( { maxAbs, std::abs( q.x ), std::abs( q.y ), std::abs( q.z ) } );
+                }
             }
+            const double unit = 1 / sortData_->converter.invRange;
+            tol_ = 2 * unit + 0x1p-20 * ( maxAbs + unit );
+            for ( int k = 0; k < 3; ++k )
+                ownInt_[k] = preciseOwnVert( verts_[k], mesh_, *sortData_ ).pt;
+            ownNormal_ = dirDblArea( Vector3i64( ownInt_[0] ), Vector3i64( ownInt_[1] ), Vector3i64( ownInt_[2] ) );
         }
-        const double unit = 1 / sortData->converter.invRange;
-        tol = 2 * unit + 0x1p-20 * ( maxAbs + unit );
+
+        // drop the axis most aligned with the normal
+        const auto n = dirDblArea( Vector3d( corners[0] ), Vector3d( corners[1] ), Vector3d( corners[2] ) );
+        const int drop = std::abs( n.x ) >= std::abs( n.y ) && std::abs( n.x ) >= std::abs( n.z ) ? 0 : std::abs( n.y ) >= std::abs( n.z ) ? 1 : 2;
+        kx_ = drop == 0 ? 1 : 0;
+        ky_ = drop == 2 ? 1 : 2;
     }
 
-    // drop the axis most aligned with the normal
-    const auto n = cross( Vector3d( corners[1] ) - Vector3d( corners[0] ), Vector3d( corners[2] ) - Vector3d( corners[0] ) );
-    const int drop = std::abs( n.x ) >= std::abs( n.y ) && std::abs( n.x ) >= std::abs( n.z ) ? 0 : std::abs( n.y ) >= std::abs( n.z ) ? 1 : 2;
-    const int kx = drop == 0 ? 1 : 0, ky = drop == 2 ? 1 : 2;
-    auto project = [&] ( const Vector3f& p ) { return Vector2d( p[kx], p[ky] ); };
-
-    // findTriangleSegmentIntersectionPrecise takes the middle of the part of the segment inside the triangle if both ends
-    // of the segment are in the plane of the triangle, which can be far from the exact point: a loose point
-    std::array<Vector3i, 3> ownInt;
-    Vector3i64 ownNormal;
-    if ( sortData )
+    // whether intersection i of contour c may be a loose point: findTriangleSegmentIntersectionPrecise takes the middle of the part
+    // of the segment inside the triangle if both ends of the segment are in the plane of the triangle, which can be far from the exact point
+    bool isLoose_( int c, int i ) const
     {
-        for ( int k = 0; k < 3; ++k )
-            ownInt[k] = preciseOwnVert( verts[k], mesh, *sortData ).pt;
-        ownNormal = exactNormal( ownInt[0], ownInt[1], ownInt[2] );
-    }
-    auto isLoose = [&] ( int c, int i )
-    {
-        const auto& prim = contours[c].intersections[i].primitiveId;
-        const auto& et = sortData->contours[c][i];
-        const auto& otherTopology = sortData->otherMesh.topology;
+        const auto& prim = contours_[c].intersections[i].primitiveId;
+        const auto& et = sortData_->contours[c][i];
+        const auto& otherTopology = sortData_->otherMesh.topology;
         if ( const auto pe = std::get_if<EdgeId>( &prim ) )
         {
-            // an edge of this face crossing a triangle of the other mesh
+            // a side of this face crossing a triangle of the other mesh
             const auto t = otherTopology.getTriVerts( et.tri() );
-            const auto a = preciseOtherVert( t[0], *sortData ).pt;
-            const auto n = exactNormal( a, preciseOtherVert( t[1], *sortData ).pt, preciseOtherVert( t[2], *sortData ).pt );
+            const auto a = preciseOtherVert( t[0], *sortData_ ).pt;
+            const auto n = dirDblArea( Vector3i64( a ), Vector3i64( preciseOtherVert( t[1], *sortData_ ).pt ),
+                Vector3i64( preciseOtherVert( t[2], *sortData_ ).pt ) );
             for ( int k = 0; k < 3; ++k )
-                if ( edges[k].undirected() == pe->undirected() )
-                    return mayBeInPlane( n, a, ownInt[k] ) && mayBeInPlane( n, a, ownInt[( k + 1 ) % 3] );
+                if ( edges_[k].undirected() == pe->undirected() )
+                    return mayBeInPlane( n, a, ownInt_[k] ) && mayBeInPlane( n, a, ownInt_[( k + 1 ) % 3] );
             return true;
         }
         if ( std::holds_alternative<FaceId>( prim ) )
         {
             // an edge of the other mesh crossing this face
-            return mayBeInPlane( ownNormal, ownInt[0], preciseOtherVert( otherTopology.org( et.edge ), *sortData ).pt )
-                && mayBeInPlane( ownNormal, ownInt[0], preciseOtherVert( otherTopology.dest( et.edge ), *sortData ).pt );
+            return mayBeInPlane( ownNormal_, ownInt_[0], preciseOtherVert( otherTopology.org( et.edge ), *sortData_ ).pt )
+                && mayBeInPlane( ownNormal_, ownInt_[0], preciseOtherVert( otherTopology.dest( et.edge ), *sortData_ ).pt );
         }
         return false; // a corner
-    };
-
-    auto& segs = local.segs;
-    segs.clear();
-    int numPoints = 0;
-    for ( const auto& p : pieces )
-    {
-        const auto& inContour = contours[p.c].intersections;
-        const int numSegs = int( inContour.size() ) - 1;
-        bool looseA = sortData && isLoose( p.c, p.first );
-        for ( int k = 0; k < p.num; ++k )
-        {
-            auto& s = segs.emplace_back();
-            s.c = p.c;
-            s.i = ( p.first + k ) % numSegs;
-            s.p = numPoints + k;
-            s.a = project( inContour[s.i].coordinate );
-            s.b = project( inContour[s.i + 1].coordinate );
-            s.box = Box2d( s.a, s.a );
-            s.box.include( s.b );
-            const bool looseB = sortData && isLoose( p.c, s.i + 1 );
-            s.loose = looseA || looseB;
-            looseA = looseB;
-        }
-        numPoints += p.num + 1;
     }
 
-    // segments that follow each other along a contour or meet at a mesh vertex touch at their common end, and do not cross
-    auto touch = [&] ( const FaceSegment& s, const FaceSegment& t )
+    // makes the projected segments of the pieces, numbering the points of the face piece by piece
+    void makeSegments_( std::span<const ContourPiece> pieces )
+    {
+        segs_.clear();
+        numPoints_ = 0;
+        auto project = [&] ( const Vector3f& p ) { return Vector2d( p[kx_], p[ky_] ); };
+        for ( const auto& p : pieces )
+        {
+            const auto& inContour = contours_[p.c].intersections;
+            const int numSegs = int( inContour.size() ) - 1;
+            bool looseA = sortData_ && isLoose_( p.c, p.first );
+            for ( int k = 0; k < p.num; ++k )
+            {
+                auto& s = segs_.emplace_back();
+                s.c = p.c;
+                s.i = ( p.first + k ) % numSegs;
+                s.p = numPoints_ + k;
+                s.a = project( inContour[s.i].coordinate );
+                s.b = project( inContour[s.i + 1].coordinate );
+                s.box = Box2d( s.a, s.a );
+                s.box.include( s.b );
+                const bool looseB = sortData_ && isLoose_( p.c, s.i + 1 );
+                s.loose = looseA || looseB;
+                looseA = looseB;
+            }
+            numPoints_ += p.num + 1;
+        }
+    }
+
+    // whether two segments touch at their common end, so that they do not cross: they follow each other along a contour or meet at a mesh vertex
+    bool touch_( const FaceSegment& s, const FaceSegment& t ) const
     {
         if ( s.c == t.c )
         {
-            const int numSegs = int( contours[s.c].intersections.size() ) - 1;
+            const int numSegs = int( contours_[s.c].intersections.size() ) - 1;
             const int d = std::abs( s.i - t.i );
-            if ( d == 1 || ( contours[s.c].closed && d == numSegs - 1 ) )
+            if ( d == 1 || ( contours_[s.c].closed && d == numSegs - 1 ) )
                 return true;
         }
         for ( int sk = 0; sk < 2; ++sk )
-            if ( const auto sv = std::get_if<VertId>( &contours[s.c].intersections[s.i + sk].primitiveId ) )
+            if ( const auto sv = std::get_if<VertId>( &contours_[s.c].intersections[s.i + sk].primitiveId ) )
                 for ( int tk = 0; tk < 2; ++tk )
-                    if ( const auto tv = std::get_if<VertId>( &contours[t.c].intersections[t.i + tk].primitiveId ); tv && *tv == *sv )
+                    if ( const auto tv = std::get_if<VertId>( &contours_[t.c].intersections[t.i + tk].primitiveId ); tv && *tv == *sv )
                         return true;
         return false;
-    };
+    }
 
-    // the exact predicates get the points of the face on the first pair that the coordinates do not decide
-    bool predsReady = false;
-    int numPredPoints = 0;
-    auto predPoint = [&] ( const FaceSegment& s, int end )
+    // the id of an end of a segment in the exact predicates, which get the point on its first use
+    VertId predPoint_( const FaceSegment& s, int end )
     {
-        auto& v = local.predPoints[s.p + end];
+        auto& v = predPoints_[s.p + end];
         if ( !v )
         {
-            v = VertId( numPredPoints++ );
-            local.preds.addPoint( v, preciseCutPoint( mesh, contours, s.c, s.i + end, edges, verts, *sortData ) );
+            v = VertId( numPredPoints_++ );
+            preds_.addPoint( v, preciseCutPoint( mesh_, contours_, s.c, s.i + end, edges_, verts_, *sortData_ ) );
         }
         return v;
-    };
-    auto exactCross = [&] ( const FaceSegment& s, const FaceSegment& t )
+    }
+
+    // whether two segments cross by the exact predicates, which get the face on the first pair that the coordinates do not decide
+    bool exactCross_( const FaceSegment& s, const FaceSegment& t )
     {
-        if ( !predsReady )
+        if ( !predsReady_ )
         {
-            local.preds.reset( preciseOwnTri( verts, mesh, *sortData ) );
-            local.predPoints.assign( numPoints, VertId() );
-            numPredPoints = 0;
-            predsReady = true;
+            preds_.reset( preciseOwnTri( verts_, mesh_, *sortData_ ) );
+            predPoints_.assign( numPoints_, VertId() );
+            numPredPoints_ = 0;
+            predsReady_ = true;
         }
-        const auto a = predPoint( s, 0 ), b = predPoint( s, 1 ), c = predPoint( t, 0 ), d = predPoint( t, 1 );
+        const auto a = predPoint_( s, 0 ), b = predPoint_( s, 1 ), c = predPoint_( t, 0 ), d = predPoint_( t, 1 );
+        const bool res = !preds_.failed() && preds_.ccw( a, b, c ) != preds_.ccw( a, b, d ) && preds_.ccw( c, d, a ) != preds_.ccw( c, d, b );
         // points that break a precondition make the face bad anyway: the pair counts as crossing, and the next pair starts anew
-        if ( local.preds.failed() )
+        if ( preds_.failed() )
         {
-            predsReady = false;
-            return true;
-        }
-        const bool res = local.preds.ccw( a, b, c ) != local.preds.ccw( a, b, d ) && local.preds.ccw( c, d, a ) != local.preds.ccw( c, d, b );
-        if ( local.preds.failed() )
-        {
-            predsReady = false;
+            predsReady_ = false;
             return true;
         }
         return res;
-    };
+    }
 
-    auto add = [&] ( const FaceSegment& s, const FaceSegment& t )
+    // adds the crossing of two segments
+    void add_( const FaceSegment& s, const FaceSegment& t )
     {
         if ( std::tie( s.c, s.i ) < std::tie( t.c, t.i ) )
-            local.res.push_back( { f, s.c, s.i, t.c, t.i } );
+            crossings.push_back( { f_, s.c, s.i, t.c, t.i } );
         else
-            local.res.push_back( { f, t.c, t.i, s.c, s.i } );
-    };
+            crossings.push_back( { f_, t.c, t.i, s.c, s.i } );
+    }
 
-    // sweep along the first axis over the boxes of the segments; a loose segment is checked exactly with every other one
-    auto& order = local.order;
-    order.clear();
-    for ( int i = 0; i < segs.size(); ++i )
+    // checks a loose segment exactly with every other one, and the others by a sweep along the first axis over their boxes
+    void sweep_()
     {
-        if ( !segs[i].loose )
+        order_.clear();
+        for ( int i = 0; i < segs_.size(); ++i )
         {
-            order.push_back( i );
-            continue;
-        }
-        for ( int j = 0; j < segs.size(); ++j )
-            if ( ( j > i || !segs[j].loose ) && j != i && !touch( segs[i], segs[j] ) && exactCross( segs[i], segs[j] ) )
-                add( segs[i], segs[j] );
-    }
-    std::sort( order.begin(), order.end(), [&] ( int x, int y ) { return segs[x].box.min.x < segs[y].box.min.x; } );
-    auto& active = local.active;
-    active.clear();
-    for ( int j : order )
-    {
-        const auto& t = segs[j];
-        std::erase_if( active, [&] ( int i ) { return segs[i].box.max.x + 2 * tol < t.box.min.x; } );
-        for ( int i : active )
-        {
-            const auto& s = segs[i];
-            if ( touch( s, t ) )
+            if ( !segs_[i].loose )
+            {
+                order_.push_back( i );
                 continue;
-            int r = approxCross( s, t, tol );
-            if ( r == 0 )
-                r = sortData ? ( exactCross( s, t ) ? 1 : -1 ) : approxCross( s, t, 0 );
-            if ( r > 0 )
-                add( s, t );
+            }
+            for ( int j = 0; j < segs_.size(); ++j )
+                if ( ( j > i || !segs_[j].loose ) && j != i && !touch_( segs_[i], segs_[j] ) && exactCross_( segs_[i], segs_[j] ) )
+                    add_( segs_[i], segs_[j] );
         }
-        active.push_back( j );
+        std::sort( order_.begin(), order_.end(), [&] ( int x, int y ) { return segs_[x].box.min.x < segs_[y].box.min.x; } );
+        active_.clear();
+        for ( int j : order_ )
+        {
+            const auto& t = segs_[j];
+            std::erase_if( active_, [&] ( int i ) { return segs_[i].box.max.x + 2 * tol_ < t.box.min.x; } );
+            for ( int i : active_ )
+            {
+                const auto& s = segs_[i];
+                if ( touch_( s, t ) )
+                    continue;
+                // without sortData, tol is zero, and 0 means that an end of a segment is on the line of the other one: touching, no crossing
+                const int r = approxCross( s, t, tol_ );
+                if ( r > 0 || ( r == 0 && sortData_ && exactCross_( s, t ) ) )
+                    add_( s, t );
+            }
+            active_.push_back( j );
+        }
     }
+
+    const Mesh& mesh_;
+    const OneMeshContours& contours_;
+    const SortIntersectionsData* sortData_ = nullptr;
+    FaceId f_;
+    std::array<EdgeId, 3> edges_; // counterclockwise
+    ThreeVertIds verts_; // verts_[k] = org( edges_[k] )
+    double tol_ = 0; // the bound of the errors of the coordinates of the intersections along each axis
+    int kx_ = 0, ky_ = 1; // the projection axes
+    std::array<Vector3i, 3> ownInt_; // the exact corners, if sortData is given
+    Vector3i64 ownNormal_;
+    std::vector<FaceSegment> segs_;
+    int numPoints_ = 0; // the number of the points of the segments, counted piece by piece
+    std::vector<int> order_, active_; // the buffers of the sweep
+    CutTrianglePredicates preds_;
+    std::vector<VertId> predPoints_; // the ids of the points of the face in preds_, if added
+    int numPredPoints_ = 0;
+    bool predsReady_ = false;
+};
+
+// finds every two segments of the contours that cross inside a face of the mesh, before the cut, sorted;
+// the segments of one face are checked only if it has two pieces of the contours or a piece of three segments;
+// two segments that follow each other along a contour or have a common mesh vertex do not cross
+std::vector<ContoursCrossing> findContoursCrossings( const Mesh& mesh, const OneMeshContours& contours, const SortIntersectionsData* sortData )
+{
+    MR_TIMER;
+    const auto pieces = findContourPieces( mesh.topology, contours );
+    // the pieces of the faces with two pieces or with a piece of three segments, where two segments may cross
+    std::vector<std::span<const ContourPiece>> faces;
+    for ( int i = 0; i < pieces.size(); )
+    {
+        int j = i + 1;
+        while ( j < pieces.size() && pieces[j].f == pieces[i].f )
+            ++j;
+        if ( j > i + 1 || pieces[i].num >= 3 )
+            faces.emplace_back( pieces.data() + i, j - i );
+        i = j;
+    }
+
+    tbb::enumerable_thread_specific<FaceCrossingsFinder> finders( [&] { return FaceCrossingsFinder( mesh, contours, sortData ); } );
+    ParallelFor( faces, finders, [&] ( size_t k, FaceCrossingsFinder& finder ) { finder.find( faces[k] ); } );
+    std::vector<ContoursCrossing> res;
+    for ( auto& finder : finders )
+        res.insert( res.end(), finder.crossings.begin(), finder.crossings.end() );
+    std::sort( res.begin(), res.end() );
+    return res;
 }
 
 } //anonymous namespace
@@ -1686,35 +1745,6 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
 
     res.resultCut = std::move( preRes.paths );
 
-    return res;
-}
-
-std::vector<ContoursCrossing> findContoursCrossings( const Mesh& mesh, const OneMeshContours& contours, const SortIntersectionsData* sortData )
-{
-    MR_TIMER;
-    const auto pieces = findContourPieces( mesh.topology, contours );
-    // the faces with two pieces or with a piece of three segments, where two segments may cross
-    std::vector<std::pair<int, int>> faceRanges;
-    for ( int i = 0; i < pieces.size(); )
-    {
-        int j = i + 1;
-        while ( j < pieces.size() && pieces[j].f == pieces[i].f )
-            ++j;
-        if ( j > i + 1 || pieces[i].num >= 3 )
-            faceRanges.emplace_back( i, j );
-        i = j;
-    }
-
-    tbb::enumerable_thread_specific<CrossingsLocal> locals;
-    ParallelFor( faceRanges, locals, [&] ( size_t k, CrossingsLocal& local )
-    {
-        findFaceCrossings( mesh, contours, sortData,
-            std::span<const ContourPiece>( pieces.data() + faceRanges[k].first, pieces.data() + faceRanges[k].second ), local );
-    } );
-    std::vector<ContoursCrossing> res;
-    for ( auto& local : locals )
-        res.insert( res.end(), local.res.begin(), local.res.end() );
-    std::sort( res.begin(), res.end() );
     return res;
 }
 

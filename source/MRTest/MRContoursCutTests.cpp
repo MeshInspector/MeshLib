@@ -1131,23 +1131,10 @@ TEST( MRMesh, SurfaceOffsetAlongOpenBorder )
     EXPECT_LT( numOpen, int( res->size() ) ); // the inner offset is closed
 }
 
-namespace
-{
-
-// the faces of the crossings
-FaceBitSet crossingFaces( const std::vector<ContoursCrossing>& crossings )
-{
-    FaceBitSet res;
-    for ( const auto& x : crossings )
-        res.autoResizeSet( x.face );
-    return res;
-}
-
-} //anonymous namespace
-
 // an open contour across triangle 0_f of the square at y = 2, and a contour from the bottom side up to a point inside 0_f and back:
-// with the point above the first contour, they cross twice, which leaves valid hole loops, so the cut does not report it
-TEST( MRMesh, FindContoursCrossingsEven )
+// with the point above the first contour, they cross twice, which leaves valid hole loops, so the plain cut does not report it,
+// while under force fill the face of the crossings is bad; with the point below, the segments only touch at it
+TEST( MRMesh, ForceFillCrossingsEven )
 {
     const auto square = makeSquareOfTwoTriangles();
     const OneMeshContour across{ .intersections = {
@@ -1160,44 +1147,34 @@ TEST( MRMesh, FindContoursCrossingsEven )
     };
     for ( float top : { 1.5f, 3.0f } )
     {
-        const auto crossings = findContoursCrossings( square, { across, tent( top ) } );
-        if ( top < 2 )
-        {
-            EXPECT_TRUE( crossings.empty() );
-            Mesh cut = square;
-            EXPECT_TRUE( cutMesh( cut, { across, tent( top ) }, { .forceFill = true } ).fbsWithContourIntersections.none() );
-            continue;
-        }
-        const std::vector<ContoursCrossing> expected{ { 0_f, 0, 0, 1, 0 }, { 0_f, 0, 0, 1, 1 } };
-        EXPECT_EQ( crossings, expected );
-
         Mesh cut = square;
         EXPECT_TRUE( cutMesh( cut, { across, tent( top ) } ).fbsWithContourIntersections.none() );
-        // under force fill, the face of the crossings is bad
         cut = square;
         const auto forced = cutMesh( cut, { across, tent( top ) }, { .forceFill = true } ).fbsWithContourIntersections;
-        EXPECT_EQ( forced.count(), 1 );
-        EXPECT_TRUE( forced.test( 0_f ) );
+        EXPECT_EQ( forced.count(), top < 2 ? 0 : 1 );
+        EXPECT_EQ( forced.test( 0_f ), top > 2 );
     }
 }
 
-// one contour that crosses itself inside triangle 0_f: its first and third segments cross, the ones that follow each other do not
-TEST( MRMesh, FindContoursCrossingsSelf )
+// one contour that crosses itself inside triangle 0_f: its first and third segments cross, which makes the face bad under force fill
+TEST( MRMesh, ForceFillCrossingsSelf )
 {
     const auto square = makeSquareOfTwoTriangles();
     auto inside = [] ( float x, float y ) { return OneMeshIntersection{ .primitiveId = 0_f, .coordinate = Vector3f( x, y, 0 ) }; };
     const OneMeshContour loop{ .intersections = { onSquareSide( square, 0_v, 1_v, Vector3f( 4, 0, 0 ) ),
         inside( 8, 3 ), inside( 8, 1 ), inside( 5, 3 ), onSquareSide( square, 0_v, 2_v, Vector3f( 4, 4, 0 ) ) } };
-    const std::vector<ContoursCrossing> expected{ { 0_f, 0, 0, 0, 2 } };
-    EXPECT_EQ( findContoursCrossings( square, { loop } ), expected );
+    Mesh cut = square;
+    const auto forced = cutMesh( cut, { loop }, { .forceFill = true } ).fbsWithContourIntersections;
+    EXPECT_EQ( forced.count(), 1 );
+    EXPECT_TRUE( forced.test( 0_f ) );
 }
 
 namespace
 {
 
-// finds the crossings of the contours of the intersection with mesh B on mesh A by the exact predicates of the boolean,
-// and checks that every bad face of the cut of A is among their faces
-std::vector<ContoursCrossing> findBooleanCrossings( const Mesh& meshA, const Mesh& meshB )
+// the bad faces of the forced cut of mesh A by the contours of its intersection with mesh B, on the exact predicates of the boolean,
+// which are the faces where the contours cross, after checking that they include every bad face of the plain cut
+FaceBitSet forcedBooleanBadFaces( const Mesh& meshA, const Mesh& meshB )
 {
     const auto converters = getVectorConverters( meshA, meshB );
     const auto contours = orderIntersectionContours( meshA.topology, meshB.topology,
@@ -1205,28 +1182,21 @@ std::vector<ContoursCrossing> findBooleanCrossings( const Mesh& meshA, const Mes
     OneMeshContours contoursA;
     getOneMeshIntersectionContours( meshA, meshB, contours, &contoursA, nullptr, converters );
     const SortIntersectionsData dataForA{ meshB, contours, converters.toInt, nullptr, meshA.topology.vertSize(), false };
-    auto res = findContoursCrossings( meshA, contoursA, &dataForA );
 
     Mesh cut = meshA;
     const auto bad = cutMesh( cut, contoursA, { .sortData = &dataForA } ).fbsWithContourIntersections;
-    const auto faces = crossingFaces( res );
-    for ( auto f : bad )
-        EXPECT_TRUE( f < faces.size() && faces.test( f ) ) << "bad face " << f << " without crossings";
-
-    // the forced cut reports exactly the faces of the crossings
     cut = meshA;
-    const auto forced = cutMesh( cut, contoursA, { .sortData = &dataForA, .forceFill = true } ).fbsWithContourIntersections;
-    EXPECT_EQ( forced.count(), faces.count() );
-    for ( auto f : faces )
-        EXPECT_TRUE( forced.test( f ) );
-    return res;
+    auto forced = cutMesh( cut, contoursA, { .sortData = &dataForA, .forceFill = true } ).fbsWithContourIntersections;
+    for ( auto f : bad )
+        EXPECT_TRUE( f < forced.size() && forced.test( f ) ) << "bad face " << f << " without crossings";
+    return forced;
 }
 
 } //anonymous namespace
 
 // the top of a cube crossed by two overlapping boxes of mesh B, whose two closed contours there cross twice, on the exact predicates:
 // axis-aligned, where the coordinates leave most pairs open, and rotated
-TEST( MRMesh, FindContoursCrossingsBoolean )
+TEST( MRMesh, ForceFillCrossingsBoolean )
 {
     const auto cube = makeCube( Vector3f::diagonal( 1 ), Vector3f() );
     auto boxes = makeCube( Vector3f( 0.4f, 0.4f, 1 ), Vector3f( 0.2f, 0.2f, 0.5f ) );
@@ -1237,13 +1207,13 @@ TEST( MRMesh, FindContoursCrossingsBoolean )
         auto b = boxes;
         if ( rotated )
             b.transform( AffineXf3f::xfAround( Matrix3f::rotation( Vector3f( 0.1f, 0.2f, 1 ).normalized(), 0.3f ), Vector3f::diagonal( 0.5f ) ) );
-        const auto crossings = findBooleanCrossings( cube, b );
-        ASSERT_EQ( crossings.size(), 2 );
-        for ( const auto& x : crossings )
-            EXPECT_NE( x.contour0, x.contour1 );
+        const auto forced = forcedBooleanBadFaces( cube, b );
+        EXPECT_EQ( forced.count(), 2 );
+        for ( auto f : forced )
+            EXPECT_EQ( cube.triCenter( f ).z, 1 ); // on the top
 
         // a single box crosses nothing
-        EXPECT_TRUE( findBooleanCrossings( cube, makeCube( Vector3f( 0.4f, 0.4f, 1 ), Vector3f( 0.2f, 0.2f, 0.5f ) ) ).empty() );
+        EXPECT_TRUE( forcedBooleanBadFaces( cube, makeCube( Vector3f( 0.4f, 0.4f, 1 ), Vector3f( 0.2f, 0.2f, 0.5f ) ) ).none() );
     }
 }
 

@@ -17,7 +17,6 @@
 #include "MRSurfaceDistance.h"
 #include "MRExtractIsolines.h"
 #include "MRParallelFor.h"
-#include "MRBitSetParallelFor.h"
 #include "MRMeshIntersect.h"
 #include "MRSurfacePath.h"
 #include "MRphmap.h"
@@ -1063,13 +1062,11 @@ std::vector<ContourPiece> findContourPieces( const MeshTopology& topology, const
         firstSeg[c + 1] = firstSeg[c] + std::max( int( contours[c].intersections.size() ) - 1, 0 );
     std::vector<FaceId> segFaces( firstSeg.back() );
     // in parallel over all segments, since one contour can have most of them, and they read the topology at random;
-    // each sub-range of one thread is done at its first segment, which finds its contour once
-    BitSetParallel::forAllRanged( { size_t( 0 ), segFaces.size() }, [&] ( size_t i, const BitSetParallel::Range& range )
+    // over ranges, not by ParallelFor, so that each range finds its first contour once
+    tbb::parallel_for( tbb::blocked_range<int>( 0, firstSeg.back() ), [&] ( const tbb::blocked_range<int>& range )
     {
-        if ( i != range.begin() )
-            return;
-        int c = int( std::upper_bound( firstSeg.begin(), firstSeg.end(), int( i ) ) - firstSeg.begin() ) - 1;
-        for ( int k = int( range.begin() ); k < int( range.end() ); ++k )
+        int c = int( std::upper_bound( firstSeg.begin(), firstSeg.end(), range.begin() ) - firstSeg.begin() ) - 1;
+        for ( int k = range.begin(); k < range.end(); ++k )
         {
             while ( k >= firstSeg[c + 1] )
                 ++c;

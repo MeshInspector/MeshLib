@@ -541,6 +541,8 @@ using ThreeUVCoords = std::array<UVCoord, 3>;
 
 struct MRMESH_CLASS Dipole;
 
+/// Vector<T> is std::vector<T> allocating with MR::Allocator
+template <typename T, typename I = size_t> class MRMESH_CLASS Vector;
 MR_CANONICAL_TYPEDEFS( (template <typename T, typename I> class MRMESH_CLASS), Vector,
     /// mapping from UndirectedEdgeId to its end vertices
     ( Edges,    Vector<TwoVertIds, UndirectedEdgeId> )

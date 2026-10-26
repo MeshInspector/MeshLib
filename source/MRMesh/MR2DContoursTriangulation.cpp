@@ -803,24 +803,27 @@ void SweepLineQueue::triangulate()
 
 void SweepLineQueue::setupStartVertices_()
 {
-    // whether no edge of v goes left
-    auto isStart = [&] ( VertId v )
-    {
-        for ( auto e : orgRing( tp_, v ) )
-            if ( predicates_.less( tp_.dest( e ), v ) )
-                return false;
-        return true;
-    };
-    // a parallel loop over one block of the bit set runs in one thread anyway, only slower, as in the many small runs of hasCrossing
-    const bool parallel = tp_.vertSize() > VertBitSet::bits_per_block;
     auto& startVertices = startVerticesCache_;
     startVertices.clear();
     startVertices.resize( tp_.vertSize() );
-    if ( parallel )
-        BitSetParallelFor( tp_.getValidVerts(), [&] ( VertId v ) { startVertices.set( v, isStart( v ) ); } );
+    BitSetParallelFor( tp_.getValidVerts(), [&] ( VertId v )
+    {
+        bool startVert = true;
+        for ( auto e : orgRing( tp_, v ) )
+        {
+            if ( predicates_.less( tp_.dest( e ), v ) )
+            {
+                startVert = false;
+                break;
+            }
+        }
+        if ( startVert )
+            startVertices.set( v );
+    } );
     // all vertices are sorted already
+    startVerts_.reserve( startVertices.count() );
     for ( auto v : sortedVerts_ )
-        if ( parallel ? startVertices.test( v ) : tp_.hasVert( v ) && isStart( v ) )
+        if ( startVertices.test( v ) )
             startVerts_.push_back( v );
     startVertLowestRight_.resize( startVerts_.size() );
 }

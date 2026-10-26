@@ -6,12 +6,17 @@
 #include "MRResizeNoInit.h"
 #include "MRPch/MRBindingMacros.h"
 #include <cassert>
+#include <memory>
 
 namespace MR
 {
 
-// Operators of `Vector::iterator` / `Vector::const_iterator` returning the derived type, which C++20 iterator concepts require.
+// Operators of `Vector::iterator` / `Vector::const_iterator` returning the derived type, which C++20 iterator concepts require;
+// `*` and `==` are repeated for the bindings, `->` avoids MSVC's dereferenceability check in `std::to_address( end )`
 #define MR_VECTOR_ITERATOR_OPS( Self, Base ) \
+    [[nodiscard]] typename std::iterator_traits<Base>::reference operator *() const { return *static_cast<const Base &>( *this ); } \
+    [[nodiscard]] MR_BIND_IGNORE typename std::iterator_traits<Base>::pointer operator ->() const { return std::to_address( static_cast<const Base &>( *this ) ); } \
+    [[nodiscard]] bool operator ==( const Self & b ) const { return static_cast<const Base &>( *this ) == static_cast<const Base &>( b ); } \
     Self & operator ++() { ++static_cast<Base &>( *this ); return *this; } \
     Self operator ++( int ) { Self res = *this; ++*this; return res; } \
     Self & operator --() { --static_cast<Base &>( *this ); return *this; } \
@@ -56,6 +61,7 @@ public:
         MR_BIND_IGNORE const_iterator( typename StdVector::iterator it ) : StdVector::const_iterator( it ) {}
         const_iterator( iterator it ) : StdVector::const_iterator( it ) {}
         MR_VECTOR_ITERATOR_OPS( const_iterator, typename StdVector::const_iterator )
+        [[nodiscard]] MR_BIND_IGNORE friend bool operator ==( const const_iterator & a, const iterator & b ) { return a == const_iterator( b ); } // else ambiguous with libc++
     };
     using reverse_iterator MR_BIND_IGNORE = typename StdVector::reverse_iterator;
     using const_reverse_iterator MR_BIND_IGNORE = typename StdVector::const_reverse_iterator;

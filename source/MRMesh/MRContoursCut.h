@@ -69,8 +69,8 @@ struct CutMeshResult
     /// a contour going from a mesh vertex to a point and back has an edge followed by its sym there
     std::vector<EdgePath> resultCut;
     /// Bitset of bad triangles - triangles where input contours have intersections and cannot be cut and filled in a good way;
-    /// under force fill, only the triangles where two segments of the contours cross (segments that follow each other along a contour
-    /// or have a common mesh vertex do not), and the triangles of lone contours that cannot be connected with the rest of the triangle
+    /// under force fill, also the triangles where two segments of the contours cross (segments that follow each other along a contour
+    /// or have a common mesh vertex do not), even if their cut is valid
     /// \sa \ref MR::CutMeshParameters
     FaceBitSet fbsWithContourIntersections;
 };

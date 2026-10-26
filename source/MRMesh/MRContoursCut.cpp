@@ -1568,7 +1568,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     if ( params.new2OldMap )
         prepareFacesMap( mesh.topology, *params.new2OldMap );
 
-    // under force fill, bad faces are the faces where the contours really cross (touching is fine), found before the cut
+    // under force fill, the faces where the contours really cross (touching is fine) are bad too, found before the cut
     if ( params.forceFill )
         res.fbsWithContourIntersections = findCrossingFaces( mesh, contours, params.sortData );
 
@@ -1592,17 +1592,9 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     FaceBitSet badLoneFaces;
     connectLoneContours( mesh, contours, loneFaces, preRes, firstNewEdge, params.sortData, params.new2oldEdgesMap, badLoneFaces );
 
-    if ( params.forceFill )
-    {
-        // a lone contour that cannot be connected with the rest of its face (e.g. a degenerate one) is bad too
-        res.fbsWithContourIntersections |= badLoneFaces;
-    }
-    else
-    {
-        res.fbsWithContourIntersections = getBadFacesAfterCut( mesh.topology, preRes ) | badLoneFaces;
-        if ( res.fbsWithContourIntersections.any() )
-            return res;
-    }
+    res.fbsWithContourIntersections |=getBadFacesAfterCut( mesh.topology, preRes ) | badLoneFaces;
+    if ( !params.forceFill && res.fbsWithContourIntersections.any() )
+        return res;
 
     // find one edge for every hole to fill
     Timer t( "find edge per hole" );

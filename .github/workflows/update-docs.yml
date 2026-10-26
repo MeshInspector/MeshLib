@@ -119,6 +119,17 @@ jobs:
         working-directory: MeshInspector.github.io
         run: scripts/update_doc.sh ${{ inputs.output_folder }} ../MeshLib/scripts/doxygen/Modules.txt
 
+      # Documentation coverage counted by update_doc.sh; kept out of the published site.
+      - name: Upload documentation metrics
+        if: ${{ !cancelled() && steps.check_bindings.outputs.all_bindings == 'true' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: DoxygenMetrics
+          path: |
+            MeshInspector.github.io/doxystat-metrics.txt
+            MeshInspector.github.io/doxystat-xml/*/stats.txt
+          if-no-files-found: warn
+
       - name: Commit and push changes
         if: ${{ steps.check_bindings.outputs.all_bindings == 'true' }}
         working-directory: MeshInspector.github.io

@@ -1064,8 +1064,7 @@ Expected<OneMeshContours> offsetSurfaceLineToMeshContours( const Mesh& mesh, con
 
     Mesh meshAfterCut = mesh;
     NewEdgesMap nEM;
-    // .forceFill = true
-    // because we don't really care about intermediate mesh quality
+    // force fill because we don't really care about intermediate mesh quality
     auto cutRes = cutMesh( meshAfterCut, initCutContoursVec, { .forceFill = true, .new2oldEdgesMap = &nEM } );
 
     const auto& initCutContours = initCutContoursVec[0];

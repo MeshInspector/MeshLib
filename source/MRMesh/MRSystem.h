@@ -71,7 +71,7 @@ MRMESH_API bool OpenDocument( const std::filesystem::path& path );
 // returns string with OS name with details
 [[nodiscard]] MRMESH_API std::string GetDetailedOSName();
 
-// returns string identification of the OS
+// returns string identification of the OS (and of the CPU architecture: macOS always, elsewhere "_arm64" suffix on Arm)
 [[nodiscard]] MRMESH_API std::string getOSNoSpaces();
 
 // sets new handler for operator new if needed for some platforms

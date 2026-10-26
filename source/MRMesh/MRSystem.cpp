@@ -620,13 +620,9 @@ std::string getOSNoSpaces()
 #if defined( __EMSCRIPTEN__ )
     return "Wasm";
 #elif defined( MR_PLATFORM )
-    // from DetectPlatform.cmake or common.props; names the architecture on macOS and Windows
+    // from DetectPlatform.cmake or common.props, with the CPU architecture on Arm and macOS
     std::string platform = MR_PLATFORM;
     std::replace( platform.begin(), platform.end(), ' ', '_' );
-    #if defined( __linux__ ) && defined( __aarch64__ )
-    // Linux names are compared in CMake (Ubuntu_24) and overridden by CI, so the architecture is added here
-    platform += "_arm64";
-    #endif
     return platform;
 #elif defined( _WIN32 )
     return "Windows";

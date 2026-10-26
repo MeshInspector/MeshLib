@@ -128,8 +128,8 @@ public:
         { drawLines( lines, colors, { getBaseRenderParams(), width, depthTest } ); }
 
     /// Draw points immediately
-    MRVIEWER_API void drawPoints( const std::vector<Vector3f>& points, const std::vector<Vector4f>& colors, const LinePointImmediateRenderParams & params );
-    void drawPoints( const std::vector<Vector3f>& points, const std::vector<Vector4f>& colors, float width = 1, bool depthTest = true )
+    MRVIEWER_API void drawPoints( std::span<const Vector3f> points, std::span<const Vector4f> colors, const LinePointImmediateRenderParams & params );
+    void drawPoints( std::span<const Vector3f> points, std::span<const Vector4f> colors, float width = 1, bool depthTest = true )
         { drawPoints( points, colors, { getBaseRenderParams(), width, depthTest } ); }
 
     struct TriCornerColors

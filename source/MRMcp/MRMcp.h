@@ -48,6 +48,13 @@ namespace Schema
                 { "type", "string" },
             } ) )
         {}
+
+        /// A string limited to one of `allowedValues`.
+        explicit String( std::vector<std::string> allowedValues )
+            : String()
+        {
+            json["enum"] = std::move( allowedValues );
+        }
     };
 
     /// A schema describing a boolean.
@@ -61,6 +68,8 @@ namespace Schema
     };
 
     /// A schema describing an array of whatever is passed to the constructor.
+    /// For an array of arrays write `Array( Base( Array( ... ) ) )`: `Array( Array( ... ) )` is just the inner array,
+    /// because initializing from a prvalue of the same type skips the constructors.
     struct Array : Base
     {
         Array( Base elemSchema )
@@ -69,6 +78,19 @@ namespace Schema
                 { "items", std::move( elemSchema ).asJson() },
             } ) )
         {}
+    };
+
+    /// A schema matching any of the given schemas, e.g. a number or an array of numbers.
+    struct AnyOf : Base
+    {
+        AnyOf( std::vector<Base> alternatives )
+            : Base( nlohmann::json::object( {
+                { "anyOf", nlohmann::json::array() },
+            } ) )
+        {
+            for ( auto& alt : alternatives )
+                json["anyOf"].push_back( std::move( alt ).asJson() );
+        }
     };
 
     /// A schema describing an object.

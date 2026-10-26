@@ -11,6 +11,7 @@
 #include "MRVolumeIndexer.h"
 #include "MRBox.h"
 #include "MRMeshIntersect.h"
+#include "MRMeshProject.h"
 
 namespace MR
 {
@@ -69,6 +70,69 @@ LineSegm3f findLatticeEdgeEnds( const MeshTopology& t, VertId v, const Vector<Vo
     ++n1[dir];
     return { gridToMeshXf( Vector3f( box.max ) ), gridToMeshXf( Vector3f( n1 ) ) };
 }
+
+/// moves point (p) along the lattice segment by Newton's method to the location, where the signed distance
+/// to the reference mesh is equal to given offset; returns false if the method did not converge
+bool moveAlongLatticeEdgeToOffset( const MeshPart& ref, const LineSegm3f& segm, float offset, Vector3f& p, MeshProjectionResult& proj )
+{
+    constexpr int maxSteps = 3;
+    const auto d = segm.dir();
+    const auto len = d.length();
+    float t = dot( p - segm.a, d ) / sqr( len );
+    for ( int i = 0; ; ++i )
+    {
+        proj = findProjection( p, ref );
+        const auto dist = std::sqrt( proj.distSq );
+        if ( dist <= 0 )
+            return false;
+        const auto toP = p - proj.proj.point;
+        const float side = dot( toP, ref.mesh.pseudonormal( proj.mtp, ref.region ) ) >= 0 ? 1.0f : -1.0f;
+        const auto f = side * dist - offset;
+        if ( std::abs( f ) <= 0.01f * len )
+            return true;
+        const auto df = side * dot( toP, d ) / dist; // derivative of the signed distance along the segment
+        if ( i == maxSteps || std::abs( df ) <= 1e-6f * len )
+            return false;
+        const auto nextT = std::clamp( t - f / df, 0.0f, 1.0f );
+        if ( nextT == t )
+            return false;
+        t = nextT;
+        p = segm.a + t * d;
+    }
+}
+
+/// shortens the displacement from (from) to (to), keeping its direction, until the result is within the voxel's box;
+/// (from) must be within the box
+Vector3f clampToVoxel( const VolumeIndexer& vi, const AffineXf3f& gridToMeshXf, VoxelId voxel, const Vector3f& from, const Vector3f& to )
+{
+    const auto pos = vi.toPos( voxel );
+    Box3f voxBox;
+    voxBox.include( gridToMeshXf( Vector3f( pos ) + Vector3f::diagonal( 1e-3f ) ) );
+    voxBox.include( gridToMeshXf( Vector3f( pos ) + Vector3f::diagonal( 1.0f - 1e-3f ) ) );
+    const auto shift = to - from;
+    float part = 1;
+    for ( int i = 0; i < 3; ++i )
+    {
+        if ( shift[i] > 0 )
+            part = std::min( part, ( voxBox.max[i] - from[i] ) / shift[i] );
+        else if ( shift[i] < 0 )
+            part = std::min( part, ( voxBox.min[i] - from[i] ) / shift[i] );
+    }
+    return from + std::max( 0.0f, part ) * shift;
+}
+
+/// returns the number of faces in the voxel of original marching cubes face (f);
+/// marching cubes outputs all faces of a voxel consecutively, and the original faces precede (endFace)
+int numVoxelFaces( const Vector<VoxelId, FaceId>& face2voxel, FaceId f, FaceId endFace )
+{
+    const auto voxel = face2voxel[f];
+    FaceId b = f, e = f;
+    while ( b > 0 && face2voxel[FaceId( b - 1 )] == voxel )
+        --b;
+    while ( e + 1 < endFace && face2voxel[FaceId( e + 1 )] == voxel )
+        ++e;
+    return e - b + 1;
+}
 }
 
 void sharpenMarchingCubesMesh( const MeshPart& ref, Mesh& vox, Vector<VoxelId, FaceId>& face2voxel,
@@ -88,23 +152,39 @@ void sharpenMarchingCubesMesh( const MeshPart& ref, Mesh& vox, Vector<VoxelId, F
         MeshTriPoint rp;
         Vector3f refPt;
         // the vertex is located on the lattice edge, and its position there was found by linear interpolation
-        // of the values in the edge's ends; if the reference mesh crosses that edge, then the crossing
-        // is the exact point, which the interpolation approximates;
-        // this is valid for zero offset only, where the volume stores the distances to the reference mesh itself
-        if ( settings.offset == 0 )
+        // of the values in the edge's ends; the vertex is corrected only along that edge, so the triangles
+        // of every voxel stay within it and cannot intersect the triangles of other voxels
+        const auto latticeSegm = findLatticeEdgeEnds( vox.topology, v, face2voxel, vi, settings.gridToMeshXf );
+        if ( latticeSegm.lengthSq() > 0 ) // otherwise no lattice edge was found for the vertex
         {
-            const auto latticeSegm = findLatticeEdgeEnds( vox.topology, v, face2voxel, vi, settings.gridToMeshXf );
-            if ( latticeSegm.lengthSq() > 0 ) // otherwise no lattice edge was found for the vertex
+            const auto p = vox.points[v];
+            if ( settings.offset == 0 )
             {
-                const auto p = vox.points[v];
-                const auto d = latticeSegm.dir();
+                // the crossing of the edge with the reference mesh is the exact point, which the interpolation approximates;
                 // the ray starts in the vertex and spans the edge in both directions,
                 // so the crossing closest to the vertex is found
+                const auto d = latticeSegm.dir();
                 const auto rayStart = dot( latticeSegm.a - p, d ) / d.lengthSq();
                 if ( const auto isect = rayMeshIntersect( ref, Line3f{ p, d }, rayStart, rayStart + 1 ) )
                 {
                     rp = isect.mtp;
                     refPt = ref.mesh.triPoint( rp );
+                    // a correction of any length is trustworthy here
+                    if ( settings.maxOldVertPosCorrection > 0 )
+                        vox.points[v] = refPt;
+                }
+            }
+            else if ( settings.maxOldVertPosCorrection > 0 )
+            {
+                auto newPos = p;
+                MeshProjectionResult proj;
+                // a large correction can be wrong and result from self-intersections in the reference mesh
+                if ( moveAlongLatticeEdgeToOffset( ref, latticeSegm, settings.offset, newPos, proj )
+                    && ( newPos - p ).lengthSq() <= sqr( settings.maxOldVertPosCorrection ) )
+                {
+                    rp = proj.mtp;
+                    refPt = proj.proj.point;
+                    vox.points[v] = newPos;
                 }
             }
         }
@@ -121,27 +201,16 @@ void sharpenMarchingCubesMesh( const MeshPart& ref, Mesh& vox, Vector<VoxelId, F
             n = np;
         else if ( dot( n, np ) < 0 )
             n = -n;
-
-        if ( settings.maxOldVertPosCorrection > 0 )
-        {
-            const auto newPos = refPt + settings.offset * n;
-            // at zero offset the reference point is the exact crossing of the vertex's lattice edge
-            // with the reference mesh, so a correction of any length is trustworthy there;
-            // for other offsets a large correction can be wrong and the limit is respected
-            if ( settings.offset == 0 ||
-                 ( newPos - vox.points[v] ).lengthSq() <= sqr( settings.maxOldVertPosCorrection ) )
-                vox.points[v] = newPos;
-            else
-                n = Vector3f{}; //undefined
-        }
-
         normals[v] = n;
     } );
 
     auto facesToProcess = vox.topology.getValidFaces();
     VertId firstNewVert( vox.topology.vertSize() );
-    // line directions in new vertices, dirs[i] contains the data for vertex firstNewVert+i
+    const FaceId firstNewFace( vox.topology.faceSize() );
+    // line directions and voxels of new vertices, dirs[i] and newVertVoxels[i] contain the data for vertex firstNewVert+i
     std::vector<Vector3f> dirs;
+    std::vector<VoxelId> newVertVoxels;
+    std::vector<EdgeId> boundary; // the edges with the voxel's surface patch on the left
     for ( auto f : facesToProcess )
     {
         const auto voxel = face2voxel[f];
@@ -163,9 +232,12 @@ void sharpenMarchingCubesMesh( const MeshPart& ref, Mesh& vox, Vector<VoxelId, F
         Vector3f sumAC;
         float sumArea = 0;
         Vector3f sumDirArea; // area-weighted normal sum of the voxel's faces
+        int numPatchFaces = 0;
         PlaneAccumulator pacc;
+        boundary.clear();
         do
         {
+            boundary.push_back( e );
             auto v = vox.topology.org( e );
             pacc.addPlane( Plane3f::fromDirAndPt( normals[v], vox.points[v] ) );
 
@@ -177,6 +249,7 @@ void sharpenMarchingCubesMesh( const MeshPart& ref, Mesh& vox, Vector<VoxelId, F
                     break;
                 if ( facesToProcess.test_set( l, false ) )
                 {
+                    ++numPatchFaces;
                     const auto da = vox.dirDblArea( l ); // length = 2x face area
                     const auto a = da.length();
                     sumArea += a;
@@ -198,6 +271,8 @@ void sharpenMarchingCubesMesh( const MeshPart& ref, Mesh& vox, Vector<VoxelId, F
 
         if ( sumArea <= 0 )
             continue; //degenerate triangles within voxel
+        if ( numPatchFaces != numVoxelFaces( face2voxel, f, firstNewFace ) )
+            continue; //a new vertex can intersect another surface patch in the same voxel
 
         Vector3f avgPt = sumAC / sumArea;
         int rank = 0;
@@ -210,22 +285,8 @@ void sharpenMarchingCubesMesh( const MeshPart& ref, Mesh& vox, Vector<VoxelId, F
         if ( settings.voxelClamp )
         {
             // every marching cubes triangle is located within its own voxel, and the new vertex must not
-            // break that: shorten the displacement to sharpPt, keeping its direction, until the point
-            // is within the voxel's box, so the geometry of a voxel can never reach another one
-            const auto pos = vi.toPos( voxel );
-            Box3f voxBox;
-            voxBox.include( settings.gridToMeshXf( Vector3f( pos ) + Vector3f::diagonal( 1e-3f ) ) );
-            voxBox.include( settings.gridToMeshXf( Vector3f( pos ) + Vector3f::diagonal( 1.0f - 1e-3f ) ) );
-            const auto shift = sharpPt - avgPt;
-            float part = 1;
-            for ( int i = 0; i < 3; ++i )
-            {
-                if ( shift[i] > 0 )
-                    part = std::min( part, ( voxBox.max[i] - avgPt[i] ) / shift[i] );
-                else if ( shift[i] < 0 )
-                    part = std::min( part, ( voxBox.min[i] - avgPt[i] ) / shift[i] );
-            }
-            sharpPt = avgPt + std::max( 0.0f, part ) * shift;
+            // break that, so the geometry of a voxel can never reach another one
+            sharpPt = clampToVoxel( vi, settings.gridToMeshXf, voxel, avgPt, sharpPt );
         }
 
         const auto distSq = ( avgPt - sharpPt ).lengthSq();
@@ -246,9 +307,18 @@ void sharpenMarchingCubesMesh( const MeshPart& ref, Mesh& vox, Vector<VoxelId, F
                 continue; //sharpPt shifts (nearly) within the surface plane
         }
 
+        // the triangles connecting the new vertex with the patch boundary must not fold
+        if ( std::any_of( boundary.begin(), boundary.end(), [&]( EdgeId be )
+        {
+            const auto o = vox.orgPnt( be );
+            return dot( cross( vox.destPnt( be ) - o, sharpPt - o ), sumDirArea ) <= 0;
+        } ) )
+            continue;
+
         auto v = vox.splitFace( f, sharpPt );
         assert( v == dirs.size() + firstNewVert );
         dirs.push_back( dir );
+        newVertVoxels.push_back( voxel );
         for ( auto ei : orgRing( vox.topology, v ) )
             face2voxel.autoResizeSet( vox.topology.left( ei ), voxel );
 
@@ -387,8 +457,8 @@ void sharpenMarchingCubesMesh( const MeshPart& ref, Mesh& vox, Vector<VoxelId, F
         for ( auto v = firstNewVert; v < vox.topology.vertSize(); ++v )
         {
             const auto pOld = vox.points[v];
-            const auto pNew = newPos[ v - firstNewVert ];
-            vox.points[v] = 0.5f * ( pOld + pNew );
+            const auto pNew = 0.5f * ( pOld + newPos[ v - firstNewVert ] );
+            vox.points[v] = settings.voxelClamp ? clampToVoxel( vi, settings.gridToMeshXf, newVertVoxels[ v - firstNewVert ], pOld, pNew ) : pNew;
         }
     }
 

@@ -19,16 +19,15 @@ struct SharpenMarchingCubesMeshSettings
     float maxNewRank3VertDev = 0;
     /// relative to reference mesh
     float offset = 0;
-    /// correct positions of the input vertices using reference mesh by not more than this distance;
+    /// correct positions of the input vertices along their lattice edges using reference mesh by not more than this distance;
     /// big correction can be wrong and result from self-intersections in the reference mesh
     /// recommended set equal to ( voxel size / 2 )
     float maxOldVertPosCorrection = 0;
     /// the number of iterations to best select positions for new vertices,
     /// the probability of self-intersections and spikes are higher if posSelIters = 0
     int posSelIters = 3;
-    /// if true, the displacement of a new vertex from the average point is shortened to keep the vertex
-    /// within its voxel's box (so the geometry of a voxel can never reach another one),
-    /// and the in-plane elevation check is skipped; requires dims and gridToMeshXf to be set
+    /// if true, the new vertices are kept within their voxels' boxes (so the geometry of a voxel can never reach another one),
+    /// and the in-plane elevation check is skipped
     bool voxelClamp = false;
     /// Marching Cubes volume dimensions
     Vector3i dims;

@@ -70,13 +70,12 @@ struct SharpOffsetParameters : OffsetParameters
     float maxNewRank2VertDev = 5;
     /// maximal surface deviation to introduce new rank 3 vertex (on intersection of 3 planes), measured in voxelSize
     float maxNewRank3VertDev = 2;
-    /// correct positions of the input vertices using reference mesh by not more than this distance, measured in voxelSize;
+    /// correct positions of the input vertices along their lattice edges using reference mesh by not more than this distance, measured in voxelSize;
     /// big correction can be wrong and result from self-intersections in the reference mesh
     float maxOldVertPosCorrection = 0.5f;
-    /// if true, the displacement of a new vertex from the average point is shortened to keep the vertex
-    /// within its voxel's box (so the geometry of a voxel can never reach another one),
+    /// if true, the new vertices are kept within their voxels' boxes (so the geometry of a voxel can never reach another one),
     /// and the in-plane elevation check is skipped
-    bool voxelClamp = false;
+    bool voxelClamp = true;
 };
 
 /// Offsets mesh by converting it to distance field in voxels using OpenVDB library,

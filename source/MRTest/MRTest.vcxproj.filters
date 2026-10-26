@@ -205,6 +205,9 @@
     <ClCompile Include="MRShrinkwrapTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRSharpOffsetTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRBase64Tests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

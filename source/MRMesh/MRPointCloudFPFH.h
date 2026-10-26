@@ -31,9 +31,16 @@ using FPFHDescriptors = Vector<FPFHDescriptor, VertId>;
 [[nodiscard]] MRMESH_API Expected<FPFHDescriptors> computeFPFH( const PointCloud& pointCloud,
     float radius, const ProgressCallback & progress = {} );
 
+/// \brief Computes for each of given points how unusual its descriptor is: |d - mu| / sigma,
+/// where d is the distance of the point's descriptor from the mean descriptor of all given points,
+/// and mu and sigma are the mean and the standard deviation of these distances;
+/// deviations |d - mu| up to 1e-6, which come from float rounding of equal descriptors, give 0
+/// \ingroup PointCloudGroup
+[[nodiscard]] MRMESH_API VertScalars computeFPFHUniqueness( const FPFHDescriptors & descriptors, const VertBitSet & points );
+
 /// \brief Finds the points with unique descriptors, which are less likely to be matched ambiguously:
 /// the points whose distance from the mean descriptor of all given points is outside the interval mu +- beta * sigma,
-/// where mu and sigma are the mean and the standard deviation of these distances
+/// where mu and sigma are the mean and the standard deviation of these distances, i.e. computeFPFHUniqueness(...) > beta
 /// \param beta the half-width of the interval in standard deviations, usually 1..2
 /// \ingroup PointCloudGroup
 [[nodiscard]] MRMESH_API VertBitSet findUniqueFPFHPoints( const FPFHDescriptors & descriptors, const VertBitSet & points, float beta );

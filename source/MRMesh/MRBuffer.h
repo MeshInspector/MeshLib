@@ -80,8 +80,10 @@ public:
             clear();
             T * p = Allocator<T>().allocate( newSize );
             {
-                MR_FINALLY_ON_THROW { Allocator<T>().deallocate( p, newSize ); };
+                bool ok = false;
+                MR_FINALLY { if ( !ok ) Allocator<T>().deallocate( p, newSize ); };
                 std::uninitialized_default_construct_n( p, newSize ); // leaves the elements uninitialized
+                ok = true;
             }
             data_ = std::unique_ptr<T[], Deleter>( p, Deleter{ newSize } );
             capacity_.val = newSize;

@@ -1272,20 +1272,21 @@ TEST( MRMesh, ForceFillCrossingsMultipleEdge )
 }
 
 // a flat rectangle of two triangles and the same triangles reversed, with the same vertices (a closed double-sided sheet, whose diagonals
-// make a multiple edge), across the top of the unit cube: the contours of its sides there coincide, and the plain boolean reports nothing
+// make a multiple edge), across the top of the unit cube inside one triangle of it, which the plain cut reports bad: the contours of its sides
+// there coincide, and the current crossing search reports that triangle too, since the predicates cannot tell apart the crossings
+// of the diagonals of both sides, defined alike, and their failure makes the face bad, although the segments only touch there
 TEST( MRMesh, ForceFillDoubleSidedSheet )
 {
     const auto cube = makeCube( Vector3f::diagonal( 1 ), Vector3f() );
-    const auto sheet = Mesh::fromTriangles( { Vector3f( 0.2f, 0.37f, 0.5f ), Vector3f( 0.8f, 0.37f, 0.5f ), Vector3f( 0.8f, 0.37f, 1.5f ),
-        Vector3f( 0.2f, 0.37f, 1.5f ) }, { { 0_v, 1_v, 2_v }, { 0_v, 2_v, 3_v }, { 0_v, 2_v, 1_v }, { 0_v, 3_v, 2_v } } );
+    const auto sheet = Mesh::fromTriangles( { Vector3f( 0.3f, 0.15f, 0.5f ), Vector3f( 0.7f, 0.15f, 0.5f ), Vector3f( 0.7f, 0.15f, 1.5f ),
+        Vector3f( 0.3f, 0.15f, 1.5f ) }, { { 0_v, 1_v, 2_v }, { 0_v, 2_v, 3_v }, { 0_v, 2_v, 1_v }, { 0_v, 3_v, 2_v } } );
     const auto plain = boolean( cube, sheet, BooleanOperation::Union );
-    ASSERT_TRUE( plain.valid() ) << plain.errorString;
+    EXPECT_EQ( plain.meshABadContourFaces.count(), 1 );
     const auto forced = boolean( cube, sheet, BooleanOperation::Union, { .forceCut = true } );
     ASSERT_TRUE( forced.valid() ) << forced.errorString;
     EXPECT_TRUE( forced.mesh.topology.checkValidity() );
-    // the current behavior: the predicates cannot tell apart the crossings of the diagonals of both sides, defined alike, and their failure
-    // makes the face bad, although the segments only touch there
     EXPECT_EQ( forced.meshABadContourFaces.count(), 1 );
+    EXPECT_EQ( forced.meshABadContourFaces.find_first(), plain.meshABadContourFaces.find_first() );
     EXPECT_TRUE( forced.meshBBadContourFaces.none() );
 }
 

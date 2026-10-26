@@ -243,6 +243,8 @@ if(MESHLIB_USE_VCPKG)
     DESTINATION .
     PATTERN "pkgconfig" EXCLUDE
     PATTERN "__pycache__" EXCLUDE
+    # OpenSSL looks for its modules only in the build-time vcpkg path
+    PATTERN "ossl-modules" EXCLUDE
     REGEX "/${VCPKG_TARGET_TRIPLET}/include/(${VCPKG_PRIVATE_HEADERS})$" EXCLUDE
     # vcpkg bookkeeping
     PATTERN "vcpkg_abi_info.txt" EXCLUDE

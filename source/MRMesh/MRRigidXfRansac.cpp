@@ -1,6 +1,8 @@
 #include "MRRigidXfRansac.h"
 #include "MRPointToPointAligningTransform.h"
 #include "MRParallelFor.h"
+#include "MRPointCloud.h"
+#include "MRPointsProject.h"
 #include "MRVector.h"
 #include "MRTimer.h"
 #include <algorithm>
@@ -43,6 +45,22 @@ Expected<AffineXf3f> findRigidXfRansac( const VertCoords & srcPoints, const Vert
     if ( numMatches < 3 )
         return unexpected( "At least three matches are required" );
 
+    const bool overlapScore = params.overlapSrcPoints && params.overlapTgtCloud;
+    if ( overlapScore )
+        params.overlapTgtCloud->getAABBTree(); // build it once before the parallel search
+    // the measure of a transformation's quality: the number of inlier matches or of overlapping source points
+    auto score = [&]( const AffineXf3f & xf ) -> size_t
+    {
+        if ( !overlapScore )
+            return countInliers( srcPoints, tgtPoints, matches, xf, params.inlierDistance );
+        const auto distSq = sqr( params.inlierDistance );
+        size_t res = 0;
+        for ( const auto & p : *params.overlapSrcPoints )
+            if ( findProjectionOnPoints( xf( p ), *params.overlapTgtCloud, distSq, nullptr, distSq ).vId )
+                ++res;
+        return res;
+    };
+
     const auto ratioSq = sqr( params.edgeLengthRatio );
     // the transformation of the sample with given index, or nothing if the sample is inconsistent
     auto sampleXf = [&]( int iteration ) -> std::optional<AffineXf3f>
@@ -76,7 +94,8 @@ Expected<AffineXf3f> findRigidXfRansac( const VertCoords & srcPoints, const Vert
     constexpr int batchSize = 1024;
     std::vector<size_t> counts( batchSize );
     std::vector<AffineXf3f> xfs( batchSize );
-    size_t bestCount = 0;
+    size_t bestScore = 0;
+    size_t bestCount = 0; // the number of inlier matches of the best transformation
     AffineXf3f bestXf;
     int required = params.maxIterations;
     for ( int done = 0; done < required; )
@@ -88,16 +107,17 @@ Expected<AffineXf3f> findRigidXfRansac( const VertCoords & srcPoints, const Vert
             if ( auto xf = sampleXf( done + i ) )
             {
                 xfs[i] = *xf;
-                counts[i] = countInliers( srcPoints, tgtPoints, matches, *xf, params.inlierDistance );
+                counts[i] = score( *xf );
             }
         } );
         done += num;
         for ( int i = 0; i < num; ++i )
         {
-            if ( counts[i] > bestCount )
+            if ( counts[i] > bestScore )
             {
-                bestCount = counts[i];
+                bestScore = counts[i];
                 bestXf = xfs[i];
+                bestCount = overlapScore ? countInliers( srcPoints, tgtPoints, matches, bestXf, params.inlierDistance ) : bestScore;
             }
         }
 
@@ -114,15 +134,16 @@ Expected<AffineXf3f> findRigidXfRansac( const VertCoords & srcPoints, const Vert
         if ( !reportProgress( progress, float( done ) / float( std::max( done, required ) ) ) )
             return unexpectedOperationCanceled();
     }
-    if ( bestCount == 0 )
-        return unexpected( "No consistent sample of three matches was found" );
+    if ( bestScore == 0 )
+        return unexpected( overlapScore ? "No sample of three matches brings source points close to the target cloud"
+            : "No consistent sample of three matches was found" );
 
     PointToPointAligningTransform p2p;
     for ( const auto & m : matches )
         if ( distanceSq( bestXf( srcPoints[m.first] ), tgtPoints[m.second] ) <= sqr( params.inlierDistance ) )
             p2p.add( srcPoints[m.first], tgtPoints[m.second] );
     const auto refinedXf = AffineXf3f( p2p.findBestRigidXf() );
-    if ( countInliers( srcPoints, tgtPoints, matches, refinedXf, params.inlierDistance ) >= bestCount )
+    if ( score( refinedXf ) >= bestScore )
         return refinedXf;
     return bestXf;
 }

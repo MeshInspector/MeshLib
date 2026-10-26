@@ -1064,9 +1064,9 @@ Expected<OneMeshContours> offsetSurfaceLineToMeshContours( const Mesh& mesh, con
 
     Mesh meshAfterCut = mesh;
     NewEdgesMap nEM;
-    // .forceFillMode = CutMeshParameters::ForceFill::All
+    // .forceFill = true
     // because we don't really care about intermediate mesh quality
-    auto cutRes = cutMesh( meshAfterCut, initCutContoursVec, { .forceFillMode = CutMeshParameters::ForceFill::All,.new2oldEdgesMap = &nEM } );
+    auto cutRes = cutMesh( meshAfterCut, initCutContoursVec, { .forceFill = true, .new2oldEdgesMap = &nEM } );
 
     const auto& initCutContours = initCutContoursVec[0];
 
@@ -1212,7 +1212,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     connectLoneContours( mesh, contours, loneFaces, preRes, firstNewEdge, params.sortData, params.new2oldEdgesMap, badLoneFaces );
 
     res.fbsWithContourIntersections = getBadFacesAfterCut( mesh.topology, preRes ) | badLoneFaces;
-    if ( params.forceFillMode == CutMeshParameters::ForceFill::None && res.fbsWithContourIntersections.any() )
+    if ( !params.forceFill && res.fbsWithContourIntersections.any() )
         return res;
 
     // find one edge for every hole to fill
@@ -1254,8 +1254,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         for ( int edgeId = 0; edgeId < path.size(); ++edgeId )
         {
             const FaceId oldf = oldEdgesInfo[edgeId].left;
-            if ( !oldf.valid() ||
-                ( params.forceFillMode == CutMeshParameters::ForceFill::Good && res.fbsWithContourIntersections.test( oldf ) ) )
+            if ( !oldf.valid() )
                 continue;
             const FaceId oldRightF = oldEdgesInfo[edgeId].right;
             bool addLeftDesc = !mesh.topology.left( path[edgeId] ).valid();

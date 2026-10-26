@@ -283,7 +283,7 @@ TEST( MRMesh, CutMeshContourTurnsBackOnBoundary )
         }
     }
 
-    auto res = cutMesh( mesh, { *contour }, { .forceFillMode = CutMeshParameters::ForceFill::All } );
+    auto res = cutMesh( mesh, { *contour }, { .forceFill = true } );
     EXPECT_TRUE( mesh.topology.checkValidity() );
     EXPECT_TRUE( res.fbsWithContourIntersections.none() );
     EXPECT_EQ( res.resultCut.size(), 1 );
@@ -347,7 +347,7 @@ TEST( MRMesh, ContourThroughBoundaryCorner )
             }
 
             auto cut = mesh;
-            auto res = cutMesh( cut, { *contour }, { .forceFillMode = CutMeshParameters::ForceFill::All } );
+            auto res = cutMesh( cut, { *contour }, { .forceFill = true } );
             EXPECT_TRUE( cut.topology.checkValidity() );
             EXPECT_TRUE( res.fbsWithContourIntersections.none() );
             EXPECT_EQ( res.resultCut.size(), 1 );
@@ -400,7 +400,7 @@ TEST( MRMesh, ContourTouchesBoundaryAtEarTip )
         ASSERT_TRUE( contour->closed );
 
         Mesh cut = mesh;
-        auto res = cutMesh( cut, { *contour }, { .forceFillMode = CutMeshParameters::ForceFill::All } );
+        auto res = cutMesh( cut, { *contour }, { .forceFill = true } );
         EXPECT_TRUE( cut.topology.checkValidity() );
         EXPECT_TRUE( res.fbsWithContourIntersections.none() );
         EXPECT_EQ( res.resultCut.size(), 1 );
@@ -433,7 +433,7 @@ TEST( MRMesh, CutMeshContourTurnsInsideFace )
             { a, mesh.points[a] } };
 
         Mesh cut = mesh;
-        auto res = cutMesh( cut, { contour }, { .forceFillMode = CutMeshParameters::ForceFill::All } );
+        auto res = cutMesh( cut, { contour }, { .forceFill = true } );
         EXPECT_TRUE( cut.topology.checkValidity() );
         EXPECT_TRUE( res.fbsWithContourIntersections.none() );
         EXPECT_EQ( res.resultCut.size(), 1 );
@@ -658,16 +658,16 @@ TEST( MRMesh, CutMeshSelfCrossingLoneContour )
     const auto contour = surfaceLineToMeshContour( mesh, mtps );
     ASSERT_TRUE( contour.has_value() );
 
-    for ( auto mode : { CutMeshParameters::ForceFill::None, CutMeshParameters::ForceFill::Good, CutMeshParameters::ForceFill::All } )
+    for ( bool forceFill : { false, true } )
     {
         Mesh cut = mesh;
-        const auto res = cutMesh( cut, { *contour }, { .forceFillMode = mode } );
+        const auto res = cutMesh( cut, { *contour }, { .forceFill = forceFill } );
         EXPECT_TRUE( cut.topology.checkValidity() );
         EXPECT_TRUE( res.fbsWithContourIntersections.test( f ) );
         EXPECT_TRUE( cut.topology.hasFace( f ) );
         EXPECT_EQ( cut.topology.left( e ), f );
-        // the two sides of the island are left without faces (Good fills no hole of a bad face), or filled
-        EXPECT_EQ( cut.topology.findNumHoles(), mode == CutMeshParameters::ForceFill::All ? 0 : 2 );
+        // the two sides of the island are left without faces, or filled
+        EXPECT_EQ( cut.topology.findNumHoles(), forceFill ? 0 : 2 );
     }
 }
 
@@ -684,16 +684,16 @@ TEST( MRMesh, CutMeshLoneContourInZeroAreaFace )
         island.intersections.push_back( { .primitiveId = 1_f, .coordinate = Vector3f( t, t, 0 ) } );
     island.closed = true;
 
-    for ( auto mode : { CutMeshParameters::ForceFill::None, CutMeshParameters::ForceFill::All } )
+    for ( bool forceFill : { false, true } )
     {
         Mesh cut = mesh;
-        const auto res = cutMesh( cut, { island }, { .forceFillMode = mode } );
+        const auto res = cutMesh( cut, { island }, { .forceFill = forceFill } );
         EXPECT_TRUE( cut.topology.checkValidity() );
         EXPECT_TRUE( res.fbsWithContourIntersections.test( 1_f ) );
         EXPECT_TRUE( cut.topology.hasFace( 1_f ) );
         EXPECT_EQ( cut.topology.left( e ), 1_f );
         // the border of the mesh, and the two sides of the island unless they are filled
-        EXPECT_EQ( cut.topology.findNumHoles(), mode == CutMeshParameters::ForceFill::All ? 1 : 3 );
+        EXPECT_EQ( cut.topology.findNumHoles(), forceFill ? 1 : 3 );
     }
 }
 

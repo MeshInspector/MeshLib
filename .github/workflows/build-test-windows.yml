@@ -164,12 +164,6 @@ jobs:
           # too small an address space for our PCH when targeting ARM64 (C3859, C1076).
           msbuild-architecture: ${{ matrix.arch == 'arm64' && 'arm64' || 'x86' }}
 
-      - name: Install .NET
-        if:   ${{ env.BUILD_C_SHARP == 'true' }}
-        uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: '8.0.x'
-
       - name: Install MSYS2 for MRBind
         if: ${{ inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true' }}
         uses: ./.github/actions/install-msys2-mrbind

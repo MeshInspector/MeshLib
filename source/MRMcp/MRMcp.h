@@ -180,6 +180,11 @@ public:
     using ToolValidator = std::function<Expected<void>( const std::string& toolId )>;
     MRMCP_API void setToolValidator( ToolValidator validator );
 
+    /// Optional callback invoked for every tool call that passed the validator, given the tool's id,
+    /// right before the tool runs (on the server thread). E.g. for usage telemetry.
+    using ToolCallListener = std::function<void( const std::string& toolId )>;
+    MRMCP_API void setToolCallListener( ToolCallListener listener );
+
 private:
     struct State;
 

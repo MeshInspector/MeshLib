@@ -65,6 +65,7 @@ struct Server::State
     std::unordered_map<std::string, std::string> toolDescs; // No idea why this is not a part of `toolManager`.
     std::optional<fastmcpp::server::SseServerWrapper> server;
     Server::ToolValidator toolValidator; // Empty by default; consulted per tool call when set.
+    Server::ToolCallListener toolCallListener; // Empty by default; notified per allowed tool call when set.
 
     void createServer( const Params& params );
 
@@ -348,6 +349,8 @@ bool Server::addTool( std::string id, std::string name, std::string desc, Schema
             if ( auto res = statePtr->toolValidator( id ); !res )
                 throw std::runtime_error( std::move( res.error() ) );
         }
+        if ( statePtr->toolCallListener )
+            statePtr->toolCallListener( id );
         return inner( reifyStringEncodedArgs( args, schema ) );
     };
     state_->toolManager.register_tool( fastmcpp::tools::Tool( id, std::move( schemaJson ), std::move( outputSchema ).asJson(), std::move( wrapped ), name, desc, {} ) );
@@ -468,6 +471,13 @@ void Server::setToolValidator( ToolValidator validator )
     if ( !state_ )
         state_ = std::make_unique<State>();
     state_->toolValidator = std::move( validator );
+}
+
+void Server::setToolCallListener( ToolCallListener listener )
+{
+    if ( !state_ )
+        state_ = std::make_unique<State>();
+    state_->toolCallListener = std::move( listener );
 }
 
 Server& getDefaultServer()

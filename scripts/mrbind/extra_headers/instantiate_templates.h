@@ -99,6 +99,8 @@ FORCE_REGISTER_TYPE( std::vector<MR::PointCloud> );
 FORCE_REGISTER_TYPE( std::vector<MR::Polyline3> );
 // Those are needed directly for mrmeshpy:
 FORCE_REGISTER_TYPE( std::monostate );
+// storage of `bool_output` / `char_output`, and the data of `ZipFileCallback`; was only registered as `Vector<char, VertId>::vec` before it got `Allocator`
+FORCE_REGISTER_TYPE( std::vector<char> );
 FORCE_REGISTER_TYPE( Expected<MR::VoxelsLoad::DicomVolumeT<MR::VoxelsVolumeMinMax<FloatGrid>>> );
 FORCE_REGISTER_TYPE( Expected<MR::VoxelsLoad::DicomVolumeT<MR::VoxelsVolumeMinMax<Vector<float, MR::VoxelId>>>> );
 FORCE_REGISTER_PARAM_TYPE( double * );

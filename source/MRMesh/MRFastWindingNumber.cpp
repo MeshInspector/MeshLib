@@ -75,7 +75,7 @@ float FastWindingNumber::calcWithDistances( const Vector3f& p, const DistanceToM
     return sign * std::sqrt( resSq );
 }
 
-Expected<void> FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, const DistanceToMeshOptions& options, const ProgressCallback& cb )
+Expected<void> FastWindingNumber::calcFromGridWithDistances( VoxelScalars& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, const DistanceToMeshOptions& options, const ProgressCallback& cb )
 {
     MR_TIMER;
 

@@ -227,7 +227,7 @@ Expected<void> FastWindingNumber::calcFromGrid( std::vector<float>& res, const V
     return {};
 }
 
-Expected<void> FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, const DistanceToMeshOptions& options, const ProgressCallback& cb )
+Expected<void> FastWindingNumber::calcFromGridWithDistances( VoxelScalars& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, const DistanceToMeshOptions& options, const ProgressCallback& cb )
 {
     MR_TIMER;
     if ( auto maybe = prepareData_( subprogress( cb, 0.0, 0.5f ) ); !maybe )

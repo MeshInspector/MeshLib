@@ -62,7 +62,7 @@ public:
 
     /// Compute tool distance
     virtual Expected<void> computeToolDistance(
-        std::vector<float>& output,
+        VoxelScalars& output,
         const Vector3i& dims, float voxelSize, const Vector3f& origin,
         float padding
     ) const = 0;

@@ -13,3 +13,4 @@
 --expose-as-struct '/MR::Box\d\w.*/'
 --expose-as-struct '/MR::(?!NoInit|Dental)[A-Z]\w*Id/'
 --expose-as-struct '/MR::Color/'
+--custom-cpp-include-for-name MR::Allocator MRMesh/MRAllocator.h

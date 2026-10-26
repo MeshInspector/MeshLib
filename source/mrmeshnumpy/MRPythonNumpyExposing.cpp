@@ -350,18 +350,20 @@ pybind11::array_t<int> getNumpyFaces( const MR::MeshTopology& topology )
 }
 
 // returns numpy array shapes [num verts,3] which represents coordinates from given vector
-pybind11::array_t<double> toNumpyArray( const std::vector<MR::Vector3f>& coords )
+template <typename V>
+static pybind11::array_t<double> toNumpyArrayImpl( const V& coords )
 {
     using namespace MR;
     auto numVerts = coords.size();
+    const MR::Vector3f* src = coords.data();
     // Allocate and initialize some data;
     const auto size = numVerts * 3;
     double* data = new double[size];
-    ParallelFor( coords, [&]( size_t i )
+    ParallelFor( size_t( 0 ), numVerts, [&]( size_t i )
     {
         auto ind = 3 * i;
         for ( int vi = 0; vi < 3; ++vi )
-            data[ind + vi] = coords[i][vi];
+            data[ind + vi] = src[i][vi];
     } );
 
     // Create a Python object that will free the allocated
@@ -379,14 +381,19 @@ pybind11::array_t<double> toNumpyArray( const std::vector<MR::Vector3f>& coords 
         freeWhenDone ); // numpy array references this parent
 }
 
+pybind11::array_t<double> toNumpyArray( const std::vector<MR::Vector3f>& coords )
+{
+    return toNumpyArrayImpl( coords );
+}
+
 pybind11::array_t<double> toNumpyArray( const MR::VertCoords& coords )
 {
-    return toNumpyArray( coords.vec );
+    return toNumpyArrayImpl( coords );
 }
 
 pybind11::array_t<double> toNumpyArray( const MR::FaceNormals& norms )
 {
-    return toNumpyArray( norms.vec );
+    return toNumpyArrayImpl( norms );
 }
 
 // returns numpy array shapes [num verts,3] which represents coordinates of all mesh points (including invalid ones)

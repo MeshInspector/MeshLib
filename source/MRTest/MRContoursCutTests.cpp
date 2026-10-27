@@ -1161,7 +1161,7 @@ TEST( MRMesh, ForceFillCrossingsEven )
 }
 
 // under force fill, a contour crossing itself inside triangle 0_f makes it bad: in one piece of three segments, across the end
-// of a closed contour, or in two visits of the face; touching after visiting the face again or at a mesh vertex is fine
+// of a closed contour, or in two visits of the face; visiting the face again without a crossing, or touching at a mesh vertex, is fine
 TEST( MRMesh, ForceFillCrossingsOneFace )
 {
     const auto square = makeSquareOfTwoTriangles();
@@ -1282,7 +1282,7 @@ TEST( MRMesh, ForceFillCrossingsSweep )
 // the float overload of hasCrossing on more than 32 segments, which the sweep tests: 30 vertical segments, a chain of two segments over
 // the tops of the first two, the third one again and reversed, and a segment from a point to itself, all of which only touch, with
 // a segment from the top of the first vertical one to the bottom of the second one, touching them only, or of the sixth one, crossing four
-TEST( MRMesh, ForceFillCrossingsSweepFloat )
+TEST( MRMesh, HasCrossingFloatSweep )
 {
     std::vector<Vector3f> points;
     std::vector<TwoVertIds> segments;

@@ -1124,28 +1124,19 @@ FaceBitSet findCrossingFaces( const Mesh& mesh, const OneMeshContours& contours,
         return std::tie( a.f, a.c, a.i ) < std::tie( b.f, b.c, b.i );
     } );
 
-    // the faces with two segments at least
-    std::vector<std::span<const FaceSegment>> faces;
-    for ( size_t i = 0; i < segs.size(); )
+    FaceBitSet res( mesh.topology.faceSize() );
+    tbb::enumerable_thread_specific<FaceCrossingsBuffers> buffers;
+    ParallelFor( segs, buffers, [&] ( size_t i, FaceCrossingsBuffers& buf )
     {
+        if ( i > 0 && segs[i - 1].f == segs[i].f )
+            return; // not the first segment of its face
         size_t j = i + 1;
         while ( j < segs.size() && segs[j].f == segs[i].f )
             ++j;
-        if ( j > i + 1 )
-            faces.emplace_back( segs.data() + i, j - i );
-        i = j;
-    }
-    tbb::enumerable_thread_specific<FaceCrossingsBuffers> buffers;
-    std::vector<char> crossed( faces.size() ); // not in a bit set yet, since its neighbor faces share words
-    ParallelFor( faces, buffers, [&] ( size_t k, FaceCrossingsBuffers& buf )
-    {
         // isolate keeps the nested parallel loops of the sweep from stealing this thread onto another face with the same buffers
-        tbb::this_task_arena::isolate( [&] { crossed[k] = crossesInFace( buf, mesh, contours, preRes, sortData, faces[k] ); } );
+        if ( j > i + 1 && tbb::this_task_arena::isolate( [&] { return crossesInFace( buf, mesh, contours, preRes, sortData, { segs.data() + i, j - i } ); } ) )
+            res.atomicTestSet( segs[i].f );
     } );
-    FaceBitSet res( mesh.topology.faceSize() );
-    for ( size_t k = 0; k < faces.size(); ++k )
-        if ( crossed[k] )
-            res.set( faces[k].front().f );
     return res;
 }
 

@@ -5,7 +5,7 @@
 #include "MRCMesh/MRMeshCollidePrecise.h"
 #include "MRCMesh/MRPrecisePredicates3.h"
 #include "MRCMesh/MRBitSet.h"
-#include "MRCMesh/MRVector.h"
+#include <MRCMisc/std_vector_MR_VarEdgeTri_MR_Allocator_MR_VarEdgeTri.h>
 #include <MRCMisc/std_string.h>
 
 #include <stdio.h>
@@ -28,13 +28,13 @@ int main( void )
     // create converters to integer field (needed for absolute precision predicates)
     MR_CoordinateConverters* converters = MR_getVectorConverters( mpA, mpB, NULL );
     // find each intersecting edge/triangle pair
-    MR_Vector_MR_VarEdgeTri* collidingFaceEdges = MR_findCollidingEdgeTrisPrecise(
+    MR_std_vector_MR_VarEdgeTri_MR_Allocator_MR_VarEdgeTri* collidingFaceEdges = MR_findCollidingEdgeTrisPrecise(
         mpA, mpB, MR_CoordinateConverters_Get_toInt( converters ), NULL, NULL );
 
     // print pairs of edges triangles
-    for ( size_t i = 0; i < MR_Vector_MR_VarEdgeTri_size( collidingFaceEdges ); ++i )
+    for ( size_t i = 0; i < MR_std_vector_MR_VarEdgeTri_MR_Allocator_MR_VarEdgeTri_size( collidingFaceEdges ); ++i )
     {
-        MR_VarEdgeTri* edgeTri = MR_Vector_MR_VarEdgeTri_index_mut( collidingFaceEdges, i );
+        MR_VarEdgeTri* edgeTri = MR_std_vector_MR_VarEdgeTri_MR_Allocator_MR_VarEdgeTri_at_mut( collidingFaceEdges, i );
         bool edgeATriB = MR_VarEdgeTri_isEdgeATriB( edgeTri );
         MR_FaceId tri = MR_VarEdgeTri_tri( edgeTri );
         if ( edgeATriB )
@@ -43,7 +43,7 @@ int main( void )
             fprintf( stdout, "triA: %d, edgeB: %d\n", *MR_FaceId_get( &tri ), *MR_EdgeId_get( MR_VarEdgeTri_GetMutable_edge( edgeTri ) ) );
     }
 
-    MR_Vector_MR_VarEdgeTri_Destroy( collidingFaceEdges );
+    MR_std_vector_MR_VarEdgeTri_MR_Allocator_MR_VarEdgeTri_Destroy( collidingFaceEdges );
     MR_CoordinateConverters_Destroy( converters );
 
     MR_MeshPart_Destroy( mpB );

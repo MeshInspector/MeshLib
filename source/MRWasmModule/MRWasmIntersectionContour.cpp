@@ -10,7 +10,7 @@ using namespace MR;
 
 EMSCRIPTEN_BINDINGS( meshlib_intersection_contour )
 {
-    // Opaque carrier: Vector<Vector<VarEdgeTri>>; produced here, consumed by getOneMeshIntersectionContours.
+    // Opaque carrier: MiVector<MiVector<VarEdgeTri>>; produced here, consumed by getOneMeshIntersectionContours.
     emscripten::class_<ContinuousContours>( "ContinuousContours" );
 
     emscripten::function( "orderIntersectionContours",

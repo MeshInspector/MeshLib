@@ -52,7 +52,7 @@ struct NeighborLinks
     int next{ -1 };
 };
 
-using NeighborLinksList = Vector<NeighborLinks>;
+using NeighborLinksList = MiVector<NeighborLinks>;
 
 struct EdgeTriHash
 {
@@ -67,7 +67,7 @@ using VariableEdgeTri2Index = std::pair<VarEdgeTri, int>;
 class EdgeTri2IndexMap
 {
 public:
-    EdgeTri2IndexMap( const Vector<VarEdgeTri>& intersections );
+    EdgeTri2IndexMap( const MiVector<VarEdgeTri>& intersections );
 
     const int* findIndex( const VarEdgeTri& item ) const;
 
@@ -84,7 +84,7 @@ private:
     HashMapType hmaps_[NumBuckets];
 };
 
-EdgeTri2IndexMap::EdgeTri2IndexMap( const Vector<VarEdgeTri>& intersections )
+EdgeTri2IndexMap::EdgeTri2IndexMap( const MiVector<VarEdgeTri>& intersections )
 {
     MR_TIMER;
     int counts[NumBuckets] = {};
@@ -115,7 +115,7 @@ const int* EdgeTri2IndexMap::findIndex( const VarEdgeTri& item ) const
 struct AccumulativeSet
 {
     AccumulativeSet( const MeshTopology& topologyA, const MeshTopology& topologyB,
-        const Vector<VarEdgeTri>& intersections );
+        const MiVector<VarEdgeTri>& intersections );
 
     const MeshTopology& topologyA;
     const MeshTopology& topologyB;
@@ -136,7 +136,7 @@ struct AccumulativeSet
 };
 
 AccumulativeSet::AccumulativeSet( const MeshTopology& topologyA, const MeshTopology& topologyB,
-    const Vector<VarEdgeTri>& intersections )
+    const MiVector<VarEdgeTri>& intersections )
     : topologyA( topologyA ), topologyB( topologyB ), edgeTri2IndexMap( intersections )
 {
 }
@@ -182,7 +182,7 @@ std::optional<VariableEdgeTri2Index> findNext( AccumulativeSet& accumulativeSet,
     return {};
 }
 
-void parallelPrepareLinkedLists( const Vector<VarEdgeTri>& intersections, AccumulativeSet& accumulativeSet )
+void parallelPrepareLinkedLists( const MiVector<VarEdgeTri>& intersections, AccumulativeSet& accumulativeSet )
 {
     MR_TIMER;
     const auto sz = (int)intersections.size();
@@ -206,11 +206,11 @@ struct ContourInfo
     size_t size;
 };
 
-Vector<ContourInfo> calcContoursInfo( const AccumulativeSet& accumulativeSet )
+MiVector<ContourInfo> calcContoursInfo( const AccumulativeSet& accumulativeSet )
 {
     MR_TIMER;
     BitSet queuedRecords( accumulativeSet.nList.size(), true );
-    Vector<ContourInfo> contInfos; // use it to preallocate contours and fill them in parallel then
+    MiVector<ContourInfo> contInfos; // use it to preallocate contours and fill them in parallel then
     for ( auto s : queuedRecords )
     {
         auto& currInfo = contInfos.emplace_back();
@@ -250,7 +250,7 @@ Vector<ContourInfo> calcContoursInfo( const AccumulativeSet& accumulativeSet )
     return contInfos;
 }
 
-ContinuousContours orderIntersectionContoursUsingAccumulativeSet( const AccumulativeSet& accumulativeSet, const Vector<VarEdgeTri>& intersections )
+ContinuousContours orderIntersectionContoursUsingAccumulativeSet( const AccumulativeSet& accumulativeSet, const MiVector<VarEdgeTri>& intersections )
 {
     MR_TIMER;
     const auto contInfos = calcContoursInfo( accumulativeSet );
@@ -279,7 +279,7 @@ ContinuousContours orderIntersectionContoursUsingAccumulativeSet( const Accumula
 ContinuousContours orderSelfIntersectionContours( const MeshTopology& topology, const std::vector<EdgeTri>& intersections )
 {
     MR_TIMER;
-    Vector<VarEdgeTri> vars;
+    MiVector<VarEdgeTri> vars;
     vars.reserve( intersections.size() * 2 );
     for ( const auto & x : intersections )
     {

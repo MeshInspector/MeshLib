@@ -78,8 +78,8 @@ inline auto ParallelFor( I begin, I end, tbb::enumerable_thread_specific<L> & e,
 /// executes given function f for each vector element in parallel threads;
 /// optional parameters after f: ProgressCallback cb, size_t reportProgressEvery = 1024 for periodic progress report
 /// \return false if terminated by callback
-template <typename T, typename ...F>
-inline auto ParallelFor( const std::vector<T> & v, F &&... f )
+template <typename T, typename A, typename ...F>
+inline auto ParallelFor( const std::vector<T, A> & v, F &&... f )
 {
     return ParallelFor( size_t(0), v.size(), std::forward<F>( f )... );
 }

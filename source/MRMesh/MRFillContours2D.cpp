@@ -189,7 +189,7 @@ struct FillContours2DPlanCache final : IFillContours2DPlanCache
         int refCode;  // plan code of cur: not-negative absolute mesh EdgeId, negative - earlier plan edge
         int succ;     // next slot around the polygon
     };
-    Vector<Slot> slots;
+    MiVector<Slot> slots;
 };
 
 std::unique_ptr<IFillContours2DPlanCache> makeFillContours2DPlanCache()

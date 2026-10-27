@@ -15,7 +15,7 @@ class PriorityQueue
 {
 public:
     using value_type = T;
-    using Container = Vector<T>;
+    using Container = MiVector<T>;
     using size_type = typename Container::size_type;
 
     /// constructs empty queue

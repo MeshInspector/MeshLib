@@ -79,7 +79,7 @@ void gatherEdgeInfo( const MeshTopology& topology, EdgeId e, FaceBitSet& faces, 
 // removes the closed contours of two points, which have zero area, as their two segments coincide
 void removeTwoPointLoops( ContinuousContours& contours )
 {
-    erase_if( contours, [] ( const ContinuousContour& c ) { return c.size() == 3 && isClosed( c ); } );
+    std::erase_if( contours, [] ( const ContinuousContour& c ) { return c.size() == 3 && isClosed( c ); } );
 }
 
 } //anonymous namespace
@@ -135,10 +135,10 @@ struct JoinedSelfLoops
     int second{ 0 };
     int secondRot{ 0 };
 };
-Vector<JoinedSelfLoops> findSelfContoursMapping( const ContinuousContours& contours )
+MiVector<JoinedSelfLoops> findSelfContoursMapping( const ContinuousContours& contours )
 {
     assert( contours.size() % 2 == 0 );
-    Vector<JoinedSelfLoops> holePairs( contours.size() / 2 );
+    MiVector<JoinedSelfLoops> holePairs( contours.size() / 2 );
     BitSet visitedConts( contours.size(), true );
     int i = 0;
     while ( visitedConts.any() )

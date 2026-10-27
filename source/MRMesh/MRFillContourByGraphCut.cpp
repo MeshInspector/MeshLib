@@ -29,7 +29,7 @@ private:
     FaceBitSet filled_[2];
     Vector<EdgeId, FaceId> parent_;  // edge having parent to the right and this face to the left, invalid edge for root faces
     std::deque<FaceId, Allocator<FaceId>> active_[2];
-    Vector<FaceId> orphans_;
+    MiVector<FaceId> orphans_;
 
     // process given active face which should belong to given side (left or right)
     void processActive_( FaceId f, int side );

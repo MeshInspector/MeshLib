@@ -541,8 +541,7 @@ using ThreeUVCoords = std::array<UVCoord, 3>;
 
 struct MRMESH_CLASS Dipole;
 
-/// Vector<T> is indexed by size_t
-template <typename T, typename I = size_t> class MRMESH_CLASS Vector;
+template <typename T, typename I> class MRMESH_CLASS Vector;
 MR_CANONICAL_TYPEDEFS( (template <typename T, typename I> class MRMESH_CLASS), Vector,
     /// mapping from UndirectedEdgeId to its end vertices
     ( Edges,    Vector<TwoVertIds, UndirectedEdgeId> )
@@ -614,6 +613,10 @@ MR_CANONICAL_TYPEDEFS( (template <typename T, typename I> struct MRMESH_CLASS), 
 )
 
 template <typename T> struct MR_BIND_IGNORE Allocator;
+
+/// std::vector allocating with MR::Allocator
+template <typename T>
+using MiVector = std::vector<T, Allocator<T>>;
 
 template <typename T, typename Hash = phmap::priv::hash_default_hash<T>, typename Eq = phmap::priv::hash_default_eq<T>>
 using HashSet = phmap::flat_hash_set<T, Hash, Eq, Allocator<T>>;

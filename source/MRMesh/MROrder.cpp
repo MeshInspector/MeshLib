@@ -73,7 +73,7 @@ void orderFacePoints( const FacePointSpan & span, int numThreads )
 
     // process the span in this thread only
     Timer t( "finishing" );
-    Vector<FacePointSpan> stack;
+    MiVector<FacePointSpan> stack;
     stack.push_back( span );
 
     while ( !stack.empty() )

@@ -77,13 +77,13 @@ private:
     size_t numOutdated_ = 0; // total number of not lone outdated edges in the queue
     size_t maxRemainingFlips_ = 0; // the number of flip-edge operations that can be performed before stop adding them in the queue
     DecimateResult res_;
-    Vector<VertId> originNeis_;
-    Vector<Vector3f> triDblAreas_; // directed double areas of newly formed triangles to check that they are consistently oriented
+    MiVector<VertId> originNeis_;
+    MiVector<Vector3f> triDblAreas_; // directed double areas of newly formed triangles to check that they are consistently oriented
     class EdgeMetricCalc;
 
     bool initialize_();
     void initializeQueue_();
-    Vector<QueueElement> makeQueueElements_();
+    MiVector<QueueElement> makeQueueElements_();
     void updateQueue_();
     QuadraticForm3f collapseForm_( UndirectedEdgeId ue, const Vector3f & collapsePos ) const;
     std::optional<QueueElement> computeQueueElement_( UndirectedEdgeId ue, bool optimizeVertexPos,
@@ -302,7 +302,7 @@ bool MeshDecimator::initialize_()
     return true;
 }
 
-auto MeshDecimator::makeQueueElements_() -> Vector<QueueElement>
+auto MeshDecimator::makeQueueElements_() -> MiVector<QueueElement>
 {
     MR_TIMER;
 
@@ -310,11 +310,11 @@ auto MeshDecimator::makeQueueElements_() -> Vector<QueueElement>
     validInQueue_.clear();
     validInQueue_.resize( sz, false );
 
-    tbb::enumerable_thread_specific<Vector<QueueElement>> threadData;
+    tbb::enumerable_thread_specific<MiVector<QueueElement>> threadData;
     if ( initialEdges_ )
     {
         // few initial edges in a large bit set
-        Vector<UndirectedEdgeId> edges;
+        MiVector<UndirectedEdgeId> edges;
         for ( auto ue : *initialEdges_ )
             if ( regionEdges_.empty() ? !mesh_.topology.isLoneEdge( ue ) : regionEdges_.test( ue ) )
                 edges.push_back( ue );
@@ -353,7 +353,7 @@ auto MeshDecimator::makeQueueElements_() -> Vector<QueueElement>
     for ( const auto & v : threadData )
         queueSize += v.size();
 
-    Vector<QueueElement> elms;
+    MiVector<QueueElement> elms;
     elms.reserve( queueSize );
     for ( auto & v : threadData )
     {
@@ -411,7 +411,7 @@ void MeshDecimator::updateQueue_()
 
     t.restart( "remove deleted" );
     // remove invalid and deleted edges from the queue
-    erase_if( vec, [&]( QueueElement & qe ) { return !validInQueue_.test( qe.uedgeId() ); } );
+    std::erase_if( vec, [&]( QueueElement & qe ) { return !validInQueue_.test( qe.uedgeId() ); } );
 
     t.restart( "restore heap" );
     // sort elements to restore heap property
@@ -1070,7 +1070,7 @@ FaceBitSet getSubdividePart( const FaceBitSet & valids, size_t subdivideParts, s
 }
 
 /// returns the faces of the subtrees of mesh's AABB tree (or of a tree constructed for the region), at least subdivideParts of them
-static Vector<FaceBitSet> getTreeParts( const Mesh & mesh, const DecimateSettings & settings )
+static MiVector<FaceBitSet> getTreeParts( const Mesh & mesh, const DecimateSettings & settings )
 {
     MR_TIMER;
     std::optional<AABBTree> ownTree;
@@ -1078,7 +1078,7 @@ static Vector<FaceBitSet> getTreeParts( const Mesh & mesh, const DecimateSetting
     if ( !tree )
         tree = &ownTree.emplace( MeshPart{ mesh, settings.region } );
     const auto roots = tree->getSubtrees( settings.subdivideParts );
-    Vector<FaceBitSet> res( roots.size() );
+    MiVector<FaceBitSet> res( roots.size() );
     ParallelFor( res, [&]( size_t i )
     {
         res[i] = tree->getSubtreeLeaves( roots[i] );
@@ -1088,7 +1088,7 @@ static Vector<FaceBitSet> getTreeParts( const Mesh & mesh, const DecimateSetting
 }
 
 /// \param treeParts if not null, the faces of each part, used instead of getSubdividePart
-static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const DecimateSettings & settings, Vector<FaceBitSet> * treeParts = nullptr )
+static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const DecimateSettings & settings, MiVector<FaceBitSet> * treeParts = nullptr )
 {
     MR_TIMER;
     assert( settings.subdivideParts > 1 );
@@ -1147,7 +1147,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
         /// the node is decimated by the thread which finished the second of its children
         std::atomic<int> finishedChildren{ 0 };
     };
-    Vector<Parts> parts( hierarchical ? 2 * sz - 1 : sz );
+    MiVector<Parts> parts( hierarchical ? 2 * sz - 1 : sz );
     for ( int i = 0; i < sz; ++i )
     {
         parts[i].beginPart = i;
@@ -1255,7 +1255,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     };
     Vector<PartRange, VertId> vertRange( mesh.topology.vertSize() );
     // vertices on the boundaries of parts
-    tbb::enumerable_thread_specific<Vector<VertId>> threadBdVerts;
+    tbb::enumerable_thread_specific<MiVector<VertId>> threadBdVerts;
 
     // bdVerts: vertices with incident (region) faces from several parts, and if !touchNearBdEdges also on hole or region boundaries;
     // one pass for all parts instead of a whole-mesh pass per part; writing different VertBitSets by v is race-free
@@ -1347,7 +1347,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     {
         // the edge of a vertex can be deleted only in the node, where the vertex is not fixed anymore;
         // otherwise the edge of a vertex could change during decimation of one node, while another node reads it
-        Vector<int> depth( parts.size(), 0 );
+        MiVector<int> depth( parts.size(), 0 );
         for ( int id = root - 1; id >= 0; --id )
             depth[id] = depth[parts[id].parent] + 1;
         // the depth of the node, where the edge or the vertex stops being fixed
@@ -1366,10 +1366,10 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
             const auto r = vertRange[v];
             return ( r.lo < 0 || r.hi >= sz ) ? 0 : depth[smallestNode( r.lo, r.hi )];
         };
-        Vector<VertId> bdVerts;
+        MiVector<VertId> bdVerts;
         for ( auto & tv : threadBdVerts )
             bdVerts.insert( bdVerts.end(), tv.begin(), tv.end() );
-        Vector<EdgeId> betterEdges( bdVerts.size() );
+        MiVector<EdgeId> betterEdges( bdVerts.size() );
         ParallelFor( bdVerts, [&]( size_t i )
         {
             const auto v = bdVerts[i];
@@ -1451,7 +1451,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
                 node.bdVerts = std::exchange( l.bdVerts, {} );
                 node.bdVerts |= r.bdVerts;
                 r.bdVerts = {};
-                Vector<VertId> freedVerts;
+                MiVector<VertId> freedVerts;
                 for ( auto v : node.bdVerts )
                     if ( vertRange[v].inside( node ) )
                         freedVerts.push_back( v );
@@ -1642,7 +1642,7 @@ DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings0 )
         return res;
 #endif
 
-    Vector<FaceBitSet> treeParts;
+    MiVector<FaceBitSet> treeParts;
     if ( settings.subdivideParts > 1 && !settings.partFaces && settings.partsMode == DecimatePartsMode::AABBTree )
         treeParts = getTreeParts( mesh, settings ); // before invalidateCaches() to use the tree of the mesh if any
 

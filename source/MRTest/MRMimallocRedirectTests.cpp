@@ -79,7 +79,7 @@ TEST( MRMesh, MimallocAllocator )
 
     // mi_stl_allocator alone ignores alignas
     struct alignas( 64 ) Aligned { char c = 0; };
-    Vector<Aligned> v( 3 );
+    MiVector<Aligned> v( 3 );
     EXPECT_TRUE( mi_is_in_heap_region( v.data() ) );
     EXPECT_EQ( reinterpret_cast<std::uintptr_t>( v.data() ) % 64, 0 );
 }

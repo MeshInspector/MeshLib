@@ -47,6 +47,7 @@ option(MESHLIB_BUILD_VOXELS "Build voxels library" ON)
 option(MESHLIB_BUILD_EXTRA_IO_FORMATS "Build extra IO format support library" ON)
 option(MESHLIB_BUILD_MCP "Enable MCP server" ON)
 option(MESHLIB_BUILD_GENERATED_C_BINDINGS "Build C bindings (assuming they are already generated)" OFF)
+option(MESHLIB_BUILD_JS_BINDINGS "Build the wasm module of the generated JS bindings (Emscripten only, needs the C and JS bindings already generated)" OFF)
 option(MESHLIB_BUILD_WASM_MODULE "Build the headless WebAssembly module" OFF)
 option(MESHLIB_BUILD_WASM_DEFINITIONS_ONLY "Emit only the WebAssembly module's TypeScript definitions, leaving MeshLib unlinked" OFF)
 
@@ -269,6 +270,13 @@ IF(MESHLIB_BUILD_GENERATED_C_BINDINGS)
 
   # The Cuda is always enabled. Even if we don't want to actually build Cuda, we still need the stubs.
   add_subdirectory(${PROJECT_SOURCE_DIR}/MeshLibC2Cuda ./MeshLibC2Cuda)
+
+  IF(MESHLIB_BUILD_JS_BINDINGS)
+    IF(NOT MR_EMSCRIPTEN)
+      message(FATAL_ERROR "MESHLIB_BUILD_JS_BINDINGS needs an Emscripten build (MR_EMSCRIPTEN=ON).")
+    ENDIF()
+    add_subdirectory(${PROJECT_SOURCE_DIR}/MeshLibJS ./MeshLibJS)
+  ENDIF()
 ENDIF()
 
 IF(MESHLIB_BUILD_SYMBOLMESH)

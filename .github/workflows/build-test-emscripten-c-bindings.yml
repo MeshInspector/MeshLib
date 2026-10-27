@@ -34,6 +34,10 @@ jobs:
           - emsdk_ver: 4.0.19
             emsdk_ver_docker: 4.0.19-arm64
             emsdk_runs_on: ubuntu-24.04-arm
+          # Adds the wasm module of the generated JS bindings, and its tests, to the Singlethreaded 4.0.19 job.
+          - config: Singlethreaded
+            emsdk_ver: 4.0.19
+            build_js: true
 
     runs-on: ${{matrix.emsdk_runs_on}}
     container:
@@ -96,6 +100,9 @@ jobs:
           mv MeshLib/CbindingsTmp/MeshLibC2Wasm source/MeshLibC2
           # Cuda placeholders:
           cp -r scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
+          # The generated JS bindings (`js/` is in .gitignore, so it's not in the checkout).
+          rm -rf source/MeshLibJS/js
+          mv MeshLib/CbindingsTmp/MeshLibJS/js source/MeshLibJS/js
 
       - name: Build
         env:
@@ -111,9 +118,27 @@ jobs:
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DMRVOXELS_UNITY_BUILD=ON
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON
+            ${{ matrix.build_js && '-DMESHLIB_BUILD_JS_BINDINGS=ON' || '' }}
           MR_CMAKE_BUILD_OPTIONS: >
-            --target MeshLibC2 MeshLibC2Cuda
+            --target MeshLibC2 MeshLibC2Cuda ${{ matrix.build_js && 'MeshLibJS' || '' }}
         run: ./scripts/build_source.sh
+
+      - name: Test JS bindings
+        if: ${{ matrix.build_js }}
+        shell: bash
+        run: |
+          # The emsdk ships its own Node.
+          NODE=$(ls -d ${EMSDK}/node/*/bin/node 2>/dev/null | head -1)
+          ${NODE:-node} --version
+          ${NODE:-node} source/MRTestJS/main.mjs
+
+      - name: Upload JS bindings
+        if: ${{ matrix.build_js }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: JsBindings
+          path: ./source/MeshLibJS
+          retention-days: 1
 
       - name: Prepare output files
         shell: bash

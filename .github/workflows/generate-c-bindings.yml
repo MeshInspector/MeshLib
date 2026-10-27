@@ -56,6 +56,8 @@ jobs:
         run: |
           cp -r source/MeshLibC2 source/MeshLibC2_orig
           make -f scripts/mrbind/generate.mk TARGET=c -B --trace EM_USE_HOST_HEADERS=0 C_FOR_WASM=1
+          # The JS bindings target wasm32, so they come from the Wasm version of the description JSON.
+          make -f scripts/mrbind/generate.mk TARGET=js -B --trace
           mv source/MeshLibC2 source/MeshLibC2Wasm
           mv source/MeshLibC2_orig source/MeshLibC2
 
@@ -71,6 +73,7 @@ jobs:
             ./source/MeshLibC2
             ./source/MeshLibC2Wasm
             ./source/MeshLibC2Cuda
+            ./source/MeshLibJS
           retention-days: 1
 
         # Unlike the other artifact, here we strip some temporary files, and the project files.

@@ -6,7 +6,7 @@
 #include <new>
 
 // mr_enable_mimalloc executables forward malloc to the same mimalloc; MRMESH_NO_MIMALLOC, see cmake/Modules/Mimalloc.cmake
-#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_MIMALLOC )
+#if 0 // A/B: std::allocator unconditionally
 #define MR_ALLOCATOR_IS_MIMALLOC
 #endif
 

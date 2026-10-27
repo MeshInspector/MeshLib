@@ -166,6 +166,16 @@ MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const 
 MR_BIND_IGNORE MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops,
     const std::array<PreciseVertCoords, 3>& tri, const std::function<PreciseCutPoint( VertId )>& pointOf );
 
+/// finds where the edges of the loops of one triangle of a mesh cut by the boolean cross, on the exact predicates of \ref getMonotonePlan above
+/// \param cutOf the triangle of the other mesh whose plane every edge of the loops inside the triangle goes along (as PreciseCutPoint::tri),
+///        or invalid ids for an edge along a side; every crossing of two cuts is a point of the predicates (see PreciseCutPoint::tri2)
+/// \return the crossings in the order a sweep over the triangle meets them, which is also their order along every edge (crossings at one
+///         point are met one by one); every crossing is two edges directed along the sweep, the first one passing from the right of the
+///         second one to its left; std::nullopt if an edge without a cut crosses another one, or in the cases of \ref getMonotonePlan above
+MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops,
+    const std::array<PreciseVertCoords, 3>& tri, const std::function<PreciseCutPoint( VertId )>& pointOf,
+    const std::function<std::array<PreciseVertCoords, 3>( UndirectedEdgeId )>& cutOf );
+
 /// \ref hasCrossing tests up to this many segments in pairs, which is faster for them than the sweep, the only user of its cache with the exact predicates
 constexpr size_t cMaxSegmentsInPairs = 32;
 

@@ -1996,6 +1996,23 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
 
 bool hasCrossing( const std::vector<TwoVertIds>& segments, const CutTrianglePredicates& preds, ISweepLineCache* cache )
 {
+    // a few segments are tested in pairs, faster than setting up the sweep: two segments without a common end cross if each one
+    // has the ends of the other on its two sides; a segment from a point to itself is skipped, as the sweep skips it
+    if ( segments.size() <= 32 )
+    {
+        for ( size_t s = 0; s < segments.size(); ++s )
+        {
+            for ( size_t t = s + 1; t < segments.size(); ++t )
+            {
+                const auto [a, b] = segments[s];
+                const auto [c, d] = segments[t];
+                if ( a != b && c != d && a != c && a != d && b != c && b != d
+                    && preds.ccw( a, b, c ) != preds.ccw( a, b, d ) && preds.ccw( c, d, a ) != preds.ccw( c, d, b ) )
+                    return true;
+            }
+        }
+        return preds.failed();
+    }
     std::optional<SweepLineQueue::Cache> localCache;
     auto& cacheImpl = cache ? static_cast<SweepLineQueue::Cache&>( *cache ) : localCache.emplace();
     // the points are distinct, so none is merged, and the run stops at the first crossing

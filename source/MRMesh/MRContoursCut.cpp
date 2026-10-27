@@ -1110,26 +1110,7 @@ bool crossesInFace( FaceCrossingsBuffers& buf, const Mesh& mesh, const OneMeshCo
             const auto& s = segs[buf.defs[p] / 2];
             preds.addPoint( VertId( p ), preciseCutPoint( mesh, contours, s.c, s.i + buf.defs[p] % 2, edges, tri, *sortData ) );
         }
-        if ( preds.failed() )
-            return true;
-        // a few segments are tested in pairs, faster than by the sweep: two segments without a common end cross if each one
-        // has the ends of the other on its two sides; a segment from a point to itself is skipped, as the sweep skips it
-        if ( segs.size() <= 32 )
-        {
-            for ( size_t s = 0; s < buf.ends.size(); ++s )
-            {
-                for ( size_t t = s + 1; t < buf.ends.size(); ++t )
-                {
-                    const auto [a, b] = buf.ends[s];
-                    const auto [c, d] = buf.ends[t];
-                    if ( a != b && c != d && a != c && a != d && b != c && b != d
-                        && preds.ccw( a, b, c ) != preds.ccw( a, b, d ) && preds.ccw( c, d, a ) != preds.ccw( c, d, b ) )
-                        return true;
-                }
-            }
-            return preds.failed();
-        }
-        return PlanarTriangulation::hasCrossing( buf.ends, preds, buf.cache.get() );
+        return preds.failed() || PlanarTriangulation::hasCrossing( buf.ends, preds, buf.cache.get() );
     }
 
     // drop the axis most aligned with the normal

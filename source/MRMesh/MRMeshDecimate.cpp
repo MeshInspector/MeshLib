@@ -25,6 +25,32 @@
 namespace MR
 {
 
+namespace
+{
+
+enum class EdgeOp : unsigned int
+{
+    CollapseOptPos, ///< collapse the edge with target position optimization
+    CollapseEnd,    ///< collapse the edge in one of its current vertices
+    Flip            ///< flip the edge inside quadrangle
+    // one more option is available to fit in 2 bits
+};
+
+struct QueueElement
+{
+    float c = 0;
+    struct X {
+        EdgeOp edgeOp : 2 = EdgeOp::CollapseOptPos;
+        unsigned int uedgeId : 30 = 0;
+    } x;
+    UndirectedEdgeId uedgeId() const { return UndirectedEdgeId{ (int)x.uedgeId }; }
+    std::pair<float, int> asPair() const { return { -c, x.uedgeId }; }
+    bool operator < ( const QueueElement & r ) const { return asPair() < r.asPair(); }
+};
+static_assert( sizeof( QueueElement ) == 8 );
+
+} // anonymous namespace
+
 class MeshDecimator
 {
 public:
@@ -45,26 +71,6 @@ private:
     const UndirectedEdgeBitSet * initialEdges_ = nullptr;
     std::function<void( EdgeId del, EdgeId rem )> onEdgeDel_;
 
-    enum class EdgeOp : unsigned int
-    {
-        CollapseOptPos, ///< collapse the edge with target position optimization
-        CollapseEnd,    ///< collapse the edge in one of its current vertices
-        Flip            ///< flip the edge inside quadrangle
-        // one more option is available to fit in 2 bits
-    };
-
-    struct QueueElement
-    {
-        float c = 0;
-        struct X {
-            EdgeOp edgeOp : 2 = EdgeOp::CollapseOptPos;
-            unsigned int uedgeId : 30 = 0;
-        } x;
-        UndirectedEdgeId uedgeId() const { return UndirectedEdgeId{ (int)x.uedgeId }; }
-        std::pair<float, int> asPair() const { return { -c, x.uedgeId }; }
-        bool operator < ( const QueueElement & r ) const { return asPair() < r.asPair(); }
-    };
-    static_assert( sizeof( QueueElement ) == 8 );
     PriorityQueue<QueueElement> queue_;
     UndirectedEdgeBitSet validInQueue_; // bit set if the edge is both present in queue_ and not lone
     UndirectedEdgeBitSet outdated_; // true if edge's error in the queue may be outdated (too optimistic) due to nearby collapse
@@ -405,7 +411,7 @@ void MeshDecimator::updateQueue_()
 
     t.restart( "remove deleted" );
     // remove invalid and deleted edges from the queue
-    std::erase_if( vec, [&]( QueueElement & qe ) { return !validInQueue_.test( qe.uedgeId() ); } );
+    erase_if( vec, [&]( QueueElement & qe ) { return !validInQueue_.test( qe.uedgeId() ); } );
 
     t.restart( "restore heap" );
     // sort elements to restore heap property

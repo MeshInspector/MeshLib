@@ -13,7 +13,7 @@ using namespace MR;
 
 EMSCRIPTEN_BINDINGS( meshlib_one_mesh_contours )
 {
-    // Opaque carrier: std::vector<OneMeshContour>; produced here, consumed by cutMesh.
+    // Opaque carrier: Vector<OneMeshContour>; produced here, consumed by cutMesh.
     emscripten::class_<OneMeshContours>( "OneMeshContours" );
 
     emscripten::function( "getOneMeshIntersectionContours", +[]( const Mesh& meshA, const Mesh& meshB,

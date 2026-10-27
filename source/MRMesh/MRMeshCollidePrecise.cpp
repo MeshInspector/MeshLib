@@ -43,7 +43,7 @@ public:
         if ( xf )
         {
             bBoxes_.resize( bTree.nodes().size() );
-            bState_ = std::make_unique<std::atomic<std::uint8_t>[]>( bTree.nodes().size() );
+            bState_ = Vector<std::atomic<std::uint8_t>>( bTree.nodes().size() );
         }
     }
 
@@ -77,7 +77,7 @@ private:
     const AffineXf3f * xf_ = nullptr;
     double minGap_ = 0;
     mutable Buffer<Box3f, NodeId> bBoxes_;
-    std::unique_ptr<std::atomic<std::uint8_t>[]> bState_;
+    mutable Vector<std::atomic<std::uint8_t>> bState_;
 };
 
 /// finds all pairs of colliding edges and triangles of two mesh parts, given the AABB trees with (at least) all triangles of the parts
@@ -94,7 +94,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const A
     // and they shall be not too few for enough parallelism later
     Timer t( "2 top subtasks" );
 
-    std::vector<NodeNode> subtasks{ { NodeId{ 0 }, NodeId{ 0 } } }, nextSubtasks, leafTasks;
+    Vector<NodeNode> subtasks{ { NodeId{ 0 }, NodeId{ 0 } } }, nextSubtasks, leafTasks;
     // tested on two Spheres each with 3366 vertices (these numbers are outdated after preparation of precise boxes):
     // 16 -> init=0.886 (13%), main=5.948, total=6.834
     // 14 -> init=0.429 ( 7%), main=5.990, total=6.419
@@ -231,7 +231,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const A
     struct ThreadData
     {
         PreciseCollisionResult res;
-        std::vector<NodeNode> subtasks;
+        Vector<NodeNode> subtasks;
     };
 
     tbb::enumerable_thread_specific<ThreadData> threadData;
@@ -243,12 +243,12 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const A
         int last = 0;
     };
 
-    std::vector<SubtaskRes> subtaskRes( subtasks.size() );
+    Vector<SubtaskRes> subtaskRes( subtasks.size() );
 
     std::atomic<bool> anyIntersectionAtm{ false };
     ParallelFor( subtasks, threadData, [&]( size_t is, ThreadData & tls )
     {
-        std::vector<NodeNode>& mySubtasks = tls.subtasks;
+        Vector<NodeNode>& mySubtasks = tls.subtasks;
         assert( mySubtasks.empty() );
         mySubtasks.push_back( subtasks[is] );
         SubtaskRes myRes{ .vec = &tls.res };
@@ -468,7 +468,7 @@ void updateCollidingEdgeTrisPrecise( PreciseCollisionResult & res,
         for ( auto t : tris )
             for ( auto e : leftRing( mesh.topology, t ) )
                 edges.set( e.undirected() );
-        std::erase_if( res, [&]( const VarEdgeTri & et )
+        erase_if( res, [&]( const VarEdgeTri & et )
         {
             // both tests without a branch on the kind of the record, which alternates unpredictably:
             // the test of the ids of the other mesh is masked out

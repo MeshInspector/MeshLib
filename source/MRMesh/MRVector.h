@@ -225,18 +225,6 @@ public:
 #endif
 };
 
-/// std::vector allocating with MR::Allocator, for the containers indexed by size_t
-template <typename T>
-class Vector<T, size_t> : public std::vector<T, Allocator<T>>
-{
-public:
-    using std::vector<T, Allocator<T>>::vector;
-
-    [[nodiscard]] size_t beginId() const { return 0; }
-    [[nodiscard]] size_t backId() const { assert( !this->empty() ); return this->size() - 1; }
-    [[nodiscard]] size_t endId() const { return this->size(); }
-};
-
 /// given some std::vector and a key, returns the value associated with the key, or default value if key is invalid or outside the std::vector
 template <typename T>
 [[nodiscard]] inline T getAt( const std::vector<T>& a, size_t id, T def = {} )

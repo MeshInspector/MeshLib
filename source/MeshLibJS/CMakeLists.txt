@@ -6,9 +6,10 @@
 
 project(MeshLibJS CXX)
 
-foreach(lib MRIOExtras MRSymbolMesh MRVoxels)
-  if(NOT TARGET ${lib})
-    message(FATAL_ERROR "The JS bindings link ${lib}, which is disabled.")
+# The libraries this links (some are added to the build after this directory, so the options are checked, not the targets).
+foreach(opt MESHLIB_BUILD_EXTRA_IO_FORMATS MESHLIB_BUILD_SYMBOLMESH MESHLIB_BUILD_VOXELS)
+  if(NOT ${opt})
+    message(FATAL_ERROR "The JS bindings need ${opt}=ON.")
   endif()
 endforeach()
 

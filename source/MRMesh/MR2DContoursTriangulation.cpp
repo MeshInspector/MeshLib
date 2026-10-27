@@ -1996,20 +1996,32 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
     } );
 }
 
-// whether two of the segments between distinct points cross: up to 32 segments are tested in pairs by ccw, faster than setting up
-// the sweep, as two segments without a common end cross if each one has the ends of the other on its two sides (a segment from
+// the predicates of the sweep of hasCrossing: the float ones moved in, or calls of the exact ones
+static SweepLinePredicates sweepPredicates( SweepLinePredicates&& preds )
+{
+    return std::move( preds );
+}
+
+static SweepLinePredicates sweepPredicates( const CutTrianglePredicates& preds )
+{
+    return {
+        .less = [&] ( VertId l, VertId r ) { return preds.less( l, r ); },
+        .ccw = [&] ( VertId a, VertId b, VertId c ) { return preds.ccw( a, b, c ); },
+        .ccwFromBehind = [&] ( VertId b, VertId pivot ) { return preds.ccwFromBehind( b, pivot ); },
+        .failed = [&] { return preds.failed(); } };
+}
+
+// whether two of the segments between distinct points cross: up to cMaxSegmentsInPairs segments are tested in pairs by ccw, faster than
+// setting up the sweep, as two segments without a common end cross if each one has the ends of the other on its two sides (a segment from
 // a point to itself is skipped, as the sweep skips it); more segments by the sweep, which merges no points and stops at the first crossing
 template <typename Preds>
-static bool hasCrossingT( const Vector<TwoVertIds>& segments, const Preds& preds, ISweepLineCache* cache )
+static bool hasCrossingT( const Vector<TwoVertIds>& segments, Preds&& preds, ISweepLineCache* cache )
 {
-    if ( segments.size() > 32 )
+    if ( segments.size() > cMaxSegmentsInPairs )
     {
         std::optional<SweepLineQueue::Cache> localCache;
-        return !SweepLineQueue( cache ? static_cast<SweepLineQueue::Cache&>( *cache ) : localCache.emplace(), {
-            .less = [&] ( VertId l, VertId r ) { return preds.less( l, r ); },
-            .ccw = [&] ( VertId a, VertId b, VertId c ) { return preds.ccw( a, b, c ); },
-            .ccwFromBehind = [&] ( VertId b, VertId pivot ) { return preds.ccwFromBehind( b, pivot ); },
-            .failed = [&] { return preds.failed(); } }, segments, { .abortWhenIntersect = true, .allowMerge = false } ).findIntersections();
+        return !SweepLineQueue( cache ? static_cast<SweepLineQueue::Cache&>( *cache ) : localCache.emplace(),
+            sweepPredicates( std::forward<Preds>( preds ) ), segments, { .abortWhenIntersect = true, .allowMerge = false } ).findIntersections();
     }
     for ( size_t s = 0; s < segments.size(); ++s )
     {
@@ -2036,9 +2048,8 @@ bool hasCrossing( const Vector<TwoVertIds>& segments, const VertCoords& points, 
         box.include( q );
     if ( box.size() == Vector3f() )
         return false; // all points in one position
-    std::optional<SweepLineQueue::Cache> localCache;
-    auto& cacheImpl = cache ? static_cast<SweepLineQueue::Cache&>( *cache ) : localCache.emplace();
-    auto& pts = cacheImpl.pts2Buffer;
+    Vector<Vector2i, VertId> localPts; // without a cache, which the sweep alone makes for more segments
+    auto& pts = cache ? static_cast<SweepLineQueue::Cache&>( *cache ).pts2Buffer : localPts;
     pts.clear();
     const auto toInt = getToIntConverter( Box3d( box ) );
     const auto axes = projectionAxes( normal );
@@ -2050,7 +2061,7 @@ bool hasCrossing( const Vector<TwoVertIds>& segments, const VertCoords& points, 
     SweepLinePredicates p;
     setPts2Predicates( p, &pts );
     p.failed = [] { return false; };
-    return hasCrossingT( segments, p, &cacheImpl );
+    return hasCrossingT( segments, std::move( p ), cache );
 }
 
 }

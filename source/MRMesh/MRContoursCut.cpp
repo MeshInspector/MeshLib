@@ -1055,8 +1055,17 @@ struct FaceCrossingsBuffers
     Vector<int> defs; // an end at every point
     Vector<TwoVertIds> ends; // the points of every segment
     VertCoords xyz; // the coordinates of the points without sortData
-    CutTrianglePredicates preds;
-    std::unique_ptr<PlanarTriangulation::ISweepLineCache> cache = PlanarTriangulation::makeSweepLineCache();
+    std::optional<CutTrianglePredicates> preds; // made on the first face with sortData
+    std::unique_ptr<PlanarTriangulation::ISweepLineCache> cache; // made on the first face that needs it
+
+    // the cache of the sweep, which only a face of more segments than are tested in pairs needs, or one without sortData,
+    // whose projected points it keeps
+    PlanarTriangulation::ISweepLineCache* sweepCache()
+    {
+        if ( !cache )
+            cache = PlanarTriangulation::makeSweepLineCache();
+        return cache.get();
+    }
 };
 
 // whether two segments of one face cross: with sortData, by the exact predicates consistent with the boolean, a failure of which makes
@@ -1095,7 +1104,7 @@ bool crossesInFace( FaceCrossingsBuffers& buf, const Mesh& mesh, const OneMeshCo
     const ThreeVertIds verts{ mesh.topology.org( edges[0] ), mesh.topology.org( edges[1] ), mesh.topology.org( edges[2] ) };
     if ( sortData )
     {
-        auto& preds = buf.preds;
+        auto& preds = buf.preds ? *buf.preds : buf.preds.emplace();
         const auto tri = preciseOwnTri( verts, mesh, *sortData );
         preds.reset( tri );
         for ( int p = 0; p < int( buf.defs.size() ); ++p )
@@ -1103,7 +1112,8 @@ bool crossesInFace( FaceCrossingsBuffers& buf, const Mesh& mesh, const OneMeshCo
             const auto& s = segs[buf.defs[p] / 2];
             preds.addPoint( VertId( p ), preciseCutPoint( mesh, contours, s.c, s.i + buf.defs[p] % 2, edges, tri, *sortData ) );
         }
-        return preds.failed() || PlanarTriangulation::hasCrossing( buf.ends, preds, buf.cache.get() );
+        return preds.failed() || PlanarTriangulation::hasCrossing( buf.ends, preds,
+            buf.ends.size() > PlanarTriangulation::cMaxSegmentsInPairs ? buf.sweepCache() : nullptr );
     }
 
     const auto normal = cornersNormal( mesh, verts );
@@ -1115,7 +1125,7 @@ bool crossesInFace( FaceCrossingsBuffers& buf, const Mesh& mesh, const OneMeshCo
         const auto& s = segs[buf.defs[p] / 2];
         buf.xyz[p] = contours[s.c].intersections[s.i + buf.defs[p] % 2].coordinate;
     }
-    return PlanarTriangulation::hasCrossing( buf.ends, buf.xyz, normal, buf.cache.get() );
+    return PlanarTriangulation::hasCrossing( buf.ends, buf.xyz, normal, buf.sweepCache() );
 }
 
 // finds the old faces of the mesh where two segments of the contours cross, right after doPreCutMesh; two segments with a common end,

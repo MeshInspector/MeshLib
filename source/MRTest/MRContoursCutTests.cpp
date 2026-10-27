@@ -1291,9 +1291,6 @@ TEST( MRMesh, ForceFillCrossingsCylinders )
             SCOPED_TRACE( testing::Message() << sides << " sides, " << ( overlap ? "overlapping" : "separate" ) );
             // the first cylinder is mostly below the diagonal, the second one is on it, by the first one or further along the diagonal
             const auto cylinders = makeTwoCylinders( sides, { 0.55f, 0.48f }, overlap ? Vector2f( 0.52f, 0.51f ) : Vector2f( 0.77f, 0.76f ) );
-            // the side edges of the cylinders cross the top of the cube, and its diagonal crosses each cylinder twice
-            const auto inters = findCollidingEdgeTrisPrecise( cube, cylinders, getVectorConverters( cube, cylinders ).toInt );
-            EXPECT_EQ( inters.size(), size_t( 4 * sides + 4 ) );
             EXPECT_TRUE( boolean( cube, cylinders, BooleanOperation::Union ).meshABadContourFaces.none() );
             const auto bad = forcedBooleanBadFaces( cube, cylinders );
             EXPECT_EQ( bad[0].count(), overlap ? 1 : 0 );

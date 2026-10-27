@@ -72,7 +72,7 @@ struct CutMeshResult
     /// under force fill, also the triangles where two segments of the contours cross (segments that follow each other along a contour
     /// or have a common mesh vertex do not), even if their cut is valid; the triangles where that cannot be told may be reported too:
     /// where the exact predicates fail on the points of the contours that they compare (e.g. coincident contours of a double-sided sheet),
-    /// or, without sortData, where the corners of the triangle are on one line
+    /// or, without sortData, where the corners of the triangle are on one line and more than three points of the contours are inside it
     /// \sa \ref MR::CutMeshParameters
     FaceBitSet fbsWithContourIntersections;
 };

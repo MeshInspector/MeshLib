@@ -43,7 +43,10 @@ function(mr_add_js_module TARGET_NAME)
     LINKER_LANGUAGE CXX
     RUNTIME_OUTPUT_DIRECTORY "${MESHLIB_JS_DIR}"
   )
+  # The generated link flags export Emscripten's exception helpers (our C bindings don't catch C++ exceptions, the JS converts
+  # the escaping ones), which need the exception-enabled system libraries: `-fexceptions` at link time selects them.
   target_link_options(${TARGET_NAME} PRIVATE
+    "-fexceptions"
     "SHELL:@${MESHLIB_JS_DIR}/emcc_link_flags.rsp"
     "SHELL:-sEXPORTED_FUNCTIONS=@${MESHLIB_JS_DIR}/exported_functions.txt"
     "-sMODULARIZE=1"

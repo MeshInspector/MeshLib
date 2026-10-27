@@ -149,6 +149,8 @@ jobs:
             -DMESHLIB_BUILD_MESHCONV=OFF
           MR_CMAKE_BUILD_OPTIONS: --target MeshViewer
         run: |
+          export HOME=${RUNNER_TEMP}
+          git config --global --add safe.directory '*'
           git fetch --depth=1 origin master
           git show origin/master:source/MRViewer/MRViewerSettingsManager.cpp > source/MRViewer/MRViewerSettingsManager.cpp
           grep -c mainWindowScreenSize source/MRViewer/MRViewerSettingsManager.cpp || true

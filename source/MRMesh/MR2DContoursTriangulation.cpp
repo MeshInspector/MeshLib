@@ -474,8 +474,6 @@ private:
         operator bool() const { return vId.valid(); }
     };
     using IntersectionMap = HashMap<EdgePair, IntersectionInfo>;
-    // whether segments (aOrg,aDest) and (bOrg,bDest) properly intersect, via the injected ccw
-    bool doSegmentSegmentIntersect_( VertId aOrg, VertId aDest, VertId bOrg, VertId bDest ) const;
     void checkIntersection_( int index, bool lower );
     void checkIntersection_( int indexLower );
     // an intersection was found while params_.abortWhenIntersect, so the run fails
@@ -1153,16 +1151,18 @@ void SweepLineQueue::checkIntersection_( int index, bool lower )
         return checkIntersection_( index );
 }
 
-bool SweepLineQueue::doSegmentSegmentIntersect_( VertId aOrg, VertId aDest, VertId bOrg, VertId bDest ) const
+// whether segments (aOrg,aDest) and (bOrg,bDest) properly intersect, which they do iff each separates the endpoints of the other;
+// equivalent of MR::doSegmentSegmentIntersect on the ccw of the predicates (cIsLeftFromAB is unused here);
+// inlined, since the sweep asks it about every two neighboring active edges
+template <typename Preds>
+static MR_FORCE_INLINE bool doSegmentsCross( const Preds& preds, VertId aOrg, VertId aDest, VertId bOrg, VertId bDest )
 {
-    // segments intersect iff each separates the endpoints of the other;
-    // predicate-based equivalent of MR::doSegmentSegmentIntersect (cIsLeftFromAB is unused here)
-    const bool abc = predicates_.ccw( aOrg, aDest, bOrg );
-    const bool abd = predicates_.ccw( aOrg, aDest, bDest );
+    const bool abc = preds.ccw( aOrg, aDest, bOrg );
+    const bool abd = preds.ccw( aOrg, aDest, bDest );
     if ( abc == abd )
         return false; // segment (bOrg,bDest) is on one side of line (aOrg,aDest)
-    const bool cda = predicates_.ccw( bOrg, bDest, aOrg );
-    const bool cdb = predicates_.ccw( bOrg, bDest, aDest );
+    const bool cda = preds.ccw( bOrg, bDest, aOrg );
+    const bool cdb = preds.ccw( bOrg, bDest, aDest );
     return cda != cdb; // equal => segment (aOrg,aDest) is on one side of line (bOrg,bDest)
 }
 
@@ -1178,7 +1178,7 @@ void SweepLineQueue::checkIntersection_( int i )
     if ( !canIntersect || !org1 || !org2 || !dest1 || !dest2 )
         return;
 
-    if ( !doSegmentSegmentIntersect_( org1, dest1, org2, dest2 ) )
+    if ( !doSegmentsCross( predicates_, org1, dest1, org2, dest2 ) )
         return;
     if ( params_.abortWhenIntersect )
     {
@@ -2017,8 +2017,7 @@ static bool hasCrossingT( const std::vector<TwoVertIds>& segments, const Preds& 
         {
             const auto [a, b] = segments[s];
             const auto [c, d] = segments[t];
-            if ( a != b && c != d && a != c && a != d && b != c && b != d
-                && preds.ccw( a, b, c ) != preds.ccw( a, b, d ) && preds.ccw( c, d, a ) != preds.ccw( c, d, b ) )
+            if ( a != b && c != d && a != c && a != d && b != c && b != d && doSegmentsCross( preds, a, b, c, d ) )
                 return true;
         }
     }

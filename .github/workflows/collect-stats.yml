@@ -75,6 +75,7 @@ jobs:
       - name: Delete stats artifacts
         uses: actions/github-script@v9
         with:
+          retries: 3
           script: |
             const { owner, repo } = context.repo;
             const runId = Number(${{ toJSON(inputs.run_id) }});

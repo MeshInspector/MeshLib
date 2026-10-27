@@ -21,8 +21,7 @@ static void report( GLFWwindow* w, int i )
 int main( int argc, char** argv )
 {
     const char* mode = argc > 1 ? argv[1] : "default";
-    printf( "mode %s
-", mode );
+    printf( "mode %s\n", mode );
     glfwSetErrorCallback( onErr );
     if ( !glfwInit() )
     {
@@ -73,8 +72,7 @@ int main( int argc, char** argv )
     if ( strcmp( mode, "hidden" ) == 0 || strcmp( mode, "twowin" ) == 0 )
     {
         for ( int i = 0; i < 20; ++i ) { glfwPollEvents(); usleep( 10000 ); }
-        printf( "[%.3f] glfwShowWindow
-", glfwGetTime() );
+        printf( "[%.3f] glfwShowWindow\n", glfwGetTime() );
         glfwShowWindow( w );
     }
     for ( int i = 1; i <= 300; ++i )

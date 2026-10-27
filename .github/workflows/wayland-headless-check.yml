@@ -70,15 +70,15 @@ jobs:
 
       - name: Install the MCP client, hand the workspace to the unprivileged user (Weston refuses root)
         run: |
-          python3 -m pip install --break-system-packages --ignore-installed mcp
+          python3 -m pip install --break-system-packages --ignore-installed 'mcp==2.3.0'
           mkdir -p /tmp/home /tmp/xdg out
           chmod 0700 /tmp/xdg
           chown -R github-user /tmp/home /tmp/xdg "${GITHUB_WORKSPACE}"
 
       - name: Start Weston headless at scale 2 and at scale 1
         run: |
-          ${AS_USER} weston --backend=headless --socket=wl-scale2 --width=3200 --height=2000 --scale=2 --idle-time=0 --renderer=gl --log=/tmp/weston-scale2.log &
-          ${AS_USER} weston --backend=headless --socket=wl-scale1 --width=1600 --height=1000 --scale=1 --idle-time=0 --renderer=gl --log=/tmp/weston-scale1.log &
+          ${AS_USER} weston --backend=headless --socket=wl-scale2 --width=3200 --height=2000 --scale=2 --idle-time=0 --debug --renderer=gl --log=/tmp/weston-scale2.log &
+          ${AS_USER} weston --backend=headless --socket=wl-scale1 --width=1600 --height=1000 --scale=1 --idle-time=0 --debug --renderer=gl --log=/tmp/weston-scale1.log &
           sleep 3
           ls -l /tmp/xdg
           cat /tmp/weston-scale2.log
@@ -92,10 +92,10 @@ jobs:
           st=$?
           cp viewer_stdout.txt out/runA-stdout.txt
           cp /tmp/MeshLib/Logs/*.txt out/ 2>/dev/null || true
-          exit $st
           cfg=$(find /tmp/home -name config.json | head -1)
           echo "config: ${cfg}"
           grep -A3 -i 'mainWindow' "${cfg}" || true
+          exit $st
 
       - name: Run B, scale 2, saved screen size 1000x600 (expect 2000x1200 framebuffer)
         env:

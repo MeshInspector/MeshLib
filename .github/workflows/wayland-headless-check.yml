@@ -86,8 +86,10 @@ jobs:
       - name: GLFW-only probe at scale 2 and at scale 1
         run: |
           cc -O1 scripts/devops/glfw_wayland_probe.c -I/usr/local/include -L/usr/local/lib -lglfw -o out/glfw_probe
-          echo "=== scale 2"; ${AS_USER} env WAYLAND_DISPLAY=wl-scale2 out/glfw_probe || true
-          echo "=== scale 1"; ${AS_USER} env WAYLAND_DISPLAY=wl-scale1 out/glfw_probe || true
+          for mode in default hidden transparent twowin; do
+            echo "=== scale 2, $mode"; ${AS_USER} env WAYLAND_DISPLAY=wl-scale2 out/glfw_probe $mode 2>/dev/null || true
+          done
+          echo "=== scale 1"; ${AS_USER} env WAYLAND_DISPLAY=wl-scale1 out/glfw_probe 2>/dev/null || true
 
       - name: Run A, scale 2, fresh config (expect 1280x800 window = 2560x1600 framebuffer)
         env:

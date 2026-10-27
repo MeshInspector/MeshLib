@@ -1335,7 +1335,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     FaceBitSet badLoneFaces;
     connectLoneContours( mesh, contours, loneFaces, preRes, firstNewEdge, params.sortData, params.new2oldEdgesMap, badLoneFaces );
 
-    res.fbsWithContourIntersections |= getBadFacesAfterCut( mesh.topology, preRes ) | badLoneFaces;
+    res.fbsWithContourIntersections = getBadFacesAfterCut( mesh.topology, preRes ) | badLoneFaces | res.fbsWithContourIntersections;
     if ( !params.forceFill && res.fbsWithContourIntersections.any() )
         return res;
 

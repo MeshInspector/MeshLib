@@ -97,7 +97,7 @@ jobs:
           WAYLAND_DISPLAY: wl-scale2
         run: |
           set +e
-          ${AS_USER} env WAYLAND_DEBUG=1 python3 scripts/devops/wayland_headless_check.py build/Release/bin/MeshViewer 7899 2560 1600 out/runA-scale2-fresh.png
+          ${AS_USER} python3 scripts/devops/wayland_headless_check.py build/Release/bin/MeshViewer 7899 2560 1600 out/runA-scale2-fresh.png
           st=$?
           cp viewer_stdout.txt out/runA-stdout.txt
           cp /tmp/MeshLib/Logs/*.txt out/ 2>/dev/null || true

@@ -1146,9 +1146,10 @@ TEST( MRMesh, SurfaceOffsetAlongOpenBorder )
 }
 
 // an open contour across triangle 0_f of the square at y = 2, and a contour from the bottom side up to a point inside 0_f and back,
-// or to a zigzag of 33 points there, whose 35 segments in 0_f the search tests by the sweep on the float coordinates: with the points
-// above the first contour, they cross twice, which leaves valid hole loops, so the plain cut does not report it, while under force fill
-// the face of the crossings is bad; with the points below it, the contours do not meet, and the segments of the second one only touch
+// or to a zigzag of 33 points there, so that 0_f has 35 segments with the first contour, which the search tests by the sweep on the float
+// coordinates: with the points above the first contour, they cross twice, which leaves valid hole loops, so the plain cut does not
+// report it, while under force fill the face of the crossings is bad; with the points below it, the contours do not meet, and the segments
+// of the second one only touch
 TEST( MRMesh, ForceFillCrossingsEven )
 {
     const auto square = makeSquareOfTwoTriangles();
@@ -1227,15 +1228,15 @@ Mesh makeTwoBoxes( float z0, float z1 )
     return res;
 }
 
-// two cylinders of radius 0.1 and 64 sides from z = 0.5 to 1.5 around (x0, 0.2) and (x1, 0.2), which cross the top of the unit cube
-// inside its triangle below the diagonal, away from its sides, each in a closed contour of 128 points on its vertical and diagonal edges
-Mesh makeTwoCylinders( float x0, float x1 )
+// two cylinders of radius 0.1 with the given number of sides from z = 0.5 to 1.5 around c0 and c1, every one crossing the top of the unit
+// cube by its 2 * sides vertical and diagonal side edges
+Mesh makeTwoCylinders( int sides, const Vector2f& c0, const Vector2f& c1 )
 {
     Mesh res;
-    for ( float x : { x0, x1 } )
+    for ( const auto& c : { c0, c1 } )
     {
-        auto cylinder = makeCylinder( 0.1f, 1, 64 );
-        cylinder.transform( AffineXf3f::translation( Vector3f( x, 0.2f, 0.5f ) ) );
+        auto cylinder = makeCylinder( 0.1f, 1, sides );
+        cylinder.transform( AffineXf3f::translation( Vector3f( c.x, c.y, 0.5f ) ) );
         res.addMesh( cylinder );
     }
     return res;
@@ -1275,24 +1276,35 @@ TEST( MRMesh, ForceFillCrossingsBoolean )
     expectTop( forcedBooleanBadFaces( cube, makeTwoBoxes( 1, 1.5f ) )[0], cube, {} );
 }
 
-// the top of a cube crossed inside one triangle by two cylinders, whose closed contours have 256 segments there, so that the sweep tests
-// them on the exact predicates: overlapping cylinders, whose contours cross twice, make that triangle bad, and separate ones nothing
-TEST( MRMesh, ForceFillCrossingsSweep )
+// the top of a cube crossed by two cylinders through its diagonal, so that their contours are not lone ones (the plain cut reports the face
+// of crossing lone contours already): overlapping cylinders, whose contours cross twice inside the triangle below the diagonal, where they
+// have 22 segments with 8 sides, which are tested in pairs, or 154 with 64 sides, which the sweep tests, both on the exact predicates, make
+// that triangle bad under force fill, while the plain cut does not report it, as the contours leave valid hole loops there; separate
+// cylinders make nothing bad
+TEST( MRMesh, ForceFillCrossingsCylinders )
 {
     const auto cube = makeCube( Vector3f::diagonal( 1 ), Vector3f() );
-    for ( bool overlap : { true, false } )
+    for ( int sides : { 8, 64 } )
     {
-        SCOPED_TRACE( overlap ? "overlapping" : "separate" );
-        const auto cylinders = makeTwoCylinders( 0.55f, overlap ? 0.7f : 0.8f );
-        // every contour point is a side edge of the cylinders crossing one triangle of the cube
-        const auto inters = findCollidingEdgeTrisPrecise( cube, cylinders, getVectorConverters( cube, cylinders ).toInt );
-        ASSERT_EQ( inters.size(), 256 );
-        const auto top = inters.front().tri();
-        EXPECT_TRUE( std::all_of( inters.begin(), inters.end(), [top] ( const VarEdgeTri& x ) { return !x.isEdgeATriB() && x.tri() == top; } ) );
-        const auto bad = forcedBooleanBadFaces( cube, cylinders );
-        EXPECT_EQ( bad[0].count(), overlap ? 1 : 0 );
-        EXPECT_EQ( bad[0].test( top ), overlap );
-        EXPECT_TRUE( bad[1].none() );
+        for ( bool overlap : { true, false } )
+        {
+            SCOPED_TRACE( testing::Message() << sides << " sides, " << ( overlap ? "overlapping" : "separate" ) );
+            // the first cylinder is mostly below the diagonal, the second one is on it, by the first one or further along the diagonal
+            const auto cylinders = makeTwoCylinders( sides, { 0.55f, 0.48f }, overlap ? Vector2f( 0.52f, 0.51f ) : Vector2f( 0.77f, 0.76f ) );
+            // the side edges of the cylinders cross the top of the cube, and its diagonal crosses each cylinder twice
+            const auto inters = findCollidingEdgeTrisPrecise( cube, cylinders, getVectorConverters( cube, cylinders ).toInt );
+            EXPECT_EQ( inters.size(), size_t( 4 * sides + 4 ) );
+            EXPECT_TRUE( boolean( cube, cylinders, BooleanOperation::Union ).meshABadContourFaces.none() );
+            const auto bad = forcedBooleanBadFaces( cube, cylinders );
+            EXPECT_EQ( bad[0].count(), overlap ? 1 : 0 );
+            for ( auto f : bad[0] )
+            {
+                const auto c = cube.triCenter( f );
+                EXPECT_NEAR( c.z, 1, 1e-5f );
+                EXPECT_GT( c.x, c.y );
+            }
+            EXPECT_TRUE( bad[1].none() );
+        }
     }
 }
 

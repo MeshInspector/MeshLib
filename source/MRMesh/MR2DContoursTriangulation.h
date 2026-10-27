@@ -166,7 +166,7 @@ MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const 
 MR_BIND_IGNORE MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops,
     const std::array<PreciseVertCoords, 3>& tri, const std::function<PreciseCutPoint( VertId )>& pointOf );
 
-/// \ref hasCrossing tests up to this many segments in pairs, which is faster for them than the sweep, the only user of its cache there
+/// \ref hasCrossing tests up to this many segments in pairs, which is faster for them than the sweep, the only user of its cache with the exact predicates
 constexpr size_t cMaxSegmentsInPairs = 32;
 
 /// whether two of the segments between the points of \p preds cross, found by the sweep of \ref triangulateDisjointContours,

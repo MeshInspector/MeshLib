@@ -67,7 +67,7 @@ jobs:
 
       - name: Install the MCP client, hand the workspace to the unprivileged user (Weston refuses root)
         run: |
-          python3 -m pip install --break-system-packages mcp
+          python3 -m pip install --break-system-packages --ignore-installed mcp
           mkdir -p /tmp/home /tmp/xdg out
           chmod 0700 /tmp/xdg
           chown -R github-user /tmp/home /tmp/xdg "${GITHUB_WORKSPACE}"

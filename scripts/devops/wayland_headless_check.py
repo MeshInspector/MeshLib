@@ -5,6 +5,13 @@ Exit code 1 when the framebuffer size differs from the expectation or the viewer
 """
 import asyncio, json, os, subprocess, sys, time
 
+# MeshViewer's SSE endpoint answers with a doubled `Content-Type: text/event-stream, text/event-stream`;
+# httpx2's EventSource compares the header for equality and rejects it, so that check is disabled here.
+import httpx2._sse as _sse
+for _obj in list(vars(_sse).values()):
+    if isinstance(_obj, type) and hasattr(_obj, "_check_content_type"):
+        _obj._check_content_type = lambda self: None
+
 from mcp import ClientSession
 from mcp.client.sse import sse_client
 

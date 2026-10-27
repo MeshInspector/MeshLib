@@ -13,6 +13,8 @@
 #include <MRMesh/MRMeshComponents.h>
 #include <MRMesh/MRFillContour.h>
 #include <MRMesh/MRMeshBoolean.h>
+#include <MRMesh/MRCylinder.h>
+#include <MRMesh/MR2DContoursTriangulation.h>
 #include <cmath>
 #include <random>
 
@@ -1178,9 +1180,16 @@ TEST( MRMesh, ForceFillCrossingsOneFace )
     for ( bool cross : { true, false } )
         check( { { .intersections = { side( 0_v, 1_v, 4, 0 ), side( 0_v, 2_v, 5, 5 ), in( 1_f, 2, 6 ), side( 2_v, 0_v, 3, 3 ),
             cross ? side( 2_v, 1_v, 10, 5 ) : side( 1_v, 0_v, 2, 0 ) } } }, cross );
+    // two contours through mesh vertex 2_v only touch there, also with a third one from the bottom side up to a point inside 0_f and back,
+    // which crosses the second one twice with the point left of it, or meets none with the point right of it: then 0_f, removed at 2_v
+    // before the search, has more than three points
     const OneMeshIntersection corner{ .primitiveId = 2_v, .coordinate = Vector3f( 10, 10, 0 ) };
-    check( { { .intersections = { side( 0_v, 1_v, 4, 0 ), corner, side( 0_v, 3_v, 0, 6 ) } },
-        { .intersections = { side( 0_v, 1_v, 7, 0 ), corner, side( 0_v, 3_v, 0, 3 ) } } }, false );
+    const OneMeshContour viaCorner[] = { { .intersections = { side( 0_v, 1_v, 4, 0 ), corner, side( 0_v, 3_v, 0, 6 ) } },
+        { .intersections = { side( 0_v, 1_v, 7, 0 ), corner, side( 0_v, 3_v, 0, 3 ) } } };
+    check( { viaCorner[0], viaCorner[1] }, false );
+    for ( bool cross : { true, false } )
+        check( { viaCorner[0], viaCorner[1],
+            { .intersections = { side( 0_v, 1_v, 8, 0 ), in( 0_f, cross ? 6.5f : 9.5f, 2 ), side( 1_v, 0_v, 9, 0 ) } } }, cross );
 }
 
 namespace
@@ -1198,6 +1207,20 @@ Mesh makeTwoBoxes( float z0, float z1 )
 {
     auto res = makeCube( Vector3f( 0.4f, 0.4f, z1 - z0 ), Vector3f( 0.2f, 0.2f, z0 ) );
     res.addMesh( makeCube( Vector3f( 0.4f, 0.4f, z1 - z0 ), Vector3f( 0.4f, 0.4f, z0 ) ) );
+    return res;
+}
+
+// two cylinders of radius 0.1 and 64 sides from z = 0.5 to 1.5 around (x0, 0.2) and (x1, 0.2), which cross the top of the unit cube
+// inside its triangle below the diagonal, away from its sides, each in a closed contour of 128 points on its vertical and diagonal edges
+Mesh makeTwoCylinders( float x0, float x1 )
+{
+    Mesh res;
+    for ( float x : { x0, x1 } )
+    {
+        auto cylinder = makeCylinder( 0.1f, 1, 64 );
+        cylinder.transform( AffineXf3f::translation( Vector3f( x, 0.2f, 0.5f ) ) );
+        res.addMesh( cylinder );
+    }
     return res;
 }
 
@@ -1233,6 +1256,51 @@ TEST( MRMesh, ForceFillCrossingsBoolean )
     expectTop( forcedBooleanBadFaces( boxes, local, &xf )[1], local, xf );
 
     expectTop( forcedBooleanBadFaces( cube, makeTwoBoxes( 1, 1.5f ) )[0], cube, {} );
+}
+
+// the top of a cube crossed inside one triangle by two cylinders, whose closed contours have 256 segments there, so that the sweep tests
+// them on the exact predicates: overlapping cylinders, whose contours cross twice, make that triangle bad, and separate ones nothing
+TEST( MRMesh, ForceFillCrossingsSweep )
+{
+    const auto cube = makeCube( Vector3f::diagonal( 1 ), Vector3f() );
+    for ( bool overlap : { true, false } )
+    {
+        SCOPED_TRACE( overlap ? "overlapping" : "separate" );
+        const auto cylinders = makeTwoCylinders( 0.55f, overlap ? 0.7f : 0.8f );
+        // every contour point is a side edge of the cylinders crossing one triangle of the cube
+        const auto inters = findCollidingEdgeTrisPrecise( cube, cylinders, getVectorConverters( cube, cylinders ).toInt );
+        ASSERT_EQ( inters.size(), 256 );
+        const auto top = inters.front().tri();
+        EXPECT_TRUE( std::all_of( inters.begin(), inters.end(), [top] ( const VarEdgeTri& x ) { return !x.isEdgeATriB() && x.tri() == top; } ) );
+        const auto bad = forcedBooleanBadFaces( cube, cylinders );
+        EXPECT_EQ( bad[0].count(), overlap ? 1 : 0 );
+        EXPECT_EQ( bad[0].test( top ), overlap );
+        EXPECT_TRUE( bad[1].none() );
+    }
+}
+
+// the float overload of hasCrossing on more than 32 segments, which the sweep tests: 30 vertical segments, a chain of two segments over
+// the tops of the first two, the third one again and reversed, and a segment from a point to itself, all of which only touch, with
+// a segment from the top of the first vertical one to the bottom of the second one, touching them only, or of the sixth one, crossing four
+TEST( MRMesh, ForceFillCrossingsSweepFloat )
+{
+    std::vector<Vector3f> points;
+    std::vector<TwoVertIds> segments;
+    for ( int i = 0; i < 30; ++i )
+    {
+        segments.push_back( { VertId( 2 * i ), VertId( 2 * i + 1 ) } );
+        points.emplace_back( float( i ), 0.f, 0.f );
+        points.emplace_back( float( i ), 10.f, 0.f );
+    }
+    points.emplace_back( 0.5f, 12.f, 0.f );
+    segments.insert( segments.end(), { { 1_v, 60_v }, { 60_v, 3_v }, { 4_v, 5_v }, { 5_v, 4_v }, { 6_v, 6_v } } );
+    const auto cache = PlanarTriangulation::makeSweepLineCache();
+    for ( bool cross : { true, false } )
+    {
+        auto s = segments;
+        s.push_back( { 1_v, cross ? 10_v : 2_v } );
+        EXPECT_EQ( PlanarTriangulation::hasCrossing( s, points, Vector3f::plusZ(), cache.get() ), cross );
+    }
 }
 
 // a flat rectangle of two triangles and the same triangles reversed, with the same vertices (a closed double-sided sheet, whose diagonals

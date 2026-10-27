@@ -2,23 +2,33 @@
 #ifndef MRIOEXTRAS_NO_LAS
 #include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRBox.h"
+#include "MRMesh/MRChrono.h"
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRPointsLoadSettings.h"
 #include "MRMesh/MRProgressCallback.h"
 #include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRTimer.h"
+#include "MRMesh/MRVector.h"
 #include "MRPch/MRFmt.h"
 
 #if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
 #pragma warning( push )
 #pragma warning( disable: 5267 ) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
 #endif
+#include <lazperf/filestream.hpp>
 #include <lazperf/lazperf.hpp>
 #include <lazperf/readers.hpp>
+#include <lazperf/vlr.hpp>
+#include <lazperf/writers.hpp>
 #if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
 #pragma warning( pop )
 #endif
+
+#include <algorithm>
+#include <cmath>
+#include <fstream>
 
 namespace
 {
@@ -369,13 +379,13 @@ Expected<PointCloud> process( lazperf::reader::basic_file& reader, const PointsL
                 settings.colors->emplace_back( color );
                 colorsHi->emplace_back( color );
             }
+        }
 
-            if ( hasNormals )
-            {
-                Vector3d normal;
-                std::memcpy( &normal.x, buf.data() + LasPointSize[pointFormat], 3 * sizeof( double ) );
-                result.normals.push_back( Vector3f( normal ) );
-            }
+        if ( hasNormals )
+        {
+            Vector3d normal;
+            std::memcpy( &normal.x, buf.data() + LasPointSize[pointFormat], 3 * sizeof( double ) );
+            result.normals.push_back( Vector3f( normal ) );
         }
     }
 
@@ -388,6 +398,191 @@ Expected<PointCloud> process( lazperf::reader::basic_file& reader, const PointsL
     result.validPoints.resize( result.points.size(), true );
 
     return result;
+}
+
+Expected<void> save( const PointCloud& cloud, std::ostream& out, const SaveSettings& settings, bool compress )
+{
+    MR_TIMER;
+    const size_t totalPoints = settings.onlyValidPoints ? cloud.validPoints.count() : cloud.points.size();
+    if ( totalPoints > std::numeric_limits<uint32_t>::max() )
+        return unexpected( fmt::format( "Too many points for LAS 1.2 format: {}", totalPoints ) );
+
+    const bool saveColors = settings.colors && !settings.colors->empty();
+    const bool saveNormals = cloud.points.size() <= cloud.normals.size();
+    const int pointFormat = saveColors ? 2 : 0;
+    const int ebCount = saveNormals ? int( 3 * sizeof( double ) ) : 0;
+
+    Box3d box;
+    for ( auto v = 0_v; v < cloud.points.size(); ++v )
+        if ( !settings.onlyValidPoints || cloud.validPoints.test( v ) )
+            box.include( applyDouble( settings.xf, cloud.points[v] ) );
+    if ( !box.valid() )
+        box = Box3d( Vector3d(), Vector3d() );
+
+    // the largest power of 10 scale keeping all coordinates relative to the center within int32 range
+    const Vector3d offset = box.center();
+    const double maxHalfSize = std::max( { box.size().x, box.size().y, box.size().z } ) / 2;
+    const double scale = maxHalfSize > 0 ? std::pow( 10.0, std::ceil( std::log10( maxHalfSize / 2e9 ) ) ) : 1.0;
+    const auto quantize = [&] ( const Vector3d& p )
+    {
+        return LasPoint {
+            int32_t( std::lround( ( p.x - offset.x ) / scale ) ),
+            int32_t( std::lround( ( p.y - offset.y ) / scale ) ),
+            int32_t( std::lround( ( p.z - offset.z ) / scale ) ),
+        };
+    };
+    const auto boxMin = quantize( box.min );
+    const auto boxMax = quantize( box.max );
+
+    lazperf::header12 header;
+    constexpr char generatingSoftware[] = "MeshLib";
+    std::memcpy( header.generating_software, generatingSoftware, sizeof( generatingSoftware ) );
+    if ( const auto tm = Localtime( std::time( nullptr ) ) )
+    {
+        header.creation.day = uint16_t( tm->tm_yday + 1 );
+        header.creation.year = uint16_t( tm->tm_year + 1900 );
+    }
+    header.header_size = uint16_t( lazperf::header12::Size );
+    header.point_format_id = uint8_t( pointFormat );
+    header.point_record_length = uint16_t( LasPointSize[pointFormat] + ebCount );
+    header.point_count = uint32_t( totalPoints );
+    header.points_by_return[0] = header.point_count;
+    header.scale = { scale, scale, scale };
+    header.offset = { offset.x, offset.y, offset.z };
+    header.minx = boxMin.x * scale + offset.x;
+    header.miny = boxMin.y * scale + offset.y;
+    header.minz = boxMin.z * scale + offset.z;
+    header.maxx = boxMax.x * scale + offset.x;
+    header.maxy = boxMax.y * scale + offset.y;
+    header.maxz = boxMax.z * scale + offset.z;
+
+    const lazperf::laz_vlr lazVlr( pointFormat, ebCount, lazperf::DefaultChunkSize );
+    lazperf::eb_vlr ebVlr;
+    if ( saveNormals )
+    {
+        for ( const char* name : { "NormalX", "NormalY", "NormalZ" } )
+        {
+            lazperf::eb_vlr::ebfield field;
+            field.data_type = 10; // double
+            field.name = name;
+            ebVlr.addField( field );
+        }
+    }
+
+    header.point_offset = header.header_size;
+    if ( compress )
+    {
+        header.point_format_id |= 0x80;
+        header.point_offset += uint32_t( lazperf::vlr_header::Size + lazVlr.size() );
+        ++header.vlr_count;
+    }
+    if ( saveNormals )
+    {
+        header.point_offset += uint32_t( lazperf::vlr_header::Size + ebVlr.size() );
+        ++header.vlr_count;
+    }
+
+    header.write( out );
+    if ( compress )
+    {
+        lazVlr.header().write( out );
+        lazVlr.write( out );
+    }
+    if ( saveNormals )
+    {
+        ebVlr.header().write( out );
+        ebVlr.write( out );
+    }
+
+    // compressed chunks are kept in memory, since the offset of the chunk table must precede them
+    std::optional<lazperf::writer::chunk_compressor> compressor;
+    std::vector<unsigned char> compressed;
+    std::vector<lazperf::chunk> chunks;
+    const auto finishChunk = [&]
+    {
+        const auto data = compressor->done();
+        compressed.insert( compressed.end(), data.begin(), data.end() );
+        chunks.back().offset = data.size();
+        compressor.reset();
+    };
+
+    std::optional<Matrix3d> normXf;
+    if ( saveNormals && settings.xf )
+        normXf = settings.xf->A.inverse().transposed();
+
+    std::vector<char> buf( header.point_record_length, '\0' );
+    size_t numSaved = 0;
+    for ( auto v = 0_v; v < cloud.points.size(); ++v )
+    {
+        if ( settings.onlyValidPoints && !cloud.validPoints.test( v ) )
+            continue;
+
+        LasPoint2 point {};
+        const auto pos = quantize( applyDouble( settings.xf, cloud.points[v] ) );
+        point.x = pos.x;
+        point.y = pos.y;
+        point.z = pos.z;
+        point.returnNumber = 1;
+        point.numberOfReturns = 1;
+        if ( saveColors )
+        {
+            const auto c = getAt( *settings.colors, v );
+            point.red = uint16_t( c.r * 257 );
+            point.green = uint16_t( c.g * 257 );
+            point.blue = uint16_t( c.b * 257 );
+        }
+        std::memcpy( buf.data(), &point, LasPointSize[pointFormat] );
+
+        if ( saveNormals )
+        {
+            Vector3d normal( cloud.normals[v] );
+            if ( normXf )
+                normal = *normXf * normal;
+            std::memcpy( buf.data() + LasPointSize[pointFormat], &normal.x, 3 * sizeof( double ) );
+        }
+
+        if ( compress )
+        {
+            if ( !compressor )
+            {
+                compressor.emplace( pointFormat, ebCount );
+                chunks.push_back( {} );
+            }
+            compressor->compress( buf.data() );
+            if ( ++chunks.back().count == lazperf::DefaultChunkSize )
+                finishChunk();
+        }
+        else
+        {
+            out.write( buf.data(), buf.size() );
+        }
+
+        ++numSaved;
+        if ( settings.progress && !( numSaved & 0x3FF ) && !settings.progress( float( numSaved ) / totalPoints ) )
+            return unexpectedOperationCanceled();
+    }
+
+    if ( compress )
+    {
+        if ( compressor )
+            finishChunk();
+        const auto chunkTableOffset = int64_t( header.point_offset + sizeof( int64_t ) + compressed.size() );
+        out.write( (const char*)&chunkTableOffset, sizeof( chunkTableOffset ) );
+        out.write( (const char*)compressed.data(), compressed.size() );
+
+        const uint32_t chunkTableVersion = 0;
+        const auto numChunks = uint32_t( chunks.size() );
+        out.write( (const char*)&chunkTableVersion, sizeof( chunkTableVersion ) );
+        out.write( (const char*)&numChunks, sizeof( numChunks ) );
+        lazperf::OutFileStream stream( out );
+        lazperf::compress_chunk_table( stream.cb(), chunks, false );
+    }
+
+    if ( !out )
+        return unexpected( std::string( "Error saving in LAS-format" ) );
+
+    reportProgress( settings.progress, 1.f );
+    return {};
 }
 
 }
@@ -425,4 +620,40 @@ MR_ADD_POINTS_LOADER( IOFilter( "LAS (.las)", "*.las" ), fromLas )
 MR_ADD_POINTS_LOADER( IOFilter( "LASzip (.laz)", "*.laz" ), fromLas )
 
 } // namespace MR::PointsLoad
+
+namespace MR::PointsSave
+{
+
+Expected<void> toLas( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings )
+{
+    std::ofstream out( file, std::ofstream::binary );
+    if ( !out )
+        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+
+    return toLas( points, out, settings );
+}
+
+Expected<void> toLas( const PointCloud& points, std::ostream& out, const SaveSettings& settings )
+{
+    return save( points, out, settings, false );
+}
+
+Expected<void> toLaz( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings )
+{
+    std::ofstream out( file, std::ofstream::binary );
+    if ( !out )
+        return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
+
+    return toLaz( points, out, settings );
+}
+
+Expected<void> toLaz( const PointCloud& points, std::ostream& out, const SaveSettings& settings )
+{
+    return save( points, out, settings, true );
+}
+
+MR_ADD_POINTS_SAVER( IOFilter( "LAS (.las)", "*.las" ), toLas )
+MR_ADD_POINTS_SAVER( IOFilter( "LASzip (.laz)", "*.laz" ), toLaz )
+
+} // namespace MR::PointsSave
 #endif

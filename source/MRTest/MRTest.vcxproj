@@ -75,6 +75,7 @@
     <ClCompile Include="MRRoundTests.cpp" />
     <ClCompile Include="MRReducePathTests.cpp" />
     <ClCompile Include="MRSerializeTests.cpp" />
+    <ClCompile Include="MRSharpOffsetComponentsTests.cpp" />
     <ClCompile Include="MRShrinkwrapTests.cpp" />
     <ClCompile Include="MRSpdlog.cpp" />
     <ClCompile Include="MRStreamOperatorsTests.cpp" />

@@ -77,6 +77,9 @@ struct SharpOffsetParameters : OffsetParameters
     /// within its voxel's box (so the geometry of a voxel can never reach another one),
     /// and the in-plane elevation check is skipped
     bool voxelClamp = false;
+    /// if positive, then after sharpening every connected component with not more than this number of triangles
+    /// intersecting a larger component is deleted; such tiny fragments appear near sharp creases
+    int maxDeletedComponentFaces = 100;
 };
 
 /// Offsets mesh by converting it to distance field in voxels using OpenVDB library,

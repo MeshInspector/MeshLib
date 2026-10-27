@@ -174,7 +174,7 @@ MR_BIND_IGNORE MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mes
 MR_BIND_IGNORE MRMESH_API bool hasCrossing( const std::vector<TwoVertIds>& segments, const CutTrianglePredicates& preds, ISweepLineCache* cache = nullptr );
 
 /// same as above for the points that \p segments index given by their coordinates, which the sweep rounds to integers
-/// as \ref triangulateDisjointContours does; points rounded to the same position are merged, so the segments through them touch there
+/// as \ref triangulateDisjointContours does; distinct points rounded to the same position are told apart by their ids, not merged
 MR_BIND_IGNORE MRMESH_API bool hasCrossing( const std::vector<TwoVertIds>& segments, const Contour2f& points, ISweepLineCache* cache = nullptr );
 
 }

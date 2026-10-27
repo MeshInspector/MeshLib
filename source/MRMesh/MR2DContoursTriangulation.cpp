@@ -1994,33 +1994,40 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
     } );
 }
 
+// whether two of the segments between distinct points cross: up to 32 segments are tested in pairs by ccw, faster than setting up
+// the sweep, as two segments without a common end cross if each one has the ends of the other on its two sides (a segment from
+// a point to itself is skipped, as the sweep skips it); more segments by the sweep, which merges no points and stops at the first crossing
+template <typename Ccw, typename Failed>
+static bool hasCrossing( const std::vector<TwoVertIds>& segments, const Ccw& ccw, const Failed& failed, SweepLineQueue::Cache& cache,
+    const std::function<SweepLinePredicates()>& predicates )
+{
+    if ( segments.size() > 32 )
+        return !SweepLineQueue( cache, predicates(), segments, { .abortWhenIntersect = true, .allowMerge = false } ).findIntersections();
+    for ( size_t s = 0; s < segments.size(); ++s )
+    {
+        for ( size_t t = s + 1; t < segments.size(); ++t )
+        {
+            const auto [a, b] = segments[s];
+            const auto [c, d] = segments[t];
+            if ( a != b && c != d && a != c && a != d && b != c && b != d && ccw( a, b, c ) != ccw( a, b, d ) && ccw( c, d, a ) != ccw( c, d, b ) )
+                return true;
+        }
+    }
+    return failed();
+}
+
 bool hasCrossing( const std::vector<TwoVertIds>& segments, const CutTrianglePredicates& preds, ISweepLineCache* cache )
 {
-    // a few segments are tested in pairs, faster than setting up the sweep: two segments without a common end cross if each one
-    // has the ends of the other on its two sides; a segment from a point to itself is skipped, as the sweep skips it
-    if ( segments.size() <= 32 )
-    {
-        for ( size_t s = 0; s < segments.size(); ++s )
-        {
-            for ( size_t t = s + 1; t < segments.size(); ++t )
-            {
-                const auto [a, b] = segments[s];
-                const auto [c, d] = segments[t];
-                if ( a != b && c != d && a != c && a != d && b != c && b != d
-                    && preds.ccw( a, b, c ) != preds.ccw( a, b, d ) && preds.ccw( c, d, a ) != preds.ccw( c, d, b ) )
-                    return true;
-            }
-        }
-        return preds.failed();
-    }
     std::optional<SweepLineQueue::Cache> localCache;
-    auto& cacheImpl = cache ? static_cast<SweepLineQueue::Cache&>( *cache ) : localCache.emplace();
-    // the points are distinct, so none is merged, and the run stops at the first crossing
-    return !SweepLineQueue( cacheImpl, {
-        .less = [&] ( VertId l, VertId r ) { return preds.less( l, r ); },
-        .ccw = [&] ( VertId a, VertId b, VertId c ) { return preds.ccw( a, b, c ); },
-        .ccwFromBehind = [&] ( VertId b, VertId pivot ) { return preds.ccwFromBehind( b, pivot ); },
-        .failed = [&] { return preds.failed(); } }, segments, { .abortWhenIntersect = true, .allowMerge = false } ).findIntersections();
+    return hasCrossing( segments, [&] ( VertId a, VertId b, VertId c ) { return preds.ccw( a, b, c ); }, [&] { return preds.failed(); },
+        cache ? static_cast<SweepLineQueue::Cache&>( *cache ) : localCache.emplace(), [&]
+    {
+        return SweepLinePredicates{
+            .less = [&] ( VertId l, VertId r ) { return preds.less( l, r ); },
+            .ccw = [&] ( VertId a, VertId b, VertId c ) { return preds.ccw( a, b, c ); },
+            .ccwFromBehind = [&] ( VertId b, VertId pivot ) { return preds.ccwFromBehind( b, pivot ); },
+            .failed = [&] { return preds.failed(); } };
+    } );
 }
 
 bool hasCrossing( const std::vector<TwoVertIds>& segments, const Contour2f& points, ISweepLineCache* cache )
@@ -2039,8 +2046,10 @@ bool hasCrossing( const std::vector<TwoVertIds>& segments, const Contour2f& poin
         pts.push_back( to2dim( toInt( to3dim( q ) ) ) );
     SweepLinePredicates p;
     setPts2Predicates( p, &pts );
-    return !SweepLineQueue( cacheImpl, std::move( p ), segments, { .abortWhenIntersect = true } ).findIntersections();
+    return hasCrossing( segments, p.ccw, [] { return false; }, cacheImpl, [&] { return p; } );
 }
+
+
 
 }
 

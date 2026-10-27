@@ -241,8 +241,11 @@ jobs:
 
       - name: Test Wasm module
         run: |
-          node --version
-          node source/MRTestJS/main.mjs source/MeshLibJS/${{ matrix.js-dir }}/index.mjs
+          # The 64-bit module needs Memory64, which Node 22 only has behind a flag; the emsdk ships a newer Node.
+          NODE=$(ls -d ${EMSDK}/node/*/bin/node 2>/dev/null | sort -V | tail -1)
+          NODE=${NODE:-node}
+          ${NODE} --version
+          ${NODE} ${{ matrix.wasm64 == 1 && '--experimental-wasm-memory64' || '' }} source/MRTestJS/main.mjs source/MeshLibJS/${{ matrix.js-dir }}/index.mjs
 
       - name: Assemble and pack npm package
         if: ${{ matrix.wasm64 == 0 }}

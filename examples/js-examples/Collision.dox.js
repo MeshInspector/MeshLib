@@ -19,8 +19,8 @@ for (let i = 0; i < collidingFacePairs.size(); ++i) {
 
 // find bitsets of colliding faces
 using collidingBitSets = ml.findCollidingTriangleBitsets(partA, partB);
-console.log(collidingBitSets.first.count()); // number of colliding faces from mesh A
-console.log(collidingBitSets.second.count()); // number of colliding faces from mesh B
+console.log(collidingBitSets.first().count()); // number of colliding faces from mesh A
+console.log(collidingBitSets.second().count()); // number of colliding faces from mesh B
 
 // fast check whether mesh A and mesh B collide
 using firstPair = ml.findCollidingTriangles(partA, partB, null, true);

@@ -170,15 +170,15 @@ export function components()
 {
     const m = createComponentsMesh();
     const map = ml.MeshComponents.getAllComponentsMap(m, null, null);
-    checkEq(map.second, 2, "components");
-    checkEq(map.first.size(), 24, "map size");
-    checkEq(map.first.index(new ml.FaceId(0)).id_, 0, "face 0");
-    checkEq(map.first.index(new ml.FaceId(12)).id_, 1, "face 12");
+    checkEq(map.second(), 2, "components");
+    checkEq(map.first().size(), 24, "map size");
+    checkEq(map.first().index(new ml.FaceId(0)).id_, 0, "face 0");
+    checkEq(map.first().index(new ml.FaceId(12)).id_, 1, "face 12");
 
-    const regions = ml.MeshComponents.getLargeByAreaRegions(m, map.first, map.second, 0.1);
-    checkEq(regions.second, 1, "regions");
-    check(regions.first.test(new ml.FaceId(0)), "face 0");
-    check(!regions.first.test(new ml.FaceId(12)), "face 12");
+    const regions = ml.MeshComponents.getLargeByAreaRegions(m, map.first(), map.second(), 0.1);
+    checkEq(regions.second(), 1, "regions");
+    check(regions.first().test(new ml.FaceId(0)), "face 0");
+    check(!regions.first().test(new ml.FaceId(12)), "face 12");
 
     const components = ml.MeshComponents.getLargeByAreaComponents(m, 0.1, null);
     check(components.test(new ml.FaceId(0)), "face 0");

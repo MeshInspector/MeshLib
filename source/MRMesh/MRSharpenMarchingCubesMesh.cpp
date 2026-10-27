@@ -92,7 +92,7 @@ static void deleteSmallCollidingComponents( Mesh& mesh, int maxFaces, Undirected
         return;
 
     mesh.invalidateCaches(); // vertices were moved above
-    struct Collision { RegionId small, other; };
+    struct Collision { RegionId lesser, greater; }; // the component with fewer triangles, and the one it intersects
     std::vector<Collision> collisions;
     for ( const auto& p : findCollidingTriangles( { mesh, &smallFaces }, mesh ) )
     {
@@ -103,17 +103,17 @@ static void deleteSmallCollidingComponents( Mesh& mesh, int maxFaces, Undirected
     if ( collisions.empty() )
         return;
 
-    // larger components are processed first, so the fate of (other) is known when (small) is considered
+    // larger components are processed first, so the fate of (greater) is known when (lesser) is considered
     std::sort( collisions.begin(), collisions.end(), [&]( const Collision& x, const Collision& y )
     {
-        if ( regionFaces[x.small] != regionFaces[y.small] )
-            return regionFaces[x.small] > regionFaces[y.small];
-        return x.small < y.small;
+        if ( regionFaces[x.lesser] != regionFaces[y.lesser] )
+            return regionFaces[x.lesser] > regionFaces[y.lesser];
+        return x.lesser < y.lesser;
     } );
     RegionBitSet deleted( numRegions );
     for ( const auto& c : collisions )
-        if ( !deleted.test( c.other ) )
-            deleted.set( c.small );
+        if ( !deleted.test( c.greater ) )
+            deleted.set( c.lesser );
 
     FaceBitSet delFaces( mesh.topology.faceSize() );
     for ( auto f : smallFaces )

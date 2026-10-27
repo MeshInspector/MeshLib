@@ -30,7 +30,7 @@ jobs:
         run: |
           export DEBIAN_FRONTEND=noninteractive
           apt-get update
-          apt-get install -y --no-install-recommends libwayland-dev libxkbcommon-dev wayland-protocols libdecor-0-0 weston libegl1 libgles2 python3-pip
+          apt-get install -y --no-install-recommends libwayland-dev libxkbcommon-dev wayland-protocols libdecor-0-0 libdecor-0-plugin-1-gtk weston libegl1 libgles2 python3-pip
           apt-get remove -y libglfw3-dev || true
           weston --version
 
@@ -38,6 +38,9 @@ jobs:
         run: |
           curl -fsSL -o /tmp/glfw.tar.gz https://github.com/glfw/glfw/archive/refs/tags/3.4.tar.gz
           mkdir -p /tmp/glfw && tar -C /tmp/glfw --strip-components=1 -xzf /tmp/glfw.tar.gz
+          # GLFW 3.4 dereferences a missing wl_seat in glfwInit (headless Weston has no seat); upstream master no longer does
+          sed -i 's/if (wl_seat_get_version(_glfw.wl.seat) >= WL_KEYBOARD_REPEAT_INFO_SINCE_VERSION)/if (_glfw.wl.seat \&\& wl_seat_get_version(_glfw.wl.seat) >= WL_KEYBOARD_REPEAT_INFO_SINCE_VERSION)/' /tmp/glfw/src/wl_init.c
+          grep -c 'if (_glfw.wl.seat && wl_seat_get_version' /tmp/glfw/src/wl_init.c
           cmake -S /tmp/glfw -B /tmp/glfw/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DGLFW_BUILD_WAYLAND=ON -DGLFW_BUILD_X11=ON -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF
           cmake --build /tmp/glfw/build
           cmake --install /tmp/glfw/build --prefix /usr/local
@@ -84,8 +87,12 @@ jobs:
         env:
           WAYLAND_DISPLAY: wl-scale2
         run: |
+          set +e
           ${AS_USER} python3 scripts/devops/wayland_headless_check.py build/Release/bin/MeshViewer 7899 2560 1600 out/runA-scale2-fresh.png
+          st=$?
           cp viewer_stdout.txt out/runA-stdout.txt
+          cp /tmp/MeshLib/Logs/*.txt out/ 2>/dev/null || true
+          exit $st
           cfg=$(find /tmp/home -name config.json | head -1)
           echo "config: ${cfg}"
           grep -A3 -i 'mainWindow' "${cfg}" || true
@@ -96,8 +103,12 @@ jobs:
         run: |
           cfg=$(find /tmp/home -name config.json | head -1)
           ${AS_USER} python3 scripts/devops/wayland_patch_config.py "${cfg}" 1000 600 2000 1200
+          set +e
           ${AS_USER} python3 scripts/devops/wayland_headless_check.py build/Release/bin/MeshViewer 7899 2000 1200 out/runB-scale2-restored.png
+          st=$?
           cp viewer_stdout.txt out/runB-stdout.txt
+          cp /tmp/MeshLib/Logs/*.txt out/ 2>/dev/null || true
+          exit $st
 
       - name: Run C, scale 1, same saved config (expect 1000x600 framebuffer)
         env:
@@ -105,8 +116,12 @@ jobs:
         run: |
           cfg=$(find /tmp/home -name config.json | head -1)
           ${AS_USER} python3 scripts/devops/wayland_patch_config.py "${cfg}" 1000 600
+          set +e
           ${AS_USER} python3 scripts/devops/wayland_headless_check.py build/Release/bin/MeshViewer 7899 1000 600 out/runC-scale1-restored.png
+          st=$?
           cp viewer_stdout.txt out/runC-stdout.txt
+          cp /tmp/MeshLib/Logs/*.txt out/ 2>/dev/null || true
+          exit $st
 
       - name: Splash screenshots, scale 2 (compositor view during the first seconds)
         if: always()
@@ -128,7 +143,7 @@ jobs:
         run: |
           mkdir -p out
           cp /tmp/weston-*.log out/ || true
-          find /tmp/home -name '*.log' -exec cp {} out/ \; || true
+          cp /tmp/MeshLib/Logs/*.txt out/ 2>/dev/null || true
           ls -l out
 
       - name: Upload results

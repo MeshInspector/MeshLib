@@ -139,6 +139,18 @@ static const Vector<int>& getContourSizes( const Contours2f& contours, Vector<in
     return sizes;
 }
 
+// the two axes kept by the projection along the axis most aligned with `normal`, ordered so that the 2D ccw
+// of the projection equals the 3D orientation around +normal (swapped when normal points the other way)
+static Vector2i projectionAxes( const Vector3f& normal )
+{
+    int dropAx = 0;
+    for ( int i = 1; i < 3; ++i )
+        if ( normal[i] * normal[i] > normal[dropAx] * normal[dropAx] )
+            dropAx = i;
+    const Vector2i axes( ( dropAx + 1 ) % 3, ( dropAx + 2 ) % 3 );
+    return normal[dropAx] < 0 ? Vector2i( axes.y, axes.x ) : axes;
+}
+
 // mesh-space predicates: triangulate hole boundary loops of `mesh` in the mesh's own 3D coordinates,
 // orienting around `normal`. Combinatorics run on the dominant-axis projection (reusing the exact 2D
 // predicates via setPts2Predicates). point() restores each output vertex's exact original mesh position
@@ -157,27 +169,17 @@ static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoop
             pointsSize += int( loop.size() );
     }
 
-    // drop the axis most aligned with the normal; order the two kept axes so the 2D ccw of the
-    // projection equals the 3D orientation around +normal (swap them when normal points the other way)
-    int dropAx = 0;
-    for ( int i = 1; i < 3; ++i )
-        if ( normal[i] * normal[i] > normal[dropAx] * normal[dropAx] )
-            dropAx = i;
-    int kx = ( dropAx + 1 ) % 3;
-    int ky = ( dropAx + 2 ) % 3;
-    if ( normal[dropAx] < 0 )
-        std::swap( kx, ky );
-
+    const auto axes = projectionAxes( normal );
     pts2->clear();
     pts2->reserve( pointsSize );
     auto toInt = getToIntConverter( Box3d( box ) ); // Vector3f -> Vector3i
 
     SweepLinePredicates p;
     setPts2Predicates( p, pts2 );
-    p.addInputPoint = [&mesh, &loops, pts2, toInt, kx, ky] ( VertId v, int contourId, int pointId )
+    p.addInputPoint = [&mesh, &loops, pts2, toInt, axes] ( VertId v, int contourId, int pointId )
     {
         const Vector3i q = toInt( mesh.orgPnt( loops[contourId][pointId] ) );
-        pts2->autoResizeSet( v, Vector2i( q[kx], q[ky] ) );
+        pts2->autoResizeSet( v, Vector2i( q[axes.x], q[axes.y] ) );
     };
     p.addIntersectionPoint = [pts2] ( VertId v, VertId a, VertId b, VertId c, VertId d )
     {
@@ -335,6 +337,9 @@ public:
 
     SweepLineQueue( Cache& cache, const MeshTopology& inTp, SweepLinePredicates predicates, const EdgeLoops& holes, const SweepLineParams& params );
 
+    // makes initial mesh with one edge per segment between the points of the predicates, see initMeshBySegments_
+    SweepLineQueue( Cache& cache, SweepLinePredicates predicates, const Vector<TwoVertIds>& segments, const SweepLineParams& params );
+
     size_t vertSize() const { return tp_.vertSize(); }
     std::optional<Mesh> run( IntersectionsMap* interMap = nullptr );
     // same as run(), but the resulting connectivity stays inside the cache (returned pointer valid
@@ -360,6 +365,9 @@ private:
     // make base mesh only containing input contours as edge loops
     void initMeshByContours_( const Vector<int>& contourSizes );
     void initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops& loops );
+    // vertex v is point v of the predicates, and the edges of every vertex are in angle order, as the sweep needs them;
+    // a segment with one point at both ends or already added is skipped
+    void initMeshBySegments_( const Vector<TwoVertIds>& segments );
     // two different loop edges join the same two vertices: coincident segments the sweep cannot order, so the run fails
     bool multipleEdge_{ false };
     // merge same points on base mesh
@@ -466,8 +474,6 @@ private:
         operator bool() const { return vId.valid(); }
     };
     using IntersectionMap = HashMap<EdgePair, IntersectionInfo>;
-    // whether segments (aOrg,aDest) and (bOrg,bDest) properly intersect, via the injected ccw
-    bool doSegmentSegmentIntersect_( VertId aOrg, VertId aDest, VertId bOrg, VertId bDest ) const;
     void checkIntersection_( int index, bool lower );
     void checkIntersection_( int indexLower );
     // an intersection was found while params_.abortWhenIntersect, so the run fails
@@ -561,6 +567,17 @@ SweepLineQueue::SweepLineQueue( Cache& cache, const MeshTopology& inTp, SweepLin
     initMeshByLoops_( inTp, holes );
     if ( !multipleEdge_ )
         setupStartVertices_();
+}
+
+SweepLineQueue::SweepLineQueue( Cache& cache, SweepLinePredicates predicates, const Vector<TwoVertIds>& segments, const SweepLineParams& params ) :
+    predicates_{ std::move( predicates ) },
+    params_{ params },
+    cache_( cache )
+{
+    resetCache_();
+    initMeshBySegments_( segments );
+    mergeSamePoints_();
+    setupStartVertices_();
 }
 
 void SweepLineQueue::resetCache_()
@@ -1134,16 +1151,18 @@ void SweepLineQueue::checkIntersection_( int index, bool lower )
         return checkIntersection_( index );
 }
 
-bool SweepLineQueue::doSegmentSegmentIntersect_( VertId aOrg, VertId aDest, VertId bOrg, VertId bDest ) const
+// whether segments (aOrg,aDest) and (bOrg,bDest) properly intersect, which they do iff each separates the endpoints of the other;
+// equivalent of MR::doSegmentSegmentIntersect on the ccw of the predicates (cIsLeftFromAB is unused here);
+// inlined, since the sweep asks it about every two neighboring active edges
+template <typename Preds>
+static MR_FORCE_INLINE bool doSegmentsCross( const Preds& preds, VertId aOrg, VertId aDest, VertId bOrg, VertId bDest )
 {
-    // segments intersect iff each separates the endpoints of the other;
-    // predicate-based equivalent of MR::doSegmentSegmentIntersect (cIsLeftFromAB is unused here)
-    const bool abc = predicates_.ccw( aOrg, aDest, bOrg );
-    const bool abd = predicates_.ccw( aOrg, aDest, bDest );
+    const bool abc = preds.ccw( aOrg, aDest, bOrg );
+    const bool abd = preds.ccw( aOrg, aDest, bDest );
     if ( abc == abd )
         return false; // segment (bOrg,bDest) is on one side of line (aOrg,aDest)
-    const bool cda = predicates_.ccw( bOrg, bDest, aOrg );
-    const bool cdb = predicates_.ccw( bOrg, bDest, aDest );
+    const bool cda = preds.ccw( bOrg, bDest, aOrg );
+    const bool cdb = preds.ccw( bOrg, bDest, aDest );
     return cda != cdb; // equal => segment (aOrg,aDest) is on one side of line (bOrg,bDest)
 }
 
@@ -1159,7 +1178,7 @@ void SweepLineQueue::checkIntersection_( int i )
     if ( !canIntersect || !org1 || !org2 || !dest1 || !dest2 )
         return;
 
-    if ( !doSegmentSegmentIntersect_( org1, dest1, org2, dest2 ) )
+    if ( !doSegmentsCross( predicates_, org1, dest1, org2, dest2 ) )
         return;
     if ( params_.abortWhenIntersect )
     {
@@ -1386,6 +1405,31 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
     {
         return predicates_.less( l, r );
     } );
+}
+
+void SweepLineQueue::initMeshBySegments_( const Vector<TwoVertIds>& segments )
+{
+    for ( const auto& [a, b] : segments )
+    {
+        tp_.vertResize( size_t( std::max( a, b ) ) + 1 );
+        bool skip = a == b;
+        for ( auto e : orgRing( tp_, a ) )
+            skip = skip || tp_.dest( e ) == b;
+        if ( skip )
+            continue;
+        const auto e = tp_.makeEdge();
+        // every end goes right after the edge of its ring closest to it clockwise
+        for ( const auto& [x, v, to] : { std::tuple{ e, a, b }, std::tuple{ e.sym(), b, a } } )
+        {
+            findClosestCache_.assign( 1, x );
+            for ( auto r : orgRing( tp_, v ) )
+                findClosestCache_.push_back( r );
+            if ( findClosestCache_.size() == 1 )
+                tp_.setOrg( x, v );
+            else
+                tp_.splice( findClosestCache_[findClosestToFront( tp_, predicates_, findClosestCache_, false, to )], x );
+        }
+    }
 }
 
 void SweepLineQueue::mergeSamePoints_()
@@ -1950,6 +1994,63 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
         p.failed = [&] { return preds.failed(); };
         return p;
     } );
+}
+
+// whether two of the segments between distinct points cross: up to 32 segments are tested in pairs by ccw, faster than setting up
+// the sweep, as two segments without a common end cross if each one has the ends of the other on its two sides (a segment from
+// a point to itself is skipped, as the sweep skips it); more segments by the sweep, which merges no points and stops at the first crossing
+template <typename Preds>
+static bool hasCrossingT( const Vector<TwoVertIds>& segments, const Preds& preds, ISweepLineCache* cache )
+{
+    if ( segments.size() > 32 )
+    {
+        std::optional<SweepLineQueue::Cache> localCache;
+        return !SweepLineQueue( cache ? static_cast<SweepLineQueue::Cache&>( *cache ) : localCache.emplace(), {
+            .less = [&] ( VertId l, VertId r ) { return preds.less( l, r ); },
+            .ccw = [&] ( VertId a, VertId b, VertId c ) { return preds.ccw( a, b, c ); },
+            .ccwFromBehind = [&] ( VertId b, VertId pivot ) { return preds.ccwFromBehind( b, pivot ); },
+            .failed = [&] { return preds.failed(); } }, segments, { .abortWhenIntersect = true, .allowMerge = false } ).findIntersections();
+    }
+    for ( size_t s = 0; s < segments.size(); ++s )
+    {
+        for ( size_t t = s + 1; t < segments.size(); ++t )
+        {
+            const auto [a, b] = segments[s];
+            const auto [c, d] = segments[t];
+            if ( a != b && c != d && a != c && a != d && b != c && b != d && doSegmentsCross( preds, a, b, c, d ) )
+                return true;
+        }
+    }
+    return preds.failed();
+}
+
+bool hasCrossing( const Vector<TwoVertIds>& segments, const CutTrianglePredicates& preds, ISweepLineCache* cache )
+{
+    return hasCrossingT( segments, preds, cache );
+}
+
+bool hasCrossing( const Vector<TwoVertIds>& segments, const VertCoords& points, const Vector3f& normal, ISweepLineCache* cache )
+{
+    Box3f box;
+    for ( const auto& q : points )
+        box.include( q );
+    if ( box.size() == Vector3f() )
+        return false; // all points in one position
+    std::optional<SweepLineQueue::Cache> localCache;
+    auto& cacheImpl = cache ? static_cast<SweepLineQueue::Cache&>( *cache ) : localCache.emplace();
+    auto& pts = cacheImpl.pts2Buffer;
+    pts.clear();
+    const auto toInt = getToIntConverter( Box3d( box ) );
+    const auto axes = projectionAxes( normal );
+    for ( const auto& q : points )
+    {
+        const auto i = toInt( q );
+        pts.push_back( { i[axes.x], i[axes.y] } );
+    }
+    SweepLinePredicates p;
+    setPts2Predicates( p, &pts );
+    p.failed = [] { return false; };
+    return hasCrossingT( segments, p, &cacheImpl );
 }
 
 }

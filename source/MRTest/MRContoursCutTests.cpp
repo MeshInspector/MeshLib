@@ -12,6 +12,9 @@
 #include <MRMesh/MRMakePlane.h>
 #include <MRMesh/MRMeshComponents.h>
 #include <MRMesh/MRFillContour.h>
+#include <MRMesh/MRMeshBoolean.h>
+#include <MRMesh/MRCylinder.h>
+#include <MRMesh/MR2DContoursTriangulation.h>
 #include <cmath>
 #include <random>
 
@@ -672,7 +675,8 @@ TEST( MRMesh, CutMeshSelfCrossingLoneContour )
 }
 
 // a lone contour inside a triangle of zero area (its corners on one line) has no plane to connect it with the triangle in;
-// without the exact sorting data, the cut reports the triangle as bad and keeps it
+// without the exact sorting data, the cut reports the triangle as bad and keeps it; a contour through the triangle along that line
+// with four points in it, which the plain cut takes, makes it bad under force fill, with no plane to find their crossings in either
 TEST( MRMesh, CutMeshLoneContourInZeroAreaFace )
 {
     // corner 2_v of 1_f is on its side from 1_v to 0_v
@@ -683,6 +687,11 @@ TEST( MRMesh, CutMeshLoneContourInZeroAreaFace )
     for ( float t : { 1.f, 3.f, 7.f, 1.f } )
         island.intersections.push_back( { .primitiveId = 1_f, .coordinate = Vector3f( t, t, 0 ) } );
     island.closed = true;
+    // from the side of 1_f between 0_v and 2_v through two points inside it to its side between 0_v and 1_v, then across 0_f to the border
+    const OneMeshContour through{ .intersections = { { .primitiveId = mesh.topology.findEdge( 0_v, 2_v ), .coordinate = Vector3f( 2, 2, 0 ) },
+        { .primitiveId = 1_f, .coordinate = Vector3f( 3, 3, 0 ) }, { .primitiveId = 1_f, .coordinate = Vector3f( 5, 5, 0 ) },
+        { .primitiveId = mesh.topology.findEdge( 0_v, 1_v ), .coordinate = Vector3f( 6, 6, 0 ) },
+        { .primitiveId = mesh.topology.findEdge( 3_v, 1_v ), .coordinate = Vector3f( 5, 10, 0 ) } } };
 
     for ( bool forceFill : { false, true } )
     {
@@ -694,6 +703,11 @@ TEST( MRMesh, CutMeshLoneContourInZeroAreaFace )
         EXPECT_EQ( cut.topology.left( e ), 1_f );
         // the border of the mesh, and the two sides of the island unless they are filled
         EXPECT_EQ( cut.topology.findNumHoles(), forceFill ? 1 : 3 );
+
+        cut = mesh;
+        const auto bad = cutMesh( cut, { through }, { .forceFill = forceFill } ).fbsWithContourIntersections;
+        EXPECT_EQ( bad.count(), forceFill ? 1 : 0 );
+        EXPECT_EQ( bad.test( 1_f ), forceFill );
     }
 }
 
@@ -1129,6 +1143,212 @@ TEST( MRMesh, SurfaceOffsetAlongOpenBorder )
     const int numOpen = checkOffsetContoursAndCut( mesh, *res );
     EXPECT_GT( numOpen, 0 );
     EXPECT_LT( numOpen, int( res->size() ) ); // the inner offset is closed
+}
+
+// an open contour across triangle 0_f of the square at y = 2, and a contour from the bottom side up to a point inside 0_f and back,
+// or to a zigzag of 33 points there, so that 0_f has 35 segments with the first contour, which the search tests by the sweep on the float
+// coordinates: with the points above the first contour, they cross twice, which leaves valid hole loops, so the plain cut does not
+// report it, while under force fill the face of the crossings is bad; with the points below it, the contours do not meet, and the segments
+// of the second one only touch
+TEST( MRMesh, ForceFillCrossingsEven )
+{
+    const auto square = makeSquareOfTwoTriangles();
+    const OneMeshContour across{ .intersections = {
+        onSquareSide( square, 1_v, 2_v, Vector3f( 10, 2, 0 ) ), onSquareSide( square, 0_v, 2_v, Vector3f( 2, 2, 0 ) ) } };
+    // from the bottom side up to n points from x = 4.5 to 5.5 (one at x = 5), every other one a quarter below the top, and back
+    auto tent = [&] ( float top, int n )
+    {
+        OneMeshContour res{ .intersections = { onSquareSide( square, 0_v, 1_v, Vector3f( 4, 0, 0 ) ) } };
+        for ( int i = 0; i < n; ++i )
+            res.intersections.push_back( { .primitiveId = 0_f, .coordinate = Vector3f( 5 + ( i - n / 2 ) / 32.f, top - ( i % 2 ) / 4.f, 0 ) } );
+        res.intersections.push_back( onSquareSide( square, 1_v, 0_v, Vector3f( 6, 0, 0 ) ) );
+        return res;
+    };
+    for ( int n : { 1, 33 } )
+    {
+        for ( float top : { 1.5f, 3.0f } )
+        {
+            Mesh cut = square;
+            EXPECT_TRUE( cutMesh( cut, { across, tent( top, n ) } ).fbsWithContourIntersections.none() );
+            cut = square;
+            const auto forced = cutMesh( cut, { across, tent( top, n ) }, { .forceFill = true } ).fbsWithContourIntersections;
+            EXPECT_EQ( forced.count(), top < 2 ? 0 : 1 );
+            EXPECT_EQ( forced.test( 0_f ), top > 2 );
+        }
+    }
+}
+
+// under force fill, a contour crossing itself inside triangle 0_f makes it bad: in one piece of three segments, across the end
+// of a closed contour, or in two visits of the face; visiting the face again without a crossing, or touching at a mesh vertex, is fine
+TEST( MRMesh, ForceFillCrossingsOneFace )
+{
+    const auto square = makeSquareOfTwoTriangles();
+    auto in = [] ( FaceId f, float x, float y ) { return OneMeshIntersection{ .primitiveId = f, .coordinate = Vector3f( x, y, 0 ) }; };
+    auto side = [&] ( VertId a, VertId b, float x, float y ) { return onSquareSide( square, a, b, Vector3f( x, y, 0 ) ); };
+    auto check = [&] ( const OneMeshContours& contours, bool bad )
+    {
+        Mesh cut = square;
+        const auto forced = cutMesh( cut, contours, { .forceFill = true } ).fbsWithContourIntersections;
+        EXPECT_EQ( forced.count(), bad ? 1 : 0 );
+        EXPECT_EQ( forced.test( 0_f ), bad );
+    };
+    check( { { .intersections = { side( 0_v, 1_v, 4, 0 ), in( 0_f, 8, 3 ), in( 0_f, 8, 1 ), in( 0_f, 5, 3 ), side( 0_v, 2_v, 4, 4 ) } } }, true );
+    check( { { .intersections = { in( 0_f, 6, 2 ), side( 0_v, 2_v, 5, 5 ), in( 1_f, 2, 6 ), side( 2_v, 0_v, 3, 3 ), in( 0_f, 8, 4 ), in( 0_f, 6, 2 ) },
+        .closed = true } }, true );
+    for ( bool cross : { true, false } )
+        check( { { .intersections = { side( 0_v, 1_v, 4, 0 ), side( 0_v, 2_v, 5, 5 ), in( 1_f, 2, 6 ), side( 2_v, 0_v, 3, 3 ),
+            cross ? side( 2_v, 1_v, 10, 5 ) : side( 1_v, 0_v, 2, 0 ) } } }, cross );
+    // two contours through mesh vertex 2_v only touch there, also with a third one from the bottom side up to a point inside 0_f and back,
+    // which crosses the second one twice with the point left of it, or meets none with the point right of it: then 0_f, removed at 2_v
+    // before the search, has more than three points
+    const OneMeshIntersection corner{ .primitiveId = 2_v, .coordinate = Vector3f( 10, 10, 0 ) };
+    const OneMeshContour viaCorner[] = { { .intersections = { side( 0_v, 1_v, 4, 0 ), corner, side( 0_v, 3_v, 0, 6 ) } },
+        { .intersections = { side( 0_v, 1_v, 7, 0 ), corner, side( 0_v, 3_v, 0, 3 ) } } };
+    check( { viaCorner[0], viaCorner[1] }, false );
+    for ( bool cross : { true, false } )
+        check( { viaCorner[0], viaCorner[1],
+            { .intersections = { side( 0_v, 1_v, 8, 0 ), in( 0_f, cross ? 6.5f : 9.5f, 2 ), side( 1_v, 0_v, 9, 0 ) } } }, cross );
+}
+
+namespace
+{
+
+// the bad faces of meshes A and B by their forced boolean
+std::array<FaceBitSet, 2> forcedBooleanBadFaces( const Mesh& meshA, const Mesh& meshB, const AffineXf3f* rigidB2A = nullptr )
+{
+    auto res = boolean( meshA, meshB, BooleanOperation::Union, { .rigidB2A = rigidB2A, .forceCut = true } );
+    return { std::move( res.meshABadContourFaces ), std::move( res.meshBBadContourFaces ) };
+}
+
+// two overlapping boxes from z0 to z1 above the middle of the unit cube, whose contours on the top of the cube cross twice
+Mesh makeTwoBoxes( float z0, float z1 )
+{
+    auto res = makeCube( Vector3f( 0.4f, 0.4f, z1 - z0 ), Vector3f( 0.2f, 0.2f, z0 ) );
+    res.addMesh( makeCube( Vector3f( 0.4f, 0.4f, z1 - z0 ), Vector3f( 0.4f, 0.4f, z0 ) ) );
+    return res;
+}
+
+// two cylinders of radius 0.1 with the given number of sides from z = 0.5 to 1.5 around c0 and c1, every one crossing the top of the unit
+// cube by its 2 * sides vertical and diagonal side edges
+Mesh makeTwoCylinders( int sides, const Vector2f& c0, const Vector2f& c1 )
+{
+    Mesh res;
+    for ( const auto& c : { c0, c1 } )
+    {
+        auto cylinder = makeCylinder( 0.1f, 1, sides );
+        cylinder.transform( AffineXf3f::translation( Vector3f( c.x, c.y, 0.5f ) ) );
+        res.addMesh( cylinder );
+    }
+    return res;
+}
+
+} //anonymous namespace
+
+// the top of a cube crossed by two overlapping boxes, whose two closed contours there cross twice, on the exact predicates: axis-aligned,
+// where the coordinates leave most pairs open, rotated, with the cube cut as mesh B in other coordinates, and with the boxes standing
+// on the top, in its plane
+TEST( MRMesh, ForceFillCrossingsBoolean )
+{
+    const auto cube = makeCube( Vector3f::diagonal( 1 ), Vector3f() );
+    auto expectTop = [&] ( const FaceBitSet& bad, const Mesh& mesh, const AffineXf3f& xf )
+    {
+        EXPECT_EQ( bad.count(), 2 );
+        for ( auto f : bad )
+            EXPECT_NEAR( xf( mesh.triCenter( f ) ).z, 1, 1e-5f );
+    };
+    const auto boxes = makeTwoBoxes( 0.5f, 1.5f );
+    for ( bool rotated : { false, true } )
+    {
+        SCOPED_TRACE( rotated ? "rotated" : "axis-aligned" );
+        auto b = boxes;
+        if ( rotated )
+            b.transform( AffineXf3f::xfAround( Matrix3f::rotation( Vector3f( 0.1f, 0.2f, 1 ).normalized(), 0.3f ), Vector3f::diagonal( 0.5f ) ) );
+        expectTop( forcedBooleanBadFaces( cube, b )[0], cube, {} );
+    }
+    // a single box crosses nothing
+    EXPECT_TRUE( forcedBooleanBadFaces( cube, makeCube( Vector3f( 0.4f, 0.4f, 1 ), Vector3f( 0.2f, 0.2f, 0.5f ) ) )[0].none() );
+
+    const AffineXf3f xf( Matrix3f::rotation( Vector3f( 1, 2, 3 ).normalized(), 0.7f ), Vector3f( 0.3f, -0.2f, 0.1f ) );
+    auto local = cube;
+    local.transform( xf.inverse() );
+    expectTop( forcedBooleanBadFaces( boxes, local, &xf )[1], local, xf );
+
+    expectTop( forcedBooleanBadFaces( cube, makeTwoBoxes( 1, 1.5f ) )[0], cube, {} );
+}
+
+// the top of a cube crossed by two cylinders through its diagonal, so that their contours are not lone ones (the plain cut reports the face
+// of crossing lone contours already): overlapping cylinders, whose contours cross twice inside the triangle below the diagonal, where they
+// have 22 segments with 8 sides, which are tested in pairs, or 154 with 64 sides, which the sweep tests, both on the exact predicates, make
+// that triangle bad under force fill, while the plain cut does not report it, as the contours leave valid hole loops there; separate
+// cylinders make nothing bad
+TEST( MRMesh, ForceFillCrossingsCylinders )
+{
+    const auto cube = makeCube( Vector3f::diagonal( 1 ), Vector3f() );
+    for ( int sides : { 8, 64 } )
+    {
+        for ( bool overlap : { true, false } )
+        {
+            SCOPED_TRACE( testing::Message() << sides << " sides, " << ( overlap ? "overlapping" : "separate" ) );
+            // the first cylinder is mostly below the diagonal, the second one is on it, by the first one or further along the diagonal
+            const auto cylinders = makeTwoCylinders( sides, { 0.55f, 0.48f }, overlap ? Vector2f( 0.52f, 0.51f ) : Vector2f( 0.77f, 0.76f ) );
+            // the side edges of the cylinders cross the top of the cube, and its diagonal crosses each cylinder twice
+            const auto inters = findCollidingEdgeTrisPrecise( cube, cylinders, getVectorConverters( cube, cylinders ).toInt );
+            EXPECT_EQ( inters.size(), size_t( 4 * sides + 4 ) );
+            EXPECT_TRUE( boolean( cube, cylinders, BooleanOperation::Union ).meshABadContourFaces.none() );
+            const auto bad = forcedBooleanBadFaces( cube, cylinders );
+            EXPECT_EQ( bad[0].count(), overlap ? 1 : 0 );
+            for ( auto f : bad[0] )
+            {
+                const auto c = cube.triCenter( f );
+                EXPECT_NEAR( c.z, 1, 1e-5f );
+                EXPECT_GT( c.x, c.y );
+            }
+            EXPECT_TRUE( bad[1].none() );
+        }
+    }
+}
+
+// the float overload of hasCrossing on more than 32 segments, which the sweep tests: 30 vertical segments, a chain of two segments over
+// the tops of the first two, the third one again and reversed, and a segment from a point to itself, all of which only touch, with
+// a segment from the top of the first vertical one to the bottom of the second one, touching them only, or of the sixth one, crossing four
+TEST( MRMesh, HasCrossingFloatSweep )
+{
+    VertCoords points;
+    Vector<TwoVertIds> segments;
+    for ( int i = 0; i < 30; ++i )
+    {
+        segments.push_back( { VertId( 2 * i ), VertId( 2 * i + 1 ) } );
+        points.emplace_back( float( i ), 0.f, 0.f );
+        points.emplace_back( float( i ), 10.f, 0.f );
+    }
+    points.emplace_back( 0.5f, 12.f, 0.f );
+    segments.insert( segments.end(), { { 1_v, 60_v }, { 60_v, 3_v }, { 4_v, 5_v }, { 5_v, 4_v }, { 6_v, 6_v } } );
+    const auto cache = PlanarTriangulation::makeSweepLineCache();
+    for ( bool cross : { true, false } )
+    {
+        auto s = segments;
+        s.push_back( { 1_v, cross ? 10_v : 2_v } );
+        EXPECT_EQ( PlanarTriangulation::hasCrossing( s, points, Vector3f::plusZ(), cache.get() ), cross );
+    }
+}
+
+// a flat rectangle of two triangles and the same triangles reversed, with the same vertices (a closed double-sided sheet, whose diagonals
+// make a multiple edge), across the top of the unit cube inside one triangle of it, which the plain cut reports bad: the contours of its sides
+// there coincide, and the current crossing search reports that triangle too, since the predicates cannot tell apart the crossings
+// of the diagonals of both sides, defined alike, and their failure makes the face bad, although the segments only touch there
+TEST( MRMesh, ForceFillDoubleSidedSheet )
+{
+    const auto cube = makeCube( Vector3f::diagonal( 1 ), Vector3f() );
+    const auto sheet = Mesh::fromTriangles( { Vector3f( 0.3f, 0.15f, 0.5f ), Vector3f( 0.7f, 0.15f, 0.5f ), Vector3f( 0.7f, 0.15f, 1.5f ),
+        Vector3f( 0.3f, 0.15f, 1.5f ) }, { { 0_v, 1_v, 2_v }, { 0_v, 2_v, 3_v }, { 0_v, 2_v, 1_v }, { 0_v, 3_v, 2_v } } );
+    const auto plain = boolean( cube, sheet, BooleanOperation::Union );
+    EXPECT_EQ( plain.meshABadContourFaces.count(), 1 );
+    const auto forced = boolean( cube, sheet, BooleanOperation::Union, { .forceCut = true } );
+    ASSERT_TRUE( forced.valid() ) << forced.errorString;
+    EXPECT_TRUE( forced.mesh.topology.checkValidity() );
+    EXPECT_EQ( forced.meshABadContourFaces.count(), 1 );
+    EXPECT_EQ( forced.meshABadContourFaces.find_first(), plain.meshABadContourFaces.find_first() );
+    EXPECT_TRUE( forced.meshBBadContourFaces.none() );
 }
 
 } //namespace MR

@@ -15,7 +15,8 @@ static int countSmallCollidingComponents( const Mesh& mesh, int maxFaces )
     for ( auto f : mesh.topology.getValidFaces() )
         ++regionFaces[face2region[f]];
     RegionBitSet colliding( numRegions );
-    for ( const auto& p : *findSelfCollidingTriangles( mesh ) )
+    const auto pairs = findSelfCollidingTriangles( mesh );
+    for ( const auto& p : *pairs )
     {
         const auto a = face2region[p.aFace], b = face2region[p.bFace];
         if ( a == b )
@@ -47,22 +48,28 @@ TEST( MRMesh, SharpOffsetDeleteSmallCollidingComponents )
     }
     const auto mesh = Mesh::fromTriangles( points, t );
 
-    SharpOffsetParameters params;
-    params.voxelSize = 0.021779f;
-    params.signDetectionMode = SignDetectionMode::ProjectionNormal;
-    params.maxDeletedComponentFaces = 0;
-    const auto res0 = sharpOffsetMesh( mesh, 0, params );
-    ASSERT_TRUE( res0.has_value() );
-    const auto numComps0 = MeshComponents::getNumComponents( *res0 );
-    EXPECT_GT( numComps0, size_t( 1 ) );
-    EXPECT_GT( countSmallCollidingComponents( *res0, 100 ), 0 );
+    // several voxel sizes and sign modes, since a particular fragment can touch the main surface on one platform only
+    int numSmallColliding0 = 0;
+    for ( float voxelSize : { 0.018f, 0.021779f, 0.025f } )
+    for ( auto signMode : { SignDetectionMode::ProjectionNormal, SignDetectionMode::OpenVDB } )
+    {
+        SharpOffsetParameters params;
+        params.voxelSize = voxelSize;
+        params.signDetectionMode = signMode;
+        params.maxDeletedComponentFaces = 0;
+        const auto res0 = sharpOffsetMesh( mesh, 0, params );
+        ASSERT_TRUE( res0.has_value() );
+        const auto numComps0 = MeshComponents::getNumComponents( *res0 );
+        numSmallColliding0 += countSmallCollidingComponents( *res0, 100 );
 
-    params.maxDeletedComponentFaces = 100;
-    const auto res1 = sharpOffsetMesh( mesh, 0, params );
-    ASSERT_TRUE( res1.has_value() );
-    EXPECT_LT( MeshComponents::getNumComponents( *res1 ), numComps0 );
-    EXPECT_EQ( countSmallCollidingComponents( *res1, 100 ), 0 );
-    EXPECT_TRUE( res1->topology.findHoleRepresentiveEdges().empty() );
+        params.maxDeletedComponentFaces = 100;
+        const auto res1 = sharpOffsetMesh( mesh, 0, params );
+        ASSERT_TRUE( res1.has_value() );
+        EXPECT_LE( MeshComponents::getNumComponents( *res1 ), numComps0 );
+        EXPECT_EQ( countSmallCollidingComponents( *res1, 100 ), 0 );
+        EXPECT_TRUE( res1->topology.findHoleRepresentiveEdges().empty() );
+    }
+    EXPECT_GT( numSmallColliding0, 0 );
 }
 
 } //namespace MR

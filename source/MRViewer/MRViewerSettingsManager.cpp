@@ -40,6 +40,11 @@ const std::string cTopPanelPinnedKey = "topPanelPinned";
 const std::string cQuickAccessListKey = "quickAccesList";
 const std::string cQuickAccessListVersionKey = "quickAccessListVersion";
 const std::string cMainWindowSize = "mainWindowSize";
+#if defined( MRVIEWER_EXPERIMENTAL_WAYLAND_SUPPORT ) && defined( __linux__ )
+// Wayland tells the framebuffer scale only after the first frame is shown, so the saved framebuffer size
+// cannot be converted into the window size on start: the window size is stored in screen coordinates as well
+const std::string cMainWindowScreenSize = "mainWindowScreenSize";
+#endif
 const std::string cMainWindowPos = "mainWindowPos";
 const std::string cMainWindowMaximized = "mainWindowMaximized";
 const std::string cRibbonLeftWindowSize = "ribbonLeftWindowSize";
@@ -333,7 +338,25 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         }
     }
 #ifndef __EMSCRIPTEN__
-    if ( cfg.hasVector2i( cMainWindowSize ) )
+    bool wayland = false;
+#if defined( MRVIEWER_EXPERIMENTAL_WAYLAND_SUPPORT ) && defined( __linux__ )
+    wayland = glfwGetPlatform() == GLFW_PLATFORM_WAYLAND;
+    if ( wayland && cfg.hasVector2i( cMainWindowScreenSize ) )
+    {
+        const auto size = cfg.getVector2i( cMainWindowScreenSize, Vector2i( 1280, 800 ) );
+        if ( size.x > 0 && size.y > 0 )
+        {
+            CommandLoop::appendCommand( [&viewer, size]
+            {
+                if ( !viewer.window )
+                    return;
+                spdlog::info( "Resize window: {} {}", size.x, size.y );
+                glfwSetWindowSize( viewer.window, size.x, size.y );
+            } );
+        }
+    }
+#endif
+    if ( !wayland && cfg.hasVector2i( cMainWindowSize ) )
     {
         const auto size = cfg.getVector2i( cMainWindowSize, Vector2i( 1280, 800 ) );
         if ( size.x > 0 && size.y > 0 )
@@ -345,7 +368,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
             } );
         }
     }
-    if ( cfg.hasVector2i( cMainWindowPos ) )
+    if ( !wayland && cfg.hasVector2i( cMainWindowPos ) ) // Wayland does not let a client position its window
     {
         auto pos = cfg.getVector2i( cMainWindowPos, Vector2i( 100, 100 ) );
         if ( pos.x > -32000 && pos.y > -32000 )
@@ -663,6 +686,14 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     cfg.setJsonValue( "lastExtextentions", xtext );
 
     cfg.setVector2i( cMainWindowSize, viewer.windowSaveSize );
+#if defined( MRVIEWER_EXPERIMENTAL_WAYLAND_SUPPORT ) && defined( __linux__ )
+    if ( glfwGetPlatform() == GLFW_PLATFORM_WAYLAND && viewer.pixelRatio > 0 )
+    {
+        const Vector2i screenSize( int( std::lround( viewer.windowSaveSize.x / viewer.pixelRatio ) ),
+                                   int( std::lround( viewer.windowSaveSize.y / viewer.pixelRatio ) ) );
+        cfg.setVector2i( cMainWindowScreenSize, screenSize );
+    }
+#endif
     if ( viewer.windowSaveSize.x > 0 && viewer.windowSaveSize.y > 0 )
         cfg.setVector2i( cMainWindowPos, viewer.windowSavePos );
     cfg.setBool( cMainWindowMaximized, viewer.windowMaximized );

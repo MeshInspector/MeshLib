@@ -296,7 +296,8 @@ jobs:
           echo "import * as ml from '@meshinspector/${{ matrix.wasm-module-name }}'; await ml.init(); console.log(ml.makeUVSphere(1, 8, 8).volume());" > main.mjs
           npx esbuild main.mjs --bundle --format=esm --platform=browser --loader:.wasm=file --outdir=dist
           ls -l dist
-          if grep -q "MeshLibC2.node" dist/main.js ; then
+          # The excluded module leaves an empty stub named after it; its wasm sidecar is only referenced from inside the module.
+          if grep -q "MeshLibC2.node.wasm" dist/main.js ; then
             echo "The browser bundle contains the Node module" >&2
             exit 1
           fi

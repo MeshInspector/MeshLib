@@ -28,7 +28,7 @@ namespace MR
 #ifdef MR_ALLOCATOR_IS_MIMALLOC
 // not mi_stl_allocator: its construct/destroy members stop std containers from memmove-copying and skipping trivial destructors
 template <typename T>
-struct AllocatorBase {};
+struct MR_BIND_IGNORE AllocatorBase {};
 #else
 template <typename T>
 using AllocatorBase = std::allocator<T>;

@@ -119,6 +119,19 @@ TEST( MRMesh, BitSetParallelForCancel )
     }, ctx1 );
     EXPECT_TRUE( ctx1.is_group_execution_cancelled() );
     EXPECT_LT( visited, bs.count() );
+
+    // the same in a bit set of one block, processed in the calling thread
+    VertBitSet small( 10 );
+    small.set();
+    visited = 0;
+    tbb::task_group_context ctx2;
+    BitSetParallelFor( small, [&] ( VertId )
+    {
+        ++visited;
+        ctx2.cancel_group_execution();
+    }, ctx2 );
+    EXPECT_TRUE( ctx2.is_group_execution_cancelled() );
+    EXPECT_EQ( visited, 1 );
 }
 
 TEST( MRMesh, BitSetCountBitsAndBlocks )

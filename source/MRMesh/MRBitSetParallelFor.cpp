@@ -26,6 +26,7 @@ Range toBitSubRange( const Range & bitRange, const Range & blockRange, const Ran
 
 // calls body on the subranges of blockRange in parallel threads, or on the whole range in this thread if it is one block,
 // which a parallel loop would process in one thread anyway, only slower
+// (unlike tbb::parallel_for, the one-block call neither binds to an enclosing task group nor cancels tgc on an exception)
 template <typename Body, typename ...Tgc>
 void forBlocks( const Range & blockRange, const Body & body, Tgc & ... tgc )
 {

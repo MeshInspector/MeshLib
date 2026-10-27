@@ -2053,8 +2053,6 @@ bool hasCrossing( const std::vector<TwoVertIds>& segments, const std::vector<Vec
     return hasCrossingT( segments, p, &cacheImpl );
 }
 
-
-
 }
 
 }

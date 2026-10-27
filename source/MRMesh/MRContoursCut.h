@@ -70,8 +70,9 @@ struct CutMeshResult
     std::vector<EdgePath> resultCut;
     /// Bitset of bad triangles - triangles where input contours have intersections and cannot be cut and filled in a good way;
     /// under force fill, also the triangles where two segments of the contours cross (segments that follow each other along a contour
-    /// or have a common mesh vertex do not), even if their cut is valid, and the triangles where the exact predicates fail to tell
-    /// the points of the contours apart (e.g. coincident contours of a double-sided sheet)
+    /// or have a common mesh vertex do not), even if their cut is valid; the triangles where that cannot be told may be reported too:
+    /// where the exact predicates fail on the points of the contours that they compare (e.g. coincident contours of a double-sided sheet),
+    /// or, without sortData, where the corners of the triangle are on one line
     /// \sa \ref MR::CutMeshParameters
     FaceBitSet fbsWithContourIntersections;
 };

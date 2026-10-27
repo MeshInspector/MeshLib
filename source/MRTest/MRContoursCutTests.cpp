@@ -1134,7 +1134,8 @@ TEST( MRMesh, SurfaceOffsetAlongOpenBorder )
 
 // an open contour across triangle 0_f of the square at y = 2, and a contour from the bottom side up to a point inside 0_f and back:
 // with the point above the first contour, they cross twice, which leaves valid hole loops, so the plain cut does not report it,
-// while under force fill the face of the crossings is bad; with the point below, the segments only touch at it
+// while under force fill the face of the crossings is bad; with the point below it, the contours do not meet, and the two segments
+// of the second one only touch at the point
 TEST( MRMesh, ForceFillCrossingsEven )
 {
     const auto square = makeSquareOfTwoTriangles();

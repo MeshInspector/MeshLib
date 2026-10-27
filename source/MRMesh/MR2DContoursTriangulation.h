@@ -170,7 +170,7 @@ MR_BIND_IGNORE MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mes
 /// which stops at the first crossing, or by testing every two of up to 32 segments, which is faster for them;
 /// segments with a common end only touch, and a repeated segment is taken once
 /// \param segments the ends of every segment, as the ids of the points in \p preds, which are all set and not failed
-/// \return true also if the predicates fail during the sweep
+/// \return true also if the predicates fail
 MR_BIND_IGNORE MRMESH_API bool hasCrossing( const std::vector<TwoVertIds>& segments, const CutTrianglePredicates& preds, ISweepLineCache* cache = nullptr );
 
 /// same as above for the points that \p segments index given by their coordinates, projected along the axis most aligned with \p normal

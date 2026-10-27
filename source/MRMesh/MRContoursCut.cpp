@@ -1059,9 +1059,10 @@ struct FaceCrossingsBuffers
     std::unique_ptr<PlanarTriangulation::ISweepLineCache> cache = PlanarTriangulation::makeSweepLineCache();
 };
 
-// whether two segments of one face cross: by the exact predicates consistent with the boolean, which make the face bad if they fail too
-// (with sortData), or by the float coordinates projected along the axis most aligned with the normal of the face, which is bad
-// if its corners are on one line
+// whether two segments of one face cross: with sortData, by the exact predicates consistent with the boolean, a failure of which makes
+// the face bad too (they fail only on the points they compare, so a degenerate face may be bad with many segments for the sweep and not
+// with a few tested in pairs); without it, by the float coordinates projected along the axis most aligned with the normal of the face,
+// and a face with its corners on one line is bad
 bool crossesInFace( FaceCrossingsBuffers& buf, const Mesh& mesh, const OneMeshContours& contours, const PreCutResult& preRes,
     const SortIntersectionsData* sortData, std::span<const FaceSegment> segs )
 {

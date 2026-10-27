@@ -227,7 +227,7 @@ Expected<std::vector<MR::FloatGrid>> gridsFromVdb( std::istream& in, const Progr
     openvdb::GridPtrVecPtr grids;
     {
         openvdb::initialize();
-        openvdb::io::Stream stream( in, false );
+        openvdb::io::Stream stream( in );
         grids = stream.getGrids();
     }
 

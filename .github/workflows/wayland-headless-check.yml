@@ -11,9 +11,11 @@ jobs:
     timeout-minutes: 120
     container:
       image: ghcr.io/meshinspector/meshlib-ubuntu24:latest
+      options: --user root
     env:
       MESHLIB_THIRDPARTY_ROOT_DIR: /usr/local/lib/MeshLib
-      XDG_RUNTIME_DIR: /tmp/xdg
+      # the compositor and the viewer run as the image's unprivileged user, with WAYLAND_DISPLAY from the step
+      AS_USER: runuser -u github-user -- env HOME=/tmp/home XDG_RUNTIME_DIR=/tmp/xdg LD_LIBRARY_PATH=/usr/local/lib
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -63,66 +65,60 @@ jobs:
           grep -i 'glfw' build/Release/CMakeCache.txt | head
           ldd build/Release/bin/MeshViewer | grep -i glfw
 
-      - name: Install the MCP client
-        run: python3 -m pip install --break-system-packages mcp
+      - name: Install the MCP client, hand the workspace to the unprivileged user (Weston refuses root)
+        run: |
+          python3 -m pip install --break-system-packages mcp
+          mkdir -p /tmp/home /tmp/xdg out
+          chmod 0700 /tmp/xdg
+          chown -R github-user /tmp/home /tmp/xdg "${GITHUB_WORKSPACE}"
 
       - name: Start Weston headless at scale 2 and at scale 1
         run: |
-          mkdir -p ${XDG_RUNTIME_DIR} && chmod 0700 ${XDG_RUNTIME_DIR}
-          weston --backend=headless --socket=wl-scale2 --width=3200 --height=2000 --scale=2 --idle-time=0 --renderer=gl --log=/tmp/weston-scale2.log &
-          weston --backend=headless --socket=wl-scale1 --width=1600 --height=1000 --scale=1 --idle-time=0 --renderer=gl --log=/tmp/weston-scale1.log &
+          ${AS_USER} weston --backend=headless --socket=wl-scale2 --width=3200 --height=2000 --scale=2 --idle-time=0 --renderer=gl --log=/tmp/weston-scale2.log &
+          ${AS_USER} weston --backend=headless --socket=wl-scale1 --width=1600 --height=1000 --scale=1 --idle-time=0 --renderer=gl --log=/tmp/weston-scale1.log &
           sleep 3
-          ls -l ${XDG_RUNTIME_DIR}
+          ls -l /tmp/xdg
           cat /tmp/weston-scale2.log
 
       - name: Run A, scale 2, fresh config (expect 1280x800 window = 2560x1600 framebuffer)
         env:
-          HOME: /tmp/home
           WAYLAND_DISPLAY: wl-scale2
-          LD_LIBRARY_PATH: /usr/local/lib
         run: |
-          mkdir -p ${HOME} out
-          python3 scripts/devops/wayland_headless_check.py build/Release/bin/MeshViewer 7899 2560 1600 out/runA-scale2-fresh.png
+          ${AS_USER} python3 scripts/devops/wayland_headless_check.py build/Release/bin/MeshViewer 7899 2560 1600 out/runA-scale2-fresh.png
           cp viewer_stdout.txt out/runA-stdout.txt
-          cfg=$(find ${HOME} -name config.json | head -1)
+          cfg=$(find /tmp/home -name config.json | head -1)
           echo "config: ${cfg}"
           grep -A3 -i 'mainWindow' "${cfg}" || true
 
       - name: Run B, scale 2, saved screen size 1000x600 (expect 2000x1200 framebuffer)
         env:
-          HOME: /tmp/home
           WAYLAND_DISPLAY: wl-scale2
-          LD_LIBRARY_PATH: /usr/local/lib
         run: |
-          cfg=$(find ${HOME} -name config.json | head -1)
-          python3 scripts/devops/wayland_patch_config.py "${cfg}" 1000 600 2000 1200
-          python3 scripts/devops/wayland_headless_check.py build/Release/bin/MeshViewer 7899 2000 1200 out/runB-scale2-restored.png
+          cfg=$(find /tmp/home -name config.json | head -1)
+          ${AS_USER} python3 scripts/devops/wayland_patch_config.py "${cfg}" 1000 600 2000 1200
+          ${AS_USER} python3 scripts/devops/wayland_headless_check.py build/Release/bin/MeshViewer 7899 2000 1200 out/runB-scale2-restored.png
           cp viewer_stdout.txt out/runB-stdout.txt
 
       - name: Run C, scale 1, same saved config (expect 1000x600 framebuffer)
         env:
-          HOME: /tmp/home
           WAYLAND_DISPLAY: wl-scale1
-          LD_LIBRARY_PATH: /usr/local/lib
         run: |
-          cfg=$(find ${HOME} -name config.json | head -1)
-          python3 scripts/devops/wayland_patch_config.py "${cfg}" 1000 600
-          python3 scripts/devops/wayland_headless_check.py build/Release/bin/MeshViewer 7899 1000 600 out/runC-scale1-restored.png
+          cfg=$(find /tmp/home -name config.json | head -1)
+          ${AS_USER} python3 scripts/devops/wayland_patch_config.py "${cfg}" 1000 600
+          ${AS_USER} python3 scripts/devops/wayland_headless_check.py build/Release/bin/MeshViewer 7899 1000 600 out/runC-scale1-restored.png
           cp viewer_stdout.txt out/runC-stdout.txt
 
       - name: Splash screenshots, scale 2 (compositor view during the first seconds)
         if: always()
         env:
-          HOME: /tmp/home
           WAYLAND_DISPLAY: wl-scale2
-          LD_LIBRARY_PATH: /usr/local/lib
         run: |
-          mkdir -p out && cd out
-          ../build/Release/bin/MeshViewer -mcpPort 7899 -console > splash-run-stdout.txt 2>&1 &
+          cd out
+          ${AS_USER} ../build/Release/bin/MeshViewer -mcpPort 7899 -console > splash-run-stdout.txt 2>&1 &
           pid=$!
-          for i in 1 2 3 4 5 6; do sleep 0.7; weston-screenshooter || true; done
+          for i in 1 2 3 4 5 6; do sleep 0.7; ${AS_USER} weston-screenshooter || true; done
           sleep 5
-          weston-screenshooter || true
+          ${AS_USER} weston-screenshooter || true
           kill ${pid} || true
           sleep 2
           ls -l

@@ -338,7 +338,7 @@ public:
     SweepLineQueue( Cache& cache, const MeshTopology& inTp, SweepLinePredicates predicates, const EdgeLoops& holes, const SweepLineParams& params );
 
     // makes initial mesh with one edge per segment between the points of the predicates, see initMeshBySegments_
-    SweepLineQueue( Cache& cache, SweepLinePredicates predicates, const std::vector<TwoVertIds>& segments, const SweepLineParams& params );
+    SweepLineQueue( Cache& cache, SweepLinePredicates predicates, const Vector<TwoVertIds>& segments, const SweepLineParams& params );
 
     size_t vertSize() const { return tp_.vertSize(); }
     std::optional<Mesh> run( IntersectionsMap* interMap = nullptr );
@@ -367,7 +367,7 @@ private:
     void initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops& loops );
     // vertex v is point v of the predicates, and the edges of every vertex are in angle order, as the sweep needs them;
     // a segment with one point at both ends or already added is skipped
-    void initMeshBySegments_( const std::vector<TwoVertIds>& segments );
+    void initMeshBySegments_( const Vector<TwoVertIds>& segments );
     // two different loop edges join the same two vertices: coincident segments the sweep cannot order, so the run fails
     bool multipleEdge_{ false };
     // merge same points on base mesh
@@ -569,7 +569,7 @@ SweepLineQueue::SweepLineQueue( Cache& cache, const MeshTopology& inTp, SweepLin
         setupStartVertices_();
 }
 
-SweepLineQueue::SweepLineQueue( Cache& cache, SweepLinePredicates predicates, const std::vector<TwoVertIds>& segments, const SweepLineParams& params ) :
+SweepLineQueue::SweepLineQueue( Cache& cache, SweepLinePredicates predicates, const Vector<TwoVertIds>& segments, const SweepLineParams& params ) :
     predicates_{ std::move( predicates ) },
     params_{ params },
     cache_( cache )
@@ -1407,7 +1407,7 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
     } );
 }
 
-void SweepLineQueue::initMeshBySegments_( const std::vector<TwoVertIds>& segments )
+void SweepLineQueue::initMeshBySegments_( const Vector<TwoVertIds>& segments )
 {
     for ( const auto& [a, b] : segments )
     {
@@ -2000,7 +2000,7 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
 // the sweep, as two segments without a common end cross if each one has the ends of the other on its two sides (a segment from
 // a point to itself is skipped, as the sweep skips it); more segments by the sweep, which merges no points and stops at the first crossing
 template <typename Preds>
-static bool hasCrossingT( const std::vector<TwoVertIds>& segments, const Preds& preds, ISweepLineCache* cache )
+static bool hasCrossingT( const Vector<TwoVertIds>& segments, const Preds& preds, ISweepLineCache* cache )
 {
     if ( segments.size() > 32 )
     {
@@ -2024,12 +2024,12 @@ static bool hasCrossingT( const std::vector<TwoVertIds>& segments, const Preds& 
     return preds.failed();
 }
 
-bool hasCrossing( const std::vector<TwoVertIds>& segments, const CutTrianglePredicates& preds, ISweepLineCache* cache )
+bool hasCrossing( const Vector<TwoVertIds>& segments, const CutTrianglePredicates& preds, ISweepLineCache* cache )
 {
     return hasCrossingT( segments, preds, cache );
 }
 
-bool hasCrossing( const std::vector<TwoVertIds>& segments, const std::vector<Vector3f>& points, const Vector3f& normal, ISweepLineCache* cache )
+bool hasCrossing( const Vector<TwoVertIds>& segments, const VertCoords& points, const Vector3f& normal, ISweepLineCache* cache )
 {
     Box3f box;
     for ( const auto& q : points )

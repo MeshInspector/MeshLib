@@ -1313,8 +1313,8 @@ TEST( MRMesh, ForceFillCrossingsCylinders )
 // a segment from the top of the first vertical one to the bottom of the second one, touching them only, or of the sixth one, crossing four
 TEST( MRMesh, HasCrossingFloatSweep )
 {
-    std::vector<Vector3f> points;
-    std::vector<TwoVertIds> segments;
+    VertCoords points;
+    Vector<TwoVertIds> segments;
     for ( int i = 0; i < 30; ++i )
     {
         segments.push_back( { VertId( 2 * i ), VertId( 2 * i + 1 ) } );

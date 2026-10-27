@@ -1051,10 +1051,10 @@ struct FaceSegment
 // the buffers of the search in one face, kept for the next face of the thread
 struct FaceCrossingsBuffers
 {
-    std::vector<std::pair<VertId, int>> keys; // the vertex of every end of a segment and the end, 2 * segment + k
-    std::vector<int> defs; // an end at every point
-    std::vector<TwoVertIds> ends; // the points of every segment
-    std::vector<Vector3f> xyz; // the coordinates of the points without sortData
+    Vector<std::pair<VertId, int>> keys; // the vertex of every end of a segment and the end, 2 * segment + k
+    Vector<int> defs; // an end at every point
+    Vector<TwoVertIds> ends; // the points of every segment
+    VertCoords xyz; // the coordinates of the points without sortData
     CutTrianglePredicates preds;
     std::unique_ptr<PlanarTriangulation::ISweepLineCache> cache = PlanarTriangulation::makeSweepLineCache();
 };
@@ -1110,7 +1110,7 @@ bool crossesInFace( FaceCrossingsBuffers& buf, const Mesh& mesh, const OneMeshCo
     if ( normal == Vector3f() )
         return true; // corners on one line give no plane to find the crossings in, so the face is bad, as in connectLoneContours
     buf.xyz.resize( buf.defs.size() );
-    for ( size_t p = 0; p < buf.xyz.size(); ++p )
+    for ( VertId p( 0 ); p < buf.xyz.size(); ++p )
     {
         const auto& s = segs[buf.defs[p] / 2];
         buf.xyz[p] = contours[s.c].intersections[s.i + buf.defs[p] % 2].coordinate;
@@ -1125,7 +1125,7 @@ FaceBitSet findCrossingFaces( const Mesh& mesh, const OneMeshContours& contours,
 {
     MR_TIMER;
     // the new path edges (an edge of the old mesh is in no face)
-    std::vector<FaceSegment> segs;
+    Vector<FaceSegment> segs;
     for ( int c = 0; c < preRes.paths.size(); ++c )
         for ( int i = 0; i < preRes.paths[c].size(); ++i )
             if ( const auto f = preRes.oldEdgesInfo[c][i].left; f && preRes.paths[c][i].undirected() >= firstNewEdge )

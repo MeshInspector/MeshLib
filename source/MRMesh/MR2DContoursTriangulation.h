@@ -171,12 +171,12 @@ MR_BIND_IGNORE MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mes
 /// segments with a common end only touch, and a repeated segment is taken once
 /// \param segments the ends of every segment, as the ids of the points in \p preds, which are all set and not failed
 /// \return true also if the predicates fail
-MR_BIND_IGNORE MRMESH_API bool hasCrossing( const std::vector<TwoVertIds>& segments, const CutTrianglePredicates& preds, ISweepLineCache* cache = nullptr );
+MR_BIND_IGNORE MRMESH_API bool hasCrossing( const Vector<TwoVertIds>& segments, const CutTrianglePredicates& preds, ISweepLineCache* cache = nullptr );
 
 /// same as above for the points that \p segments index given by their coordinates, projected along the axis most aligned with \p normal
 /// and rounded to integers as \ref triangulateDisjointContours does; distinct points rounded to the same position are told apart by their ids, not merged;
 /// if all the points are at one position, no segments cross
-MR_BIND_IGNORE MRMESH_API bool hasCrossing( const std::vector<TwoVertIds>& segments, const std::vector<Vector3f>& points, const Vector3f& normal,
+MR_BIND_IGNORE MRMESH_API bool hasCrossing( const Vector<TwoVertIds>& segments, const VertCoords& points, const Vector3f& normal,
     ISweepLineCache* cache = nullptr );
 
 }

@@ -83,6 +83,12 @@ jobs:
           ls -l /tmp/xdg
           cat /tmp/weston-scale2.log
 
+      - name: GLFW-only probe at scale 2 and at scale 1
+        run: |
+          cc -O1 scripts/devops/glfw_wayland_probe.c -I/usr/local/include -L/usr/local/lib -lglfw -o out/glfw_probe
+          echo "=== scale 2"; ${AS_USER} env WAYLAND_DISPLAY=wl-scale2 out/glfw_probe || true
+          echo "=== scale 1"; ${AS_USER} env WAYLAND_DISPLAY=wl-scale1 out/glfw_probe || true
+
       - name: Run A, scale 2, fresh config (expect 1280x800 window = 2560x1600 framebuffer)
         env:
           WAYLAND_DISPLAY: wl-scale2
@@ -92,7 +98,7 @@ jobs:
           st=$?
           cp viewer_stdout.txt out/runA-stdout.txt
           cp /tmp/MeshLib/Logs/*.txt out/ 2>/dev/null || true
-          cfg=$(find /tmp/home -name config.json | head -1)
+          cfg=$(find /home/github-user /tmp/home -name config.json 2>/dev/null | head -1)
           echo "config: ${cfg}"
           grep -A3 -i 'mainWindow' "${cfg}" || true
           exit $st
@@ -101,7 +107,7 @@ jobs:
         env:
           WAYLAND_DISPLAY: wl-scale2
         run: |
-          cfg=$(find /tmp/home -name config.json | head -1)
+          cfg=$(find /home/github-user /tmp/home -name config.json 2>/dev/null | head -1)
           ${AS_USER} python3 scripts/devops/wayland_patch_config.py "${cfg}" 1000 600 2000 1200
           set +e
           ${AS_USER} python3 scripts/devops/wayland_headless_check.py build/Release/bin/MeshViewer 7899 2000 1200 out/runB-scale2-restored.png
@@ -114,7 +120,7 @@ jobs:
         env:
           WAYLAND_DISPLAY: wl-scale1
         run: |
-          cfg=$(find /tmp/home -name config.json | head -1)
+          cfg=$(find /home/github-user /tmp/home -name config.json 2>/dev/null | head -1)
           ${AS_USER} python3 scripts/devops/wayland_patch_config.py "${cfg}" 1000 600
           set +e
           ${AS_USER} python3 scripts/devops/wayland_headless_check.py build/Release/bin/MeshViewer 7899 1000 600 out/runC-scale1-restored.png

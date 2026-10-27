@@ -45,19 +45,33 @@ Expected<AffineXf3f> findRigidXfRansac( const VertCoords & srcPoints, const Vert
     if ( numMatches < 3 )
         return unexpected( "At least three matches are required" );
 
-    const bool overlapScore = params.overlapSrcPoints && params.overlapTgtCloud;
-    if ( overlapScore )
-        params.overlapTgtCloud->getAABBTree(); // build it once before the parallel search
-    // the measure of a transformation's quality: the number of inlier matches or of overlapping source points
+    const bool srcToTgt = params.overlapSrcPoints && params.overlapTgtCloud;
+    const bool tgtToSrc = params.overlapTgtPoints && params.overlapSrcCloud;
+    const bool overlapScore = srcToTgt || tgtToSrc;
+    // build the trees once before the parallel search
+    if ( srcToTgt )
+        params.overlapTgtCloud->getAABBTree();
+    if ( tgtToSrc )
+        params.overlapSrcCloud->getAABBTree();
+    const auto distSq = sqr( params.inlierDistance );
+    auto countOverlapping = [distSq]( const VertCoords & points, const AffineXf3f & xf, const PointCloud & cloud )
+    {
+        size_t res = 0;
+        for ( const auto & p : points )
+            if ( findProjectionOnPoints( xf( p ), cloud, distSq, nullptr, distSq ).vId )
+                ++res;
+        return res;
+    };
+    // the measure of a transformation's quality: the number of inlier matches or of overlapping points
     auto score = [&]( const AffineXf3f & xf ) -> size_t
     {
         if ( !overlapScore )
             return countInliers( srcPoints, tgtPoints, matches, xf, params.inlierDistance );
-        const auto distSq = sqr( params.inlierDistance );
         size_t res = 0;
-        for ( const auto & p : *params.overlapSrcPoints )
-            if ( findProjectionOnPoints( xf( p ), *params.overlapTgtCloud, distSq, nullptr, distSq ).vId )
-                ++res;
+        if ( srcToTgt )
+            res += countOverlapping( *params.overlapSrcPoints, xf, *params.overlapTgtCloud );
+        if ( tgtToSrc )
+            res += countOverlapping( *params.overlapTgtPoints, xf.inverse(), *params.overlapSrcCloud );
         return res;
     };
 
@@ -135,12 +149,12 @@ Expected<AffineXf3f> findRigidXfRansac( const VertCoords & srcPoints, const Vert
             return unexpectedOperationCanceled();
     }
     if ( bestScore == 0 )
-        return unexpected( overlapScore ? "No sample of three matches brings source points close to the target cloud"
+        return unexpected( overlapScore ? "No sample of three matches makes the clouds overlap"
             : "No consistent sample of three matches was found" );
 
     PointToPointAligningTransform p2p;
     for ( const auto & m : matches )
-        if ( distanceSq( bestXf( srcPoints[m.first] ), tgtPoints[m.second] ) <= sqr( params.inlierDistance ) )
+        if ( distanceSq( bestXf( srcPoints[m.first] ), tgtPoints[m.second] ) <= distSq )
             p2p.add( srcPoints[m.first], tgtPoints[m.second] );
     const auto refinedXf = AffineXf3f( p2p.findBestRigidXf() );
     if ( score( refinedXf ) >= bestScore )

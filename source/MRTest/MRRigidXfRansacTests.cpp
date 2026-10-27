@@ -84,6 +84,19 @@ TEST( MRMesh, RigidXfRansacOverlap )
     ASSERT_TRUE( res.has_value() );
     for ( const auto & p : src )
         EXPECT_LT( distanceSq( ( *res )( p ), xf( p ) ), 1e-6f );
+
+    // and its inverse moves most target points onto the source cloud
+    PointCloud srcCloud;
+    for ( const auto & p : src )
+        srcCloud.addPoint( p );
+    params.overlapSrcPoints = nullptr;
+    params.overlapTgtCloud = nullptr;
+    params.overlapTgtPoints = &tgt.points;
+    params.overlapSrcCloud = &srcCloud;
+    res = findRigidXfRansac( src, tgt.points, matches, params );
+    ASSERT_TRUE( res.has_value() );
+    for ( const auto & p : src )
+        EXPECT_LT( distanceSq( ( *res )( p ), xf( p ) ), 1e-6f );
 }
 
 } //namespace MR

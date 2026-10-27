@@ -33,6 +33,11 @@ struct RigidXfRansacParams
     /// this finds the transformation even when only a few matches are correct, at the cost of a closest point search per point
     const VertCoords * overlapSrcPoints = nullptr;
     const PointCloud * overlapTgtCloud = nullptr;
+
+    /// if both are set, the score also counts how many of these target points the inverse transformation moves
+    /// within inlierDistance of some point of the source cloud; can be set alone or together with the pair above
+    const VertCoords * overlapTgtPoints = nullptr;
+    const PointCloud * overlapSrcCloud = nullptr;
 };
 
 /// counts the matches (source point, target point) that given transformation maps within given distance from their target points

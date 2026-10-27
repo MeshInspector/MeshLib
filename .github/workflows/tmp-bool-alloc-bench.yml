@@ -56,7 +56,7 @@ jobs:
             python -m venv venv_$v
             if [ -x venv_$v/Scripts/python.exe ]; then py=venv_$v/Scripts/python.exe; else py=venv_$v/bin/python; fi
             $py -m pip install -q numpy
-            $py -m pip install --no-index --no-deps --find-links whl/$v meshlib
+            $py -m pip install --no-index --no-deps --find-links whl/$v meshlib meshlib_core
             echo "PY_$v=$PWD/$py" >> $GITHUB_ENV
           done
 

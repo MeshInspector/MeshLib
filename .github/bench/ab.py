@@ -15,7 +15,10 @@ print(f"{platform.platform()} {platform.machine()} cpus={os.cpu_count()} python=
 
 for r in range(rounds):
     for name, exe in variants:
-        out = subprocess.run([exe, bench, "3"], capture_output=True, text=True, check=True).stdout
+        p = subprocess.run([exe, bench, "3"], capture_output=True, text=True)
+        if p.returncode:
+            sys.exit(f"{name} failed:\n{p.stdout}\n{p.stderr}")
+        out = p.stdout
         for line in out.splitlines():
             if line.startswith("mimalloc"):
                 if r == 0:

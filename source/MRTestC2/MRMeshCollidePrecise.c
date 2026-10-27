@@ -12,11 +12,8 @@
 #include <MRCMesh/MROneMeshContours.h>
 #include <MRCMesh/MRPrecisePredicates3.h>
 #include <MRCMesh/MRTorus.h>
+#include <MRCMesh/MRVector.h>
 #include <MRCMesh/MRVector3.h>
-#include <MRCMisc/std_vector_MR_OneMeshContour.h>
-#include <MRCMisc/std_vector_MR_OneMeshIntersection.h>
-#include <MRCMisc/std_vector_MR_VarEdgeTri.h>
-#include <MRCMisc/std_vector_std_vector_MR_VarEdgeTri.h>
 
 void testMeshCollidePrecise( void )
 {
@@ -37,43 +34,43 @@ void testMeshCollidePrecise( void )
     MR_MeshPart* meshBPart = MR_MeshPart_Construct( meshB, NULL );
     MR_CoordinateConverters* conv = MR_getVectorConverters( meshAPart, meshBPart, NULL );
 
-    MR_std_vector_MR_VarEdgeTri* intersections = MR_findCollidingEdgeTrisPrecise( meshAPart, meshBPart, MR_CoordinateConverters_Get_toInt( conv ), NULL, NULL );
+    MR_Vector_MR_VarEdgeTri* intersections = MR_findCollidingEdgeTrisPrecise( meshAPart, meshBPart, MR_CoordinateConverters_Get_toInt( conv ), NULL, NULL );
 
     MR_MeshPart_Destroy( meshAPart );
     MR_MeshPart_Destroy( meshBPart );
 
-    TEST_ASSERT_INT_EQUAL( (int)MR_std_vector_MR_VarEdgeTri_size( intersections ), 152 )
+    TEST_ASSERT_INT_EQUAL( (int)MR_Vector_MR_VarEdgeTri_size( intersections ), 152 )
 
     const MR_MeshTopology* meshATop = MR_Mesh_Get_topology( meshA );
     const MR_MeshTopology* meshBTop = MR_Mesh_Get_topology( meshB );
-    MR_std_vector_std_vector_MR_VarEdgeTri* contours = MR_orderIntersectionContours( meshATop, meshBTop, intersections );
-    TEST_ASSERT_INT_EQUAL( (int)MR_std_vector_std_vector_MR_VarEdgeTri_size( contours ), 4 )
-    TEST_ASSERT( MR_std_vector_MR_VarEdgeTri_size( MR_std_vector_std_vector_MR_VarEdgeTri_at( contours, 0 ) ) == 69 || // Apple Debug
-                 MR_std_vector_MR_VarEdgeTri_size( MR_std_vector_std_vector_MR_VarEdgeTri_at( contours, 0 ) ) == 71 )
-    TEST_ASSERT( MR_std_vector_MR_VarEdgeTri_size( MR_std_vector_std_vector_MR_VarEdgeTri_at( contours, 1 ) ) == 9  || // Apple Debug
-                 MR_std_vector_MR_VarEdgeTri_size( MR_std_vector_std_vector_MR_VarEdgeTri_at( contours, 1 ) ) == 7 )
-    TEST_ASSERT( MR_std_vector_MR_VarEdgeTri_size( MR_std_vector_std_vector_MR_VarEdgeTri_at( contours, 2 ) ) == 69 || // without FMA instruction (default settings for x86 or old compilers for ARM)
-                 MR_std_vector_MR_VarEdgeTri_size( MR_std_vector_std_vector_MR_VarEdgeTri_at( contours, 2 ) ) == 71 ); // with FMA instruction (modern compilers for ARM)
-    TEST_ASSERT( MR_std_vector_MR_VarEdgeTri_size( MR_std_vector_std_vector_MR_VarEdgeTri_at( contours, 3 ) ) == 9 ||  // without FMA instruction (default settings for x86 or old compilers for ARM)
-                 MR_std_vector_MR_VarEdgeTri_size( MR_std_vector_std_vector_MR_VarEdgeTri_at( contours, 3 ) ) == 7 );  // with FMA instruction (modern compilers for ARM)
+    MR_Vector_MR_Vector_MR_VarEdgeTri* contours = MR_orderIntersectionContours( meshATop, meshBTop, intersections );
+    TEST_ASSERT_INT_EQUAL( (int)MR_Vector_MR_Vector_MR_VarEdgeTri_size( contours ), 4 )
+    TEST_ASSERT( MR_Vector_MR_VarEdgeTri_size( MR_Vector_MR_Vector_MR_VarEdgeTri_index( contours, 0 ) ) == 69 || // Apple Debug
+                 MR_Vector_MR_VarEdgeTri_size( MR_Vector_MR_Vector_MR_VarEdgeTri_index( contours, 0 ) ) == 71 )
+    TEST_ASSERT( MR_Vector_MR_VarEdgeTri_size( MR_Vector_MR_Vector_MR_VarEdgeTri_index( contours, 1 ) ) == 9  || // Apple Debug
+                 MR_Vector_MR_VarEdgeTri_size( MR_Vector_MR_Vector_MR_VarEdgeTri_index( contours, 1 ) ) == 7 )
+    TEST_ASSERT( MR_Vector_MR_VarEdgeTri_size( MR_Vector_MR_Vector_MR_VarEdgeTri_index( contours, 2 ) ) == 69 || // without FMA instruction (default settings for x86 or old compilers for ARM)
+                 MR_Vector_MR_VarEdgeTri_size( MR_Vector_MR_Vector_MR_VarEdgeTri_index( contours, 2 ) ) == 71 ); // with FMA instruction (modern compilers for ARM)
+    TEST_ASSERT( MR_Vector_MR_VarEdgeTri_size( MR_Vector_MR_Vector_MR_VarEdgeTri_index( contours, 3 ) ) == 9 ||  // without FMA instruction (default settings for x86 or old compilers for ARM)
+                 MR_Vector_MR_VarEdgeTri_size( MR_Vector_MR_Vector_MR_VarEdgeTri_index( contours, 3 ) ) == 7 );  // with FMA instruction (modern compilers for ARM)
 
-    MR_std_vector_MR_OneMeshContour* meshAContours = MR_std_vector_MR_OneMeshContour_DefaultConstruct();
-    MR_std_vector_MR_OneMeshContour* meshBContours = MR_std_vector_MR_OneMeshContour_DefaultConstruct();
+    MR_Vector_MR_OneMeshContour* meshAContours = MR_Vector_MR_OneMeshContour_DefaultConstruct();
+    MR_Vector_MR_OneMeshContour* meshBContours = MR_Vector_MR_OneMeshContour_DefaultConstruct();
     MR_getOneMeshIntersectionContours( meshA, meshB, contours, meshAContours, meshBContours, conv, NULL, NULL, NULL );
-    TEST_ASSERT( MR_std_vector_MR_OneMeshContour_size( meshAContours ) == 4 )
-    TEST_ASSERT( MR_std_vector_MR_OneMeshContour_size( meshBContours ) == 4 )
+    TEST_ASSERT( MR_Vector_MR_OneMeshContour_size( meshAContours ) == 4 )
+    TEST_ASSERT( MR_Vector_MR_OneMeshContour_size( meshBContours ) == 4 )
 
     size_t posCount = 0;
-    for ( size_t i = 0; i < MR_std_vector_MR_OneMeshContour_size( meshAContours ); ++i )
-        posCount += MR_std_vector_MR_OneMeshIntersection_size( MR_OneMeshContour_Get_intersections( MR_std_vector_MR_OneMeshContour_at( meshAContours, i ) ) );
+    for ( size_t i = 0; i < MR_Vector_MR_OneMeshContour_size( meshAContours ); ++i )
+        posCount += MR_Vector_MR_OneMeshIntersection_size( MR_OneMeshContour_Get_intersections( MR_Vector_MR_OneMeshContour_index( meshAContours, i ) ) );
     TEST_ASSERT( posCount == 156 )
 
-    MR_std_vector_MR_OneMeshContour_Destroy( meshBContours );
-    MR_std_vector_MR_OneMeshContour_Destroy( meshAContours );
+    MR_Vector_MR_OneMeshContour_Destroy( meshBContours );
+    MR_Vector_MR_OneMeshContour_Destroy( meshAContours );
 
-    MR_std_vector_std_vector_MR_VarEdgeTri_Destroy( contours );
+    MR_Vector_MR_Vector_MR_VarEdgeTri_Destroy( contours );
 
-    MR_std_vector_MR_VarEdgeTri_Destroy( intersections );
+    MR_Vector_MR_VarEdgeTri_Destroy( intersections );
 
     MR_CoordinateConverters_Destroy( conv );
 

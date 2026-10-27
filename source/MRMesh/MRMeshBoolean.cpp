@@ -79,7 +79,7 @@ void gatherEdgeInfo( const MeshTopology& topology, EdgeId e, FaceBitSet& faces, 
 // removes the closed contours of two points, which have zero area, as their two segments coincide
 void removeTwoPointLoops( ContinuousContours& contours )
 {
-    std::erase_if( contours, [] ( const ContinuousContour& c ) { return c.size() == 3 && isClosed( c ); } );
+    erase_if( contours, [] ( const ContinuousContour& c ) { return c.size() == 3 && isClosed( c ); } );
 }
 
 } //anonymous namespace
@@ -135,10 +135,10 @@ struct JoinedSelfLoops
     int second{ 0 };
     int secondRot{ 0 };
 };
-std::vector<JoinedSelfLoops> findSelfContoursMapping( const ContinuousContours& contours )
+Vector<JoinedSelfLoops> findSelfContoursMapping( const ContinuousContours& contours )
 {
     assert( contours.size() % 2 == 0 );
-    std::vector<JoinedSelfLoops> holePairs( contours.size() / 2 );
+    Vector<JoinedSelfLoops> holePairs( contours.size() / 2 );
     BitSet visitedConts( contours.size(), true );
     int i = 0;
     while ( visitedConts.any() )
@@ -267,8 +267,8 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
     } );
 
     // meshAVertsNum = 0 because both meshes are actually the same and no need to change the IDs of any mesh vertices
-    auto sortData = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ inMesh, contours, converters.toInt, nullptr, 0, false } );
-    auto cutRes = cutMesh( mesh, intContours, { .sortData = sortData.get() } );
+    const SortIntersectionsData sortData{ inMesh, contours, converters.toInt, nullptr, 0, false };
+    auto cutRes = cutMesh( mesh, intContours, { .sortData = &sortData } );
     if ( cutRes.fbsWithContourIntersections.any() )
         return unexpected( fmt::format( "Self-Boolean has nested intersections on {} faces", cutRes.fbsWithContourIntersections.count() ) );
     convertIntFloatAllVerts( mesh, converters );
@@ -353,8 +353,8 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     // as far as meshes is going to be change in the same time we need to take copies before start cutting
     Mesh meshACopyBuffer; // (only used if meshes were not copied before, otherwise old copy will be used)
     Mesh meshBCopyBuffer;// (only used if meshes were not copied before, otherwise old copy will be used)
-    std::unique_ptr<SortIntersectionsData> dataForA;
-    std::unique_ptr<SortIntersectionsData> dataForB;
+    std::optional<SortIntersectionsData> dataForA;
+    std::optional<SortIntersectionsData> dataForB;
 
     tbb::task_group taskGroup;
     if ( doCutA )
@@ -369,11 +369,11 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
                     meshBCopyBuffer = meshB;
                     intParams.originalMeshB = &meshBCopyBuffer;
                 }
-                dataForA = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ *intParams.originalMeshB, contours, converters.toInt, params.rigidB2A, meshAVertsNum, false } );
+                dataForA.emplace( SortIntersectionsData{ *intParams.originalMeshB, contours, converters.toInt, params.rigidB2A, meshAVertsNum, false } );
             }
             else
                 // B is stable so no need copy
-                dataForA = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ meshB, contours, converters.toInt, params.rigidB2A, meshAVertsNum, false } );
+                dataForA.emplace( SortIntersectionsData{ meshB, contours, converters.toInt, params.rigidB2A, meshAVertsNum, false } );
         } );
     }
 
@@ -387,11 +387,11 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
                 meshACopyBuffer = meshA;
                 intParams.originalMeshA = &meshACopyBuffer;
             }
-            dataForB = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ *intParams.originalMeshA, contours, converters.toInt, params.rigidB2A, meshAVertsNum, true } );
+            dataForB.emplace( SortIntersectionsData{ *intParams.originalMeshA, contours, converters.toInt, params.rigidB2A, meshAVertsNum, true } );
         }
         else
             // A is stable so no need to copy
-            dataForB = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ meshA, contours, converters.toInt, params.rigidB2A, meshAVertsNum, true } );
+            dataForB.emplace( SortIntersectionsData{ meshA, contours, converters.toInt, params.rigidB2A, meshAVertsNum, true } );
     }
     taskGroup.wait();
 
@@ -414,7 +414,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
             FaceMap* cut2oldAPtr = params.mapper ? &params.mapper->maps[int( BooleanResultMapper::MapObject::A )].cut2origin : nullptr;
             // cut meshes
             CutMeshParameters cmParams;
-            cmParams.sortData = dataForA.get();
+            cmParams.sortData = &*dataForA;
             cmParams.new2OldMap = cut2oldAPtr;
             if ( params.forceCut )
                 cmParams.forceFill = true;
@@ -434,7 +434,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         FaceMap* cut2oldBPtr = params.mapper ? &params.mapper->maps[int( BooleanResultMapper::MapObject::B )].cut2origin : nullptr;
         // cut meshes
         CutMeshParameters cmParams;
-        cmParams.sortData = dataForB.get();
+        cmParams.sortData = &*dataForB;
         cmParams.new2OldMap = cut2oldBPtr;
         if ( params.forceCut )
             cmParams.forceFill = true;

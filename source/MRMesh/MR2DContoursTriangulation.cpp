@@ -131,7 +131,7 @@ static SweepLinePredicates precisePredicates( const Contours2f& contours, Vector
 
 // per-contour vertex counts; lets the queue build the initial edge loops independently of coordinate dimension
 // filled in the caller's buffer, which a caller triangulating many contour sets reuses
-static const std::vector<int>& getContourSizes( const Contours2f& contours, std::vector<int>& sizes )
+static const Vector<int>& getContourSizes( const Contours2f& contours, Vector<int>& sizes )
 {
     sizes.resize( contours.size() );
     for ( int i = 0; i < int( contours.size() ); ++i )
@@ -212,7 +212,7 @@ static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoop
 // edges[0] is the edge being queried itself - only its slot is used, its topology is never read,
 // so it may be a lone edge still under construction
 int findClosestToFront( const MeshTopology& tp, const SweepLinePredicates& predicates,
-    const std::vector<EdgeId>& edges, bool left, VertId baseId )
+    const Vector<EdgeId>& edges, bool left, VertId baseId )
 {
     if ( edges.size() == 2 )
         return 1;
@@ -272,7 +272,7 @@ int findClosestToFront( const MeshTopology& tp, const SweepLinePredicates& predi
 // spliced edge here, or invalid for the against-the-sweep ray); a candidate pointing to that same
 // dest is returned right away
 int findClosestToFront( const MeshTopology& tp, const SweepLinePredicates& predicates,
-    const std::vector<EdgeId>& edges, bool left )
+    const Vector<EdgeId>& edges, bool left )
 {
     if ( edges.size() == 2 )
         return 1;
@@ -324,7 +324,7 @@ struct SweepLineParams
     /// optional output: the chords makeMonotone() adds, in creation order. Because makeEdge() only
     /// appends, chord k is the undirected edge patchToInEdges.size() + k - but only while nothing is
     /// injected between the loop edges and the chords (i.e. findIntersections() found no intersection)
-    std::vector<MonotoneChord>* outChords{ nullptr };
+    Vector<MonotoneChord>* outChords{ nullptr };
 };
 
 class SweepLineQueue
@@ -333,7 +333,7 @@ public:
     struct Cache; // all the buffers reused between runs, defined below
 
     // constructor makes initial mesh which simply contain input contours as edges
-    SweepLineQueue( Cache& cache, SweepLinePredicates predicates, const std::vector<int>& contourSizes, const SweepLineParams& params );
+    SweepLineQueue( Cache& cache, SweepLinePredicates predicates, const Vector<int>& contourSizes, const SweepLineParams& params );
 
     SweepLineQueue( Cache& cache, const MeshTopology& inTp, SweepLinePredicates predicates, const EdgeLoops& holes, const SweepLineParams& params );
 
@@ -363,7 +363,7 @@ private:
 
 // INITIALIZATION CLASS BLOCK
     // make base mesh only containing input contours as edge loops
-    void initMeshByContours_( const std::vector<int>& contourSizes );
+    void initMeshByContours_( const Vector<int>& contourSizes );
     void initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops& loops );
     // vertex v is point v of the predicates, and the edges of every vertex are in angle order, as the sweep needs them;
     // a segment with one point at both ends or already added is skipped
@@ -492,26 +492,26 @@ public:
         // pointer to it, which is enough because a run's predicates never outlive the cache
         Vector<Vector2i, VertId> pts2Buffer;
         Vector<EdgeWindingInfo, UndirectedEdgeId> windingInfo;
-        std::vector<int> reflexChainCache;
-        std::vector<Intersection> intersections;
+        Vector<int> reflexChainCache;
+        Vector<Intersection> intersections;
         // scratch bitset of setupStartVertices_()
         VertBitSet startVerticesCache;
         // sorted vertices with no left-going edges
-        std::vector<VertId> startVerts;
-        std::vector<EdgeId> startVertLowestRight;
+        Vector<VertId> startVerts;
+        Vector<EdgeId> startVertLowestRight;
         // sorted vertices
-        std::vector<VertId> sortedVerts;
+        Vector<VertId> sortedVerts;
         // edges that are intersected by sweep line ordered by position
-        std::vector<SweepEdgeInfo> activeSweepEdges;
+        Vector<SweepEdgeInfo> activeSweepEdges;
         // ordered events after intersection stage
-        std::vector<Event> events;
-        std::vector<SweepEdgeInfo> rightGoingCache;
-        std::vector<EdgeId> findClosestCache;
+        Vector<Event> events;
+        Vector<SweepEdgeInfo> rightGoingCache;
+        Vector<EdgeId> findClosestCache;
         IntersectionMap intersectionsMap; // needed to prevent recreation of same vertices multiple times
         // scratch maps of initMeshByLoops_()
         UndirectedEdgeHashMap in2p;
         WholeEdgeMap p2inCache;
-        std::vector<int> contourSizes; // vertex count of every input contour
+        Vector<int> contourSizes; // vertex count of every input contour
         Vector<EdgeId, UndirectedEdgeId> oldToFirstNewEdgeMap; // scratch of injectIntersections()
         EdgeLoop monotoneBlockLoop; // scratch boundary loop of triangulateMonotoneBlock_()
         DeloneFlipsCache deloneCache; // candidate sets of the Delone flips in triangulate()
@@ -524,16 +524,16 @@ private:
     MeshTopology& tp_ = cache_.tp;
     VertCoords& pointsCache_ = cache_.pointsCache;
     Vector<EdgeWindingInfo, UndirectedEdgeId>& windingInfo_ = cache_.windingInfo;
-    std::vector<int>& reflexChainCache_ = cache_.reflexChainCache;
-    std::vector<Intersection>& intersections_ = cache_.intersections;
+    Vector<int>& reflexChainCache_ = cache_.reflexChainCache;
+    Vector<Intersection>& intersections_ = cache_.intersections;
     VertBitSet& startVerticesCache_ = cache_.startVerticesCache;
-    std::vector<VertId>& startVerts_ = cache_.startVerts;
-    std::vector<EdgeId>& startVertLowestRight_ = cache_.startVertLowestRight;
-    std::vector<VertId>& sortedVerts_ = cache_.sortedVerts;
-    std::vector<SweepEdgeInfo>& activeSweepEdges_ = cache_.activeSweepEdges;
-    std::vector<Event>& events_ = cache_.events;
-    std::vector<SweepEdgeInfo>& rightGoingCache_ = cache_.rightGoingCache;
-    std::vector<EdgeId>& findClosestCache_ = cache_.findClosestCache;
+    Vector<VertId>& startVerts_ = cache_.startVerts;
+    Vector<EdgeId>& startVertLowestRight_ = cache_.startVertLowestRight;
+    Vector<VertId>& sortedVerts_ = cache_.sortedVerts;
+    Vector<SweepEdgeInfo>& activeSweepEdges_ = cache_.activeSweepEdges;
+    Vector<Event>& events_ = cache_.events;
+    Vector<SweepEdgeInfo>& rightGoingCache_ = cache_.rightGoingCache;
+    Vector<EdgeId>& findClosestCache_ = cache_.findClosestCache;
     IntersectionMap& intersectionsMap_ = cache_.intersectionsMap;
     UndirectedEdgeHashMap& in2p_ = cache_.in2p;
     WholeEdgeMap& p2inCache_ = cache_.p2inCache;
@@ -549,7 +549,7 @@ std::unique_ptr<ISweepLineCache> makeSweepLineCache()
     return std::make_unique<SweepLineQueue::Cache>();
 }
 
-SweepLineQueue::SweepLineQueue( Cache& cache, SweepLinePredicates predicates, const std::vector<int>& contourSizes, const SweepLineParams& params ) :
+SweepLineQueue::SweepLineQueue( Cache& cache, SweepLinePredicates predicates, const Vector<int>& contourSizes, const SweepLineParams& params ) :
     predicates_{ std::move( predicates ) },
     params_{ params },
     cache_( cache )
@@ -1201,7 +1201,7 @@ void SweepLineQueue::checkIntersection_( int i )
     activeSweepEdges_[i + 1].lowerInfo.interVertId = interInfo.vId;
 }
 
-void SweepLineQueue::initMeshByContours_( const std::vector<int>& contourSizes )
+void SweepLineQueue::initMeshByContours_( const Vector<int>& contourSizes )
 {
     for ( int contourId = 0; contourId < int( contourSizes.size() ); ++contourId )
     {
@@ -1463,7 +1463,7 @@ void SweepLineQueue::mergeSamePoints_()
 
 void SweepLineQueue::mergeSinglePare_( VertId unique, VertId same )
 {
-    std::vector<EdgeId> sameEdges;
+    Vector<EdgeId> sameEdges;
     int sameToUniqueEdgeIndex{ -1 };
     int i = 0;
     for ( auto eSame : orgRing( tp_, same ) )
@@ -1566,7 +1566,7 @@ void SweepLineQueue::removeMultipleAfterMerge_()
     auto multiples = findMultipleEdges( tp_ ).value();
     for ( const auto& multiple : multiples )
     {
-        std::vector<EdgeId> multiplesFromThis;
+        Vector<EdgeId> multiplesFromThis;
         for ( auto e : orgRing( tp_, multiple.first ) )
         {
             if ( tp_.dest( e ) == multiple.second )
@@ -1884,7 +1884,7 @@ static std::optional<HoleFillPlan> getMonotonePlanImpl( const Mesh& mesh, const 
 
     SweepLineQueue::Cache cache;
     WholeEdgeMap patchToInEdges; // initMeshByLoops_ reserves it from the loop sizes
-    std::vector<MonotoneChord> chords;
+    Vector<MonotoneChord> chords;
     SweepLineQueue triangulator( cache, mesh.topology, makePredicates( patchToInEdges, cache ), loops,
         { .abortWhenIntersect = true, .allowTwoEdgeLoops = true, .outPatchMap = &patchToInEdges, .outChords = &chords } );
     if ( !triangulator.findIntersections() )
@@ -1939,7 +1939,7 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
 {
     // the distinct vertices of the loops (a vertex can be on several loops, or twice on a slit), sorted; vertex verts[i] is point i
     // of the predicates, all added before the sweep, since no predicate may run after a failed addPoint
-    std::vector<VertId> verts;
+    Vector<VertId> verts;
     for ( const auto& loop : loops )
         for ( auto e : loop )
             verts.push_back( mesh.topology.org( e ) );
@@ -1951,7 +1951,7 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
     // (as the crossings of the edges of a multiple edge of the other mesh with their wedges), so every two of them are compared before
     // the sweep, and the loops are rejected if that fails: a vertex point by its id, a crossing by the ids of its segment and triangle
     // in any order, with the index of the point
-    std::vector<std::pair<std::array<int, 5>, int>> keys( verts.size() );
+    Vector<std::pair<std::array<int, 5>, int>> keys( verts.size() );
     for ( int i = 0; i < verts.size(); ++i )
     {
         const auto d = pointOf( verts[i] );

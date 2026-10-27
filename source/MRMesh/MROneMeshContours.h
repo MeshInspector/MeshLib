@@ -31,7 +31,7 @@ struct OneMeshIntersection
 // One contour on mesh
 struct OneMeshContour
 {
-    std::vector<OneMeshIntersection> intersections;
+    Vector<OneMeshIntersection> intersections;
     bool closed{false};
 };
 /** \ingroup BooleanGroup
@@ -41,7 +41,7 @@ struct OneMeshContour
   * \ref MR::surfaceLineToClosedMeshContour
   * \ref MR::surfacePathsToMeshContours
   */
-using OneMeshContours = std::vector<OneMeshContour>;
+using OneMeshContours = Vector<OneMeshContour>;
 
 // Divides faces that fully own contours into 3 parts with center in center mass of one of the face contours
 // if there is more than one contour on face it guarantee to subdivide at least one lone contour on this face

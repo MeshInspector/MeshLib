@@ -52,7 +52,7 @@ struct EdgeIntersectionData
     int beforeSortIndex{ 0 }; // useful for next sort
 };
 
-using EdgeData = std::vector<EdgeIntersectionData>;
+using EdgeData = Vector<EdgeIntersectionData>;
 
 // the faces of the old mesh on both sides of a path edge: the same face for a path edge inside it,
 // the faces of an edge of the old mesh for a path edge along it
@@ -62,7 +62,7 @@ struct PathsEdgeIndex
     FaceId right;
 };
 
-using PathsOldFaces = std::vector<std::vector<PathsEdgeIndex>>; // [contour][edge]
+using PathsOldFaces = Vector<Vector<PathsEdgeIndex>>; // [contour][edge]
 using EdgeDataMap = ParallelHashMap<UndirectedEdgeId, EdgeData>;
 struct PreCutResult
 {
@@ -401,9 +401,9 @@ struct LoneFace
 };
 
 // finds the faces of lone contours, before the cut changes their topology
-std::vector<LoneFace> findLoneFaces( const MeshTopology& topology, const OneMeshContours& contours )
+Vector<LoneFace> findLoneFaces( const MeshTopology& topology, const OneMeshContours& contours )
 {
-    std::vector<FaceId> faces;
+    Vector<FaceId> faces;
     for ( const auto& c : contours )
     {
         if ( c.intersections.size() > 1 && std::all_of( c.intersections.begin(), c.intersections.end(),
@@ -412,7 +412,7 @@ std::vector<LoneFace> findLoneFaces( const MeshTopology& topology, const OneMesh
     }
     std::sort( faces.begin(), faces.end() );
     faces.erase( std::unique( faces.begin(), faces.end() ), faces.end() );
-    std::vector<LoneFace> res( faces.size() );
+    Vector<LoneFace> res( faces.size() );
     for ( int i = 0; i < faces.size(); ++i )
     {
         auto& lf = res[i];
@@ -427,7 +427,7 @@ std::vector<LoneFace> findLoneFaces( const MeshTopology& topology, const OneMesh
 // connects the islands of lone contours with the rest of the holes of their faces by the chords that split the holes in monotone parts,
 // found on the exact predicates consistent with the boolean if sortData is given; the faces where that fails are added to badFaces
 // and stay in the mesh unless another contour removed them
-void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const std::vector<LoneFace>& loneFaces, const PreCutResult& preRes,
+void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const Vector<LoneFace>& loneFaces, const PreCutResult& preRes,
     UndirectedEdgeId firstNewEdge, const SortIntersectionsData* sortData, NewEdgesMap* new2OldEdgeMap, FaceBitSet& badFaces )
 {
     if ( loneFaces.empty() )
@@ -435,7 +435,7 @@ void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const std
     MR_TIMER;
 
     // the path edges inside every lone face, with the face on the left, and the contour points at their ends for the exact definitions
-    std::vector<EdgePath> faceEdges( loneFaces.size() );
+    Vector<EdgePath> faceEdges( loneFaces.size() );
     HashMap<VertId, std::pair<int, int>> vertInters;
     for ( int i = 0; i < preRes.paths.size(); ++i )
     {
@@ -471,7 +471,7 @@ void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const std
     };
 
     // the boundaries of the hole of every lone face
-    std::vector<EdgeLoops> faceLoops( loneFaces.size() );
+    Vector<EdgeLoops> faceLoops( loneFaces.size() );
     EdgeBitSet inLoops( mesh.topology.edgeSize() );
     BitSet removedHere( loneFaces.size() ); // the faces that no other contour removed, to put back if their plans fail
     for ( int i = 0; i < loneFaces.size(); ++i )
@@ -498,7 +498,7 @@ void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const std
     }
 
     // the faces are independent, so plan them in parallel
-    std::vector<std::optional<HoleFillPlan>> plans( loneFaces.size() );
+    Vector<std::optional<HoleFillPlan>> plans( loneFaces.size() );
     ParallelFor( plans, [&] ( size_t i )
     {
         const auto& lf = loneFaces[i];
@@ -813,7 +813,7 @@ void sortEdgeInfo( const Mesh& mesh, const OneMeshContours& contours, EdgeData& 
     else
     {
         // sort using floating-point coordinates of new vertices
-        std::vector<double> dotProds( edgeData.size() );
+        Vector<double> dotProds( edgeData.size() );
         Vector3d orgPoint{ mesh.orgPnt( baseEdge ) };
         auto abVec = Vector3d{ mesh.destPnt( baseEdge ) } - orgPoint;
         for ( int i = 0; i < edgeData.size(); ++i )
@@ -1192,14 +1192,14 @@ Expected<OneMeshContours> offsetSurfaceLineToMeshContours( const Mesh& mesh, con
     // setup start vertices
     VertBitSet startVertices( meshAfterCut.topology.vertSize() );
     HashMap<VertId, float> startVerticesValues; // only used if offset is variable
-    std::vector<float> sumLength; // only used if offset is variable
+    Vector<float> sumLength; // only used if offset is variable
     struct InterInfo
     {
         float length{ 0.0f };
         int startPivot{ -1 };
         int endPivot{ -1 };
     };
-    std::vector<InterInfo> singleSegmentInfo; // only used if offset is variable
+    Vector<InterInfo> singleSegmentInfo; // only used if offset is variable
     if ( !pivotIndices.empty() ) // if offset is variable
     {
         sumLength.resize( pivotIndices.size(), 0.0f );
@@ -1341,9 +1341,9 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     Timer t( "find edge per hole" );
     EdgeBitSet allHoleEdges( mesh.topology.edgeSize() );
     std::vector<EdgeId> holeRepresentativeEdges;
-    std::vector<FaceId> oldFaces; // of corresponding holeRepresentativeEdges
-    std::vector<EdgeId> pseudoHoleRepresentativeEdges;
-    std::vector<FaceId> pseudoOldFaces; // of corresponding pseudoHoleRepresentativeEdges
+    Vector<FaceId> oldFaces; // of corresponding holeRepresentativeEdges
+    Vector<EdgeId> pseudoHoleRepresentativeEdges;
+    Vector<FaceId> pseudoOldFaces; // of corresponding pseudoHoleRepresentativeEdges
     const bool needOldFaces = params.new2OldMap || params.new2oldEdgesMap;
     auto addHoleDesc = [&] ( EdgeId e, FaceId oldf, bool pseudofill )
     {
@@ -1462,7 +1462,7 @@ Expected<FaceBitSet> cutMeshByContours( Mesh& mesh, const Contours3f& contours, 
     if ( mesh.topology.faceSize() <= 0 )
         return unexpected( "Mesh is empty" );
 
-    std::vector<Expected<OneMeshContour>> maybeOneMeshContours( contours.size() );
+    Vector<Expected<OneMeshContour>> maybeOneMeshContours( contours.size() );
     ParallelFor( contours, [&]( size_t ic )
     {
         const auto & contour = contours[ic];
@@ -1475,7 +1475,7 @@ Expected<FaceBitSet> cutMeshByContours( Mesh& mesh, const Contours3f& contours, 
         maybeOneMeshContours[ic] = surfaceLineToMeshContour( mesh, surfaceLine );
     } );
 
-    std::vector<OneMeshContour> oneMeshContours( contours.size() );
+    Vector<OneMeshContour> oneMeshContours( contours.size() );
     for( size_t ic = 0; ic < contours.size(); ++ic )
     {
         if ( !maybeOneMeshContours[ic] )

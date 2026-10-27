@@ -132,6 +132,38 @@ jobs:
           cp /tmp/MeshLib/Logs/*.txt out/ 2>/dev/null || true
           exit $st
 
+      - name: Control, master's restore code, scale 2, saved 2000x1200 framebuffer (expect the overscaled 4000x2400)
+        env:
+          WAYLAND_DISPLAY: wl-scale2
+          MESHLIB_BUILD_RELEASE: "ON"
+          MESHLIB_BUILD_DEBUG: "OFF"
+          CMAKE_C_COMPILER: clang
+          CMAKE_CXX_COMPILER: clang++
+          CMAKE_LINKER_TYPE: LLD
+          MR_CMAKE_OPTIONS: >
+            -DMRVIEWER_EXPERIMENTAL_WAYLAND_SUPPORT=ON
+            -DMESHLIB_BUILD_MRCUDA=OFF
+            -DMESHLIB_BUILD_PYTHON_MODULES=OFF
+            -DMESHLIB_BUILD_MRMESH_PY_LEGACY=OFF
+            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=OFF
+            -DMESHLIB_BUILD_MESHCONV=OFF
+          MR_CMAKE_BUILD_OPTIONS: --target MeshViewer
+        run: |
+          git fetch --depth=1 origin master
+          git show origin/master:source/MRViewer/MRViewerSettingsManager.cpp > source/MRViewer/MRViewerSettingsManager.cpp
+          grep -c mainWindowScreenSize source/MRViewer/MRViewerSettingsManager.cpp || true
+          export PATH=${LLVM_PREFIX}/bin:${PATH}
+          ./scripts/build_source.sh > /tmp/rebuild.log 2>&1 || { tail -30 /tmp/rebuild.log; exit 1; }
+          chown -R github-user "${GITHUB_WORKSPACE}"
+          cfg=$(find /home/github-user /tmp/home -name config.json 2>/dev/null | head -1)
+          ${AS_USER} python3 scripts/devops/wayland_patch_config.py "${cfg}" 1000 600 2000 1200
+          set +e
+          ${AS_USER} python3 scripts/devops/wayland_headless_check.py build/Release/bin/MeshViewer 7899 4000 2400 out/control-master-scale2.png
+          st=$?
+          cp viewer_stdout.txt out/control-stdout.txt
+          git checkout -- source/MRViewer/MRViewerSettingsManager.cpp
+          exit $st
+
       - name: Splash screenshots, scale 2 (compositor view during the first seconds)
         if: always()
         env:

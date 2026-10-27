@@ -41,6 +41,7 @@ jobs:
           # GLFW 3.4 dereferences a missing wl_seat in glfwInit (headless Weston has no seat); upstream master no longer does
           sed -i 's/if (wl_seat_get_version(_glfw.wl.seat) >= WL_KEYBOARD_REPEAT_INFO_SINCE_VERSION)/if (_glfw.wl.seat \&\& wl_seat_get_version(_glfw.wl.seat) >= WL_KEYBOARD_REPEAT_INFO_SINCE_VERSION)/' /tmp/glfw/src/wl_init.c
           grep -c 'if (_glfw.wl.seat && wl_seat_get_version' /tmp/glfw/src/wl_init.c
+          python3 scripts/devops/glfw_debug_patch.py /tmp/glfw/src/wl_window.c
           cmake -S /tmp/glfw -B /tmp/glfw/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DGLFW_BUILD_WAYLAND=ON -DGLFW_BUILD_X11=ON -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF
           cmake --build /tmp/glfw/build
           cmake --install /tmp/glfw/build --prefix /usr/local

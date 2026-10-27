@@ -1,16 +1,18 @@
 # @meshinspector/meshlib
 
-[MeshLib](https://meshlib.io/) geometry library compiled to WebAssembly.
+[MeshLib](https://meshlib.io/) geometry library compiled to WebAssembly, with the **complete MeshLib API**
+generated from the C++ headers (the same way as the Python, C#, Rust and Java bindings), as ES modules with
+TypeScript declarations.
 
-This package ships the **single-threaded** build of MeshLib's WebAssembly
-module (`meshlib.mjs` + `meshlib.wasm`).
+This package ships the **single-threaded** build. The multi-threaded build is
+[`@meshinspector/meshlib-mt`](https://www.npmjs.com/package/@meshinspector/meshlib-mt), with an identical API.
 
 - Source: https://github.com/MeshInspector/MeshLib
 - Documentation: https://meshlib.io/documentation/index.html
 
 ## Requirements
 
-- Node.js >= 18
+- Node.js >= 22 (>= 24 for `using`), or a current browser.
 
 ## Install
 
@@ -18,34 +20,19 @@ module (`meshlib.mjs` + `meshlib.wasm`).
 npm install @meshinspector/meshlib
 ```
 
-## Use from CDN
-
-In the browser you can skip npm entirely and import the module directly:
-
-```js
-// latest release
-import createMeshLib from 'https://js.meshlib.io/meshlib/meshlib.mjs';
-
-// or pin a release — v1.2.3.456 is an example tag, not a real one
-import createMeshLib from 'https://js.meshlib.io/meshlib@v1.2.3.456/meshlib.mjs';
-```
-
-To pin, take a real tag from the [releases page](https://github.com/MeshInspector/MeshLib/releases): it has a
-leading `v` and four components, and is **not** the npm version — the tag `v1.2.3.456` would be npm `1.2.3-456`.
-Pinned URLs are immutable, so a pin never changes under you; the unpinned path always serves the latest release.
-
 ## Usage
 
-The default export is an async factory. Await it once to get the module instance, then
-call MeshLib functions on it:
+Import the package as a namespace, initialize it once (this downloads and instantiates the wasm), then the
+whole MeshLib API is there: the classes of the `MR` namespace at the top level, the nested namespaces
+(`MeshLoad`, `MeshSave`, `MeshBuilder`, ...) as namespace objects.
 
 > `using` requires Node.js 24+ or a current browser. On older runtimes, call `.delete()`
 > instead — see [Memory management](#memory-management).
 
 ```js
-import createMeshLib from '@meshinspector/meshlib';
+import * as ml from '@meshinspector/meshlib';
 
-const ml = await createMeshLib();
+await ml.init();
 
 // Build a cube (side 2) from raw geometry.
 const positions = new Float32Array([
@@ -62,85 +49,96 @@ using tris = ml.Triangulation.fromArray(indices);
 using mesh = ml.Mesh.fromTriangles(coords, tris);
 
 console.log('volume =', mesh.volume()); // ~8
-// `using` frees these WebAssembly-backed objects automatically at the end of scope
+
+// Any MeshLib function: a boolean with a sphere, then the result back as typed arrays.
+using sphere = ml.makeUVSphere(1.5, 32, 32);
+using result = ml.boolean(mesh, sphere, ml.BooleanOperation.Intersection);
+console.log('intersection volume =', result.mesh.volume());
+const outPositions = result.mesh.points.toArray();                  // Float32Array, x y z per vertex
+const outIndices = result.mesh.topology.getTriangulation().toArray(); // Int32Array, 3 vertex ids per triangle
 ```
 
-## Using with bundlers
+The API follows the C++ one: see the [C++ reference](https://meshlib.io/documentation/index.html), the
+same classes, functions, parameters and defaults. What's different:
 
-Vite 8 and webpack 5 resolve `meshlib.wasm` from the module and emit it as an asset, so a plain `import`
-needs no configuration. For other bundlers, such as esbuild or Rollup, import the wasm as an asset URL
-and hand it to the loader via `locateFile`:
-
-```js
-import createMeshLib from '@meshinspector/meshlib';
-import wasmUrl from '@meshinspector/meshlib/meshlib.wasm';
-
-const ml = await createMeshLib( { locateFile: () => wasmUrl } );
-```
-
-The bundler must treat `.wasm` files as static assets, so that the import resolves to the URL of the
-emitted file; the option is usually called an asset or file loader. For example:
-
-- **esbuild**: pass `--loader:.wasm=file`
-- **Rollup**: add `@rollup/plugin-url` with `include: /\.wasm$/`
-- **Parcel**: use the `url:` scheme on the import specifier: `import wasmUrl from 'url:@meshinspector/meshlib/meshlib.wasm';`
-
-## TypeScript
-
-The package ships type definitions, so `createMeshLib` and the whole module API are typed with
-minimal setup:
-
-```ts
-import createMeshLib, { type Mesh } from '@meshinspector/meshlib';
-
-const ml = await createMeshLib();
-const mesh: Mesh = ml.Mesh.fromTriangles(coords, tris)!;
-const { valid, distSq } = ml.findProjection(point, mesh);
-mesh.delete();
-```
-
-Also make sure to add `"type": "module"` to your package.json.
+- Fields are properties (`settings.maxError = 0.05`, `mesh.topology`), overloads are resolved by the
+  argument types, `std::string` results are strings, `Expected` results are unwrapped (an error throws
+  `UnexpectedResultException`), C++ exceptions throw `CppException`.
+- Parameters with defaults can be omitted or passed as `null`; `std::function` parameters (progress
+  callbacks) take a plain JS function.
+- The contiguous containers (`VertCoords`, `Triangulation`, `std::vector`s, ...) have `toArray()`,
+  `view()`, `setFromArray()` and `fromArray()` for typed arrays.
+- Every `.d.mts` carries the doc comments of the C++ API, so editors show them.
 
 ## Memory management
 
-Values returned from the API (meshes, bit sets, settings, result objects, …) hold
-WebAssembly memory that the JavaScript garbage collector does not reclaim, so each one
-must be freed explicitly.
-
-The preferred way is JavaScript's explicit resource management: declare a handle with
-`using` and it is freed automatically when its scope ends — even if an exception is thrown.
+Values returned from the API (meshes, bit sets, settings, result objects, ...) hold WebAssembly memory.
+They are freed when the JavaScript garbage collector collects them, but it does so late and unpredictably,
+so free the large ones explicitly: declare them with `using`, or call `.delete()`.
 
 ```js
-using mesh = ml.Mesh.fromTriangles(coords, tris);
+using mesh = ml.makeUVSphere(1, 64, 64);
 // ... use mesh; it is freed at the end of this scope
 ```
 
-When the number of handles is dynamic (for example built in a loop), collect them in a
-`DisposableStack`, which frees everything it holds, in reverse order, at the end of the scope:
-
 ```js
-using stack = new DisposableStack();
-for (const path of inputPaths) {
-  const cloud = stack.use(ml.PointsLoad.fromAnySupportedFormat(path));
-  // ... use cloud
-}
-// every handle passed to stack.use(...) is freed here
-```
-
-`using` and `DisposableStack` are part of JavaScript's Explicit Resource Management,
-available in Node.js 24+ and current browsers. On older runtimes and browsers, call
-`.delete()` on each object when you are done instead:
-
-```js
-const mesh = ml.Mesh.fromTriangles(coords, tris);
+const mesh = ml.makeUVSphere(1, 64, 64);
 // ... use mesh
 mesh.delete();
 ```
 
-See also, on MDN: [`using`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/using) and [`DisposableStack`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DisposableStack).
+References into other objects (`mesh.points`, `mesh.topology`) don't own anything and keep their owner alive.
 
-## License
+## Node.js and the browser
 
-Free for non-commercial and educational use. See [LICENSE](./LICENSE).
+`init()` picks the Node build of the module (with access to the real file system, so `MeshLoad` and
+`MeshSave` work with paths) under Node.js, and the browser build everywhere else. In the browser, file
+functions see the module's in-memory file system (`ml.ffi.M.FS`); load files with `fetch` and pass the
+bytes through it.
 
-For commercial use, contact us at https://meshlib.io/book-a-call/
+## Use from CDN
+
+In the browser you can skip npm entirely and import the module directly:
+
+```js
+// latest release
+import * as ml from 'https://js.meshlib.io/meshlib/index.mjs';
+
+// or pin a release — v1.2.3.456 is an example tag, not a real one
+import * as ml from 'https://js.meshlib.io/meshlib@v1.2.3.456/index.mjs';
+```
+
+To pin, take a real tag from the [releases page](https://github.com/MeshInspector/MeshLib/releases): it has a
+leading `v` and four components, and is **not** the npm version — the tag `v1.2.3.456` would be npm `1.2.3-456`.
+
+## Using with bundlers
+
+The package is many small ES modules plus the wasm sidecar. Vite and webpack 5 resolve the `.wasm` from
+the module and emit it as an asset, so a plain `import` needs no configuration. For other bundlers, import
+the wasm as an asset URL and hand it to the loader via `locateFile`:
+
+```js
+import * as ml from '@meshinspector/meshlib';
+import wasmUrl from '@meshinspector/meshlib/MeshLibC2.wasm';
+
+await ml.init( { locateFile: () => wasmUrl } );
+```
+
+The options of `init()` go to the Emscripten module factory (`locateFile`, `print`, `printErr`, ...).
+
+## TypeScript
+
+The package ships type definitions for the whole API:
+
+```ts
+import * as ml from '@meshinspector/meshlib';
+
+await ml.init();
+const mesh: ml.Mesh = ml.makeUVSphere(1, 32, 32);
+const settings = new ml.DecimateSettings();
+settings.maxError = 0.05;
+const result: ml.DecimateResult = ml.decimateMesh(mesh, settings);
+mesh.delete();
+```
+
+Also make sure to add `"type": "module"` to your package.json.

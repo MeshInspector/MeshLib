@@ -75,6 +75,28 @@ export function points()
     mesh.invalidateCaches(true);
 }
 
+export function typedArrays()
+{
+    // The contiguous containers expose their scalars as typed arrays.
+    const mesh = createCube();
+    const points = mesh.points.toArray();
+    check(points instanceof Float32Array && points.length === 24, "points as Float32Array");
+    const view = mesh.points.view();
+    check(view.length === 24 && view[0] === points[0], "view");
+    const tris = mesh.topology.getTriangulation().toArray();
+    check(tris instanceof Int32Array && tris.length === 36, "triangulation as Int32Array");
+    // And are built from them.
+    const coords = ml.VertCoords.fromArray(points);
+    checkEq(coords.size(), 8, "fromArray");
+    const triangulation = ml.Triangulation.fromArray(tris);
+    checkEq(triangulation.size(), 12, "fromArray");
+    const copy = ml.Mesh.fromTriangles(coords, triangulation);
+    checkApprox(copy.volume(), mesh.volume(), 1e-6);
+    coords.setFromArray(new Float32Array(points.map(x => x * 2)));
+    const scaled = ml.Mesh.fromTriangles(coords, triangulation);
+    checkApprox(scaled.volume(), 8.0, 0.001);
+}
+
 export function normals()
 {
     const cube = createCube();

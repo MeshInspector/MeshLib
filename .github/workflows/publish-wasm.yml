@@ -46,22 +46,41 @@ jobs:
         run: |
           gh release download "${TAG}" --pattern "js-meshlib-*.tgz" --repo ${{ github.repository }} --clobber
 
+        # The package is a directory of ES modules (`index.mjs`, `ffi.mjs`, `lib/`, `ns/`), declarations and the wasm modules,
+        # uploaded as a whole: `https://js.meshlib.io/<package>/index.mjs` is the entry point, and the modules import each other relatively.
       - name: Upload to S3
         env:
           BUCKET: s3://cdn-meshlib-js
         run: |
-          for TGZ in js-meshlib-*.tgz ; do tar -xzf "${TGZ}" --strip-components=1 ; done
+          for TGZ in js-meshlib-*.tgz ; do
+            NAME=${TGZ#js-}            # meshlib-1.2.3-4.tgz
+            NAME=${NAME%%-[0-9]*}      # meshlib, meshlib-mt
+            mkdir -p "pkg/${NAME}"
+            tar -xzf "${TGZ}" --strip-components=1 -C "pkg/${NAME}"
+            rm -f "pkg/${NAME}/package.json"
+          done
+          content_type() {
+            case "$1" in
+              *.mjs) echo text/javascript ;;
+              *.wasm) echo application/wasm ;;
+              *.d.mts) echo text/plain ;;
+              *) echo application/octet-stream ;;
+            esac
+          }
           upload() {
-            local dest="$1" ; shift
-            gzip -9 -c "${f}.mjs"  | aws s3 cp - "${dest}/${f}.mjs"  --content-type text/javascript   --content-encoding gzip "$@"
-            gzip -9 -c "${f}.wasm" | aws s3 cp - "${dest}/${f}.wasm" --content-type application/wasm  --content-encoding gzip "$@"
+            local name="$1" dest="$2" ; shift 2
+            ( cd "pkg/${name}" && find . -type f -print0 ) | while IFS= read -r -d '' f ; do
+              f=${f#./}
+              gzip -9 -c "pkg/${name}/${f}" | aws s3 cp - "${dest}/${f}" --content-type "$(content_type "${f}")" --content-encoding gzip "$@"
+            done
           }
           for f in meshlib meshlib-mt ; do
+            [ -d "pkg/${f}" ] || continue
             if [ "${IS_DRAFT}" = "true" ] ; then
-              upload "${BUCKET}/${f}-draft"  --cache-control "public, max-age=300"
+              upload "${f}" "${BUCKET}/${f}-draft"  --cache-control "public, max-age=300"
             else
-              upload "${BUCKET}/${f}@${TAG}" --cache-control "public, max-age=31536000, immutable"
-              upload "${BUCKET}/${f}"        --cache-control "public, max-age=300"
+              upload "${f}" "${BUCKET}/${f}@${TAG}" --cache-control "public, max-age=31536000, immutable"
+              upload "${f}" "${BUCKET}/${f}"        --cache-control "public, max-age=300"
             fi
           done
 

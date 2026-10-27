@@ -4,18 +4,18 @@
 
 [TOC]
 
-[MeshLib](https://meshlib.io/) is available for JavaScript as the geometry library compiled to WebAssembly.
+[MeshLib](https://meshlib.io/) is available for JavaScript as the geometry library compiled to WebAssembly, with the **complete MeshLib API** generated from the C++ headers (the same way as the Python, C#, Rust and Java bindings) as ES modules with TypeScript declarations.
 It runs both in Node.js and in the browser, and is published to npm as two packages that share an identical API:
 `@meshinspector/meshlib` (single-threaded) and `@meshinspector/meshlib-mt` (multi-threaded).
-To see it running in the browser before you install anything, open [demo.meshlib.io](https://demo.meshlib.io/) — the live demo is built on the multi-threaded package.
+To see it running in the browser before you install anything, open [demo.meshlib.io](https://demo.meshlib.io/).
 
 ## Prerequisites
 Before installing MeshLib SDK for JavaScript, ensure you have the following:
 
 ### Runtime
 MeshLib runs in Node.js or in a modern browser.
- - `@meshinspector/meshlib` (single-threaded) requires **Node.js 18 or newer**.
- - `@meshinspector/meshlib-mt` (multi-threaded) requires **Node.js 21 or newer**.
+ - **Node.js 22 or newer** (24 or newer for the `using` declarations the examples use).
+ - In the browser, the current versions of Chrome, Firefox, Safari and Edge.
 
 [Download Node.js](https://nodejs.org/en/download).
 
@@ -28,7 +28,7 @@ You can use any JavaScript- or TypeScript-compatible editor, such as Visual Stud
 MeshLib ships in two flavors with an identical API:
 
  - `@meshinspector/meshlib`: the single-threaded build. The simplest choice, and the right one for most applications.
- - `@meshinspector/meshlib-mt`: the multi-threaded build. It uses worker threads to parallelize geometry operations for higher throughput, and requires Node.js 21 or newer.
+ - `@meshinspector/meshlib-mt`: the multi-threaded build. It uses worker threads to parallelize geometry operations for higher throughput.
 
 The examples below use `@meshinspector/meshlib`. To use the multi-threaded build instead, install `@meshinspector/meshlib-mt` and change the import specifier; in Node.js nothing else changes. In the browser the page must additionally be [cross-origin isolated](\ref JsMtCrossOriginIsolation).
 
@@ -44,53 +44,55 @@ npm pkg set type=module
 In the browser you can skip npm entirely and import the module directly:
 ```js
 // latest release
-import createMeshLib from 'https://js.meshlib.io/meshlib/meshlib.mjs';
+import * as ml from 'https://js.meshlib.io/meshlib/index.mjs';
 
 // or pin a release
-import createMeshLib from 'https://js.meshlib.io/meshlib@v1.2.3.456/meshlib.mjs';
+import * as ml from 'https://js.meshlib.io/meshlib@v1.2.3.456/index.mjs';
 ```
 
 #### Multi-Threaded Build
-The multi-threaded build cannot be imported straight from the CDN, because the browser refuses to run a worker script from another origin, so pass the fetched module to the factory as a `Blob` and its worker pool starts from a same-origin `blob:` URL:
+The multi-threaded build cannot run its workers straight from the CDN, because the browser refuses to run a worker script from another origin, so pass the fetched module to `init()` as a `Blob` and its worker pool starts from a same-origin `blob:` URL:
 ```js
-const url = 'https://js.meshlib.io/meshlib-mt/meshlib-mt.mjs';
+import * as ml from 'https://js.meshlib.io/meshlib-mt/index.mjs';
 
-const { default: createMeshLib } = await import( url );
+const url = 'https://js.meshlib.io/meshlib-mt/MeshLibC2.mjs';
 const blob = new Blob( [ await ( await fetch( url ) ).text() ], { type: 'text/javascript' } );
-
-const ml = await createMeshLib( { mainScriptUrlOrBlob: blob } );
+await ml.init( { mainScriptUrlOrBlob: blob } );
 ```
 
 In the browser the multi-threaded build additionally requires the page to be [cross-origin isolated](\ref JsMtCrossOriginIsolation).
 
 ### Bundlers
-Vite 8 and webpack 5 resolve `meshlib.wasm` from the module and emit it as an asset, so a plain `import` needs no configuration. For other bundlers, such as esbuild or Rollup, import the wasm as an asset URL and hand it to the loader via `locateFile`:
+The package is a set of ES modules plus the wasm sidecar `MeshLibC2.wasm`. Vite and webpack 5 resolve the wasm from the module and emit it as an asset, so a plain `import` needs no configuration. For other bundlers, such as esbuild or Rollup, import the wasm as an asset URL and hand it to the loader via `locateFile`:
 ```js
-import createMeshLib from '@meshinspector/meshlib';
-import wasmUrl from '@meshinspector/meshlib/meshlib.wasm';
+import * as ml from '@meshinspector/meshlib';
+import wasmUrl from '@meshinspector/meshlib/MeshLibC2.wasm';
 
-const ml = await createMeshLib( { locateFile: () => wasmUrl } );
+await ml.init( { locateFile: () => wasmUrl } );
 ```
 
 The bundler must treat `.wasm` files as static assets, so that the import resolves to the URL of the emitted file; the option is usually called an asset or file loader. For example:
 
 - **esbuild**: pass `--loader:.wasm=file`
 - **Rollup**: add `@rollup/plugin-url` with `include: /\.wasm$/`
-- **Parcel**: use the `url:` scheme on the import specifier: `import wasmUrl from 'url:@meshinspector/meshlib/meshlib.wasm';`
+- **Parcel**: use the `url:` scheme on the import specifier: `import wasmUrl from 'url:@meshinspector/meshlib/MeshLibC2.wasm';`
+
+The options of `init()` go to the Emscripten module factory (`locateFile`, `print`, `printErr`, `mainScriptUrlOrBlob`, ...).
 
 ### Payload Size {#MeshLibJsPayloadSize}
-MeshLib is a WebAssembly build of the full geometry library, so a browser downloads roughly **11 MB of wasm, about 3 MB gzipped over the wire**, before the first geometry call. `@meshinspector/meshlib-mt` is the same order of magnitude.
+MeshLib is a WebAssembly build of the full geometry library with its complete API exported, so a browser downloads several tens of megabytes of wasm (a fraction of that gzipped over the wire) before the first geometry call. `@meshinspector/meshlib-mt` is the same order of magnitude.
 
-Two consequences for a browser application:
+Consequences for a browser application:
 
- - The `.wasm` is a sidecar file fetched as a **second request**, separate from the `.mjs` module. Serve it as `application/wasm` with compression enabled, or the download is several times larger than it needs to be.
- - `npm install` unpacks about 21 MB, because the browser and the Node.js wasm ship side by side in one package. Only one of them ever reaches the browser; the rest is bundler input, not payload.
+ - The `.wasm` is a sidecar file fetched as a **second request**, separate from the `.mjs` modules. Serve it as `application/wasm` with compression enabled, or the download is several times larger than it needs to be.
+ - The JavaScript side is many small modules (one per C++ header); a bundler merges them, and since the package declares `"sideEffects": false` it can drop the ones you don't use.
+ - `npm install` unpacks the browser and the Node.js wasm side by side. Only one of them ever reaches the browser; the rest is bundler input, not payload.
 
 If the geometry is not needed on first paint, load the module lazily instead of at the top level, so the wasm download does not block startup:
 ```js
 // load MeshLib only when the user actually needs geometry
-const { default: createMeshLib } = await import('@meshinspector/meshlib');
-const ml = await createMeshLib();
+const ml = await import('@meshinspector/meshlib');
+await ml.init();
 ```
 
 ## Cross-Origin Isolation for the Multi-Threaded Build in the Browser {#JsMtCrossOriginIsolation}
@@ -102,7 +104,7 @@ Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
 
-Without them `crossOriginIsolated` is `false`, `SharedArrayBuffer` is unavailable, and `createMeshLib()` never resolves.
+Without them `crossOriginIsolated` is `false`, `SharedArrayBuffer` is unavailable, and `init()` never resolves.
 
 For a Vite dev server, set the headers in `vite.config.js` (whatever hosts the production build must send them too; `vite-plugin-cross-origin-isolation` can stamp them for `vite preview`):
 ```js
@@ -122,15 +124,15 @@ Where you cannot set response headers at all — GitHub Pages and similar static
 So on a page that is not cross-origin isolated you have three options: send the headers, install the service-worker shim, or use the single-threaded `@meshinspector/meshlib` package, which has no such requirement.
 
 ## Getting Started: Your First Example
-The default export is an async factory. Await it once to get the module instance, then call MeshLib functions on it:
+Import the package as a namespace and call `init()` once: it downloads and instantiates the wasm, after which the whole MeshLib API is there, the classes and functions of the `MR` namespace at the top level and the nested namespaces (`MeshLoad`, `MeshSave`, `MeshBuilder`, ...) as namespace objects:
 
 > [!NOTE]
 > The `using` declaration requires Node.js 24+ or a current browser. On older runtimes, call `.delete()` on each object instead (see the **Memory Management** section below).
 
 ```js
-import createMeshLib from '@meshinspector/meshlib';
+import * as ml from '@meshinspector/meshlib';
 
-const ml = await createMeshLib();
+await ml.init();
 
 // Build a cube (side 2) from raw geometry.
 const positions = new Float32Array([
@@ -152,19 +154,33 @@ console.log('volume =', mesh.volume()); // ~8
 > [!NOTE]
 > This example loads the module at the top level, which downloads the wasm on startup. In the browser, consider the lazy alternative in [Payload Size](\ref MeshLibJsPayloadSize).
 
-## TypeScript
-The package ships type definitions, so `createMeshLib` and the whole module API are typed with minimal setup:
-```ts
-import createMeshLib, { type Mesh } from '@meshinspector/meshlib';
+## How the API Maps to C++
+The bindings follow the C++ API: the same classes, functions, parameters and default values, documented in the [C++ reference](\ref APIPage). The differences come from JavaScript itself:
 
-const ml = await createMeshLib();
-const mesh: Mesh = ml.Mesh.fromTriangles(coords, tris)!;
-const { valid, distSq } = ml.findProjection(point, mesh);
+ - **Fields are properties**: `settings.maxError = 0.05`, `mesh.topology`, `box.min.x`. The math types (`Vector3f`, `Matrix3f`, `AffineXf3f`, `Box3f`, the ids) are small structs with accessor properties over wasm memory.
+ - **Overloads** keep their names and are resolved by the argument types at runtime. The few overloads that JavaScript can't tell apart (`int` vs `float` parameters) are exported under the names of their C bindings as well, e.g. `foo_float`.
+ - **Default arguments**: trailing parameters with defaults can be omitted, any parameter with a default takes `null` to use it.
+ - **Return values**: `std::string` results are strings, `Expected` results are unwrapped and an error throws `UnexpectedResultException` with the message, C++ exceptions throw `CppException`. Functions returning references give you references that keep their owner alive.
+ - **Callbacks**: `std::function` parameters (progress callbacks and such) take a plain JavaScript function.
+ - **Containers**: `VertCoords`, `Triangulation`, `std::vector`s and the other contiguous containers have `toArray()` (a typed array copy), `view()` (a typed array over the wasm memory, valid until the next allocation), `setFromArray()` and `static fromArray()`.
+ - **Mesh parts**: the functions taking `MeshPart` in C++ take a `new ml.MeshPart(mesh)` (optionally with a face region).
+ - **Enums** are plain numbers with named constants: `ml.BooleanOperation.Union`.
+
+## TypeScript
+The package ships type definitions for the whole API, with the doc comments of the C++ headers:
+```ts
+import * as ml from '@meshinspector/meshlib';
+
+await ml.init();
+const mesh: ml.Mesh = ml.makeUVSphere(1, 32, 32);
+const settings = new ml.DecimateSettings();
+settings.maxError = 0.05;
+const result: ml.DecimateResult = ml.decimateMesh(mesh, settings);
 mesh.delete();
 ```
 
 ## Memory Management {#JsMemoryManagement}
-Values returned from the API (meshes, bit sets, settings, result objects, and so on) hold WebAssembly memory that the JavaScript garbage collector does not reclaim, so each one must be freed explicitly.
+Values returned from the API (meshes, bit sets, settings, result objects, and so on) hold WebAssembly memory. They are released when the JavaScript garbage collector collects them, but it does so late and unpredictably, so free the large ones explicitly.
 
 The preferred way is JavaScript's explicit resource management: declare a handle with [`using`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/using) and it is freed automatically when its scope ends, even if an exception is thrown.
 ```js
@@ -188,6 +204,11 @@ const mesh = ml.Mesh.fromTriangles(coords, tris);
 // ... use mesh
 mesh.delete();
 ```
+
+References into other objects (`mesh.points`, `mesh.topology`, the elements returned by `index()`) own nothing and need no freeing; they keep their owner alive while they exist.
+
+## Files in the Browser
+In Node.js, `init()` picks the build of the module with access to the real file system, so `MeshLoad`, `MeshSave` and the other file functions take paths. In the browser the module has an in-memory file system (`ml.ffi.M.FS`): write the bytes you fetched into it, then load from that path, and read the saved files back from it.
 
 ## Try Interactive MeshLib Examples
 You can check how MeshLib works in a browser environment with live interactive examples: https://demo.meshlib.io/

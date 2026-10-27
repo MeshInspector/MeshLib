@@ -1,14 +1,13 @@
-import createMeshLib from '@meshinspector/meshlib';
+import * as ml from '@meshinspector/meshlib';
 
-const ml = await createMeshLib();
+await ml.init();
 
 // load points
 using pointCloud = ml.PointsLoad.fromAnySupportedFormat('Points.ply');
 
-// triangulate (the JS binding requires a parameters object)
-using params = new ml.TriangulationParameters();
-using mesh = ml.triangulatePointCloud(pointCloud, params);
-if (!mesh)
+// triangulate (the result is empty if the triangulation was cancelled)
+using triangulated = ml.triangulatePointCloud(pointCloud);
+if (!triangulated.has_value())
   throw new Error('triangulation was cancelled');
 
-ml.MeshSave.toAnySupportedFormat(mesh, 'Mesh.ply');
+ml.MeshSave.toAnySupportedFormat(triangulated.value(), 'Mesh.ctm');

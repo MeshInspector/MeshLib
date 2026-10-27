@@ -108,7 +108,7 @@ jobs:
             echo "Failed to get C# bindings, aborting"
             exit 0
           fi
-          if [ ! -f MeshLib/scripts/npm/meshlib/bindings.d.mts ]; then
+          if [ ! -f MeshLib/scripts/npm/meshlib/index.d.mts ]; then
             echo "Failed to get Wasm definitions, aborting"
             exit 0
           fi

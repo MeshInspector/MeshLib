@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
-import createMeshLib from './meshlib.mjs';
+import * as ml from '@meshinspector/meshlib';
 import { meshFromThree, meshToThree } from './meshlib-three.js';
 
 const statsEl = document.getElementById( 'stats' );
@@ -42,7 +42,7 @@ addEventListener( 'resize', () => {
   renderer.render( scene, camera );
 } )();
 
-const ml = await createMeshLib();
+await ml.init();
 
 const boxGeom = new THREE.BoxGeometry( 1.6, 1.6, 1.6, 6, 6, 6 );
 const sphereGeom = new THREE.SphereGeometry( 1.05, 48, 32 );
@@ -61,24 +61,20 @@ function recompute() {
     a.delete(); b.delete(); res.delete();
     return;
   }
-  const out = res.mesh;
+  const out = res.mesh; // a reference into the result, freed with it
 
   out.pack();
-  const outTopology = out.topology;
-  const outTris = outTopology.getTriangulation();
-  const trisAfterBool = outTris.toArray().length / 3;
-  outTopology.delete();
-  outTris.delete();
-  let decimated = { facesDeleted: 0 };
+  const trisAfterBool = out.topology.numValidFaces();
+  let facesDeleted = 0;
   if ( ratio < 1 ) {
     const s = new ml.DecimateSettings();
     s.maxDeletedFaces = Math.floor( trisAfterBool * ( 1 - ratio ) );
-    decimated = ml.decimateMesh( out, s );
+    facesDeleted = ml.decimateMesh( out, s ).facesDeleted;
     s.delete();
   }
 
   const geom = meshToThree( ml, THREE, out, { normals: true } );
-  a.delete(); b.delete(); res.delete(); out.delete();
+  a.delete(); b.delete(); res.delete();
 
   if ( resultMesh ) {
     scene.remove( resultMesh );
@@ -91,7 +87,7 @@ function recompute() {
   statsEl.textContent =
     `boolean result: ${trisAfterBool.toLocaleString()} triangles\n` +
     `after decimate: ${finalTris.toLocaleString()} triangles ` +
-    `(removed ${decimated.facesDeleted.toLocaleString()})`;
+    `(removed ${facesDeleted.toLocaleString()})`;
 }
 
 document.getElementById( 'ratio' ).addEventListener( 'input', ( e ) => {

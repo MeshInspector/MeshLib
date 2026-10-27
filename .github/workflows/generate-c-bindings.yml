@@ -56,8 +56,9 @@ jobs:
         run: |
           cp -r source/MeshLibC2 source/MeshLibC2_orig
           make -f scripts/mrbind/generate.mk TARGET=c -B --trace EM_USE_HOST_HEADERS=0 C_FOR_WASM=1
-          # The JS bindings target wasm32, so they come from the Wasm version of the description JSON.
+          # The JS bindings target wasm, so they come from the Wasm version of the description JSON: `js` for wasm32, `js64` for the `-sMEMORY64` modules.
           make -f scripts/mrbind/generate.mk TARGET=js -B --trace
+          make -f scripts/mrbind/generate.mk TARGET=js -B --trace JS_WASM64=1
           mv source/MeshLibC2 source/MeshLibC2Wasm
           mv source/MeshLibC2_orig source/MeshLibC2
 
@@ -74,6 +75,14 @@ jobs:
             ./source/MeshLibC2Wasm
             ./source/MeshLibC2Cuda
             ./source/MeshLibJS
+          retention-days: 1
+
+        # The TypeScript declarations of the JS bindings, for the documentation site (`update-docs.yml`).
+      - name: Upload JS declarations
+        uses: actions/upload-artifact@v7
+        with:
+          name: WasmBindingsDts
+          path: ./source/MeshLibJS/js/**/*.d.mts
           retention-days: 1
 
         # Unlike the other artifact, here we strip some temporary files, and the project files.

@@ -134,15 +134,15 @@ jobs:
     secrets: inherit
 
   emscripten-build-test:
-    if: ${{ needs.config.outputs.build_enable_emscripten == 'true' || needs.config.outputs.update_doc == 'true' }}
-    needs: [ config, prepare-image ]
+    if: ${{ needs.config.outputs.build_enable_emscripten == 'true' }}
+    # The generated JS bindings and the Wasm C bindings come from `generate-c-bindings`.
+    needs: [ config, prepare-image, generate-c-bindings ]
     uses: ./.github/workflows/build-test-emscripten.yml
     with:
       app_version:       ${{ needs.config.outputs.app_version }}
       docker_image_tag:  ${{ needs.config.outputs.docker_image_tag }}
       internal_build:    ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:  ${{ needs.config.outputs.upload_artifacts == 'true' }}
-      definitions_only:  ${{ needs.config.outputs.build_enable_emscripten != 'true' && needs.config.outputs.update_doc == 'true' }}
 
   emscripten-c-bindings-build-test:
     if: ${{ needs.config.outputs.build_enable_emscripten == 'true' }}

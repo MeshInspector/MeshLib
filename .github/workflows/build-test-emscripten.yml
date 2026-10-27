@@ -6,10 +6,6 @@ on:
       app_version:
         required: false
         type: string
-      definitions_only:
-        required: false
-        type: boolean
-        default: false
       docker_image_tag:
         required: true
         type: string
@@ -26,7 +22,6 @@ on:
 
 jobs:
   emscripten-build:
-    if: ${{ !inputs.definitions_only }}
     timeout-minutes: 40
     runs-on: ubuntu-24.04-arm
     container:
@@ -154,8 +149,7 @@ jobs:
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
 
   wasm-module-build:
-    if: ${{ !inputs.definitions_only }}
-    timeout-minutes: 40
+    timeout-minutes: 60
     runs-on: ubuntu-24.04-arm
     container:
       image: ghcr.io/meshinspector/meshlib-emscripten-arm64:${{ inputs.docker_image_tag }}
@@ -167,10 +161,21 @@ jobs:
             thirdparty-dir: emscripten-single
             wasm-module-name: meshlib
             singlethread: 1
+            wasm64: 0
+            js-dir: js
           - config: Multithreaded
             thirdparty-dir: emscripten
             wasm-module-name: meshlib-mt
             singlethread: 0
+            wasm64: 0
+            js-dir: js
+          # No npm package for the 64-bit module: it needs Memory64, which the current browsers only started to ship.
+          - config: Multithreaded-64Bit
+            thirdparty-dir: emscripten-wasm64
+            wasm-module-name: meshlib-mt64
+            singlethread: 0
+            wasm64: 1
+            js-dir: js64
     steps:
       - name: Work-around possible permission issues
         shell: bash
@@ -200,35 +205,54 @@ jobs:
           ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/lib ./lib
           ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/share ./share
 
+        # The C bindings and the JS generated from them, by the `generate-c-bindings` job.
+      - name: Download C bindings
+        uses: actions/download-artifact@v8
+        with:
+          name: CBindings
+          path: MeshLib/CbindingsTmp
+
+      - name: Prepare C and JS bindings folders
+        shell: bash
+        run: |
+          rm -rf source/MeshLibC2 source/MeshLibJS/js source/MeshLibJS/js64
+          mv MeshLib/CbindingsTmp/MeshLibC2Wasm source/MeshLibC2
+          mv MeshLib/CbindingsTmp/MeshLibJS/js source/MeshLibJS/js
+          mv MeshLib/CbindingsTmp/MeshLibJS/js64 source/MeshLibJS/js64
+          # Cuda placeholders:
+          cp -r scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
+
       - name: Build Wasm module
         env:
-          MR_EMSCRIPTEN_SINGLETHREAD: ${{ matrix.singlethread }}
+          MR_EMSCRIPTEN: "ON"
+          MESHLIB_BUILD_RELEASE: "ON"
+          MESHLIB_BUILD_DEBUG: "OFF"
+          MR_EMSCRIPTEN_SINGLE: ${{ fromJSON('["OFF", "ON"]')[matrix.singlethread == 1] }}
+          MR_EMSCRIPTEN_WASM64: ${{ fromJSON('["OFF", "ON"]')[matrix.wasm64 == 1] }}
           MR_CMAKE_OPTIONS: >
+            -DMR_CXX_STANDARD=23
+            -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DMRVOXELS_UNITY_BUILD=ON
-        run: ./scripts/build_wasm_meshlib.sh
+            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON
+            -DMESHLIB_BUILD_JS_BINDINGS=ON
+          MR_CMAKE_BUILD_OPTIONS: >
+            --target MeshLibJS MeshLibJSNode
+        run: ./scripts/build_source.sh
 
       - name: Test Wasm module
-        env:
-          MESHLIB_MODULE: build/Release/bin/${{ matrix.wasm-module-name }}.node.mjs
-        run: node source/MRWasmTest/index.mjs
-
-        # Embind doesn't provide any way to define docstrings for the generated TypeScript definition file.
-        # `inject_tsdoc.py` manually updates it with docstrings extracted from the C++ code with Doxygen.
-        # The docstrings are then used both by the end users ("hover information") and for generating documentation.
-      - name: Document the TypeScript definition file
         run: |
-          doxygen scripts/npm/Doxyfile
-          python3 scripts/npm/inject_tsdoc.py \
-            build/Release/bin/${{ matrix.wasm-module-name }}.d.mts \
-            --bindings source/MRWasmModule
+          node --version
+          node source/MRTestJS/main.mjs source/MeshLibJS/${{ matrix.js-dir }}/index.mjs
 
       - name: Assemble and pack npm package
+        if: ${{ matrix.wasm64 == 0 }}
         run: |
           scripts/npm/assemble.sh ${{ matrix.wasm-module-name }} "${{ inputs.app_version }}"
           npm pack ./npm-distr/${{ matrix.wasm-module-name }}
           for TGZ in meshinspector-*.tgz ; do mv "${TGZ}" "js-${TGZ#meshinspector-}" ; done
 
       - name: Build and run TypeScript example
+        if: ${{ matrix.wasm64 == 0 }}
         working-directory: examples/typescript
         run: |
           sed -i "s|@meshinspector/meshlib|@meshinspector/${{ matrix.wasm-module-name }}|g" main.ts package.json
@@ -236,78 +260,22 @@ jobs:
           npm start
 
       - name: Upload npm package
-        if: ${{ inputs.upload_artifacts }}
+        if: ${{ inputs.upload_artifacts && matrix.wasm64 == 0 }}
         uses: actions/upload-artifact@v7
         with:
           name: Distributives_web_${{ matrix.wasm-module-name }}
           path: js-meshlib-*.tgz
           retention-days: 1
 
-      - name: Upload the TypeScript definition file for docs
-        if: ${{ inputs.upload_artifacts && matrix.wasm-module-name == 'meshlib' }}
+      - name: Upload the 64-bit module
+        if: ${{ inputs.upload_artifacts && matrix.wasm64 == 1 }}
         uses: actions/upload-artifact@v7
         with:
-          name: WasmBindingsDts
-          path: npm-distr/meshlib/bindings.d.mts
-          retention-days: 1
-
-  wasm-definitions-build:
-    if: ${{ inputs.definitions_only }}
-    timeout-minutes: 20
-    runs-on: ubuntu-24.04-arm
-    container:
-      image: ghcr.io/meshinspector/meshlib-emscripten-arm64:${{ inputs.docker_image_tag }}
-    steps:
-      - name: Work-around possible permission issues
-        shell: bash
-        run: |
-          # NOTE: {GITHUB_WORKSPACE} != {{ github.workspace }}
-          # Related issue: https://github.com/actions/runner/issues/2058
-          if test -d $GITHUB_WORKSPACE && test -n "$(find ${GITHUB_WORKSPACE} -user root)" ; then
-            mv ${GITHUB_WORKSPACE} ${GITHUB_WORKSPACE}_${RANDOM}
-            mkdir ${GITHUB_WORKSPACE}
-          fi
-
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ inputs.version_tag }}
-
-      - name: Checkout third-party submodules
-        run: |
-          # have to checkout selective submodules by our own
-          # related issue: https://github.com/actions/checkout/issues/1779
-          export HOME=${RUNNER_TEMP}
-          git config --global --add safe.directory ${GITHUB_WORKSPACE}
-          # Retried via retry.sh: submodule endpoints occasionally 500.
-          bash scripts/retry.sh -- scripts/clone_submodules_emscripten.sh --skip-prebuilt-thirdparty
-
-      - name: Install thirdparty libs
-        run: |
-          ln -s /usr/local/lib/emscripten-single/include ./include
-          ln -s /usr/local/lib/emscripten-single/lib ./lib
-          ln -s /usr/local/lib/emscripten-single/share ./share
-
-      - name: Generate the TypeScript definition file
-        env:
-          MR_CMAKE_BUILD_OPTIONS: --target MRWasmModuleDefinitions
-        run: |
-          ./scripts/build_wasm_meshlib.sh -D MESHLIB_BUILD_WASM_DEFINITIONS_ONLY=ON
-          doxygen scripts/npm/Doxyfile
-          python3 scripts/npm/inject_tsdoc.py \
-            build/Release/bin/meshlib.d.mts \
-            --bindings source/MRWasmModule
-          install -D build/Release/bin/meshlib.d.mts npm-distr/meshlib/bindings.d.mts
-
-      - name: Upload the TypeScript definition file for docs
-        uses: actions/upload-artifact@v7
-        with:
-          name: WasmBindingsDts
-          path: npm-distr/meshlib/bindings.d.mts
+          name: Distributives_web_${{ matrix.wasm-module-name }}
+          path: source/MeshLibJS/js64
           retention-days: 1
 
   emscripten-test:
-    if: ${{ !inputs.definitions_only }}
     needs: emscripten-build
     timeout-minutes: 10
     runs-on: ubuntu-24.04-arm

@@ -1319,14 +1319,20 @@ JS_CODE_OUTPUT_DIR := $(makefile_dir)../../source/MeshLibJS
 
 JS_INPUT_JSON := $(TEMP_OUTPUT_DIR)/interop_desc.json
 
+# `JS_WASM64=1` generates the variant for the modules linked with `-sMEMORY64` (64-bit pointers), into `js64` instead of `js`.
+JS_WASM64 := 0
+override JS_WASM64 := $(filter-out 0,$(JS_WASM64))
+
 .PHONY: generate
 generate:
 	$(strip $(MRBIND_GEN_JS_EXE) \
 		--input-json $(call quote,$(JS_INPUT_JSON)) \
-		--output-dir $(call quote,$(JS_CODE_OUTPUT_DIR)/js) \
+		--output-dir $(call quote,$(JS_CODE_OUTPUT_DIR)/js$(if $(JS_WASM64),64)) \
 		--clean-output-dir \
 		--wasm-module ./MeshLibC2.mjs \
+		--wasm-module-node ./MeshLibC2.node.mjs \
 		--replace-namespace MR :: \
+		$(if $(JS_WASM64),--wasm64) \
 	)
 
 .DEFAULT_GOAL := build

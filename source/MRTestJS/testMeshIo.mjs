@@ -1,18 +1,29 @@
 import { ml, createCube, check, checkEq, checkApprox } from "./common.mjs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 
-// The module uses Emscripten's in-memory file system (no `NODERAWFS`), so the files live only inside the wasm module.
+// The Node build of the module has the real file system (`-sNODERAWFS`), so the files land in the temporary directory.
 export function saveLoad()
 {
-    const cube = createCube();
-    for (const ext of ["ply", "stl", "obj", "off", "ctm", "mrmesh"])
+    const dir = mkdtempSync(join(tmpdir(), "meshlib-js-"));
+    try
     {
-        const path = "/tmp/cube." + ext;
-        ml.MeshSave.toAnySupportedFormat(cube, path);
-        const loaded = ml.MeshLoad.fromAnySupportedFormat(path);
-        check(loaded instanceof ml.Mesh, "loaded " + ext);
-        checkEq(loaded.topology.getValidFaces().count(), 12, "faces " + ext);
-        checkApprox(loaded.volume(), 1.0, 0.001);
-        ml.ffi.M.FS.unlink(path);
+        const cube = createCube();
+        for (const ext of ["ply", "stl", "obj", "off", "ctm", "mrmesh"])
+        {
+            const path = join(dir, "cube." + ext);
+            ml.MeshSave.toAnySupportedFormat(cube, path);
+            check(existsSync(path), "saved " + ext);
+            const loaded = ml.MeshLoad.fromAnySupportedFormat(path);
+            check(loaded instanceof ml.Mesh, "loaded " + ext);
+            checkEq(loaded.topology.getValidFaces().count(), 12, "faces " + ext);
+            checkApprox(loaded.volume(), 1.0, 0.001);
+        }
+    }
+    finally
+    {
+        rmSync(dir, {recursive: true, force: true});
     }
 }
 
@@ -21,7 +32,7 @@ export function loadError()
     let caught = false;
     try
     {
-        ml.MeshLoad.fromAnySupportedFormat("/tmp/missing.ply");
+        ml.MeshLoad.fromAnySupportedFormat(join(tmpdir(), "meshlib-js-missing-file.ply"));
     }
     catch (e)
     {

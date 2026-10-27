@@ -1,6 +1,6 @@
-import createMeshLib from '@meshinspector/meshlib';
+import * as ml from '@meshinspector/meshlib';
 
-const ml = await createMeshLib();
+await ml.init();
 
 // generate a point cloud sampling a unit sphere
 using pointCloud = new ml.PointCloud();
@@ -9,11 +9,7 @@ for (let i = 0; i < resolution; ++i) {
   const u = 2 * Math.PI * i / (resolution - 1);
   for (let j = 0; j < resolution; ++j) {
     const v = Math.PI * j / (resolution - 1);
-    pointCloud.addPoint({
-      x: Math.cos(u) * Math.sin(v),
-      y: Math.sin(u) * Math.sin(v),
-      z: Math.cos(v),
-    });
+    pointCloud.addPoint(new ml.Vector3f(Math.cos(u) * Math.sin(v), Math.sin(u) * Math.sin(v), Math.cos(v)));
   }
 }
 
@@ -21,16 +17,16 @@ for (let i = 0; i < resolution; ++i) {
 using samplingSettings = new ml.UniformSamplingSettings();
 samplingSettings.distance = 1e-3;
 using samples = ml.pointUniformSampling(pointCloud, samplingSettings);
-pointCloud.validPoints = samples;
+pointCloud.validPoints = samples.value();
 pointCloud.invalidateCaches();
 
 // triangulate the sampled cloud
-using triangulationParams = new ml.TriangulationParameters();
-using triangulated = ml.triangulatePointCloud(pointCloud, triangulationParams);
+using triangulated = ml.triangulatePointCloud(pointCloud);
 
 // fix possible issues with a zero offset
 using offsetParams = new ml.OffsetParameters();
-offsetParams.voxelSize = ml.suggestVoxelSize(triangulated, 5e6);
-using mesh = ml.offsetMesh(triangulated, 0, offsetParams);
+using triangulatedPart = new ml.MeshPart(triangulated.value());
+offsetParams.voxelSize = ml.suggestVoxelSize(triangulatedPart, 5e6);
+using mesh = ml.offsetMesh(triangulatedPart, 0, offsetParams);
 
 ml.MeshSave.toAnySupportedFormat(mesh, 'result.stl');

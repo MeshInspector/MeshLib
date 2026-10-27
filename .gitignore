@@ -62,6 +62,7 @@ compile_commands.json
 
 # The generated JS bindings and their wasm module.
 /source/MeshLibJS/js/
+/source/MeshLibJS/js64/
 /source/MRTestJava/classes/
 /examples/java-examples/classes/
 /examples/java-examples/target/

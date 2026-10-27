@@ -1,33 +1,46 @@
 {
   "name": "@meshinspector/meshlib-mt",
   "version": "0.0.0",
-  "description": "MeshLib geometry library compiled to WebAssembly (multi-threaded).",
+  "description": "MeshLib geometry library compiled to WebAssembly (multi-threaded), with the complete API generated from the C++ headers.",
   "type": "module",
-  "main": "./meshlib-mt.mjs",
+  "main": "./index.mjs",
   "types": "./index.d.mts",
   "exports": {
     ".": {
       "types": "./index.d.mts",
-      "node": "./meshlib-mt.node.mjs",
-      "browser": "./meshlib-mt.mjs",
-      "import": "./meshlib-mt.mjs",
-      "default": "./meshlib-mt.mjs"
+      "default": "./index.mjs"
     },
-    "./meshlib-mt.wasm": "./meshlib-mt.wasm",
+    "./MeshLibC2.mjs": "./MeshLibC2.mjs",
+    "./MeshLibC2.wasm": "./MeshLibC2.wasm",
+    "./MeshLibC2.node.mjs": "./MeshLibC2.node.mjs",
+    "./MeshLibC2.node.wasm": "./MeshLibC2.node.wasm",
+    "./ffi.mjs": {
+      "types": "./ffi.d.mts",
+      "default": "./ffi.mjs"
+    },
+    "./ns/*": {
+      "types": "./ns/*.d.mts",
+      "default": "./ns/*.mjs"
+    },
     "./package.json": "./package.json"
   },
+  "sideEffects": false,
   "files": [
-    "meshlib-mt.mjs",
-    "meshlib-mt.wasm",
-    "meshlib-mt.node.mjs",
-    "meshlib-mt.node.wasm",
+    "index.mjs",
     "index.d.mts",
-    "bindings.d.mts",
+    "ffi.mjs",
+    "ffi.d.mts",
+    "lib/",
+    "ns/",
+    "MeshLibC2.mjs",
+    "MeshLibC2.wasm",
+    "MeshLibC2.node.mjs",
+    "MeshLibC2.node.wasm",
     "README.md",
     "LICENSE"
   ],
   "engines": {
-    "node": ">=21"
+    "node": ">=22"
   },
   "author": "MeshLib Team <support@meshinspector.com>",
   "license": "SEE LICENSE IN LICENSE",
@@ -54,6 +67,7 @@
     "stl",
     "remeshing",
     "cad",
-    "point-cloud"
+    "point-cloud",
+    "multithreaded"
   ]
 }

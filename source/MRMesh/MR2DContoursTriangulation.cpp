@@ -139,6 +139,18 @@ static const std::vector<int>& getContourSizes( const Contours2f& contours, std:
     return sizes;
 }
 
+// the two axes kept by the projection along the axis most aligned with `normal`, ordered so that the 2D ccw
+// of the projection equals the 3D orientation around +normal (swapped when normal points the other way)
+static Vector2i projectionAxes( const Vector3f& normal )
+{
+    int dropAx = 0;
+    for ( int i = 1; i < 3; ++i )
+        if ( normal[i] * normal[i] > normal[dropAx] * normal[dropAx] )
+            dropAx = i;
+    const Vector2i axes( ( dropAx + 1 ) % 3, ( dropAx + 2 ) % 3 );
+    return normal[dropAx] < 0 ? Vector2i( axes.y, axes.x ) : axes;
+}
+
 // mesh-space predicates: triangulate hole boundary loops of `mesh` in the mesh's own 3D coordinates,
 // orienting around `normal`. Combinatorics run on the dominant-axis projection (reusing the exact 2D
 // predicates via setPts2Predicates). point() restores each output vertex's exact original mesh position
@@ -157,27 +169,17 @@ static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoop
             pointsSize += int( loop.size() );
     }
 
-    // drop the axis most aligned with the normal; order the two kept axes so the 2D ccw of the
-    // projection equals the 3D orientation around +normal (swap them when normal points the other way)
-    int dropAx = 0;
-    for ( int i = 1; i < 3; ++i )
-        if ( normal[i] * normal[i] > normal[dropAx] * normal[dropAx] )
-            dropAx = i;
-    int kx = ( dropAx + 1 ) % 3;
-    int ky = ( dropAx + 2 ) % 3;
-    if ( normal[dropAx] < 0 )
-        std::swap( kx, ky );
-
+    const auto axes = projectionAxes( normal );
     pts2->clear();
     pts2->reserve( pointsSize );
     auto toInt = getToIntConverter( Box3d( box ) ); // Vector3f -> Vector3i
 
     SweepLinePredicates p;
     setPts2Predicates( p, pts2 );
-    p.addInputPoint = [&mesh, &loops, pts2, toInt, kx, ky] ( VertId v, int contourId, int pointId )
+    p.addInputPoint = [&mesh, &loops, pts2, toInt, axes] ( VertId v, int contourId, int pointId )
     {
         const Vector3i q = toInt( mesh.orgPnt( loops[contourId][pointId] ) );
-        pts2->autoResizeSet( v, Vector2i( q[kx], q[ky] ) );
+        pts2->autoResizeSet( v, Vector2i( q[axes.x], q[axes.y] ) );
     };
     p.addIntersectionPoint = [pts2] ( VertId v, VertId a, VertId b, VertId c, VertId d )
     {
@@ -1997,44 +1999,42 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
 // whether two of the segments between distinct points cross: up to 32 segments are tested in pairs by ccw, faster than setting up
 // the sweep, as two segments without a common end cross if each one has the ends of the other on its two sides (a segment from
 // a point to itself is skipped, as the sweep skips it); more segments by the sweep, which merges no points and stops at the first crossing
-template <typename Ccw, typename Failed>
-static bool hasCrossing( const std::vector<TwoVertIds>& segments, const Ccw& ccw, const Failed& failed, SweepLineQueue::Cache& cache,
-    const std::function<SweepLinePredicates()>& predicates )
+template <typename Preds>
+static bool hasCrossingT( const std::vector<TwoVertIds>& segments, const Preds& preds, ISweepLineCache* cache )
 {
     if ( segments.size() > 32 )
-        return !SweepLineQueue( cache, predicates(), segments, { .abortWhenIntersect = true, .allowMerge = false } ).findIntersections();
+    {
+        std::optional<SweepLineQueue::Cache> localCache;
+        return !SweepLineQueue( cache ? static_cast<SweepLineQueue::Cache&>( *cache ) : localCache.emplace(), {
+            .less = [&] ( VertId l, VertId r ) { return preds.less( l, r ); },
+            .ccw = [&] ( VertId a, VertId b, VertId c ) { return preds.ccw( a, b, c ); },
+            .ccwFromBehind = [&] ( VertId b, VertId pivot ) { return preds.ccwFromBehind( b, pivot ); },
+            .failed = [&] { return preds.failed(); } }, segments, { .abortWhenIntersect = true, .allowMerge = false } ).findIntersections();
+    }
     for ( size_t s = 0; s < segments.size(); ++s )
     {
         for ( size_t t = s + 1; t < segments.size(); ++t )
         {
             const auto [a, b] = segments[s];
             const auto [c, d] = segments[t];
-            if ( a != b && c != d && a != c && a != d && b != c && b != d && ccw( a, b, c ) != ccw( a, b, d ) && ccw( c, d, a ) != ccw( c, d, b ) )
+            if ( a != b && c != d && a != c && a != d && b != c && b != d
+                && preds.ccw( a, b, c ) != preds.ccw( a, b, d ) && preds.ccw( c, d, a ) != preds.ccw( c, d, b ) )
                 return true;
         }
     }
-    return failed();
+    return preds.failed();
 }
 
 bool hasCrossing( const std::vector<TwoVertIds>& segments, const CutTrianglePredicates& preds, ISweepLineCache* cache )
 {
-    std::optional<SweepLineQueue::Cache> localCache;
-    return hasCrossing( segments, [&] ( VertId a, VertId b, VertId c ) { return preds.ccw( a, b, c ); }, [&] { return preds.failed(); },
-        cache ? static_cast<SweepLineQueue::Cache&>( *cache ) : localCache.emplace(), [&]
-    {
-        return SweepLinePredicates{
-            .less = [&] ( VertId l, VertId r ) { return preds.less( l, r ); },
-            .ccw = [&] ( VertId a, VertId b, VertId c ) { return preds.ccw( a, b, c ); },
-            .ccwFromBehind = [&] ( VertId b, VertId pivot ) { return preds.ccwFromBehind( b, pivot ); },
-            .failed = [&] { return preds.failed(); } };
-    } );
+    return hasCrossingT( segments, preds, cache );
 }
 
-bool hasCrossing( const std::vector<TwoVertIds>& segments, const Contour2f& points, ISweepLineCache* cache )
+bool hasCrossing( const std::vector<TwoVertIds>& segments, const std::vector<Vector3f>& points, const Vector3f& normal, ISweepLineCache* cache )
 {
     Box3f box;
     for ( const auto& q : points )
-        box.include( to3dim( q ) );
+        box.include( q );
     if ( box.size() == Vector3f() )
         return false; // all points in one position
     std::optional<SweepLineQueue::Cache> localCache;
@@ -2042,11 +2042,16 @@ bool hasCrossing( const std::vector<TwoVertIds>& segments, const Contour2f& poin
     auto& pts = cacheImpl.pts2Buffer;
     pts.clear();
     const auto toInt = getToIntConverter( Box3d( box ) );
+    const auto axes = projectionAxes( normal );
     for ( const auto& q : points )
-        pts.push_back( to2dim( toInt( to3dim( q ) ) ) );
+    {
+        const auto i = toInt( q );
+        pts.push_back( { i[axes.x], i[axes.y] } );
+    }
     SweepLinePredicates p;
     setPts2Predicates( p, &pts );
-    return hasCrossing( segments, p.ccw, [] { return false; }, cacheImpl, [&] { return p; } );
+    p.failed = [] { return false; };
+    return hasCrossingT( segments, p, &cacheImpl );
 }
 
 

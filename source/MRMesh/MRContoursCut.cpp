@@ -1060,7 +1060,7 @@ struct FaceCrossingsBuffers
     std::vector<int> defs; // an end at every point
     std::vector<TwoVertIds> ends; // the points of every segment
     std::vector<FaceSegment> segs; // the segments of the face, one by one
-    Contour2f xy; // the projected coordinates of the points without sortData
+    std::vector<Vector3f> xyz; // the coordinates of the points without sortData
     CutTrianglePredicates preds;
     std::unique_ptr<PlanarTriangulation::ISweepLineCache> cache = PlanarTriangulation::makeSweepLineCache();
 };
@@ -1075,7 +1075,7 @@ std::int64_t pointKey( const OneMeshContours& contours, int c, int j )
 }
 
 // whether two segments of one face cross: by the exact predicates consistent with the boolean, which make the face bad if they fail too
-// (with sortData), or by the coordinates projected on the plane of the two axes least aligned with the normal of the face
+// (with sortData), or by the float coordinates projected along the axis most aligned with the normal of the face
 bool crossesInFace( FaceCrossingsBuffers& buf, const Mesh& mesh, const OneMeshContours& contours, const SortIntersectionsData* sortData,
     std::span<const FaceSegment> segs )
 {
@@ -1113,18 +1113,14 @@ bool crossesInFace( FaceCrossingsBuffers& buf, const Mesh& mesh, const OneMeshCo
         return preds.failed() || PlanarTriangulation::hasCrossing( buf.ends, preds, buf.cache.get() );
     }
 
-    // drop the axis most aligned with the normal
-    const auto n = dirDblArea( Vector3d( mesh.points[verts[0]] ), Vector3d( mesh.points[verts[1]] ), Vector3d( mesh.points[verts[2]] ) );
-    const int drop = std::abs( n.x ) >= std::abs( n.y ) && std::abs( n.x ) >= std::abs( n.z ) ? 0 : std::abs( n.y ) >= std::abs( n.z ) ? 1 : 2;
-    auto& xy = buf.xy;
-    xy.resize( buf.defs.size() );
-    for ( size_t p = 0; p < xy.size(); ++p )
+    buf.xyz.resize( buf.defs.size() );
+    for ( size_t p = 0; p < buf.xyz.size(); ++p )
     {
         const auto& s = segs[buf.defs[p] / 2];
-        const auto& q = contours[s.c].intersections[s.i + buf.defs[p] % 2].coordinate;
-        xy[p] = { q[drop == 0 ? 1 : 0], q[drop == 2 ? 1 : 2] };
+        buf.xyz[p] = contours[s.c].intersections[s.i + buf.defs[p] % 2].coordinate;
     }
-    return PlanarTriangulation::hasCrossing( buf.ends, xy, buf.cache.get() );
+    return PlanarTriangulation::hasCrossing( buf.ends, buf.xyz,
+        dirDblArea( mesh.points[verts[0]], mesh.points[verts[1]], mesh.points[verts[2]] ), buf.cache.get() );
 }
 
 // finds the faces of the mesh where two segments of the contours cross, before the cut; two segments with a common end,

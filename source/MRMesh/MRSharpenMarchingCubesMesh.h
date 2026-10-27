@@ -41,7 +41,7 @@ struct SharpenMarchingCubesMeshSettings
 /// adjust the mesh \param vox produced by marching cubes method (NOT dual marching cubes) by
 /// 1) correcting positions of all vertices to given offset relative to \param ref mesh (if correctOldVertPos == true);
 /// 2) introducing new vertices in the voxels where the normals change abruptly.
-/// \param face2voxel mapping from Face Id to Voxel Id where it is located
+/// \param face2voxel mapping from Face Id to Voxel Id where it is located; all faces of one voxel must be consecutive, as marching cubes produces them
 MRMESH_API void sharpenMarchingCubesMesh( const MeshPart& ref, Mesh& vox, Vector<VoxelId, FaceId>& face2voxel,
     const SharpenMarchingCubesMeshSettings& settings );
 

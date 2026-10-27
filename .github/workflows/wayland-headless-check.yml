@@ -2,6 +2,8 @@ name: Wayland headless check
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ wayland-headless-check ]
 
 jobs:
   check:

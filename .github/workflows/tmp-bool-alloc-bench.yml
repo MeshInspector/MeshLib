@@ -1,0 +1,65 @@
+name: tmp Boolean allocator A/B
+
+on:
+  push:
+    branches: [ tmp-bool-alloc-bench ]
+
+jobs:
+  bench:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: ubuntu-latest, artifact: ManyLinux-x86_64 }
+          - { runner: ubuntu-24.04-arm, artifact: ManyLinux-aarch64 }
+          - { runner: windows-2025, artifact: Windows-x64 }
+          - { runner: windows-11-arm, artifact: Windows-arm64 }
+          - { runner: macos-15-intel, artifact: Macos-x64 }
+          - { runner: macos-15, artifact: Macos-arm64 }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    permissions:
+      actions: read
+      contents: read
+    env:
+      RUNNER_LABEL: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: .github/bench
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Download master wheel
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ matrix.artifact }}
+          path: whl/master
+          run-id: 40498458513
+          github-token: ${{ github.token }}
+
+      - name: Download std::allocator wheel
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ matrix.artifact }}
+          path: whl/std
+          run-id: 40498463342
+          github-token: ${{ github.token }}
+
+      - name: Install wheels into two venvs
+        shell: bash
+        run: |
+          ls -R whl
+          for v in master std; do
+            python -m venv venv_$v
+            if [ -x venv_$v/Scripts/python.exe ]; then py=venv_$v/Scripts/python.exe; else py=venv_$v/bin/python; fi
+            $py -m pip install -q numpy
+            $py -m pip install --no-index --no-deps --find-links whl/$v meshlib
+            echo "PY_$v=$PWD/$py" >> $GITHUB_ENV
+          done
+
+      - name: Benchmark
+        shell: bash
+        run: python .github/bench/ab.py 10 master="$PY_master" std="$PY_std"

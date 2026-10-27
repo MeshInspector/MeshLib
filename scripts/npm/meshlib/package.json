@@ -25,6 +25,10 @@
     "./package.json": "./package.json"
   },
   "sideEffects": false,
+  "browser": {
+    "./MeshLibC2.node.mjs": false,
+    "./MeshLibC2.node.wasm": false
+  },
   "files": [
     "index.mjs",
     "index.d.mts",

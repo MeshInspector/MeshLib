@@ -40,6 +40,13 @@ npm install @meshinspector/meshlib
 npm pkg set type=module
 ```
 
+### Migrating from the 3.x Packages
+The packages up to 3.1.x shipped a hand-written Embind module with a part of the API; the generated API is different:
+ - The default export (`import createMeshLib`, `const ml = await createMeshLib()`) became a namespace import and an `init()` call: `import * as ml from '@meshinspector/meshlib'; await ml.init();`.
+ - On the CDN the entry point is `index.mjs` instead of `meshlib.mjs`.
+ - The classes, functions and fields follow the C++ API one to one (see [How the API Maps to C++](#how-the-api-maps-to-c) below), so the helpers of the old module have no direct counterparts: look up the C++ function instead.
+ - Objects are still freed with `.delete()` (or `using`), and the typed-array conversions are `toArray()`/`view()`/`fromArray()`.
+
 ### Use from CDN
 In the browser you can skip npm entirely and import the module directly:
 ```js
@@ -50,12 +57,14 @@ import * as ml from 'https://js.meshlib.io/meshlib/index.mjs';
 import * as ml from 'https://js.meshlib.io/meshlib@v1.2.3.456/index.mjs';
 ```
 
-#### Multi-Threaded Build
-The multi-threaded build cannot run its workers straight from the CDN, because the browser refuses to run a worker script from another origin, so pass the fetched module to `init()` as a `Blob` and its worker pool starts from a same-origin `blob:` URL:
-```js
-import * as ml from 'https://js.meshlib.io/meshlib-mt/index.mjs';
+The unpinned `index.mjs` re-exports the latest pinned release, which holds the modules themselves (`meshlib@v1.2.3.456/MeshLibC2.wasm` and the like).
 
-const url = 'https://js.meshlib.io/meshlib-mt/MeshLibC2.mjs';
+#### Multi-Threaded Build
+The multi-threaded build cannot run its workers straight from the CDN, because the browser refuses to run a worker script from another origin, so pass the fetched module to `init()` as a `Blob` and its worker pool starts from a same-origin `blob:` URL. The module must be the one of the imported release, so pin it:
+```js
+import * as ml from 'https://js.meshlib.io/meshlib-mt@v1.2.3.456/index.mjs';
+
+const url = 'https://js.meshlib.io/meshlib-mt@v1.2.3.456/MeshLibC2.mjs';
 const blob = new Blob( [ await ( await fetch( url ) ).text() ], { type: 'text/javascript' } );
 await ml.init( { mainScriptUrlOrBlob: blob } );
 ```

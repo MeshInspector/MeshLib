@@ -69,7 +69,9 @@ function recompute() {
   if ( ratio < 1 ) {
     const s = new ml.DecimateSettings();
     s.maxDeletedFaces = Math.floor( trisAfterBool * ( 1 - ratio ) );
-    facesDeleted = ml.decimateMesh( out, s ).facesDeleted;
+    const r = ml.decimateMesh( out, s );
+    facesDeleted = r.facesDeleted;
+    r.delete();
     s.delete();
   }
 

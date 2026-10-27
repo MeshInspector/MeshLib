@@ -110,6 +110,7 @@ import * as ml from 'https://js.meshlib.io/meshlib@v1.2.3.456/index.mjs';
 
 To pin, take a real tag from the [releases page](https://github.com/MeshInspector/MeshLib/releases): it has a
 leading `v` and four components, and is **not** the npm version — the tag `v1.2.3.456` would be npm `1.2.3-456`.
+The unpinned `index.mjs` re-exports the latest pinned release, which holds the module files themselves.
 
 ## Using with bundlers
 
@@ -142,3 +143,14 @@ mesh.delete();
 ```
 
 Also make sure to add `"type": "module"` to your package.json.
+
+## Migrating from the 3.x packages
+
+The packages up to 3.1.x shipped a hand-written Embind module with a part of the API; this is a different, generated API:
+
+- The default export (`import createMeshLib`, `const ml = await createMeshLib()`) became a namespace import and an `init()` call:
+  `import * as ml from '@meshinspector/meshlib'; await ml.init();`.
+- On the CDN the entry point is `index.mjs` instead of `meshlib.mjs`.
+- The classes, functions and fields now follow the C++ API one to one (the same names, parameters and defaults as in the C++
+  reference), so the hand-written helpers of the old module have no direct counterparts: look up the C++ function instead.
+- Objects are still freed with `.delete()` (or `using`), and the typed-array conversions are `toArray()`/`view()`/`fromArray()`.

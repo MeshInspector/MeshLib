@@ -55,15 +55,28 @@ the headers. In Node.js nothing is needed.
 ## Use from CDN
 
 The browser refuses to run a worker script from another origin, so the worker pool of the module must start
-from a same-origin URL: fetch the module and pass it to `init()` as a `Blob`:
+from a same-origin URL: fetch the module and pass it to `init()` as a `Blob`. The module must be the one of the
+imported release, so pin it by its tag (`v1.2.3.456` is an example, take a real one from the
+[releases page](https://github.com/MeshInspector/MeshLib/releases)):
 
 ```js
-import * as ml from 'https://js.meshlib.io/meshlib-mt/index.mjs';
+import * as ml from 'https://js.meshlib.io/meshlib-mt@v1.2.3.456/index.mjs';
 
-const url = 'https://js.meshlib.io/meshlib-mt/MeshLibC2.mjs';
+const url = 'https://js.meshlib.io/meshlib-mt@v1.2.3.456/MeshLibC2.mjs';
 const blob = new Blob( [ await ( await fetch( url ) ).text() ], { type: 'text/javascript' } );
 await ml.init( { mainScriptUrlOrBlob: blob } );
 ```
 
-Pin a release by its tag in the URL (`https://js.meshlib.io/meshlib-mt@v1.2.3.456/index.mjs`), see the
-[releases page](https://github.com/MeshInspector/MeshLib/releases).
+The unpinned `https://js.meshlib.io/meshlib-mt/index.mjs` re-exports the latest release, but only the pinned
+directory holds the module files.
+
+## Migrating from the 3.x packages
+
+The packages up to 3.1.x shipped a hand-written Embind module with a part of the API; this is a different, generated API:
+
+- The default export (`import createMeshLib`, `const ml = await createMeshLib()`) became a namespace import and an `init()` call:
+  `import * as ml from '@meshinspector/meshlib'; await ml.init();`.
+- On the CDN the entry point is `index.mjs` instead of `meshlib.mjs`.
+- The classes, functions and fields now follow the C++ API one to one (the same names, parameters and defaults as in the C++
+  reference), so the hand-written helpers of the old module have no direct counterparts: look up the C++ function instead.
+- Objects are still freed with `.delete()` (or `using`), and the typed-array conversions are `toArray()`/`view()`/`fromArray()`.

@@ -40,9 +40,13 @@ export function geometryToThree( THREE, exported ) {
 export function meshToThree( ml, THREE, mesh, { normals = false } = {} ) {
   mesh.pack(); // getTriangulation() is undefined on deleted faces; pack removes them
   // `toArray()` returns copies (Float32Array of the coordinates, Int32Array of the vertex ids), safe to keep.
+  const tris = mesh.topology.getTriangulation();
+  const ids = tris.toArray();
+  tris.delete();
   const exported = {
     positions: mesh.points.toArray(),
-    indices: mesh.topology.getTriangulation().toArray(),
+    // three.js draws an Int32Array index as gl.INT, which drawElements rejects: reinterpret the ids as unsigned, without a copy.
+    indices: new Uint32Array( ids.buffer, ids.byteOffset, ids.length ),
   };
   if ( normals ) {
     const vertNormals = ml.computePerVertNormals( mesh );

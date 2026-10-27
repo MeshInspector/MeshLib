@@ -46,8 +46,11 @@ jobs:
         run: |
           gh release download "${TAG}" --pattern "js-meshlib-*.tgz" --repo ${{ github.repository }} --clobber
 
-        # The package is a directory of ES modules (`index.mjs`, `ffi.mjs`, `lib/`, `ns/`), declarations and the wasm modules,
-        # uploaded as a whole: `https://js.meshlib.io/<package>/index.mjs` is the entry point, and the modules import each other relatively.
+        # The package is a directory of ES modules (`index.mjs`, `ffi.mjs`, `lib/`, `ns/`) and the wasm modules, which import each other
+        # relatively, so the whole tree (~2k files) goes under `<package>@<tag>/`, gzipped once into a staging tree and uploaded per content type.
+        # The Node build and the declarations are useless from a CDN and are skipped.
+        # `<package>/index.mjs` (the unpinned entry point) only re-exports the tagged tree: replacing the tree in place would let
+        # a client mix the new `index.mjs` with the cached old `lib/*.mjs`.
       - name: Upload to S3
         env:
           BUCKET: s3://cdn-meshlib-js
@@ -56,31 +59,25 @@ jobs:
             NAME=${TGZ#js-}            # meshlib-1.2.3-4.tgz
             NAME=${NAME%%-[0-9]*}      # meshlib, meshlib-mt
             mkdir -p "pkg/${NAME}"
-            tar -xzf "${TGZ}" --strip-components=1 -C "pkg/${NAME}"
-            rm -f "pkg/${NAME}/package.json"
+            tar -xzf "${TGZ}" --strip-components=1 -C "pkg/${NAME}" --exclude=package.json --exclude='*.node.mjs' --exclude='*.node.wasm' --exclude='*.d.mts'
+            find "pkg/${NAME}" -type f -exec gzip -9 -n {} \;
+            find "pkg/${NAME}" -type f -name '*.gz' -exec sh -c 'mv "$1" "${1%.gz}"' _ {} \;
           done
-          content_type() {
-            case "$1" in
-              *.mjs) echo text/javascript ;;
-              *.wasm) echo application/wasm ;;
-              *.d.mts) echo text/plain ;;
-              *) echo application/octet-stream ;;
-            esac
-          }
+          # One recursive upload per content type.
           upload() {
-            local name="$1" dest="$2" ; shift 2
-            ( cd "pkg/${name}" && find . -type f -print0 ) | while IFS= read -r -d '' f ; do
-              f=${f#./}
-              gzip -9 -c "pkg/${name}/${f}" | aws s3 cp - "${dest}/${f}" --content-type "$(content_type "${f}")" --content-encoding gzip "$@"
-            done
+            local src="$1" dest="$2" ; shift 2
+            aws s3 cp "${src}" "${dest}" --recursive --only-show-errors --content-encoding gzip --exclude '*' --include '*.mjs'  --content-type text/javascript  "$@"
+            aws s3 cp "${src}" "${dest}" --recursive --only-show-errors --content-encoding gzip --exclude '*' --include '*.wasm' --content-type application/wasm "$@"
+            aws s3 cp "${src}" "${dest}" --recursive --only-show-errors --content-encoding gzip --exclude '*' --include '*.md'   --content-type text/markdown    "$@"
+            aws s3 cp "${src}" "${dest}" --recursive --only-show-errors --content-encoding gzip --exclude '*' --include 'LICENSE' --content-type text/plain      "$@"
           }
           for f in meshlib meshlib-mt ; do
             [ -d "pkg/${f}" ] || continue
             if [ "${IS_DRAFT}" = "true" ] ; then
-              upload "${f}" "${BUCKET}/${f}-draft"  --cache-control "public, max-age=300"
+              upload "pkg/${f}" "${BUCKET}/${f}-draft" --cache-control "public, max-age=300"
             else
-              upload "${f}" "${BUCKET}/${f}@${TAG}" --cache-control "public, max-age=31536000, immutable"
-              upload "${f}" "${BUCKET}/${f}"        --cache-control "public, max-age=300"
+              upload "pkg/${f}" "${BUCKET}/${f}@${TAG}" --cache-control "public, max-age=31536000, immutable"
+              printf 'export * from "../%s@%s/index.mjs";\n' "${f}" "${TAG}" | gzip -9 -n | aws s3 cp - "${BUCKET}/${f}/index.mjs" --content-type text/javascript --content-encoding gzip --cache-control "public, max-age=300"
             fi
           done
 
@@ -96,7 +93,7 @@ jobs:
         run: |
           aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.CDN_CLOUDFRONT_DISTRIBUTION_ID }} \
-            --paths "/meshlib/*" "/meshlib-mt/*"
+            --paths "/meshlib/index.mjs" "/meshlib-mt/index.mjs"
 
   npm:
     permissions:

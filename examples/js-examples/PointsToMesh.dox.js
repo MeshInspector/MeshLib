@@ -7,7 +7,8 @@ using pointCloud = ml.PointsLoad.fromAnySupportedFormat('Points.ply');
 
 // triangulate (the result is empty if the triangulation was cancelled)
 using triangulated = ml.triangulatePointCloud(pointCloud);
-if (!triangulated.has_value())
+const mesh = triangulated.value();
+if (!mesh)
   throw new Error('triangulation was cancelled');
 
-ml.MeshSave.toAnySupportedFormat(triangulated.value(), 'Mesh.ctm');
+ml.MeshSave.toAnySupportedFormat(mesh, 'Mesh.ctm');

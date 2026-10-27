@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Assembles the npm package of the generated JS bindings: `scripts/npm/<variant>` (package.json, README) plus the generated
-# `source/MeshLibJS/js` (the ES modules, the declarations, and the wasm modules built next to them).
+# JS copied to the build tree with the wasm modules built next to it (`build/Release/MeshLibJS/js` by default, `JS_DIR` overrides).
 # Usage: assemble.sh <meshlib|meshlib-mt> [version tag]
 set -euo pipefail
 
@@ -14,7 +14,7 @@ if [ "${2:-}" ] ; then
   VERSION="${VERSION%.*}-${VERSION##*.}"   # 1.2.3.4 -> 1.2.3-4
 fi
 
-JS_DIR=source/MeshLibJS/js
+JS_DIR=${JS_DIR:-build/Release/MeshLibJS/js}
 for f in index.mjs index.d.mts ffi.mjs MeshLibC2.mjs MeshLibC2.wasm MeshLibC2.node.mjs MeshLibC2.node.wasm ; do
   [ -f "${JS_DIR}/${f}" ] || { echo "Missing ${JS_DIR}/${f}: generate the bindings (TARGET=js) and build the MeshLibJS and MeshLibJSNode targets first" >&2 ; exit 1 ; }
 done

@@ -77,7 +77,7 @@ TEST( MRMesh, MimallocAllocator )
     Buffer<int> buf( 1000 );
     EXPECT_TRUE( mi_is_in_heap_region( buf.data() ) );
 
-    // mi_stl_allocator alone ignores alignas
+    // mi_new_n alone ignores alignas
     struct alignas( 64 ) Aligned { char c = 0; };
     Vector<Aligned> v( 3 );
     EXPECT_TRUE( mi_is_in_heap_region( v.data() ) );

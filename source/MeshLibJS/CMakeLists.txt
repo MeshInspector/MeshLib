@@ -15,9 +15,11 @@ file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/MeshLibJS_empty.cpp" "")
 add_executable(${PROJECT_NAME} "${CMAKE_CURRENT_BINARY_DIR}/MeshLibJS_empty.cpp")
 
 # The C bindings must be linked whole, the exported functions are referenced by nothing else.
+# `MeshLibC2Cuda` holds the Cuda stubs (`MR_Cuda_isCudaAvailable()`), which the generated JS calls too.
 target_link_libraries(${PROJECT_NAME} PRIVATE
   -Wl,--whole-archive
   MeshLibC2
+  MeshLibC2Cuda
   -Wl,--no-whole-archive
   MRMesh
   MRIOExtras

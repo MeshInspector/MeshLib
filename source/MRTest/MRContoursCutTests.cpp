@@ -1357,12 +1357,24 @@ namespace
 // the bad faces of the plain and the forced cut of a mesh along its self-intersections as selfBoolean cuts it: with sortData, and every open
 // contour closed through the fold vertices at its ends (the third vertices of the faces right of its first intersected edge and left
 // of its last one, which are corners of the intersected triangles too), from the first one along the contour on one sheet and back along
-// its pair on the other sheet, with the edge-triangle intersections of the vertex points repeated to keep both kinds of contours aligned
-std::array<FaceBitSet, 2> selfCutBadFaces( const Mesh& mesh )
+// its pair on the other sheet, with the edge-triangle intersections of the vertex points repeated to keep both kinds of contours aligned;
+// it asserts what selfBoolean finds or requires: the pair of every contour is the next one in the order of orderSelfIntersectionContours,
+// as findSelfContoursMapping finds it, and the fold vertices are corners of the first and the last intersected triangles
+void selfCutBadFaces( const Mesh& mesh, std::array<FaceBitSet, 2>& bad )
 {
     const auto conv = getVectorConverters( mesh );
     auto contours = orderSelfIntersectionContours( mesh.topology, findSelfCollidingEdgeTrisPrecise( mesh, conv.toInt ) );
     auto inters = getOneMeshSelfIntersectionContours( mesh, contours, conv );
+    // the same crossing of an edge and a triangle, seen from the other sheet
+    auto mirrors = [] ( const VarEdgeTri& a, const VarEdgeTri& b )
+    {
+        return a.isEdgeATriB() != b.isEdgeATriB() && a.tri() == b.tri() && a.edge == b.edge.sym();
+    };
+    auto isCorner = [&] ( VertId v, FaceId f )
+    {
+        const auto t = mesh.topology.getTriVerts( f );
+        return v == t[0] || v == t[1] || v == t[2];
+    };
     auto join = [] ( auto& c, auto& other, auto first, auto last )
     {
         c.insert( c.begin(), first );
@@ -1371,20 +1383,23 @@ std::array<FaceBitSet, 2> selfCutBadFaces( const Mesh& mesh )
         c.push_back( first );
         other.clear();
     };
-    auto destPoint = [&] ( EdgeId e ) { return OneMeshIntersection{ .primitiveId = mesh.topology.dest( e ), .coordinate = mesh.destPnt( e ) }; };
+    auto vertPoint = [&] ( VertId v ) { return OneMeshIntersection{ .primitiveId = v, .coordinate = mesh.points[v] }; };
     for ( size_t k = 0; k < contours.size(); k += 2 )
     {
         auto& c = contours[k];
+        ASSERT_TRUE( std::any_of( contours[k + 1].begin(), contours[k + 1].end(), [&] ( const VarEdgeTri& x ) { return mirrors( x, c.front() ); } ) );
         if ( isClosed( c ) )
             continue;
-        join( inters[k].intersections, inters[k + 1].intersections, destPoint( mesh.topology.prev( c.front().edge ) ),
-            destPoint( mesh.topology.next( c.back().edge ) ) );
+        const auto sv = mesh.topology.dest( mesh.topology.prev( c.front().edge ) );
+        const auto fv = mesh.topology.dest( mesh.topology.next( c.back().edge ) );
+        ASSERT_TRUE( isCorner( sv, c.front().tri() ) && isCorner( fv, c.back().tri() ) );
+        join( inters[k].intersections, inters[k + 1].intersections, vertPoint( sv ), vertPoint( fv ) );
         inters[k].closed = true;
         join( c, contours[k + 1], c.front(), c.back() );
     }
     const SortIntersectionsData sortData{ mesh, contours, conv.toInt, nullptr, 0, false };
     Mesh plain = mesh, forced = mesh;
-    return { cutMesh( plain, inters, { .sortData = &sortData } ).fbsWithContourIntersections,
+    bad = { cutMesh( plain, inters, { .sortData = &sortData } ).fbsWithContourIntersections,
         cutMesh( forced, inters, { .sortData = &sortData, .forceFill = true } ).fbsWithContourIntersections };
 }
 
@@ -1402,13 +1417,16 @@ TEST( MRMesh, ForceFillCrossingsFoldVertex )
         Vector3f( 3, 2, -2 ), Vector3f( 11, 2, -2 ), Vector3f( 3, -2, 2 ), Vector3f( 11, -2, 3 ) },
         { { 0_v, 2_v, 3_v }, { 1_v, 3_v, 2_v }, { 0_v, 3_v, 4_v }, { 5_v, 4_v, 3_v }, { 3_v, 1_v, 5_v }, { 0_v, 4_v, 6_v }, { 7_v, 6_v, 4_v },
           { 4_v, 5_v, 7_v }, { 1_v, 7_v, 5_v }, { 0_v, 6_v, 2_v }, { 6_v, 7_v, 2_v }, { 7_v, 1_v, 2_v } } );
-    for ( const auto& bad : selfCutBadFaces( spindle ) )
-        EXPECT_TRUE( bad.none() );
+    std::array<FaceBitSet, 2> bad;
+    ASSERT_NO_FATAL_FAILURE( selfCutBadFaces( spindle, bad ) );
+    for ( const auto& b : bad )
+        EXPECT_TRUE( b.none() );
 
     auto mesh = spindle;
     const Vector3f sides[3] = { Vector3f( -8, 3, 0 ), Vector3f( 6, 3, 0 ), Vector3f( 0, 0, 8 ) };
     mesh.addMesh( makeParallelepiped( sides, Vector3f( 2, -0.25f, -4 ) ) );
-    const auto [plain, forced] = selfCutBadFaces( mesh );
+    ASSERT_NO_FATAL_FAILURE( selfCutBadFaces( mesh, bad ) );
+    const auto& [plain, forced] = bad;
     EXPECT_EQ( plain.count(), 2 );
     const auto added = forced - plain;
     EXPECT_EQ( added.count(), 2 );

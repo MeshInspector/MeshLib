@@ -74,6 +74,7 @@ jobs:
 
       - name: Delete stats artifacts
         uses: actions/github-script@v9
+        continue-on-error: true
         with:
           retries: 3
           script: |

@@ -30,7 +30,7 @@ namespace PointsSave
 MRIOEXTRAS_API Expected<void> toLas( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings = {} );
 MRIOEXTRAS_API Expected<void> toLas( const PointCloud& points, std::ostream& out, const SaveSettings& settings = {} );
 
-/// saves in compressed .laz file, the same contents as in ef toLas
+/// saves in compressed .laz file, the same contents as in toLas
 MRIOEXTRAS_API Expected<void> toLaz( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings = {} );
 MRIOEXTRAS_API Expected<void> toLaz( const PointCloud& points, std::ostream& out, const SaveSettings& settings = {} );
 

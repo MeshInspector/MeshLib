@@ -13,7 +13,7 @@
 #ifdef MR_ALLOCATOR_IS_MIMALLOC
 #include <mimalloc.h>
 #if defined( _MSC_VER ) && !defined( MR_USE_CMAKE_CONFIGURE_FILE )
-// the inline mi_stl_allocator calls mimalloc from every binary using MRMesh; MeshLib's CMake targets link it instead
+// the inline Allocator calls mimalloc from every binary using MRMesh; MeshLib's CMake targets link it instead
 #ifdef _DEBUG
 #pragma comment( lib, "mimalloc-debug.dll.lib" )
 #else
@@ -26,8 +26,9 @@ namespace MR
 {
 
 #ifdef MR_ALLOCATOR_IS_MIMALLOC
+// not mi_stl_allocator: its construct/destroy members stop std containers from memmove-copying and skipping trivial destructors
 template <typename T>
-using AllocatorBase = mi_stl_allocator<T>;
+struct AllocatorBase {};
 #else
 template <typename T>
 using AllocatorBase = std::allocator<T>;
@@ -49,7 +50,8 @@ struct MR_BIND_IGNORE Allocator : AllocatorBase<T>
     Allocator( const Allocator<U> & ) noexcept {}
 
 #ifdef MR_ALLOCATOR_IS_MIMALLOC
-    // mi_stl_allocator ignores the alignment of over-aligned types
+    using propagate_on_container_move_assignment = std::true_type;
+
     [[nodiscard]] T * allocate( std::size_t n )
     {
         if constexpr ( alignof( T ) > __STDCPP_DEFAULT_NEW_ALIGNMENT__ )
@@ -59,8 +61,9 @@ struct MR_BIND_IGNORE Allocator : AllocatorBase<T>
             return static_cast<T *>( mi_new_aligned( n * sizeof( T ), alignof( T ) ) );
         }
         else
-            return AllocatorBase<T>::allocate( n );
+            return static_cast<T *>( mi_new_n( n, sizeof( T ) ) );
     }
+    void deallocate( T * p, std::size_t ) noexcept { mi_free( p ); }
 #endif
     [[nodiscard]] Allocator select_on_container_copy_construction() const noexcept { return *this; }
 };

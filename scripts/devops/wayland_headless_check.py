@@ -1,7 +1,9 @@
 """Run MeshViewer under a Wayland compositor and read its framebuffer size through MCP.
 
 usage: wayland_headless_check.py <exe> <port> <expected_width> <expected_height> <screenshot.png> [extra viewer args...]
-Exit code 1 when the framebuffer size differs from the expectation or the viewer does not exit cleanly.
+The framebuffer is read twice: right after the MCP server answers (usually before the first frame is presented,
+so the compositor has not yet told the client its output scale) and again 4 s later; the second reading is checked.
+Exit code 1 when it differs from the expectation or the viewer does not exit cleanly.
 """
 import asyncio, json, os, subprocess, sys, time
 
@@ -21,6 +23,7 @@ screenshot = os.path.abspath(sys.argv[5])
 extra = sys.argv[6:]
 url = f"http://127.0.0.1:{port}/sse"
 failures = []
+t0 = time.time()
 
 
 def check(cond, what):
@@ -29,17 +32,25 @@ def check(cond, what):
         failures.append(what)
 
 
+async def capture(s, path):
+    shot = await s.call_tool("viewer_captureScreenshot", {"includeUi": True, "filePath": path})
+    sc = shot.structured_content or {}
+    info = await s.call_tool("system_info", {})
+    win = (info.structured_content or {}).get("Window Info", {})
+    size = (sc.get("width"), sc.get("height"))
+    print(f"[{time.time() - t0:.2f} s] window capture {size}, system_info: {json.dumps(win)}", flush=True)
+    return size
+
+
 async def drive():
     async with sse_client(url, timeout=10, sse_read_timeout=120) as (rd, wr):
         async with ClientSession(rd, wr) as s:
             await s.initialize()
-            info = await s.call_tool("system_info", {})
-            print("system_info:", json.dumps(info.structured_content)[:1500], flush=True)
-            shot = await s.call_tool("viewer_captureScreenshot", {"includeUi": True, "filePath": screenshot})
-            sc = shot.structured_content or {}
-            size = (sc.get("width"), sc.get("height"))
-            print("framebuffer (window capture):", size, flush=True)
-            check(size == expected, f"framebuffer size {size} == expected {expected}")
+            first = await capture(s, screenshot.replace(".png", "-first.png"))
+            await asyncio.sleep(4)
+            second = await capture(s, screenshot)
+            print(f"framebuffer first {first}, after 4 s {second}", flush=True)
+            check(second == expected, f"framebuffer size after 4 s {second} == expected {expected}")
             await s.call_tool("viewer_shutdown", {})
 
 
@@ -70,7 +81,7 @@ def main():
     print("--- viewer log lines of interest ---")
     for line in text.splitlines():
         low = line.lower()
-        if any(k in low for k in ("glfw", "wayland", "resize", "window pos", "scale", "splash", "error", "warn", "log file")):
+        if any(k in low for k in ("glfw", "wayland", "resize", "window pos", "scale", "splash", "error", "warn", "log file", "debug")):
             print("  " + line[:300])
     print("--- end ---")
     sys.exit(1 if failures else 0)

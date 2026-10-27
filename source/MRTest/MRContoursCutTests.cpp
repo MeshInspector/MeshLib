@@ -675,7 +675,8 @@ TEST( MRMesh, CutMeshSelfCrossingLoneContour )
 }
 
 // a lone contour inside a triangle of zero area (its corners on one line) has no plane to connect it with the triangle in;
-// without the exact sorting data, the cut reports the triangle as bad and keeps it
+// without the exact sorting data, the cut reports the triangle as bad and keeps it; a contour through the triangle along that line
+// with four points in it, which the plain cut takes, makes it bad under force fill, with no plane to find their crossings in either
 TEST( MRMesh, CutMeshLoneContourInZeroAreaFace )
 {
     // corner 2_v of 1_f is on its side from 1_v to 0_v
@@ -686,6 +687,11 @@ TEST( MRMesh, CutMeshLoneContourInZeroAreaFace )
     for ( float t : { 1.f, 3.f, 7.f, 1.f } )
         island.intersections.push_back( { .primitiveId = 1_f, .coordinate = Vector3f( t, t, 0 ) } );
     island.closed = true;
+    // from the side of 1_f between 0_v and 2_v through two points inside it to its side between 0_v and 1_v, then across 0_f to the border
+    const OneMeshContour through{ .intersections = { { .primitiveId = mesh.topology.findEdge( 0_v, 2_v ), .coordinate = Vector3f( 2, 2, 0 ) },
+        { .primitiveId = 1_f, .coordinate = Vector3f( 3, 3, 0 ) }, { .primitiveId = 1_f, .coordinate = Vector3f( 5, 5, 0 ) },
+        { .primitiveId = mesh.topology.findEdge( 0_v, 1_v ), .coordinate = Vector3f( 6, 6, 0 ) },
+        { .primitiveId = mesh.topology.findEdge( 3_v, 1_v ), .coordinate = Vector3f( 5, 10, 0 ) } } };
 
     for ( bool forceFill : { false, true } )
     {
@@ -697,6 +703,11 @@ TEST( MRMesh, CutMeshLoneContourInZeroAreaFace )
         EXPECT_EQ( cut.topology.left( e ), 1_f );
         // the border of the mesh, and the two sides of the island unless they are filled
         EXPECT_EQ( cut.topology.findNumHoles(), forceFill ? 1 : 3 );
+
+        cut = mesh;
+        const auto bad = cutMesh( cut, { through }, { .forceFill = forceFill } ).fbsWithContourIntersections;
+        EXPECT_EQ( bad.count(), forceFill ? 1 : 0 );
+        EXPECT_EQ( bad.test( 1_f ), forceFill );
     }
 }
 
@@ -1134,29 +1145,35 @@ TEST( MRMesh, SurfaceOffsetAlongOpenBorder )
     EXPECT_LT( numOpen, int( res->size() ) ); // the inner offset is closed
 }
 
-// an open contour across triangle 0_f of the square at y = 2, and a contour from the bottom side up to a point inside 0_f and back:
-// with the point above the first contour, they cross twice, which leaves valid hole loops, so the plain cut does not report it,
-// while under force fill the face of the crossings is bad; with the point below it, the contours do not meet, and the two segments
-// of the second one only touch at the point
+// an open contour across triangle 0_f of the square at y = 2, and a contour from the bottom side up to a point inside 0_f and back,
+// or to a zigzag of 33 points there, whose 35 segments in 0_f the search tests by the sweep on the float coordinates: with the points
+// above the first contour, they cross twice, which leaves valid hole loops, so the plain cut does not report it, while under force fill
+// the face of the crossings is bad; with the points below it, the contours do not meet, and the segments of the second one only touch
 TEST( MRMesh, ForceFillCrossingsEven )
 {
     const auto square = makeSquareOfTwoTriangles();
     const OneMeshContour across{ .intersections = {
         onSquareSide( square, 1_v, 2_v, Vector3f( 10, 2, 0 ) ), onSquareSide( square, 0_v, 2_v, Vector3f( 2, 2, 0 ) ) } };
-    auto tent = [&] ( float top )
+    // from the bottom side up to n points from x = 4.5 to 5.5 (one at x = 5), every other one a quarter below the top, and back
+    auto tent = [&] ( float top, int n )
     {
-        const Vector3f peak( 5, top, 0 );
-        return OneMeshContour{ .intersections = { onSquareSide( square, 0_v, 1_v, Vector3f( 4, 0, 0 ) ),
-            { .primitiveId = 0_f, .coordinate = peak }, onSquareSide( square, 1_v, 0_v, Vector3f( 6, 0, 0 ) ) } };
+        OneMeshContour res{ .intersections = { onSquareSide( square, 0_v, 1_v, Vector3f( 4, 0, 0 ) ) } };
+        for ( int i = 0; i < n; ++i )
+            res.intersections.push_back( { .primitiveId = 0_f, .coordinate = Vector3f( 5 + ( i - n / 2 ) / 32.f, top - ( i % 2 ) / 4.f, 0 ) } );
+        res.intersections.push_back( onSquareSide( square, 1_v, 0_v, Vector3f( 6, 0, 0 ) ) );
+        return res;
     };
-    for ( float top : { 1.5f, 3.0f } )
+    for ( int n : { 1, 33 } )
     {
-        Mesh cut = square;
-        EXPECT_TRUE( cutMesh( cut, { across, tent( top ) } ).fbsWithContourIntersections.none() );
-        cut = square;
-        const auto forced = cutMesh( cut, { across, tent( top ) }, { .forceFill = true } ).fbsWithContourIntersections;
-        EXPECT_EQ( forced.count(), top < 2 ? 0 : 1 );
-        EXPECT_EQ( forced.test( 0_f ), top > 2 );
+        for ( float top : { 1.5f, 3.0f } )
+        {
+            Mesh cut = square;
+            EXPECT_TRUE( cutMesh( cut, { across, tent( top, n ) } ).fbsWithContourIntersections.none() );
+            cut = square;
+            const auto forced = cutMesh( cut, { across, tent( top, n ) }, { .forceFill = true } ).fbsWithContourIntersections;
+            EXPECT_EQ( forced.count(), top < 2 ? 0 : 1 );
+            EXPECT_EQ( forced.test( 0_f ), top > 2 );
+        }
     }
 }
 

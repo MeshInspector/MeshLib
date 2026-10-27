@@ -1,9 +1,9 @@
 name: Build Rust bindings
 description: >
   Installs Rust if needed, generates the Rust bindings from the C bindings
-  (`make -f scripts/mrbind/generate.mk TARGET=rust`, which also builds the
-  crate), then builds and runs the Rust examples and tests against the
-  freshly built C libraries. The C bindings must have been built already.
+  (`make -f scripts/mrbind/generate.mk TARGET=rust generate`), then builds
+  and runs the Rust examples and tests against the freshly built C libraries.
+  The C bindings must have been built already.
 
 inputs:
   lib-dir:
@@ -24,7 +24,9 @@ runs:
     - name: Install Rust
       uses: ./.github/actions/setup-rust
 
-    - name: Generate and build Rust bindings
+    # Only `generate`: the crate is built below by its consumers, in one target directory with one environment,
+    # because a different MESHLIB_LIB_DIR or linker would rebuild it and its dependencies in every cargo call.
+    - name: Generate Rust bindings
       if: runner.os != 'Windows'
       shell: bash
       run: |
@@ -32,16 +34,16 @@ runs:
         if [ "$RUNNER_OS" = macOS ]; then
           export PATH="$(brew --prefix)/opt/make/libexec/gnubin:$(brew --prefix)/opt/grep/libexec/gnubin:$PATH"
         fi
-        make -f scripts/mrbind/generate.mk -B --trace TARGET=rust
+        make -f scripts/mrbind/generate.mk -B --trace TARGET=rust generate
 
-    - name: Generate and build Rust bindings (Windows)
+    - name: Generate Rust bindings (Windows)
       if: runner.os == 'Windows'
       shell: cmd
       env:
         MSYS2_DIR: C:\msys64
       run: |
         ${{ inputs.windows-vsdevcmd }} || exit /b 1
-        call ./scripts/mrbind/generate_win.bat -B --trace TARGET=rust || exit /b 1
+        call ./scripts/mrbind/generate_win.bat -B --trace TARGET=rust generate || exit /b 1
 
     - name: Build and run Rust examples and tests
       if: runner.os != 'Windows'
@@ -52,8 +54,9 @@ runs:
         DYLD_LIBRARY_PATH: ${{ inputs.lib-dir }}
       run: |
         set -eu
+        export CARGO_TARGET_DIR="$PWD/source/MeshLibRust/target"
         cargo build --manifest-path examples/rust-examples/Cargo.toml
-        ./examples/rust-examples/target/debug/MeshBoolean
+        "$CARGO_TARGET_DIR/debug/MeshBoolean"
         cargo test --manifest-path source/MRTestRust/Cargo.toml
 
     - name: Build and run Rust examples and tests (Windows)
@@ -63,7 +66,8 @@ runs:
         MESHLIB_LIB_DIR: ${{ inputs.lib-dir }}
       run: |
         ${{ inputs.windows-vsdevcmd }} || exit /b 1
+        set CARGO_TARGET_DIR=%CD%\source\MeshLibRust\target
         cargo build --manifest-path examples/rust-examples/Cargo.toml || exit /b 1
         set PATH=${{ inputs.lib-dir }};%PATH%
-        examples\rust-examples\target\debug\MeshBoolean.exe || exit /b 1
+        "%CARGO_TARGET_DIR%\debug\MeshBoolean.exe" || exit /b 1
         cargo test --manifest-path source/MRTestRust/Cargo.toml || exit /b 1

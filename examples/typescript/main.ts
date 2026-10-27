@@ -22,7 +22,7 @@ console.log('cube volume =', cube.volume().toFixed(3));
 const sphere: ml.Mesh = ml.makeUVSphere(1, 24, 24);
 const res: ml.BooleanResult = ml.boolean(cube, sphere, ml.BooleanOperation.Union);
 if (!res.valid())
-  throw new Error(res.errorString);
+  throw new Error(res.errorString.toString());
 const union: ml.Mesh = res.mesh;
 console.log('union volume =', union.volume().toFixed(3));
 

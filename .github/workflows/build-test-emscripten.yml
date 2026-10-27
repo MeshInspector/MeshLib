@@ -239,13 +239,16 @@ jobs:
             --target MeshLibJS MeshLibJSNode
         run: ./scripts/build_source.sh
 
+        # The image (and the emsdk) ship Node 22, whose Memory64 is too old for the 64-bit module.
+      - name: Install Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
       - name: Test Wasm module
         run: |
-          # The 64-bit module needs Memory64, which Node 22 only has behind a flag; the emsdk ships a newer Node.
-          NODE=$(ls -d ${EMSDK}/node/*/bin/node 2>/dev/null | sort -V | tail -1)
-          NODE=${NODE:-node}
-          ${NODE} --version
-          ${NODE} ${{ matrix.wasm64 == 1 && '--experimental-wasm-memory64' || '' }} source/MRTestJS/main.mjs source/MeshLibJS/${{ matrix.js-dir }}/index.mjs
+          node --version
+          node source/MRTestJS/main.mjs source/MeshLibJS/${{ matrix.js-dir }}/index.mjs
 
       - name: Assemble and pack npm package
         if: ${{ matrix.wasm64 == 0 }}

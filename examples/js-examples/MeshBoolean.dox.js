@@ -17,7 +17,7 @@ params.mapper = mapper;
 // perform boolean operation
 using result = ml.boolean(sphere1, sphere2, ml.BooleanOperation.Intersection, params);
 if (!result.valid())
-  throw new Error(result.errorString);
+  throw new Error(result.errorString.toString());
 
 // find the faces of the result produced by each input sphere, and the faces the cut created
 const MapObject = ml.BooleanResultMapper_MapObject;

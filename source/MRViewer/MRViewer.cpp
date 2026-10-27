@@ -205,6 +205,7 @@ static bool gWindowSizeInitialized = false;
 static void glfw_framebuffer_size( GLFWwindow* /*window*/, int width, int height )
 {
     auto viewer = &MR::getViewerInstance();
+    spdlog::info( "DEBUG glfw_framebuffer_size {} {}", width, height );
 #if defined( __linux__ ) && !defined( __EMSCRIPTEN__ )
     if ( gWindowSizeInitialized )
     {
@@ -284,6 +285,7 @@ static void glfw_window_close( GLFWwindow* /*window*/ )
 static void glfw_window_scale( GLFWwindow* /*window*/, float xscale, float yscale )
 {
     auto viewer = &MR::getViewerInstance();
+    spdlog::info( "DEBUG glfw_window_scale {} {}", xscale, yscale );
     viewer->postRescale( xscale, yscale );
 }
 
@@ -2126,6 +2128,7 @@ void Viewer::resize( int w, int h )
 
 void Viewer::postResize( int w, int h )
 {
+    spdlog::info( "DEBUG postResize {} {} (current {} {}, launched {}, inDraw {})", w, h, framebufferSize.x, framebufferSize.y, isLaunched_, isInDraw_ );
     if ( w == 0 || h == 0 )
         return;
     if ( framebufferSize.x == w && framebufferSize.y == h )

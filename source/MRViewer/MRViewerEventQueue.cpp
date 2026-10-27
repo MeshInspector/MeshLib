@@ -1,4 +1,5 @@
 #include "MRViewerEventQueue.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
@@ -9,7 +10,10 @@ void ViewerEventQueue::emplace( std::string name, ViewerEventCallback cb, bool s
     if ( queue_.empty() || !skipable || !lastSkipable_ )
         queue_.emplace( NamedEvent{ std::move( name ), std::move( cb ) } );
     else
+    {
+        spdlog::info( "DEBUG event queue: {} replaces {}", name, queue_.back().name );
         queue_.back() = { std::move( name ), std::move( cb ) };
+    }
     lastSkipable_ = skipable;
 }
 

@@ -532,7 +532,7 @@ TEST( MRMesh, CutMeshOpenContourTouchesPoint )
     ASSERT_EQ( topology.right( e ), f );
     const OneMeshIntersection iv{ v, mesh.points[v] }, ix{ f, Vector3f( 1.8f, 1.2f, 0.0f ) }, ix2{ f, Vector3f( 1.8f, 1.6f, 0.0f ) },
         iy{ g, Vector3f( 1.2f, 1.6f, 0.0f ) }, ip{ 1_v, mesh.points[1_v] }, iq{ 9_v, mesh.points[9_v] }, ie{ e, Vector3f( 1.5f, 1.5f, 0.0f ) };
-    const std::pair<std::vector<OneMeshIntersection>, int> cases[] = {
+    const std::pair<Vector<OneMeshIntersection>, int> cases[] = {
         { { ip, iv, ix, iv, iq }, 1 },
         { { iv, ix, iv }, 1 },
         { { ip, iv, ix }, 1 },

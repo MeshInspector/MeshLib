@@ -6,26 +6,9 @@
 #include "MRResizeNoInit.h"
 #include "MRPch/MRBindingMacros.h"
 #include <cassert>
-#include <memory>
 
 namespace MR
 {
-
-// Operators of `Vector::iterator` / `Vector::const_iterator` returning the derived type, which C++20 iterator concepts require;
-// `*` and `==` are repeated for the bindings, `->` avoids MSVC's dereferenceability check in `std::to_address( end )`
-#define MR_VECTOR_ITERATOR_OPS( Self, Base ) \
-    [[nodiscard]] typename std::iterator_traits<Base>::reference operator *() const { return *static_cast<const Base &>( *this ); } \
-    [[nodiscard]] MR_BIND_IGNORE typename std::iterator_traits<Base>::pointer operator ->() const { return std::to_address( static_cast<const Base &>( *this ) ); } \
-    [[nodiscard]] bool operator ==( const Self & b ) const { return static_cast<const Base &>( *this ) == static_cast<const Base &>( b ); } \
-    Self & operator ++() { ++static_cast<Base &>( *this ); return *this; } \
-    Self operator ++( int ) { Self res = *this; ++*this; return res; } \
-    Self & operator --() { --static_cast<Base &>( *this ); return *this; } \
-    Self operator --( int ) { Self res = *this; --*this; return res; } \
-    Self & operator +=( difference_type n ) { static_cast<Base &>( *this ) += n; return *this; } \
-    Self & operator -=( difference_type n ) { static_cast<Base &>( *this ) -= n; return *this; } \
-    [[nodiscard]] friend Self operator +( Self it, difference_type n ) { return it += n; } \
-    [[nodiscard]] friend Self operator +( difference_type n, Self it ) { return it += n; } \
-    [[nodiscard]] friend Self operator -( Self it, difference_type n ) { return it -= n; }
 
 /**
  * \brief std::vector<T>-like container that requires specific indexing type,
@@ -44,25 +27,8 @@ public:
     using size_type = typename StdVector::size_type;
     using difference_type = typename StdVector::difference_type;
 
-    /// derived from `StdVector::iterator` rather than an alias of it, so that the bindings spell it through `Vector`:
-    /// the canonical standard iterator types don't always mention the allocator (e.g. libc++'s `std::__wrap_iter<T *>`)
-    struct iterator : StdVector::iterator
-    {
-        using element_type = T; // for std::pointer_traits, some libc++ versions hard-error without it
-        iterator() = default;
-        MR_BIND_IGNORE iterator( typename StdVector::iterator it ) : StdVector::iterator( it ) {}
-        MR_VECTOR_ITERATOR_OPS( iterator, typename StdVector::iterator )
-    };
-    struct const_iterator : StdVector::const_iterator
-    {
-        using element_type = const T;
-        const_iterator() = default;
-        MR_BIND_IGNORE const_iterator( typename StdVector::const_iterator it ) : StdVector::const_iterator( it ) {}
-        MR_BIND_IGNORE const_iterator( typename StdVector::iterator it ) : StdVector::const_iterator( it ) {}
-        const_iterator( iterator it ) : StdVector::const_iterator( it ) {}
-        MR_VECTOR_ITERATOR_OPS( const_iterator, typename StdVector::const_iterator )
-        [[nodiscard]] MR_BIND_IGNORE friend bool operator ==( const const_iterator & a, const iterator & b ) { return a == const_iterator( b ); } // else ambiguous with libc++
-    };
+    using iterator MR_BIND_IGNORE = typename StdVector::iterator;
+    using const_iterator MR_BIND_IGNORE = typename StdVector::const_iterator;
     using reverse_iterator MR_BIND_IGNORE = typename StdVector::reverse_iterator;
     using const_reverse_iterator MR_BIND_IGNORE = typename StdVector::const_reverse_iterator;
     using pointer = typename StdVector::pointer;
@@ -178,27 +144,27 @@ public:
     void pop_back() { vec.pop_back(); }
 
     /// inserts \p t before \p pos
-    MR_BIND_IGNORE_PY iterator insert( const_iterator pos, const T & t MR_LIFETIME_CAPTURE_BY_NESTED(this) ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::copy_constructible<T> && std::movable<T> ) { return vec.insert( pos, t ); }
-    MR_BIND_IGNORE_PY iterator insert( const_iterator pos, T && t MR_LIFETIME_CAPTURE_BY_NESTED(this) ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> ) { return vec.insert( pos, std::move( t ) ); }
+    MR_BIND_IGNORE iterator insert( const_iterator pos, const T & t MR_LIFETIME_CAPTURE_BY_NESTED(this) ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::copy_constructible<T> && std::movable<T> ) { return vec.insert( pos, t ); }
+    MR_BIND_IGNORE iterator insert( const_iterator pos, T && t MR_LIFETIME_CAPTURE_BY_NESTED(this) ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> ) { return vec.insert( pos, std::move( t ) ); }
 
     /// inserts \p count copies of \p t before \p pos
-    MR_BIND_IGNORE_PY iterator insert( const_iterator pos, size_t count, const T & t MR_LIFETIME_CAPTURE_BY_NESTED(this) ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::copy_constructible<T> && std::movable<T> ) { return vec.insert( pos, count, t ); }
+    MR_BIND_IGNORE iterator insert( const_iterator pos, size_t count, const T & t MR_LIFETIME_CAPTURE_BY_NESTED(this) ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::copy_constructible<T> && std::movable<T> ) { return vec.insert( pos, count, t ); }
 
     /// inserts elements from range [first, last) before \p pos
     template<class InputIt>
     iterator insert( const_iterator pos, InputIt first, InputIt last ) { return vec.insert( pos, first, last ); }
 
-    MR_BIND_IGNORE_PY iterator insert( const_iterator pos, std::initializer_list<T> init ) { return vec.insert( pos, init ); }
+    MR_BIND_IGNORE iterator insert( const_iterator pos, std::initializer_list<T> init ) { return vec.insert( pos, init ); }
 
     /// constructs an element in-place before \p pos
     template<typename... Args> MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::constructible_from<T, Args &&...> && std::movable<T> )
     iterator emplace( const_iterator pos, Args&&... args ) { return vec.emplace( pos, std::forward<Args>(args)... ); }
 
     /// removes the element at \p pos
-    MR_BIND_IGNORE_PY iterator erase( const_iterator pos ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> ) { return vec.erase( pos ); }
+    MR_BIND_IGNORE iterator erase( const_iterator pos ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> ) { return vec.erase( pos ); }
 
     /// removes the elements in range [first, last)
-    MR_BIND_IGNORE_PY iterator erase( const_iterator first, const_iterator last ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> ) { return vec.erase( first, last ); }
+    MR_BIND_IGNORE iterator erase( const_iterator first, const_iterator last ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> ) { return vec.erase( first, last ); }
 
     template<typename... Args> MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::constructible_from<T, Args &&...> )
     T& emplace_back( Args&&... args ) { return vec.emplace_back( std::forward<Args>(args)... ); }
@@ -220,12 +186,12 @@ public:
     [[nodiscard]] T* data() MR_LIFETIMEBOUND { return vec.data(); }
     [[nodiscard]] const T* data() const MR_LIFETIMEBOUND { return vec.data(); }
 
-    [[nodiscard]] MR_BIND_IGNORE_PY iterator begin() MR_LIFETIMEBOUND { return vec.begin(); }
-    [[nodiscard]] MR_BIND_IGNORE_PY const_iterator begin() const MR_LIFETIMEBOUND { return vec.begin(); }
-    [[nodiscard]] MR_BIND_IGNORE_PY const_iterator cbegin() const MR_LIFETIMEBOUND { return vec.cbegin(); }
-    [[nodiscard]] MR_BIND_IGNORE_PY iterator end() MR_LIFETIMEBOUND { return vec.end(); }
-    [[nodiscard]] MR_BIND_IGNORE_PY const_iterator end() const MR_LIFETIMEBOUND { return vec.end(); }
-    [[nodiscard]] MR_BIND_IGNORE_PY const_iterator cend() const MR_LIFETIMEBOUND { return vec.cend(); }
+    [[nodiscard]] MR_BIND_IGNORE iterator begin() MR_LIFETIMEBOUND { return vec.begin(); }
+    [[nodiscard]] MR_BIND_IGNORE const_iterator begin() const MR_LIFETIMEBOUND { return vec.begin(); }
+    [[nodiscard]] MR_BIND_IGNORE const_iterator cbegin() const MR_LIFETIMEBOUND { return vec.cbegin(); }
+    [[nodiscard]] MR_BIND_IGNORE iterator end() MR_LIFETIMEBOUND { return vec.end(); }
+    [[nodiscard]] MR_BIND_IGNORE const_iterator end() const MR_LIFETIMEBOUND { return vec.end(); }
+    [[nodiscard]] MR_BIND_IGNORE const_iterator cend() const MR_LIFETIMEBOUND { return vec.cend(); }
     [[nodiscard]] MR_BIND_IGNORE reverse_iterator rbegin() MR_LIFETIMEBOUND { return vec.rbegin(); }
     [[nodiscard]] MR_BIND_IGNORE const_reverse_iterator rbegin() const MR_LIFETIMEBOUND { return vec.rbegin(); }
     [[nodiscard]] MR_BIND_IGNORE const_reverse_iterator crbegin() const MR_LIFETIMEBOUND { return vec.crbegin(); }
@@ -238,10 +204,10 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] size_t heapBytes() const { return capacity() * sizeof(T); }
 
-    [[nodiscard]] MR_BIND_IGNORE_PY friend const_iterator begin( const Vector<T, I> & a ) { return a.vec.begin(); }
-    [[nodiscard]] MR_BIND_IGNORE_PY friend iterator begin( Vector<T, I> & a ) { return a.vec.begin(); }
-    [[nodiscard]] MR_BIND_IGNORE_PY friend const_iterator end( const Vector<T, I> & a ) { return a.vec.end(); }
-    [[nodiscard]] MR_BIND_IGNORE_PY friend iterator end( Vector<T, I> & a ) { return a.vec.end(); }
+    [[nodiscard]] MR_BIND_IGNORE friend const_iterator begin( const Vector<T, I> & a ) { return a.vec.begin(); }
+    [[nodiscard]] MR_BIND_IGNORE friend iterator begin( Vector<T, I> & a ) { return a.vec.begin(); }
+    [[nodiscard]] MR_BIND_IGNORE friend const_iterator end( const Vector<T, I> & a ) { return a.vec.end(); }
+    [[nodiscard]] MR_BIND_IGNORE friend iterator end( Vector<T, I> & a ) { return a.vec.end(); }
 
     /// removes all elements equal to \p value, returns the number of removed elements
     template <typename U>
@@ -272,7 +238,5 @@ template <typename T, typename I>
 {
     return size_t( id ) < a.size() ? a[id] : def;
 }
-
-#undef MR_VECTOR_ITERATOR_OPS
 
 } // namespace MR

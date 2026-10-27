@@ -541,6 +541,8 @@ using ThreeUVCoords = std::array<UVCoord, 3>;
 
 struct MRMESH_CLASS Dipole;
 
+/// Vector<T> is indexed by size_t
+template <typename T, typename I = size_t> class MRMESH_CLASS Vector;
 MR_CANONICAL_TYPEDEFS( (template <typename T, typename I> class MRMESH_CLASS), Vector,
     /// mapping from UndirectedEdgeId to its end vertices
     ( Edges,    Vector<TwoVertIds, UndirectedEdgeId> )
@@ -616,7 +618,7 @@ template <typename T> struct MR_BIND_IGNORE Allocator;
 template <typename T, typename Hash = phmap::priv::hash_default_hash<T>, typename Eq = phmap::priv::hash_default_eq<T>>
 using HashSet = phmap::flat_hash_set<T, Hash, Eq, Allocator<T>>;
 template <typename T, typename Hash = phmap::priv::hash_default_hash<T>, typename Eq = phmap::priv::hash_default_eq<T>>
-using ParallelHashSet = phmap::parallel_flat_hash_set<T, Hash, Eq>;
+using ParallelHashSet = phmap::parallel_flat_hash_set<T, Hash, Eq, Allocator<T>>;
 
 // No canonical typedefs because `phmap::...` is not under our control.
 using FaceHashSet = HashSet<FaceId>;
@@ -626,7 +628,7 @@ using EdgeHashSet = HashSet<EdgeId>;
 template <typename K, typename V, typename Hash = phmap::priv::hash_default_hash<K>, typename Eq = phmap::priv::hash_default_eq<K>>
 using HashMap = phmap::flat_hash_map<K, V, Hash, Eq, Allocator<std::pair<const K, V>>>;
 template <typename K, typename V, typename Hash = phmap::priv::hash_default_hash<K>, typename Eq = phmap::priv::hash_default_eq<K>>
-using ParallelHashMap = phmap::parallel_flat_hash_map<K, V, Hash, Eq>;
+using ParallelHashMap = phmap::parallel_flat_hash_map<K, V, Hash, Eq, Allocator<std::pair<const K, V>>>;
 
 using FaceHashMap = HashMap<FaceId, FaceId>;
 using VertHashMap = HashMap<VertId, VertId>;

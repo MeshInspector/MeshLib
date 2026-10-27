@@ -24,12 +24,24 @@ Range toBitSubRange( const Range & bitRange, const Range & blockRange, const Ran
     };
 }
 
+// calls body on the subranges of blockRange in parallel threads, or on the whole range in this thread if it is one block,
+// which a parallel loop would process in one thread anyway, only slower
+// (unlike tbb::parallel_for, the one-block call neither binds to an enclosing task group nor cancels tgc on an exception)
+template <typename Body, typename ...Tgc>
+void forBlocks( const Range & blockRange, const Body & body, Tgc & ... tgc )
+{
+    if ( blockRange.size() == 1 )
+        body( blockRange );
+    else
+        tbb::parallel_for( blockRange, body, tgc... );
+}
+
 } // namespace
 
 void forAllRanged( const Range & bitRange, FunctionRef<void ( size_t, const Range & )> f )
 {
     const auto blockRange = toBlockRange( bitRange );
-    tbb::parallel_for( blockRange, [&] ( const Range & subRange )
+    forBlocks( blockRange, [&] ( const Range & subRange )
     {
         const auto bitSubRange = toBitSubRange( bitRange, blockRange, subRange );
         for ( auto i = bitSubRange.begin(); i < bitSubRange.end(); ++i )
@@ -40,7 +52,7 @@ void forAllRanged( const Range & bitRange, FunctionRef<void ( size_t, const Rang
 void forAllRanged( const Range & bitRange, FunctionRef<void ( size_t, const Range & )> f, tbb::task_group_context & tgc )
 {
     const auto blockRange = toBlockRange( bitRange );
-    tbb::parallel_for( blockRange, [&] ( const Range & subRange )
+    forBlocks( blockRange, [&] ( const Range & subRange )
     {
         const auto bitSubRange = toBitSubRange( bitRange, blockRange, subRange );
         for ( auto i = bitSubRange.begin(); i < bitSubRange.end(); ++i )
@@ -56,7 +68,7 @@ void forAllRanged( const Range & bitRange, FunctionRef<void ( size_t, const Rang
     FunctionRef<void* ()> ctx )
 {
     const auto blockRange = toBlockRange( bitRange );
-    tbb::parallel_for( blockRange, [&] ( const Range & subRange )
+    forBlocks( blockRange, [&] ( const Range & subRange )
     {
         const auto bitSubRange = toBitSubRange( bitRange, blockRange, subRange );
         void* ctx_ = ctx();
@@ -88,7 +100,7 @@ bool forAllRanged( const Range & bitRange, FunctionRef<void ( size_t, const Rang
     static_assert( sizeof( S ) == hardware_destructive_interference_size );
 
     const auto blockRange = toBlockRange( bitRange );
-    tbb::parallel_for( blockRange, [&] ( const Range & subRange )
+    forBlocks( blockRange, [&] ( const Range & subRange )
     {
         size_t myProcessedBits = 0;
         const auto callingThreadLock = callingThreadMutex.tryLock();

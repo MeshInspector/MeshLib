@@ -25,6 +25,32 @@
 namespace MR
 {
 
+namespace
+{
+
+enum class EdgeOp : unsigned int
+{
+    CollapseOptPos, ///< collapse the edge with target position optimization
+    CollapseEnd,    ///< collapse the edge in one of its current vertices
+    Flip            ///< flip the edge inside quadrangle
+    // one more option is available to fit in 2 bits
+};
+
+struct QueueElement
+{
+    float c = 0;
+    struct X {
+        EdgeOp edgeOp : 2 = EdgeOp::CollapseOptPos;
+        unsigned int uedgeId : 30 = 0;
+    } x;
+    UndirectedEdgeId uedgeId() const { return UndirectedEdgeId{ (int)x.uedgeId }; }
+    std::pair<float, int> asPair() const { return { -c, x.uedgeId }; }
+    bool operator < ( const QueueElement & r ) const { return asPair() < r.asPair(); }
+};
+static_assert( sizeof( QueueElement ) == 8 );
+
+} // anonymous namespace
+
 class MeshDecimator
 {
 public:
@@ -45,39 +71,19 @@ private:
     const UndirectedEdgeBitSet * initialEdges_ = nullptr;
     std::function<void( EdgeId del, EdgeId rem )> onEdgeDel_;
 
-    enum class EdgeOp : unsigned int
-    {
-        CollapseOptPos, ///< collapse the edge with target position optimization
-        CollapseEnd,    ///< collapse the edge in one of its current vertices
-        Flip            ///< flip the edge inside quadrangle
-        // one more option is available to fit in 2 bits
-    };
-
-    struct QueueElement
-    {
-        float c = 0;
-        struct X {
-            EdgeOp edgeOp : 2 = EdgeOp::CollapseOptPos;
-            unsigned int uedgeId : 30 = 0;
-        } x;
-        UndirectedEdgeId uedgeId() const { return UndirectedEdgeId{ (int)x.uedgeId }; }
-        std::pair<float, int> asPair() const { return { -c, x.uedgeId }; }
-        bool operator < ( const QueueElement & r ) const { return asPair() < r.asPair(); }
-    };
-    static_assert( sizeof( QueueElement ) == 8 );
     PriorityQueue<QueueElement> queue_;
     UndirectedEdgeBitSet validInQueue_; // bit set if the edge is both present in queue_ and not lone
     UndirectedEdgeBitSet outdated_; // true if edge's error in the queue may be outdated (too optimistic) due to nearby collapse
     size_t numOutdated_ = 0; // total number of not lone outdated edges in the queue
     size_t maxRemainingFlips_ = 0; // the number of flip-edge operations that can be performed before stop adding them in the queue
     DecimateResult res_;
-    std::vector<VertId> originNeis_;
-    std::vector<Vector3f> triDblAreas_; // directed double areas of newly formed triangles to check that they are consistently oriented
+    Vector<VertId> originNeis_;
+    Vector<Vector3f> triDblAreas_; // directed double areas of newly formed triangles to check that they are consistently oriented
     class EdgeMetricCalc;
 
     bool initialize_();
     void initializeQueue_();
-    std::vector<QueueElement> makeQueueElements_();
+    Vector<QueueElement> makeQueueElements_();
     void updateQueue_();
     QuadraticForm3f collapseForm_( UndirectedEdgeId ue, const Vector3f & collapsePos ) const;
     std::optional<QueueElement> computeQueueElement_( UndirectedEdgeId ue, bool optimizeVertexPos,
@@ -296,7 +302,7 @@ bool MeshDecimator::initialize_()
     return true;
 }
 
-auto MeshDecimator::makeQueueElements_() -> std::vector<QueueElement>
+auto MeshDecimator::makeQueueElements_() -> Vector<QueueElement>
 {
     MR_TIMER;
 
@@ -304,11 +310,11 @@ auto MeshDecimator::makeQueueElements_() -> std::vector<QueueElement>
     validInQueue_.clear();
     validInQueue_.resize( sz, false );
 
-    tbb::enumerable_thread_specific<std::vector<QueueElement>> threadData;
+    tbb::enumerable_thread_specific<Vector<QueueElement>> threadData;
     if ( initialEdges_ )
     {
         // few initial edges in a large bit set
-        std::vector<UndirectedEdgeId> edges;
+        Vector<UndirectedEdgeId> edges;
         for ( auto ue : *initialEdges_ )
             if ( regionEdges_.empty() ? !mesh_.topology.isLoneEdge( ue ) : regionEdges_.test( ue ) )
                 edges.push_back( ue );
@@ -347,7 +353,7 @@ auto MeshDecimator::makeQueueElements_() -> std::vector<QueueElement>
     for ( const auto & v : threadData )
         queueSize += v.size();
 
-    std::vector<QueueElement> elms;
+    Vector<QueueElement> elms;
     elms.reserve( queueSize );
     for ( auto & v : threadData )
     {
@@ -405,7 +411,7 @@ void MeshDecimator::updateQueue_()
 
     t.restart( "remove deleted" );
     // remove invalid and deleted edges from the queue
-    std::erase_if( vec, [&]( QueueElement & qe ) { return !validInQueue_.test( qe.uedgeId() ); } );
+    erase_if( vec, [&]( QueueElement & qe ) { return !validInQueue_.test( qe.uedgeId() ); } );
 
     t.restart( "restore heap" );
     // sort elements to restore heap property
@@ -1064,7 +1070,7 @@ FaceBitSet getSubdividePart( const FaceBitSet & valids, size_t subdivideParts, s
 }
 
 /// returns the faces of the subtrees of mesh's AABB tree (or of a tree constructed for the region), at least subdivideParts of them
-static std::vector<FaceBitSet> getTreeParts( const Mesh & mesh, const DecimateSettings & settings )
+static Vector<FaceBitSet> getTreeParts( const Mesh & mesh, const DecimateSettings & settings )
 {
     MR_TIMER;
     std::optional<AABBTree> ownTree;
@@ -1072,7 +1078,7 @@ static std::vector<FaceBitSet> getTreeParts( const Mesh & mesh, const DecimateSe
     if ( !tree )
         tree = &ownTree.emplace( MeshPart{ mesh, settings.region } );
     const auto roots = tree->getSubtrees( settings.subdivideParts );
-    std::vector<FaceBitSet> res( roots.size() );
+    Vector<FaceBitSet> res( roots.size() );
     ParallelFor( res, [&]( size_t i )
     {
         res[i] = tree->getSubtreeLeaves( roots[i] );
@@ -1082,7 +1088,7 @@ static std::vector<FaceBitSet> getTreeParts( const Mesh & mesh, const DecimateSe
 }
 
 /// \param treeParts if not null, the faces of each part, used instead of getSubdividePart
-static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const DecimateSettings & settings, std::vector<FaceBitSet> * treeParts = nullptr )
+static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const DecimateSettings & settings, Vector<FaceBitSet> * treeParts = nullptr )
 {
     MR_TIMER;
     assert( settings.subdivideParts > 1 );
@@ -1141,7 +1147,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
         /// the node is decimated by the thread which finished the second of its children
         std::atomic<int> finishedChildren{ 0 };
     };
-    std::vector<Parts> parts( hierarchical ? 2 * sz - 1 : sz );
+    Vector<Parts> parts( hierarchical ? 2 * sz - 1 : sz );
     for ( int i = 0; i < sz; ++i )
     {
         parts[i].beginPart = i;
@@ -1249,7 +1255,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     };
     Vector<PartRange, VertId> vertRange( mesh.topology.vertSize() );
     // vertices on the boundaries of parts
-    tbb::enumerable_thread_specific<std::vector<VertId>> threadBdVerts;
+    tbb::enumerable_thread_specific<Vector<VertId>> threadBdVerts;
 
     // bdVerts: vertices with incident (region) faces from several parts, and if !touchNearBdEdges also on hole or region boundaries;
     // one pass for all parts instead of a whole-mesh pass per part; writing different VertBitSets by v is race-free
@@ -1341,7 +1347,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     {
         // the edge of a vertex can be deleted only in the node, where the vertex is not fixed anymore;
         // otherwise the edge of a vertex could change during decimation of one node, while another node reads it
-        std::vector<int> depth( parts.size(), 0 );
+        Vector<int> depth( parts.size(), 0 );
         for ( int id = root - 1; id >= 0; --id )
             depth[id] = depth[parts[id].parent] + 1;
         // the depth of the node, where the edge or the vertex stops being fixed
@@ -1360,10 +1366,10 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
             const auto r = vertRange[v];
             return ( r.lo < 0 || r.hi >= sz ) ? 0 : depth[smallestNode( r.lo, r.hi )];
         };
-        std::vector<VertId> bdVerts;
+        Vector<VertId> bdVerts;
         for ( auto & tv : threadBdVerts )
             bdVerts.insert( bdVerts.end(), tv.begin(), tv.end() );
-        std::vector<EdgeId> betterEdges( bdVerts.size() );
+        Vector<EdgeId> betterEdges( bdVerts.size() );
         ParallelFor( bdVerts, [&]( size_t i )
         {
             const auto v = bdVerts[i];
@@ -1445,7 +1451,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
                 node.bdVerts = std::exchange( l.bdVerts, {} );
                 node.bdVerts |= r.bdVerts;
                 r.bdVerts = {};
-                std::vector<VertId> freedVerts;
+                Vector<VertId> freedVerts;
                 for ( auto v : node.bdVerts )
                     if ( vertRange[v].inside( node ) )
                         freedVerts.push_back( v );
@@ -1636,7 +1642,7 @@ DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings0 )
         return res;
 #endif
 
-    std::vector<FaceBitSet> treeParts;
+    Vector<FaceBitSet> treeParts;
     if ( settings.subdivideParts > 1 && !settings.partFaces && settings.partsMode == DecimatePartsMode::AABBTree )
         treeParts = getTreeParts( mesh, settings ); // before invalidateCaches() to use the tree of the mesh if any
 
@@ -1700,7 +1706,7 @@ DecimateResult decimateObjectMeshData( ObjectMeshData & data, const DecimateSett
             data.selectedFaces = data.selectedFaces.getMapping( packMapping.f );
         if ( settings.region )
             *settings.region = settings.region->getMapping( packMapping.f );
-        emap = std::make_shared<UndirectedEdgeBMap>( std::move( packMapping.e ) );
+        emap = std::allocate_shared<UndirectedEdgeBMap>( Allocator<UndirectedEdgeBMap>(), std::move( packMapping.e ) );
         if ( !reportProgress( set0.progressCallback, .2f ) )
             return res;
     }
@@ -1727,7 +1733,7 @@ DecimateResult decimateObjectMeshData( ObjectMeshData & data, const DecimateSett
         if ( emap )
             *emap = compose( packMapping.e, *emap );
         else
-            emap = std::make_shared<UndirectedEdgeBMap>( std::move( packMapping.e ) );
+            emap = std::allocate_shared<UndirectedEdgeBMap>( Allocator<UndirectedEdgeBMap>(), std::move( packMapping.e ) );
 
         packMapping = {}; //free memory
         data.mesh->shrinkToFit();
@@ -1763,7 +1769,7 @@ MRMESH_API std::optional<ObjectMeshData> makeDecimatedObjectMeshData( const Obje
         return {};
     }
     // clone mesh as well
-    data.mesh = std::make_shared<Mesh>( *data.mesh );
+    data.mesh = std::allocate_shared<Mesh>( Allocator<Mesh>(), *data.mesh );
     auto res = decimateObjectMeshData( data, settings );
     if ( outRes )
         *outRes = res;

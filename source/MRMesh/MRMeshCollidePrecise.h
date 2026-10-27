@@ -3,6 +3,7 @@
 #include "MRId.h"
 #include "MRMeshPart.h"
 #include "MRPrecisePredicates3.h"
+#include "MRVector.h"
 
 #include <functional>
 
@@ -61,7 +62,7 @@ static_assert( sizeof( VarEdgeTri ) == 8 );
 
 /// In each VarEdgeTri = pair of (intersected edge, intersected triangle), the intersected edge
 /// is directed from negative half-space of the intersected triangle B to its positive half-space
-using PreciseCollisionResult = std::vector<VarEdgeTri>;
+using PreciseCollisionResult = Vector<VarEdgeTri>;
 
 /**
  * \brief finds all pairs of colliding edges from one mesh and triangle from another mesh

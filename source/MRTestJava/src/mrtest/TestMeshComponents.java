@@ -27,7 +27,8 @@ public final class TestMeshComponents
         Mesh meshB = Functions.makeCube(Vector3f.diagonal(0.1f), Vector3f.diagonal(1.0f));
         BooleanResult result = Functions.boolean_(meshA, meshB, BooleanOperation.Union, new BooleanParameters());
         Mesh mesh = new Mesh(result.mesh());
-        return new MeshPart(mesh, null); // The part keeps the mesh alive.
+        // MeshPart(Mesh, FaceBitSet) does not keep the mesh alive, so the part owns it here
+        return new MeshPart(new MeshPart(mesh, null).release(), true, mesh);
     }
 
     public static void componentsMap()

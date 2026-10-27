@@ -57,7 +57,7 @@ bool operator<( const WeightedConn& left, const WeightedConn& right )
     return left.weight > right.weight;
 }
 
-typedef std::vector<std::vector<WeightedConn>> WeightedConnMap;
+typedef Vector<Vector<WeightedConn>> WeightedConnMap;
 
 bool sameEdgeExists( const MeshTopology& topology, EdgeId e1Org, EdgeId e2Org )
 {
@@ -88,7 +88,7 @@ bool holeHasDuplicateVerts( const MeshTopology& topology, EdgeId a )
     return false;
 }
 
-void getOptimalSteps( std::vector<unsigned>& optimalSteps, unsigned start, unsigned steps, unsigned loopSize, int maxPolygonSubdivisions )
+void getOptimalSteps( Vector<unsigned>& optimalSteps, unsigned start, unsigned steps, unsigned loopSize, int maxPolygonSubdivisions )
 {
     optimalSteps.resize(0);
     --steps;
@@ -122,7 +122,7 @@ void getOptimalSteps( std::vector<unsigned>& optimalSteps, unsigned start, unsig
 // finds best candidate among all given steps
 void getTriangulationWeights( const MeshTopology& topology, const WeightedConnMap& map, const EdgePath& loop,
     const FillHoleMetric& metrics, bool smoothBd,
-    const std::vector<unsigned>& optimalStepsCache, WeightedConn& processedConn )
+    const Vector<unsigned>& optimalStepsCache, WeightedConn& processedConn )
 {
     for ( unsigned s = 0; s < optimalStepsCache.size(); ++s )
     {
@@ -185,7 +185,7 @@ struct MapPatchElement
     int b{ -1 };
     int newPrevA{ -1 };
 };
-using MapPatch = std::vector<MapPatchElement>;
+using MapPatch = Vector<MapPatchElement>;
 
 // this function go backward by given triangulation and tries to fix multiple edges
 // return false if triangulation has multiple edges that cannot be fixed
@@ -209,8 +209,8 @@ bool removeMultipleEdgesFromTriangulation( const MeshTopology& topology, const W
         auto it = edgesInTriangulation.find( { aV,bV } );
         return it != edgesInTriangulation.end();
     };
-    std::vector<unsigned> optimalStepsCache( maxPolygonSubdivisions );
-    std::queue<WeightedConn> newEdgesQueue;
+    Vector<unsigned> optimalStepsCache( maxPolygonSubdivisions );
+    std::queue<WeightedConn, std::deque<WeightedConn, Allocator<WeightedConn>>> newEdgesQueue;
 
     auto pushInQueue = [&] ( int a, int b )
     {
@@ -260,9 +260,9 @@ bool removeMultipleEdgesFromTriangulation( const MeshTopology& topology, const W
 
 // add next candidate to queue
 void processCandidate( const Mesh& mesh, const WeightedConn& current,
-    std::priority_queue<WeightedConn>& queue, WeightedConnMap& map,
-    const std::vector<EdgeId>& aEdgesMap,
-    const std::vector<EdgeId>& bEdgesMap,
+    std::priority_queue<WeightedConn, Vector<WeightedConn>>& queue, WeightedConnMap& map,
+    const Vector<EdgeId>& aEdgesMap,
+    const Vector<EdgeId>& bEdgesMap,
     const FillHoleMetric& metrics,
     bool addALoop )
 {
@@ -429,8 +429,8 @@ void stitchHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const StitchHolesParams& pa
     }
 
     // Fill EdgeMaps
-    std::vector<EdgeId> aEdgeMap( aLoopEdgesCounter );
-    std::vector<EdgeId> bEdgeMap( bLoopEdgesCounter );
+    Vector<EdgeId> aEdgeMap( aLoopEdgesCounter );
+    Vector<EdgeId> bEdgeMap( bLoopEdgesCounter );
     a = ac;
     for ( int i = 0; i < aLoopEdgesCounter; ++i )
     {
@@ -452,11 +452,11 @@ void stitchHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const StitchHolesParams& pa
 
     // [0..aLoopEdgesCounter][0..bLoopEdgesCounter]
     // last one represents the same edge as first one, but reaching it means that algorithm has finished
-    WeightedConnMap newEdgesMap( aLoopEdgesCounter + 1, std::vector<WeightedConn>( bLoopEdgesCounter + 1 ) );
+    WeightedConnMap newEdgesMap( aLoopEdgesCounter + 1, Vector<WeightedConn>( bLoopEdgesCounter + 1 ) );
 
     WeightedConn& firstWConn = newEdgesMap[0][0];
     firstWConn.a = 0; firstWConn.b = 0; firstWConn.weight = std::sqrt( minDistSq );
-    std::priority_queue<WeightedConn> queue;
+    std::priority_queue<WeightedConn, Vector<WeightedConn>> queue;
     WeightedConn current;
     queue.push( firstWConn );
     do
@@ -657,11 +657,11 @@ public:
     unsigned concurrentSmallHoleSize = 0; ///< if hole size is smaller than this value preffer concurrent processing, sometimes it better than isolated parallelism overhead
 private:
     std::unique_ptr<IFillContours2DPlanCache> planCache_; ///< keeps the swept-line plan buffers alive between runPlanar() runs
-    std::vector<EdgeId> edgeMap_;
-    std::vector<std::vector<WeightedConn>> newEdgesMap_;
-    tbb::enumerable_thread_specific<std::vector<unsigned>> optimalStepsCache_;
+    EdgePath edgeMap_;
+    Vector<Vector<WeightedConn>> newEdgesMap_;
+    tbb::enumerable_thread_specific<Vector<unsigned>> optimalStepsCache_;
     MapPatch savedMapPatch_, cachedMapPatch_;
-    std::queue<std::pair<WeightedConn, int>> newEdgesQueue_;
+    std::queue<std::pair<WeightedConn, int>, std::deque<std::pair<WeightedConn, int>, Allocator<std::pair<WeightedConn, int>>>> newEdgesQueue_;
 };
 
 // Sub cubic complexity
@@ -721,7 +721,7 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
     const unsigned stepEnd = loopEdgesCounter - 2;
     for ( auto steps = stepStart; steps <= stepEnd; ++steps )
     {
-        auto work = [&]( unsigned i, std::vector<unsigned>& optimalSteps )
+        auto work = [&]( unsigned i, Vector<unsigned>& optimalSteps )
         {
             const auto cIndex = ( i + steps ) % loopEdgesCounter;
             EdgeId aCur = edgeMap_[i];
@@ -742,7 +742,7 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
         }
         else
         {
-            ParallelFor( unsigned( 0 ), loopEdgesCounter, optimalStepsCache_, [&]( unsigned i, std::vector<unsigned>& optimalSteps )
+            ParallelFor( unsigned( 0 ), loopEdgesCounter, optimalStepsCache_, [&]( unsigned i, Vector<unsigned>& optimalSteps )
             {
                 work( i, optimalSteps );
             } );

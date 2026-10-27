@@ -13,24 +13,15 @@ TEST( MRFinally, Normal )
     ASSERT_EQ( x, true );
 }
 
-TEST( MRFinally, OnSuccess )
-{
-    bool x = false;
-
-    {
-        MR_FINALLY_ON_SUCCESS{ x = true; };
-        ASSERT_EQ( x, false );
-    }
-    ASSERT_EQ( x, true );
-}
-
 TEST( MRFinally, OnThrow )
 {
     bool x = false;
 
     {
-        MR_FINALLY_ON_THROW{ x = true; };
+        bool ok = false;
+        MR_FINALLY{ if ( !ok ) x = true; };
         ASSERT_EQ( x, false );
+        ok = true;
     }
     ASSERT_EQ( x, false );
 }
@@ -52,27 +43,14 @@ TEST( MRFinally, Normal_Exception )
     ASSERT_EQ( x, true );
 }
 
-TEST( MRFinally, OnSuccess_Exception )
-{
-    bool x = false;
-
-    try
-    {
-        MR_FINALLY_ON_SUCCESS{ x = true; };
-        ASSERT_EQ( x, false );
-        throw 42;
-    }
-    catch ( int ) {}
-    ASSERT_EQ( x, false );
-}
-
 TEST( MRFinally, OnThrow_Exception )
 {
     bool x = false;
 
     try
     {
-        MR_FINALLY_ON_THROW{ x = true; };
+        bool ok = false;
+        MR_FINALLY{ if ( !ok ) x = true; };
         ASSERT_EQ( x, false );
         throw 42;
     }

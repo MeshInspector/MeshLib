@@ -3,6 +3,7 @@
 #include <MRMesh/MREnumNeighbours.h>
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRMesh.h>
+#include <MRMesh/MRRingIterator.h>
 #include <MRMesh/MRTorus.h>
 #include <gtest/gtest.h>
 
@@ -19,15 +20,30 @@ VertScalars computeBestPlaneVolumesNaive( const Mesh& mesh, float radius )
     for ( auto v : mesh.topology.getValidVerts() )
     {
         std::vector<FaceId> region;
-        PointAccumulator acc;
+        FaceBitSet inRegion( mesh.topology.faceSize() );
         e.run( mesh.topology, v, [&]( FaceId f )
         {
             if ( ( mesh.triCenter( f ) - mesh.points[v] ).lengthSq() > radius * radius )
                 return false;
             region.push_back( f );
-            acc.addPoint( mesh.triCenter( f ), mesh.area( f ) );
+            inRegion.set( f );
             return true;
         } );
+        VertBitSet bdVerts( mesh.topology.vertSize() );
+        for ( auto f : region )
+        {
+            for ( auto edge : leftRing( mesh.topology, f ) )
+            {
+                const auto r = mesh.topology.right( edge );
+                if ( r && inRegion.test( r ) )
+                    continue;
+                bdVerts.set( mesh.topology.org( edge ) );
+                bdVerts.set( mesh.topology.dest( edge ) );
+            }
+        }
+        PointAccumulator acc;
+        for ( auto bv : bdVerts )
+            acc.addPoint( mesh.points[bv] );
         if ( !acc.valid() )
             continue;
         const auto bestPlane = acc.getBestPlane();
@@ -45,7 +61,7 @@ TEST( MRMesh, BestPlaneVolumesSphere )
 {
     auto sphere = makeSphere( { .radius = 1.0f, .numMeshVertices = 3000 } );
     const float radius = 0.3f;
-    const float expected = PI_F * radius * radius * radius / 48; // small radius approximation for unit sphere
+    const float expected = PI_F * radius / 4; // small radius approximation for unit sphere
 
     auto convex = computeBestPlaneVolumes( sphere, radius );
     ASSERT_TRUE( convex.has_value() );

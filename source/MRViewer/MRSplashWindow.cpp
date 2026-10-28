@@ -217,6 +217,7 @@ void DefaultSplashWindow::positioning_( float )
     int height = int( float( width ) * float( splashImage_->getImageHeight() ) / float( splashImage_->getImageWidth() ) );
 
 
+    spdlog::info( "DEBUG splash positioning: work area {} x {} -> window {} x {}", workAreaW, workAreaH, width, height );
     glfwSetWindowSize( window_, width, height );
 
     if ( wayland )

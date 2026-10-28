@@ -14,6 +14,7 @@ namespace MR
 namespace
 {
 
+// computed once per triangle, since each triangle is visited from the regions of many vertices
 struct FaceData
 {
     Vector3f center;

@@ -316,6 +316,7 @@ bool Handler3dxMacDriver::initialize()
     // TODO: better design (e.g. `auto lib = Handle::tryLoad()`)
     std::unique_lock lock( gStateMutex );
 
+    static constexpr const auto* c3DconnexionClientFrameworkPath = "/Library/Frameworks/3DconnexionClient.framework";
     static constexpr const auto* c3DconnexionClientPath = "/Library/Frameworks/3DconnexionClient.framework/3DconnexionClient";
     std::error_code ec;
     if ( !std::filesystem::exists( c3DconnexionClientPath, ec ) )
@@ -324,8 +325,8 @@ bool Handler3dxMacDriver::initialize()
         return false;
     }
 
-    const auto version = getBundleVersion( std::filesystem::path( c3DconnexionClientPath ).parent_path().string() );
-    spdlog::info( "3DxWare client library version: {}", version );
+    const auto version = getBundleVersion( c3DconnexionClientFrameworkPath );
+    spdlog::info( "3DxWare driver version: {}", version );
     TelemetrySignal( "3DxWare driver version " + version );
 
     lib.handle = dlopen( c3DconnexionClientPath, RTLD_LAZY );
@@ -338,16 +339,8 @@ bool Handler3dxMacDriver::initialize()
 
     if ( !lib.loadSymbols() )
     {
-        spdlog::error( "Failed to load the 3DxWare client library symbols" );
+        spdlog::error( "Failed to load the 3DxWare client library symbols; consider upgrading the 3DxWare driver to version 10.2.2 or later" );
         TelemetrySignal( "3DxWare driver symbols missing" );
-        dlclose( lib.handle );
-        lib.handle = nullptr;
-        return false;
-    }
-
-    if ( lib.SetConnexionHandlers == nullptr )
-    {
-        spdlog::warn( "Incompatible 3DxWare driver version; consider upgrading to version 10.2.2 or later" );
         dlclose( lib.handle );
         lib.handle = nullptr;
         return false;

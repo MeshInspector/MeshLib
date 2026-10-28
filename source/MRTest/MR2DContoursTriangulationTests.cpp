@@ -536,9 +536,10 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
         }
         return EdgeLoop{ e, e.sym() };
     };
-    const auto a = addCut( { 320, 300 }, { 50, 300 }, { 550, 300 } ); // along y = 300 from x = 185 to x = 435
-    const auto b = addCut( { 300, 260 }, { 300, 100 }, { 300, 600 } ); // along x = 300 from y = 180 to y = 430
-    const auto c = addCut( { 380, 270 }, { 380, 120 }, { 380, 560 } ); // along x = 380 from y = 195 to y = 415
+    // no slit is along an axis, where the sweeps could order its ends differently
+    const auto a = addCut( { 320, 300 }, { 50, 290 }, { 550, 310 } ); // from ( 185, 295 ) to ( 435, 305 )
+    const auto b = addCut( { 300, 260 }, { 290, 100 }, { 310, 600 } ); // from ( 295, 180 ) to ( 305, 430 )
+    const auto c = addCut( { 380, 270 }, { 370, 120 }, { 390, 620 } ); // from ( 375, 195 ) to ( 385, 445 ), parallel to B
     EdgeLoop outerLoop;
     for ( auto e : leftRing( mesh.topology, outer ) )
         outerLoop.push_back( e );
@@ -563,7 +564,7 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
     for ( int i = 0; i < 2; ++i )
     {
         const auto [e0, e1] = ( *res )[i];
-        // with A, crossed by B first, at x = 300
+        // with A, crossed by B first, near x = 300
         const auto other = i == 0 ? b[0] : c[0];
         EXPECT_TRUE( ( e0.undirected() == a[0].undirected() && e1.undirected() == other.undirected() ) ||
             ( e1.undirected() == a[0].undirected() && e0.undirected() == other.undirected() ) );
@@ -588,6 +589,26 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
         return ue == a[0].undirected() ? std::array<PreciseVertCoords, 3>{} : cutOf( ue );
     } );
     EXPECT_FALSE( res.has_value() );
+
+    // the same crossings on the float predicates
+    const Vector3f normal( 0, 0, 1 );
+    auto isSide = [&] ( UndirectedEdgeId ue ) { return ue < cutEdges[0]; }; // the sides were made first
+    res = PlanarTriangulation::findCrossings( mesh, { outerLoop, a, b, c }, normal, isSide );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_EQ( *res, *PlanarTriangulation::findCrossings( mesh, { outerLoop, a, b, c }, tri, pointOf, cutOf ) );
+
+    // a slit just across the long side crosses no side once the sides are scaled up, while one far across it still does
+    auto addSlit = [&] ( const Vector3f& p, const Vector3f& q )
+    {
+        const auto e = mesh.topology.makeEdge();
+        mesh.topology.setOrg( e, mesh.addPoint( p ) );
+        mesh.topology.setOrg( e.sym(), mesh.addPoint( q ) );
+        return EdgeLoop{ e, e.sym() };
+    };
+    res = PlanarTriangulation::findCrossings( mesh, { outerLoop, addSlit( { 400, 400, 0 }, { 500.01f, 500.01f, 0 } ) }, normal, isSide );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_TRUE( res->empty() );
+    EXPECT_FALSE( PlanarTriangulation::findCrossings( mesh, { outerLoop, addSlit( { 400, 400, 0 }, { 510, 510, 0 } ) }, normal, isSide ) );
 }
 
 namespace

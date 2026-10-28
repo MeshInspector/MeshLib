@@ -2007,32 +2007,19 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
     return getMonotonePlanImpl( mesh, loops, [&] ( const WholeEdgeMap&, SweepLineQueue::Cache& ) { return std::move( p ); } );
 }
 
-std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops, const std::array<PreciseVertCoords, 3>& tri,
-    const std::function<PreciseCutPoint( VertId )>& pointOf, const std::function<std::array<PreciseVertCoords, 3>( UndirectedEdgeId )>& cutOf )
+// the crossings of the edges of the loops by the sweep, which does not stop at them, on the predicates that makePredicates( patchToInEdges,
+// cache, meshEdge ) gives, where meshEdge( a, b ) is the mesh edge of the edge of the sweep from a to b (an edge of the loops, since
+// findIntersections splits no edge); prepare( cache, patchToInEdges ) runs once the points of the loops are set, before the sweep
+template <typename MakePredicates, typename Prepare>
+static std::optional<Vector<EdgePair>> findCrossingsImpl( const Mesh& mesh, const EdgeLoops& loops, MakePredicates&& makePredicates, Prepare&& prepare )
 {
-    LoopPoints lp;
-    SweepLinePredicates p;
-    if ( !setLoopPredicates( p, lp, mesh, loops, tri, pointOf ) )
-        return {};
-
     SweepLineQueue::Cache cache;
     WholeEdgeMap patchToInEdges;
-    // the mesh edge of the edge of the sweep from a to b, which is an edge of the loops, since findIntersections splits no edge
     auto meshEdge = [&] ( VertId a, VertId b ) { return mapEdge( patchToInEdges, cache.tp.findEdge( a, b ) ); };
-    VertId nextPoint( lp.verts.size() );
-    bool alongSide = false; // an edge without a cut crosses another one
-    p.addIntersectionPoint = [&] ( VertId v, VertId a, VertId b, VertId c, VertId d )
-    {
-        const PreciseCutPoint x{ .tri = cutOf( meshEdge( a, b ).undirected() ), .tri2 = cutOf( meshEdge( c, d ).undirected() ) };
-        if ( !x.tri[0].id || !x.tri2[0].id )
-            alongSide = true; // the run stops at the end of this event, and no predicate takes the point before that
-        else
-            lp.preds.addPoint( nextPoint, x );
-        lp.pointIds.autoResizeSet( v, nextPoint++ );
-    };
-    p.failed = [&] { return alongSide || lp.preds.failed(); };
     // abortWhenIntersect is not set, so the sweep finds all crossings, in the order of the sweep; their points are not injected in its edges
-    SweepLineQueue sweep( cache, mesh.topology, std::move( p ), loops, { .allowTwoEdgeLoops = true, .outPatchMap = &patchToInEdges } );
+    SweepLineQueue sweep( cache, mesh.topology, makePredicates( patchToInEdges, cache, meshEdge ), loops,
+        { .allowTwoEdgeLoops = true, .outPatchMap = &patchToInEdges } );
+    prepare( cache, patchToInEdges );
     if ( !sweep.findIntersections() )
         return {};
     Vector<EdgePair> res;
@@ -2040,6 +2027,86 @@ std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops
     for ( const auto& x : cache.intersections )
         res.emplace_back( mapEdge( patchToInEdges, x.lower ), mapEdge( patchToInEdges, x.upper ) );
     return res;
+}
+
+std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops, const std::array<PreciseVertCoords, 3>& tri,
+    const std::function<PreciseCutPoint( VertId )>& pointOf, const std::function<std::array<PreciseVertCoords, 3>( UndirectedEdgeId )>& cutOf )
+{
+    LoopPoints lp;
+    SweepLinePredicates p;
+    if ( !setLoopPredicates( p, lp, mesh, loops, tri, pointOf ) )
+        return {};
+    VertId nextPoint( lp.verts.size() );
+    bool alongSide = false; // an edge without a cut crosses another one
+    return findCrossingsImpl( mesh, loops, [&] ( const WholeEdgeMap&, SweepLineQueue::Cache&, auto meshEdge )
+    {
+        p.addIntersectionPoint = [&, meshEdge] ( VertId v, VertId a, VertId b, VertId c, VertId d )
+        {
+            const PreciseCutPoint x{ .tri = cutOf( meshEdge( a, b ).undirected() ), .tri2 = cutOf( meshEdge( c, d ).undirected() ) };
+            if ( !x.tri[0].id || !x.tri2[0].id )
+                alongSide = true; // the run stops at the end of this event, and no predicate takes the point before that
+            else
+                lp.preds.addPoint( nextPoint, x );
+            lp.pointIds.autoResizeSet( v, nextPoint++ );
+        };
+        p.failed = [&] { return alongSide || lp.preds.failed(); };
+        return std::move( p );
+    }, [] ( SweepLineQueue::Cache&, const WholeEdgeMap& ) {} );
+}
+
+std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
+    const std::function<bool( UndirectedEdgeId )>& isSide )
+{
+    Vector<VertId> sideVerts; // sorted
+    for ( const auto& loop : loops )
+        for ( auto e : loop )
+            if ( isSide( e.undirected() ) )
+                sideVerts.insert( sideVerts.end(), { mesh.topology.org( e ), mesh.topology.dest( e ) } );
+    std::sort( sideVerts.begin(), sideVerts.end() );
+    sideVerts.erase( std::unique( sideVerts.begin(), sideVerts.end() ), sideVerts.end() );
+
+    // the rounding of the points can make an edge cross a side; then the sweep runs again with the sides scaled up around their centroid
+    // by cSideScale, that is with the other points moved toward it, which keeps all points in the range of the predicates
+    constexpr double cSideScale = 1.0001;
+    for ( double k : { 1.0, 1 / cSideScale } )
+    {
+        bool alongSide = false; // an edge along a side crosses another one
+        auto res = findCrossingsImpl( mesh, loops, [&] ( const WholeEdgeMap& patchToInEdges, SweepLineQueue::Cache& cache, auto meshEdge )
+        {
+            auto p = meshSpacePredicates( mesh, loops, normal, patchToInEdges, &cache.pts2Buffer );
+            p.addIntersectionPoint = [&, meshEdge, add = std::move( p.addIntersectionPoint )] ( VertId v, VertId a, VertId b, VertId c, VertId d )
+            {
+                alongSide = alongSide || isSide( meshEdge( a, b ).undirected() ) || isSide( meshEdge( c, d ).undirected() );
+                add( v, a, b, c, d );
+            };
+            p.failed = [&] { return alongSide; };
+            return p;
+        }, [&] ( SweepLineQueue::Cache& cache, const WholeEdgeMap& patchToInEdges )
+        {
+            if ( k == 1 )
+                return;
+            auto& pts = cache.pts2Buffer;
+            VertBitSet onSide( pts.size() );
+            Vector2d centroid;
+            for ( VertId v( 0 ); v < pts.size(); ++v )
+            {
+                const auto mv = mesh.topology.org( mapEdge( patchToInEdges, cache.tp.edgeWithOrg( v ) ) );
+                if ( !std::binary_search( sideVerts.begin(), sideVerts.end(), mv ) )
+                    continue;
+                onSide.set( v );
+                centroid += Vector2d( pts[v] );
+            }
+            if ( onSide.none() )
+                return;
+            centroid /= double( onSide.count() );
+            for ( VertId v( 0 ); v < pts.size(); ++v )
+                if ( !onSide.test( v ) )
+                    pts[v] = Vector2i( centroid + ( Vector2d( pts[v] ) - centroid ) * k );
+        } );
+        if ( res || !alongSide )
+            return res;
+    }
+    return {};
 }
 
 // the predicates of the sweep of hasCrossing: the float ones moved in, or calls of the exact ones

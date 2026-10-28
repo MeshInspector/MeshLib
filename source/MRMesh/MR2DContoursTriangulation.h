@@ -176,6 +176,13 @@ MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const M
     const std::array<PreciseVertCoords, 3>& tri, const std::function<PreciseCutPoint( VertId )>& pointOf,
     const std::function<std::array<PreciseVertCoords, 3>( UndirectedEdgeId )>& cutOf );
 
+/// same as above on the predicates of \ref getMonotonePlan( mesh, loops, normal ), as where no exact definitions are given
+/// \param isSide whether an edge of the loops goes along a side of the triangle; the rounding of the points can make another edge cross it,
+///        and then the crossings are found again with the sides scaled up a little around their centroid
+/// \return std::nullopt also if an edge still crosses a side then
+MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
+    const std::function<bool( UndirectedEdgeId )>& isSide );
+
 /// \ref hasCrossing tests up to this many segments in pairs, which is faster for them than the sweep, the only user of its cache with the exact predicates
 constexpr size_t cMaxSegmentsInPairs = 32;
 

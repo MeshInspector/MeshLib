@@ -3,10 +3,6 @@ package mrtest;
 import static mrtest.Common.check;
 import static mrtest.Common.checkEq;
 
-import java.lang.foreign.Arena;
-import java.lang.foreign.MemorySegment;
-import java.lang.foreign.ValueLayout;
-
 import meshlib.BooleanOperation;
 import meshlib.BooleanParameters;
 import meshlib.BooleanResult;
@@ -16,6 +12,7 @@ import meshlib.Functions;
 import meshlib.Mesh;
 import meshlib.MeshPart;
 import meshlib.Vector3f;
+import meshlib.int_output;
 import meshlib.std_pair_MR_FaceBitSet_int;
 import meshlib.std_pair_MR_Face2RegionMap_int;
 
@@ -62,15 +59,12 @@ public final class TestMeshComponents
     public static void largestComponent()
     {
         MeshPart m = createMesh();
-        try (Arena arena = Arena.ofConfined())
-        {
-            // The `int *` output parameter is raw.
-            MemorySegment smallerComponents = arena.allocate(ValueLayout.JAVA_INT);
-            FaceBitSet largest = meshlib.meshcomponents.Functions.getLargestComponent(m, null, null, 0.1f, smallerComponents);
-            check(largest.test(new FaceId(0)), "face 0");
-            check(!largest.test(new FaceId(12)), "face 12");
-            checkEq(smallerComponents.get(ValueLayout.JAVA_INT, 0), 1, "smaller components");
-        }
+        // The `int *` output parameter takes an `int_output`.
+        int_output smallerComponents = new int_output();
+        FaceBitSet largest = meshlib.meshcomponents.Functions.getLargestComponent(m, null, null, 0.1f, smallerComponents);
+        check(largest.test(new FaceId(0)), "face 0");
+        check(!largest.test(new FaceId(12)), "face 12");
+        checkEq(smallerComponents.value(), 1, "smaller components");
     }
 
     public static void getComponent()

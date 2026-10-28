@@ -206,11 +206,6 @@ jobs:
           ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/share ./share
 
         # The C bindings and the JS generated from them, by the `generate-c-bindings` job.
-      - name: Wait for C bindings
-        uses: ./.github/actions/wait-for-job
-        with:
-          job-name: generate-c-bindings
-
       - name: Download C bindings
         uses: actions/download-artifact@v8
         with:

@@ -230,15 +230,16 @@ void onSpaceMouseMessage( uint32_t deviceId, uint32_t type, void* arg )
 
             case kConnexionCmdHandleAxis:
             {
+                // the driver reports axes with the same signs as raw HID packets, so keep them as in Device::parseRawEvent
                 const Vector3f translate {
                     +normalize( state->axis[0] ),
-                    -normalize( state->axis[1] ),
+                    +normalize( state->axis[1] ),
                     +normalize( state->axis[2] ),
                 };
                 const Vector3f rotate {
                     +normalize( state->axis[3] ),
                     +normalize( state->axis[4] ),
-                    -normalize( state->axis[5] ),
+                    +normalize( state->axis[5] ),
                 };
                 viewer.spaceMouseMove( translate, rotate );
                 glfwPostEmptyEvent();

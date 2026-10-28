@@ -529,39 +529,45 @@ void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const Vec
             plans[i] = PlanarTriangulation::getMonotonePlan( mesh, loops, tri, [&] ( VertId v ) { return pointOf( lf, tri, v ); } );
             return;
         }
-        // every edge of the loops but the new cut path edges inside the face goes along a side of it, which the walk along them from corner 0
-        // tells (none if the walk does not close, and then the fallback of the plan moves nothing)
-        auto& inside = faceEdges[i];
-        std::sort( inside.begin(), inside.end() );
-        HashMap<VertId, EdgeId> sideFrom; // the side edge from every vertex on the sides
-        for ( const auto& loop : loops )
-            for ( auto e : loop )
-                if ( e.undirected() < firstNewEdge || !std::binary_search( inside.begin(), inside.end(), e ) )
-                    sideFrom[mesh.topology.org( e )] = e;
-        HashMap<UndirectedEdgeId, UndirectedEdgeId> sides; // the side of every side edge
-        auto v = lf.verts[0];
-        for ( int k = 0; k < 3; )
+        // the side of every side edge, found on the first call of sideOf, which only the fallback of the plan makes
+        std::optional<HashMap<UndirectedEdgeId, UndirectedEdgeId>> sides;
+        auto sideOf = [&] ( UndirectedEdgeId ue )
         {
-            const auto it = sideFrom.find( v );
-            if ( it == sideFrom.end() || !sides.emplace( it->second.undirected(), lf.edges[k].undirected() ).second )
+            if ( !sides )
             {
-                sides.clear();
-                break;
+                // every edge of the loops but the new cut path edges inside the face goes along a side of it, which the walk along them
+                // from corner 0 tells (none if the walk does not close, and then the fallback moves nothing)
+                sides.emplace();
+                auto& inside = faceEdges[i];
+                std::sort( inside.begin(), inside.end() );
+                HashMap<VertId, EdgeId> sideFrom; // the side edge from every vertex on the sides
+                for ( const auto& loop : loops )
+                    for ( auto e : loop )
+                        if ( e.undirected() < firstNewEdge || !std::binary_search( inside.begin(), inside.end(), e ) )
+                            sideFrom[mesh.topology.org( e )] = e;
+                auto v = lf.verts[0];
+                for ( int k = 0; k < 3; )
+                {
+                    const auto it = sideFrom.find( v );
+                    if ( it == sideFrom.end() || !sides->emplace( it->second.undirected(), lf.edges[k].undirected() ).second )
+                    {
+                        sides->clear();
+                        break;
+                    }
+                    v = mesh.topology.dest( it->second );
+                    if ( v == lf.verts[( k + 1 ) % 3] )
+                        ++k;
+                }
             }
-            v = mesh.topology.dest( it->second );
-            if ( v == lf.verts[( k + 1 ) % 3] )
-                ++k;
-        }
+            const auto it = sides->find( ue );
+            return it == sides->end() ? UndirectedEdgeId() : it->second;
+        };
         // the loops go counterclockwise around the normal of the face, of which only the dominant component and its sign matter (either way
         // around the axis that cornersNormal gives for corners on one line, which the plan does not depend on, and where the plan is found
         // with the sides moved out at once)
         bool onLine = false;
         const auto normal = cornersNormal( mesh, lf.verts, &onLine );
-        plans[i] = PlanarTriangulation::getMonotonePlan( mesh, loops, normal, [&] ( UndirectedEdgeId ue )
-        {
-            const auto it = sides.find( ue );
-            return it == sides.end() ? UndirectedEdgeId() : it->second;
-        }, onLine );
+        plans[i] = PlanarTriangulation::getMonotonePlan( mesh, loops, normal, sideOf, onLine );
     } );
 
     for ( int i = 0; i < loneFaces.size(); ++i )

@@ -184,13 +184,13 @@ export function components()
     check(components.test(new ml.FaceId(0)), "face 0");
     check(!components.test(new ml.FaceId(12)), "face 12");
 
-    // The `int *` output parameter is raw.
-    const smallerComponents = ml.ffi.malloc(4);
+    // The `int *` output parameter takes an `int_output`.
+    const smallerComponents = new ml.int_output();
     const largest = ml.MeshComponents.getLargestComponent(m, null, null, 0.1, smallerComponents);
     check(largest.test(new ml.FaceId(0)), "face 0");
     check(!largest.test(new ml.FaceId(12)), "face 12");
-    checkEq(ml.ffi.M.HEAP32[smallerComponents >>> 2], 1, "smaller components");
-    ml.ffi.free(smallerComponents);
+    checkEq(smallerComponents.value, 1, "smaller components");
+    smallerComponents.delete();
 
     const component = ml.MeshComponents.getComponent(m, new ml.FaceId(12), null, null);
     check(component.test(new ml.FaceId(12)), "face 12");

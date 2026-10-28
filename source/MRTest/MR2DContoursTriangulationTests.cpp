@@ -592,8 +592,8 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
 
     // the same crossings on the float predicates
     const Vector3f normal( 0, 0, 1 );
-    auto isSide = [] ( UndirectedEdgeId ue ) { return ue < 3_ue; }; // the sides of every triangle here are made first
-    res = PlanarTriangulation::findCrossings( mesh, { outerLoop, a, b, c }, normal, isSide );
+    auto sideOf = [] ( UndirectedEdgeId ue ) { return ue < 3_ue ? ue : UndirectedEdgeId(); }; // the sides of every triangle here are made first
+    res = PlanarTriangulation::findCrossings( mesh, { outerLoop, a, b, c }, normal, sideOf );
     ASSERT_TRUE( res.has_value() );
     EXPECT_EQ( *res, *PlanarTriangulation::findCrossings( mesh, { outerLoop, a, b, c }, tri, pointOf, cutOf ) );
 
@@ -605,7 +605,7 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
         mesh.topology.setOrg( e.sym(), mesh.addPoint( q ) );
         return EdgeLoop{ e, e.sym() };
     };
-    res = PlanarTriangulation::findCrossings( mesh, { outerLoop, addSlit( { 400, 400, 0 }, { 500.01f, 500.01f, 0 } ) }, normal, isSide );
+    res = PlanarTriangulation::findCrossings( mesh, { outerLoop, addSlit( { 400, 400, 0 }, { 500.01f, 500.01f, 0 } ) }, normal, sideOf );
     ASSERT_TRUE( res.has_value() );
     EXPECT_TRUE( res->empty() );
 
@@ -627,13 +627,13 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
     const auto [pathLoop, nm] = pathHole( mesh, { 300, -0.01f, 0 }, { 400, 300, 0 } );
     ASSERT_EQ( pathLoop.size(), size_t( 7 ) );
     const auto slit = addSlit( { 300, 200, 0 }, { 450, 100, 0 } );
-    res = PlanarTriangulation::findCrossings( mesh, { pathLoop, slit }, normal, isSide );
+    res = PlanarTriangulation::findCrossings( mesh, { pathLoop, slit }, normal, sideOf );
     ASSERT_TRUE( res.has_value() );
     EXPECT_EQ( *res, Vector<EdgePair>( { { nm, slit[0] } } ) );
 
     // the monotone plan of the hole with the path has the same fallback
     EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( mesh, { pathLoop }, normal ) );
-    EXPECT_TRUE( PlanarTriangulation::getMonotonePlan( mesh, { pathLoop }, normal, isSide ) );
+    EXPECT_TRUE( PlanarTriangulation::getMonotonePlan( mesh, { pathLoop }, normal, sideOf ) );
 
     // where cSideScale moves the side by less than N's distance to it, while the least move is enough: a tiny triangle far from the origin,
     // and a sliver, whose long sides are close to the centroid
@@ -646,17 +646,17 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
         m.topology.setLeft( m.topology.edgeWithLeft( 0_f ), {} );
         const auto loop = pathHole( m, n, mp ).first;
         EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( m, { loop }, normal ) );
-        EXPECT_TRUE( PlanarTriangulation::getMonotonePlan( m, { loop }, normal, isSide ) );
-        res = PlanarTriangulation::findCrossings( m, { loop }, normal, isSide );
+        EXPECT_TRUE( PlanarTriangulation::getMonotonePlan( m, { loop }, normal, sideOf ) );
+        res = PlanarTriangulation::findCrossings( m, { loop }, normal, sideOf );
         ASSERT_TRUE( res.has_value() );
         EXPECT_TRUE( res->empty() );
     }
 
-    // side vertices at one position 300 from corner k along side k (or the first one an ulp ahead along it if swapped), each with a slit inside
+    // side vertices at one position `at` from corner k along side k (or the first one an ulp ahead along it if swapped), each with a slit inside
     // in the given direction (along the side, inside), in their order along the side; the first run orders them by their ids (or positions),
-    // which can make a slit cross a side or another slit; then they are moved apart in their order along the loop; they are made in this
-    // order or against it, and the loop of the hole runs either way, from the second one, so that they wrap around its start
-    auto checkSideVerts = [&] ( int k, const Vector<Vector2f>& slits, bool swapped )
+    // which can make a slit cross a side or another slit; then they are spread evenly along the moved side in their order along the loop; they
+    // are made in this order or against it, and the loop of the hole runs either way, from the second one, so that they wrap around its start
+    auto checkSideVerts = [&] ( int k, const Vector<Vector2f>& slits, bool swapped, float at = 300 )
     {
         const int n = int( slits.size() );
         for ( int variant = 0; variant < 4; ++variant )
@@ -664,7 +664,7 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
             Mesh m = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 1000, 0, 0 ), Vector3f( 0, 1000, 0 ) }, { { 0_v, 1_v, 2_v } } );
             m.topology.setLeft( m.topology.edgeWithLeft( 0_f ), {} );
             const auto side = m.topology.findEdge( VertId( k ), VertId( ( k + 1 ) % 3 ) );
-            const auto u = ( m.destPnt( side ) - m.orgPnt( side ) ).normalized(), pos = m.orgPnt( side ) + u * 300.f, in = Vector3f( -u.y, u.x, 0 );
+            const auto u = ( m.destPnt( side ) - m.orgPnt( side ) ).normalized(), pos = m.orgPnt( side ) + u * at, in = Vector3f( -u.y, u.x, 0 );
             const bool idsAlong = variant % 2 == 0;
             for ( int i = 0; i < n; ++i )
                 m.splitEdge( idsAlong ? side : side.sym(), swapped && i == ( idsAlong ? 0 : n - 1 ) ?
@@ -673,7 +673,7 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
             for ( int i = 0; i < n; ++i )
             {
                 e = m.topology.prev( e.sym() ); // from the i-th vertex along the side
-                if ( i == 1 )
+                if ( i == std::min( n - 1, 1 ) )
                     start = e;
                 const auto s = m.topology.makeEdge();
                 m.topology.splice( e, s );
@@ -689,9 +689,10 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
                 for ( auto& le : loop )
                     le = le.sym();
             }
-            auto isSideM = [n] ( UndirectedEdgeId ue ) { return int( ue ) < 3 + n; }; // the sides and their splits
-            EXPECT_TRUE( PlanarTriangulation::getMonotonePlan( m, { loop }, normal, isSideM ) );
-            const auto r = PlanarTriangulation::findCrossings( m, { loop }, normal, isSideM );
+            // the sides, and the splits of side k
+            auto sideOfM = [n, side] ( UndirectedEdgeId ue ) { return ue < 3_ue ? ue : int( ue ) < 3 + n ? side.undirected() : UndirectedEdgeId(); };
+            EXPECT_TRUE( PlanarTriangulation::getMonotonePlan( m, { loop }, normal, sideOfM ) );
+            const auto r = PlanarTriangulation::findCrossings( m, { loop }, normal, sideOfM );
             EXPECT_TRUE( r && r->empty() );
         }
     };
@@ -700,11 +701,44 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
         checkSideVerts( k, { { -50, 100 }, { 50, 100 } }, false );
         checkSideVerts( k, { { -50, 100 }, { 50, 100 } }, true );
         checkSideVerts( k, { { -75, 100 }, { -25, 100 }, { 25, 100 }, { 75, 100 } }, false );
+        // shallow slits back along the side, at 9 and 53, 9 and 39, 2 and 5 degrees to it
+        checkSideVerts( k, { { -100, 15 }, { -75, 100 } }, false );
+        checkSideVerts( k, { { -100, 15 }, { -100, 80 } }, false );
+        checkSideVerts( k, { { -100, 4 }, { -100, 8.75f } }, false );
+        // a side vertex at corner k, and one at the next corner
+        checkSideVerts( k, { { 100, 50 } }, false, 0 );
+        if ( k != 1 )
+            checkSideVerts( k, { { -200, 100 } }, false, 1000 );
     }
-    // slits back along the side: the first one's (at 9 degrees to the side) crosses nothing at any angle; the second vertex moves out past
-    // the line of the first one's side edge at about 44 degrees to the side here, so its slit (at 53 degrees) would cross that edge if it were
-    // flatter than that
-    checkSideVerts( 2, { { -100, 15 }, { -75, 100 } }, false );
+
+    // degenerate triangles, the hole with a cut path from corner 0 to N, just outside side 0 or at the position of corner 0, and on to M:
+    // all three corners at one position, three corners closer than minMove, and two corners at one position (1 and 2, or 0 and 1); the
+    // corners are placed apart before the sides are scaled
+    const float u = 1.f / 2097152; // the float step at 5
+    for ( const auto& [pts, n, mp] : {
+        std::tuple{ Triangle3f{ Vector3f( 5, 5, 0 ), Vector3f( 5, 5, 0 ), Vector3f( 5, 5, 0 ) }, Vector3f( 5, 5 - u, 0 ), Vector3f( 5, 5, 0 ) },
+        std::tuple{ Triangle3f{ Vector3f( 5, 5, 0 ), Vector3f( 5, 5, 0 ), Vector3f( 5, 5, 0 ) }, Vector3f( 5 + u, 5, 0 ), Vector3f( 5, 5 + u, 0 ) },
+        std::tuple{ Triangle3f{ Vector3f( 5, 5, 0 ), Vector3f( 5 + 4 * u, 5, 0 ), Vector3f( 5, 5 + 4 * u, 0 ) }, Vector3f( 5 + 2 * u, 5 - 4 * u, 0 ),
+            Vector3f( 5 + u, 5 + u, 0 ) },
+        std::tuple{ Triangle3f{ Vector3f( 0, 0, 0 ), Vector3f( 1000, 0, 0 ), Vector3f( 1000, 0, 0 ) }, Vector3f( 300, 1.f / 8192, 0 ), Vector3f( 600, 0, 0 ) },
+        std::tuple{ Triangle3f{ Vector3f( 0, 0, 0 ), Vector3f( 0, 0, 0 ), Vector3f( 1000, 0, 0 ) }, Vector3f( 0, 1.f / 8192, 0 ), Vector3f( 600, 0, 0 ) } } )
+    {
+        for ( bool reversed : { false, true } )
+        {
+            Mesh m = Mesh::fromTriangles( { pts[0], pts[1], pts[2] }, { { 0_v, 1_v, 2_v } } );
+            m.topology.setLeft( m.topology.edgeWithLeft( 0_f ), {} );
+            auto loop = pathHole( m, n, mp ).first;
+            if ( reversed )
+            {
+                std::reverse( loop.begin(), loop.end() );
+                for ( auto& le : loop )
+                    le = le.sym();
+            }
+            EXPECT_TRUE( PlanarTriangulation::getMonotonePlan( m, { loop }, normal, sideOf ) );
+            res = PlanarTriangulation::findCrossings( m, { loop }, normal, sideOf );
+            EXPECT_TRUE( res && res->empty() );
+        }
+    }
 }
 
 namespace

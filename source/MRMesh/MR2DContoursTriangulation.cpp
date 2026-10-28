@@ -156,14 +156,132 @@ static Vector2i projectionAxes( const Vector3f& normal )
 // predicates via setPts2Predicates). point() restores each output vertex's exact original mesh position
 // through `patchToInEdges`, the patch->input edge map (no separate coordinate copy, no projection round-trip).
 // `mesh`, `loops` and `patchToInEdges` only need to outlive the run; the map may be filled after construction.
-// The edges of the loops that `scaledSides` tells are the sides of a cut triangle (all of them, its whole perimeter), scaled up around the
-// centroid of their perimeter: a fallback for when the rounding of the points made another edge cross a side; by cSideScale, and more if needed
-// to move every side by a few float errors of the coordinates (up to twice in degenerate triangles); side vertices still closer than that
-// along the sides then move out from the centroid and apart across their line from it, in their order along the sides.
+// With `sideOf`, the edges of the loops it tells are the sides of a cut triangle (all of them, its whole perimeter), moved out as a fallback
+// for when the rounding of the points made another edge cross a side (see moveSideVerts); the other points keep their positions.
 constexpr double cSideScale = 1.0001;
+
+// the side vertices of a cut triangle moved for meshSpacePredicates, `sideVerts` sorted and `sidePts` their points, both empty if the side edges
+// (those with valid sideOf) are not one cycle with three corners, where sideOf changes. Corners closer than minMove in the projection are placed
+// apart first: two at minMove from their midpoint across its line from the third one, three at minMove from their centroid; their triangle,
+// oriented as the sides, is then scaled about the centroid of its perimeter by cSideScale, and more if needed to move every side by minMove
+// (up to twice in thin triangles). Every other side vertex goes to the same place on its new side, and runs of them closer than minMove along
+// it (or out of order) are spread evenly between the nearest other vertices on that side.
+static void moveSideVerts( const Mesh& mesh, const EdgeLoops& loops, const std::function<UndirectedEdgeId( UndirectedEdgeId )>& sideOf,
+    const Vector2i& axes, double minMove, Vector<VertId>& sideVerts, Vector<Vector3d>& sidePts )
+{
+    const auto& tp = mesh.topology;
+    Vector<EdgeId> sides; // sorted by their origins
+    for ( const auto& loop : loops )
+        for ( auto e : loop )
+            if ( sideOf( e.undirected() ) )
+                sides.push_back( e );
+    std::sort( sides.begin(), sides.end(), [&] ( EdgeId a, EdgeId b ) { return tp.org( a ) < tp.org( b ); } );
+    const auto n = sides.size();
+    Vector<size_t> order( n ); // the side edges along the cycle from sides[0], each one from the destination of the previous one
+    for ( size_t k = 0, i = 0; k < n; ++k )
+    {
+        order[k] = i;
+        const auto v = tp.dest( sides[i] );
+        i = size_t( std::lower_bound( sides.begin(), sides.end(), v, [&] ( EdgeId e, VertId u ) { return tp.org( e ) < u; } ) - sides.begin() );
+        if ( i == n || tp.org( sides[i] ) != v || ( i == 0 ) != ( k + 1 == n ) )
+            return;
+    }
+    auto edgeAt = [&] ( size_t k ) { return sides[order[k % n]]; };
+    std::array<size_t, 4> c{}; // the positions of the corners along the cycle, and the first one again past its end
+    int numCorners = 0;
+    for ( size_t k = 0; k < n; ++k )
+    {
+        if ( sideOf( edgeAt( k + n - 1 ).undirected() ) == sideOf( edgeAt( k ).undirected() ) )
+            continue;
+        if ( numCorners == 3 )
+            return;
+        c[numCorners++] = k;
+    }
+    if ( numCorners != 3 )
+        return;
+    c[3] = c[0] + n;
+
+    auto to2 = [&] ( VertId v ) { return Vector2d( mesh.points[v][axes.x], mesh.points[v][axes.y] ); };
+    std::array<Vector2d, 3> x, y; // the corners before and after the move
+    for ( int j = 0; j < 3; ++j )
+        x[j] = y[j] = to2( tp.org( edgeAt( c[j] ) ) );
+    double orient = 0; // twice the area of the sides, signed as their orientation
+    for ( auto e : sides )
+        orient += cross( to2( tp.org( e ) ) - x[0], to2( tp.dest( e ) ) - x[0] );
+    const double sign = orient < 0 ? -1 : 1;
+    int numClose = 0, far3 = 0; // the pairs of corners closer than minMove, and the corner not in the last one
+    for ( int j = 0; j < 3; ++j )
+    {
+        if ( ( x[( j + 1 ) % 3] - x[( j + 2 ) % 3] ).lengthSq() < minMove * minMove )
+        {
+            ++numClose;
+            far3 = j;
+        }
+    }
+    if ( numClose == 1 )
+    {
+        const auto mid = ( x[( far3 + 1 ) % 3] + x[( far3 + 2 ) % 3] ) / 2.0;
+        const auto d = ( mid - x[far3] ).normalized() * ( sign * minMove );
+        y[( far3 + 1 ) % 3] = mid - Vector2d( -d.y, d.x );
+        y[( far3 + 2 ) % 3] = mid + Vector2d( -d.y, d.x );
+    }
+    else if ( numClose > 1 )
+    {
+        const auto g = ( x[0] + x[1] + x[2] ) / 3.0;
+        y = { g + Vector2d( minMove, 0 ), g + Vector2d( 0, sign * minMove ), g - Vector2d( 0, sign * minMove ) };
+    }
+    // area / perimeter is a lower bound of the distance from the centroid of the perimeter to every side
+    Vector2d centre;
+    double per = 0;
+    for ( int j = 0; j < 3; ++j )
+    {
+        const double l = ( y[( j + 1 ) % 3] - y[j] ).length();
+        centre += ( y[j] + y[( j + 1 ) % 3] ) * ( l / 2 );
+        per += l;
+    }
+    centre = per > 0 ? centre / per : y[0];
+    const double h = per > 0 ? std::abs( cross( y[1] - y[0], y[2] - y[0] ) ) / ( 2 * per ) : 0;
+    const double scale = std::max( cSideScale, 1 + minMove / std::max( h, minMove ) );
+    for ( auto& q : y )
+        q = centre + ( q - centre ) * scale;
+
+    sideVerts.resize( n );
+    sidePts.resize( n );
+    Vector<double> ts; // the vertices of a side at their parameters along it, the corners at 0 and 1
+    for ( int j = 0; j < 3; ++j )
+    {
+        const auto dx = x[( j + 1 ) % 3] - x[j], dy = y[( j + 1 ) % 3] - y[j];
+        const size_t last = c[j + 1] - c[j];
+        ts.resize( last + 1 );
+        for ( size_t i = 0; i <= last; ++i )
+            ts[i] = i == last ? 1 : i == 0 || dx.lengthSq() == 0 ? 0 :
+                std::clamp( dot( to2( tp.org( edgeAt( c[j] + i ) ) ) - x[j], dx ) / dx.lengthSq(), 0.0, 1.0 );
+        const double minGap = minMove / dy.length();
+        auto bad = [&] ( size_t i ) { return ts[i + 1] - ts[i] < minGap; }; // the gap after vertex i
+        for ( size_t i = 1; i < last; )
+        {
+            size_t r = i; // vertices i, ..., r - 1 are at bad gaps, and vertex r is not or is the corner
+            while ( r < last && ( bad( r - 1 ) || bad( r ) ) )
+                ++r;
+            for ( size_t q = i; q < r; ++q )
+                ts[q] = ts[i - 1] + ( ts[r] - ts[i - 1] ) * double( q - i + 1 ) / double( r - i + 1 );
+            i = r + 1;
+        }
+        for ( size_t i = 0; i < last; ++i )
+        {
+            const auto s = order[( c[j] + i ) % n];
+            sideVerts[s] = tp.org( sides[s] );
+            const auto p = y[j] + dy * ts[i];
+            sidePts[s] = Vector3d( mesh.points[sideVerts[s]] );
+            sidePts[s][axes.x] = p.x;
+            sidePts[s][axes.y] = p.y;
+        }
+    }
+}
+
 static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, const WholeEdgeMap& patchToInEdges,
     Vector<Vector2i, VertId>* pts2, // storage for the dominant-axis projection that drives every predicate
-    const std::function<bool( UndirectedEdgeId )>* scaledSides = nullptr )
+    const std::function<UndirectedEdgeId( UndirectedEdgeId )>* sideOf = nullptr )
 {
     Box3d box;
     int pointsSize = 0;
@@ -176,71 +294,12 @@ static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoop
     }
 
     const auto axes = projectionAxes( normal );
-    const auto to2 = [axes] ( const Vector3d& q ) { return Vector2d( q[axes.x], q[axes.y] ); };
     Vector<VertId> sideVerts; // sorted
     Vector<Vector3d> sidePts; // the moved points of sideVerts
-    if ( scaledSides )
+    if ( sideOf )
     {
-        Vector<EdgeId> sides;
-        for ( const auto& loop : loops )
-            for ( auto e : loop )
-                if ( ( *scaledSides )( e.undirected() ) )
-                    sides.push_back( e );
-        // the centroid of the perimeter in the projection, which is farther than area / perimeter from every side of a triangle
-        Vector3d centre;
-        double len = 0, orient = 0; // the perimeter and twice the area of the sides in the projection, signed as their orientation
-        const auto ref = to2( box.center() );
-        for ( auto e : sides )
-        {
-            const Vector3d o( mesh.orgPnt( e ) ), d( mesh.destPnt( e ) );
-            const double l = to2( d - o ).length();
-            centre += ( o + d ) * ( l / 2 );
-            len += l;
-            orient += cross( to2( o ) - ref, to2( d ) - ref );
-            sideVerts.insert( sideVerts.end(), { mesh.topology.org( e ), mesh.topology.dest( e ) } );
-        }
-        std::sort( sideVerts.begin(), sideVerts.end() );
-        sideVerts.erase( std::unique( sideVerts.begin(), sideVerts.end() ), sideVerts.end() );
-        centre = len > 0 ? centre / len : box.center();
-        const double minMove = 4 * std::numeric_limits<float>::epsilon() * std::max( box.min.length(), box.max.length() );
-        const double hMin = len > 0 ? std::abs( orient ) / ( 2 * len ) : 0;
-        const double scale = std::max( cSideScale, 1 + minMove / std::max( hMin, minMove ) );
-        for ( auto v : sideVerts )
-            sidePts.push_back( centre + ( Vector3d( mesh.points[v] ) - centre ) * scale );
-
-        // the chains of side vertices closer than minMove along the sides
-        const auto n = sideVerts.size();
-        auto sideId = [&] ( VertId v ) { return size_t( std::lower_bound( sideVerts.begin(), sideVerts.end(), v ) - sideVerts.begin() ); };
-        Vector<size_t> next( n, n ), prev( n, n );
-        for ( auto e : sides )
-        {
-            const auto i = sideId( mesh.topology.org( e ) ), j = sideId( mesh.topology.dest( e ) );
-            if ( i != j && next[i] == n && prev[j] == n && to2( sidePts[j] - sidePts[i] ).lengthSq() < minMove * minMove )
-            {
-                next[i] = j;
-                prev[j] = i;
-            }
-        }
-        // the vertices of a chain of m move out from the centroid by minMove and across their lines from it, as the sides go around it,
-        // by ( 1 - m ) minMove, ( 3 - m ) minMove, ..., ( m - 1 ) minMove, so that the chain is spread in its order along the sides
-        for ( size_t h = 0; h < n; ++h )
-        {
-            if ( prev[h] != n || next[h] == n )
-                continue; // not the first vertex of a chain
-            int m = 1;
-            for ( auto i = next[h]; i != n; i = next[i] )
-                ++m;
-            for ( size_t i = h; i != n; i = next[i], m -= 2 )
-            {
-                const auto r = to2( sidePts[i] - centre );
-                if ( const double l = r.length(); l > 0 )
-                {
-                    const auto t = ( r + Vector2d( -r.y, r.x ) * double( orient < 0 ? m - 1 : 1 - m ) ) * ( minMove / l );
-                    sidePts[i][axes.x] += t.x;
-                    sidePts[i][axes.y] += t.y;
-                }
-            }
-        }
+        moveSideVerts( mesh, loops, *sideOf, axes, 4 * std::numeric_limits<float>::epsilon() * std::max( box.min.length(), box.max.length() ),
+            sideVerts, sidePts );
         for ( const auto& q : sidePts )
             box.include( q );
     }
@@ -2009,19 +2068,19 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
 }
 
 std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
-    const std::function<bool( UndirectedEdgeId )>& isSide )
+    const std::function<UndirectedEdgeId( UndirectedEdgeId )>& sideOf )
 {
-    auto plan = [&] ( const std::function<bool( UndirectedEdgeId )>* scaledSides )
+    auto plan = [&] ( const std::function<UndirectedEdgeId( UndirectedEdgeId )>* movedSides )
     {
         return getMonotonePlanImpl( mesh, loops, [&] ( const WholeEdgeMap& patchToInEdges, SweepLineQueue::Cache& cache )
         {
-            return meshSpacePredicates( mesh, loops, normal, patchToInEdges, &cache.pts2Buffer, scaledSides );
+            return meshSpacePredicates( mesh, loops, normal, patchToInEdges, &cache.pts2Buffer, movedSides );
         } );
     };
-    // the rounding of the points can make an edge cross a side; then the sides are scaled up (see meshSpacePredicates)
+    // the rounding of the points can make an edge cross a side; then the sides are moved out (see meshSpacePredicates)
     auto res = plan( nullptr );
-    if ( !res && isSide )
-        res = plan( &isSide );
+    if ( !res && sideOf )
+        res = plan( &sideOf );
     return res;
 }
 
@@ -2145,28 +2204,28 @@ std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops
 }
 
 std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
-    const std::function<bool( UndirectedEdgeId )>& isSide )
+    const std::function<UndirectedEdgeId( UndirectedEdgeId )>& sideOf )
 {
     bool alongSide = false; // an edge along a side crosses another one
-    auto run = [&] ( const std::function<bool( UndirectedEdgeId )>* scaledSides )
+    auto run = [&] ( const std::function<UndirectedEdgeId( UndirectedEdgeId )>* movedSides )
     {
         alongSide = false;
         return findCrossingsImpl( mesh, loops, [&] ( const WholeEdgeMap& patchToInEdges, SweepLineQueue::Cache& cache, auto meshEdge )
         {
-            auto p = meshSpacePredicates( mesh, loops, normal, patchToInEdges, &cache.pts2Buffer, scaledSides );
+            auto p = meshSpacePredicates( mesh, loops, normal, patchToInEdges, &cache.pts2Buffer, movedSides );
             p.addIntersectionPoint = [&, meshEdge, add = std::move( p.addIntersectionPoint )] ( VertId v, VertId a, VertId b, VertId c, VertId d )
             {
-                alongSide = alongSide || isSide( meshEdge( a, b ).undirected() ) || isSide( meshEdge( c, d ).undirected() );
+                alongSide = alongSide || sideOf( meshEdge( a, b ).undirected() ) || sideOf( meshEdge( c, d ).undirected() );
                 add( v, a, b, c, d );
             };
             p.failed = [&] { return alongSide; };
             return p;
         } );
     };
-    // the rounding of the points can make an edge cross a side; then the sides are scaled up (see meshSpacePredicates)
+    // the rounding of the points can make an edge cross a side; then the sides are moved out (see meshSpacePredicates)
     if ( auto res = run( nullptr ); res || !alongSide )
         return res;
-    auto res = run( &isSide );
+    auto res = run( &sideOf );
     assert( !alongSide ); // the sides are moved by more than the rounding of the points
     return res;
 }

@@ -43,7 +43,7 @@
     <ClCompile Include="MRMeshTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MRBestPlaneVolumeTests.cpp">
+    <ClCompile Include="MRLocalConvexityTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRBestFitTests.cpp">

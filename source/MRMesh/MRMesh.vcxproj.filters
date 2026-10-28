@@ -132,7 +132,7 @@
     <ClInclude Include="MRMatrix3.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
-    <ClInclude Include="MRBestPlaneVolume.h">
+    <ClInclude Include="MRLocalConvexity.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
     <ClInclude Include="MRBestFit.h">
@@ -1514,7 +1514,7 @@
     <ClCompile Include="MRTimer.cpp">
       <Filter>Source Files\Basic</Filter>
     </ClCompile>
-    <ClCompile Include="MRBestPlaneVolume.cpp">
+    <ClCompile Include="MRLocalConvexity.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRBestFit.cpp">

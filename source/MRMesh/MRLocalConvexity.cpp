@@ -1,4 +1,4 @@
-#include "MRBestPlaneVolume.h"
+#include "MRLocalConvexity.h"
 #include "MRMesh.h"
 #include "MRBitSetParallelFor.h"
 #include "MRRingIterator.h"
@@ -31,7 +31,7 @@ struct ThreadData
 
 } //anonymous namespace
 
-Expected<VertScalars> computeBestPlaneVolumes( const Mesh& mesh, float radius, const ProgressCallback& cb )
+Expected<VertScalars> computeLocalConvexity( const Mesh& mesh, float radius, const ProgressCallback& cb )
 {
     MR_TIMER;
     const auto& topology = mesh.topology;

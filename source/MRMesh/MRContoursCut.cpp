@@ -1170,12 +1170,15 @@ bool crossesInFace( FaceCrossingsBuffers& buf, const Mesh& mesh, const OneMeshCo
     if ( !onLine && !PlanarTriangulation::hasCrossing( buf.ends, buf.xyz, normal, buf.sweepCache() ) )
         return false;
     // the rounding of the points can make two segments cross near a side, so they are tested again with the sides moved out as in the plans
-    // of lone faces: the corners and all cut points of the sides, along every side as the cut sorts them
+    // of lone faces: the corners and all cut points of the sides, along every side as the cut sorts them, from the corner of the smallest id
+    // as in moveSideVerts, so that both move a degenerate face alike
     Vector<VertId> cycle;
     std::array<size_t, 3> corners;
-    for ( int j = 0; j < 3; ++j )
+    const auto m = int( std::min_element( verts.begin(), verts.end() ) - verts.begin() );
+    for ( int i = 0; i < 3; ++i )
     {
-        corners[j] = cycle.size();
+        const int j = ( m + i ) % 3;
+        corners[i] = cycle.size();
         cycle.push_back( verts[j] );
         const auto it = preRes.edgeData.find( edges[j].undirected() );
         if ( it == preRes.edgeData.end() )

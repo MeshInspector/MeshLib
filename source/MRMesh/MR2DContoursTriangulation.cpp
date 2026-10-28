@@ -174,8 +174,8 @@ void moveSidesOut( Vector<Vector3d>& cycle, const std::array<size_t, 3>& corners
     const auto side = y[( a + 1 ) % 3] - y[a];
     if ( const double l = side.length(); l < minMove )
     {
-        const auto g = ( y[0] + y[1] + y[2] ) / 3.0;
-        y = { g + Vector2d( minMove, 0 ), g + Vector2d( 0, sign * minMove ), g - Vector2d( 0, sign * minMove ) };
+        const auto g = ( y[0] + y[1] + y[2] ) / 3.0, h = Vector2d( -minMove, sign * std::sqrt( 3.0 ) * minMove );
+        y = { g + Vector2d( 2 * minMove, 0 ), g + h, g + Vector2d( h.x, -h.y ) }; // equilateral around g, with inradius minMove
     }
     else if ( const double height = cross( side, y[( a + 2 ) % 3] - y[a] ) / l; std::abs( height ) < minMove )
         y[( a + 2 ) % 3] += Vector2d( -side.y, side.x ) * ( ( sign * minMove - height ) / l );
@@ -186,14 +186,14 @@ void moveSidesOut( Vector<Vector3d>& cycle, const std::array<size_t, 3>& corners
         out[j] = Vector2d( d.y, -d.x ) * sign;
     }
 
-    Vector<double> ts; // the points of a side at their parameters along it, the corners at 0 and 1
+    Vector<double> ts; // the points of a side at their parameters along it, the corners at 0 and 1, a point out of order at the one before it
     for ( int j = 0; j < 3; ++j )
     {
         const auto d = y[( j + 1 ) % 3] - y[j];
         const size_t last = c[j + 1] - c[j];
         ts.resize( last + 1 );
         for ( size_t i = 0; i <= last; ++i )
-            ts[i] = i == 0 ? 0 : i == last ? 1 : std::clamp( dot( to2( c[j] + i ) - y[j], d ) / d.lengthSq(), 0.0, 1.0 );
+            ts[i] = i == 0 ? 0 : i == last ? 1 : std::clamp( dot( to2( c[j] + i ) - y[j], d ) / d.lengthSq(), ts[i - 1], 1.0 );
         const double minGap = minMove / d.length();
         auto bad = [&] ( size_t i ) { return ts[i + 1] - ts[i] < minGap; }; // the gap after point i
         for ( size_t i = 1, r; i < last; i = r )
@@ -257,7 +257,9 @@ static HashMap<VertId, Vector3d> moveSideVerts( const Mesh& mesh, const EdgeLoop
     Vector<Vector3d> pts( n );
     for ( size_t k = 0; k < n; ++k )
         pts[k] = Vector3d( mesh.points[cycle[k]] );
-    moveSidesOut( pts, c, normal );
+    // from the corner of the smallest id, as crossesInFace in MRContoursCut.cpp, so that both move a degenerate face alike
+    const auto m = size_t( std::min_element( c.begin(), c.end(), [&] ( size_t a, size_t b ) { return cycle[a % n] < cycle[b % n]; } ) - c.begin() );
+    moveSidesOut( pts, { c[m], c[( m + 1 ) % 3] + ( m > 1 ? n : 0 ), c[( m + 2 ) % 3] + ( m > 0 ? n : 0 ) }, normal );
     for ( size_t k = 0; k < n; ++k )
         moved[cycle[k]] = pts[k];
     return moved;
@@ -299,7 +301,7 @@ static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoop
     p.addInputPoint = [&mesh, &loops, pts2, to2i, moved = std::move( moved )] ( VertId v, int contourId, int pointId )
     {
         const VertId mv = mesh.topology.org( loops[contourId][pointId] );
-        const auto it = moved.find( mv );
+        const auto it = moved.empty() ? moved.end() : moved.find( mv );
         pts2->autoResizeSet( v, to2i( it != moved.end() ? it->second : Vector3d( mesh.points[mv] ) ) );
     };
     p.addIntersectionPoint = [pts2] ( VertId v, VertId a, VertId b, VertId c, VertId d )

@@ -198,14 +198,17 @@ MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const M
 MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
     const std::function<UndirectedEdgeId( UndirectedEdgeId )>& sideOf );
 
-/// moves the points along the perimeter of a triangle out of it by a few float errors of their coordinates, in the projection along the axis
-/// most aligned with \p normal, so that no other edge crosses a side only by the rounding of the points: first the corners are placed at that
-/// distance from their centroid if they are all closer, else the corner opposite the longest side goes to that height over it if it is lower;
-/// then every side moves out by that much, the corners to where the moved sides meet, and the other points from their places on the moved sides
-/// only across them, but that far apart along a side where they are closer or out of order (around the middle of every such run)
+/// moves the points along the perimeter of a triangle out of it by a few float errors of their coordinates (1e-3 if all points are at the origin),
+/// in the projection along the axis most aligned with \p normal, out by the orientation of the corners there, so that no other edge crosses a side
+/// only by the rounding of the points: first the corners are placed as an equilateral triangle of that inradius around their centroid if they are
+/// all closer, else the corner opposite the longest side goes to that height over it if it is lower; then every side moves out by that much, the
+/// corners to where the moved sides meet, and the other points from their places on the moved sides only across them, but that far apart along
+/// a side where they are closer or out of order (around the middle of every such run, and evenly where its neighbours leave less room);
+/// for use inside MRMesh (not exported)
 /// \param cycle the points in their order along the perimeter
-/// \param corners the positions of the corners in \p cycle, increasing (modulo its size)
-MR_BIND_IGNORE MRMESH_API void moveSidesOut( Vector<Vector3d>& cycle, const std::array<size_t, 3>& corners, const Vector3f& normal );
+/// \param corners the positions of the corners in \p cycle, increasing within one turn and taken modulo its size (so they may reach past its
+///        end); the callers start at the corner of the smallest vertex id, so that they all move one face alike
+MR_BIND_IGNORE void moveSidesOut( Vector<Vector3d>& cycle, const std::array<size_t, 3>& corners, const Vector3f& normal );
 
 /// \ref hasCrossing tests up to this many segments in pairs, which is faster for them than the sweep, the only user of its cache with the exact predicates
 constexpr size_t cMaxSegmentsInPairs = 32;

@@ -60,13 +60,13 @@ TEST( MRMesh, SharpOffsetDeleteSmallCollidingComponents )
         const auto res0 = sharpOffsetMesh( mesh, 0, params );
         ASSERT_TRUE( res0.has_value() );
         const auto numComps0 = MeshComponents::getNumComponents( *res0 );
-        numSmallColliding0 += countSmallCollidingComponents( *res0, 100 );
+        numSmallColliding0 += countSmallCollidingComponents( *res0, 50 );
 
-        params.maxDeletedComponentFaces = 100;
+        params.maxDeletedComponentFaces = 50;
         const auto res1 = sharpOffsetMesh( mesh, 0, params );
         ASSERT_TRUE( res1.has_value() );
         EXPECT_LE( MeshComponents::getNumComponents( *res1 ), numComps0 );
-        EXPECT_EQ( countSmallCollidingComponents( *res1, 100 ), 0 );
+        EXPECT_EQ( countSmallCollidingComponents( *res1, 50 ), 0 );
         EXPECT_TRUE( res1->topology.findHoleRepresentiveEdges().empty() );
     }
     EXPECT_GT( numSmallColliding0, 0 );

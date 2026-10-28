@@ -79,7 +79,7 @@ struct SharpOffsetParameters : OffsetParameters
     bool voxelClamp = false;
     /// if positive, then after sharpening every connected component with not more than this number of triangles
     /// intersecting a larger component is deleted; such tiny fragments appear near sharp creases
-    int maxDeletedComponentFaces = 100;
+    int maxDeletedComponentFaces = 50;
 };
 
 /// Offsets mesh by converting it to distance field in voxels using OpenVDB library,

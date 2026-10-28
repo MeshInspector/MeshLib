@@ -156,10 +156,10 @@ static Vector2i projectionAxes( const Vector3f& normal )
 // predicates via setPts2Predicates). point() restores each output vertex's exact original mesh position
 // through `patchToInEdges`, the patch->input edge map (no separate coordinate copy, no projection round-trip).
 // `mesh`, `loops` and `patchToInEdges` only need to outlive the run; the map may be filled after construction.
-// The edges of the loops that `scaledSides` tells are the sides of a cut triangle, scaled up around the centroid of their perimeter:
-// a fallback for when the rounding of the points made another edge cross a side; by cSideScale, and more if needed to move every side
-// by a few float errors of the coordinates (up to twice where the centroid is that close to a side, in degenerate loops); two side vertices
-// still at one position are then moved apart across their line from the centroid, so that their triangle with it is oriented as the sides.
+// The edges of the loops that `scaledSides` tells are the sides of a cut triangle (all of them, its whole perimeter), scaled up around the
+// centroid of their perimeter: a fallback for when the rounding of the points made another edge cross a side; by cSideScale, and more if needed
+// to move every side by a few float errors of the coordinates (up to twice in degenerate triangles); side vertices still closer than that
+// along the sides then move out from the centroid and apart across their line from it, in their order along the sides.
 constexpr double cSideScale = 1.0001;
 static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, const WholeEdgeMap& patchToInEdges,
     Vector<Vector2i, VertId>* pts2, // storage for the dominant-axis projection that drives every predicate
@@ -177,71 +177,78 @@ static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoop
 
     const auto axes = projectionAxes( normal );
     const auto to2 = [axes] ( const Vector3d& q ) { return Vector2d( q[axes.x], q[axes.y] ); };
-    std::vector<EdgeId> sides;
     Vector<VertId> sideVerts; // sorted
-    std::vector<Vector3d> sidePts; // the moved points of sideVerts
-    Vector3d centre;
+    Vector<Vector3d> sidePts; // the moved points of sideVerts
     if ( scaledSides )
     {
+        Vector<EdgeId> sides;
         for ( const auto& loop : loops )
             for ( auto e : loop )
                 if ( ( *scaledSides )( e.undirected() ) )
                     sides.push_back( e );
-        double len = 0;
+        // the centroid of the perimeter in the projection, which is farther than area / perimeter from every side of a triangle
+        Vector3d centre;
+        double len = 0, orient = 0; // the perimeter and twice the area of the sides in the projection, signed as their orientation
+        const auto ref = to2( box.center() );
         for ( auto e : sides )
         {
             const Vector3d o( mesh.orgPnt( e ) ), d( mesh.destPnt( e ) );
-            const double l = ( d - o ).length();
+            const double l = to2( d - o ).length();
             centre += ( o + d ) * ( l / 2 );
             len += l;
+            orient += cross( to2( o ) - ref, to2( d ) - ref );
             sideVerts.insert( sideVerts.end(), { mesh.topology.org( e ), mesh.topology.dest( e ) } );
         }
         std::sort( sideVerts.begin(), sideVerts.end() );
         sideVerts.erase( std::unique( sideVerts.begin(), sideVerts.end() ), sideVerts.end() );
         centre = len > 0 ? centre / len : box.center();
-        double hMin = std::numeric_limits<double>::max(); // the least distance from the centroid to the line of a side in the projection
-        for ( auto e : sides )
-        {
-            const auto o = to2( Vector3d( mesh.orgPnt( e ) ) ), s = to2( Vector3d( mesh.destPnt( e ) ) ) - o;
-            if ( const double l = s.length(); l > 0 )
-                hMin = std::min( hMin, std::abs( cross( s, to2( centre ) - o ) ) / l );
-        }
         const double minMove = 4 * std::numeric_limits<float>::epsilon() * std::max( box.min.length(), box.max.length() );
+        const double hMin = len > 0 ? std::abs( orient ) / ( 2 * len ) : 0;
         const double scale = std::max( cSideScale, 1 + minMove / std::max( hMin, minMove ) );
         for ( auto v : sideVerts )
-            box.include( sidePts.emplace_back( centre + ( Vector3d( mesh.points[v] ) - centre ) * scale ) );
+            sidePts.push_back( centre + ( Vector3d( mesh.points[v] ) - centre ) * scale );
+
+        // the chains of side vertices closer than minMove along the sides
+        const auto n = sideVerts.size();
+        auto sideId = [&] ( VertId v ) { return size_t( std::lower_bound( sideVerts.begin(), sideVerts.end(), v ) - sideVerts.begin() ); };
+        Vector<size_t> next( n, n ), prev( n, n );
+        for ( auto e : sides )
+        {
+            const auto i = sideId( mesh.topology.org( e ) ), j = sideId( mesh.topology.dest( e ) );
+            if ( i != j && next[i] == n && prev[j] == n && to2( sidePts[j] - sidePts[i] ).lengthSq() < minMove * minMove )
+            {
+                next[i] = j;
+                prev[j] = i;
+            }
+        }
+        // the vertices of a chain of m move out from the centroid by minMove and across their lines from it, as the sides go around it,
+        // by ( 1 - m ) minMove, ( 3 - m ) minMove, ..., ( m - 1 ) minMove, so that the chain is spread in its order along the sides
+        for ( size_t h = 0; h < n; ++h )
+        {
+            if ( prev[h] != n || next[h] == n )
+                continue; // not the first vertex of a chain
+            int m = 1;
+            for ( auto i = next[h]; i != n; i = next[i] )
+                ++m;
+            for ( size_t i = h; i != n; i = next[i], m -= 2 )
+            {
+                const auto r = to2( sidePts[i] - centre );
+                if ( const double l = r.length(); l > 0 )
+                {
+                    const auto t = ( r + Vector2d( -r.y, r.x ) * double( orient < 0 ? m - 1 : 1 - m ) ) * ( minMove / l );
+                    sidePts[i][axes.x] += t.x;
+                    sidePts[i][axes.y] += t.y;
+                }
+            }
+        }
+        for ( const auto& q : sidePts )
+            box.include( q );
     }
 
     pts2->clear();
     pts2->reserve( pointsSize );
     const auto toInt = getToIntConverter( box ); // Vector3d -> Vector3i
     const auto to2i = [toInt, axes] ( const Vector3d& q ) { const auto qi = toInt( q ); return Vector2i( qi[axes.x], qi[axes.y] ); };
-
-    // two side vertices at one position: the first one along the sides moves back across its line from the centroid by two units, the second one
-    // forward (one between two such pairs stays)
-    auto sideId = [&] ( VertId v ) { return size_t( std::lower_bound( sideVerts.begin(), sideVerts.end(), v ) - sideVerts.begin() ); };
-    std::vector<int> shifts( sideVerts.size() );
-    double orient = 0; // of the sides around the centroid
-    for ( auto e : sides )
-    {
-        const auto i = sideId( mesh.topology.org( e ) ), j = sideId( mesh.topology.dest( e ) );
-        orient += cross( to2( sidePts[i] - centre ), to2( sidePts[j] - centre ) );
-        if ( i != j && to2i( sidePts[i] ) == to2i( sidePts[j] ) )
-        {
-            --shifts[i];
-            ++shifts[j];
-        }
-    }
-    for ( size_t i = 0; i < sidePts.size(); ++i )
-    {
-        const auto r = to2( sidePts[i] - centre );
-        if ( const double l = r.length(); shifts[i] && l > 0 )
-        {
-            const auto t = Vector2d( -r.y, r.x ) * ( ( orient < 0 ? -2 : 2 ) * shifts[i] / ( l * toInt.invRange ) );
-            sidePts[i][axes.x] += t.x;
-            sidePts[i][axes.y] += t.y;
-        }
-    }
 
     SweepLinePredicates p;
     setPts2Predicates( p, pts2 );

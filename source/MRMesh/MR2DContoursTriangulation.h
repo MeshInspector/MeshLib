@@ -156,10 +156,10 @@ MR_BIND_IGNORE MRMESH_API MeshTopology* triangulateDisjointContoursTopology( con
  */
 MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal );
 
-/// same as above for the loops of one triangle of a mesh
+/// same as above for the loops of one triangle of a mesh, all of them (the whole perimeter of the triangle is on the loops)
 /// \param isSide whether an edge of the loops goes along a side of the triangle; the rounding of the points can make another edge cross it,
 ///        so if the plan fails, it is found again with the sides scaled up around the centroid of their perimeter, enough to move them
-///        by more than that rounding
+///        by more than that rounding, and side vertices still that close to each other moved apart
 MR_BIND_IGNORE MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
     const std::function<bool( UndirectedEdgeId )>& isSide );
 
@@ -185,10 +185,12 @@ MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const M
     const std::array<PreciseVertCoords, 3>& tri, const std::function<PreciseCutPoint( VertId )>& pointOf,
     const std::function<std::array<PreciseVertCoords, 3>( UndirectedEdgeId )>& cutOf );
 
-/// same as above on the predicates of \ref getMonotonePlan( mesh, loops, normal ), as where no exact definitions are given
+/// same as above on the predicates of \ref getMonotonePlan( mesh, loops, normal ), as where no exact definitions are given;
+/// the loops must be all the loops of the triangle (its whole perimeter)
 /// \param isSide whether an edge of the loops goes along a side of the triangle; the rounding of the points can make another edge cross it,
 ///        and then the crossings are found again with the sides scaled up as in \ref getMonotonePlan( mesh, loops, normal, isSide )
-/// \return std::nullopt if two edges of the loops join the same two vertices
+/// \return std::nullopt if two edges of the loops join the same two vertices, or if an edge still crosses a side after the sides are
+///         scaled up (as a slit at side vertices that were moved apart, flatter than the angle of their move to the side)
 MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
     const std::function<bool( UndirectedEdgeId )>& isSide );
 

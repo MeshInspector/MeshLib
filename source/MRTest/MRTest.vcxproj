@@ -26,6 +26,7 @@
     <ClCompile Include="MRShortcutManagerTests.cpp" />
     <ClCompile Include="MRRibbonIconsTests.cpp" />
     <ClCompile Include="MRBestFitTests.cpp" />
+    <ClCompile Include="MRBestPlaneVolumeTests.cpp" />
     <ClCompile Include="MRBezierTests.cpp" />
     <ClCompile Include="MRBitSetTests.cpp" />
     <ClCompile Include="MRBoxTests.cpp" />

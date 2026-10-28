@@ -55,7 +55,8 @@ void checkRoundTrip( bool compress, int n )
 
 TEST( MRIOExtras, LasPoints )
 {
-    checkRoundTrip( false, 1000 );
+    // several write blocks of 50000 points each
+    checkRoundTrip( false, 120000 );
 }
 
 TEST( MRIOExtras, LazPoints )

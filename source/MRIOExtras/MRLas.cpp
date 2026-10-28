@@ -510,7 +510,10 @@ Expected<void> save( const PointCloud& cloud, std::ostream& out, const SaveSetti
     if ( saveNormals && settings.xf )
         normXf = settings.xf->A.inverse().transposed();
 
-    std::vector<char> buf( header.point_record_length, '\0' );
+    // uncompressed records are written to the stream in blocks rather than one by one
+    const size_t recordSize = header.point_record_length;
+    std::vector<char> block( ( compress ? 1 : lazperf::DefaultChunkSize ) * recordSize );
+    size_t blockSize = 0;
     size_t numSaved = 0;
     for ( auto v = 0_v; v < cloud.points.size(); ++v )
     {
@@ -531,14 +534,15 @@ Expected<void> save( const PointCloud& cloud, std::ostream& out, const SaveSetti
             point.green = uint16_t( c.g * 257 );
             point.blue = uint16_t( c.b * 257 );
         }
-        std::memcpy( buf.data(), &point, LasPointSize[pointFormat] );
+        char* record = block.data() + blockSize;
+        std::memcpy( record, &point, LasPointSize[pointFormat] );
 
         if ( saveNormals )
         {
             Vector3d normal( cloud.normals[v] );
             if ( normXf )
                 normal = *normXf * normal;
-            std::memcpy( buf.data() + LasPointSize[pointFormat], &normal.x, 3 * sizeof( double ) );
+            std::memcpy( record + LasPointSize[pointFormat], &normal.x, 3 * sizeof( double ) );
         }
 
         if ( compress )
@@ -548,19 +552,21 @@ Expected<void> save( const PointCloud& cloud, std::ostream& out, const SaveSetti
                 compressor.emplace( pointFormat, ebCount );
                 chunks.push_back( {} );
             }
-            compressor->compress( buf.data() );
+            compressor->compress( record );
             if ( ++chunks.back().count == lazperf::DefaultChunkSize )
                 finishChunk();
         }
-        else
+        else if ( ( blockSize += recordSize ) == block.size() )
         {
-            out.write( buf.data(), buf.size() );
+            out.write( block.data(), blockSize );
+            blockSize = 0;
         }
 
         ++numSaved;
         if ( settings.progress && !( numSaved & 0x3FF ) && !settings.progress( float( numSaved ) / totalPoints ) )
             return unexpectedOperationCanceled();
     }
+    out.write( block.data(), blockSize );
 
     if ( compress )
     {

@@ -297,6 +297,7 @@ Expected<Mesh> sharpOffsetMesh( const MeshPart& mp, float offset, const SharpOff
     sharpenParams.maxOldVertPosCorrection = params.voxelSize * params.maxOldVertPosCorrection;
     sharpenParams.offset = offset;
     sharpenParams.voxelClamp = params.voxelClamp;
+    sharpenParams.maxDeletedComponentFaces = params.maxDeletedComponentFaces;
     sharpenParams.outSharpEdges = params.outSharpEdges;
 
     sharpenMarchingCubesMesh( mp, res.value(), map, sharpenParams );

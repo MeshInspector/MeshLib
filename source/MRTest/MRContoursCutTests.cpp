@@ -731,6 +731,55 @@ TEST( MRMesh, CutMeshLoneContourInThinFace )
     }
 }
 
+// islands in a triangle and two contours cutting off its corners at 1_v and 2_v, cut without the exact sorting data: one island has a point
+// just outside side 2 (by less than minMove, about 1/1484 here, as if rounded there), so its edges cross the side on the points as they are,
+// and the plan is found again with the sides moved out; the contour at 1_v is closer to it along the sides than minMove, so its points are
+// spaced apart along them, and another island is near it (by about 45 minMove); a third island is inside the part that the contour at 2_v
+// cuts off, near the contour (by about 23 minMove). The moves must not take an island to the other side of a contour, where its triangles
+// would fold over others in the real positions: the cut keeps the area, and every triangle is on the side of the normal of the face,
+// but those at the point outside, which its rounding turns over
+TEST( MRMesh, CutMeshLoneContourNearCutCorners )
+{
+    const auto mesh = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 1000, 0, 0 ), Vector3f( 0, 1000, 0 ) }, { { 0_v, 1_v, 2_v } } );
+    auto island = [] ( const std::vector<Vector3f>& pts )
+    {
+        OneMeshContour res{ .closed = true };
+        for ( const auto& p : pts )
+            res.intersections.push_back( { .primitiveId = 0_f, .coordinate = p } );
+        res.intersections.push_back( res.intersections.front() );
+        return res;
+    };
+    auto onSide = [&] ( VertId a, VertId b, const Vector3f& p )
+    {
+        return OneMeshIntersection{ .primitiveId = mesh.topology.findEdge( a, b ), .coordinate = p };
+    };
+    const Vector3f outside( -1.f / 8192, 400, 0 );
+    const float d = 1.f / 4096; // about a third of minMove
+    const OneMeshContours contours{
+        island( { outside, Vector3f( 100, 350, 0 ), Vector3f( 100, 450, 0 ) } ),
+        { .intersections = { onSide( 0_v, 1_v, Vector3f( 1000 - d, 0, 0 ) ), onSide( 2_v, 1_v, Vector3f( 1000 - d, d, 0 ) ) } },
+        island( { Vector3f( 999.9375f, 1.f / 256, 0 ), Vector3f( 999.96875f, 1.f / 256, 0 ), Vector3f( 999.9375f, 1.f / 64, 0 ) } ),
+        { .intersections = { onSide( 1_v, 2_v, Vector3f( 20, 980, 0 ) ), onSide( 0_v, 2_v, Vector3f( 0, 980, 0 ) ) } },
+        island( { Vector3f( 2, 980 + 1.f / 64, 0 ), Vector3f( 15, 980 + 1.f / 64, 0 ), Vector3f( 2, 980 + 1.f / 32, 0 ) } ) };
+
+    Mesh cut = mesh;
+    const auto res = cutMesh( cut, contours );
+    EXPECT_TRUE( cut.topology.checkValidity() );
+    EXPECT_TRUE( res.fbsWithContourIntersections.none() );
+    EXPECT_EQ( cut.topology.findNumHoles(), 1 ); // the border of the mesh
+    EXPECT_EQ( MeshComponents::getNumComponents( cut ), 1 );
+    EXPECT_NEAR( cut.area(), mesh.area(), 1e-6 * mesh.area() );
+    for ( auto f : cut.topology.getValidFaces() )
+    {
+        const auto vs = cut.topology.getTriVerts( f );
+        if ( std::any_of( vs.begin(), vs.end(), [&] ( VertId v ) { return cut.points[v] == outside; } ) )
+            continue;
+        // the sign is exact: the differences of these floats and their products are exact in doubles
+        const Vector3d a( cut.points[vs[0]] ), b( cut.points[vs[1]] ), c( cut.points[vs[2]] );
+        EXPECT_GT( cross( b - a, c - a ).z, 0 ) << "face " << f;
+    }
+}
+
 // a small square pierces a big triangle of a cube without crossing its edges, so the cube is cut along an open lone contour (a slit)
 // of three points on one line, where the sides and the diagonal of the square cross the triangle; the steps of the boolean before its cut
 // (as in the terrain embedding) give the exact sorting data, with the square as mesh A, and as mesh B, whose vertex ids the predicates shift

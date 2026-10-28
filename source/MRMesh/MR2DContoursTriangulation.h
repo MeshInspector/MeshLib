@@ -159,9 +159,9 @@ MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const 
 /// same as above for the loops of one triangle of a mesh, all of them (the whole perimeter of the triangle is on the loops)
 /// \param sideOf for an edge of the loops, the side of the triangle it goes along (in cutMesh, the edge it was split from), or an invalid id
 ///        for an edge inside the triangle; the rounding of the points can make another edge cross a side, so if the plan fails, it is found
-///        again with the sides moved out: the corners apart if they are closer than a few float errors of the coordinates, the one opposite
-///        the longest side away from it if it is closer to its line than that, their triangle scaled up enough to move every side by that
-///        much, and the other side vertices on the new sides, spread evenly where they are that close along a side or out of order
+///        again with every side moved out by a few float errors of the coordinates (after the corners are placed apart if they are closer than
+///        that, and the one opposite the longest side away from it if it is closer to its line than that), the other side vertices moved only
+///        across their sides, but that far apart along a side where they are closer or out of order; if sideOf is empty, the plan is the one above
 /// \param moveSidesAtOnce find the plan only with the sides moved out, as where the corners are on one line: there the points as they are
 ///        leave the plan to the simulation of simplicity, which can put an island outside the triangle
 MR_BIND_IGNORE MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
@@ -195,7 +195,8 @@ MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const M
 ///        points can make another edge cross a side, and then the crossings are found again with the sides moved out as in
 ///        \ref getMonotonePlan( mesh, loops, normal, sideOf )
 /// \return std::nullopt if two edges of the loops join the same two vertices, or if an edge still crosses a side after the sides are
-///         moved out, which should only happen if the loops are not the whole perimeter or its side edges do not make a triangle
+///         moved out, which should only happen if a point is outside the triangle by more than its rounding, the loops are not the whole
+///         perimeter, or its side edges do not make a triangle
 MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
     const std::function<UndirectedEdgeId( UndirectedEdgeId )>& sideOf );
 

@@ -597,7 +597,8 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
     ASSERT_TRUE( res.has_value() );
     EXPECT_EQ( *res, *PlanarTriangulation::findCrossings( mesh, { outerLoop, a, b, c }, tri, pointOf, cutOf ) );
 
-    // a slit just across the long side (as if rounded there) crosses no side once the sides are scaled up
+    // a slit just across the long side (less than minMove, about 1/1484 here, as if rounded there) crosses it on the points as they are,
+    // and no side once the sides are moved out
     auto addSlit = [&] ( const Vector3f& p, const Vector3f& q )
     {
         const auto e = mesh.topology.makeEdge();
@@ -605,7 +606,9 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
         mesh.topology.setOrg( e.sym(), mesh.addPoint( q ) );
         return EdgeLoop{ e, e.sym() };
     };
-    res = PlanarTriangulation::findCrossings( mesh, { outerLoop, addSlit( { 400, 400, 0 }, { 500.01f, 500.01f, 0 } ) }, normal, sideOf );
+    const auto across = addSlit( { 400, 400, 0 }, { 500 + 1.f / 4096, 500 + 1.f / 4096, 0 } );
+    EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( mesh, { outerLoop, across }, normal ) );
+    res = PlanarTriangulation::findCrossings( mesh, { outerLoop, across }, normal, sideOf );
     ASSERT_TRUE( res.has_value() );
     EXPECT_TRUE( res->empty() );
 
@@ -624,7 +627,7 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
         return std::pair{ loop, nm };
     };
     // crossed by a slit: the sweep runs again with the sides moved out past N, where N->M passes from the right of the slit to its left
-    const auto [pathLoop, nm] = pathHole( mesh, { 300, -0.01f, 0 }, { 400, 300, 0 } );
+    const auto [pathLoop, nm] = pathHole( mesh, { 300, -1.f / 4096, 0 }, { 400, 300, 0 } );
     ASSERT_EQ( pathLoop.size(), size_t( 7 ) );
     const auto slit = addSlit( { 300, 200, 0 }, { 450, 100, 0 } );
     res = PlanarTriangulation::findCrossings( mesh, { pathLoop, slit }, normal, sideOf );
@@ -635,8 +638,7 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
     EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( mesh, { pathLoop }, normal ) );
     EXPECT_TRUE( PlanarTriangulation::getMonotonePlan( mesh, { pathLoop }, normal, sideOf ) );
 
-    // where cSideScale moves the side by less than N's distance to it, while the least move is enough: a tiny triangle far from the origin,
-    // and a sliver, whose long sides are close to the centroid
+    // N just outside side 0 (by less than minMove) of a tiny triangle far from the origin, and of a sliver
     for ( const auto& [pts, n, mp] : {
         std::tuple{ Triangle3f{ Vector3f( 1e4f, 1e4f, 0 ), Vector3f( 1e4f + 1, 1e4f, 0 ), Vector3f( 1e4f, 1e4f + 1, 0 ) },
             Vector3f( 1e4f + 0.3f, 1e4f - 1.f / 1024, 0 ), Vector3f( 1e4f + 0.4f, 1e4f + 0.3f, 0 ) },
@@ -654,8 +656,9 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
 
     // side vertices at one position `at` from corner k along side k (or the first one an ulp ahead along it if swapped), each with a slit inside
     // in the given direction (along the side, inside), in their order along the side; the first run orders them by their ids (or positions),
-    // which can make a slit cross a side or another slit; then they are spread evenly along the moved side in their order along the loop; they
-    // are made in this order or against it, and the loop of the hole runs either way, from the second one, so that they wrap around its start
+    // which can make a slit cross a side or another slit (on some sides here), so the plan is also found with the sides moved out at once,
+    // where they are spaced apart along the moved side in their order along the loop; they are made in this order or against it, and
+    // the loop of the hole runs either way, from the second one, so that they wrap around its start
     auto checkSideVerts = [&] ( int k, const Vector<Vector2f>& slits, bool swapped, float at = 300 )
     {
         const int n = int( slits.size() );
@@ -691,7 +694,7 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
             }
             // the sides, and the splits of side k
             auto sideOfM = [n, side] ( UndirectedEdgeId ue ) { return ue < 3_ue ? ue : int( ue ) < 3 + n ? side.undirected() : UndirectedEdgeId(); };
-            EXPECT_TRUE( PlanarTriangulation::getMonotonePlan( m, { loop }, normal, sideOfM ) );
+            EXPECT_TRUE( PlanarTriangulation::getMonotonePlan( m, { loop }, normal, sideOfM, true ) );
             const auto r = PlanarTriangulation::findCrossings( m, { loop }, normal, sideOfM );
             EXPECT_TRUE( r && r->empty() );
         }
@@ -713,7 +716,7 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
 
     // degenerate triangles, the hole with a cut path from corner 0 to N, just outside side 0 or at the position of corner 0, and on to M:
     // all three corners at one position, three corners closer than minMove, and two corners at one position (1 and 2, or 0 and 1); the
-    // corners are placed apart before the sides are scaled
+    // corners are placed apart before the sides are moved out (at once here, since the first run succeeds on some of them)
     const float u = 1.f / 2097152; // the float step at 5
     for ( const auto& [pts, n, mp] : {
         std::tuple{ Triangle3f{ Vector3f( 5, 5, 0 ), Vector3f( 5, 5, 0 ), Vector3f( 5, 5, 0 ) }, Vector3f( 5, 5 - u, 0 ), Vector3f( 5, 5, 0 ) },
@@ -734,15 +737,15 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
                 for ( auto& le : loop )
                     le = le.sym();
             }
-            EXPECT_TRUE( PlanarTriangulation::getMonotonePlan( m, { loop }, normal, sideOf ) );
+            EXPECT_TRUE( PlanarTriangulation::getMonotonePlan( m, { loop }, normal, sideOf, true ) );
             res = PlanarTriangulation::findCrossings( m, { loop }, normal, sideOf );
             EXPECT_TRUE( res && res->empty() );
         }
     }
 
     // corners on one line far apart, and a thin triangle lower than minMove (about 1/2097 here): the corner opposite the longest side is moved
-    // across it to the height minMove before the sides are scaled; the cut path goes from corner 0 to N two float steps (at 1000) below or above
-    // side 0, so away from the moved corner in some loop directions, and on to M
+    // across it to the height minMove before the sides are moved out (at once here, since the first run succeeds on some of them); the cut path
+    // goes from corner 0 to N two float steps (at 1000) below or above side 0, so away from the moved corner in some loop directions, and on to M
     for ( const auto& [pts, mp] : {
         std::pair{ Triangle3f{ Vector3f( 0, 0, 0 ), Vector3f( 1000, 0, 0 ), Vector3f( 400, 0, 0 ) }, Vector3f( 600, 0, 0 ) },
         std::pair{ Triangle3f{ Vector3f( 0, 0, 0 ), Vector3f( 1000, 0, 0 ), Vector3f( 400, 1.f / 65536, 0 ) }, Vector3f( 600, 1.f / 262144, 0 ) } } )
@@ -761,7 +764,7 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
                     for ( auto& le : loop )
                         le = le.sym();
                 }
-                EXPECT_TRUE( PlanarTriangulation::getMonotonePlan( m, { loop }, normal, sideOf ) );
+                EXPECT_TRUE( PlanarTriangulation::getMonotonePlan( m, { loop }, normal, sideOf, true ) );
                 res = PlanarTriangulation::findCrossings( m, { loop }, normal, sideOf );
                 EXPECT_TRUE( res && res->empty() );
             }

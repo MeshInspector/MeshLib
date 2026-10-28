@@ -151,23 +151,15 @@ static Vector2i projectionAxes( const Vector3f& normal )
     return normal[dropAx] < 0 ? Vector2i( axes.y, axes.x ) : axes;
 }
 
-// mesh-space predicates: triangulate hole boundary loops of `mesh` in the mesh's own 3D coordinates,
-// orienting around `normal`. Combinatorics run on the dominant-axis projection (reusing the exact 2D
-// predicates via setPts2Predicates). point() restores each output vertex's exact original mesh position
-// through `patchToInEdges`, the patch->input edge map (no separate coordinate copy, no projection round-trip).
-// `mesh`, `loops` and `patchToInEdges` only need to outlive the run; the map may be filled after construction.
-// With `sideOf`, the edges of the loops it tells are the sides of a cut triangle (all of them, its whole perimeter), moved out as a fallback
-// for when the rounding of the points made another edge cross a side (see moveSideVerts); the other points keep their positions.
-constexpr double cSideScale = 1.0001;
-
 // the side vertices of a cut triangle moved for meshSpacePredicates, `sideVerts` sorted and `sidePts` their points, both empty if the side edges
 // (those with valid sideOf) are not one cycle with three corners, where sideOf changes. Corners closer than minMove in the projection are placed
 // apart first: two at minMove from their midpoint across its line from the third one, three at minMove from their centroid; else the corner
 // opposite the longest side, if it is closer than minMove to its line (as on it, where the corners are on one line), goes across the line to
-// the height minMove over it. Their triangle, oriented as the sides, is then scaled about the centroid of its perimeter by cSideScale, and more
-// if needed to move every side by minMove (less than 10 times, since every height of the triangle is now above minMove / 2). Every other side
-// vertex goes to the same place on its new side, and runs of them closer than minMove along it (or out of order) are spread evenly between
-// the nearest other vertices on that side.
+// the height minMove over it. Every side of their triangle, oriented as the sides, then moves out by minMove: the corners go to where the moved
+// sides meet (a sharp corner far along its sides, which only adds empty area beyond it, but less than four times the longest side, since every
+// height of the triangle is now at least minMove / 2), and every other side vertex goes from the same place on its side by minMove across it,
+// not along it, but for runs of them closer than minMove along it (or out of order), spaced minMove apart around their middle between
+// the nearest other vertices on the side, or evenly between those if they are closer than that.
 static void moveSideVerts( const Mesh& mesh, const EdgeLoops& loops, const std::function<UndirectedEdgeId( UndirectedEdgeId )>& sideOf,
     const Vector2i& axes, double minMove, Vector<VertId>& sideVerts, Vector<Vector3d>& sidePts )
 {
@@ -243,20 +235,12 @@ static void moveSideVerts( const Mesh& mesh, const EdgeLoops& loops, const std::
         if ( std::abs( height ) < minMove )
             y[( j + 2 ) % 3] += Vector2d( -d.y, d.x ) * ( ( sign * minMove - height ) / l );
     }
-    // area / perimeter is a lower bound of the distance from the centroid of the perimeter to every side
-    Vector2d centre;
-    double per = 0;
+    std::array<Vector2d, 3> out; // the outward unit normals of the sides
     for ( int j = 0; j < 3; ++j )
     {
-        const double l = ( y[( j + 1 ) % 3] - y[j] ).length();
-        centre += ( y[j] + y[( j + 1 ) % 3] ) * ( l / 2 );
-        per += l;
+        const auto d = ( y[( j + 1 ) % 3] - y[j] ).normalized();
+        out[j] = Vector2d( d.y, -d.x ) * sign;
     }
-    centre = per > 0 ? centre / per : y[0];
-    const double h = per > 0 ? std::abs( cross( y[1] - y[0], y[2] - y[0] ) ) / ( 2 * per ) : 0;
-    const double scale = std::max( cSideScale, 1 + minMove / h );
-    for ( auto& q : y )
-        q = centre + ( q - centre ) * scale;
 
     sideVerts.resize( n );
     sidePts.resize( n );
@@ -271,20 +255,29 @@ static void moveSideVerts( const Mesh& mesh, const EdgeLoops& loops, const std::
                 std::clamp( dot( to2( tp.org( edgeAt( c[j] + i ) ) ) - x[j], dx ) / dx.lengthSq(), 0.0, 1.0 );
         const double minGap = minMove / dy.length();
         auto bad = [&] ( size_t i ) { return ts[i + 1] - ts[i] < minGap; }; // the gap after vertex i
-        for ( size_t i = 1; i < last; )
+        for ( size_t i = 1; i < last; ++i )
         {
-            size_t r = i; // vertices i, ..., r - 1 are at bad gaps, and vertex r is not or is the corner
+            if ( !bad( i - 1 ) && !bad( i ) )
+                continue;
+            size_t r = i + 1; // vertices i, ..., r - 1 are at bad gaps, and vertex r is not or is the corner
             while ( r < last && ( bad( r - 1 ) || bad( r ) ) )
                 ++r;
+            // the run spaced by gap around its middle, at least gap from vertices i - 1 and r
+            const auto k = double( r - i );
+            const double gap = std::min( minGap, ( ts[r] - ts[i - 1] ) / ( k + 1 ) );
+            const double first = std::max( ts[i - 1] + gap, std::min( ( ts[i] + ts[r - 1] - ( k - 1 ) * gap ) / 2, ts[r] - k * gap ) );
             for ( size_t q = i; q < r; ++q )
-                ts[q] = ts[i - 1] + ( ts[r] - ts[i - 1] ) * double( q - i + 1 ) / double( r - i + 1 );
-            i = r + 1;
+                ts[q] = first + double( q - i ) * gap;
+            i = r;
         }
+        // where the moved side before this one meets this one
+        const auto& o = out[( j + 2 ) % 3];
+        const auto corner = y[j] + Vector2d( out[j].y - o.y, o.x - out[j].x ) * ( minMove / cross( o, out[j] ) );
         for ( size_t i = 0; i < last; ++i )
         {
             const auto s = order[( c[j] + i ) % n];
             sideVerts[s] = tp.org( sides[s] );
-            const auto p = y[j] + dy * ts[i];
+            const auto p = i == 0 ? corner : y[j] + dy * ts[i] + out[j] * minMove;
             sidePts[s] = Vector3d( mesh.points[sideVerts[s]] );
             sidePts[s][axes.x] = p.x;
             sidePts[s][axes.y] = p.y;
@@ -292,6 +285,13 @@ static void moveSideVerts( const Mesh& mesh, const EdgeLoops& loops, const std::
     }
 }
 
+// mesh-space predicates: triangulate hole boundary loops of `mesh` in the mesh's own 3D coordinates,
+// orienting around `normal`. Combinatorics run on the dominant-axis projection (reusing the exact 2D
+// predicates via setPts2Predicates). point() restores each output vertex's exact original mesh position
+// through `patchToInEdges`, the patch->input edge map (no separate coordinate copy, no projection round-trip).
+// `mesh`, `loops` and `patchToInEdges` only need to outlive the run; the map may be filled after construction.
+// With `sideOf`, the edges of the loops it tells are the sides of a cut triangle (all of them, its whole perimeter), moved out as a fallback
+// for when the rounding of the points made another edge cross a side (see moveSideVerts); the other points keep their positions.
 static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, const WholeEdgeMap& patchToInEdges,
     Vector<Vector2i, VertId>* pts2, // storage for the dominant-axis projection that drives every predicate
     const std::function<UndirectedEdgeId( UndirectedEdgeId )>* sideOf = nullptr )
@@ -2092,7 +2092,7 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
     };
     // the rounding of the points can make an edge cross a side; then the sides are moved out (see meshSpacePredicates)
     std::optional<HoleFillPlan> res;
-    if ( !moveSidesAtOnce )
+    if ( !moveSidesAtOnce || !sideOf )
         res = plan( nullptr );
     if ( !res && sideOf )
         res = plan( &sideOf );

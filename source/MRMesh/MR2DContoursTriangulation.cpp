@@ -152,14 +152,13 @@ static Vector2i projectionAxes( const Vector3f& normal )
 }
 
 // the side vertices of a cut triangle moved for meshSpacePredicates, `sideVerts` sorted and `sidePts` their points, both empty if the side edges
-// (those with valid sideOf) are not one cycle with three corners, where sideOf changes. Corners closer than minMove in the projection are placed
-// apart first: two at minMove from their midpoint across its line from the third one, three at minMove from their centroid; else the corner
-// opposite the longest side, if it is closer than minMove to its line (as on it, where the corners are on one line), goes across the line to
-// the height minMove over it. Every side of their triangle, oriented as the sides, then moves out by minMove: the corners go to where the moved
-// sides meet (a sharp corner far along its sides, which only adds empty area beyond it, but less than four times the longest side, since every
-// height of the triangle is now at least minMove / 2), and every other side vertex goes from the same place on its side by minMove across it,
-// not along it, but for runs of them closer than minMove along it (or out of order), spaced minMove apart around their middle between
-// the nearest other vertices on the side, or evenly between those if they are closer than that.
+// (those with valid sideOf) are not one cycle with three corners, where sideOf changes. Corners all closer than minMove in the projection are
+// placed at minMove from their centroid first; else the corner opposite the longest side, if it is closer than minMove to its line (as on it, where
+// the corners are on one line), goes across the line to the height minMove over it. Every side of their triangle, oriented as the corners, then
+// moves out by minMove: the corners go to where the moved sides meet (a sharp corner far along its sides, which only adds empty area beyond it,
+// but less than twice the longest side, since every height of the triangle is now at least minMove), and every other side vertex goes from
+// the same place on its side by minMove across it, not along it, but for runs of them closer than minMove along it (or out of order), spaced
+// minMove apart around their middle between the nearest other vertices on the side, or evenly between those if they are closer than that.
 static void moveSideVerts( const Mesh& mesh, const EdgeLoops& loops, const std::function<UndirectedEdgeId( UndirectedEdgeId )>& sideOf,
     const Vector2i& axes, double minMove, Vector<VertId>& sideVerts, Vector<Vector3d>& sidePts )
 {
@@ -172,69 +171,42 @@ static void moveSideVerts( const Mesh& mesh, const EdgeLoops& loops, const std::
     std::sort( sides.begin(), sides.end(), [&] ( EdgeId a, EdgeId b ) { return tp.org( a ) < tp.org( b ); } );
     const auto n = sides.size();
     Vector<size_t> order( n ); // the side edges along the cycle from sides[0], each one from the destination of the previous one
+    std::array<size_t, 4> c{}; // the positions of the corners along the cycle, and the first one again past its end
+    int numCorners = 0;
     for ( size_t k = 0, i = 0; k < n; ++k )
     {
         order[k] = i;
         const auto v = tp.dest( sides[i] );
+        const auto s = sideOf( sides[i].undirected() );
         i = size_t( std::lower_bound( sides.begin(), sides.end(), v, [&] ( EdgeId e, VertId u ) { return tp.org( e ) < u; } ) - sides.begin() );
         if ( i == n || tp.org( sides[i] ) != v || ( i == 0 ) != ( k + 1 == n ) )
             return;
-    }
-    auto edgeAt = [&] ( size_t k ) { return sides[order[k % n]]; };
-    std::array<size_t, 4> c{}; // the positions of the corners along the cycle, and the first one again past its end
-    int numCorners = 0;
-    for ( size_t k = 0; k < n; ++k )
-    {
-        if ( sideOf( edgeAt( k + n - 1 ).undirected() ) == sideOf( edgeAt( k ).undirected() ) )
-            continue;
-        if ( numCorners == 3 )
-            return;
-        c[numCorners++] = k;
+        if ( sideOf( sides[i].undirected() ) != s && ++numCorners <= 3 ) // a corner at v
+            c[numCorners - 1] = ( k + 1 ) % n;
     }
     if ( numCorners != 3 )
         return;
+    std::sort( c.begin(), c.begin() + 3 );
     c[3] = c[0] + n;
+    auto edgeAt = [&] ( size_t k ) { return sides[order[k % n]]; };
 
     auto to2 = [&] ( VertId v ) { return Vector2d( mesh.points[v][axes.x], mesh.points[v][axes.y] ); };
     std::array<Vector2d, 3> x, y; // the corners before and after the move
     for ( int j = 0; j < 3; ++j )
         x[j] = y[j] = to2( tp.org( edgeAt( c[j] ) ) );
-    double orient = 0; // twice the area of the sides, signed as their orientation
-    for ( auto e : sides )
-        orient += cross( to2( tp.org( e ) ) - x[0], to2( tp.dest( e ) ) - x[0] );
-    const double sign = orient < 0 ? -1 : 1;
-    int numClose = 0, far3 = 0; // the pairs of corners closer than minMove, and the corner not in the last one
-    for ( int j = 0; j < 3; ++j )
-    {
-        if ( ( x[( j + 1 ) % 3] - x[( j + 2 ) % 3] ).lengthSq() < minMove * minMove )
-        {
-            ++numClose;
-            far3 = j;
-        }
-    }
-    if ( numClose == 1 )
-    {
-        const auto mid = ( x[( far3 + 1 ) % 3] + x[( far3 + 2 ) % 3] ) / 2.0;
-        const auto d = ( mid - x[far3] ).normalized() * ( sign * minMove );
-        y[( far3 + 1 ) % 3] = mid - Vector2d( -d.y, d.x );
-        y[( far3 + 2 ) % 3] = mid + Vector2d( -d.y, d.x );
-    }
-    else if ( numClose > 1 )
+    const double sign = cross( x[1] - x[0], x[2] - x[0] ) < 0 ? -1 : 1; // the orientation of the corners
+    int a = 0; // the longest side, from corner a
+    for ( int i = 1; i < 3; ++i )
+        if ( ( x[( i + 1 ) % 3] - x[i] ).lengthSq() > ( x[( a + 1 ) % 3] - x[a] ).lengthSq() )
+            a = i;
+    const auto side = x[( a + 1 ) % 3] - x[a];
+    if ( const double l = side.length(); l < minMove )
     {
         const auto g = ( x[0] + x[1] + x[2] ) / 3.0;
         y = { g + Vector2d( minMove, 0 ), g + Vector2d( 0, sign * minMove ), g - Vector2d( 0, sign * minMove ) };
     }
-    else
-    {
-        int j = 0; // the longest side, from corner j, over which the opposite corner goes to the height minMove oriented as the sides
-        for ( int i = 1; i < 3; ++i )
-            if ( ( x[( i + 1 ) % 3] - x[i] ).lengthSq() > ( x[( j + 1 ) % 3] - x[j] ).lengthSq() )
-                j = i;
-        const auto d = x[( j + 1 ) % 3] - x[j];
-        const double l = d.length(), height = cross( d, x[( j + 2 ) % 3] - x[j] ) / l;
-        if ( std::abs( height ) < minMove )
-            y[( j + 2 ) % 3] += Vector2d( -d.y, d.x ) * ( ( sign * minMove - height ) / l );
-    }
+    else if ( const double height = cross( side, x[( a + 2 ) % 3] - x[a] ) / l; std::abs( height ) < minMove )
+        y[( a + 2 ) % 3] += Vector2d( -side.y, side.x ) * ( ( sign * minMove - height ) / l );
     std::array<Vector2d, 3> out; // the outward unit normals of the sides
     for ( int j = 0; j < 3; ++j )
     {
@@ -259,8 +231,8 @@ static void moveSideVerts( const Mesh& mesh, const EdgeLoops& loops, const std::
         {
             if ( !bad( i - 1 ) && !bad( i ) )
                 continue;
-            size_t r = i + 1; // vertices i, ..., r - 1 are at bad gaps, and vertex r is not or is the corner
-            while ( r < last && ( bad( r - 1 ) || bad( r ) ) )
+            size_t r = i + 1; // the run i, ..., r - 1 joined by bad gaps, and vertex r after a good gap or the corner
+            while ( r < last && bad( r - 1 ) )
                 ++r;
             // the run spaced by gap around its middle, at least gap from vertices i - 1 and r
             const auto k = double( r - i );
@@ -268,7 +240,7 @@ static void moveSideVerts( const Mesh& mesh, const EdgeLoops& loops, const std::
             const double first = std::max( ts[i - 1] + gap, std::min( ( ts[i] + ts[r - 1] - ( k - 1 ) * gap ) / 2, ts[r] - k * gap ) );
             for ( size_t q = i; q < r; ++q )
                 ts[q] = first + double( q - i ) * gap;
-            i = r;
+            i = r - 1;
         }
         // where the moved side before this one meets this one
         const auto& o = out[( j + 2 ) % 3];

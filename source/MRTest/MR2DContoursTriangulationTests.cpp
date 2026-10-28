@@ -714,6 +714,37 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
             checkSideVerts( k, { { -200, 100 } }, false, 1000 );
     }
 
+    // two pairs of side vertices, each at one position, at 200 and 800 along side 0, with slits inside, and an island slit between them: each pair
+    // is spaced apart around its own position, not with the other pair around their middle at 500, from where the slits would cross the island
+    {
+        Mesh m = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 1000, 0, 0 ), Vector3f( 0, 1000, 0 ) }, { { 0_v, 1_v, 2_v } } );
+        m.topology.setLeft( m.topology.edgeWithLeft( 0_f ), {} );
+        const auto side = m.topology.findEdge( 0_v, 1_v );
+        for ( float x : { 200.f, 200.f, 800.f, 800.f } )
+            m.splitEdge( side, Vector3f( x, 0, 0 ) );
+        EdgeId e = m.topology.findEdge( 0_v, 3_v ), start;
+        for ( float x : { 150.f, 250.f, 750.f, 850.f } )
+        {
+            e = m.topology.prev( e.sym() ); // from the next vertex along the side
+            if ( !start )
+                start = e;
+            const auto s = m.topology.makeEdge();
+            m.topology.splice( e, s );
+            m.topology.setOrg( s.sym(), m.addPoint( Vector3f( x, 100, 0 ) ) );
+        }
+        EdgeLoop loop;
+        for ( auto le : leftRing( m.topology, start ) )
+            loop.push_back( le );
+        ASSERT_EQ( loop.size(), size_t( 15 ) );
+        const auto island = m.topology.makeEdge();
+        m.topology.setOrg( island, m.addPoint( Vector3f( 380, 25, 0 ) ) );
+        m.topology.setOrg( island.sym(), m.addPoint( Vector3f( 440, 27, 0 ) ) );
+        const EdgeLoops loops{ loop, { island, island.sym() } };
+        auto sideOfM = [side] ( UndirectedEdgeId ue ) { return ue < 3_ue ? ue : ue < 7_ue ? side.undirected() : UndirectedEdgeId(); };
+        EXPECT_TRUE( PlanarTriangulation::getMonotonePlan( m, loops, normal ) );
+        EXPECT_TRUE( PlanarTriangulation::getMonotonePlan( m, loops, normal, sideOfM, true ) );
+    }
+
     // degenerate triangles, the hole with a cut path from corner 0 to N, just outside side 0 or at the position of corner 0, and on to M:
     // all three corners at one position, three corners closer than minMove, and two corners at one position (1 and 2, or 0 and 1); the
     // corners are placed apart before the sides are moved out (at once here, since the first run succeeds on some of them)

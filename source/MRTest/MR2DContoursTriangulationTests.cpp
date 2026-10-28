@@ -651,6 +651,44 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
         ASSERT_TRUE( res.has_value() );
         EXPECT_TRUE( res->empty() );
     }
+
+    // two side vertices P, Q at one position, each with a slit inside, P's one back along the side; the vertex ids tell them apart
+    // in the first run, which on some sides and in some id orders makes a slit cross a side; then P and Q are moved apart
+    for ( int k = 0; k < 6; ++k )
+    {
+        Mesh m = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 1000, 0, 0 ), Vector3f( 0, 1000, 0 ) }, { { 0_v, 1_v, 2_v } } );
+        m.topology.setLeft( m.topology.edgeWithLeft( 0_f ), {} );
+        const auto side = m.topology.findEdge( VertId( k / 2 ), VertId( ( k / 2 + 1 ) % 3 ) );
+        const auto u = ( m.destPnt( side ) - m.orgPnt( side ) ).normalized(), pos = m.orgPnt( side ) + u * 300.f, in = Vector3f( -u.y, u.x, 0 );
+        EdgeId fromP, pq, qTo; // for odd k, Q is made first
+        if ( k % 2 == 0 )
+        {
+            fromP = m.splitEdge( side, pos );
+            pq = m.splitEdge( side, pos );
+            qTo = side;
+        }
+        else
+        {
+            qTo = m.splitEdge( side.sym(), pos ).sym();
+            pq = m.splitEdge( side.sym(), pos ).sym();
+            fromP = side;
+        }
+        for ( auto [e, d] : { std::pair{ pq, in * 100.f - u * 50.f }, std::pair{ qTo, in * 100.f + u * 50.f } } )
+        {
+            const auto s = m.topology.makeEdge();
+            m.topology.splice( e, s );
+            m.topology.setOrg( s.sym(), m.addPoint( pos + d ) );
+        }
+        EdgeLoop loop;
+        for ( auto e : leftRing( m.topology, fromP ) )
+            loop.push_back( e );
+        ASSERT_EQ( loop.size(), size_t( 9 ) );
+        auto isSideM = [] ( UndirectedEdgeId ue ) { return ue < 5_ue; }; // the sides and the splits of a side
+        EXPECT_TRUE( PlanarTriangulation::getMonotonePlan( m, { loop }, normal, isSideM ) );
+        res = PlanarTriangulation::findCrossings( m, { loop }, normal, isSideM );
+        ASSERT_TRUE( res.has_value() );
+        EXPECT_TRUE( res->empty() );
+    }
 }
 
 namespace

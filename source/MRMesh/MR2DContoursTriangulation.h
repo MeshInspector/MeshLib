@@ -188,8 +188,7 @@ MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const M
 /// same as above on the predicates of \ref getMonotonePlan( mesh, loops, normal ), as where no exact definitions are given
 /// \param isSide whether an edge of the loops goes along a side of the triangle; the rounding of the points can make another edge cross it,
 ///        and then the crossings are found again with the sides scaled up as in \ref getMonotonePlan( mesh, loops, normal, isSide )
-/// \return std::nullopt if two edges of the loops join the same two vertices, or if an edge still crosses a side then, which only
-///         two vertices on the sides at one position can cause
+/// \return std::nullopt if two edges of the loops join the same two vertices
 MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
     const std::function<bool( UndirectedEdgeId )>& isSide );
 

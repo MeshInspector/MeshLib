@@ -158,7 +158,8 @@ static Vector2i projectionAxes( const Vector3f& normal )
 // `mesh`, `loops` and `patchToInEdges` only need to outlive the run; the map may be filled after construction.
 // The edges of the loops that `scaledSides` tells are the sides of a cut triangle, scaled up around the centroid of their perimeter:
 // a fallback for when the rounding of the points made another edge cross a side; by cSideScale, and more if needed to move every side
-// by a few float errors of the coordinates (up to twice where the centroid is that close to a side, in degenerate loops).
+// by a few float errors of the coordinates (up to twice where the centroid is that close to a side, in degenerate loops); two side vertices
+// still at one position are then moved apart across their line from the centroid, so that their triangle with it is oriented as the sides.
 constexpr double cSideScale = 1.0001;
 static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, const WholeEdgeMap& patchToInEdges,
     Vector<Vector2i, VertId>* pts2, // storage for the dominant-axis projection that drives every predicate
@@ -175,12 +176,13 @@ static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoop
     }
 
     const auto axes = projectionAxes( normal );
+    const auto to2 = [axes] ( const Vector3d& q ) { return Vector2d( q[axes.x], q[axes.y] ); };
+    std::vector<EdgeId> sides;
     Vector<VertId> sideVerts; // sorted
+    std::vector<Vector3d> sidePts; // the moved points of sideVerts
     Vector3d centre;
-    double scale = 1;
     if ( scaledSides )
     {
-        std::vector<EdgeId> sides;
         for ( const auto& loop : loops )
             for ( auto e : loop )
                 if ( ( *scaledSides )( e.undirected() ) )
@@ -197,7 +199,6 @@ static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoop
         std::sort( sideVerts.begin(), sideVerts.end() );
         sideVerts.erase( std::unique( sideVerts.begin(), sideVerts.end() ), sideVerts.end() );
         centre = len > 0 ? centre / len : box.center();
-        const auto to2 = [axes] ( const Vector3d& q ) { return Vector2d( q[axes.x], q[axes.y] ); };
         double hMin = std::numeric_limits<double>::max(); // the least distance from the centroid to the line of a side in the projection
         for ( auto e : sides )
         {
@@ -206,25 +207,49 @@ static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoop
                 hMin = std::min( hMin, std::abs( cross( s, to2( centre ) - o ) ) / l );
         }
         const double minMove = 4 * std::numeric_limits<float>::epsilon() * std::max( box.min.length(), box.max.length() );
-        scale = std::max( cSideScale, 1 + minMove / std::max( hMin, minMove ) );
+        const double scale = std::max( cSideScale, 1 + minMove / std::max( hMin, minMove ) );
         for ( auto v : sideVerts )
-            box.include( centre + ( Vector3d( mesh.points[v] ) - centre ) * scale );
+            box.include( sidePts.emplace_back( centre + ( Vector3d( mesh.points[v] ) - centre ) * scale ) );
     }
 
     pts2->clear();
     pts2->reserve( pointsSize );
-    auto toInt = getToIntConverter( box ); // Vector3d -> Vector3i
+    const auto toInt = getToIntConverter( box ); // Vector3d -> Vector3i
+    const auto to2i = [toInt, axes] ( const Vector3d& q ) { const auto qi = toInt( q ); return Vector2i( qi[axes.x], qi[axes.y] ); };
+
+    // two side vertices at one position: the first one along the sides moves back across its line from the centroid by two units, the second one
+    // forward (one between two such pairs stays)
+    auto sideId = [&] ( VertId v ) { return size_t( std::lower_bound( sideVerts.begin(), sideVerts.end(), v ) - sideVerts.begin() ); };
+    std::vector<int> shifts( sideVerts.size() );
+    double orient = 0; // of the sides around the centroid
+    for ( auto e : sides )
+    {
+        const auto i = sideId( mesh.topology.org( e ) ), j = sideId( mesh.topology.dest( e ) );
+        orient += cross( to2( sidePts[i] - centre ), to2( sidePts[j] - centre ) );
+        if ( i != j && to2i( sidePts[i] ) == to2i( sidePts[j] ) )
+        {
+            --shifts[i];
+            ++shifts[j];
+        }
+    }
+    for ( size_t i = 0; i < sidePts.size(); ++i )
+    {
+        const auto r = to2( sidePts[i] - centre );
+        if ( const double l = r.length(); shifts[i] && l > 0 )
+        {
+            const auto t = Vector2d( -r.y, r.x ) * ( ( orient < 0 ? -2 : 2 ) * shifts[i] / ( l * toInt.invRange ) );
+            sidePts[i][axes.x] += t.x;
+            sidePts[i][axes.y] += t.y;
+        }
+    }
 
     SweepLinePredicates p;
     setPts2Predicates( p, pts2 );
-    p.addInputPoint = [&mesh, &loops, pts2, toInt, axes, sideVerts = std::move( sideVerts ), centre, scale] ( VertId v, int contourId, int pointId )
+    p.addInputPoint = [&mesh, &loops, pts2, to2i, sideVerts = std::move( sideVerts ), sidePts = std::move( sidePts )] ( VertId v, int contourId, int pointId )
     {
         const VertId mv = mesh.topology.org( loops[contourId][pointId] );
-        Vector3d q( mesh.points[mv] );
-        if ( std::binary_search( sideVerts.begin(), sideVerts.end(), mv ) )
-            q = centre + ( q - centre ) * scale;
-        const Vector3i qi = toInt( q );
-        pts2->autoResizeSet( v, Vector2i( qi[axes.x], qi[axes.y] ) );
+        const auto it = std::lower_bound( sideVerts.begin(), sideVerts.end(), mv );
+        pts2->autoResizeSet( v, to2i( it != sideVerts.end() && *it == mv ? sidePts[it - sideVerts.begin()] : Vector3d( mesh.points[mv] ) ) );
     };
     p.addIntersectionPoint = [pts2] ( VertId v, VertId a, VertId b, VertId c, VertId d )
     {

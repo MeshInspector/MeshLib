@@ -739,6 +739,34 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
             EXPECT_TRUE( res && res->empty() );
         }
     }
+
+    // corners on one line far apart, and a thin triangle lower than minMove (about 1/2097 here): the corner opposite the longest side is moved
+    // across it to the height minMove before the sides are scaled; the cut path goes from corner 0 to N two float steps (at 1000) below or above
+    // side 0, so away from the moved corner in some loop directions, and on to M
+    for ( const auto& [pts, mp] : {
+        std::pair{ Triangle3f{ Vector3f( 0, 0, 0 ), Vector3f( 1000, 0, 0 ), Vector3f( 400, 0, 0 ) }, Vector3f( 600, 0, 0 ) },
+        std::pair{ Triangle3f{ Vector3f( 0, 0, 0 ), Vector3f( 1000, 0, 0 ), Vector3f( 400, 1.f / 65536, 0 ) }, Vector3f( 600, 1.f / 262144, 0 ) } } )
+    {
+        for ( float ny : { -1.f / 8192, 1.f / 8192 } )
+        {
+            for ( bool reversed : { false, true } )
+            {
+                SCOPED_TRACE( testing::Message() << "corner 2 at height " << pts[2].y << ", N at " << ny << ( reversed ? ", reversed" : "" ) );
+                Mesh m = Mesh::fromTriangles( { pts[0], pts[1], pts[2] }, { { 0_v, 1_v, 2_v } } );
+                m.topology.setLeft( m.topology.edgeWithLeft( 0_f ), {} );
+                auto loop = pathHole( m, Vector3f( 300, ny, 0 ), mp ).first;
+                if ( reversed )
+                {
+                    std::reverse( loop.begin(), loop.end() );
+                    for ( auto& le : loop )
+                        le = le.sym();
+                }
+                EXPECT_TRUE( PlanarTriangulation::getMonotonePlan( m, { loop }, normal, sideOf ) );
+                res = PlanarTriangulation::findCrossings( m, { loop }, normal, sideOf );
+                EXPECT_TRUE( res && res->empty() );
+            }
+        }
+    }
 }
 
 namespace

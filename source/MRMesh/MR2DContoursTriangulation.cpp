@@ -162,10 +162,12 @@ constexpr double cSideScale = 1.0001;
 
 // the side vertices of a cut triangle moved for meshSpacePredicates, `sideVerts` sorted and `sidePts` their points, both empty if the side edges
 // (those with valid sideOf) are not one cycle with three corners, where sideOf changes. Corners closer than minMove in the projection are placed
-// apart first: two at minMove from their midpoint across its line from the third one, three at minMove from their centroid; their triangle,
-// oriented as the sides, is then scaled about the centroid of its perimeter by cSideScale, and more if needed to move every side by minMove
-// (up to twice in thin triangles). Every other side vertex goes to the same place on its new side, and runs of them closer than minMove along
-// it (or out of order) are spread evenly between the nearest other vertices on that side.
+// apart first: two at minMove from their midpoint across its line from the third one, three at minMove from their centroid; else the corner
+// opposite the longest side, if it is closer than minMove to its line (as on it, where the corners are on one line), goes across the line to
+// the height minMove over it. Their triangle, oriented as the sides, is then scaled about the centroid of its perimeter by cSideScale, and more
+// if needed to move every side by minMove (less than 10 times, since every height of the triangle is now above minMove / 2). Every other side
+// vertex goes to the same place on its new side, and runs of them closer than minMove along it (or out of order) are spread evenly between
+// the nearest other vertices on that side.
 static void moveSideVerts( const Mesh& mesh, const EdgeLoops& loops, const std::function<UndirectedEdgeId( UndirectedEdgeId )>& sideOf,
     const Vector2i& axes, double minMove, Vector<VertId>& sideVerts, Vector<Vector3d>& sidePts )
 {
@@ -230,6 +232,17 @@ static void moveSideVerts( const Mesh& mesh, const EdgeLoops& loops, const std::
         const auto g = ( x[0] + x[1] + x[2] ) / 3.0;
         y = { g + Vector2d( minMove, 0 ), g + Vector2d( 0, sign * minMove ), g - Vector2d( 0, sign * minMove ) };
     }
+    else
+    {
+        int j = 0; // the longest side, from corner j, over which the opposite corner goes to the height minMove oriented as the sides
+        for ( int i = 1; i < 3; ++i )
+            if ( ( x[( i + 1 ) % 3] - x[i] ).lengthSq() > ( x[( j + 1 ) % 3] - x[j] ).lengthSq() )
+                j = i;
+        const auto d = x[( j + 1 ) % 3] - x[j];
+        const double l = d.length(), height = cross( d, x[( j + 2 ) % 3] - x[j] ) / l;
+        if ( std::abs( height ) < minMove )
+            y[( j + 2 ) % 3] += Vector2d( -d.y, d.x ) * ( ( sign * minMove - height ) / l );
+    }
     // area / perimeter is a lower bound of the distance from the centroid of the perimeter to every side
     Vector2d centre;
     double per = 0;
@@ -241,7 +254,7 @@ static void moveSideVerts( const Mesh& mesh, const EdgeLoops& loops, const std::
     }
     centre = per > 0 ? centre / per : y[0];
     const double h = per > 0 ? std::abs( cross( y[1] - y[0], y[2] - y[0] ) ) / ( 2 * per ) : 0;
-    const double scale = std::max( cSideScale, 1 + minMove / std::max( h, minMove ) );
+    const double scale = std::max( cSideScale, 1 + minMove / h );
     for ( auto& q : y )
         q = centre + ( q - centre ) * scale;
 

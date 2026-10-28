@@ -159,9 +159,9 @@ MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const 
 /// same as above for the loops of one triangle of a mesh, all of them (the whole perimeter of the triangle is on the loops)
 /// \param sideOf for an edge of the loops, the side of the triangle it goes along (in cutMesh, the edge it was split from), or an invalid id
 ///        for an edge inside the triangle; the rounding of the points can make another edge cross a side, so if the plan fails, it is found
-///        again with the sides moved out: the corners apart if they are closer than a few float errors of the coordinates, their triangle
-///        scaled up enough to move every side by that much, and the other side vertices on the new sides, spread evenly where they are that
-///        close along a side or out of order
+///        again with the sides moved out: the corners apart if they are closer than a few float errors of the coordinates, the one opposite
+///        the longest side away from it if it is closer to its line than that, their triangle scaled up enough to move every side by that
+///        much, and the other side vertices on the new sides, spread evenly where they are that close along a side or out of order
 MR_BIND_IGNORE MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
     const std::function<UndirectedEdgeId( UndirectedEdgeId )>& sideOf );
 

@@ -162,6 +162,8 @@ static Vector2i projectionAxes( const Vector3f& normal )
 static void moveSideVerts( const Mesh& mesh, const EdgeLoops& loops, const std::function<UndirectedEdgeId( UndirectedEdgeId )>& sideOf,
     const Vector2i& axes, double minMove, Vector<VertId>& sideVerts, Vector<Vector3d>& sidePts )
 {
+    if ( minMove == 0 )
+        minMove = 1e-3; // all points are at the origin, where zero would make the corners NaN
     const auto& tp = mesh.topology;
     Vector<EdgeId> sides; // sorted by their origins
     for ( const auto& loop : loops )

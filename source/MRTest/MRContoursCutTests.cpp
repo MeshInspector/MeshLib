@@ -707,6 +707,25 @@ TEST( MRMesh, CutMeshLoneContourInZeroAreaFace )
     }
 }
 
+// a lone contour in a triangle with its corners and all the points of the contour at the origin, where a few float errors of the coordinates
+// are zero: the sides are moved out by a fixed distance instead (zero made the corners NaN, and the face bad), and the island is connected
+TEST( MRMesh, CutMeshLoneContourAtOrigin )
+{
+    const auto mesh = Mesh::fromTriangles( { Vector3f(), Vector3f(), Vector3f() }, { { 0_v, 1_v, 2_v } } );
+    OneMeshContour island{ .closed = true };
+    for ( int i = 0; i < 4; ++i )
+        island.intersections.push_back( { .primitiveId = 0_f, .coordinate = Vector3f() } );
+    for ( bool forceFill : { false, true } )
+    {
+        Mesh cut = mesh;
+        const auto res = cutMesh( cut, { island }, { .forceFill = forceFill } );
+        EXPECT_TRUE( cut.topology.checkValidity() );
+        EXPECT_TRUE( res.fbsWithContourIntersections.none() );
+        EXPECT_EQ( cut.topology.findNumHoles(), 1 ); // the border of the mesh
+        EXPECT_EQ( MeshComponents::getNumComponents( cut ), 1 );
+    }
+}
+
 // a lone contour in a thin triangle (lower than a few float errors of its coordinates) with a point just outside its long side, as if rounded there,
 // alone and with a contour cutting off the corner at 1_v: the plan fails on the points as they are, and is found again with the corner opposite
 // the long side moved away from it and the sides moved out, the side vertices on them

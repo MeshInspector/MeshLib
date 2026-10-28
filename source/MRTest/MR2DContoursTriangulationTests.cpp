@@ -592,7 +592,7 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
 
     // the same crossings on the float predicates
     const Vector3f normal( 0, 0, 1 );
-    auto isSide = [&] ( UndirectedEdgeId ue ) { return ue < cutEdges[0]; }; // the sides were made first
+    auto isSide = [] ( UndirectedEdgeId ue ) { return ue < 3_ue; }; // the sides of every triangle here are made first
     res = PlanarTriangulation::findCrossings( mesh, { outerLoop, a, b, c }, normal, isSide );
     ASSERT_TRUE( res.has_value() );
     EXPECT_EQ( *res, *PlanarTriangulation::findCrossings( mesh, { outerLoop, a, b, c }, tri, pointOf, cutOf ) );
@@ -623,7 +623,7 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
             loop.push_back( e );
         return std::pair{ loop, nm };
     };
-    // crossed by a slit: the sweep runs again with N moved inside, where N->M passes from the right of the slit to its left
+    // crossed by a slit: the sweep runs again with the sides moved out past N, where N->M passes from the right of the slit to its left
     const auto [pathLoop, nm] = pathHole( mesh, { 300, -0.01f, 0 }, { 400, 300, 0 } );
     ASSERT_EQ( pathLoop.size(), size_t( 7 ) );
     const auto slit = addSlit( { 300, 200, 0 }, { 450, 100, 0 } );
@@ -635,15 +635,22 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
     EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( mesh, { pathLoop }, normal ) );
     EXPECT_TRUE( PlanarTriangulation::getMonotonePlan( mesh, { pathLoop }, normal, isSide ) );
 
-    // a tiny triangle far from the origin, where the scale moves N by less than its distance to the side, while the least move is enough
-    Mesh tiny = Mesh::fromTriangles( { Vector3f( 1e4f, 1e4f, 0 ), Vector3f( 1e4f + 1, 1e4f, 0 ), Vector3f( 1e4f, 1e4f + 1, 0 ) }, { { 0_v, 1_v, 2_v } } );
-    tiny.topology.setLeft( tiny.topology.edgeWithLeft( 0_f ), {} );
-    const auto tinyLoop = pathHole( tiny, { 1e4f + 0.3f, 1e4f - 1.f / 1024, 0 }, { 1e4f + 0.4f, 1e4f + 0.3f, 0 } ).first;
-    EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( tiny, { tinyLoop }, normal ) );
-    EXPECT_TRUE( PlanarTriangulation::getMonotonePlan( tiny, { tinyLoop }, normal, isSide ) );
-    res = PlanarTriangulation::findCrossings( tiny, { tinyLoop }, normal, isSide );
-    ASSERT_TRUE( res.has_value() );
-    EXPECT_TRUE( res->empty() );
+    // where cSideScale moves the side by less than N's distance to it, while the least move is enough: a tiny triangle far from the origin,
+    // and a sliver, whose long sides are close to the centroid
+    for ( const auto& [pts, n, mp] : {
+        std::tuple{ Triangle3f{ Vector3f( 1e4f, 1e4f, 0 ), Vector3f( 1e4f + 1, 1e4f, 0 ), Vector3f( 1e4f, 1e4f + 1, 0 ) },
+            Vector3f( 1e4f + 0.3f, 1e4f - 1.f / 1024, 0 ), Vector3f( 1e4f + 0.4f, 1e4f + 0.3f, 0 ) },
+        std::tuple{ Triangle3f{ Vector3f( 0, 0, 0 ), Vector3f( 1000, 0, 0 ), Vector3f( 500, 1, 0 ) }, Vector3f( 300, -1e-4f, 0 ), Vector3f( 400, 0.4f, 0 ) } } )
+    {
+        Mesh m = Mesh::fromTriangles( { pts[0], pts[1], pts[2] }, { { 0_v, 1_v, 2_v } } );
+        m.topology.setLeft( m.topology.edgeWithLeft( 0_f ), {} );
+        const auto loop = pathHole( m, n, mp ).first;
+        EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( m, { loop }, normal ) );
+        EXPECT_TRUE( PlanarTriangulation::getMonotonePlan( m, { loop }, normal, isSide ) );
+        res = PlanarTriangulation::findCrossings( m, { loop }, normal, isSide );
+        ASSERT_TRUE( res.has_value() );
+        EXPECT_TRUE( res->empty() );
+    }
 }
 
 namespace

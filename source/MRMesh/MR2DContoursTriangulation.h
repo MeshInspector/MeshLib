@@ -153,12 +153,15 @@ MR_BIND_IGNORE MRMESH_API MeshTopology* triangulateDisjointContoursTopology( con
  *         the caller can fall back on filling every loop separately; otherwise a plan with numTris == 0
  *         for \ref executeHoleFillPlan, which then only adds edges (empty if already monotone, a no-op).
  *         Validate it with \ref isFillingMultipleEdgeFree: a chord may duplicate an off-loop mesh edge
- * @param isSide optional, for the loops of one triangle of a mesh: whether an edge of the loops goes along a side of the triangle;
- *        the rounding of the points can make another edge cross it, so if the plan fails, it is found again with the sides scaled up
- *        a little around the centroid of their perimeter
  */
-MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
-    const std::function<bool( UndirectedEdgeId )>& isSide = {} );
+MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal );
+
+/// same as above for the loops of one triangle of a mesh
+/// \param isSide whether an edge of the loops goes along a side of the triangle; the rounding of the points can make another edge cross it,
+///        so if the plan fails, it is found again with the sides scaled up around the centroid of their perimeter, enough to move them
+///        by more than that rounding
+MR_BIND_IGNORE MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
+    const std::function<bool( UndirectedEdgeId )>& isSide );
 
 /// same as above for the region of one triangle of a mesh cut by the boolean (the loops of all the holes of the triangle),
 /// on the exact predicates of \ref CutTrianglePredicates, which never contradict the boolean's ones, so the loops are disjoint
@@ -185,7 +188,8 @@ MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const M
 /// same as above on the predicates of \ref getMonotonePlan( mesh, loops, normal ), as where no exact definitions are given
 /// \param isSide whether an edge of the loops goes along a side of the triangle; the rounding of the points can make another edge cross it,
 ///        and then the crossings are found again with the sides scaled up as in \ref getMonotonePlan( mesh, loops, normal, isSide )
-/// \return std::nullopt if an edge still crosses a side then, or if two edges of the loops join the same two vertices
+/// \return std::nullopt if two edges of the loops join the same two vertices, or if an edge still crosses a side then, which only
+///         two vertices on the sides at one position can cause
 MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
     const std::function<bool( UndirectedEdgeId )>& isSide );
 

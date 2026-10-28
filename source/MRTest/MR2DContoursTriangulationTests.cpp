@@ -597,7 +597,7 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
     ASSERT_TRUE( res.has_value() );
     EXPECT_EQ( *res, *PlanarTriangulation::findCrossings( mesh, { outerLoop, a, b, c }, tri, pointOf, cutOf ) );
 
-    // a slit just across the long side crosses no side once the sides are scaled up, while one far across it still does
+    // a slit just across the long side (as if rounded there) crosses no side once the sides are scaled up
     auto addSlit = [&] ( const Vector3f& p, const Vector3f& q )
     {
         const auto e = mesh.topology.makeEdge();
@@ -608,23 +608,42 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
     res = PlanarTriangulation::findCrossings( mesh, { outerLoop, addSlit( { 400, 400, 0 }, { 500.01f, 500.01f, 0 } ) }, normal, isSide );
     ASSERT_TRUE( res.has_value() );
     EXPECT_TRUE( res->empty() );
-    EXPECT_FALSE( PlanarTriangulation::findCrossings( mesh, { outerLoop, addSlit( { 400, 400, 0 }, { 510, 510, 0 } ) }, normal, isSide ) );
 
-    // a cut path from corner 0 to N just outside the side to corner 1 (as if rounded there), then inside to M, crossed by a slit:
-    // the sweep runs again with N moved inside, where N->M passes from the right of the slit to its left
-    const auto sn = mesh.topology.makeEdge(), nm = mesh.topology.makeEdge();
-    mesh.topology.splice( mesh.topology.findEdge( 0_v, 1_v ), sn );
-    mesh.topology.setOrg( sn.sym(), mesh.addPoint( { 300, -0.01f, 0 } ) );
-    mesh.topology.splice( sn.sym(), nm );
-    mesh.topology.setOrg( nm.sym(), mesh.addPoint( { 400, 300, 0 } ) );
-    EdgeLoop pathLoop;
-    for ( auto e : leftRing( mesh.topology, outer ) )
-        pathLoop.push_back( e );
+    // the hole of the triangle 0_v, 1_v, 2_v of m with a cut path from corner 0 to N just outside the side to corner 1 (as if rounded there),
+    // then inside to M; returns the loop of the hole and the edge from N to M
+    auto pathHole = [] ( Mesh& m, const Vector3f& n, const Vector3f& mp )
+    {
+        const auto side = m.topology.findEdge( 0_v, 1_v ), sn = m.topology.makeEdge(), nm = m.topology.makeEdge();
+        m.topology.splice( side, sn );
+        m.topology.setOrg( sn.sym(), m.addPoint( n ) );
+        m.topology.splice( sn.sym(), nm );
+        m.topology.setOrg( nm.sym(), m.addPoint( mp ) );
+        EdgeLoop loop;
+        for ( auto e : leftRing( m.topology, side ) )
+            loop.push_back( e );
+        return std::pair{ loop, nm };
+    };
+    // crossed by a slit: the sweep runs again with N moved inside, where N->M passes from the right of the slit to its left
+    const auto [pathLoop, nm] = pathHole( mesh, { 300, -0.01f, 0 }, { 400, 300, 0 } );
     ASSERT_EQ( pathLoop.size(), size_t( 7 ) );
     const auto slit = addSlit( { 300, 200, 0 }, { 450, 100, 0 } );
     res = PlanarTriangulation::findCrossings( mesh, { pathLoop, slit }, normal, isSide );
     ASSERT_TRUE( res.has_value() );
     EXPECT_EQ( *res, Vector<EdgePair>( { { nm, slit[0] } } ) );
+
+    // the monotone plan of the hole with the path has the same fallback
+    EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( mesh, { pathLoop }, normal ) );
+    EXPECT_TRUE( PlanarTriangulation::getMonotonePlan( mesh, { pathLoop }, normal, isSide ) );
+
+    // a tiny triangle far from the origin, where the scale moves N by less than its distance to the side, while the least move is enough
+    Mesh tiny = Mesh::fromTriangles( { Vector3f( 1e4f, 1e4f, 0 ), Vector3f( 1e4f + 1, 1e4f, 0 ), Vector3f( 1e4f, 1e4f + 1, 0 ) }, { { 0_v, 1_v, 2_v } } );
+    tiny.topology.setLeft( tiny.topology.edgeWithLeft( 0_f ), {} );
+    const auto tinyLoop = pathHole( tiny, { 1e4f + 0.3f, 1e4f - 1.f / 1024, 0 }, { 1e4f + 0.4f, 1e4f + 0.3f, 0 } ).first;
+    EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( tiny, { tinyLoop }, normal ) );
+    EXPECT_TRUE( PlanarTriangulation::getMonotonePlan( tiny, { tinyLoop }, normal, isSide ) );
+    res = PlanarTriangulation::findCrossings( tiny, { tinyLoop }, normal, isSide );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_TRUE( res->empty() );
 }
 
 namespace

@@ -156,8 +156,14 @@ static Vector2i projectionAxes( const Vector3f& normal )
 // predicates via setPts2Predicates). point() restores each output vertex's exact original mesh position
 // through `patchToInEdges`, the patch->input edge map (no separate coordinate copy, no projection round-trip).
 // `mesh`, `loops` and `patchToInEdges` only need to outlive the run; the map may be filled after construction.
+// The edges of the loops that `scaledSides` tells are the sides of a cut triangle, scaled up by cSideScale around the centroid of their
+// perimeter: a fallback for when the rounding of the points made another edge cross a side; in fact the points of all other vertices are moved
+// toward that centroid as they are added (the sweep orders them and the rings of its vertices from its start), which keeps them in range,
+// and by at least a few float errors of the coordinates.
+constexpr double cSideScale = 1.0001;
 static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, const WholeEdgeMap& patchToInEdges,
-    Vector<Vector2i, VertId>* pts2 ) // storage for the dominant-axis projection that drives every predicate
+    Vector<Vector2i, VertId>* pts2, // storage for the dominant-axis projection that drives every predicate
+    const std::function<bool( UndirectedEdgeId )>* scaledSides = nullptr )
 {
     Box3f box;
     int pointsSize = 0;
@@ -181,6 +187,45 @@ static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoop
         const Vector3i q = toInt( mesh.orgPnt( loops[contourId][pointId] ) );
         pts2->autoResizeSet( v, Vector2i( q[axes.x], q[axes.y] ) );
     };
+    if ( scaledSides )
+    {
+        Vector<VertId> sideVerts; // sorted
+        Vector3d sum; // of the midpoints of the sides weighted by their lengths
+        double len = 0;
+        for ( const auto& loop : loops )
+        {
+            for ( auto e : loop )
+            {
+                if ( !( *scaledSides )( e.undirected() ) )
+                    continue;
+                const Vector3d o( mesh.orgPnt( e ) ), d( mesh.destPnt( e ) );
+                const double l = ( d - o ).length();
+                sum += ( o + d ) * ( l / 2 );
+                len += l;
+                sideVerts.insert( sideVerts.end(), { mesh.topology.org( e ), mesh.topology.dest( e ) } );
+            }
+        }
+        std::sort( sideVerts.begin(), sideVerts.end() );
+        sideVerts.erase( std::unique( sideVerts.begin(), sideVerts.end() ), sideVerts.end() );
+        const auto c = toInt( len > 0 ? sum / len : Vector3d( box.center() ) );
+        // every point moves by at least a few float errors of the coordinates and one unit, also where the scale moves it by nothing
+        // (near the centroid, or in degenerate loops), but not past the centroid
+        const double minMove = std::max( 1.0,
+            toInt.invRange * 4 * std::numeric_limits<float>::epsilon() * std::max( box.min.length(), box.max.length() ) );
+        p.addInputPoint = [&mesh, &loops, pts2, add = std::move( p.addInputPoint ), sideVerts = std::move( sideVerts ),
+            centre = Vector2d( c[axes.x], c[axes.y] ), minMove] ( VertId v, int contourId, int pointId )
+        {
+            add( v, contourId, pointId );
+            if ( std::binary_search( sideVerts.begin(), sideVerts.end(), mesh.topology.org( loops[contourId][pointId] ) ) )
+                return;
+            const Vector2d q( ( *pts2 )[v] ), d = centre - q;
+            if ( const double dist = d.length(); dist > 0 )
+            {
+                const auto r = q + d * std::min( 1.0, std::max( 1 - 1 / cSideScale, minMove / dist ) );
+                ( *pts2 )[v] = { roundToInt( r.x ), roundToInt( r.y ) };
+            }
+        };
+    }
     p.addIntersectionPoint = [pts2] ( VertId v, VertId a, VertId b, VertId c, VertId d )
     {
         pts2->autoResizeSet( v, findSegmentSegmentIntersectionPrecise(
@@ -1926,12 +1971,21 @@ static std::optional<HoleFillPlan> getMonotonePlanImpl( const Mesh& mesh, const 
     return res;
 }
 
-std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal )
+std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
+    const std::function<bool( UndirectedEdgeId )>& isSide )
 {
-    return getMonotonePlanImpl( mesh, loops, [&] ( const WholeEdgeMap& patchToInEdges, SweepLineQueue::Cache& cache )
+    auto plan = [&] ( const std::function<bool( UndirectedEdgeId )>* scaledSides )
     {
-        return meshSpacePredicates( mesh, loops, normal, patchToInEdges, &cache.pts2Buffer );
-    } );
+        return getMonotonePlanImpl( mesh, loops, [&] ( const WholeEdgeMap& patchToInEdges, SweepLineQueue::Cache& cache )
+        {
+            return meshSpacePredicates( mesh, loops, normal, patchToInEdges, &cache.pts2Buffer, scaledSides );
+        } );
+    };
+    // the rounding of the points can make an edge cross a side; then the sides are scaled up (see meshSpacePredicates)
+    auto res = plan( nullptr );
+    if ( !res && isSide )
+        res = plan( &isSide );
+    return res;
 }
 
 // the exact predicates on the vertices of the loops of one cut triangle, for a sweep over them
@@ -2056,61 +2110,28 @@ std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops
 std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
     const std::function<bool( UndirectedEdgeId )>& isSide )
 {
-    // the rounding of the points can make an edge cross a side; then the sweep runs again with the sides scaled up by cSideScale around
-    // the centroid of their perimeter, that is with the points of all other vertices moved toward it, which keeps them in the range of the predicates
-    constexpr double cSideScale = 1.0001;
-    Vector<VertId> sideVerts; // sorted, set for the second run
-    Vector2d centre; // in the coordinates of the predicates
     bool alongSide = false; // an edge along a side crosses another one
-    auto run = [&]
+    auto run = [&] ( const std::function<bool( UndirectedEdgeId )>* scaledSides )
     {
+        alongSide = false;
         return findCrossingsImpl( mesh, loops, [&] ( const WholeEdgeMap& patchToInEdges, SweepLineQueue::Cache& cache, auto meshEdge )
         {
-            auto p = meshSpacePredicates( mesh, loops, normal, patchToInEdges, &cache.pts2Buffer );
+            auto p = meshSpacePredicates( mesh, loops, normal, patchToInEdges, &cache.pts2Buffer, scaledSides );
             p.addIntersectionPoint = [&, meshEdge, add = std::move( p.addIntersectionPoint )] ( VertId v, VertId a, VertId b, VertId c, VertId d )
             {
                 alongSide = alongSide || isSide( meshEdge( a, b ).undirected() ) || isSide( meshEdge( c, d ).undirected() );
                 add( v, a, b, c, d );
             };
-            // the points are moved as they are added, since the sweep orders them and the rings of its vertices from its start
-            if ( !sideVerts.empty() )
-                p.addInputPoint = [&, add = std::move( p.addInputPoint )] ( VertId v, int c, int i )
-                {
-                    add( v, c, i );
-                    if ( std::binary_search( sideVerts.begin(), sideVerts.end(), mesh.topology.org( loops[c][i] ) ) )
-                        return;
-                    const auto q = centre + ( Vector2d( cache.pts2Buffer[v] ) - centre ) / cSideScale;
-                    cache.pts2Buffer[v] = { roundToInt( q.x ), roundToInt( q.y ) };
-                };
             p.failed = [&] { return alongSide; };
             return p;
         } );
     };
-    if ( auto res = run(); res || !alongSide )
+    // the rounding of the points can make an edge cross a side; then the sides are scaled up (see meshSpacePredicates)
+    if ( auto res = run( nullptr ); res || !alongSide )
         return res;
-
-    Box3f box; // of all points, as in meshSpacePredicates
-    Vector3d sum; // of the midpoints of the sides weighted by their lengths
-    double len = 0;
-    for ( const auto& loop : loops )
-        for ( auto e : loop )
-        {
-            box.include( mesh.orgPnt( e ) );
-            if ( !isSide( e.undirected() ) )
-                continue;
-            const Vector3d o( mesh.orgPnt( e ) ), d( mesh.destPnt( e ) );
-            const double l = ( d - o ).length();
-            sum += ( o + d ) * ( l / 2 );
-            len += l;
-            sideVerts.insert( sideVerts.end(), { mesh.topology.org( e ), mesh.topology.dest( e ) } );
-        }
-    std::sort( sideVerts.begin(), sideVerts.end() );
-    sideVerts.erase( std::unique( sideVerts.begin(), sideVerts.end() ), sideVerts.end() );
-    const auto c = getToIntConverter( Box3d( box ) )( sum / len );
-    const auto axes = projectionAxes( normal );
-    centre = Vector2d( c[axes.x], c[axes.y] );
-    alongSide = false;
-    return run();
+    auto res = run( &isSide );
+    assert( !alongSide ); // the points are moved by more than their rounding
+    return res;
 }
 
 // the predicates of the sweep of hasCrossing: the float ones moved in, or calls of the exact ones

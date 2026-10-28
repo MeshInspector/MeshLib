@@ -72,6 +72,7 @@ jobs:
       - name: Install the MCP client, hand the workspace to the unprivileged user (Weston refuses root)
         run: |
           python3 -m pip install --break-system-packages --ignore-installed 'mcp==2.3.0'
+          python3 -m pip install --break-system-packages pillow
           mkdir -p /tmp/home /tmp/xdg out
           chmod 0700 /tmp/xdg
           chown -R github-user /tmp/home /tmp/xdg "${GITHUB_WORKSPACE}"
@@ -80,6 +81,8 @@ jobs:
         run: |
           ${AS_USER} weston --backend=headless --socket=wl-scale2 --width=3200 --height=2000 --scale=2 --idle-time=0 --debug --renderer=gl --log=/tmp/weston-scale2.log &
           ${AS_USER} weston --backend=headless --socket=wl-scale1 --width=1600 --height=1000 --scale=1 --idle-time=0 --debug --renderer=gl --log=/tmp/weston-scale1.log &
+          # a small 2x screen (1200x750 logical): the splash image is 1800 px wide, so the work-area clamp matters here
+          ${AS_USER} weston --backend=headless --socket=wl-scale2small --width=2400 --height=1500 --scale=2 --idle-time=0 --debug --renderer=gl --log=/tmp/weston-scale2small.log &
           sleep 3
           ls -l /tmp/xdg
           cat /tmp/weston-scale2.log
@@ -166,20 +169,22 @@ jobs:
           git checkout -- source/MRViewer/MRViewerSettingsManager.cpp
           exit $st
 
-      - name: Splash screenshots, scale 2 (compositor view during the first seconds)
+      - name: Splash screenshots on the small 2x screen (expect the splash 0.6 x 1200 = 720 screen units = 1440 px wide)
         if: always()
         env:
-          WAYLAND_DISPLAY: wl-scale2
+          WAYLAND_DISPLAY: wl-scale2small
         run: |
           cd out
           ${AS_USER} ../build/Release/bin/MeshViewer -mcpPort 7899 -console > splash-run-stdout.txt 2>&1 &
           pid=$!
-          for i in 1 2 3 4 5 6; do sleep 0.7; ${AS_USER} weston-screenshooter || true; done
-          sleep 5
+          for i in 1 2 3; do sleep 0.7; ${AS_USER} weston-screenshooter || true; done
+          sleep 6
           ${AS_USER} weston-screenshooter || true
           kill ${pid} || true
           sleep 2
           ls -l
+          grep -c 'glfw_error_callback' splash-run-stdout.txt || true
+          python3 ../scripts/devops/wayland_measure_splash.py 1500 $(ls wayland-screenshot-*.png | head -3)
 
       - name: Weston logs and viewer log files
         if: always()

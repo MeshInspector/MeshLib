@@ -26,6 +26,7 @@
     <ClCompile Include="MRShortcutManagerTests.cpp" />
     <ClCompile Include="MRRibbonIconsTests.cpp" />
     <ClCompile Include="MRBestFitTests.cpp" />
+    <ClCompile Include="MRLocalConvexityTests.cpp" />
     <ClCompile Include="MRBezierTests.cpp" />
     <ClCompile Include="MRBitSetTests.cpp" />
     <ClCompile Include="MRBoxTests.cpp" />
@@ -65,6 +66,7 @@
     <ClCompile Include="MRNaNTest.cpp" />
     <ClCompile Include="MRObjectTests.cpp" />
     <ClCompile Include="MRDracoTests.cpp" />
+    <ClCompile Include="MRLasTests.cpp" />
     <ClCompile Include="MRPdfTests.cpp" />
     <ClCompile Include="MRPointCloudVariadicOffsetTests.cpp" />
     <ClCompile Include="MRPolyline2IntersectTests.cpp" />
@@ -75,6 +77,7 @@
     <ClCompile Include="MRRoundTests.cpp" />
     <ClCompile Include="MRReducePathTests.cpp" />
     <ClCompile Include="MRSerializeTests.cpp" />
+    <ClCompile Include="MRSharpOffsetComponentsTests.cpp" />
     <ClCompile Include="MRShrinkwrapTests.cpp" />
     <ClCompile Include="MRSpdlog.cpp" />
     <ClCompile Include="MRStreamOperatorsTests.cpp" />

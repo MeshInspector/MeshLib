@@ -119,7 +119,7 @@ jobs:
           install-flags: '--write-s3'
           internal-build: ${{ inputs.internal_build }}
 
-      # A TLS handshake through vcpkg's OpenSSL, which crashed on arm64 before the triplet's /Gs (see it)
+      # A TLS handshake through vcpkg's OpenSSL, which crashed on arm64 with MSVC older than VS 18.11 (/O2 /Gs0 codegen bug)
       - name: Check TLS handshake with vcpkg's Python
         if: ${{ matrix.arch == 'arm64' }}
         run: |

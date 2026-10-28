@@ -424,19 +424,29 @@ Vector<LoneFace> findLoneFaces( const MeshTopology& topology, const OneMeshConto
     return res;
 }
 
-// the unit normal of a triangle of the mesh, or zero if its corners are on one line: the corners in doubles give a normal free of the rounding
-// of the points inside the triangle, which a sum over them would add; normalized before the conversion to float, which could flush it
-// to zero or overflow at extreme scales
-Vector3f cornersNormal( const Mesh& mesh, const ThreeVertIds& verts )
+// the unit normal of a triangle of the mesh: the corners in doubles give a normal free of the rounding of the points inside the triangle,
+// which a sum over them would add; normalized before the conversion to float, which could flush it to zero or overflow at extreme scales;
+// if the corners are on one line (and then onLine is set), the axis along which the line has the least extent, so that the projection along
+// it keeps the line long (any axis if the corners coincide)
+Vector3f cornersNormal( const Mesh& mesh, const ThreeVertIds& verts, bool* onLine = nullptr )
 {
     const auto& p = mesh.points;
-    const auto normal = dirDblArea( Triangle3d{ Vector3d( p[verts[0]] ), Vector3d( p[verts[1]] ), Vector3d( p[verts[2]] ) } );
-    return normal == Vector3d() ? Vector3f() : Vector3f( normal.normalized() );
+    const Triangle3d t{ Vector3d( p[verts[0]] ), Vector3d( p[verts[1]] ), Vector3d( p[verts[2]] ) };
+    if ( const auto normal = dirDblArea( t ); normal != Vector3d() )
+        return Vector3f( normal.normalized() );
+    if ( onLine )
+        *onLine = true;
+    Vector3d d; // the longest difference of the corners
+    for ( int k = 0; k < 3; ++k )
+        if ( ( t[( k + 1 ) % 3] - t[k] ).lengthSq() > d.lengthSq() )
+            d = t[( k + 1 ) % 3] - t[k];
+    return Vector3f( d.furthestBasisVector() );
 }
 
 // connects the islands of lone contours with the rest of the holes of their faces by the chords that split the holes in monotone parts,
-// found on the exact predicates consistent with the boolean if sortData is given; the faces where that fails are added to badFaces
-// and stay in the mesh unless another contour removed them
+// found on the exact predicates consistent with the boolean if sortData is given, otherwise on the float coordinates, and again with the sides
+// of the face moved out if the rounding made an edge cross one; the faces where that fails are added to badFaces and stay in the mesh unless
+// another contour removed them
 void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const Vector<LoneFace>& loneFaces, const PreCutResult& preRes,
     UndirectedEdgeId firstNewEdge, const SortIntersectionsData* sortData, NewEdgesMap* new2OldEdgeMap, FaceBitSet& badFaces )
 {
@@ -519,12 +529,39 @@ void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const Vec
             plans[i] = PlanarTriangulation::getMonotonePlan( mesh, loops, tri, [&] ( VertId v ) { return pointOf( lf, tri, v ); } );
             return;
         }
-        // the loops go counterclockwise around the normal of the face, of which only the dominant component and its sign matter
-        const auto normal = cornersNormal( mesh, lf.verts );
-        // corners on one line give no normal, so no plane to connect the islands in: the plan stays empty, and the face is reported
-        if ( normal == Vector3f() )
-            return;
-        plans[i] = PlanarTriangulation::getMonotonePlan( mesh, loops, normal );
+        // every edge of the loops but the new cut path edges inside the face goes along a side of it, which the walk along them from corner 0
+        // tells (none if the walk does not close, and then the fallback of the plan moves nothing)
+        auto& inside = faceEdges[i];
+        std::sort( inside.begin(), inside.end() );
+        HashMap<VertId, EdgeId> sideFrom; // the side edge from every vertex on the sides
+        for ( const auto& loop : loops )
+            for ( auto e : loop )
+                if ( e.undirected() < firstNewEdge || !std::binary_search( inside.begin(), inside.end(), e ) )
+                    sideFrom[mesh.topology.org( e )] = e;
+        HashMap<UndirectedEdgeId, UndirectedEdgeId> sides; // the side of every side edge
+        auto v = lf.verts[0];
+        for ( int k = 0; k < 3; )
+        {
+            const auto it = sideFrom.find( v );
+            if ( it == sideFrom.end() || !sides.emplace( it->second.undirected(), lf.edges[k].undirected() ).second )
+            {
+                sides.clear();
+                break;
+            }
+            v = mesh.topology.dest( it->second );
+            if ( v == lf.verts[( k + 1 ) % 3] )
+                ++k;
+        }
+        // the loops go counterclockwise around the normal of the face, of which only the dominant component and its sign matter (either way
+        // around the axis that cornersNormal gives for corners on one line, which the plan does not depend on, and where the plan is found
+        // with the sides moved out at once)
+        bool onLine = false;
+        const auto normal = cornersNormal( mesh, lf.verts, &onLine );
+        plans[i] = PlanarTriangulation::getMonotonePlan( mesh, loops, normal, [&] ( UndirectedEdgeId ue )
+        {
+            const auto it = sides.find( ue );
+            return it == sides.end() ? UndirectedEdgeId() : it->second;
+        }, onLine );
     } );
 
     for ( int i = 0; i < loneFaces.size(); ++i )
@@ -1070,8 +1107,8 @@ struct FaceCrossingsBuffers
 
 // whether two segments of one face cross: with sortData, by the exact predicates consistent with the boolean, a failure of which makes
 // the face bad too (they fail only on the points they compare, so a degenerate face may be bad with many segments for the sweep and not
-// with a few tested in pairs); without it, by the float coordinates projected along the axis most aligned with the normal of the face,
-// and a face with its corners on one line is bad
+// with a few tested in pairs); without it, by the float coordinates projected along the axis most aligned with the normal of the face
+// (see cornersNormal for a face with its corners on one line)
 bool crossesInFace( FaceCrossingsBuffers& buf, const Mesh& mesh, const OneMeshContours& contours, const PreCutResult& preRes,
     const SortIntersectionsData* sortData, std::span<const FaceSegment> segs )
 {
@@ -1116,16 +1153,13 @@ bool crossesInFace( FaceCrossingsBuffers& buf, const Mesh& mesh, const OneMeshCo
             buf.ends.size() > PlanarTriangulation::cMaxSegmentsInPairs ? buf.sweepCache() : nullptr );
     }
 
-    const auto normal = cornersNormal( mesh, verts );
-    if ( normal == Vector3f() )
-        return true; // corners on one line give no plane to find the crossings in, so the face is bad, as in connectLoneContours
     buf.xyz.resize( buf.defs.size() );
     for ( VertId p( 0 ); p < buf.xyz.size(); ++p )
     {
         const auto& s = segs[buf.defs[p] / 2];
         buf.xyz[p] = contours[s.c].intersections[s.i + buf.defs[p] % 2].coordinate;
     }
-    return PlanarTriangulation::hasCrossing( buf.ends, buf.xyz, normal, buf.sweepCache() );
+    return PlanarTriangulation::hasCrossing( buf.ends, buf.xyz, cornersNormal( mesh, verts ), buf.sweepCache() );
 }
 
 // finds the old faces of the mesh where two segments of the contours cross, right after doPreCutMesh; two segments with a common end,

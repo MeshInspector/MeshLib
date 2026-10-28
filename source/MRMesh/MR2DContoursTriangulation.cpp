@@ -2081,7 +2081,7 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
 }
 
 std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
-    const std::function<UndirectedEdgeId( UndirectedEdgeId )>& sideOf )
+    const std::function<UndirectedEdgeId( UndirectedEdgeId )>& sideOf, bool moveSidesAtOnce )
 {
     auto plan = [&] ( const std::function<UndirectedEdgeId( UndirectedEdgeId )>* movedSides )
     {
@@ -2091,7 +2091,9 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
         } );
     };
     // the rounding of the points can make an edge cross a side; then the sides are moved out (see meshSpacePredicates)
-    auto res = plan( nullptr );
+    std::optional<HoleFillPlan> res;
+    if ( !moveSidesAtOnce )
+        res = plan( nullptr );
     if ( !res && sideOf )
         res = plan( &sideOf );
     return res;

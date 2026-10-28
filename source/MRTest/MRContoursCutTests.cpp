@@ -674,15 +674,15 @@ TEST( MRMesh, CutMeshSelfCrossingLoneContour )
     }
 }
 
-// a lone contour inside a triangle of zero area (its corners on one line) has no plane to connect it with the triangle in;
-// without the exact sorting data, the cut reports the triangle as bad and keeps it; a contour through the triangle along that line
-// with four points in it, which the plain cut takes, makes it bad under force fill, with no plane to find their crossings in either
+// a lone contour inside a triangle of zero area (its corners on one line, and the contour on it too): without the exact sorting data, the cut
+// projects them along the axis across the line, where the points as they are would put the island outside the triangle, so the plan is found
+// at once with the corner opposite the longest side moved off the line and the sides moved out, and the island is connected and filled; a contour
+// through the triangle along that line with four points in it, its segments one after another, crosses nothing there under force fill either
 TEST( MRMesh, CutMeshLoneContourInZeroAreaFace )
 {
     // corner 2_v of 1_f is on its side from 1_v to 0_v
     const auto mesh = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 10, 10, 0 ), Vector3f( 4, 4, 0 ), Vector3f( 0, 10, 0 ) },
         { { 0_v, 1_v, 3_v }, { 1_v, 0_v, 2_v } } );
-    const auto e = mesh.topology.edgeWithLeft( 1_f );
     OneMeshContour island;
     for ( float t : { 1.f, 3.f, 7.f, 1.f } )
         island.intersections.push_back( { .primitiveId = 1_f, .coordinate = Vector3f( t, t, 0 ) } );
@@ -698,16 +698,36 @@ TEST( MRMesh, CutMeshLoneContourInZeroAreaFace )
         Mesh cut = mesh;
         const auto res = cutMesh( cut, { island }, { .forceFill = forceFill } );
         EXPECT_TRUE( cut.topology.checkValidity() );
-        EXPECT_TRUE( res.fbsWithContourIntersections.test( 1_f ) );
-        EXPECT_TRUE( cut.topology.hasFace( 1_f ) );
-        EXPECT_EQ( cut.topology.left( e ), 1_f );
-        // the border of the mesh, and the two sides of the island unless they are filled
-        EXPECT_EQ( cut.topology.findNumHoles(), forceFill ? 1 : 3 );
+        EXPECT_TRUE( res.fbsWithContourIntersections.none() );
+        EXPECT_EQ( cut.topology.findNumHoles(), 1 ); // the border of the mesh
+        EXPECT_EQ( MeshComponents::getNumComponents( cut ), 1 );
 
         cut = mesh;
-        const auto bad = cutMesh( cut, { through }, { .forceFill = forceFill } ).fbsWithContourIntersections;
-        EXPECT_EQ( bad.count(), forceFill ? 1 : 0 );
-        EXPECT_EQ( bad.test( 1_f ), forceFill );
+        EXPECT_TRUE( cutMesh( cut, { through }, { .forceFill = forceFill } ).fbsWithContourIntersections.none() );
+    }
+}
+
+// a lone contour in a thin triangle (lower than a few float errors of its coordinates) with a point just outside its long side, as if rounded there,
+// alone and with a contour cutting off the corner at 1_v: the plan fails on the points as they are, and is found again with the corner opposite
+// the long side moved away from it and the sides moved out, the side vertices on them
+TEST( MRMesh, CutMeshLoneContourInThinFace )
+{
+    const float h = 1.f / 65536;
+    const auto mesh = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 1000, 0, 0 ), Vector3f( 400, h, 0 ) }, { { 0_v, 1_v, 2_v } } );
+    OneMeshContour island{ .closed = true };
+    for ( const auto& p : { Vector3f( 300, -1.f / 8192, 0 ), Vector3f( 500, h / 4, 0 ), Vector3f( 700, h / 4, 0 ), Vector3f( 300, -1.f / 8192, 0 ) } )
+        island.intersections.push_back( { .primitiveId = 0_f, .coordinate = p } );
+    const OneMeshContour corner{ .intersections = { { .primitiveId = mesh.topology.findEdge( 0_v, 1_v ), .coordinate = Vector3f( 900, 0, 0 ) },
+        { .primitiveId = mesh.topology.findEdge( 2_v, 1_v ), .coordinate = Vector3f( 950, h / 12, 0 ) } } };
+    for ( const auto& contours : { OneMeshContours{ island }, OneMeshContours{ island, corner } } )
+    {
+        SCOPED_TRACE( testing::Message() << contours.size() << " contours" );
+        Mesh cut = mesh;
+        const auto res = cutMesh( cut, contours );
+        EXPECT_TRUE( cut.topology.checkValidity() );
+        EXPECT_TRUE( res.fbsWithContourIntersections.none() );
+        EXPECT_EQ( cut.topology.findNumHoles(), 1 ); // the border of the mesh
+        EXPECT_EQ( MeshComponents::getNumComponents( cut ), 1 );
     }
 }
 

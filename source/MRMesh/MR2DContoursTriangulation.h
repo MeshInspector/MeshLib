@@ -162,8 +162,10 @@ MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const 
 ///        again with the sides moved out: the corners apart if they are closer than a few float errors of the coordinates, the one opposite
 ///        the longest side away from it if it is closer to its line than that, their triangle scaled up enough to move every side by that
 ///        much, and the other side vertices on the new sides, spread evenly where they are that close along a side or out of order
+/// \param moveSidesAtOnce find the plan only with the sides moved out, as where the corners are on one line: there the points as they are
+///        leave the plan to the simulation of simplicity, which can put an island outside the triangle
 MR_BIND_IGNORE MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
-    const std::function<UndirectedEdgeId( UndirectedEdgeId )>& sideOf );
+    const std::function<UndirectedEdgeId( UndirectedEdgeId )>& sideOf, bool moveSidesAtOnce = false );
 
 /// same as above for the region of one triangle of a mesh cut by the boolean (the loops of all the holes of the triangle),
 /// on the exact predicates of \ref CutTrianglePredicates, which never contradict the boolean's ones, so the loops are disjoint

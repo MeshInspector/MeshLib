@@ -85,9 +85,11 @@ static void deleteSmallCollidingComponents( Mesh& mesh, int maxFaces, Undirected
     for ( auto f : mesh.topology.getValidFaces() )
         ++regionFaces[face2region[f]];
     FaceBitSet smallFaces( mesh.topology.faceSize() );
-    for ( auto f : mesh.topology.getValidFaces() )
+    BitSetParallelFor( mesh.topology.getValidFaces(), [&]( FaceId f )
+    {
         if ( regionFaces[face2region[f]] <= maxFaces )
             smallFaces.set( f );
+    } );
     if ( !smallFaces.any() )
         return;
 

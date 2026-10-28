@@ -5,6 +5,7 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshToPointCloud.h>
 #include <MRMesh/MRPointCloud.h>
+#include <MRMesh/MRPointCloudRadius.h>
 #include <MRMesh/MRRingIterator.h>
 #include <MRMesh/MRTorus.h>
 #include <gtest/gtest.h>
@@ -113,8 +114,9 @@ TEST( MRMesh, LocalConvexityPointCloudSphere )
 TEST( MRMesh, LocalConvexityPointCloudNaive )
 {
     const auto cloud = meshToPointCloud( makeTorus( 1.0f, 0.4f, 96, 48 ) );
-    const float radius = 0.25f, shell = 0.1f;
-    const auto fast = computeLocalConvexity( cloud, radius, shell );
+    const float radius = 0.25f;
+    const float shell = findAvgPointsRadius( cloud, 3 );
+    const auto fast = computeLocalConvexity( cloud, radius );
     ASSERT_TRUE( fast.has_value() );
     for ( auto v : cloud.validPoints )
     {

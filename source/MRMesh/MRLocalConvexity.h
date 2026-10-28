@@ -16,10 +16,9 @@ namespace MR
 
 /// computes unitless convexity of the point cloud with oriented normals at each point on the scale of given radius:
 /// for each point p considers the points q_i within given radius from p,
-/// finds the best plane for the points at the distance from p in [radius - shell/2, radius + shell/2], and returns
+/// finds the best plane for the points at the distance from p within half of the average distance between neighbor points from the radius, and returns
 /// pi * sum_i( distance( plane, q_i ) * dot( plane.n, N_i ) ) / ( sum_i |dot( plane.n, N_i )| * radius ),
-/// which approximates the same signed volume divided by radius^3 as the mesh version;
-/// \param shell if not positive then the average distance between neighbor points is used
-[[nodiscard]] MRMESH_API Expected<VertScalars> computeLocalConvexity( const PointCloud& cloud, float radius, float shell = 0, const ProgressCallback& cb = {} );
+/// which approximates the same signed volume divided by radius^3 as the mesh version
+[[nodiscard]] MRMESH_API Expected<VertScalars> computeLocalConvexity( const PointCloud& cloud, float radius, const ProgressCallback& cb = {} );
 
 } //namespace MR

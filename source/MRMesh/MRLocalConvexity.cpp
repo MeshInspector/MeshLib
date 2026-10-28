@@ -129,13 +129,13 @@ Expected<VertScalars> computeLocalConvexity( const Mesh& mesh, float radius, con
     return res;
 }
 
-Expected<VertScalars> computeLocalConvexity( const PointCloud& cloud, float radius, float shell, const ProgressCallback& cb )
+Expected<VertScalars> computeLocalConvexity( const PointCloud& cloud, float radius, const ProgressCallback& cb )
 {
     MR_TIMER;
     if ( !cloud.hasNormals() )
         return unexpected( "Point cloud has no normals" );
-    if ( shell <= 0 )
-        shell = findAvgPointsRadius( cloud, 3 );
+    // plane points are taken from the shell around the sphere of given radius, as wide as the average distance between neighbor points
+    const float shell = findAvgPointsRadius( cloud, 3 );
     cloud.getAABBTree(); // build it before the parallel region
 
     const float rSq = sqr( radius );

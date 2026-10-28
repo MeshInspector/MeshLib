@@ -7,6 +7,7 @@
 
 #include <GLFW/glfw3.h>
 
+#include <CoreFoundation/CoreFoundation.h>
 #include <dlfcn.h>
 
 #include <bit>
@@ -127,6 +128,25 @@ std::unordered_set<uint16_t> gKnownClientIds;
 std::unordered_map<uint32_t, ConnexionDevicePrefs> gKnownDevices;
 uint32_t gButtonState{ 0 };
 size_t gNumMsg{ 0 };
+
+// returns CFBundleShortVersionString of the bundle at the given path, or "unknown"
+std::string getBundleVersion( const std::string& path )
+{
+    std::string res = "unknown";
+    auto url = CFURLCreateFromFileSystemRepresentation( kCFAllocatorDefault, (const UInt8*)path.data(), (CFIndex)path.size(), true );
+    if ( !url )
+        return res;
+    auto bundle = CFBundleCreate( kCFAllocatorDefault, url );
+    CFRelease( url );
+    if ( !bundle )
+        return res;
+    auto version = CFBundleGetValueForInfoDictionaryKey( bundle, CFSTR( "CFBundleShortVersionString" ) );
+    char buf[64];
+    if ( version && CFGetTypeID( version ) == CFStringGetTypeID() && CFStringGetCString( (CFStringRef)version, buf, sizeof( buf ), kCFStringEncodingUTF8 ) )
+        res = buf;
+    CFRelease( bundle );
+    return res;
+}
 
 float normalize( int16_t value )
 {
@@ -304,16 +324,22 @@ bool Handler3dxMacDriver::initialize()
         return false;
     }
 
+    const auto version = getBundleVersion( std::filesystem::path( c3DconnexionClientPath ).parent_path().string() );
+    spdlog::info( "3DxWare client library version: {}", version );
+    TelemetrySignal( "3DxWare driver version " + version );
+
     lib.handle = dlopen( c3DconnexionClientPath, RTLD_LAZY );
     if ( lib.handle == nullptr )
     {
         spdlog::error( "Failed to load the 3DxWare client library: {}", dlerror() );
+        TelemetrySignal( "3DxWare driver load failed" );
         return false;
     }
 
     if ( !lib.loadSymbols() )
     {
         spdlog::error( "Failed to load the 3DxWare client library symbols" );
+        TelemetrySignal( "3DxWare driver symbols missing" );
         dlclose( lib.handle );
         lib.handle = nullptr;
         return false;
@@ -334,6 +360,7 @@ bool Handler3dxMacDriver::initialize()
     if ( clientId_ == 0 )
     {
         spdlog::warn( "Failed to connect to the 3DxWare driver" );
+        TelemetrySignal( "3DxWare driver connect failed" );
         return false;
     }
     gKnownClientIds.emplace( clientId_ );

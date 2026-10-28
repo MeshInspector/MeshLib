@@ -43,6 +43,9 @@
     <ClCompile Include="MRMeshTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRLocalConvexityTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRBestFitTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

@@ -135,8 +135,7 @@ jobs:
 
   emscripten-build-test:
     if: ${{ needs.config.outputs.build_enable_emscripten == 'true' }}
-    # The generated JS bindings and the Wasm C bindings come from `generate-c-bindings`.
-    needs: [ config, prepare-image, generate-c-bindings ]
+    needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-emscripten.yml
     with:
       app_version:       ${{ needs.config.outputs.app_version }}

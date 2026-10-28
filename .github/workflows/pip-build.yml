@@ -177,6 +177,7 @@ jobs:
               - "3.12"
               - "3.13"
               - "3.14"
+              - "3.15"
           rules: |
             - extend:
                 - platform: x86_64
@@ -202,6 +203,8 @@ jobs:
                   os: "fedora:42"
                 - py-version: "3.14"
                   os: "ubuntu:25.10"
+                - py-version: "3.15"
+                  os: "fedora:44"
             - if: ${{ inputs.disable_manylinux }}
               exclude:
                 - platform: x86_64
@@ -867,6 +870,11 @@ jobs:
         if: ${{ matrix.os == 'rockylinux:9' || matrix.os == 'fedora:37' || matrix.os == 'fedora:39' || matrix.os == 'fedora:42' }}
         run: dnf -y install python3-pip
 
+      - name: Fedora 44 system setup
+        # Python 3.15 is not the system Python there, but a parallel-installable package
+        if: ${{ matrix.os == 'fedora:44' }}
+        run: dnf -y install python3.15
+
       - name: Create virtualenv
         run: |
           ${{ env.PYTHON_CMD }} -m venv .venv
@@ -935,6 +943,7 @@ jobs:
             3.12
             3.13
             3.14
+            3.15
 
       - name: Python setup (arm64)
         # python.org publishes no win-arm64 build before 3.11
@@ -946,6 +955,7 @@ jobs:
             3.12
             3.13
             3.14
+            3.15
 
       # One step per Python ABI so the GitHub Actions UI shows per-version
       # status / timing / logs. Each step is a thin wrapper around the
@@ -980,6 +990,10 @@ jobs:
       - name: Test wheel against Python 3.14
         shell: pwsh
         run: ./scripts/wheel/test_wheel_windows.ps1 -Version 3.14
+
+      - name: Test wheel against Python 3.15
+        shell: pwsh
+        run: ./scripts/wheel/test_wheel_windows.ps1 -Version 3.15
 
   macos-pip-test:
     needs: [setup, macos-pip-build]
@@ -1052,6 +1066,9 @@ jobs:
 
       - name: Test wheel against Python 3.14
         run: scripts/wheel/test_wheel_macos.sh 3.14 ${{ matrix.platform }}
+
+      - name: Test wheel against Python 3.15
+        run: scripts/wheel/test_wheel_macos.sh 3.15 ${{ matrix.platform }}
 
   upload-to-release:
     if: ${{ needs.setup.outputs.publish_prod == 'true' }}

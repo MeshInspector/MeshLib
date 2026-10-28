@@ -122,8 +122,7 @@ static void deleteSmallCollidingComponents( Mesh& mesh, int maxFaces, Undirected
             delFaces.set( f );
     for ( auto f : delFaces )
         for ( auto e : leftRing( mesh.topology, f ) )
-            if ( e.undirected() < sharpEdges.size() )
-                sharpEdges.reset( e.undirected() );
+            sharpEdges.reset( e.undirected() );
     mesh.deleteFaces( delFaces );
 }
 

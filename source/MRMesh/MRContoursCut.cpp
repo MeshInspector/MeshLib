@@ -1113,8 +1113,8 @@ struct FaceCrossingsBuffers
 
 // whether two segments of one face cross: with sortData, by the exact predicates consistent with the boolean, a failure of which makes
 // the face bad too (they fail only on the points they compare, so a degenerate face may be bad with many segments for the sweep and not
-// with a few tested in pairs); without it, by the float coordinates projected along the axis most aligned with the normal of the face
-// (see cornersNormal for a face with its corners on one line)
+// with a few tested in pairs); without it, by the float coordinates projected along the axis most aligned with the normal of the face,
+// and if two cross, again with the sides moved out by moveSidesOut (only so for a face with its corners on one line, see cornersNormal)
 bool crossesInFace( FaceCrossingsBuffers& buf, const Mesh& mesh, const OneMeshContours& contours, const PreCutResult& preRes,
     const SortIntersectionsData* sortData, std::span<const FaceSegment> segs )
 {
@@ -1165,7 +1165,36 @@ bool crossesInFace( FaceCrossingsBuffers& buf, const Mesh& mesh, const OneMeshCo
         const auto& s = segs[buf.defs[p] / 2];
         buf.xyz[p] = contours[s.c].intersections[s.i + buf.defs[p] % 2].coordinate;
     }
-    return PlanarTriangulation::hasCrossing( buf.ends, buf.xyz, cornersNormal( mesh, verts ), buf.sweepCache() );
+    bool onLine = false;
+    const auto normal = cornersNormal( mesh, verts, &onLine );
+    if ( !onLine && !PlanarTriangulation::hasCrossing( buf.ends, buf.xyz, normal, buf.sweepCache() ) )
+        return false;
+    // the rounding of the points can make two segments cross near a side, so they are tested again with the sides moved out as in the plans
+    // of lone faces: the corners and all cut points of the sides, along every side as the cut sorts them
+    Vector<VertId> cycle;
+    std::array<size_t, 3> corners;
+    for ( int j = 0; j < 3; ++j )
+    {
+        corners[j] = cycle.size();
+        cycle.push_back( verts[j] );
+        const auto it = preRes.edgeData.find( edges[j].undirected() );
+        if ( it == preRes.edgeData.end() )
+            continue;
+        auto ed = it->second; // which the cut sorts from the origin of the edge of its first cut point
+        const auto& first = ed.front().interOnEdge;
+        const bool along = std::get<EdgeId>( contours[first.contourId].intersections[first.intersectionId].primitiveId ) == edges[j];
+        sortEdgeInfo( mesh, contours, ed, nullptr );
+        for ( size_t k = 0; k < ed.size(); ++k )
+            cycle.push_back( ed[along ? k : ed.size() - 1 - k].newVert );
+    }
+    Vector<Vector3d> pts( cycle.size() );
+    for ( size_t k = 0; k < cycle.size(); ++k )
+        pts[k] = Vector3d( mesh.points[cycle[k]] );
+    PlanarTriangulation::moveSidesOut( pts, corners, normal );
+    for ( size_t k = 0; k < cycle.size(); ++k )
+        if ( const auto it = std::lower_bound( buf.keys.begin(), buf.keys.end(), std::pair( cycle[k], 0 ) ); it != buf.keys.end() && it->first == cycle[k] )
+            buf.xyz[buf.ends[it->second / 2][it->second % 2]] = Vector3f( pts[k] );
+    return PlanarTriangulation::hasCrossing( buf.ends, buf.xyz, normal, buf.sweepCache() );
 }
 
 // finds the old faces of the mesh where two segments of the contours cross, right after doPreCutMesh; two segments with a common end,

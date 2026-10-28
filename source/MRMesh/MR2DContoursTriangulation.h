@@ -159,9 +159,7 @@ MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const 
 /// same as above for the loops of one triangle of a mesh, all of them (the whole perimeter of the triangle is on the loops)
 /// \param sideOf for an edge of the loops, the side of the triangle it goes along (in cutMesh, the edge it was split from), or an invalid id
 ///        for an edge inside the triangle; the rounding of the points can make another edge cross a side, so if the plan fails, it is found
-///        again with every side moved out by a few float errors of the coordinates (after the corners are placed apart if they are all closer
-///        than that, else the one opposite the longest side away from it if it is closer to its line than that), the other side vertices moved only
-///        across their sides, but that far apart along a side where they are closer or out of order; if sideOf is empty, the plan is the one above
+///        again with the side vertices moved out by \ref moveSidesOut; if sideOf is empty, the plan is the one above
 /// \param moveSidesAtOnce find the plan only with the sides moved out, as where the corners are on one line: there the points as they are
 ///        leave the plan to the simulation of simplicity, which can put an island outside the triangle
 MR_BIND_IGNORE MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
@@ -199,6 +197,15 @@ MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const M
 ///         perimeter, or its side edges do not make a triangle
 MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
     const std::function<UndirectedEdgeId( UndirectedEdgeId )>& sideOf );
+
+/// moves the points along the perimeter of a triangle out of it by a few float errors of their coordinates, in the projection along the axis
+/// most aligned with \p normal, so that no other edge crosses a side only by the rounding of the points: first the corners are placed at that
+/// distance from their centroid if they are all closer, else the corner opposite the longest side goes to that height over it if it is lower;
+/// then every side moves out by that much, the corners to where the moved sides meet, and the other points from their places on the moved sides
+/// only across them, but that far apart along a side where they are closer or out of order (around the middle of every such run)
+/// \param cycle the points in their order along the perimeter
+/// \param corners the positions of the corners in \p cycle, increasing (modulo its size)
+MR_BIND_IGNORE MRMESH_API void moveSidesOut( Vector<Vector3d>& cycle, const std::array<size_t, 3>& corners, const Vector3f& normal );
 
 /// \ref hasCrossing tests up to this many segments in pairs, which is faster for them than the sweep, the only user of its cache with the exact predicates
 constexpr size_t cMaxSegmentsInPairs = 32;

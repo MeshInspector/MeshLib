@@ -1298,6 +1298,32 @@ TEST( MRMesh, ForceFillCrossingsOneFace )
             { .intersections = { side( 0_v, 1_v, 8, 0 ), in( 0_f, cross ? 6.5f : 9.5f, 2 ), side( 1_v, 0_v, 9, 0 ) } } }, cross );
 }
 
+// two contours from the bottom side of a triangle up into it and out through its long side, without the exact sorting data: the point of one
+// on the bottom side is before the other one along it by about a third of minMove, and below the side (by about 1/44 of minMove, as if rounded
+// there), so their first segments cross on the points as they are, but not in the order the cut sorts them along the side; under force fill,
+// the face is not bad with the sides moved out, unless the contours cross for real (with their points on the long side swapped)
+TEST( MRMesh, ForceFillCrossingsNearSide )
+{
+    const auto mesh = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 1000, 0, 0 ), Vector3f( 0, 1000, 0 ) }, { { 0_v, 1_v, 2_v } } );
+    auto side = [&] ( VertId a, VertId b, float x, float y )
+    {
+        return OneMeshIntersection{ .primitiveId = mesh.topology.findEdge( a, b ), .coordinate = Vector3f( x, y, 0 ) };
+    };
+    auto in = [] ( float x, float y ) { return OneMeshIntersection{ .primitiveId = 0_f, .coordinate = Vector3f( x, y, 0 ) }; };
+    const auto low = side( 0_v, 1_v, 500 - 1.f / 4096, -1.f / 65536 ), high = side( 0_v, 1_v, 500, 0 );
+    EXPECT_TRUE( PlanarTriangulation::hasCrossing( { { 0_v, 1_v }, { 2_v, 3_v } },
+        { high.coordinate, Vector3f( 900, 1, 0 ), low.coordinate, Vector3f( 900, 2, 0 ) }, Vector3f::plusZ() ) );
+    for ( bool cross : { false, true } )
+    {
+        Mesh cut = mesh;
+        const auto forced = cutMesh( cut, {
+            { .intersections = { high, in( 900, 1 ), side( 2_v, 1_v, cross ? 940.f : 950.f, cross ? 60.f : 50.f ) } },
+            { .intersections = { low, in( 900, 2 ), side( 2_v, 1_v, cross ? 950.f : 940.f, cross ? 50.f : 60.f ) } } },
+            { .forceFill = true } ).fbsWithContourIntersections;
+        EXPECT_EQ( forced.count(), cross ? 1 : 0 ) << "cross " << cross;
+    }
+}
+
 namespace
 {
 

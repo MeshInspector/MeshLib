@@ -151,49 +151,21 @@ static Vector2i projectionAxes( const Vector3f& normal )
     return normal[dropAx] < 0 ? Vector2i( axes.y, axes.x ) : axes;
 }
 
-// the side vertices of a cut triangle moved for meshSpacePredicates, with their moved points, none if the side edges (those with valid sideOf)
-// are not one cycle with three corners, where sideOf changes. Corners all closer than minMove in the projection are placed at minMove from their
-// centroid first; else the corner opposite the longest side, if it is closer than minMove to its line (as on it, where the corners are on one
-// line), goes across the line to the height minMove over it. Every side of their triangle, oriented as the corners, then moves out by minMove:
-// the corners go to where the moved sides meet (a sharp corner far along its sides, which only adds empty area beyond it, but less than twice
-// the longest side, since every height of the triangle is now at least minMove), and every other side vertex goes from its place on the moved
-// side by minMove across it, not along it, but for runs of them closer than minMove along it (or out of order), spaced minMove apart around
-// their middle between the nearest other vertices on the side, or evenly between those if they are closer than that.
-static void moveSideVerts( const Mesh& mesh, const EdgeLoops& loops, const std::function<UndirectedEdgeId( UndirectedEdgeId )>& sideOf,
-    const Vector2i& axes, double minMove, HashMap<VertId, Vector3d>& moved )
+void moveSidesOut( Vector<Vector3d>& cycle, const std::array<size_t, 3>& corners, const Vector3f& normal )
 {
+    Box3d box;
+    for ( const auto& q : cycle )
+        box.include( q );
+    double minMove = 4 * std::numeric_limits<float>::epsilon() * std::max( box.min.length(), box.max.length() );
     if ( minMove == 0 )
         minMove = 1e-3; // all points are at the origin, where zero would make the corners NaN
-    const auto& tp = mesh.topology;
-    Vector<EdgeId> sides; // sorted by their origins
-    for ( const auto& loop : loops )
-        for ( auto e : loop )
-            if ( sideOf( e.undirected() ) )
-                sides.push_back( e );
-    std::sort( sides.begin(), sides.end(), [&] ( EdgeId a, EdgeId b ) { return tp.org( a ) < tp.org( b ); } );
-    const auto n = sides.size();
-    Vector<VertId> cycle( n ); // the side vertices along the cycle from the origin of sides[0]
-    std::array<size_t, 4> c{}; // the positions of the corners along the cycle, and the first one again past its end
-    int numCorners = 0;
-    for ( size_t k = 0, i = 0; k < n; ++k )
-    {
-        cycle[k] = tp.org( sides[i] );
-        const auto v = tp.dest( sides[i] );
-        const auto s = sideOf( sides[i].undirected() );
-        i = size_t( std::lower_bound( sides.begin(), sides.end(), v, [&] ( EdgeId e, VertId u ) { return tp.org( e ) < u; } ) - sides.begin() );
-        if ( i == n || tp.org( sides[i] ) != v || ( i == 0 ) != ( k + 1 == n ) )
-            return;
-        if ( sideOf( sides[i].undirected() ) != s && ++numCorners <= 3 ) // a corner at v
-            c[numCorners - 1] = k + 1;
-    }
-    if ( numCorners != 3 )
-        return;
-    c[3] = c[0] + n;
-
-    auto to2 = [&] ( VertId v ) { return Vector2d( mesh.points[v][axes.x], mesh.points[v][axes.y] ); };
+    const auto axes = projectionAxes( normal );
+    const auto n = cycle.size();
+    const std::array<size_t, 4> c{ corners[0], corners[1], corners[2], corners[0] + n }; // and the first corner again past the end
+    auto to2 = [&] ( size_t k ) { return Vector2d( cycle[k % n][axes.x], cycle[k % n][axes.y] ); };
     std::array<Vector2d, 3> y; // the corners, moved below
     for ( int j = 0; j < 3; ++j )
-        y[j] = to2( cycle[c[j] % n] );
+        y[j] = to2( c[j] );
     const double sign = cross( y[1] - y[0], y[2] - y[0] ) < 0 ? -1 : 1; // the orientation of the corners
     int a = 0; // the longest side, from corner a
     for ( int i = 1; i < 3; ++i )
@@ -214,42 +186,81 @@ static void moveSideVerts( const Mesh& mesh, const EdgeLoops& loops, const std::
         out[j] = Vector2d( d.y, -d.x ) * sign;
     }
 
-    Vector<double> ts; // the vertices of a side at their parameters along it, the corners at 0 and 1
+    Vector<double> ts; // the points of a side at their parameters along it, the corners at 0 and 1
     for ( int j = 0; j < 3; ++j )
     {
         const auto d = y[( j + 1 ) % 3] - y[j];
         const size_t last = c[j + 1] - c[j];
         ts.resize( last + 1 );
         for ( size_t i = 0; i <= last; ++i )
-            ts[i] = i == 0 ? 0 : i == last ? 1 : std::clamp( dot( to2( cycle[( c[j] + i ) % n] ) - y[j], d ) / d.lengthSq(), 0.0, 1.0 );
+            ts[i] = i == 0 ? 0 : i == last ? 1 : std::clamp( dot( to2( c[j] + i ) - y[j], d ) / d.lengthSq(), 0.0, 1.0 );
         const double minGap = minMove / d.length();
-        auto bad = [&] ( size_t i ) { return ts[i + 1] - ts[i] < minGap; }; // the gap after vertex i
+        auto bad = [&] ( size_t i ) { return ts[i + 1] - ts[i] < minGap; }; // the gap after point i
         for ( size_t i = 1, r; i < last; i = r )
         {
-            r = i + 1; // the run i, ..., r - 1 joined by bad gaps, and vertex r after a good gap or the corner
+            r = i + 1; // the run i, ..., r - 1 joined by bad gaps, and point r after a good gap or the corner
             while ( r < last && bad( r - 1 ) )
                 ++r;
             if ( !bad( i - 1 ) && !bad( i ) )
                 continue;
-            // the run spaced by gap around its middle, at least gap from vertices i - 1 and r
+            // the run spaced by gap around its middle, at least gap from points i - 1 and r
             const auto k = double( r - i );
             const double gap = std::min( minGap, ( ts[r] - ts[i - 1] ) / ( k + 1 ) );
             const double first = std::max( ts[i - 1] + gap, std::min( ( ts[i] + ts[r - 1] - ( k - 1 ) * gap ) / 2, ts[r] - k * gap ) );
             for ( size_t q = i; q < r; ++q )
                 ts[q] = first + double( q - i ) * gap;
         }
-        // where the moved side before this one meets this one
+        // where the moved side before this one meets this one: a sharp corner goes far along its sides, which only adds empty area beyond it,
+        // but less than twice the longest side, since every height of the triangle is now at least minMove
         const auto& o = out[( j + 2 ) % 3];
         const auto corner = y[j] + Vector2d( out[j].y - o.y, o.x - out[j].x ) * ( minMove / cross( o, out[j] ) );
         for ( size_t i = 0; i < last; ++i )
         {
-            const auto v = cycle[( c[j] + i ) % n];
             const auto p = i == 0 ? corner : y[j] + d * ts[i] + out[j] * minMove;
-            auto& q = moved[v] = Vector3d( mesh.points[v] );
+            auto& q = cycle[( c[j] + i ) % n];
             q[axes.x] = p.x;
             q[axes.y] = p.y;
         }
     }
+}
+
+// the side vertices of a cut triangle moved by moveSidesOut for meshSpacePredicates, with their moved points, none if the side edges (those with
+// valid sideOf) are not one cycle with three corners, where sideOf changes
+static HashMap<VertId, Vector3d> moveSideVerts( const Mesh& mesh, const EdgeLoops& loops,
+    const std::function<UndirectedEdgeId( UndirectedEdgeId )>& sideOf, const Vector3f& normal )
+{
+    HashMap<VertId, Vector3d> moved;
+    const auto& tp = mesh.topology;
+    Vector<EdgeId> sides; // sorted by their origins
+    for ( const auto& loop : loops )
+        for ( auto e : loop )
+            if ( sideOf( e.undirected() ) )
+                sides.push_back( e );
+    std::sort( sides.begin(), sides.end(), [&] ( EdgeId a, EdgeId b ) { return tp.org( a ) < tp.org( b ); } );
+    const auto n = sides.size();
+    Vector<VertId> cycle( n ); // the side vertices along the cycle from the origin of sides[0]
+    std::array<size_t, 3> c{}; // the positions of the corners along the cycle
+    int numCorners = 0;
+    for ( size_t k = 0, i = 0; k < n; ++k )
+    {
+        cycle[k] = tp.org( sides[i] );
+        const auto v = tp.dest( sides[i] );
+        const auto s = sideOf( sides[i].undirected() );
+        i = size_t( std::lower_bound( sides.begin(), sides.end(), v, [&] ( EdgeId e, VertId u ) { return tp.org( e ) < u; } ) - sides.begin() );
+        if ( i == n || tp.org( sides[i] ) != v || ( i == 0 ) != ( k + 1 == n ) )
+            return moved;
+        if ( sideOf( sides[i].undirected() ) != s && ++numCorners <= 3 ) // a corner at v
+            c[numCorners - 1] = k + 1;
+    }
+    if ( numCorners != 3 )
+        return moved;
+    Vector<Vector3d> pts( n );
+    for ( size_t k = 0; k < n; ++k )
+        pts[k] = Vector3d( mesh.points[cycle[k]] );
+    moveSidesOut( pts, c, normal );
+    for ( size_t k = 0; k < n; ++k )
+        moved[cycle[k]] = pts[k];
+    return moved;
 }
 
 // mesh-space predicates: triangulate hole boundary loops of `mesh` in the mesh's own 3D coordinates,
@@ -273,18 +284,14 @@ static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoop
             pointsSize += int( loop.size() );
     }
 
-    const auto axes = projectionAxes( normal );
-    HashMap<VertId, Vector3d> moved; // the moved side vertices
-    if ( sideOf )
-    {
-        moveSideVerts( mesh, loops, *sideOf, axes, 4 * std::numeric_limits<float>::epsilon() * std::max( box.min.length(), box.max.length() ), moved );
-        for ( const auto& vq : moved )
-            box.include( vq.second );
-    }
+    auto moved = sideOf ? moveSideVerts( mesh, loops, *sideOf, normal ) : HashMap<VertId, Vector3d>{};
+    for ( const auto& vq : moved )
+        box.include( vq.second );
 
     pts2->clear();
     pts2->reserve( pointsSize );
     const auto toInt = getToIntConverter( box ); // Vector3d -> Vector3i
+    const auto axes = projectionAxes( normal );
     const auto to2i = [toInt, axes] ( const Vector3d& q ) { const auto qi = toInt( q ); return Vector2i( qi[axes.x], qi[axes.y] ); };
 
     SweepLinePredicates p;

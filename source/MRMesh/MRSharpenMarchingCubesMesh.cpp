@@ -93,7 +93,6 @@ static void deleteSmallCollidingComponents( Mesh& mesh, int maxFaces, Undirected
     if ( !smallFaces.any() )
         return;
 
-    mesh.invalidateCaches(); // vertices were moved above
     struct Collision { RegionId lesser, greater; }; // the component with fewer triangles, and the one it intersects
     std::vector<Collision> collisions;
     for ( const auto& p : findCollidingTriangles( { mesh, &smallFaces }, mesh ) )
@@ -448,6 +447,7 @@ void sharpenMarchingCubesMesh( const MeshPart& ref, Mesh& vox, Vector<VoxelId, F
             vox.points[v] = 0.5f * ( pOld + pNew );
         }
     }
+    vox.invalidateCaches();
 
     if ( settings.maxDeletedComponentFaces > 0 )
         deleteSmallCollidingComponents( vox, settings.maxDeletedComponentFaces, sharpEdges );

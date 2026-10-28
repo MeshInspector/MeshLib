@@ -61,14 +61,14 @@ jobs:
       CUDA_VERSION: ${{ matrix.cuda_version }}
       VCVARS_VER: ${{ matrix.vcvars_ver || fromJSON('{"msvc-2019":"14.2","msvc-2022":"14.4"}')[matrix.cxx_compiler] || '14.5' }}
       PLATFORM_TOOLSET: ${{ fromJSON('{"msvc-2019":"v142","msvc-2022":"v143"}')[matrix.cxx_compiler] || 'v145' }}
-      # clang-cl: the runner image's LLVM (newer than the one bundled with VS; a native arm64 build on the
-      # arm image) with lld-link, on top of the headers, libraries and vcpkg binaries of the matrix entry's
+      # clang-cl: the pinned MSYS2 clang that mrbind uses (msys2_package_hashes*.txt; native on arm64) in cl
+      # mode, with its lld-link, on top of the headers, libraries and vcpkg binaries of the matrix entry's
       # toolset (vcvars_ver); CMake only. nvcc keeps cl as its host compiler (the only one it accepts on
       # Windows), so MRCuda's .cu objects come from cl and everything else from clang-cl; nvcc takes that
       # cl and its headers from the developer prompt, not from CMAKE_CUDA_HOST_COMPILER, so CUDA 12 needs
       # the whole job on the 14.4 toolset. The C compiler matters only once the C bindings enable the
       # language: unnamed, CMake takes the image's GNU-style clang.exe, which rejects the cl-style flags.
-      CMAKE_COMPILER_ARGS: ${{ matrix.cxx_compiler == 'clang-cl' && '-DCMAKE_CXX_COMPILER="C:/Program Files/LLVM/bin/clang-cl.exe" -DCMAKE_C_COMPILER="C:/Program Files/LLVM/bin/clang-cl.exe" -DCMAKE_LINKER_TYPE=LLD' || '' }}
+      CMAKE_COMPILER_ARGS: ${{ matrix.cxx_compiler == 'clang-cl' && format('-DCMAKE_CXX_COMPILER=C:/msys64/{0}/bin/clang-cl.exe -DCMAKE_C_COMPILER=C:/msys64/{0}/bin/clang-cl.exe -DCMAKE_LINKER_TYPE=LLD', matrix.arch == 'arm64' && 'clangarm64' || 'clang64') || '' }}
       MRCUDA_PLATFORM_TOOLSET: ${{ matrix.mrcuda_platform_toolset }}
       # x64 paths below belong to steps arm64 never runs
       MR_ARCH: ${{ matrix.arch || 'x64' }}
@@ -178,6 +178,12 @@ jobs:
           build-script: scripts/mrbind/install_mrbind_windows_msys2.bat
           extra-cache-key: ${{ hashFiles(format('scripts/mrbind/msys2_package_hashes{0}.txt', env.MSYS2_PKGS)) }}
           msys2-env: ${{ env.MSYS2_ENV }}
+
+      - name: Add clang-cl to MSYS2 clang
+        # MSYS2 ships no clang-cl.exe; clang.exe called by that name runs in cl mode
+        if: ${{ matrix.cxx_compiler == 'clang-cl' }}
+        shell: cmd
+        run: copy /y C:\msys64\%MSYS2_ENV%\bin\clang.exe C:\msys64\%MSYS2_ENV%\bin\clang-cl.exe
 
       - name: Build
         shell: cmd

@@ -171,15 +171,17 @@ MR_BIND_IGNORE MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mes
 ///        or invalid ids for an edge along a side; every crossing of two cuts is a point of the predicates (see PreciseCutPoint::tri2)
 /// \return the crossings in the order a sweep over the triangle meets them, which is also their order along every edge (crossings at one
 ///         point are met one by one); every crossing is two edges directed along the sweep, the first one passing from the right of the
-///         second one to its left; std::nullopt if an edge without a cut crosses another one, or in the cases of \ref getMonotonePlan above
+///         second one to its left; std::nullopt if an edge without a cut crosses another one, if two vertices on the loops are defined alike
+///         and their wedges do not tell them apart, if two edges of the loops join the same two vertices, or if the predicates fail on the
+///         points or on a crossing
 MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops,
     const std::array<PreciseVertCoords, 3>& tri, const std::function<PreciseCutPoint( VertId )>& pointOf,
     const std::function<std::array<PreciseVertCoords, 3>( UndirectedEdgeId )>& cutOf );
 
 /// same as above on the predicates of \ref getMonotonePlan( mesh, loops, normal ), as where no exact definitions are given
 /// \param isSide whether an edge of the loops goes along a side of the triangle; the rounding of the points can make another edge cross it,
-///        and then the crossings are found again with the sides scaled up a little around their centroid
-/// \return std::nullopt also if an edge still crosses a side then
+///        and then the crossings are found again with the sides scaled up a little around the centroid of their perimeter
+/// \return std::nullopt if an edge still crosses a side then, or if two edges of the loops join the same two vertices
 MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
     const std::function<bool( UndirectedEdgeId )>& isSide );
 

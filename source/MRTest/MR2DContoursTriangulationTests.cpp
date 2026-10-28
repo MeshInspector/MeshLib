@@ -538,7 +538,7 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
     };
     // no slit is along an axis, where the sweeps could order its ends differently
     const auto a = addCut( { 320, 300 }, { 50, 290 }, { 550, 310 } ); // from ( 185, 295 ) to ( 435, 305 )
-    const auto b = addCut( { 300, 260 }, { 290, 100 }, { 310, 600 } ); // from ( 295, 180 ) to ( 305, 430 )
+    const auto b = addCut( { 300, 260 }, { 310, 600 }, { 290, 100 } ); // from ( 305, 430 ) to ( 295, 180 ), against the sweep
     const auto c = addCut( { 380, 270 }, { 370, 120 }, { 390, 620 } ); // from ( 375, 195 ) to ( 385, 445 ), parallel to B
     EdgeLoop outerLoop;
     for ( auto e : leftRing( mesh.topology, outer ) )
@@ -609,6 +609,22 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
     ASSERT_TRUE( res.has_value() );
     EXPECT_TRUE( res->empty() );
     EXPECT_FALSE( PlanarTriangulation::findCrossings( mesh, { outerLoop, addSlit( { 400, 400, 0 }, { 510, 510, 0 } ) }, normal, isSide ) );
+
+    // a cut path from corner 0 to N just outside the side to corner 1 (as if rounded there), then inside to M, crossed by a slit:
+    // the sweep runs again with N moved inside, where N->M passes from the right of the slit to its left
+    const auto sn = mesh.topology.makeEdge(), nm = mesh.topology.makeEdge();
+    mesh.topology.splice( mesh.topology.findEdge( 0_v, 1_v ), sn );
+    mesh.topology.setOrg( sn.sym(), mesh.addPoint( { 300, -0.01f, 0 } ) );
+    mesh.topology.splice( sn.sym(), nm );
+    mesh.topology.setOrg( nm.sym(), mesh.addPoint( { 400, 300, 0 } ) );
+    EdgeLoop pathLoop;
+    for ( auto e : leftRing( mesh.topology, outer ) )
+        pathLoop.push_back( e );
+    ASSERT_EQ( pathLoop.size(), size_t( 7 ) );
+    const auto slit = addSlit( { 300, 200, 0 }, { 450, 100, 0 } );
+    res = PlanarTriangulation::findCrossings( mesh, { pathLoop, slit }, normal, isSide );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_EQ( *res, Vector<EdgePair>( { { nm, slit[0] } } ) );
 }
 
 namespace

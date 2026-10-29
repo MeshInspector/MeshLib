@@ -1902,7 +1902,7 @@ I assignNewIds( const TypedBitSet<I> & from, TypedBitSet<I> * vacant, I end, boo
     }
 
     // the rank of a set bit is found from the numbers of set bits in all preceding chunks of blocks
-    constexpr size_t chunkBlocks = 1024;
+    static constexpr size_t chunkBlocks = 1024;
     auto chunkStarts = [] ( const auto & blocks )
     {
         std::vector<size_t> starts( ( blocks.size() + chunkBlocks - 1 ) / chunkBlocks + 1, 0 );

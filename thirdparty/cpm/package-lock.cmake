@@ -108,7 +108,7 @@ set(MESHLIB_PACKAGE_laz-perf
 
 set(MESHLIB_PACKAGE_libE57Format
   GIT_REPOSITORY https://github.com/MeshInspector/libE57Format
-  GIT_TAG 1816f72de58b27208a8f03c7213ba4039517402a
+  GIT_TAG 1f14b9ab86bd8599f19f8d79d8568b6a2548ebe8
 )
 
 set(MESHLIB_PACKAGE_libjpeg-turbo

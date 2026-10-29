@@ -14,8 +14,10 @@
 #include "MRIOParsing.h"
 #include "MRPartMappingAdapters.h"
 #include <atomic>
+#include <bit>
 #include <initializer_list>
 #include <istream>
+#include <numeric>
 #include <ostream>
 
 namespace MR
@@ -1866,6 +1868,95 @@ void MeshTopology::computeAllFromEdges_()
     }
 }
 
+namespace
+{
+
+/// assigns to every set bit of \p from in increasing order the next new id: first the set bits of \p vacant in increasing order, then the ids from \p end on;
+/// calls set( fromId, newId ) for all of them in parallel threads if \p parallel, otherwise in increasing order of fromId;
+/// resets the used bits of \p vacant (all of them if not enough) and returns the last assigned id: invalid if none and \p vacant is given, otherwise end - 1
+template <typename I, typename F>
+I assignNewIds( const TypedBitSet<I> & from, TypedBitSet<I> * vacant, I end, bool parallel, F && set )
+{
+    if ( !parallel )
+    {
+        I last = vacant ? I{} : end - 1;
+        for ( auto fromId : from )
+        {
+            if ( vacant )
+            {
+                last = vacant->find_next( last );
+                if ( !last )
+                {
+                    vacant->reset();
+                    vacant = nullptr;
+                    last = end;
+                }
+            }
+            else
+                ++last;
+            set( fromId, last );
+        }
+        if ( vacant )
+            vacant->reset( I( 0 ), last + 1 );
+        return last;
+    }
+
+    // the rank of a set bit is found from the numbers of set bits in all preceding chunks of blocks
+    static constexpr size_t chunkBlocks = 1024;
+    auto chunkStarts = [] ( const auto & blocks )
+    {
+        std::vector<size_t> starts( ( blocks.size() + chunkBlocks - 1 ) / chunkBlocks + 1, 0 );
+        ParallelFor( size_t( 0 ), starts.size() - 1, [&] ( size_t c )
+        {
+            size_t n = 0;
+            for ( size_t b = c * chunkBlocks, bEnd = std::min( b + chunkBlocks, blocks.size() ); b < bEnd; ++b )
+                n += std::popcount( blocks[b] );
+            starts[c + 1] = n;
+        } );
+        std::partial_sum( starts.begin(), starts.end(), starts.begin() );
+        return starts;
+    };
+    // calls f( id, rank ) for every set bit
+    auto forEachRanked = [&] ( const auto & blocks, const std::vector<size_t> & starts, auto && f )
+    {
+        ParallelFor( size_t( 0 ), starts.size() - 1, [&] ( size_t c )
+        {
+            auto rank = starts[c];
+            for ( size_t b = c * chunkBlocks, bEnd = std::min( b + chunkBlocks, blocks.size() ); b < bEnd; ++b )
+                for ( auto w = blocks[b]; w; w &= w - 1 )
+                    f( I( int( b * BitSet::bits_per_block ) + std::countr_zero( w ) ), rank++ );
+        } );
+    };
+
+    std::vector<I> vacantIds;
+    if ( vacant )
+    {
+        const auto starts = chunkStarts( vacant->bits() );
+        vacantIds.resize( starts.back() );
+        forEachRanked( vacant->bits(), starts, [&] ( I id, size_t rank ) { vacantIds[rank] = id; } );
+    }
+    const auto starts = chunkStarts( from.bits() );
+    const auto num = starts.back();
+    forEachRanked( from.bits(), starts, [&] ( I fromId, size_t rank )
+    {
+        set( fromId, rank < vacantIds.size() ? vacantIds[rank] : I( int( end ) + int( rank - vacantIds.size() ) ) );
+    } );
+
+    if ( !vacant )
+        return I( int( end ) + int( num ) - 1 );
+    if ( num == 0 )
+        return {};
+    if ( num <= vacantIds.size() )
+    {
+        vacant->reset( I( 0 ), vacantIds[num - 1] + 1 );
+        return vacantIds[num - 1];
+    }
+    vacant->reset();
+    return I( int( end ) + int( num - vacantIds.size() ) - 1 );
+}
+
+} // anonymous namespace
+
 void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces, const PartMapping & map, VacantElements * vacant )
 {
     addPartByMask( from, fromFaces, false, {}, {}, map, vacant );
@@ -2082,46 +2173,25 @@ bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             else
                 fromCopiedVerts = from.getValidVerts() - fromMappedVerts;
 
+            // the maps given by the caller as hash maps or the inverse maps are filled in order
+            const bool parallel = vmap.getMap() && !map.tgt2srcVerts;
             auto * vacantVerts = vacant ? &vacant->verts : nullptr;
-            VertId lastNewVert = vacant ? VertId{} : edgePerVertex_.endId() - 1;
-            int verticesCopied = 0;
-            for ( auto fromV : fromCopiedVerts )
+            // the vacant vertices that get used become valid: the bits of unused ones are flipped twice
+            if ( updateValids_ && vacantVerts )
+                validVerts_ ^= *vacantVerts;
+            const auto lastNewVert = assignNewIds( fromCopiedVerts, vacantVerts, edgePerVertex_.endId(), parallel, [&] ( VertId fromV, VertId v )
             {
                 assert( !getAt( vmap, fromV ) );
-                if ( vacantVerts )
-                {
-                    lastNewVert = vacantVerts->find_next( lastNewVert );
-                    if ( lastNewVert )
-                    {
-                        assert( lastNewVert < edgePerVertex_.size() );
-                        assert( !updateValids_ || !validVerts_.test( lastNewVert ) );
-                    }
-                    else
-                    {
-                        if ( updateValids_ )
-                            validVerts_ |= *vacantVerts;
-                        vacantVerts->reset();
-                        vacantVerts = nullptr;
-                        lastNewVert = edgePerVertex_.endId();
-                    }
-                }
-                else
-                    ++lastNewVert;
-                setAt( vmap, fromV, lastNewVert );
+                setAt( vmap, fromV, v );
                 if ( map.tgt2srcVerts )
-                    map.tgt2srcVerts->pushBack( lastNewVert, fromV );
-                ++verticesCopied;
-            };
-            if ( vacantVerts )
-            {
-                if ( updateValids_ )
-                    validVerts_ ^= *vacantVerts;
-                vacantVerts->reset( 0_v, lastNewVert + 1 );
-                if ( updateValids_ )
-                    validVerts_ ^= *vacantVerts;
-            }
+                    map.tgt2srcVerts->pushBack( v, fromV );
+            } );
             if ( updateValids_ )
-                numValidVerts_ += verticesCopied;
+            {
+                if ( vacantVerts )
+                    validVerts_ ^= *vacantVerts;
+                numValidVerts_ += int( fromCopiedVerts.count() );
+            }
 
             if ( edgePerVertex_.size() < lastNewVert + 1 )
             {
@@ -2134,45 +2204,22 @@ bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
         taskGroup.run( [&] ()
         {
             // copy faces
+            const bool parallel = fmap.getMap() && !map.tgt2srcFaces;
             auto * vacantFaces = vacant ? &vacant->faces : nullptr;
-            FaceId lastNewFace = vacant ? FaceId{} : edgePerFace_.endId() - 1;
-            int facesCopied = 0;
-            for ( auto fromF : fromFaces )
+            if ( updateValids_ && vacantFaces )
+                validFaces_ ^= *vacantFaces;
+            const auto lastNewFace = assignNewIds( fromFaces, vacantFaces, edgePerFace_.endId(), parallel, [&] ( FaceId fromF, FaceId f )
+            {
+                setAt( fmap, fromF, f );
+                if ( map.tgt2srcFaces )
+                    map.tgt2srcFaces->pushBack( f, fromF );
+            } );
+            if ( updateValids_ )
             {
                 if ( vacantFaces )
-                {
-                    lastNewFace = vacantFaces->find_next( lastNewFace );
-                    if ( lastNewFace )
-                    {
-                        assert( lastNewFace < edgePerFace_.size() );
-                        assert( !updateValids_ || !validFaces_.test( lastNewFace ) );
-                    }
-                    else
-                    {
-                        if ( updateValids_ )
-                            validFaces_ |= *vacantFaces;
-                        vacantFaces->reset();
-                        vacantFaces = nullptr;
-                        lastNewFace = edgePerFace_.endId();
-                    }
-                }
-                else
-                    ++lastNewFace;
-                if ( map.tgt2srcFaces )
-                    map.tgt2srcFaces ->pushBack( lastNewFace, fromF );
-                setAt( fmap, fromF, lastNewFace );
-                ++facesCopied;
-            };
-            if ( vacantFaces )
-            {
-                if ( updateValids_ )
                     validFaces_ ^= *vacantFaces;
-                vacantFaces->reset( 0_f, lastNewFace + 1 );
-                if ( updateValids_ )
-                    validFaces_ ^= *vacantFaces;
+                numValidFaces_ += int( fromFaces.count() );
             }
-            if ( updateValids_ )
-                numValidFaces_ += facesCopied;
 
             if ( edgePerFace_.size() < lastNewFace + 1 )
             {
@@ -2188,36 +2235,18 @@ bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
         else
             fromCopiedEdges = from.findNotLoneUndirectedEdges() - fromMappedEdges;
 
-        auto * vacantEdges = vacant ? &vacant->edges : nullptr;
-        UndirectedEdgeId lastNewEdge = vacant ? UndirectedEdgeId{} : UndirectedEdgeId( edges_.endId() ) - 1;
-        for ( auto fromUe : fromCopiedEdges )
+        const auto endEdge = UndirectedEdgeId( edges_.endId() );
+        const auto lastNewEdge = assignNewIds( fromCopiedEdges, vacant ? &vacant->edges : nullptr, endEdge,
+            emap.getMap() && !map.tgt2srcEdges, [&] ( UndirectedEdgeId fromUe, UndirectedEdgeId ue )
         {
             assert( !getAt( emap, fromUe ) );
-            if ( vacantEdges )
-            {
-                lastNewEdge = vacantEdges->find_next( lastNewEdge );
-                if ( lastNewEdge )
-                {
-                    assert( isLoneEdge( lastNewEdge ) );
-                }
-                else
-                {
-                    vacantEdges->reset();
-                    vacantEdges = nullptr;
-                    lastNewEdge = edges_.endId();
-                }
-            }
-            else
-                ++lastNewEdge;
-            setAt( emap, fromUe, EdgeId( lastNewEdge ) );
+            assert( ue >= endEdge || isLoneEdge( ue ) );
+            setAt( emap, fromUe, EdgeId( ue ) );
             if ( map.tgt2srcEdges )
-                map.tgt2srcEdges->pushBack( UndirectedEdgeId{ lastNewEdge }, EdgeId{ fromUe } );
-        };
-        if ( vacantEdges )
-            vacantEdges->reset( 0_ue, lastNewEdge + 1 );
+                map.tgt2srcEdges->pushBack( ue, EdgeId{ fromUe } );
+        } );
         if ( edges_.size() < 2 * ( lastNewEdge + 1 ) )
             edges_.resizeNoInit( 2 * ( lastNewEdge + 1 ) );
-
         taskGroup.wait();
     }
 

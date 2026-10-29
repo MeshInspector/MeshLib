@@ -166,6 +166,18 @@ MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const 
 MR_BIND_IGNORE MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops,
     const std::array<PreciseVertCoords, 3>& tri, const std::function<PreciseCutPoint( VertId )>& pointOf );
 
+/// finds the crossings of the loops of one triangle cut by the boolean on the exact predicates above, in the order of the sweep and along every
+/// edge, each as two edges directed along it, the first passing from right to left of the second, with \p cutOf the triangle of the other mesh
+/// along every inner edge (invalid ids along a side); std::nullopt if a side edge crosses another edge, on a multiple edge, or if predicates fail
+MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops,
+    const std::array<PreciseVertCoords, 3>& tri, const std::function<PreciseCutPoint( VertId )>& pointOf,
+    const std::function<std::array<PreciseVertCoords, 3>( UndirectedEdgeId )>& cutOf );
+
+/// same as above on the float predicates of \ref getMonotonePlan( mesh, loops, normal ), projected counterclockwise around \p normal (oriented as
+/// the triangle), which sets the sweep and left and right; the rounding, also of the crossings, can add or remove one near another point or edge,
+/// and a side edge crossing another edge is a usual pair; std::nullopt on a multiple edge
+MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal );
+
 /// \ref hasCrossing tests up to this many segments in pairs, which is faster for them than the sweep, the only user of its cache with the exact predicates
 constexpr size_t cMaxSegmentsInPairs = 32;
 

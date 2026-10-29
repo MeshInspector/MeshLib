@@ -248,6 +248,8 @@ if(MESHLIB_USE_VCPKG)
     PATTERN "vcpkg.spdx.json" EXCLUDE
     PATTERN "vcpkg-spdx-resources.json" EXCLUDE
     REGEX "/share/[^/]+/usage$" EXCLUDE
+    # the debug/ tree is not installed, so neither are the exported targets' Debug files referring to it
+    REGEX "/share/.+-debug[.]cmake$" EXCLUDE
   )
 endif()
 

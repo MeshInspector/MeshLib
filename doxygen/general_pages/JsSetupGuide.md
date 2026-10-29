@@ -89,7 +89,7 @@ The bundler must treat `.wasm` files as static assets, so that the import resolv
 The options of `init()` go to the Emscripten module factory (`locateFile`, `print`, `printErr`, `mainScriptUrlOrBlob`, ...).
 
 ### Payload Size {#MeshLibJsPayloadSize}
-MeshLib is a WebAssembly build of the full geometry library with its complete API exported, so a browser downloads several tens of megabytes of wasm (a fraction of that gzipped over the wire) before the first geometry call. `@meshinspector/meshlib-mt` is the same order of magnitude.
+MeshLib is a WebAssembly build of the full geometry library with its complete API exported, so a browser downloads several tens of megabytes of wasm (a fraction of that over the wire: the CDN serves it Brotli-compressed) before the first geometry call. `@meshinspector/meshlib-mt` is the same order of magnitude.
 
 Consequences for a browser application:
 

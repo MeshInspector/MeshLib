@@ -3,6 +3,8 @@
 #include <MRMesh/MREnumNeighbours.h>
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRMesh.h>
+#include <MRMesh/MRMeshToPointCloud.h>
+#include <MRMesh/MRPointCloud.h>
 #include <MRMesh/MRRingIterator.h>
 #include <MRMesh/MRTorus.h>
 #include <gtest/gtest.h>
@@ -84,6 +86,56 @@ TEST( MRMesh, LocalConvexityNaive )
     const auto naive = computeLocalConvexityNaive( torus, radius );
     for ( auto v : torus.topology.getValidVerts() )
         EXPECT_NEAR( ( *fast )[v], naive[v], 1e-6f );
+}
+
+TEST( MRMesh, LocalConvexityPointCloudSphere )
+{
+    auto cloud = meshToPointCloud( makeSphere( { .radius = 1.0f, .numMeshVertices = 20000 } ) );
+    const float radius = 0.3f;
+    const float expected = PI_F * radius / 4; // same as for the mesh
+
+    auto convex = computeLocalConvexity( cloud, radius );
+    ASSERT_TRUE( convex.has_value() );
+    for ( auto v : cloud.validPoints )
+        EXPECT_NEAR( ( *convex )[v], expected, 0.2f * expected );
+
+    for ( auto& n : cloud.normals )
+        n = -n;
+    auto concave = computeLocalConvexity( cloud, radius );
+    ASSERT_TRUE( concave.has_value() );
+    for ( auto v : cloud.validPoints )
+        EXPECT_NEAR( ( *concave )[v], -( *convex )[v], 1e-6f );
+
+    cloud.normals.clear();
+    EXPECT_FALSE( computeLocalConvexity( cloud, radius ).has_value() );
+}
+
+TEST( MRMesh, LocalConvexityPointCloudNaive )
+{
+    const auto cloud = meshToPointCloud( makeTorus( 1.0f, 0.4f, 96, 48 ) );
+    const float radius = 0.25f;
+    const auto fast = computeLocalConvexity( cloud, radius );
+    ASSERT_TRUE( fast.has_value() );
+    for ( auto v : cloud.validPoints )
+    {
+        std::vector<std::pair<float, VertId>> ball;
+        for ( auto u : cloud.validPoints )
+            if ( const auto distSq = ( cloud.points[u] - cloud.points[v] ).lengthSq(); distSq <= radius * radius )
+                ball.emplace_back( distSq, u );
+        std::sort( ball.begin(), ball.end() );
+        const auto numBd = std::max( size_t( 3 ), size_t( std::sqrt( ball.size() ) ) );
+        PointAccumulator acc;
+        for ( auto i = ball.size() - numBd; i < ball.size(); ++i )
+            acc.addPoint( cloud.points[ball[i].second] );
+        const auto plane = acc.getBestPlane();
+        double sum = 0, sumAbsCos = 0;
+        for ( const auto& [distSq, u] : ball )
+        {
+            sum += plane.distance( Vector3d( cloud.points[u] ) ) * dot( plane.n, Vector3d( cloud.normals[u] ) );
+            sumAbsCos += std::abs( dot( plane.n, Vector3d( cloud.normals[u] ) ) );
+        }
+        EXPECT_NEAR( ( *fast )[v], PI * sum / ( sumAbsCos * radius ), 1e-5 );
+    }
 }
 
 } //namespace MR

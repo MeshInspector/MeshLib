@@ -46,11 +46,14 @@ jobs:
         run: |
           gh release download "${TAG}" --pattern "js-meshlib-*.tgz" --repo ${{ github.repository }} --clobber
 
-        # The package is a directory of ES modules (`index.mjs`, `ffi.mjs`, `lib/`, `ns/`) and the wasm modules, which import each other
-        # relatively, so the whole tree (~2k files) goes under `<package>@<tag>/`, gzipped once into a staging tree and uploaded per content type.
-        # The Node build and the declarations are useless from a CDN and are skipped.
-        # `<package>/index.mjs` (the unpinned entry point) only re-exports the tagged tree: replacing the tree in place would let
-        # a client mix the new `index.mjs` with the cached old `lib/*.mjs`.
+        # The package is a directory of ES modules (`index.mjs`, `ffi.mjs`, `lib/`, `ns/`) importing each other, which the bundlers
+        # tree-shake; from a CDN that would be ~1100 requests, so here they're bundled into one `index.mjs` (esbuild, whitespace and
+        # syntax minified, the identifiers kept for readable stack traces). The Emscripten glue and the wasm stay separate files:
+        # the glue locates the wasm from its own URL, and the workers of the multithreaded build load it by URL. The three go
+        # under `<package>@<tag>/`, gzipped once into a staging tree and uploaded per content type. The Node build and the
+        # declarations are useless from a CDN and are skipped.
+        # `<package>/index.mjs` (the unpinned entry point) only re-exports the tagged tree: replacing the files in place would let
+        # a client mix the new `index.mjs` with the cached old glue or wasm.
       - name: Upload to S3
         env:
           BUCKET: s3://cdn-meshlib-js
@@ -58,8 +61,11 @@ jobs:
           for TGZ in js-meshlib-*.tgz ; do
             NAME=${TGZ#js-}            # meshlib-1.2.3-4.tgz
             NAME=${NAME%%-[0-9]*}      # meshlib, meshlib-mt
-            mkdir -p "pkg/${NAME}"
-            tar -xzf "${TGZ}" --strip-components=1 -C "pkg/${NAME}" --exclude=package.json --exclude='*.node.mjs' --exclude='*.node.wasm' --exclude='*.d.mts'
+            mkdir -p "src/${NAME}" "pkg/${NAME}"
+            tar -xzf "${TGZ}" --strip-components=1 -C "src/${NAME}"
+            npx --yes esbuild@0.25 "src/${NAME}/index.mjs" --bundle --format=esm --platform=neutral --minify-whitespace --minify-syntax \
+              --external:./MeshLibC2.mjs --external:./MeshLibC2.node.mjs --log-level=warning --outfile="pkg/${NAME}/index.mjs"
+            cp "src/${NAME}/MeshLibC2.mjs" "src/${NAME}/MeshLibC2.wasm" "src/${NAME}/README.md" "src/${NAME}/LICENSE" "pkg/${NAME}/"
             find "pkg/${NAME}" -type f -exec gzip -9 -n {} \;
             find "pkg/${NAME}" -type f -name '*.gz' -exec sh -c 'mv "$1" "${1%.gz}"' _ {} \;
           done

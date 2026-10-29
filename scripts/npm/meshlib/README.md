@@ -110,7 +110,8 @@ import * as ml from 'https://js.meshlib.io/meshlib@v1.2.3.456/index.mjs';
 
 To pin, take a real tag from the [releases page](https://github.com/MeshInspector/MeshLib/releases): it has a
 leading `v` and four components, and is **not** the npm version — the tag `v1.2.3.456` would be npm `1.2.3-456`.
-The unpinned `index.mjs` re-exports the latest pinned release, which holds the module files themselves.
+The unpinned `index.mjs` re-exports the latest pinned release, which holds the module files themselves: the bindings
+bundled into one `index.mjs`, the Emscripten glue `MeshLibC2.mjs` and the wasm.
 
 ## Using with bundlers
 

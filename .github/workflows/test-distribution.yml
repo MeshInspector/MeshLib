@@ -349,6 +349,10 @@ jobs:
             config: Release
             app_subdir: Release
             idl: 0
+          - dist_pattern: "MeshLibDistClangCl_${{ inputs.release_tag }}.zip"
+            config: Release
+            app_subdir: Release
+            idl: 0
           - dist_pattern: "MeshLibDist_*-IteratorDebug.zip"
             config: Debug
             app_subdir: Debug

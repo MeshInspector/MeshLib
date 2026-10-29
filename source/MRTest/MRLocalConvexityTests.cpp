@@ -5,7 +5,6 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshToPointCloud.h>
 #include <MRMesh/MRPointCloud.h>
-#include <MRMesh/MRPointCloudRadius.h>
 #include <MRMesh/MRRingIterator.h>
 #include <MRMesh/MRTorus.h>
 #include <gtest/gtest.h>
@@ -115,24 +114,22 @@ TEST( MRMesh, LocalConvexityPointCloudNaive )
 {
     const auto cloud = meshToPointCloud( makeTorus( 1.0f, 0.4f, 96, 48 ) );
     const float radius = 0.25f;
-    const float shell = findAvgPointsRadius( cloud, 3 );
     const auto fast = computeLocalConvexity( cloud, radius );
     ASSERT_TRUE( fast.has_value() );
     for ( auto v : cloud.validPoints )
     {
-        std::vector<VertId> ball;
-        PointAccumulator acc;
+        std::vector<std::pair<float, VertId>> ball;
         for ( auto u : cloud.validPoints )
-        {
-            const auto dist = ( cloud.points[u] - cloud.points[v] ).length();
-            if ( dist <= radius )
-                ball.push_back( u );
-            if ( dist >= radius - shell / 2 && dist <= radius + shell / 2 )
-                acc.addPoint( cloud.points[u] );
-        }
+            if ( const auto distSq = ( cloud.points[u] - cloud.points[v] ).lengthSq(); distSq <= radius * radius )
+                ball.emplace_back( distSq, u );
+        std::sort( ball.begin(), ball.end() );
+        const auto numBd = std::max( size_t( 3 ), size_t( std::sqrt( ball.size() ) ) );
+        PointAccumulator acc;
+        for ( auto i = ball.size() - numBd; i < ball.size(); ++i )
+            acc.addPoint( cloud.points[ball[i].second] );
         const auto plane = acc.getBestPlane();
         double sum = 0, sumAbsCos = 0;
-        for ( auto u : ball )
+        for ( const auto& [distSq, u] : ball )
         {
             sum += plane.distance( Vector3d( cloud.points[u] ) ) * dot( plane.n, Vector3d( cloud.normals[u] ) );
             sumAbsCos += std::abs( dot( plane.n, Vector3d( cloud.normals[u] ) ) );

@@ -1,7 +1,6 @@
 #include "MRLocalConvexity.h"
 #include "MRMesh.h"
 #include "MRPointCloud.h"
-#include "MRPointCloudRadius.h"
 #include "MRPointsInBall.h"
 #include "MRBestFit.h"
 #include "MRConstants.h"
@@ -11,6 +10,7 @@
 #include "MRMatrix3.h"
 #include "MRTimer.h"
 #include "MRPch/MRTBB.h"
+#include <algorithm>
 #include <array>
 
 namespace MR
@@ -134,33 +134,32 @@ Expected<VertScalars> computeLocalConvexity( const PointCloud& cloud, float radi
     MR_TIMER;
     if ( !cloud.hasNormals() )
         return unexpected( "Point cloud has no normals" );
-    // plane points are taken from the shell around the sphere of given radius, as wide as the average distance between neighbor points
-    const float shell = findAvgPointsRadius( cloud, 3 );
     cloud.getAABBTree(); // build it before the parallel region
 
-    const float rSq = sqr( radius );
-    const float innerSq = sqr( std::max( 0.0f, radius - shell / 2 ) );
-    const float outerSq = sqr( radius + shell / 2 );
     VertScalars res( cloud.points.size(), 0.0f );
-    tbb::enumerable_thread_specific<std::vector<VertId>> tls;
-    if ( !BitSetParallelFor( cloud.validPoints, tls, [&]( VertId v, std::vector<VertId>& ball )
+    using DistPoint = std::pair<float, VertId>; // squared distance from the center point
+    tbb::enumerable_thread_specific<std::vector<DistPoint>> tls;
+    if ( !BitSetParallelFor( cloud.validPoints, tls, [&]( VertId v, std::vector<DistPoint>& ball )
     {
         const auto p0 = cloud.points[v];
         ball.clear();
-        PointAccumulator planeAcc; // relative to p0
-        findPointsInBall( cloud, { p0, outerSq }, [&]( const PointsProjectionResult & found, const Vector3f&, Ball3f & )
+        findPointsInBall( cloud, { p0, sqr( radius ) }, [&]( const PointsProjectionResult & found, const Vector3f&, Ball3f & )
         {
-            if ( found.distSq <= rSq )
-                ball.push_back( found.vId );
-            if ( found.distSq >= innerSq )
-                planeAcc.addPoint( cloud.points[found.vId] - p0 );
+            ball.emplace_back( found.distSq, found.vId );
             return Processing::Continue;
         } );
-        if ( !planeAcc.valid() )
+        const int n = int( ball.size() );
+        if ( n < 3 )
             return;
+        // the furthest sqrt(n) points play the role of the mesh region's boundary
+        const int numBd = std::max( 3, int( std::sqrt( n ) ) );
+        std::nth_element( ball.begin(), ball.end() - numBd, ball.end() );
+        PointAccumulator planeAcc; // relative to p0
+        for ( auto it = ball.end() - numBd; it != ball.end(); ++it )
+            planeAcc.addPoint( cloud.points[it->second] - p0 );
         const auto plane = planeAcc.getBestPlane();
         double sum = 0, sumAbsCos = 0;
-        for ( auto u : ball )
+        for ( const auto& [distSq, u] : ball )
         {
             const auto c = dot( plane.n, Vector3d( cloud.normals[u] ) );
             sum += plane.distance( Vector3d( cloud.points[u] - p0 ) ) * c;

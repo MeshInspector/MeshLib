@@ -50,7 +50,7 @@ jobs:
             config: Debug
           - arch: arm64
             config: Debug
-            lib-source: vcpkg
+            lib-source: Homebrew
         include:
           - arch: x64
             config: Release

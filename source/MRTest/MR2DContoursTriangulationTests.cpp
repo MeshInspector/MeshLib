@@ -507,10 +507,8 @@ TEST( MRMesh, PlanarTriangulationMonotonePlanSameDefinitions )
     }
 }
 
-// findCrossings on the exact predicates of a cut triangle: cut A crossed by cuts B and C gives two crossings in the order of the sweep,
-// each one two edges directed along the sweep, the first one passing from the right of the second one to its left, and three cuts through
-// one point give three, one by one; loops without crossings (or no loops) give none, and an edge without a cut (as along a side) crossing
-// another one, or a crossing that the predicates fail on, gives std::nullopt
+// findCrossings on the exact predicates of a cut triangle: the crossings in the order of the sweep, each two edges directed along it,
+// the first one passing from the right of the second one to its left, or std::nullopt
 TEST( MRMesh, PlanarTriangulationFindCrossings )
 {
     // the hole of triangle 0_f, and every cut as a slit: the segment where the plane of another triangle crosses the plane z = 0,

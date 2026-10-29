@@ -166,22 +166,18 @@ MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const 
 MR_BIND_IGNORE MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops,
     const std::array<PreciseVertCoords, 3>& tri, const std::function<PreciseCutPoint( VertId )>& pointOf );
 
-/// finds where the edges of the loops of one triangle of a mesh cut by the boolean cross, on the exact predicates of \ref getMonotonePlan above
-/// \param cutOf the triangle of the other mesh whose plane every edge of the loops inside the triangle goes along (as PreciseCutPoint::tri),
-///        or invalid ids for an edge along a side; every crossing of two cuts is a point of the predicates (see PreciseCutPoint::tri2)
-/// \return the crossings in the order a sweep over the triangle meets them, which is also their order along every edge (crossings at one
-///         point are met one by one); every crossing is two edges directed along the sweep, the first one passing from the right of the
-///         second one to its left; std::nullopt if an edge without a cut crosses another one, if two vertices on the loops are defined alike
-///         and their wedges do not tell them apart, if two edges of the loops join the same two vertices, or if the predicates fail on the
-///         points or on a crossing
+/// finds the crossings of the edges of the loops of one triangle cut by the boolean, on the exact predicates of \ref getMonotonePlan above
+/// \param cutOf the triangle of the other mesh along whose plane every edge inside the triangle goes, or invalid ids for a side edge
+/// \return the crossings in the order of the sweep, also along every edge (at one point one by one), each as two edges directed along the
+///         sweep, the first passing from the right of the second to its left; std::nullopt if a side edge crosses another edge, if two edges
+///         join the same two vertices, or if the predicates fail (see \ref getMonotonePlan above), also on a crossing
 MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops,
     const std::array<PreciseVertCoords, 3>& tri, const std::function<PreciseCutPoint( VertId )>& pointOf,
     const std::function<std::array<PreciseVertCoords, 3>( UndirectedEdgeId )>& cutOf );
 
-/// same as above on the predicates of \ref getMonotonePlan( mesh, loops, normal ), as where no exact definitions are given: on the points
-/// rounded as there, so the rounding can add or remove crossings, as of an edge with a side of the triangle that it nearly touches;
-/// the points of the crossings are rounded too, so the result is only approximate where a crossing is within about a rounding unit
-/// of another point (as of three cuts through one point)
+/// same as above on the float predicates of \ref getMonotonePlan( mesh, loops, normal ), whose projection, counterclockwise around \p normal
+/// (oriented as the triangle for the same result), sets the direction of the sweep and left and right in the result; the rounding of the
+/// points and of the crossings can add or remove a crossing near another point or edge, and a side edge crossing another edge is a usual pair
 /// \return std::nullopt if two edges of the loops join the same two vertices
 MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal );
 

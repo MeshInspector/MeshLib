@@ -1937,9 +1937,8 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
 // the exact predicates on the vertices of the loops of one cut triangle, for a sweep over them
 struct LoopPoints
 {
-    // the distinct vertices of the loops (a vertex can be on several loops, or twice on a slit), sorted; vertex verts[i] is point i
-    // of the predicates, all added before the sweep; findCrossings adds crossings in it, so after one that fails or is not added the rest of
-    // its event must only add crossings and call ccw on loop points, and the run must stop before getNext_, the first to compare a crossing
+    // the distinct vertices of the loops, sorted; verts[i] is point i of the predicates, all added before the sweep (after a crossing that
+    // findCrossings fails to add in it, the event only calls ccw on loop points, and the run stops before getNext_ compares a crossing)
     Vector<VertId> verts;
     CutTrianglePredicates preds;
     Vector<VertId, VertId> pointIds; // the point of every vertex of the sweep

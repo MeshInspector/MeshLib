@@ -1312,8 +1312,9 @@ TEST( MRMesh, ForceFillCrossingsOneFace )
 // on the bottom side is before the other one along it by about a third of minMove, and below the side (by about 1/44 of minMove, as if rounded
 // there), or the first one starts at corner 0_v and the point of the other one is after it by as much, and above the side by as much (the corner,
 // a segment end in a face removed at the corner before the search, is moved out too), so their first segments cross on the points as they are,
-// but not in the order the cut sorts them along the side; under force fill, the face is not bad with the sides moved out, unless the contours
-// cross for real (with their points on the long side swapped)
+// but not in the order the cut sorts them along the side; under force fill, the face is not bad with the sides moved out, neither by the crossing
+// test nor by the plan that connects an island in it (both fail on the points as they are), and the cut is connected, unless the contours cross
+// for real (with their points on the long side swapped, and no island)
 TEST( MRMesh, ForceFillCrossingsNearSide )
 {
     const auto mesh = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 1000, 0, 0 ), Vector3f( 0, 1000, 0 ) }, { { 0_v, 1_v, 2_v } } );
@@ -1323,6 +1324,7 @@ TEST( MRMesh, ForceFillCrossingsNearSide )
     };
     auto in = [] ( float x, float y ) { return OneMeshIntersection{ .primitiveId = 0_f, .coordinate = Vector3f( x, y, 0 ) }; };
     const OneMeshIntersection corner{ .primitiveId = 0_v, .coordinate = Vector3f() };
+    const OneMeshContour island{ .intersections = { in( 100, 300 ), in( 200, 300 ), in( 100, 400 ), in( 100, 300 ) }, .closed = true };
     for ( const auto& [before, after] : { std::pair( side( 0_v, 1_v, 500 - 1.f / 4096, -1.f / 65536 ), side( 0_v, 1_v, 500, 0 ) ),
         std::pair( corner, side( 0_v, 1_v, 1.f / 4096, 1.f / 65536 ) ) } )
     {
@@ -1330,12 +1332,15 @@ TEST( MRMesh, ForceFillCrossingsNearSide )
             { after.coordinate, Vector3f( 900, 1, 0 ), before.coordinate, Vector3f( 900, 2, 0 ) }, Vector3f::plusZ() ) );
         for ( bool cross : { false, true } )
         {
-            Mesh cut = mesh;
-            const auto forced = cutMesh( cut, {
+            OneMeshContours contours{
                 { .intersections = { after, in( 900, 1 ), side( 2_v, 1_v, cross ? 940.f : 950.f, cross ? 60.f : 50.f ) } },
-                { .intersections = { before, in( 900, 2 ), side( 2_v, 1_v, cross ? 950.f : 940.f, cross ? 50.f : 60.f ) } } },
-                { .forceFill = true } ).fbsWithContourIntersections;
+                { .intersections = { before, in( 900, 2 ), side( 2_v, 1_v, cross ? 950.f : 940.f, cross ? 50.f : 60.f ) } } };
+            if ( !cross )
+                contours.push_back( island );
+            Mesh cut = mesh;
+            const auto forced = cutMesh( cut, contours, { .forceFill = true } ).fbsWithContourIntersections;
             EXPECT_EQ( forced.count(), cross ? 1 : 0 ) << "cross " << cross << ", first point at x = " << before.coordinate.x;
+            EXPECT_EQ( MeshComponents::getNumComponents( cut ), 1 ) << "cross " << cross << ", first point at x = " << before.coordinate.x;
         }
     }
 }

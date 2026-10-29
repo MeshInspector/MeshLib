@@ -354,7 +354,7 @@
         "type": "submodule",
         "path": "thirdparty/libE57Format"
       },
-      "version": "1816f72de58b27208a8f03c7213ba4039517402a"
+      "version": "1f14b9ab86bd8599f19f8d79d8568b6a2548ebe8"
     },
     {
       "id": "tinyxml2",

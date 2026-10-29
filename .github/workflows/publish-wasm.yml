@@ -51,10 +51,12 @@ jobs:
           BUCKET: s3://cdn-meshlib-js
         run: |
           for TGZ in js-meshlib-*.tgz ; do tar -xzf "${TGZ}" --strip-components=1 ; done
+          # Stored compressed once, served as is: every browser that runs wasm decodes Brotli, which is a third smaller than gzip here.
+          # Window 24 (16 MB) is the largest a browser accepts.
           upload() {
             local dest="$1" ; shift
-            gzip -9 -c "${f}.mjs"  | aws s3 cp - "${dest}/${f}.mjs"  --content-type text/javascript   --content-encoding gzip "$@"
-            gzip -9 -c "${f}.wasm" | aws s3 cp - "${dest}/${f}.wasm" --content-type application/wasm  --content-encoding gzip "$@"
+            brotli -q 11 -w 24 -c "${f}.mjs"  | aws s3 cp - "${dest}/${f}.mjs"  --content-type text/javascript   --content-encoding br "$@"
+            brotli -q 11 -w 24 -c "${f}.wasm" | aws s3 cp - "${dest}/${f}.wasm" --content-type application/wasm  --content-encoding br "$@"
           }
           for f in meshlib meshlib-mt ; do
             if [ "${IS_DRAFT}" = "true" ] ; then

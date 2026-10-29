@@ -158,18 +158,15 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
     res.edgeData.reserve( size_t( intersectedEdges ) );
     const auto oldEdgesSize = topology.edgeSize();
 
-    // find the old face of every path edge before the topology changes;
-    // the faces of path edges at mesh vertices are removed here (the others by cutOneEdge or connectLoneContours),
-    // and their edges show where to splice the path edges around the vertices
-    auto& vertFaces = res.vertFaces;
-    for ( int contourId = 0; contourId < contours.size(); ++contourId )
+    // find the old face of every path edge in parallel before the topology changes
+    ParallelFor( contours, [&] ( size_t contourId )
     {
         const auto& inContour = contours[contourId].intersections;
         if ( inContour.size() < 2 )
-            continue;
+            return;
         auto& faces = res.oldEdgesInfo[contourId];
         faces.resize( inContour.size() - 1 );
-        for ( int i = 0; i + 1 < inContour.size(); ++i )
+        ParallelFor( size_t( 0 ), faces.size(), [&] ( size_t i )
         {
             const auto& a = inContour[i].primitiveId;
             const auto& b = inContour[i + 1].primitiveId;
@@ -180,9 +177,8 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
                 // the path edge is an edge of the old mesh
                 const auto e = topology.findEdge( *va, *vb );
                 assert( e );
-                if ( !e )
-                    continue;
-                faces[i] = { topology.left( e ), topology.right( e ) };
+                if ( e )
+                    faces[i] = { topology.left( e ), topology.right( e ) };
             }
             else if ( const auto pe = std::get_if<EdgeId>( va ? &b : &a ) )
             {
@@ -198,12 +194,23 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
             }
             else
                 faces[i].left = faces[i].right = std::get<FaceId>( va ? b : a );
-            if ( faces[i].left && ( va || vb ) )
-            {
-                auto [it, inserted] = vertFaces.try_emplace( faces[i].left );
-                if ( inserted )
-                    topology.getTriEdges( faces[i].left, it->second[0], it->second[1], it->second[2] );
-            }
+        } );
+    } );
+
+    // the faces of path edges at mesh vertices are removed here (the others by cutOneEdge or connectLoneContours),
+    // and their edges show where to splice the path edges around the vertices
+    auto& vertFaces = res.vertFaces;
+    for ( int contourId = 0; contourId < contours.size(); ++contourId )
+    {
+        const auto& inContour = contours[contourId].intersections;
+        const auto& faces = res.oldEdgesInfo[contourId];
+        for ( int i = 0; i < faces.size(); ++i )
+        {
+            if ( !faces[i].left || !( std::holds_alternative<VertId>( inContour[i].primitiveId ) || std::holds_alternative<VertId>( inContour[i + 1].primitiveId ) ) )
+                continue;
+            auto [it, inserted] = vertFaces.try_emplace( faces[i].left );
+            if ( inserted )
+                topology.getTriEdges( faces[i].left, it->second[0], it->second[1], it->second[2] );
         }
     }
     for ( const auto& [f, edges] : vertFaces )
@@ -284,6 +291,8 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
         topology.splice( x, e );
     };
 
+    // make the path edges and the new vertices with their origin edges in order (the ids are the same as one by one),
+    // splice the path edges at mesh vertices; the rest is done in parallel below
     for ( int contourId = 0; contourId < contours.size(); ++contourId )
     {
         const auto& inContour = contours[contourId].intersections;
@@ -323,35 +332,67 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
                     spliceAtVert( *vert, faces[i - 1].left, in, contourId, i - 1 );
                 continue;
             }
-            if ( closed && i + 1 == inContour.size() )
-            {
-                // the last intersection of a closed contour is the first one
-                topology.splice( in, path.front() );
+            // the last intersection of a closed contour is the first one
+            if ( !closed || i + 1 < inContour.size() )
+                topology.setOrg( out ? out : in, topology.addVertId() );
+        }
+    }
+
+    // the new vertices are the origins of out (or of in at the end of an open contour): place them and splice in to out,
+    // which touches only the records of these two edges at the new vertex, so the intersections are independent;
+    // the submap of edgeData of every edge intersection is found here too, so each thread below does not hash all of them
+    mesh.points.resize( topology.vertSize() );
+    Vector<Vector<std::uint8_t>> subIds( contours.size() );
+    ParallelFor( contours, [&] ( size_t contourId )
+    {
+        const auto& inContour = contours[contourId].intersections;
+        if ( inContour.size() < 2 )
+            return;
+        const auto& path = res.paths[contourId];
+        const bool closed = contours[contourId].closed;
+        subIds[contourId].resize( inContour.size(), std::uint8_t( 0xFF ) );
+        ParallelFor( size_t( 0 ), inContour.size(), [&] ( size_t i )
+        {
+            if ( std::holds_alternative<VertId>( inContour[i].primitiveId ) )
+                return;
+            const EdgeId in = i > 0 ? path[i - 1].sym() : EdgeId{};
+            const EdgeId out = i < path.size() ? path[i] : EdgeId{};
+            if ( closed && !out )
+                return topology.splice( in, path.front() ); // the last intersection of a closed contour is the first one
+            if ( in && out && in != out )
+                topology.splice( in, out );
+            mesh.points[topology.org( out ? out : in )] = inContour[i].coordinate;
+            if ( const auto e = std::get_if<EdgeId>( &inContour[i].primitiveId ) )
+                subIds[contourId][i] = std::uint8_t( res.edgeData.subidx( res.edgeData.hash( e->undirected() ) ) );
+        } );
+    } );
+
+    // note the intersections on every old edge in parallel by the submaps of edgeData, each in the order of the contours
+    ParallelFor( size_t( 0 ), res.edgeData.subcnt(), [&] ( size_t sub )
+    {
+        for ( int contourId = 0; contourId < contours.size(); ++contourId )
+        {
+            const auto& inContour = contours[contourId].intersections;
+            const auto& path = res.paths[contourId];
+            if ( inContour.size() < 2 )
                 continue;
-            }
-            const auto newVertId = topology.addVertId();
-            mesh.points.autoResizeAt( newVertId ) = inter.coordinate;
-            if ( out )
+            // the last intersection of a closed contour is the first one
+            const auto end = contours[contourId].closed ? path.size() : inContour.size();
+            for ( int i = 0; i < end; ++i )
             {
-                topology.setOrg( out, newVertId );
-                if ( in )
-                    topology.splice( in, out );
-            }
-            else
-                topology.setOrg( in, newVertId );
-            // add note to edgeData
-            if ( auto e = std::get_if<EdgeId>( &inter.primitiveId ) )
-            {
-                auto& edgeData = res.edgeData[e->undirected()];
+                if ( subIds[contourId][i] != sub )
+                    continue;
+                const EdgeId out = i < path.size() ? path[i] : EdgeId{};
+                auto& edgeData = res.edgeData[std::get<EdgeId>( inContour[i].primitiveId ).undirected()];
                 edgeData.reserve( 5 ); // reserve a small amount to avoid reallocations in most common scenarios
                 edgeData.emplace_back( EdgeIntersectionData{
                     .interOnEdge = IntersectionData{ContourId( contourId ),IntersectionId( i )},
-                    .newVert = newVertId,
+                    .newVert = topology.org( out ? out : path[i - 1].sym() ),
                     .orgEdgeInLeftTri = out,
                     .beforeSortIndex = int( edgeData.size() ) } );
             }
         }
-    }
+    } );
     return res;
 }
 

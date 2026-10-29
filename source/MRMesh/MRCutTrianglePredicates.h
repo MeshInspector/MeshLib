@@ -138,10 +138,10 @@ public:
     /// the perturbation, three points off the sides on one line also after the perturbation and without a crossing of two cuts among them
     /// (as three crossings of one cut by edges, while valid input has two at most, apart from points defined alike), or points whose expansion
     /// of the perturbation reaches a stage whose degrees do not fit in int64 (see ccwByPerturbation); it stays set till reset; the caller checks
-    /// it after the addPoint calls and calls no predicate if it is set, since they take the points as valid (less may be cyclic then, and Debug
-    /// asserts may fire); a failure that a predicate finds leaves the predicates callable, with arbitrary answers that the caller discards,
-    /// and less a strict total order (points defined alike compare alike with every other point, and by their ids with one another if their
-    /// shifts do not tell them apart)
+    /// it after the addPoint calls and calls no predicate on the point of a failed addPoint, since they take the points as valid (less may be
+    /// cyclic then, and Debug asserts may fire), while predicates on the other points stay callable; a failure that a predicate finds leaves
+    /// the predicates callable, with arbitrary answers that the caller discards, and less a strict total order (points defined alike compare
+    /// alike with every other point, and by their ids with one another if their shifts do not tell them apart)
     [[nodiscard]] MRMESH_API bool failed() const;
 
 private:

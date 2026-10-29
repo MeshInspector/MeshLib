@@ -101,6 +101,11 @@ struct CutMeshResult
   */
 MRMESH_API CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMeshParameters& params = {} );
 
+/// \ingroup BooleanGroup
+/// reserves the capacity in \p mesh for a mesh with the sizes of \p sizeOf (e.g. \p mesh itself, or the mesh to be copied in it)
+/// together with the elements that \ref cutMesh by \p contours adds, so the cut does not reallocate the mesh
+MRMESH_API void reserveForCut( Mesh& mesh, const Mesh& sizeOf, const OneMeshContours& contours );
+
 
 /// Cuts \p mesh by \p contour by projecting all the points
 /// \param xf transformation from the CSYS of \p contour to the CSYS of \p mesh

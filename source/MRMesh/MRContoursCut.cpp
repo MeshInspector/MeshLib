@@ -138,30 +138,12 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
     MR_TIMER;
     auto& topology = mesh.topology;
 
-    int numVerts = 0;
-    int numEdges = 0;
     int intersectedEdges = 0;
     for ( const auto& cont : contours )
-    {
-        auto size = int( cont.intersections.size() );
-        numVerts += size;
-        numEdges += 2 * size;
         for ( const auto& in : cont.intersections )
             if ( std::holds_alternative<EdgeId>( in.primitiveId ) )
                 ++intersectedEdges;
-        if ( cont.closed )
-            --numVerts;
-    }
-    numEdges += 2 * intersectedEdges;
-    const auto totalExpectedVerts = topology.vertSize() + numVerts;
-    const auto totalExpectedEdges = topology.edgeSize() + numEdges;
-
-    // the fill of the holes adds about 0.5 times as many edges and 0.6 times as many faces as the cut adds edges: reserving for both here,
-    // as many as the cut adds for headroom, copies the topology of the whole mesh to the larger buffers once, not again before the fill
-    topology.vertReserve( totalExpectedVerts );
-    topology.edgeReserve( totalExpectedEdges + numEdges );
-    topology.faceReserve( topology.faceSize() + numEdges );
-    mesh.points.reserve( totalExpectedVerts );
+    reserveForCut( mesh, mesh, contours );
 
     PreCutResult res;
     res.paths.resize( contours.size() );
@@ -1312,6 +1294,34 @@ Expected<OneMeshContours> offsetSurfaceLineToMeshContours( const Mesh& mesh, con
         } );
     }
     return res;
+}
+
+void reserveForCut( Mesh& mesh, const Mesh& sizeOf, const OneMeshContours& contours )
+{
+    size_t numVerts = 0;
+    size_t numEdges = 0;
+    size_t intersectedEdges = 0;
+    for ( const auto& cont : contours )
+    {
+        const auto size = cont.intersections.size();
+        numVerts += size;
+        numEdges += 2 * size;
+        for ( const auto& in : cont.intersections )
+            if ( std::holds_alternative<EdgeId>( in.primitiveId ) )
+                ++intersectedEdges;
+        if ( cont.closed )
+            --numVerts;
+    }
+    numEdges += 2 * intersectedEdges;
+    const auto& topology = sizeOf.topology;
+    const auto totalExpectedVerts = topology.vertSize() + numVerts;
+
+    // the fill of the holes adds about 0.5 times as many edges and 0.6 times as many faces as the cut adds edges: reserving for both here,
+    // as many as the cut adds for headroom, copies the topology of the whole mesh to the larger buffers once, not again before the fill
+    mesh.topology.vertReserve( totalExpectedVerts );
+    mesh.topology.edgeReserve( topology.edgeSize() + 2 * numEdges );
+    mesh.topology.faceReserve( topology.faceSize() + numEdges );
+    mesh.points.reserve( totalExpectedVerts );
 }
 
 CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMeshParameters& params )

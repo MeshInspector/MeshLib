@@ -166,39 +166,18 @@ jobs:
       - name: TEMP diagnose vcpkg python
         if: ${{ matrix.lib-source == 'vcpkg' }}
         continue-on-error: true
-        timeout-minutes: 40
+        timeout-minutes: 10
         run: |
-          set -x
-          sw_vers; xcode-select -p; pkgutil --pkg-info=com.apple.pkg.CLTools_Executables | head -2 || true
-          env | grep -i -E '^(python|pip|virtual_env|__pyvenv|dyld)' || true
-          diag() {
-            PY=$1/tools/python3/python3.14
-            ls -la "$(dirname $PY)" || true
-            file "$PY" || true
-            vtool -show-build "$PY" || true
-            otool -L "$PY" || true
-            otool -l "$PY" | grep -A2 LC_RPATH || true
-            codesign -v "$PY" 2>&1 || true
-            ls $1/lib/python3.14/os.py $1/lib/libpython3.14.dylib || true
-            vtool -show-build $1/lib/libpython3.14.dylib || true
-            "$PY" -c 'import sys; print(sys.version, sys.prefix, sys.path)' 2>&1 || echo "exit=$?"
-            env -i HOME="$HOME" PATH=/usr/bin:/bin "$PY" -c 'import sysconfig; print(len(sysconfig.get_config_vars()))' 2>&1 || echo "clean-env exit=$?"
-            PYTHONVERBOSE=1 "$PY" -c pass 2>&1 | tail -30 || true
-          }
-          # python3 restored from the caches (built on another runner)
-          diag $PWD/vcpkg_installed/${VCPKG_TRIPLET}
-          # python3 built cold on this runner, no binary caches
-          D=$RUNNER_TEMP/pycold
-          rm -rf $D; mkdir -p $D
-          V=$PWD/thirdparty/vcpkg
-          printf '{"dependencies":["python3"],"configuration":{"default-registry":{"kind":"git","repository":"https://github.com/Microsoft/vcpkg","baseline":"%s"},"overlay-ports":["%s/ports"],"overlay-triplets":["%s/triplets"]}}\n' \
-            "$(grep -o '"baseline": "[0-9a-f]*"' $V/vcpkg.json | cut -d'"' -f4)" "$V" "$V" > $D/vcpkg.json
-          cat $D/vcpkg.json
-          export CC="${VCPKG_CC}" CXX="${VCPKG_CXX}" SDKROOT=$(xcrun --show-sdk-path) VCPKG_DEFAULT_HOST_TRIPLET=${VCPKG_TRIPLET}
-          vcpkg install --x-manifest-root=$D --x-install-root=$D/installed --x-abi-tools-use-exact-versions \
-            --triplet ${VCPKG_TRIPLET} --binarysource=clear || echo "install exit=$?"
-          diag $D/installed/${VCPKG_TRIPLET}
-          for f in $VCPKG_ROOT/buildtrees/python3/*.log; do echo "== $f"; tail -40 "$f"; done || true
+          B=$VCPKG_ROOT/buildtrees/mrbind-pybind11
+          ls -la $B || true
+          for f in $B/*.log; do
+            echo "::group::$f"
+            ls -la "$f"
+            grep -n -i -E -B5 -A25 'interpreter|python' "$f" | head -400
+            echo "::endgroup::"
+          done
+          ls -la $VCPKG_ROOT/buildtrees/mrbind-pybind11/arm64-osx-meshlib-rel 2>/dev/null | head || true
+          log show --start '2026-10-29 21:08:16' --end '2026-10-29 21:08:30' --style compact 2>/dev/null | grep -i -E 'python|kill|cs_|codesign|amfi|syspolicy' | head -80 || true
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}

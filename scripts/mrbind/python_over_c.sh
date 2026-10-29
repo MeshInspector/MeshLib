@@ -28,6 +28,8 @@ GEN_FLAGS=(
     --replace-namespace MR ::
     --adjust-name '\bMR::' ''
     --hide-field id_
+    # `mrcudapy` is a separate module.
+    --ignore-c-file '^MRCCuda/'
     --ignore-for-python '^MR::SetBitIteratorT<'
     --ignore-for-python 'SetBitIterator$'
     --ignore-for-python '^MR::ConstChildren::(Iterator|begin|end)$'

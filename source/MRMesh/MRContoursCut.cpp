@@ -332,8 +332,10 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
     }
 
     // the new vertices are the origins of out (or of in at the end of an open contour): place them and splice in to out,
-    // which touches only the records of these two edges at the new vertex, so the intersections are independent
+    // which touches only the records of these two edges at the new vertex, so the intersections are independent;
+    // the submap of edgeData of every edge intersection is found here too, so each thread below does not hash all of them
     mesh.points.resize( topology.vertSize() );
+    Vector<Vector<std::uint8_t>> subIds( contours.size() );
     ParallelFor( contours, [&] ( size_t contourId )
     {
         const auto& inContour = contours[contourId].intersections;
@@ -341,6 +343,7 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
             return;
         const auto& path = res.paths[contourId];
         const bool closed = contours[contourId].closed;
+        subIds[contourId].resize( inContour.size(), std::uint8_t( 0xFF ) );
         ParallelFor( size_t( 0 ), inContour.size(), [&] ( size_t i )
         {
             if ( std::holds_alternative<VertId>( inContour[i].primitiveId ) )
@@ -352,6 +355,8 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
             if ( in && out && in != out )
                 topology.splice( in, out );
             mesh.points[topology.org( out ? out : in )] = inContour[i].coordinate;
+            if ( const auto e = std::get_if<EdgeId>( &inContour[i].primitiveId ) )
+                subIds[contourId][i] = std::uint8_t( res.edgeData.subidx( res.edgeData.hash( e->undirected() ) ) );
         } );
     } );
 
@@ -368,11 +373,10 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
             const auto end = contours[contourId].closed ? path.size() : inContour.size();
             for ( int i = 0; i < end; ++i )
             {
-                const auto e = std::get_if<EdgeId>( &inContour[i].primitiveId );
-                if ( !e || res.edgeData.subidx( res.edgeData.hash( e->undirected() ) ) != sub )
+                if ( subIds[contourId][i] != sub )
                     continue;
                 const EdgeId out = i < path.size() ? path[i] : EdgeId{};
-                auto& edgeData = res.edgeData[e->undirected()];
+                auto& edgeData = res.edgeData[std::get<EdgeId>( inContour[i].primitiveId ).undirected()];
                 edgeData.reserve( 5 ); // reserve a small amount to avoid reallocations in most common scenarios
                 edgeData.emplace_back( EdgeIntersectionData{
                     .interOnEdge = IntersectionData{ContourId( contourId ),IntersectionId( i )},

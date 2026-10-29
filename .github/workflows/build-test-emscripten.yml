@@ -222,6 +222,9 @@ jobs:
           # Cuda placeholders:
           cp -r scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
 
+      - name: Optimize for size
+        run: echo 'set(CMAKE_CXX_FLAGS_RELEASE "-Oz -DNDEBUG")' > /tmp/flags.cmake
+
       - name: Build Wasm module
         env:
           MR_EMSCRIPTEN: "ON"
@@ -237,6 +240,7 @@ jobs:
             -DMESHLIB_BUILD_MRVIEWER=OFF
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON
             -DMESHLIB_BUILD_JS_BINDINGS=ON
+            -DCMAKE_PROJECT_INCLUDE=/tmp/flags.cmake
           MR_CMAKE_BUILD_OPTIONS: >
             --target MeshLibJS MeshLibJSNode
         run: ./scripts/build_source.sh

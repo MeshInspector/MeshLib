@@ -1938,7 +1938,8 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
 struct LoopPoints
 {
     // the distinct vertices of the loops (a vertex can be on several loops, or twice on a slit), sorted; vertex verts[i] is point i
-    // of the predicates, all added before the sweep, since no predicate may run after a failed addPoint
+    // of the predicates, all added before the sweep; findCrossings adds crossings in it, so after one that fails or is not added the rest of
+    // its event must only add crossings and call ccw on loop points, and the run must stop before getNext_, the first to compare a crossing
     Vector<VertId> verts;
     CutTrianglePredicates preds;
     Vector<VertId, VertId> pointIds; // the point of every vertex of the sweep
@@ -2007,17 +2008,15 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
     return getMonotonePlanImpl( mesh, loops, [&] ( const WholeEdgeMap&, SweepLineQueue::Cache& ) { return std::move( p ); } );
 }
 
-// the crossings of the edges of the loops by the sweep, which does not stop at them, on the predicates that makePredicates( patchToInEdges,
-// cache, meshEdge ) gives, where meshEdge( a, b ) is the mesh edge of the edge of the sweep from a to b (an edge of the loops, since
-// findIntersections splits no edge)
+// the crossings of the edges of the loops by the sweep, which does not stop at them, with the predicates that makePredicates builds
+// for the given patch-to-input edge map
 template <typename MakePredicates>
 static std::optional<Vector<EdgePair>> findCrossingsImpl( const Mesh& mesh, const EdgeLoops& loops, MakePredicates&& makePredicates )
 {
     SweepLineQueue::Cache cache;
     WholeEdgeMap patchToInEdges;
-    auto meshEdge = [&] ( VertId a, VertId b ) { return mapEdge( patchToInEdges, cache.tp.findEdge( a, b ) ); };
     // abortWhenIntersect is not set, so the sweep finds all crossings, in the order of the sweep; their points are not injected in its edges
-    SweepLineQueue sweep( cache, mesh.topology, makePredicates( patchToInEdges, cache, meshEdge ), loops,
+    SweepLineQueue sweep( cache, mesh.topology, makePredicates( patchToInEdges, cache ), loops,
         { .allowTwoEdgeLoops = true, .outPatchMap = &patchToInEdges } );
     if ( !sweep.findIntersections() )
         return {};
@@ -2037,11 +2036,12 @@ std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops
         return {};
     VertId nextPoint( lp.verts.size() );
     bool alongSide = false; // an edge without a cut crosses another one
-    return findCrossingsImpl( mesh, loops, [&] ( const WholeEdgeMap&, SweepLineQueue::Cache&, auto meshEdge )
+    return findCrossingsImpl( mesh, loops, [&] ( const WholeEdgeMap& patchToInEdges, SweepLineQueue::Cache& cache )
     {
-        p.addIntersectionPoint = [&, meshEdge] ( VertId v, VertId a, VertId b, VertId c, VertId d )
+        p.addIntersectionPoint = [&] ( VertId v, VertId a, VertId b, VertId c, VertId d )
         {
-            const PreciseCutPoint x{ .tri = cutOf( meshEdge( a, b ).undirected() ), .tri2 = cutOf( meshEdge( c, d ).undirected() ) };
+            const PreciseCutPoint x{ .tri = cutOf( mapEdge( patchToInEdges, cache.tp.findEdge( a, b ) ).undirected() ),
+                .tri2 = cutOf( mapEdge( patchToInEdges, cache.tp.findEdge( c, d ) ).undirected() ) };
             if ( !x.tri[0].id || !x.tri2[0].id )
                 alongSide = true; // the run stops at the end of this event, and no predicate takes the point before that
             else
@@ -2055,7 +2055,7 @@ std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops
 
 std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal )
 {
-    return findCrossingsImpl( mesh, loops, [&] ( const WholeEdgeMap& patchToInEdges, SweepLineQueue::Cache& cache, auto )
+    return findCrossingsImpl( mesh, loops, [&] ( const WholeEdgeMap& patchToInEdges, SweepLineQueue::Cache& cache )
     {
         return meshSpacePredicates( mesh, loops, normal, patchToInEdges, &cache.pts2Buffer );
     } );

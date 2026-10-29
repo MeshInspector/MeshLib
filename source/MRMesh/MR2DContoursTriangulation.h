@@ -179,7 +179,9 @@ MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const M
     const std::function<std::array<PreciseVertCoords, 3>( UndirectedEdgeId )>& cutOf );
 
 /// same as above on the predicates of \ref getMonotonePlan( mesh, loops, normal ), as where no exact definitions are given: on the points
-/// rounded as there, so the rounding can add or remove crossings, as of an edge with a side of the triangle that it nearly touches
+/// rounded as there, so the rounding can add or remove crossings, as of an edge with a side of the triangle that it nearly touches;
+/// the points of the crossings are rounded too, so the result is only approximate where a crossing is within about a rounding unit
+/// of another point (as of three cuts through one point)
 /// \return std::nullopt if two edges of the loops join the same two vertices
 MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal );
 

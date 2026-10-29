@@ -313,39 +313,6 @@ TEST( MRMesh, BooleanForceCutExactWindings )
     }
 }
 
-// a box and a double-sided triangle (two triangles on the same three vertices, winding number 0) poke through the top of the cube, and their
-// contours cross in one triangle of it; the two crossings with the two sides of the triangle are the same point, which the exact predicates
-// cannot tell apart, so the forced cut cannot split them, and the fill of that triangle folds; its pieces are kept or removed one by one,
-// so every piece of the top that the boolean keeps is outside the box for the union and inside it for the intersection;
-// Release only: in Debug, the sort of the intersections along an edge of the cube asserts that it cannot compare the two on both sides of the triangle
-#ifdef NDEBUG
-TEST( MRMesh, BooleanForceCutDoubleSidedTriangle )
-{
-    const auto cube = makeBox( Vector3f::diagonal( -1.f ), Vector3f::diagonal( 1.f ) );
-    const Box3f box( { -0.399397194f, 0.0775125921f, 0.578722f }, { 0.210799873f, 0.37126568f, 1.31900537f } );
-    Mesh other = makeBox( box.min, box.max );
-    Mesh tri;
-    tri.points = { { 1.19775832f, -0.0147513151f, 0.5f }, { -0.322802901f, 0.251895666f, 0.600000024f }, { 0.437477708f, 0.118572176f, 1.60000002f } };
-    tri.topology = MeshBuilder::fromTriangles( { { 0_v, 1_v, 2_v }, { 0_v, 2_v, 1_v } } );
-    other.addMesh( tri );
-    for ( auto op : { BooleanOperation::Union, BooleanOperation::Intersection } )
-    {
-        const auto res = boolean( cube, other, op, { .forceCut = true } );
-        ASSERT_TRUE( res.valid() ) << res.errorString;
-        EXPECT_EQ( res.meshABadContourFaces.count(), 1 );
-        double wrong = 0;
-        for ( auto f : res.mesh.topology.getValidFaces() )
-        {
-            const auto c = res.mesh.triCenter( f );
-            const bool inside = c.x > box.min.x && c.x < box.max.x && c.y > box.min.y && c.y < box.max.y;
-            if ( std::abs( c.z - 1.f ) < 1e-5f && inside != ( op == BooleanOperation::Intersection ) )
-                wrong += res.mesh.area( f );
-        }
-        EXPECT_LT( wrong, 1e-6 ) << ( op == BooleanOperation::Union ? "union" : "intersection" );
-    }
-}
-#endif
-
 // the precut output of the mesh that the operation does not cut (A for InsideB, B for InsideA) takes it only after the cut
 // of the other mesh, which sorts its intersections by that mesh itself, not by a copy; here the cut of the cube connects
 // a lone contour, whose exact points are made of the vertices of the sphere

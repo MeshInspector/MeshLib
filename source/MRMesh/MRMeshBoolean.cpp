@@ -25,13 +25,6 @@
 namespace MR
 {
 
-// the internal versions of cutMesh and doBooleanOperation with the faces where the forced cut could not split crossing contours
-// (defined in MRContoursCut.cpp and MRBooleanOperation.cpp)
-CutMeshResult cutMeshImpl( Mesh& mesh, const OneMeshContours& contours, const CutMeshParameters& params, FaceBitSet* unsplitCrossings );
-Expected<Mesh> doBooleanOperationImpl( Mesh&& meshACut, Mesh&& meshBCut, std::vector<EdgePath>&& cutEdgesA, std::vector<EdgePath>&& cutEdgesB,
-    BooleanOperation operation, const AffineXf3f* rigidB2A, BooleanResultMapper* mapper, bool mergeAllNonIntersectingComponents,
-    const BooleanInternalParameters& intParams, const FaceBitSet* unsplitA, const FaceBitSet* unsplitB );
-
 namespace
 {
 
@@ -358,7 +351,6 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         return { .errorString = stringOperationCanceled() };
 
     std::vector<EdgePath> cutA, cutB;
-    FaceBitSet unsplitA, unsplitB; // the faces where the forced cut could not split crossing contours
     OneMeshContours meshAContours;
     OneMeshContours meshBContours;
     // the meshes cut here, which need the sorting data: a precut output takes its mesh uncut
@@ -436,7 +428,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
                 cmParams.forceFill = true;
             else
                 cmParams.fillPart = needInsideA ? CutMeshParameters::FillPart::Left : CutMeshParameters::FillPart::Right;
-            auto res = cutMeshImpl( meshA, meshAContours, cmParams, &unsplitA );
+            auto res = cutMesh( meshA, meshAContours, cmParams );
             meshAContours.clear();
             meshAContours.shrink_to_fit(); // free memory
             result.meshABadContourFaces = std::move( res.fbsWithContourIntersections );
@@ -457,7 +449,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
             cmParams.forceFill = true;
         else
             cmParams.fillPart = needInsideB ? CutMeshParameters::FillPart::Right : CutMeshParameters::FillPart::Left;
-        auto res = cutMeshImpl( meshB, meshBContours, cmParams, &unsplitB );
+        auto res = cutMesh( meshB, meshBContours, cmParams );
         meshBContours.clear();
         meshBContours.shrink_to_fit(); // free memory
         result.meshBBadContourFaces = std::move( res.fbsWithContourIntersections );
@@ -511,8 +503,8 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     intParams.graphCutSeparation = params.forceCut;
     intParams.converters = &converters;
     // do operation
-    auto res = doBooleanOperationImpl( std::move( meshA ), std::move( meshB ), std::move( cutA ), std::move( cutB ), 
-        operation, params.rigidB2A, params.mapper, params.mergeAllNonIntersectingComponents, intParams, &unsplitA, &unsplitB );
+    auto res = doBooleanOperation( std::move( meshA ), std::move( meshB ), std::move( cutA ), std::move( cutB ), 
+        operation, params.rigidB2A, params.mapper, params.mergeAllNonIntersectingComponents, intParams );
 
     if ( params.cb && !params.cb( 1.0f ) )
         return { .errorString = stringOperationCanceled() };

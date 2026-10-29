@@ -214,7 +214,7 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
     const std::vector<EdgePath>& cutPaths, const Mesh& otherMesh, bool needInsideComps,
     bool originIsA, const AffineXf3f* rigidB2A,
     bool mergeAllNonIntersectingComponents, const BooleanInternalParameters& intParams,
-    int bVertShift, const FaceBitSet* unsplit )
+    int bVertShift )
 {
     MR_TIMER;
     BaseUnionFind<FaceId> unionFind;
@@ -309,13 +309,6 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
             }
         }
     }
-
-    // the faces whose fill can fold (where the forced cut could not split crossing contours), one by one, by the winding number
-    // at their centers (on a closed other mesh); a face of zero area stays with its part, as its center can be on the other mesh
-    if ( unsplit && unsplit->any() && exactWindings && other.mesh.topology.isClosed( other.region ) )
-        for ( auto f : *unsplit )
-            if ( origin.topology.hasFace( f ) && origin.dblArea( f ) > 0 )
-                res.set( f, ( ( *exactWindings )( {}, origin.triCenter( f ) ) > 0 ) == needInsideComps );
     return res;
 }
 
@@ -386,10 +379,14 @@ void connectPreparedParts( Mesh& res, Mesh& partB, const FaceBitSet* bRegion, bo
 
 } // anonymous namespace
 
-// doBooleanOperation that keeps or removes the faces in unsplitA and unsplitB one by one (see cutMeshImpl)
-Expected<Mesh> doBooleanOperationImpl( Mesh&& meshACut, Mesh&& meshBCut, std::vector<EdgePath>&& cutEdgesA, std::vector<EdgePath>&& cutEdgesB,
-    BooleanOperation operation, const AffineXf3f* rigidB2A, BooleanResultMapper* mapper, bool mergeAllNonIntersectingComponents,
-    const BooleanInternalParameters& intParams, const FaceBitSet* unsplitA, const FaceBitSet* unsplitB )
+Expected<MR::Mesh> doBooleanOperation(
+    Mesh&& meshACut, Mesh&& meshBCut,
+    std::vector<EdgePath>&& cutEdgesA, std::vector<EdgePath>&& cutEdgesB,
+    BooleanOperation operation, 
+    const AffineXf3f* rigidB2A /*= nullptr */,
+    BooleanResultMapper* mapper /*= nullptr */, 
+    bool mergeAllNonIntersectingComponents,
+    const BooleanInternalParameters& intParams )
 {
     MR_TIMER;
 
@@ -417,11 +414,11 @@ Expected<Mesh> doBooleanOperationImpl( Mesh&& meshACut, Mesh&& meshBCut, std::ve
     {
         if ( onlyCutA )
             return;
-        bPart = findMeshPart( meshBCut, cutEdgesB, meshACut, needInsideB, false, rigidB2A, mergeAllNonIntersectingComponents, intParams, bVertShift, unsplitB );
+        bPart = findMeshPart( meshBCut, cutEdgesB, meshACut, needInsideB, false, rigidB2A, mergeAllNonIntersectingComponents, intParams, bVertShift );
     } );
     // aPart
     if ( !onlyCutB )
-        aPart = findMeshPart( meshACut, cutEdgesA, meshBCut, needInsideA, true, rigidB2A, mergeAllNonIntersectingComponents, intParams, bVertShift, unsplitA );
+        aPart = findMeshPart( meshACut, cutEdgesA, meshBCut, needInsideA, true, rigidB2A, mergeAllNonIntersectingComponents, intParams, bVertShift );
     taskGroup.wait();
 
     if ( ( onlyCutA && !aPart ) ||
@@ -486,14 +483,6 @@ Expected<Mesh> doBooleanOperationImpl( Mesh&& meshACut, Mesh&& meshBCut, std::ve
     }
 
     return std::move( res );
-}
-
-Expected<Mesh> doBooleanOperation( Mesh&& meshACut, Mesh&& meshBCut, std::vector<EdgePath>&& cutEdgesA, std::vector<EdgePath>&& cutEdgesB,
-    BooleanOperation operation, const AffineXf3f* rigidB2A, BooleanResultMapper* mapper, bool mergeAllNonIntersectingComponents,
-    const BooleanInternalParameters& intParams )
-{
-    return doBooleanOperationImpl( std::move( meshACut ), std::move( meshBCut ), std::move( cutEdgesA ), std::move( cutEdgesB ),
-        operation, rigidB2A, mapper, mergeAllNonIntersectingComponents, intParams, nullptr, nullptr );
 }
 
 FaceBitSet BooleanResultMapper::map( const FaceBitSet& oldBS, MapObject obj ) const

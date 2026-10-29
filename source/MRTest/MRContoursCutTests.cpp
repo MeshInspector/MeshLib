@@ -674,17 +674,15 @@ TEST( MRMesh, CutMeshSelfCrossingLoneContour )
     }
 }
 
-// a lone contour inside a triangle of zero area (its corners on one line, and the contour on it too): without the exact sorting data, the cut
-// projects them along the axis across the line, where the points as they are would put the island outside the triangle, so the plan is found
-// at once with the corner opposite the longest side moved off the line and the sides moved out, and the island is connected and filled; a contour
-// through the triangle along that line with four points in it, its segments one after another, crosses nothing there under force fill either,
-// while one from nearer to 0_v on the side from 0_v to 2_v to further from 0_v on the side from 0_v to 1_v really crosses it, in the order of the
-// cut along the sides, which makes the triangle bad under force fill
+// a lone contour inside a triangle of zero area (its corners on one line) has no plane to connect it with the triangle in;
+// without the exact sorting data, the cut reports the triangle as bad and keeps it; a contour through the triangle along that line
+// with four points in it, which the plain cut takes, makes it bad under force fill, with no plane to find their crossings in either
 TEST( MRMesh, CutMeshLoneContourInZeroAreaFace )
 {
     // corner 2_v of 1_f is on its side from 1_v to 0_v
     const auto mesh = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 10, 10, 0 ), Vector3f( 4, 4, 0 ), Vector3f( 0, 10, 0 ) },
         { { 0_v, 1_v, 3_v }, { 1_v, 0_v, 2_v } } );
+    const auto e = mesh.topology.edgeWithLeft( 1_f );
     OneMeshContour island;
     for ( float t : { 1.f, 3.f, 7.f, 1.f } )
         island.intersections.push_back( { .primitiveId = 1_f, .coordinate = Vector3f( t, t, 0 ) } );
@@ -700,112 +698,16 @@ TEST( MRMesh, CutMeshLoneContourInZeroAreaFace )
         Mesh cut = mesh;
         const auto res = cutMesh( cut, { island }, { .forceFill = forceFill } );
         EXPECT_TRUE( cut.topology.checkValidity() );
-        EXPECT_TRUE( res.fbsWithContourIntersections.none() );
-        EXPECT_EQ( cut.topology.findNumHoles(), 1 ); // the border of the mesh
-        EXPECT_EQ( MeshComponents::getNumComponents( cut ), 1 );
+        EXPECT_TRUE( res.fbsWithContourIntersections.test( 1_f ) );
+        EXPECT_TRUE( cut.topology.hasFace( 1_f ) );
+        EXPECT_EQ( cut.topology.left( e ), 1_f );
+        // the border of the mesh, and the two sides of the island unless they are filled
+        EXPECT_EQ( cut.topology.findNumHoles(), forceFill ? 1 : 3 );
 
         cut = mesh;
-        EXPECT_TRUE( cutMesh( cut, { through }, { .forceFill = forceFill } ).fbsWithContourIntersections.none() );
-    }
-    // on across 0_f to the border inside `through`
-    const OneMeshContour crossing{ .intersections = { { .primitiveId = mesh.topology.findEdge( 0_v, 2_v ), .coordinate = Vector3f( 1, 1, 0 ) },
-        { .primitiveId = mesh.topology.findEdge( 0_v, 1_v ), .coordinate = Vector3f( 7, 7, 0 ) },
-        { .primitiveId = mesh.topology.findEdge( 3_v, 1_v ), .coordinate = Vector3f( 7, 10, 0 ) } } };
-    Mesh cut = mesh;
-    const auto bad = cutMesh( cut, { through, crossing }, { .forceFill = true } ).fbsWithContourIntersections;
-    EXPECT_EQ( bad.count(), 1 );
-    EXPECT_TRUE( bad.test( 1_f ) );
-}
-
-// a lone contour in a triangle with its corners and all the points of the contour at the origin, where a few float errors of the coordinates
-// are zero: the sides are moved out by a fixed distance instead (zero made the corners NaN, and the face bad), and the island is connected
-TEST( MRMesh, CutMeshLoneContourAtOrigin )
-{
-    const auto mesh = Mesh::fromTriangles( { Vector3f(), Vector3f(), Vector3f() }, { { 0_v, 1_v, 2_v } } );
-    OneMeshContour island{ .closed = true };
-    for ( int i = 0; i < 4; ++i )
-        island.intersections.push_back( { .primitiveId = 0_f, .coordinate = Vector3f() } );
-    for ( bool forceFill : { false, true } )
-    {
-        Mesh cut = mesh;
-        const auto res = cutMesh( cut, { island }, { .forceFill = forceFill } );
-        EXPECT_TRUE( cut.topology.checkValidity() );
-        EXPECT_TRUE( res.fbsWithContourIntersections.none() );
-        EXPECT_EQ( cut.topology.findNumHoles(), 1 ); // the border of the mesh
-        EXPECT_EQ( MeshComponents::getNumComponents( cut ), 1 );
-    }
-}
-
-// a lone contour in a thin triangle (lower than a few float errors of its coordinates) with a point just outside its long side, as if rounded there,
-// alone and with a contour cutting off the corner at 1_v: the plan fails on the points as they are, and is found again with the corner opposite
-// the long side moved away from it and the sides moved out, the side vertices on them
-TEST( MRMesh, CutMeshLoneContourInThinFace )
-{
-    const float h = 1.f / 65536;
-    const auto mesh = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 1000, 0, 0 ), Vector3f( 400, h, 0 ) }, { { 0_v, 1_v, 2_v } } );
-    OneMeshContour island{ .closed = true };
-    for ( const auto& p : { Vector3f( 300, -1.f / 8192, 0 ), Vector3f( 500, h / 4, 0 ), Vector3f( 700, h / 4, 0 ), Vector3f( 300, -1.f / 8192, 0 ) } )
-        island.intersections.push_back( { .primitiveId = 0_f, .coordinate = p } );
-    const OneMeshContour corner{ .intersections = { { .primitiveId = mesh.topology.findEdge( 0_v, 1_v ), .coordinate = Vector3f( 900, 0, 0 ) },
-        { .primitiveId = mesh.topology.findEdge( 2_v, 1_v ), .coordinate = Vector3f( 950, h / 12, 0 ) } } };
-    for ( const auto& contours : { OneMeshContours{ island }, OneMeshContours{ island, corner } } )
-    {
-        SCOPED_TRACE( testing::Message() << contours.size() << " contours" );
-        Mesh cut = mesh;
-        const auto res = cutMesh( cut, contours );
-        EXPECT_TRUE( cut.topology.checkValidity() );
-        EXPECT_TRUE( res.fbsWithContourIntersections.none() );
-        EXPECT_EQ( cut.topology.findNumHoles(), 1 ); // the border of the mesh
-        EXPECT_EQ( MeshComponents::getNumComponents( cut ), 1 );
-    }
-}
-
-// islands in a triangle and two contours cutting off its corners at 1_v and 2_v, cut without the exact sorting data: one island has a point
-// just outside side 2 (by less than minMove, about 1/1484 here, as if rounded there), so its edges cross the side on the points as they are,
-// and the plan is found again with the sides moved out; the contour at 1_v is closer to it along the sides than minMove, so its points are
-// spaced apart along them, and another island is near it (by about 45 minMove); a third island is inside the part that the contour at 2_v
-// cuts off, near the contour (by about 23 minMove). The moves must not take an island to the other side of a contour, where its triangles
-// would fold over others in the real positions: the cut keeps the area, and every triangle is on the side of the normal of the face,
-// but those at the point outside, which its rounding turns over
-TEST( MRMesh, CutMeshLoneContourNearCutCorners )
-{
-    const auto mesh = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 1000, 0, 0 ), Vector3f( 0, 1000, 0 ) }, { { 0_v, 1_v, 2_v } } );
-    auto island = [] ( const std::vector<Vector3f>& pts )
-    {
-        OneMeshContour res{ .closed = true };
-        for ( const auto& p : pts )
-            res.intersections.push_back( { .primitiveId = 0_f, .coordinate = p } );
-        res.intersections.push_back( res.intersections.front() );
-        return res;
-    };
-    auto onSide = [&] ( VertId a, VertId b, const Vector3f& p )
-    {
-        return OneMeshIntersection{ .primitiveId = mesh.topology.findEdge( a, b ), .coordinate = p };
-    };
-    const Vector3f outside( -1.f / 8192, 400, 0 );
-    const float d = 1.f / 4096; // about a third of minMove
-    const OneMeshContours contours{
-        island( { outside, Vector3f( 100, 350, 0 ), Vector3f( 100, 450, 0 ) } ),
-        { .intersections = { onSide( 0_v, 1_v, Vector3f( 1000 - d, 0, 0 ) ), onSide( 2_v, 1_v, Vector3f( 1000 - d, d, 0 ) ) } },
-        island( { Vector3f( 999.9375f, 1.f / 256, 0 ), Vector3f( 999.96875f, 1.f / 256, 0 ), Vector3f( 999.9375f, 1.f / 64, 0 ) } ),
-        { .intersections = { onSide( 1_v, 2_v, Vector3f( 20, 980, 0 ) ), onSide( 0_v, 2_v, Vector3f( 0, 980, 0 ) ) } },
-        island( { Vector3f( 2, 980 + 1.f / 64, 0 ), Vector3f( 15, 980 + 1.f / 64, 0 ), Vector3f( 2, 980 + 1.f / 32, 0 ) } ) };
-
-    Mesh cut = mesh;
-    const auto res = cutMesh( cut, contours );
-    EXPECT_TRUE( cut.topology.checkValidity() );
-    EXPECT_TRUE( res.fbsWithContourIntersections.none() );
-    EXPECT_EQ( cut.topology.findNumHoles(), 1 ); // the border of the mesh
-    EXPECT_EQ( MeshComponents::getNumComponents( cut ), 1 );
-    EXPECT_NEAR( cut.area(), mesh.area(), 1e-6 * mesh.area() );
-    for ( auto f : cut.topology.getValidFaces() )
-    {
-        const auto vs = cut.topology.getTriVerts( f );
-        if ( std::any_of( vs.begin(), vs.end(), [&] ( VertId v ) { return cut.points[v] == outside; } ) )
-            continue;
-        // the sign is exact: the differences of these floats and their products are exact in doubles
-        const Vector3d a( cut.points[vs[0]] ), b( cut.points[vs[1]] ), c( cut.points[vs[2]] );
-        EXPECT_GT( cross( b - a, c - a ).z, 0 ) << "face " << f;
+        const auto bad = cutMesh( cut, { through }, { .forceFill = forceFill } ).fbsWithContourIntersections;
+        EXPECT_EQ( bad.count(), forceFill ? 1 : 0 );
+        EXPECT_EQ( bad.test( 1_f ), forceFill );
     }
 }
 
@@ -1306,43 +1208,6 @@ TEST( MRMesh, ForceFillCrossingsOneFace )
     for ( bool cross : { true, false } )
         check( { viaCorner[0], viaCorner[1],
             { .intersections = { side( 0_v, 1_v, 8, 0 ), in( 0_f, cross ? 6.5f : 9.5f, 2 ), side( 1_v, 0_v, 9, 0 ) } } }, cross );
-}
-
-// two contours from the bottom side of a triangle up into it and out through its long side, without the exact sorting data: the point of one
-// on the bottom side is before the other one along it by about a third of minMove, and below the side (by about 1/44 of minMove, as if rounded
-// there), or the first one starts at corner 0_v and the point of the other one is after it by as much, and above the side by as much (the corner,
-// a segment end in a face removed at the corner before the search, is moved out too), so their first segments cross on the points as they are,
-// but not in the order the cut sorts them along the side; under force fill, the face is not bad with the sides moved out, neither by the crossing
-// test nor by the plan that connects an island in it (both fail on the points as they are), and the cut is connected, unless the contours cross
-// for real (with their points on the long side swapped, and no island)
-TEST( MRMesh, ForceFillCrossingsNearSide )
-{
-    const auto mesh = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 1000, 0, 0 ), Vector3f( 0, 1000, 0 ) }, { { 0_v, 1_v, 2_v } } );
-    auto side = [&] ( VertId a, VertId b, float x, float y )
-    {
-        return OneMeshIntersection{ .primitiveId = mesh.topology.findEdge( a, b ), .coordinate = Vector3f( x, y, 0 ) };
-    };
-    auto in = [] ( float x, float y ) { return OneMeshIntersection{ .primitiveId = 0_f, .coordinate = Vector3f( x, y, 0 ) }; };
-    const OneMeshIntersection corner{ .primitiveId = 0_v, .coordinate = Vector3f() };
-    const OneMeshContour island{ .intersections = { in( 100, 300 ), in( 200, 300 ), in( 100, 400 ), in( 100, 300 ) }, .closed = true };
-    for ( const auto& [before, after] : { std::pair( side( 0_v, 1_v, 500 - 1.f / 4096, -1.f / 65536 ), side( 0_v, 1_v, 500, 0 ) ),
-        std::pair( corner, side( 0_v, 1_v, 1.f / 4096, 1.f / 65536 ) ) } )
-    {
-        EXPECT_TRUE( PlanarTriangulation::hasCrossing( { { 0_v, 1_v }, { 2_v, 3_v } },
-            { after.coordinate, Vector3f( 900, 1, 0 ), before.coordinate, Vector3f( 900, 2, 0 ) }, Vector3f::plusZ() ) );
-        for ( bool cross : { false, true } )
-        {
-            OneMeshContours contours{
-                { .intersections = { after, in( 900, 1 ), side( 2_v, 1_v, cross ? 940.f : 950.f, cross ? 60.f : 50.f ) } },
-                { .intersections = { before, in( 900, 2 ), side( 2_v, 1_v, cross ? 950.f : 940.f, cross ? 50.f : 60.f ) } } };
-            if ( !cross )
-                contours.push_back( island );
-            Mesh cut = mesh;
-            const auto forced = cutMesh( cut, contours, { .forceFill = true } ).fbsWithContourIntersections;
-            EXPECT_EQ( forced.count(), cross ? 1 : 0 ) << "cross " << cross << ", first point at x = " << before.coordinate.x;
-            EXPECT_EQ( MeshComponents::getNumComponents( cut ), 1 ) << "cross " << cross << ", first point at x = " << before.coordinate.x;
-        }
-    }
 }
 
 namespace

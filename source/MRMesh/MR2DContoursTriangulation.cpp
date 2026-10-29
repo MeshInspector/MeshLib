@@ -151,167 +151,35 @@ static Vector2i projectionAxes( const Vector3f& normal )
     return normal[dropAx] < 0 ? Vector2i( axes.y, axes.x ) : axes;
 }
 
-// moves the points of the vertices along the perimeter of a triangle out of it by a few float errors of their coordinates (1e-3 if all points are
-// at the origin), in the projection along the axis most aligned with `normal`, out by the orientation of the corners there, so that no other edge
-// crosses a side only by the rounding of the points: first the corners are placed as an equilateral triangle of that inradius around their
-// centroid if they are all closer, else the corner opposite the longest side goes to that height over it if it is lower; then every side moves
-// out by that much, the corners to where the moved sides meet, and the other points from their places on the moved sides only across them, but
-// that far apart along a side where they are closer or out of order (around the middle of every such run, and evenly where its neighbours leave
-// less room); `cycle` is the vertices in their order along the perimeter, and `corners` their positions in it, increasing within one turn and
-// taken modulo its size (so they may reach past its end); the moves start at the corner of the smallest vertex id, so that every caller moves
-// one face alike; returns the moved points in the order of `cycle` (MRContoursCut.cpp declares it too, for its crossing test)
-Vector<Vector3d> moveSidesOut( const VertCoords& points, const Vector<VertId>& cycle, const std::array<size_t, 3>& corners, const Vector3f& normal )
-{
-    const auto n = cycle.size();
-    Vector<Vector3d> res( n );
-    Box3d box;
-    for ( size_t k = 0; k < n; ++k )
-        box.include( res[k] = Vector3d( points[cycle[k]] ) );
-    double minMove = 4 * std::numeric_limits<float>::epsilon() * std::max( box.min.length(), box.max.length() );
-    if ( minMove == 0 )
-        minMove = 1e-3; // all points are at the origin, where zero would make the corners NaN
-    const auto axes = projectionAxes( normal );
-    // the corners from the one of the smallest vertex id, and that one again past the end
-    const auto m = size_t( std::min_element( corners.begin(), corners.end(), [&] ( size_t a, size_t b ) { return cycle[a % n] < cycle[b % n]; } )
-        - corners.begin() );
-    const std::array<size_t, 4> c{ corners[m], corners[( m + 1 ) % 3] + ( m > 1 ? n : 0 ), corners[( m + 2 ) % 3] + ( m > 0 ? n : 0 ), corners[m] + n };
-    auto to2 = [&] ( size_t k ) { return Vector2d( res[k % n][axes.x], res[k % n][axes.y] ); };
-    std::array<Vector2d, 3> y; // the corners, moved below
-    for ( int j = 0; j < 3; ++j )
-        y[j] = to2( c[j] );
-    const double sign = cross( y[1] - y[0], y[2] - y[0] ) < 0 ? -1 : 1; // the orientation of the corners
-    int a = 0; // the longest side, from corner a
-    for ( int i = 1; i < 3; ++i )
-        if ( ( y[( i + 1 ) % 3] - y[i] ).lengthSq() > ( y[( a + 1 ) % 3] - y[a] ).lengthSq() )
-            a = i;
-    const auto side = y[( a + 1 ) % 3] - y[a];
-    if ( const double l = side.length(); l < minMove )
-    {
-        const auto g = ( y[0] + y[1] + y[2] ) / 3.0, h = Vector2d( -minMove, sign * std::sqrt( 3.0 ) * minMove );
-        y = { g + Vector2d( 2 * minMove, 0 ), g + h, g + Vector2d( h.x, -h.y ) }; // equilateral around g, with inradius minMove
-    }
-    else if ( const double height = cross( side, y[( a + 2 ) % 3] - y[a] ) / l; std::abs( height ) < minMove )
-        y[( a + 2 ) % 3] += Vector2d( -side.y, side.x ) * ( ( sign * minMove - height ) / l );
-    std::array<Vector2d, 3> out; // the outward unit normals of the sides
-    for ( int j = 0; j < 3; ++j )
-    {
-        const auto d = ( y[( j + 1 ) % 3] - y[j] ).normalized();
-        out[j] = Vector2d( d.y, -d.x ) * sign;
-    }
-
-    Vector<double> ts; // the points of a side at their parameters along it, the corners at 0 and 1, a point out of order at the one before it
-    for ( int j = 0; j < 3; ++j )
-    {
-        const auto d = y[( j + 1 ) % 3] - y[j];
-        const size_t last = c[j + 1] - c[j];
-        ts.resize( last + 1 );
-        for ( size_t i = 0; i <= last; ++i )
-            ts[i] = i == 0 ? 0 : i == last ? 1 : std::clamp( dot( to2( c[j] + i ) - y[j], d ) / d.lengthSq(), ts[i - 1], 1.0 );
-        const double minGap = minMove / d.length();
-        auto bad = [&] ( size_t i ) { return ts[i + 1] - ts[i] < minGap; }; // the gap after point i
-        for ( size_t i = 1, r; i < last; i = r )
-        {
-            r = i + 1; // the run i, ..., r - 1 joined by bad gaps, and point r after a good gap or the corner
-            while ( r < last && bad( r - 1 ) )
-                ++r;
-            if ( !bad( i - 1 ) && !bad( i ) )
-                continue;
-            // the run spaced by gap around its middle, at least gap from points i - 1 and r
-            const auto k = double( r - i );
-            const double gap = std::min( minGap, ( ts[r] - ts[i - 1] ) / ( k + 1 ) );
-            const double first = std::max( ts[i - 1] + gap, std::min( ( ts[i] + ts[r - 1] - ( k - 1 ) * gap ) / 2, ts[r] - k * gap ) );
-            for ( size_t q = i; q < r; ++q )
-                ts[q] = first + double( q - i ) * gap;
-        }
-        // where the moved side before this one meets this one: a sharp corner goes far along its sides, which only adds empty area beyond it,
-        // but less than twice the longest side, since every height of the triangle is now at least minMove
-        const auto& o = out[( j + 2 ) % 3];
-        const auto corner = y[j] + Vector2d( out[j].y - o.y, o.x - out[j].x ) * ( minMove / cross( o, out[j] ) );
-        for ( size_t i = 0; i < last; ++i )
-        {
-            const auto p = i == 0 ? corner : y[j] + d * ts[i] + out[j] * minMove;
-            auto& q = res[( c[j] + i ) % n];
-            q[axes.x] = p.x;
-            q[axes.y] = p.y;
-        }
-    }
-    return res;
-}
-
-// the side vertices of a cut triangle moved by moveSidesOut for meshSpacePredicates, with their moved points, none if the side edges (those with
-// valid sideOf) are not one cycle with three corners, where sideOf changes
-static HashMap<VertId, Vector3d> moveSideVerts( const Mesh& mesh, const EdgeLoops& loops,
-    const std::function<UndirectedEdgeId( UndirectedEdgeId )>& sideOf, const Vector3f& normal )
-{
-    HashMap<VertId, Vector3d> moved;
-    const auto& tp = mesh.topology;
-    Vector<EdgeId> sides; // sorted by their origins
-    for ( const auto& loop : loops )
-        for ( auto e : loop )
-            if ( sideOf( e.undirected() ) )
-                sides.push_back( e );
-    std::sort( sides.begin(), sides.end(), [&] ( EdgeId a, EdgeId b ) { return tp.org( a ) < tp.org( b ); } );
-    const auto n = sides.size();
-    Vector<VertId> cycle( n ); // the side vertices along the cycle from the origin of sides[0]
-    std::array<size_t, 3> c{}; // the positions of the corners along the cycle
-    int numCorners = 0;
-    for ( size_t k = 0, i = 0; k < n; ++k )
-    {
-        cycle[k] = tp.org( sides[i] );
-        const auto v = tp.dest( sides[i] );
-        const auto s = sideOf( sides[i].undirected() );
-        i = size_t( std::lower_bound( sides.begin(), sides.end(), v, [&] ( EdgeId e, VertId u ) { return tp.org( e ) < u; } ) - sides.begin() );
-        if ( i == n || tp.org( sides[i] ) != v || ( i == 0 ) != ( k + 1 == n ) )
-            return moved;
-        if ( sideOf( sides[i].undirected() ) != s && ++numCorners <= 3 ) // a corner at v
-            c[numCorners - 1] = k + 1;
-    }
-    if ( numCorners != 3 )
-        return moved;
-    const auto pts = moveSidesOut( mesh.points, cycle, c, normal );
-    for ( size_t k = 0; k < n; ++k )
-        moved[cycle[k]] = pts[k];
-    return moved;
-}
-
 // mesh-space predicates: triangulate hole boundary loops of `mesh` in the mesh's own 3D coordinates,
 // orienting around `normal`. Combinatorics run on the dominant-axis projection (reusing the exact 2D
 // predicates via setPts2Predicates). point() restores each output vertex's exact original mesh position
 // through `patchToInEdges`, the patch->input edge map (no separate coordinate copy, no projection round-trip).
 // `mesh`, `loops` and `patchToInEdges` only need to outlive the run; the map may be filled after construction.
-// With `sideOf`, the edges of the loops it tells are the sides of a cut triangle (all of them, its whole perimeter), moved out as a fallback
-// for when the rounding of the points made another edge cross a side (see moveSideVerts); the other points keep their positions.
 static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, const WholeEdgeMap& patchToInEdges,
-    Vector<Vector2i, VertId>* pts2, // storage for the dominant-axis projection that drives every predicate
-    const std::function<UndirectedEdgeId( UndirectedEdgeId )>* sideOf = nullptr )
+    Vector<Vector2i, VertId>* pts2 ) // storage for the dominant-axis projection that drives every predicate
 {
-    Box3d box;
+    Box3f box;
     int pointsSize = 0;
     for ( const auto& loop : loops )
     {
         for ( EdgeId e : loop )
-            box.include( Vector3d( mesh.orgPnt( e ) ) );
+            box.include( mesh.orgPnt( e ) );
         if ( loop.size() >= 3 )
             pointsSize += int( loop.size() );
     }
 
-    auto moved = sideOf ? moveSideVerts( mesh, loops, *sideOf, normal ) : HashMap<VertId, Vector3d>{};
-    for ( const auto& vq : moved )
-        box.include( vq.second );
-
+    const auto axes = projectionAxes( normal );
     pts2->clear();
     pts2->reserve( pointsSize );
-    const auto toInt = getToIntConverter( box ); // Vector3d -> Vector3i
-    const auto axes = projectionAxes( normal );
-    const auto to2i = [toInt, axes] ( const Vector3d& q ) { const auto qi = toInt( q ); return Vector2i( qi[axes.x], qi[axes.y] ); };
+    auto toInt = getToIntConverter( Box3d( box ) ); // Vector3f -> Vector3i
 
     SweepLinePredicates p;
     setPts2Predicates( p, pts2 );
-    p.addInputPoint = [&mesh, &loops, pts2, to2i, moved = std::move( moved )] ( VertId v, int contourId, int pointId )
+    p.addInputPoint = [&mesh, &loops, pts2, toInt, axes] ( VertId v, int contourId, int pointId )
     {
-        const VertId mv = mesh.topology.org( loops[contourId][pointId] );
-        const auto it = moved.empty() ? moved.end() : moved.find( mv );
-        pts2->autoResizeSet( v, to2i( it != moved.end() ? it->second : Vector3d( mesh.points[mv] ) ) );
+        const Vector3i q = toInt( mesh.orgPnt( loops[contourId][pointId] ) );
+        pts2->autoResizeSet( v, Vector2i( q[axes.x], q[axes.y] ) );
     };
     p.addIntersectionPoint = [pts2] ( VertId v, VertId a, VertId b, VertId c, VertId d )
     {
@@ -2060,26 +1928,10 @@ static std::optional<HoleFillPlan> getMonotonePlanImpl( const Mesh& mesh, const 
 
 std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal )
 {
-    return getMonotonePlan( mesh, loops, normal, {} );
-}
-
-std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
-    const std::function<UndirectedEdgeId( UndirectedEdgeId )>& sideOf, bool moveSidesAtOnce )
-{
-    auto plan = [&] ( const std::function<UndirectedEdgeId( UndirectedEdgeId )>* movedSides )
+    return getMonotonePlanImpl( mesh, loops, [&] ( const WholeEdgeMap& patchToInEdges, SweepLineQueue::Cache& cache )
     {
-        return getMonotonePlanImpl( mesh, loops, [&] ( const WholeEdgeMap& patchToInEdges, SweepLineQueue::Cache& cache )
-        {
-            return meshSpacePredicates( mesh, loops, normal, patchToInEdges, &cache.pts2Buffer, movedSides );
-        } );
-    };
-    // the rounding of the points can make an edge cross a side; then the sides are moved out (see meshSpacePredicates)
-    std::optional<HoleFillPlan> res;
-    if ( !moveSidesAtOnce || !sideOf )
-        res = plan( nullptr );
-    if ( !res && sideOf )
-        res = plan( &sideOf );
-    return res;
+        return meshSpacePredicates( mesh, loops, normal, patchToInEdges, &cache.pts2Buffer );
+    } );
 }
 
 // the exact predicates on the vertices of the loops of one cut triangle, for a sweep over them
@@ -2201,31 +2053,12 @@ std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops
     } );
 }
 
-std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
-    const std::function<UndirectedEdgeId( UndirectedEdgeId )>& sideOf )
+std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal )
 {
-    bool alongSide = false; // an edge along a side crosses another one
-    auto run = [&] ( const std::function<UndirectedEdgeId( UndirectedEdgeId )>* movedSides )
+    return findCrossingsImpl( mesh, loops, [&] ( const WholeEdgeMap& patchToInEdges, SweepLineQueue::Cache& cache, auto )
     {
-        alongSide = false;
-        return findCrossingsImpl( mesh, loops, [&] ( const WholeEdgeMap& patchToInEdges, SweepLineQueue::Cache& cache, auto meshEdge )
-        {
-            auto p = meshSpacePredicates( mesh, loops, normal, patchToInEdges, &cache.pts2Buffer, movedSides );
-            p.addIntersectionPoint = [&, meshEdge, add = std::move( p.addIntersectionPoint )] ( VertId v, VertId a, VertId b, VertId c, VertId d )
-            {
-                alongSide = alongSide || sideOf( meshEdge( a, b ).undirected() ) || sideOf( meshEdge( c, d ).undirected() );
-                add( v, a, b, c, d );
-            };
-            p.failed = [&] { return alongSide; };
-            return p;
-        } );
-    };
-    // the rounding of the points can make an edge cross a side; then the sides are moved out (see meshSpacePredicates)
-    if ( auto res = run( nullptr ); res || !alongSide )
-        return res;
-    auto res = run( &sideOf );
-    assert( !alongSide ); // the sides are moved by more than the rounding of the points, though that is not always enough (see the header)
-    return res;
+        return meshSpacePredicates( mesh, loops, normal, patchToInEdges, &cache.pts2Buffer );
+    } );
 }
 
 // the predicates of the sweep of hasCrossing: the float ones moved in, or calls of the exact ones

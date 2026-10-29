@@ -79,7 +79,7 @@ The bundler must treat `.wasm` files as static assets, so that the import resolv
 - **Parcel**: use the `url:` scheme on the import specifier: `import wasmUrl from 'url:@meshinspector/meshlib/meshlib.wasm';`
 
 ### Payload Size {#MeshLibJsPayloadSize}
-MeshLib is a WebAssembly build of the full geometry library, so a browser downloads roughly **11 MB of wasm, about 3 MB gzipped over the wire**, before the first geometry call. `@meshinspector/meshlib-mt` is the same order of magnitude.
+MeshLib is a WebAssembly build of the full geometry library, so a browser downloads roughly **11 MB of wasm, about 3 MB gzipped or 1.7 MB with Brotli over the wire**, before the first geometry call. `@meshinspector/meshlib-mt` is the same order of magnitude.
 
 Two consequences for a browser application:
 

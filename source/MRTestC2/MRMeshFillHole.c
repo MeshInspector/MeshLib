@@ -71,7 +71,7 @@ void testMeshFillHoleNicely( void )
 
     MR_FillHoleNicelySettings* params = MR_FillHoleNicelySettings_DefaultConstruct();
 
-    MR_FaceBitSet* patch = MR_fillHoleNicely( mesh, *MR_std_vector_MR_EdgeId_at( oldBdEdges, 0 ), params );
+    MR_FaceBitSet* patch = MR_fillHoleNicely( mesh, *MR_std_vector_MR_EdgeId_front( oldBdEdges ), params );
     MR_FillHoleNicelySettings_Destroy( params );
 
     size_t patchCount = MR_FaceBitSet_count( patch );

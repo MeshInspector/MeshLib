@@ -46,7 +46,7 @@ fn mesh_fill_hole_nicely()
     assert_eq!(old_bd_edges.size(), 2);
 
     let settings = meshlib::FillHoleNicelySettings::new();
-    let patch = meshlib::fill_hole_nicely(&mut mesh, *old_bd_edges.at(0), &settings);
+    let patch = meshlib::fill_hole_nicely(&mut mesh, *old_bd_edges.front().unwrap(), &settings);
     assert_eq!(patch.count(), 1887);
 
     let new_bd_edges = mesh.topology().find_hole_representive_edges(None);

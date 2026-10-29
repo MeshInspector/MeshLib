@@ -240,6 +240,112 @@ TEST( MRMesh, BooleanLoneContours )
     }
 }
 
+// the area of the faces of a result in the top z = 1 of the cube [-1,1]^3, facing up
+static double topArea( const Mesh& m )
+{
+    double res = 0;
+    for ( auto f : m.topology.getValidFaces() )
+        if ( std::abs( m.triCenter( f ).z - 1.f ) < 1e-5f && m.normal( f ).z > 0 )
+            res += m.area( f );
+    return res;
+}
+
+// two overlapping boxes (one mesh crossing itself) poke through one triangle of the top of the cube; the forced cut splits their contours
+// where they cross, and the winding numbers of the boxes (0 outside both, 1 inside one, 2 inside both) tell the parts of the cube, so it keeps
+// its top outside the boxes, or inside them for the intersection; the forced boolean is one closed shell
+TEST( MRMesh, BooleanForceCutCrossingContours )
+{
+    const auto cube = makeCube( Vector3f::diagonal( 2.f ), Vector3f::diagonal( -1.f ) );
+    auto boxes = makeCube( Vector3f( 0.2f, 0.2f, 1.f ), Vector3f( 0.5f, -0.1f, 0.5f ) );
+    boxes.addMesh( makeCube( Vector3f( 0.2f, 0.2f, 1.1f ), Vector3f( 0.55f, -0.05f, 0.45f ) ) );
+    // the union of the footprints of the boxes on the top z = 1 of the cube
+    const double footprints = 2 * 0.04 - 0.15 * 0.15;
+    for ( bool cubeIsA : { true, false } )
+    {
+        const auto& a = cubeIsA ? cube : boxes;
+        const auto& b = cubeIsA ? boxes : cube;
+        for ( auto op : { BooleanOperation::Union, BooleanOperation::Intersection, cubeIsA ? BooleanOperation::DifferenceAB : BooleanOperation::DifferenceBA } )
+        {
+            const auto res = boolean( a, b, op, { .forceCut = true } );
+            ASSERT_TRUE( res.valid() ) << res.errorString;
+            EXPECT_EQ( ( cubeIsA ? res.meshABadContourFaces : res.meshBBadContourFaces ).count(), 1 );
+            EXPECT_NEAR( topArea( res.mesh ), op == BooleanOperation::Intersection ? footprints : 4 - footprints, 1e-5 );
+            const auto force = forceBoolean( a, b, op );
+            ASSERT_TRUE( force.valid() ) << force.errorString;
+            EXPECT_TRUE( force.mesh.topology.isClosed() );
+            EXPECT_EQ( MeshComponents::getNumComponents( force.mesh ), 1 );
+        }
+    }
+}
+
+// the forced boolean decides the parts of the cube by the exact winding numbers of mesh B, not counted from the lowest part:
+// a box nested in another one (not crossing) pokes through the top of the cube, so the ring between their contours is to the left of one
+// closed path and to the right of the other (0 outside, 1 in the ring, 2 inside the inner box); a box enclosing everything makes all of
+// the cube inside, also where two boxes cross; and where an inside-out box crosses another box, only the top inside the first box and
+// outside the second one is inside (the winding number is -1 inside the second box only); with mesh B in its own space too
+TEST( MRMesh, BooleanForceCutExactWindings )
+{
+    const auto cube = makeBox( Vector3f::diagonal( -1.f ), Vector3f::diagonal( 1.f ) );
+    auto nested = makeBox( Vector3f( 0.1f, -0.3f, 0.5f ), Vector3f( 0.7f, 0.3f, 1.5f ) );
+    nested.addMesh( makeBox( Vector3f( 0.2f, -0.2f, 0.6f ), Vector3f( 0.6f, 0.2f, 1.4f ) ) );
+    auto nestedEnclosed = nested;
+    nestedEnclosed.addMesh( makeBox( Vector3f::diagonal( -2.f ), Vector3f::diagonal( 2.f ) ) );
+    auto enclosed = makeBox( Vector3f( 0.5f, -0.1f, 0.5f ), Vector3f( 0.7f, 0.1f, 1.5f ) );
+    enclosed.addMesh( makeBox( Vector3f( 0.55f, -0.05f, 0.45f ), Vector3f( 0.75f, 0.15f, 1.55f ) ) );
+    enclosed.addMesh( makeBox( Vector3f::diagonal( -2.f ), Vector3f::diagonal( 2.f ) ) );
+    auto inverted = makeBox( Vector3f( 0.3f, -0.6f, 0.5f ), Vector3f( 0.7f, -0.2f, 1.5f ) );
+    auto insideOut = makeBox( Vector3f( 0.4f, -0.5f, 0.45f ), Vector3f( 0.8f, -0.1f, 1.55f ) );
+    insideOut.topology.flipOrientation();
+    inverted.addMesh( insideOut );
+    const AffineXf3f b2a( Matrix3f::rotation( Vector3f( 1, 2, 3 ).normalized(), 0.7f ), Vector3f( 0.3f, -0.2f, 0.1f ) );
+    for ( const auto& [b, insideTop] : { std::pair( &nested, 0.6 * 0.6 ), std::pair( &nestedEnclosed, 4. ), std::pair( &enclosed, 4. ),
+        std::pair( &inverted, 0.4 * 0.4 - 0.3 * 0.3 ) } )
+    {
+        auto bInOwnSpace = *b;
+        bInOwnSpace.transform( b2a.inverse() );
+        for ( bool xf : { false, true } )
+            for ( auto op : { BooleanOperation::Union, BooleanOperation::Intersection } )
+            {
+                const auto res = boolean( cube, xf ? bInOwnSpace : *b, op, { .rigidB2A = xf ? &b2a : nullptr, .forceCut = true } );
+                ASSERT_TRUE( res.valid() ) << res.errorString;
+                EXPECT_NEAR( topArea( res.mesh ), op == BooleanOperation::Intersection ? insideTop : 4 - insideTop, 1e-4 );
+            }
+    }
+}
+
+// a box and a double-sided triangle (two triangles on the same three vertices, winding number 0) poke through the top of the cube, and their
+// contours cross in one triangle of it; the two crossings with the two sides of the triangle are the same point, which the exact predicates
+// cannot tell apart, so the forced cut cannot split them, and the fill of that triangle folds; its pieces are kept or removed one by one,
+// so every piece of the top that the boolean keeps is outside the box for the union and inside it for the intersection;
+// Release only: in Debug, the sort of the intersections along an edge of the cube asserts that it cannot compare the two on both sides of the triangle
+#ifdef NDEBUG
+TEST( MRMesh, BooleanForceCutDoubleSidedTriangle )
+{
+    const auto cube = makeBox( Vector3f::diagonal( -1.f ), Vector3f::diagonal( 1.f ) );
+    const Box3f box( { -0.399397194f, 0.0775125921f, 0.578722f }, { 0.210799873f, 0.37126568f, 1.31900537f } );
+    Mesh other = makeBox( box.min, box.max );
+    Mesh tri;
+    tri.points = { { 1.19775832f, -0.0147513151f, 0.5f }, { -0.322802901f, 0.251895666f, 0.600000024f }, { 0.437477708f, 0.118572176f, 1.60000002f } };
+    tri.topology = MeshBuilder::fromTriangles( { { 0_v, 1_v, 2_v }, { 0_v, 2_v, 1_v } } );
+    other.addMesh( tri );
+    for ( auto op : { BooleanOperation::Union, BooleanOperation::Intersection } )
+    {
+        const auto res = boolean( cube, other, op, { .forceCut = true } );
+        ASSERT_TRUE( res.valid() ) << res.errorString;
+        EXPECT_EQ( res.meshABadContourFaces.count(), 1 );
+        double wrong = 0;
+        for ( auto f : res.mesh.topology.getValidFaces() )
+        {
+            const auto c = res.mesh.triCenter( f );
+            const bool inside = c.x > box.min.x && c.x < box.max.x && c.y > box.min.y && c.y < box.max.y;
+            if ( std::abs( c.z - 1.f ) < 1e-5f && inside != ( op == BooleanOperation::Intersection ) )
+                wrong += res.mesh.area( f );
+        }
+        EXPECT_LT( wrong, 1e-6 ) << ( op == BooleanOperation::Union ? "union" : "intersection" );
+    }
+}
+#endif
+
 // the precut output of the mesh that the operation does not cut (A for InsideB, B for InsideA) takes it only after the cut
 // of the other mesh, which sorts its intersections by that mesh itself, not by a copy; here the cut of the cube connects
 // a lone contour, whose exact points are made of the vertices of the sphere

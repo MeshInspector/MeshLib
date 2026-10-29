@@ -109,7 +109,7 @@ struct BooleanInternalParameters
     const Mesh* originalMeshB{ nullptr };
     /// Optional output cut edges of booleaned meshes
     std::vector<EdgeLoop>* optionalOutCut{ nullptr };
-    /// If true uses graphcut for inside/outside separation
+    /// If true uses graphcut for inside/outside separation where the cut paths are open, and the winding numbers where a part is on both sides of them
     bool graphCutSeparation{ false };
     /// Float-to-int converters of both meshes in the space of mesh A; if given, the inside/outside
     /// test of the components without cuts is made by the precise orient3d predicate

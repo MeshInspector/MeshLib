@@ -49,8 +49,9 @@ struct CutMeshParameters
 
     /// This flag defines the MR::cutMesh behaviour in case bad faces occur:
     /// basically MR::cutMesh removes all faces which contours pass through, adds new edges to topology and fills all removed parts.
-    /// If bad faces occur, nothing is filled unless this flag is set; then bad faces are filled too,
-    /// but their triangulation can be bad (may have self-intersections or tunnels)
+    /// If bad faces occur, nothing is filled unless this flag is set; then bad faces are filled too;
+    /// with sortData, the contours are split where they cross in bad faces (see \ref CutMeshResult::resultCut),
+    /// otherwise, and where the split fails, their triangulation can be bad (may have self-intersections or tunnels)
     ///
     /// \note Bad faces here mean faces where contours have intersections and cannot be cut and filled in a good way
     bool forceFill{ false };
@@ -66,7 +67,8 @@ struct CutMeshParameters
 struct CutMeshResult
 {
     /// Paths of new edges on mesh, they represent same contours as input, but already cut;
-    /// a contour going from a mesh vertex to a point and back has an edge followed by its sym there
+    /// a contour going from a mesh vertex to a point and back has an edge followed by its sym there;
+    /// with \ref CutMeshParameters::forceFill and sortData, a path also passes the vertices where its contour crosses others (or itself) in bad faces
     std::vector<EdgePath> resultCut;
     /// Bitset of bad triangles - triangles where input contours have intersections and cannot be cut and filled in a good way;
     /// under force fill, also the triangles where two segments of the contours cross (segments that follow each other along a contour

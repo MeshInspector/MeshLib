@@ -404,8 +404,36 @@ jobs:
           if exist source\%MR_ARCH%\Debug\pybind11nonlimitedapi_meshlib_3*.dll del /Q source\%MR_ARCH%\Debug\pybind11nonlimitedapi_meshlib_3*.dll
           if exist source\%MR_ARCH%\Release\pybind11nonlimitedapi_meshlib_3*.dll del /Q source\%MR_ARCH%\Release\pybind11nonlimitedapi_meshlib_3*.dll
 
+      # clang-cl ships the `cmake --install` prefix (with the vcpkg dependencies) as its distributive,
+      # so it carries the CMake package config; the MeshLib .pdb files go next to their binaries.
+      - name: Install to a CMake prefix
+        if: ${{ matrix.cxx_compiler == 'clang-cl' }}
+        run: |
+          cmake --install source\TempOutput --prefix install
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Get-ChildItem install\bin\*.dll, install\bin\*.exe | ForEach-Object {
+            $pdb = "source\TempOutput\bin\$($_.BaseName).pdb"
+            if (Test-Path $pdb) { Copy-Item $pdb install\bin\ }
+          }
+
+      - name: Build examples with find_package from the CMake prefix
+        if: ${{ matrix.cxx_compiler == 'clang-cl' }}
+        shell: cmd
+        run: |
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          cmake -S examples/cpp-examples -B cpp-examples-build -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="%CD%/install" || exit /b 1
+          cmake --build cpp-examples-build -j || exit /b 1
+          cmake -S examples/c-examples -B c-examples-prefix-build -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="%CD%/install" || exit /b 1
+          cmake --build c-examples-prefix-build -j || exit /b 1
+          cmake -S example_plugin -B example-plugin-build -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="%CD%/install" || exit /b 1
+          cmake --build example-plugin-build -j || exit /b 1
+          set "PATH=%CD%\install\bin;%PATH%"
+          cpp-examples-build\MeshModification.exe || exit /b 1
+          c-examples-prefix-build\MeshModification.exe || exit /b 1
+
       - name: Build C++ examples
-        if: ${{ matrix.config == 'Release' }}  # debug builds not supported due to missing file 'tbb12_debug.lib'
+        # debug builds not supported due to missing file 'tbb12_debug.lib'
+        if: ${{ matrix.config == 'Release' && matrix.cxx_compiler != 'clang-cl' }}
         shell: cmd
         env:
           VCPKG_ROOT: C:\vcpkg
@@ -459,7 +487,7 @@ jobs:
         # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
       - name: Archive files
         if: ${{ env.job_upload_artifact == 'true' }}
-        run: tar --format zip -c -f MREDist_${{ env.VS_TAG }}_${{ matrix.upload_name || matrix.config }}.zip ./source/${{ env.MR_ARCH }}/${{ matrix.config }}
+        run: tar --format zip -c -f MREDist_${{ env.VS_TAG }}_${{ matrix.upload_name || matrix.config }}.zip ${{ matrix.cxx_compiler == 'clang-cl' && './install' || format('./source/{0}/{1}', env.MR_ARCH, matrix.config) }}
 
       - name: Archive generated C headers
         # The C2 headers are compiler-independent; upload them once (from VS2019)

@@ -52,7 +52,8 @@ The release description links the per-Visual-Studio archives and `ClangCl`; `Ite
 Take it if your project builds Debug with MSVC's default `_ITERATOR_DEBUG_LEVEL=2`: it ships `install/app/Debug` without `install/app/Release`, so it covers no Release build — but being a `v142` build it serves a newer Visual Studio too, under the rule above.
 Whichever archive you pick, step 2 must define `_ITERATOR_DEBUG_LEVEL` to the value in the table — `0` for the per-Visual-Studio archives, `2` for `IteratorDebug`.
 Archives predating `install/include/MRMesh/config_dist.h` need `MR_ITERATOR_DEBUG_LEVEL` set to the same value as well; newer ones declare it themselves in that header, which leaves `IteratorDebug` needing no define at all.
-`ClangCl` is the CMake build compiled by clang-cl against the Visual Studio 2022 headers and libraries (2026 for `-arm64`), so it links into an MSVC project on that toolset or newer, like `VS22` (`VS26`); it ships `install/app/Release` without `install/app/Debug`.
+`ClangCl` is the CMake build compiled by clang-cl against the Visual Studio 2022 headers and libraries (2026 for `-arm64`), so it links into an MSVC project on that toolset or newer, like `VS22` (`VS26`).
+Unlike the others it is the `cmake --install` tree of a Release build: `install/bin` (DLLs and executables), `install/include`, `install/lib` (import libraries) and the CMake package config in `install/lib/cmake/MeshLib`, so take it through `find_package` as the [CMake Setup Guide](\ref CmakeWindowsIntegration) describes.
 
 Debug symbols ship separately: every archive above has a companion `-PDB` archive (`MeshLibDistVS26_<version>-PDB.zip`, `MeshLibDistVS26_<version>-PDB-arm64.zip`, `MeshLibDist_<version>-IteratorDebug-PDB.zip`, ...) holding only the `.pdb` files.
 Extract it over the same directory to put them back under `install/lib`, where the debugger looks for them.

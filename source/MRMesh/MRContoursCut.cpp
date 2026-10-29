@@ -380,16 +380,6 @@ void triangulateContour( Mesh& mesh, EdgeId e, FaceId oldFace, FaceMap* new2OldM
     executeTriangulateContourPlan( mesh, e, plan, oldFace, new2OldMap, new2OldEdgeMap );
 }
 
-// the unit normal of a triangle of the mesh, or zero if its corners are on one line: the corners in doubles give a normal free of the rounding
-// of the points inside the triangle, which a sum over them would add; normalized before the conversion to float, which could flush it
-// to zero or overflow at extreme scales
-Vector3f cornersNormal( const Mesh& mesh, const ThreeVertIds& verts )
-{
-    const auto& p = mesh.points;
-    const auto normal = dirDblArea( Triangle3d{ Vector3d( p[verts[0]] ), Vector3d( p[verts[1]] ), Vector3d( p[verts[2]] ) } );
-    return normal == Vector3d() ? Vector3f() : Vector3f( normal.normalized() );
-}
-
 // a face of the mesh that contours go inside, with its sides before the cut
 struct CutFace
 {
@@ -429,6 +419,16 @@ Vector<CutFace> findLoneFaces( const MeshTopology& topology, const OneMeshContou
     for ( auto f : faces )
         res.push_back( cutFace( topology, f ) );
     return res;
+}
+
+// the unit normal of a triangle of the mesh, or zero if its corners are on one line: the corners in doubles give a normal free of the rounding
+// of the points inside the triangle, which a sum over them would add; normalized before the conversion to float, which could flush it
+// to zero or overflow at extreme scales
+Vector3f cornersNormal( const Mesh& mesh, const ThreeVertIds& verts )
+{
+    const auto& p = mesh.points;
+    const auto normal = dirDblArea( Triangle3d{ Vector3d( p[verts[0]] ), Vector3d( p[verts[1]] ), Vector3d( p[verts[2]] ) } );
+    return normal == Vector3d() ? Vector3f() : Vector3f( normal.normalized() );
 }
 
 // the index of the face in sorted faces, or -1

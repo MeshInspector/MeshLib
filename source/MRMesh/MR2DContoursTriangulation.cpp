@@ -151,18 +151,31 @@ static Vector2i projectionAxes( const Vector3f& normal )
     return normal[dropAx] < 0 ? Vector2i( axes.y, axes.x ) : axes;
 }
 
-void moveSidesOut( Vector<Vector3d>& cycle, const std::array<size_t, 3>& corners, const Vector3f& normal )
+// moves the points of the vertices along the perimeter of a triangle out of it by a few float errors of their coordinates (1e-3 if all points are
+// at the origin), in the projection along the axis most aligned with `normal`, out by the orientation of the corners there, so that no other edge
+// crosses a side only by the rounding of the points: first the corners are placed as an equilateral triangle of that inradius around their
+// centroid if they are all closer, else the corner opposite the longest side goes to that height over it if it is lower; then every side moves
+// out by that much, the corners to where the moved sides meet, and the other points from their places on the moved sides only across them, but
+// that far apart along a side where they are closer or out of order (around the middle of every such run, and evenly where its neighbours leave
+// less room); `cycle` is the vertices in their order along the perimeter, and `corners` their positions in it, increasing within one turn and
+// taken modulo its size (so they may reach past its end); the moves start at the corner of the smallest vertex id, so that every caller moves
+// one face alike; returns the moved points in the order of `cycle` (MRContoursCut.cpp declares it too, for its crossing test)
+Vector<Vector3d> moveSidesOut( const VertCoords& points, const Vector<VertId>& cycle, const std::array<size_t, 3>& corners, const Vector3f& normal )
 {
+    const auto n = cycle.size();
+    Vector<Vector3d> res( n );
     Box3d box;
-    for ( const auto& q : cycle )
-        box.include( q );
+    for ( size_t k = 0; k < n; ++k )
+        box.include( res[k] = Vector3d( points[cycle[k]] ) );
     double minMove = 4 * std::numeric_limits<float>::epsilon() * std::max( box.min.length(), box.max.length() );
     if ( minMove == 0 )
         minMove = 1e-3; // all points are at the origin, where zero would make the corners NaN
     const auto axes = projectionAxes( normal );
-    const auto n = cycle.size();
-    const std::array<size_t, 4> c{ corners[0], corners[1], corners[2], corners[0] + n }; // and the first corner again past the end
-    auto to2 = [&] ( size_t k ) { return Vector2d( cycle[k % n][axes.x], cycle[k % n][axes.y] ); };
+    // the corners from the one of the smallest vertex id, and that one again past the end
+    const auto m = size_t( std::min_element( corners.begin(), corners.end(), [&] ( size_t a, size_t b ) { return cycle[a % n] < cycle[b % n]; } )
+        - corners.begin() );
+    const std::array<size_t, 4> c{ corners[m], corners[( m + 1 ) % 3] + ( m > 1 ? n : 0 ), corners[( m + 2 ) % 3] + ( m > 0 ? n : 0 ), corners[m] + n };
+    auto to2 = [&] ( size_t k ) { return Vector2d( res[k % n][axes.x], res[k % n][axes.y] ); };
     std::array<Vector2d, 3> y; // the corners, moved below
     for ( int j = 0; j < 3; ++j )
         y[j] = to2( c[j] );
@@ -217,11 +230,12 @@ void moveSidesOut( Vector<Vector3d>& cycle, const std::array<size_t, 3>& corners
         for ( size_t i = 0; i < last; ++i )
         {
             const auto p = i == 0 ? corner : y[j] + d * ts[i] + out[j] * minMove;
-            auto& q = cycle[( c[j] + i ) % n];
+            auto& q = res[( c[j] + i ) % n];
             q[axes.x] = p.x;
             q[axes.y] = p.y;
         }
     }
+    return res;
 }
 
 // the side vertices of a cut triangle moved by moveSidesOut for meshSpacePredicates, with their moved points, none if the side edges (those with
@@ -254,12 +268,7 @@ static HashMap<VertId, Vector3d> moveSideVerts( const Mesh& mesh, const EdgeLoop
     }
     if ( numCorners != 3 )
         return moved;
-    Vector<Vector3d> pts( n );
-    for ( size_t k = 0; k < n; ++k )
-        pts[k] = Vector3d( mesh.points[cycle[k]] );
-    // from the corner of the smallest id, as crossesInFace in MRContoursCut.cpp, so that both move a degenerate face alike
-    const auto m = size_t( std::min_element( c.begin(), c.end(), [&] ( size_t a, size_t b ) { return cycle[a % n] < cycle[b % n]; } ) - c.begin() );
-    moveSidesOut( pts, { c[m], c[( m + 1 ) % 3] + ( m > 1 ? n : 0 ), c[( m + 2 ) % 3] + ( m > 0 ? n : 0 ) }, normal );
+    const auto pts = moveSidesOut( mesh.points, cycle, c, normal );
     for ( size_t k = 0; k < n; ++k )
         moved[cycle[k]] = pts[k];
     return moved;
@@ -2215,7 +2224,7 @@ std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops
     if ( auto res = run( nullptr ); res || !alongSide )
         return res;
     auto res = run( &sideOf );
-    assert( !alongSide ); // the sides are moved by more than the rounding of the points
+    assert( !alongSide ); // the sides are moved by more than the rounding of the points, though that is not always enough (see the header)
     return res;
 }
 

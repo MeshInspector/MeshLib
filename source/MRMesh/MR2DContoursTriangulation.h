@@ -159,7 +159,8 @@ MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const 
 /// same as above for the loops of one triangle of a mesh, all of them (the whole perimeter of the triangle is on the loops)
 /// \param sideOf for an edge of the loops, the side of the triangle it goes along (in cutMesh, the edge it was split from), or an invalid id
 ///        for an edge inside the triangle; the rounding of the points can make another edge cross a side, so if the plan fails, it is found
-///        again with the side vertices moved out by \ref moveSidesOut; if sideOf is empty, the plan is the one above
+///        again with the side vertices moved out of the triangle by a few float errors of their coordinates (and apart along the sides by
+///        as much where they are closer), while the inner ones stay; if sideOf is empty, the plan is the one above
 /// \param moveSidesAtOnce find the plan only with the sides moved out, as where the corners are on one line: there the points as they are
 ///        leave the plan to the simulation of simplicity, which can put an island outside the triangle
 MR_BIND_IGNORE MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
@@ -192,23 +193,13 @@ MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const M
 /// \param sideOf for an edge of the loops, the side of the triangle it goes along, or an invalid id for an edge inside it; the rounding of the
 ///        points can make another edge cross a side, and then the crossings are found again with the sides moved out as in
 ///        \ref getMonotonePlan( mesh, loops, normal, sideOf )
-/// \return std::nullopt if two edges of the loops join the same two vertices, or if an edge still crosses a side after the sides are
-///         moved out, which should only happen if a point is outside the triangle by more than its rounding, the loops are not the whole
-///         perimeter, or its side edges do not make a triangle
+/// \return std::nullopt if two edges of the loops join the same two vertices, or if an edge still crosses a side after the sides are moved
+///         out, which also asserts in Debug; that can happen if an edge inside the triangle joins two points of one side with others between
+///         them (it lies on the moved side then), or leaves a side point so nearly along the side that a nearby side point still rounds to
+///         its other side, or if a point is outside the triangle by more than its rounding, the loops are not the whole perimeter, or its
+///         side edges do not make a triangle
 MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
     const std::function<UndirectedEdgeId( UndirectedEdgeId )>& sideOf );
-
-/// moves the points along the perimeter of a triangle out of it by a few float errors of their coordinates (1e-3 if all points are at the origin),
-/// in the projection along the axis most aligned with \p normal, out by the orientation of the corners there, so that no other edge crosses a side
-/// only by the rounding of the points: first the corners are placed as an equilateral triangle of that inradius around their centroid if they are
-/// all closer, else the corner opposite the longest side goes to that height over it if it is lower; then every side moves out by that much, the
-/// corners to where the moved sides meet, and the other points from their places on the moved sides only across them, but that far apart along
-/// a side where they are closer or out of order (around the middle of every such run, and evenly where its neighbours leave less room);
-/// for use inside MRMesh (not exported)
-/// \param cycle the points in their order along the perimeter
-/// \param corners the positions of the corners in \p cycle, increasing within one turn and taken modulo its size (so they may reach past its
-///        end); the callers start at the corner of the smallest vertex id, so that they all move one face alike
-MR_BIND_IGNORE void moveSidesOut( Vector<Vector3d>& cycle, const std::array<size_t, 3>& corners, const Vector3f& normal );
 
 /// \ref hasCrossing tests up to this many segments in pairs, which is faster for them than the sweep, the only user of its cache with the exact predicates
 constexpr size_t cMaxSegmentsInPairs = 32;

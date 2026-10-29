@@ -30,6 +30,12 @@
 namespace MR
 {
 
+namespace PlanarTriangulation
+{
+// moves the points along the perimeter of a triangle out of it; defined and documented in MR2DContoursTriangulation.cpp
+Vector<Vector3d> moveSidesOut( const VertCoords& points, const Vector<VertId>& cycle, const std::array<size_t, 3>& corners, const Vector3f& normal );
+}
+
 namespace
 {
 
@@ -1170,15 +1176,12 @@ bool crossesInFace( FaceCrossingsBuffers& buf, const Mesh& mesh, const OneMeshCo
     if ( !onLine && !PlanarTriangulation::hasCrossing( buf.ends, buf.xyz, normal, buf.sweepCache() ) )
         return false;
     // the rounding of the points can make two segments cross near a side, so they are tested again with the sides moved out as in the plans
-    // of lone faces: the corners and all cut points of the sides, along every side as the cut sorts them, from the corner of the smallest id
-    // as in moveSideVerts, so that both move a degenerate face alike
+    // of lone faces: the corners and all cut points of the sides, along every side as the cut sorts them
     Vector<VertId> cycle;
     std::array<size_t, 3> corners;
-    const auto m = int( std::min_element( verts.begin(), verts.end() ) - verts.begin() );
-    for ( int i = 0; i < 3; ++i )
+    for ( int j = 0; j < 3; ++j )
     {
-        const int j = ( m + i ) % 3;
-        corners[i] = cycle.size();
+        corners[j] = cycle.size();
         cycle.push_back( verts[j] );
         const auto it = preRes.edgeData.find( edges[j].undirected() );
         if ( it == preRes.edgeData.end() )
@@ -1190,10 +1193,7 @@ bool crossesInFace( FaceCrossingsBuffers& buf, const Mesh& mesh, const OneMeshCo
         for ( size_t k = 0; k < ed.size(); ++k )
             cycle.push_back( ed[along ? k : ed.size() - 1 - k].newVert );
     }
-    Vector<Vector3d> pts( cycle.size() );
-    for ( size_t k = 0; k < cycle.size(); ++k )
-        pts[k] = Vector3d( mesh.points[cycle[k]] );
-    PlanarTriangulation::moveSidesOut( pts, corners, normal );
+    const auto pts = PlanarTriangulation::moveSidesOut( mesh.points, cycle, corners, normal );
     for ( size_t k = 0; k < cycle.size(); ++k )
         if ( const auto it = std::lower_bound( buf.keys.begin(), buf.keys.end(), std::pair( cycle[k], 0 ) ); it != buf.keys.end() && it->first == cycle[k] )
             buf.xyz[buf.ends[it->second / 2][it->second % 2]] = Vector3f( pts[k] );

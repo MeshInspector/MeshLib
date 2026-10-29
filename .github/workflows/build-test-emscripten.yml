@@ -245,6 +245,7 @@ jobs:
         working-directory: build/Release/MeshLibJS/${{ matrix.js-dir }}
         run: |
           ls -l MeshLibC2.mjs MeshLibC2.wasm MeshLibC2.node.mjs MeshLibC2.node.wasm
+          for f in MeshLibC2.mjs MeshLibC2.wasm ; do echo "${f}: $(gzip -9c ${f} | wc -c) bytes gzipped" ; done
           if grep -q asyncify_start_unwind MeshLibC2.mjs ; then
             echo "The module is built with asyncify, check the link flags" >&2
             exit 1

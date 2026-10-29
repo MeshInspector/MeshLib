@@ -29,6 +29,8 @@ add_custom_target(MeshLibJSSources
   COMMENT "Copying the generated JS bindings to ${MESHLIB_JS_OUTPUT_DIR}"
 )
 
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
 # An empty source: everything comes from the libraries.
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/MeshLibJS_empty.cpp" "")
 
@@ -69,7 +71,15 @@ function(mr_add_js_module TARGET_NAME)
     "-sALLOW_MEMORY_GROWTH=1"
     "-sEXIT_RUNTIME=0"
     "-sINVOKE_RUN=0"
+    # Keeps the wasm export names unminified (a side effect of the library, the only switch Emscripten offers): the generated JS
+    # calls the C bindings through `wasmExports` by name, which lets the glue of these exports be dropped below.
+    "-lexports.js"
     ${ARG_LINK_OPTIONS}
+  )
+  add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+    COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/strip_export_glue.py" "$<TARGET_FILE:${TARGET_NAME}>"
+    COMMENT "Dropping the per-export glue from ${ARG_OUTPUT_NAME}.mjs"
+    VERBATIM
   )
 endfunction()
 

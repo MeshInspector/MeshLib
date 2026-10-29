@@ -75,7 +75,7 @@ jobs:
             llvm-keg-version: 22.1.8_2
             cxx-compiler-template: LLVM_PREFIX/bin/clang++
             c-compiler-template: LLVM_PREFIX/bin/clang
-            runner: [ self-hosted, macos, arm64, build, macos-13 ] # TEMP: pin to MacBook-Pro-Daniil
+            runner: [ self-hosted, macos, arm64, build ] #  any macos version
             instance: self-hosted-arm
     permissions:
       id-token: write # This is required for requesting the JWT
@@ -162,22 +162,6 @@ jobs:
           internal-build: ${{ inputs.internal_build }}
           # self-hosted runners have no preinstalled vcpkg; keep one per runner workspace
           vcpkg-root: ${{ runner.environment == 'self-hosted' && format('{0}/vcpkg', runner.workspace) || '/usr/local/share/vcpkg' }}
-
-      - name: TEMP diagnose vcpkg python
-        if: ${{ matrix.lib-source == 'vcpkg' }}
-        continue-on-error: true
-        timeout-minutes: 10
-        run: |
-          B=$VCPKG_ROOT/buildtrees/mrbind-pybind11
-          ls -la $B || true
-          for f in $B/*.log; do
-            echo "::group::$f"
-            ls -la "$f"
-            grep -n -i -E -B5 -A25 'interpreter|python' "$f" | head -400 || true
-            echo "::endgroup::"
-          done
-          ls -la $VCPKG_ROOT/buildtrees/mrbind-pybind11/arm64-osx-meshlib-rel 2>/dev/null | head || true
-          log show --start '2026-10-29 21:08:16' --end '2026-10-29 21:08:30' --style compact 2>/dev/null | grep -i -E 'python|kill|cs_|codesign|amfi|syspolicy' | head -80 || true
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}

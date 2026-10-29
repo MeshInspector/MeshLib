@@ -83,10 +83,6 @@
       <!-- Adding frequently used MeshLib headers to the PCH speeds up clean (CI) builds but slows local
            iterative development, so it is off by default and enabled only in CI via -p:MR_PCH_USE_EXTRA_HEADERS=ON -->
       <PreprocessorDefinitions Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'=='ON'">MR_PCH_USE_EXTRA_HEADERS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <!-- Mirrors DetectPlatform.cmake. Required, not cosmetic: without it MRSystem.cpp's
-           GetCpuId() takes its x86 branch, which calls the __cpuid intrinsic that MSVC does
-           not provide on ARM64. -->
-      <PreprocessorDefinitions Condition="'$(Platform)'=='ARM64'">__ARM_CPU__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <!-- Mirrors DetectPlatform.cmake: the platform name returned by getOSNoSpaces() (telemetry, sign-in). -->
       <PreprocessorDefinitions Condition="'$(Platform)'=='ARM64'">MR_PLATFORM="Windows_arm64";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Platform)'!='ARM64'">MR_PLATFORM="Windows";%(PreprocessorDefinitions)</PreprocessorDefinitions>

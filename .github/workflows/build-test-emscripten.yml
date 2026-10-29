@@ -264,6 +264,11 @@ jobs:
           node --version
           node source/MRTestJS/main.mjs build/Release/MeshLibJS/${{ matrix.js-dir }}/index.mjs
 
+      - name: Benchmark Booleans
+        run: |
+          lscpu | grep -i 'model name\|vendor\|^CPU(s)' || true
+          node source/MRTestJS/benchBoolean.mjs build/Release/MeshLibJS/${{ matrix.js-dir }}/index.mjs
+
       - name: Assemble and pack npm package
         if: ${{ matrix.wasm64 == 0 }}
         run: |

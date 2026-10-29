@@ -139,7 +139,7 @@ bool uniteByWindings( const MeshTopology& topology, const std::vector<EdgePath>&
             }
     }
 
-    HashMap<FaceId, std::vector<std::pair<FaceId, int>>> links; // the parts across every path edge, with the change of the number
+    HashMap<FaceId, Vector<std::pair<FaceId, int>>> links; // the parts across every path edge, with the change of the number
     HashMap<FaceId, VertId> probes; // a vertex not on the paths, of a face next to them, in the parts having one
     const int step = originIsA ? -1 : 1;
     for ( const auto& path : cutPaths )
@@ -157,7 +157,7 @@ bool uniteByWindings( const MeshTopology& topology, const std::vector<EdgePath>&
                     probes.insert( { rr, v } );
             }
 
-    std::vector<std::tuple<bool, size_t, FaceId>> starts; // has a probe, the number of path edges, the part
+    Vector<std::tuple<bool, size_t, FaceId>> starts; // has a probe, the number of path edges, the part
     starts.reserve( links.size() );
     for ( const auto& [x, xLinks] : links )
         starts.emplace_back( probes.contains( x ), xLinks.size(), x );
@@ -171,8 +171,8 @@ bool uniteByWindings( const MeshTopology& topology, const std::vector<EdgePath>&
         int shift = 0; // to the winding numbers
         VertId probe; // of its start, which has number 0
     };
-    std::vector<LinkedSet> sets;
-    std::vector<std::pair<FaceId, int>> linked; // the parts of all sets with their numbers, set after set
+    Vector<LinkedSet> sets;
+    Vector<std::pair<FaceId, int>> linked; // the parts of all sets with their numbers, set after set
     FaceBitSet numbered( topology.faceSize() );
     for ( const auto& [probed, unused, start] : starts )
     {

@@ -482,7 +482,7 @@ struct ExactCutPoints
     // the contour point of every vertex of the paths inside the faces, as {contour, point}
     HashMap<VertId, std::pair<int, int>> vertInters;
     // the definition of every vertex at a crossing of the paths, from firstCrossing on
-    std::vector<PreciseCutPoint> crossings;
+    Vector<PreciseCutPoint> crossings;
 
     // the definition of vertex v on the loops of face cf with precise corners tri
     PreciseCutPoint point( const CutFace& cf, const std::array<PreciseVertCoords, 3>& tri, VertId v ) const

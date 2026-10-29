@@ -173,7 +173,7 @@ jobs:
           for f in $B/*.log; do
             echo "::group::$f"
             ls -la "$f"
-            grep -n -i -E -B5 -A25 'interpreter|python' "$f" | head -400
+            grep -n -i -E -B5 -A25 'interpreter|python' "$f" | head -400 || true
             echo "::endgroup::"
           done
           ls -la $VCPKG_ROOT/buildtrees/mrbind-pybind11/arm64-osx-meshlib-rel 2>/dev/null | head || true

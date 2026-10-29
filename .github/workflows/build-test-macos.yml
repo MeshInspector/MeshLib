@@ -156,6 +156,8 @@ jobs:
           cxx-compiler: ${{ steps.compilers.outputs.cxx-compiler }}
           toolchain: ${{ matrix.xcode-version && format('xcode{0}', matrix.xcode-version) || format('llvm{0}', matrix.llvm-keg-version) }}
           internal-build: ${{ inputs.internal_build }}
+          # /usr/local/share/vcpkg is preinstalled on hosted images only, not writable on self-hosted ones
+          vcpkg-root: ${{ runner.environment == 'self-hosted' && format('{0}/vcpkg', runner.tool_cache) || '/usr/local/share/vcpkg' }}
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}

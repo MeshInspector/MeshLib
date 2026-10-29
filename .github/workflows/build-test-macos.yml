@@ -155,9 +155,10 @@ jobs:
         with:
           vcpkg-version: ${{ inputs.vcpkg_version }}
           vcpkg-triplet: ${{ env.VCPKG_TRIPLET }}
-          c-compiler: ${{ steps.compilers.outputs.c-compiler }}
-          cxx-compiler: ${{ steps.compilers.outputs.cxx-compiler }}
-          toolchain: ${{ matrix.xcode-version && format('xcode{0}', matrix.xcode-version) || format('llvm{0}', matrix.llvm-keg-version) }}
+          # AppleClang as in MIC: draco 1.5.7 passes --start-group to non-Apple Clang, which ld64 rejects
+          c-compiler: /usr/bin/clang
+          cxx-compiler: /usr/bin/clang++
+          toolchain: ${{ matrix.xcode-version && format('xcode{0}', matrix.xcode-version) || matrix.instance }}
           internal-build: ${{ inputs.internal_build }}
           # self-hosted runners have no preinstalled vcpkg; keep one per runner workspace
           vcpkg-root: ${{ runner.environment == 'self-hosted' && format('{0}/vcpkg', runner.workspace) || '/usr/local/share/vcpkg' }}

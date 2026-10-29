@@ -28,7 +28,7 @@ public:
     };
     // this should be called once on start of program (called in RibbonMenu::init);
     // if resource/icons*.zip exist (one archive per library, made by the build, entries like "icons/X1/name.png"), loads all icons from them,
-    // otherwise loads all icon types from resource/<type> folders except Logos, which are loaded on first findByName request
+    // otherwise loads all icon types from `resource/<type>` folders except Logos, which are loaded on first findByName request
     MRVIEWER_API static void load();
     // this should be called once before program stops (called in RibbonMenu::shutdown)
     MRVIEWER_API static void free();

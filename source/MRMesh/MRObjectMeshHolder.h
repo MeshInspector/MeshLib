@@ -29,7 +29,7 @@ enum class MRMESH_CLASS MeshVisualizePropertyType
 template <> struct IsVisualizeMaskEnum<MeshVisualizePropertyType> : std::true_type {};
 
 /// an object that stores a mesh
-/// \ingroup ModelHolderGroup
+/// \ingroup DataModelGroup
 class MRMESH_CLASS ObjectMeshHolder : public VisualObject
 {
 public:

@@ -8,7 +8,7 @@ namespace MR
 {
 
 /// \defgroup PolylineSubdivideGroup Polyline Subdivide
-/// \ingroup PolylineAlgorithmGroup
+/// \ingroup PolylineGroup
 /// \{
 
 struct PolylineSubdivideSettings

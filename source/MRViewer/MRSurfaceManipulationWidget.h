@@ -10,7 +10,7 @@ namespace MR
 {
 
 /// @brief widget for surface modifying
-/// @detail available 3 modes:
+/// @details available 3 modes:
 /// add (move surface region in direction of normal)
 /// remove (move surface region in opposite direction to normal)
 /// relax (relax surface region)

@@ -1590,8 +1590,11 @@ CutMeshResult cutMeshImpl( Mesh& mesh, const OneMeshContours& contours, const Cu
     {
         res.fbsWithContourIntersections = findCrossingFaces( mesh, contours, preRes, firstNewEdge, params.sortData );
         if ( params.sortData )
+        {
+            crossingFaces.reserve( res.fbsWithContourIntersections.count() );
             for ( auto f : res.fbsWithContourIntersections )
                 crossingFaces.push_back( cutFace( mesh.topology, f, preRes.vertFaces ) );
+        }
     }
 
     if ( params.new2oldEdgesMap )

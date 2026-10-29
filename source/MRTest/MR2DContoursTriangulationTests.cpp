@@ -508,8 +508,9 @@ TEST( MRMesh, PlanarTriangulationMonotonePlanSameDefinitions )
 }
 
 // findCrossings on the exact predicates of a cut triangle: cut A crossed by cuts B and C gives two crossings in the order of the sweep,
-// each one two edges directed along the sweep, the first one passing from the right of the second one to its left; loops without
-// crossings (or no loops) give none, and an edge without a cut (as along a side) crossing another one gives std::nullopt
+// each one two edges directed along the sweep, the first one passing from the right of the second one to its left, and three cuts through
+// one point give three, one by one; loops without crossings (or no loops) give none, and an edge without a cut (as along a side) crossing
+// another one, or a crossing that the predicates fail on, gives std::nullopt
 TEST( MRMesh, PlanarTriangulationFindCrossings )
 {
     // the hole of triangle 0_f, and every cut as a slit: the segment where the plane of another triangle crosses the plane z = 0,
@@ -540,6 +541,10 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
     const auto a = addCut( { 320, 300 }, { 50, 290 }, { 550, 310 } ); // from ( 185, 295 ) to ( 435, 305 )
     const auto b = addCut( { 300, 260 }, { 310, 600 }, { 290, 100 } ); // from ( 305, 430 ) to ( 295, 180 ), against the sweep
     const auto c = addCut( { 380, 270 }, { 370, 120 }, { 390, 620 } ); // from ( 375, 195 ) to ( 385, 445 ), parallel to B
+    // P, Q and R through one point ( 600, 200 ), met from below by Q, P and R before it
+    const auto p = addCut( { 600, 240 }, { 300, 130 }, { 900, 190 } ); // from ( 450, 185 ) to ( 750, 215 )
+    const auto q = addCut( { 560, 200 }, { 610, -100 }, { 670, 500 } ); // from ( 585, 50 ) to ( 615, 350 )
+    const auto r = addCut( { 630, 240 }, { 330, 340 }, { 810, -20 } ); // from ( 480, 290 ) to ( 720, 110 )
     EdgeLoop outerLoop;
     for ( auto e : leftRing( mesh.topology, outer ) )
         outerLoop.push_back( e );
@@ -561,18 +566,26 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
     for ( auto v = 0_v; v < defs.endId(); ++v )
         preds.addPoint( v, defs[v] );
     const auto& tp = mesh.topology;
-    for ( int i = 0; i < 2; ++i )
+    // whether crossing x is of the cuts of slits s and t
+    auto isOf = [] ( EdgePair x, const EdgeLoop& s, const EdgeLoop& t )
     {
-        const auto [e0, e1] = ( *res )[i];
-        // with A, crossed by B first, near x = 300
-        const auto other = i == 0 ? b[0] : c[0];
-        EXPECT_TRUE( ( e0.undirected() == a[0].undirected() && e1.undirected() == other.undirected() ) ||
-            ( e1.undirected() == a[0].undirected() && e0.undirected() == other.undirected() ) );
-        EXPECT_TRUE( preds.less( tp.org( e0 ), tp.dest( e0 ) ) );
-        EXPECT_TRUE( preds.less( tp.org( e1 ), tp.dest( e1 ) ) );
-        EXPECT_FALSE( preds.ccw( tp.org( e1 ), tp.dest( e1 ), tp.org( e0 ) ) );
-        EXPECT_TRUE( preds.ccw( tp.org( e1 ), tp.dest( e1 ), tp.dest( e0 ) ) );
-    }
+        const auto u = x.first.undirected(), w = x.second.undirected();
+        return ( u == s[0].undirected() && w == t[0].undirected() ) || ( w == s[0].undirected() && u == t[0].undirected() );
+    };
+    auto checkDirections = [&]
+    {
+        for ( const auto& [e0, e1] : *res )
+        {
+            EXPECT_TRUE( preds.less( tp.org( e0 ), tp.dest( e0 ) ) );
+            EXPECT_TRUE( preds.less( tp.org( e1 ), tp.dest( e1 ) ) );
+            EXPECT_FALSE( preds.ccw( tp.org( e1 ), tp.dest( e1 ), tp.org( e0 ) ) );
+            EXPECT_TRUE( preds.ccw( tp.org( e1 ), tp.dest( e1 ), tp.dest( e0 ) ) );
+        }
+    };
+    // with A, crossed by B first, near x = 300
+    EXPECT_TRUE( isOf( ( *res )[0], a, b ) );
+    EXPECT_TRUE( isOf( ( *res )[1], a, c ) );
+    checkDirections();
     EXPECT_FALSE( preds.failed() );
 
     // B and C are parallel
@@ -589,11 +602,28 @@ TEST( MRMesh, PlanarTriangulationFindCrossings )
         return ue == a[0].undirected() ? std::array<PreciseVertCoords, 3>{} : cutOf( ue );
     } );
     EXPECT_FALSE( res.has_value() );
+    // the predicates fail on the crossing of two cuts by one triangle
+    res = PlanarTriangulation::findCrossings( mesh, { outerLoop, a, b }, tri, pointOf, [&] ( UndirectedEdgeId ) { return cuts[0]; } );
+    EXPECT_FALSE( res.has_value() );
 
     // the same crossings on the float predicates
     res = PlanarTriangulation::findCrossings( mesh, { outerLoop, a, b, c }, Vector3f( 0, 0, 1 ) );
     ASSERT_TRUE( res.has_value() );
-    EXPECT_EQ( *res, *PlanarTriangulation::findCrossings( mesh, { outerLoop, a, b, c }, tri, pointOf, cutOf ) );
+    EXPECT_EQ( res, PlanarTriangulation::findCrossings( mesh, { outerLoop, a, b, c }, tri, pointOf, cutOf ) );
+
+    // three cuts through one point are crossed one by one, the second time by the outer ones Q and R, so every two once and along every edge
+    // in the order of the sweep, which the points of the crossings follow
+    res = PlanarTriangulation::findCrossings( mesh, { outerLoop, p, q, r }, tri, pointOf, cutOf );
+    ASSERT_TRUE( res.has_value() );
+    ASSERT_EQ( res->size(), size_t( 3 ) );
+    EXPECT_TRUE( isOf( ( *res )[1], q, r ) );
+    EXPECT_TRUE( ( isOf( ( *res )[0], p, q ) && isOf( ( *res )[2], p, r ) ) || ( isOf( ( *res )[0], p, r ) && isOf( ( *res )[2], p, q ) ) );
+    checkDirections();
+    for ( int i = 0; i < 3; ++i )
+        preds.addPoint( defs.endId() + i, { .tri = cutOf( ( *res )[i].first.undirected() ), .tri2 = cutOf( ( *res )[i].second.undirected() ) } );
+    EXPECT_TRUE( preds.less( defs.endId(), defs.endId() + 1 ) );
+    EXPECT_TRUE( preds.less( defs.endId() + 1, defs.endId() + 2 ) );
+    EXPECT_FALSE( preds.failed() );
 }
 
 namespace

@@ -30,6 +30,8 @@ GEN_FLAGS=(
     --hide-field id_
     # `mrcudapy` is a separate module.
     --ignore-c-file '^MRCCuda/'
+    # `begin()`/`end()` are function templates for those.
+    --iterate-by-index '^MR::Vector[234](b|i|i64|f|d|<)'
     --ignore-for-python '^MR::SetBitIteratorT<'
     --ignore-for-python 'SetBitIterator$'
     --ignore-for-python '^MR::ConstChildren::(Iterator|begin|end)$'
@@ -43,6 +45,9 @@ GEN_FLAGS=(
     --adjust-doc-name '\b(std::)?(ptrdiff_t|int64_t)\b' 'long'
     # The C bindings merge `std::expected` and `tl::expected`, which is what `typeid()` shows.
     --adjust-typeid-name '(^|[^:A-Za-z0-9_])expected<' '$1tl::expected<'
+    # How the Linux demangler spells these: the size of a nested `std::array` as `3ul`, and `int32_t` expanded.
+    --adjust-typeid-name '([<,] ?std::array<[^<>]*(?:<[^<>]*(?:<[^<>]*>)?[^<>]*>)?[^<>]*), ([0-9]+)>' '$1, $2ul>'
+    --adjust-typeid-name '\b(std::)?int32_t\b' 'int'
 )
 
 # `aliases.cpp` has the custom aliases of the pybind11 module.

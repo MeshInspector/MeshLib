@@ -100,6 +100,13 @@ std::array<PreciseVertCoords, 3> preciseOwnTri( const ThreeVertIds& t, const Mes
     return { preciseOwnVert( t[0], mesh, sortData ), preciseOwnVert( t[1], mesh, sortData ), preciseOwnVert( t[2], mesh, sortData ) };
 }
 
+/// prepares precise-coordinates for the corners of a triangle of the other mesh
+std::array<PreciseVertCoords, 3> preciseOtherTri( FaceId t, const SortIntersectionsData& sortData )
+{
+    const auto vs = sortData.otherMesh.topology.getTriVerts( t );
+    return { preciseOtherVert( vs[0], sortData ), preciseOtherVert( vs[1], sortData ), preciseOtherVert( vs[2], sortData ) };
+}
+
 /// the exact definition of intersection i of contour c inside a triangle of the mesh with given edges, counterclockwise,
 /// and tri[k] the precise coordinates of org( edges[k] ) before the cut: a corner, a side of the triangle crossing a triangle of the other mesh,
 /// or an edge of the other mesh crossing the triangle
@@ -115,8 +122,7 @@ PreciseCutPoint preciseCutPoint( const Mesh& mesh, const OneMeshContours& contou
         for ( int k = 0; k < 3; ++k )
             if ( edges[k].undirected() == pe->undirected() )
                 res.seg = { tri[k], tri[( k + 1 ) % 3] };
-        const auto t = otherTopology.getTriVerts( et.tri() );
-        res.tri = { preciseOtherVert( t[0], sortData ), preciseOtherVert( t[1], sortData ), preciseOtherVert( t[2], sortData ) };
+        res.tri = preciseOtherTri( et.tri(), sortData );
     }
     else if ( std::holds_alternative<FaceId>( prim ) )
     {
@@ -414,17 +420,29 @@ void triangulateContour( Mesh& mesh, EdgeId e, FaceId oldFace, FaceMap* new2OldM
     executeTriangulateContourPlan( mesh, e, plan, oldFace, new2OldMap, new2OldEdgeMap );
 }
 
-// a lone contour is inside one face crossing none of its edges (e.g. where a tip of the other mesh pokes through it),
-// so it is an island in the hole of its face, or a slit if it is open
-struct LoneFace
+// a face of the mesh that contours go inside, with its sides before the cut
+struct CutFace
 {
     FaceId f;
     std::array<EdgeId, 3> edges; // counterclockwise, before the cut
     ThreeVertIds verts; // verts[i] = org( edges[i] )
 };
 
-// finds the faces of lone contours, before the cut changes their topology
-Vector<LoneFace> findLoneFaces( const MeshTopology& topology, const OneMeshContours& contours )
+// face f with its sides before the cut changes their topology (the faces that doPreCutMesh removed have their edges in vertFaces)
+CutFace cutFace( const MeshTopology& topology, FaceId f, const HashMap<FaceId, std::array<EdgeId, 3>>* vertFaces = nullptr )
+{
+    CutFace res{ f, vertFaces ? getAt( *vertFaces, f ) : std::array<EdgeId, 3>{} };
+    if ( !res.edges[0] )
+        topology.getTriEdges( f, res.edges[0], res.edges[1], res.edges[2] );
+    for ( int k = 0; k < 3; ++k )
+        res.verts[k] = topology.org( res.edges[k] );
+    return res;
+}
+
+// finds the faces of lone contours, sorted, before the cut changes their topology;
+// a lone contour is inside one face crossing none of its edges (e.g. where a tip of the other mesh pokes through it),
+// so it is an island in the hole of its face, or a slit if it is open
+Vector<CutFace> findLoneFaces( const MeshTopology& topology, const OneMeshContours& contours )
 {
     Vector<FaceId> faces;
     for ( const auto& c : contours )
@@ -435,15 +453,9 @@ Vector<LoneFace> findLoneFaces( const MeshTopology& topology, const OneMeshConto
     }
     std::sort( faces.begin(), faces.end() );
     faces.erase( std::unique( faces.begin(), faces.end() ), faces.end() );
-    Vector<LoneFace> res( faces.size() );
+    Vector<CutFace> res( faces.size() );
     for ( int i = 0; i < faces.size(); ++i )
-    {
-        auto& lf = res[i];
-        lf.f = faces[i];
-        topology.getTriEdges( lf.f, lf.edges[0], lf.edges[1], lf.edges[2] );
-        for ( int k = 0; k < 3; ++k )
-            lf.verts[k] = topology.org( lf.edges[k] );
-    }
+        res[i] = cutFace( topology, faces[i] );
     return res;
 }
 
@@ -457,41 +469,18 @@ Vector3f cornersNormal( const Mesh& mesh, const ThreeVertIds& verts )
     return normal == Vector3d() ? Vector3f() : Vector3f( normal.normalized() );
 }
 
-// connects the islands of lone contours with the rest of the holes of their faces by the chords that split the holes in monotone parts,
-// found on the exact predicates consistent with the boolean if sortData is given; the faces where that fails are added to badFaces
-// and stay in the mesh unless another contour removed them
-void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const Vector<LoneFace>& loneFaces, const PreCutResult& preRes,
-    UndirectedEdgeId firstNewEdge, const SortIntersectionsData* sortData, NewEdgesMap* new2OldEdgeMap, FaceBitSet& badFaces )
+// the exact definitions of the vertices on the hole loops of the faces that contours go inside, consistent with the boolean,
+// if sortData is given
+struct ExactCutPoints
 {
-    if ( loneFaces.empty() )
-        return;
-    MR_TIMER;
-
-    // the path edges inside every lone face, with the face on the left, and the contour points at their ends for the exact definitions
-    Vector<EdgePath> faceEdges( loneFaces.size() );
+    const Mesh& mesh;
+    const OneMeshContours& contours;
+    const SortIntersectionsData* sortData;
+    // the contour point of every vertex of the paths inside the faces, as {contour, point}
     HashMap<VertId, std::pair<int, int>> vertInters;
-    for ( int i = 0; i < preRes.paths.size(); ++i )
-    {
-        for ( int j = 0; j < preRes.paths[i].size(); ++j )
-        {
-            const auto f = preRes.oldEdgesInfo[i][j].left;
-            const auto it = std::lower_bound( loneFaces.begin(), loneFaces.end(), f, [] ( const LoneFace& lf, FaceId f ) { return lf.f < f; } );
-            if ( it == loneFaces.end() || it->f != f )
-                continue;
-            auto& edges = faceEdges[it - loneFaces.begin()];
-            const auto e = preRes.paths[i][j];
-            edges.push_back( e );
-            if ( e.undirected() >= firstNewEdge ) // a new edge is inside the face, while an old one has it on the left only
-                edges.push_back( e.sym() );
-            if ( !sortData )
-                continue;
-            vertInters[mesh.topology.org( e )] = { i, j };
-            vertInters[mesh.topology.dest( e )] = { i, j + 1 };
-        }
-    }
 
-    // the exact definition of a vertex on the loops of a lone face
-    auto pointOf = [&] ( const LoneFace& lf, const std::array<PreciseVertCoords, 3>& tri, VertId v )
+    // the definition of vertex v on the loops of face cf with precise corners tri
+    PreciseCutPoint point( const CutFace& cf, const std::array<PreciseVertCoords, 3>& tri, VertId v ) const
     {
         const auto it = vertInters.find( v );
         if ( it == vertInters.end() )
@@ -500,72 +489,133 @@ void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const Vec
             res.seg[0] = preciseOwnVert( v, mesh, *sortData ); // a corner of the face
             return res;
         }
-        return preciseCutPoint( mesh, contours, it->second.first, it->second.second, lf.edges, tri, *sortData );
-    };
+        return preciseCutPoint( mesh, contours, it->second.first, it->second.second, cf.edges, tri, *sortData );
+    }
+};
 
-    // the boundaries of the hole of every lone face
-    Vector<EdgeLoops> faceLoops( loneFaces.size() );
-    EdgeBitSet inLoops( mesh.topology.edgeSize() );
-    BitSet removedHere( loneFaces.size() ); // the faces that no other contour removed, to put back if their plans fail
-    for ( int i = 0; i < loneFaces.size(); ++i )
+// the hole loops through the given edges, skipping the edges with a face on the left and those already in loops, which it marks in inLoops
+EdgeLoops holeLoops( const MeshTopology& topology, const EdgePath& edges, EdgeBitSet& inLoops )
+{
+    EdgeLoops res;
+    for ( auto e : edges )
     {
-        const auto& lf = loneFaces[i];
-        auto& edges = faceEdges[i];
-        if ( mesh.topology.hasFace( lf.f ) ) // no other contour removed it
+        if ( topology.left( e ) || inLoops.test( e ) )
+            continue;
+        auto& loop = res.emplace_back();
+        for ( auto le : leftRing( topology, e ) )
         {
-            mesh.topology.setLeft( lf.edges[0], {} );
-            edges.push_back( lf.edges[0] );
-            removedHere.set( i );
+            inLoops.set( le );
+            loop.push_back( le );
         }
-        for ( auto e : edges )
+    }
+    return res;
+}
+
+// the holes of faces that contours go inside
+struct FaceHoles
+{
+    Vector<EdgePath> edges; // the path edges inside every face, with the face on the left, and a side of it if it was removed here
+    Vector<EdgeLoops> loops; // the boundaries of the hole of every face
+    BitSet removedHere; // the faces that no other contour removed, to put back if their plans fail
+};
+
+// removes the faces that no other contour removed, and finds the holes of all of them; sets the contour points at the ends of the path edges
+// in exact if it has sortData
+FaceHoles makeFaceHoles( MeshTopology& topology, const Vector<CutFace>& faces, const PreCutResult& preRes, UndirectedEdgeId firstNewEdge,
+    ExactCutPoints& exact )
+{
+    FaceHoles res{ Vector<EdgePath>( faces.size() ), Vector<EdgeLoops>( faces.size() ), BitSet( faces.size() ) };
+    for ( int i = 0; i < preRes.paths.size(); ++i )
+    {
+        for ( int j = 0; j < preRes.paths[i].size(); ++j )
         {
-            if ( mesh.topology.left( e ) || inLoops.test( e ) )
+            const auto f = preRes.oldEdgesInfo[i][j].left;
+            const auto it = std::lower_bound( faces.begin(), faces.end(), f, [] ( const CutFace& cf, FaceId g ) { return cf.f < g; } );
+            if ( it == faces.end() || it->f != f )
                 continue;
-            auto& loop = faceLoops[i].emplace_back();
-            for ( auto le : leftRing( mesh.topology, e ) )
-            {
-                inLoops.set( le );
-                loop.push_back( le );
-            }
+            auto& edges = res.edges[it - faces.begin()];
+            const auto e = preRes.paths[i][j];
+            edges.push_back( e );
+            if ( e.undirected() >= firstNewEdge ) // a new edge is inside the face, while an old one has it on the left only
+                edges.push_back( e.sym() );
+            if ( !exact.sortData )
+                continue;
+            exact.vertInters[topology.org( e )] = { i, j };
+            exact.vertInters[topology.dest( e )] = { i, j + 1 };
         }
     }
 
+    EdgeBitSet inLoops( topology.edgeSize() );
+    for ( int i = 0; i < faces.size(); ++i )
+    {
+        const auto& cf = faces[i];
+        if ( topology.hasFace( cf.f ) ) // no other contour removed it
+        {
+            topology.setLeft( cf.edges[0], {} );
+            res.edges[i].push_back( cf.edges[0] );
+            res.removedHere.set( i );
+        }
+        res.loops[i] = holeLoops( topology, res.edges[i], inLoops );
+    }
+    return res;
+}
+
+// adds the chords that split the holes of the faces (bounded by all their loops together) in monotone parts, on the exact predicates
+// consistent with the boolean if exact has sortData; the faces where that fails are added to badFaces, and put back if removed here
+void addMonotoneChords( Mesh& mesh, const Vector<CutFace>& faces, const Vector<EdgeLoops>& faceLoops, const BitSet& removedHere,
+    const ExactCutPoints& exact, NewEdgesMap* new2OldEdgeMap, FaceBitSet& badFaces )
+{
     // the faces are independent, so plan them in parallel
-    Vector<std::optional<HoleFillPlan>> plans( loneFaces.size() );
+    Vector<std::optional<HoleFillPlan>> plans( faces.size() );
     ParallelFor( plans, [&] ( size_t i )
     {
-        const auto& lf = loneFaces[i];
+        const auto& cf = faces[i];
         const auto& loops = faceLoops[i];
-        if ( sortData )
+        if ( exact.sortData )
         {
-            const auto tri = preciseOwnTri( lf.verts, mesh, *sortData );
-            plans[i] = PlanarTriangulation::getMonotonePlan( mesh, loops, tri, [&] ( VertId v ) { return pointOf( lf, tri, v ); } );
+            const auto tri = preciseOwnTri( cf.verts, mesh, *exact.sortData );
+            plans[i] = PlanarTriangulation::getMonotonePlan( mesh, loops, tri, [&] ( VertId v ) { return exact.point( cf, tri, v ); } );
             return;
         }
         // the loops go counterclockwise around the normal of the face, of which only the dominant component and its sign matter
-        const auto normal = cornersNormal( mesh, lf.verts );
+        const auto normal = cornersNormal( mesh, cf.verts );
         // corners on one line give no normal, so no plane to connect the islands in: the plan stays empty, and the face is reported
         if ( normal == Vector3f() )
             return;
         plans[i] = PlanarTriangulation::getMonotonePlan( mesh, loops, normal );
     } );
 
-    for ( int i = 0; i < loneFaces.size(); ++i )
+    for ( int i = 0; i < faces.size(); ++i )
     {
         auto& plan = plans[i];
         // every island or slit needs a chord to the rest of its face, so a plan without any leaves them unconnected
         // (as where the cut of a side has already filled the face again, ending an open contour on that side)
         if ( plan && !plan->items.empty() && isFillingMultipleEdgeFree( mesh.topology, *plan ) )
-            executeTriangulateContourPlan( mesh, faceLoops[i].front().front(), *plan, loneFaces[i].f, nullptr, new2OldEdgeMap );
+            executeTriangulateContourPlan( mesh, faceLoops[i].front().front(), *plan, faces[i].f, nullptr, new2OldEdgeMap );
         else
         {
-            badFaces.autoResizeSet( loneFaces[i].f );
+            badFaces.autoResizeSet( faces[i].f );
             // the holes to fill are found by the cut paths, and the old sides of the face have none, so the face is put back;
             // no chord of it was added, so its old sides still make its ring
             if ( removedHere.test( i ) )
-                mesh.topology.setLeft( loneFaces[i].edges[0], loneFaces[i].f );
+                mesh.topology.setLeft( faces[i].edges[0], faces[i].f );
         }
     }
+}
+
+// connects the islands of lone contours with the rest of the holes of their faces by the chords that split the holes in monotone parts,
+// found on the exact predicates consistent with the boolean if sortData is given; the faces where that fails are added to badFaces
+// and stay in the mesh unless another contour removed them
+void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const Vector<CutFace>& loneFaces, const PreCutResult& preRes,
+    UndirectedEdgeId firstNewEdge, const SortIntersectionsData* sortData, NewEdgesMap* new2OldEdgeMap, FaceBitSet& badFaces )
+{
+    if ( loneFaces.empty() )
+        return;
+    MR_TIMER;
+
+    ExactCutPoints exact{ mesh, contours, sortData };
+    const auto holes = makeFaceHoles( mesh.topology, loneFaces, preRes, firstNewEdge, exact );
+    addMonotoneChords( mesh, loneFaces, holes.loops, holes.removedHere, exact, new2OldEdgeMap, badFaces );
 }
 
 [[maybe_unused]] void debugSortingInfo( EdgeId baseE,
@@ -1119,12 +1169,7 @@ bool crossesInFace( FaceCrossingsBuffers& buf, const Mesh& mesh, const OneMeshCo
     if ( buf.defs.size() <= 3 )
         return false;
 
-    std::array<EdgeId, 3> edges;
-    if ( const auto it = preRes.vertFaces.find( segs[0].f ); it != preRes.vertFaces.end() )
-        edges = it->second;
-    else
-        mesh.topology.getTriEdges( segs[0].f, edges[0], edges[1], edges[2] );
-    const ThreeVertIds verts{ mesh.topology.org( edges[0] ), mesh.topology.org( edges[1] ), mesh.topology.org( edges[2] ) };
+    const auto [f, edges, verts] = cutFace( mesh.topology, segs[0].f, &preRes.vertFaces );
     if ( sortData )
     {
         auto& preds = buf.preds ? *buf.preds : buf.preds.emplace();
@@ -1141,7 +1186,7 @@ bool crossesInFace( FaceCrossingsBuffers& buf, const Mesh& mesh, const OneMeshCo
 
     const auto normal = cornersNormal( mesh, verts );
     if ( normal == Vector3f() )
-        return true; // corners on one line give no plane to find the crossings in, so the face is bad, as in connectLoneContours
+        return true; // corners on one line give no plane to find the crossings in, so the face is bad, as in addMonotoneChords
     buf.xyz.resize( buf.defs.size() );
     for ( VertId p( 0 ); p < buf.xyz.size(); ++p )
     {

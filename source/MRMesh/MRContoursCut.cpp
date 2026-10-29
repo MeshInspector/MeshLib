@@ -429,12 +429,10 @@ struct CutFace
 };
 
 // face f with its sides before the cut changes their topology (the faces that doPreCutMesh removed have their edges in vertFaces)
-CutFace cutFace( const MeshTopology& topology, FaceId f, const HashMap<FaceId, std::array<EdgeId, 3>>& vertFaces = {} )
+CutFace cutFace( const MeshTopology& topology, FaceId f, const HashMap<FaceId, std::array<EdgeId, 3>>* vertFaces = nullptr )
 {
-    CutFace res{ f };
-    if ( const auto it = vertFaces.find( f ); it != vertFaces.end() )
-        res.edges = it->second;
-    else
+    CutFace res{ f, vertFaces ? getAt( *vertFaces, f ) : std::array<EdgeId, 3>{} };
+    if ( !res.edges[0] )
         topology.getTriEdges( f, res.edges[0], res.edges[1], res.edges[2] );
     for ( int k = 0; k < 3; ++k )
         res.verts[k] = topology.org( res.edges[k] );
@@ -471,13 +469,6 @@ Vector3f cornersNormal( const Mesh& mesh, const ThreeVertIds& verts )
     return normal == Vector3d() ? Vector3f() : Vector3f( normal.normalized() );
 }
 
-// the index of the face in sorted faces, or -1
-int findCutFace( const Vector<CutFace>& faces, FaceId f )
-{
-    const auto it = std::lower_bound( faces.begin(), faces.end(), f, [] ( const CutFace& cf, FaceId f ) { return cf.f < f; } );
-    return it == faces.end() || it->f != f ? -1 : int( it - faces.begin() );
-}
-
 // the exact definitions of the vertices on the hole loops of the faces that contours go inside, consistent with the boolean,
 // if sortData is given
 struct ExactCutPoints
@@ -487,8 +478,6 @@ struct ExactCutPoints
     const SortIntersectionsData* sortData;
     // the contour point of every vertex of the paths inside the faces, as {contour, point}
     HashMap<VertId, std::pair<int, int>> vertInters;
-
-    std::array<PreciseVertCoords, 3> triangle( const CutFace& cf ) const { return preciseOwnTri( cf.verts, mesh, *sortData ); }
 
     // the definition of vertex v on the loops of face cf with precise corners tri
     PreciseCutPoint point( const CutFace& cf, const std::array<PreciseVertCoords, 3>& tri, VertId v ) const
@@ -527,7 +516,7 @@ struct FaceHoles
 {
     Vector<EdgePath> edges; // the path edges inside every face, with the face on the left, and a side of it if it was removed here
     Vector<EdgeLoops> loops; // the boundaries of the hole of every face
-    BitSet removedHere; // the faces that no other contour removed, to put back if nothing changes in them
+    BitSet removedHere; // the faces that no other contour removed, to put back if their plans fail
 };
 
 // removes the faces that no other contour removed, and finds the holes of all of them; sets the contour points at the ends of the path edges
@@ -540,10 +529,11 @@ FaceHoles makeFaceHoles( MeshTopology& topology, const Vector<CutFace>& faces, c
     {
         for ( int j = 0; j < preRes.paths[i].size(); ++j )
         {
-            const int k = findCutFace( faces, preRes.oldEdgesInfo[i][j].left );
-            if ( k < 0 )
+            const auto f = preRes.oldEdgesInfo[i][j].left;
+            const auto it = std::lower_bound( faces.begin(), faces.end(), f, [] ( const CutFace& cf, FaceId g ) { return cf.f < g; } );
+            if ( it == faces.end() || it->f != f )
                 continue;
-            auto& edges = res.edges[k];
+            auto& edges = res.edges[it - faces.begin()];
             const auto e = preRes.paths[i][j];
             edges.push_back( e );
             if ( e.undirected() >= firstNewEdge ) // a new edge is inside the face, while an old one has it on the left only
@@ -583,7 +573,7 @@ void addMonotoneChords( Mesh& mesh, const Vector<CutFace>& faces, const Vector<E
         const auto& loops = faceLoops[i];
         if ( exact.sortData )
         {
-            const auto tri = exact.triangle( cf );
+            const auto tri = preciseOwnTri( cf.verts, mesh, *exact.sortData );
             plans[i] = PlanarTriangulation::getMonotonePlan( mesh, loops, tri, [&] ( VertId v ) { return exact.point( cf, tri, v ); } );
             return;
         }
@@ -1179,7 +1169,7 @@ bool crossesInFace( FaceCrossingsBuffers& buf, const Mesh& mesh, const OneMeshCo
     if ( buf.defs.size() <= 3 )
         return false;
 
-    const auto [f, edges, verts] = cutFace( mesh.topology, segs[0].f, preRes.vertFaces );
+    const auto [f, edges, verts] = cutFace( mesh.topology, segs[0].f, &preRes.vertFaces );
     if ( sortData )
     {
         auto& preds = buf.preds ? *buf.preds : buf.preds.emplace();
@@ -1196,7 +1186,7 @@ bool crossesInFace( FaceCrossingsBuffers& buf, const Mesh& mesh, const OneMeshCo
 
     const auto normal = cornersNormal( mesh, verts );
     if ( normal == Vector3f() )
-        return true; // corners on one line give no plane to find the crossings in, so the face is bad, as in connectLoneContours
+        return true; // corners on one line give no plane to find the crossings in, so the face is bad, as in addMonotoneChords
     buf.xyz.resize( buf.defs.size() );
     for ( VertId p( 0 ); p < buf.xyz.size(); ++p )
     {

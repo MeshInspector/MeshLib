@@ -60,7 +60,7 @@ public final class TestMeshFillHole
         checkEq(oldBdEdges.size(), 2, "holes");
 
         FillHoleNicelySettings settings = new FillHoleNicelySettings();
-        FaceBitSet patch = Functions.fillHoleNicely(mesh, oldBdEdges.front(), settings);
+        FaceBitSet patch = Functions.fillHoleNicely(mesh, oldBdEdges.at(0), settings);
         checkEq(patch.count(), 1887, "patch");
 
         std_vector_MR_EdgeId newBdEdges = mesh.topology().findHoleRepresentiveEdges(null);

@@ -67,9 +67,12 @@ jobs:
             cxx_compiler: msvc-2026
             build_system: MSBuild
             build_config: Release
-          # The clang-cl jobs build Release only, so their archives have no install/app/Debug.
+          # The clang-cl jobs build Release only and upload the `cmake --install` prefix as `install`,
+          # which is shipped as is: no make_install_folder.py, and the example plugin is built from
+          # its CMakeLists.txt in build-test-windows.yml instead of the .sln here.
           - vcpkg_triplet: x64-windows-vs2022-meshlib
             extract_release: MREDist_ClangCl_Release.zip
+            cmake_install: true
             output_zip: MeshLibDistClangCl.zip
             pdb_zip: MeshLibDistClangCl-PDB.zip
             artifact_name: DistributivesWin-ClangCl
@@ -80,6 +83,7 @@ jobs:
             arch: arm64
             runner: windows-11-vs2026-arm
             extract_release: MREDist_ClangCl-arm64_Release.zip
+            cmake_install: true
             output_zip: MeshLibDistClangCl-arm64.zip
             pdb_zip: MeshLibDistClangCl-PDB-arm64.zip
             artifact_name: DistributivesWin-ClangCl-arm64
@@ -102,6 +106,7 @@ jobs:
 
       # headers that make_install_folder.py puts into the distribution
       - name: Checkout third-party submodules
+        if: ${{ !matrix.cmake_install }}
         shell: bash
         run: scripts/checkout_submodules.sh . thirdparty/imgui thirdparty/parallel-hashmap thirdparty/mrbind-pybind11
 
@@ -118,6 +123,7 @@ jobs:
           build_system: ${{ matrix.build_system }}
 
       - name: Set up vcpkg
+        if: ${{ !matrix.cmake_install }}
         uses: ./.github/actions/setup-vcpkg-windows
         with:
           vcpkg-version: ${{ inputs.vcpkg_version }}
@@ -142,9 +148,11 @@ jobs:
       # The install folder is assembled from source/<arch>/<config>, which
       # make_install_folder.py derives from the triplet name.
       - name: Make Install Folder
+        if: ${{ !matrix.cmake_install }}
         run: py -3 scripts\make_install_folder.py ${{ inputs.app_version }} ${{ matrix.vcpkg_triplet }}
 
       - name: Add msbuild to PATH
+        if: ${{ !matrix.cmake_install }}
         uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
         with:
           # see the same note in build-test-windows.yml: the default x86 MSBuild
@@ -169,6 +177,7 @@ jobs:
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
 
       - name: Test Example Plugin # call it after archive not to pack build results
+        if: ${{ !matrix.cmake_install }}
         env:
           IDL: ${{ matrix.vcpkg_triplet == 'x64-windows-meshlib-iterator-debug' && '2' || '0' }}
         run: |

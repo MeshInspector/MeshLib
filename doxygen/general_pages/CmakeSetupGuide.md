@@ -114,6 +114,15 @@ MeshLib supports **Windows** via CMake, including integration with **Visual Stud
 
 ### Prebuilt archive from GitHub Releases
 
+`MeshLibDistClangCl_<version>.zip` (and its `-arm64` sibling) is a CMake install prefix, so `find_package(MeshLib CONFIG REQUIRED)` works with it as in the sections above. Extracted to `C:/meshlib-built`, point CMake at it and build your project in Release, the only configuration it ships:
+
+```cmd
+cmake -S . -B build -A x64 -D CMAKE_PREFIX_PATH=C:/meshlib-built/install
+cmake --build build --config Release
+```
+
+To run the result, put `C:/meshlib-built/install/bin` on `PATH` or copy its DLLs next to your executable.
+
 The `MeshLibDistVS*.zip` archives contain no CMake config files, so `find_package(MeshLib CONFIG REQUIRED)` fails at **configure** time. Point CMake at the extracted tree instead — assuming the archive was extracted to `C:/meshlib-built` as described in the [C++ Setup Guide](\ref MeshLibCppSetupGuide):
 
 ```cmd

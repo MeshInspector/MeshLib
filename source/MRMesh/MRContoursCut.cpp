@@ -414,9 +414,9 @@ Vector<CutFace> findLoneFaces( const MeshTopology& topology, const OneMeshContou
     }
     std::sort( faces.begin(), faces.end() );
     faces.erase( std::unique( faces.begin(), faces.end() ), faces.end() );
-    Vector<CutFace> res;
-    for ( auto f : faces )
-        res.push_back( cutFace( topology, f ) );
+    Vector<CutFace> res( faces.size() );
+    for ( int i = 0; i < faces.size(); ++i )
+        res[i] = cutFace( topology, faces[i] );
     return res;
 }
 

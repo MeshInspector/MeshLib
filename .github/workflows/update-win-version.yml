@@ -24,8 +24,8 @@ jobs:
       fail-fast: false
       matrix:
         # One developer distributive per Visual Studio toolchain and target
-        # architecture. The MREDist_* inputs are produced by the matching VS build
-        # in build-test-windows.yml (named via its VS_TAG).
+        # architecture, plus the x64 clang-cl one. The MREDist_* inputs are produced
+        # by the matching build in build-test-windows.yml (named via its VS_TAG).
         include:
           - vcpkg_triplet: x64-windows-vs2019-meshlib
             extract_release: MREDist_VS19_Release.zip
@@ -66,6 +66,15 @@ jobs:
             artifact_name: DistributivesWin-VS26-arm64
             cxx_compiler: msvc-2026
             build_system: MSBuild
+            build_config: Release
+          # The clang-cl job builds Release only, so this archive has no install/app/Debug.
+          - vcpkg_triplet: x64-windows-vs2022-meshlib
+            extract_release: MREDist_ClangCl_Release.zip
+            output_zip: MeshLibDistClangCl.zip
+            pdb_zip: MeshLibDistClangCl-PDB.zip
+            artifact_name: DistributivesWin-ClangCl
+            cxx_compiler: clang-cl
+            build_system: CMake
             build_config: Release
           - vcpkg_triplet: x64-windows-meshlib-iterator-debug
             extract_debug: MREDist_VS19_Debug-IteratorDebug.zip
@@ -115,7 +124,9 @@ jobs:
           if ("${{ matrix.extract_release }}") { 
             tar -xvzf ${{ matrix.extract_release }} 
           }
-          tar -xvzf ${{ matrix.extract_debug }}
+          if ("${{ matrix.extract_debug }}") {
+            tar -xvzf ${{ matrix.extract_debug }}
+          }
           tar -xvzf MeshLibC2Headers.zip
 
       # The install folder is assembled from source/<arch>/<config>, which
@@ -152,7 +163,9 @@ jobs:
           IDL: ${{ matrix.vcpkg_triplet == 'x64-windows-meshlib-iterator-debug' && '2' || '0' }}
         run: |
           $platform = "${{ matrix.arch == 'arm64' && 'ARM64' || 'x64' }}"
-          msbuild -m example_plugin\example_plugin.sln -p:Configuration=Debug -p:Platform=$platform -p:MeshLibIteratorDebugLevel=$env:IDL
+          if ("${{ matrix.extract_debug }}") {
+            msbuild -m example_plugin\example_plugin.sln -p:Configuration=Debug -p:Platform=$platform -p:MeshLibIteratorDebugLevel=$env:IDL
+          }
           if ("${{ matrix.extract_release }}") {
             msbuild -m example_plugin\example_plugin.sln -p:Configuration=Release -p:Platform=$platform
           }

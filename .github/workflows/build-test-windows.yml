@@ -51,13 +51,13 @@ jobs:
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\${{ matrix.arch || 'x64' }}\${{ matrix.config }}
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
       # Upload a developer distributive per Visual Studio toolchain and target
-      # architecture so update-win-version can repackage each into
-      # MeshLibDistVS{19,22,26}[-arm64].zip.
-      # VS2019/VS2022 ship the CMake build; VS2026 ships the MSBuild build.
+      # architecture, plus the x64 clang-cl one, so update-win-version can repackage each into
+      # MeshLibDistVS{19,22,26}[-arm64].zip and MeshLibDistClangCl.zip.
+      # VS2019/VS2022 and clang-cl ship the CMake build; VS2026 ships the MSBuild build.
       # VS_TAG keeps the archive names distinct.
-      job_upload_artifact: ${{ inputs.upload_artifacts && ( matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild' || matrix.cxx_compiler != 'msvc-2026' && matrix.cxx_compiler != 'clang-cl' && matrix.build_system == 'CMake' ) }}
+      job_upload_artifact: ${{ inputs.upload_artifacts && ( matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild' || matrix.cxx_compiler == 'clang-cl' && matrix.arch != 'arm64' || matrix.cxx_compiler != 'msvc-2026' && matrix.cxx_compiler != 'clang-cl' && matrix.build_system == 'CMake' ) }}
       # Only VS2026 has an arm64 leg, so the suffix separates it from the x64 VS26 archive
-      VS_TAG: ${{ format('{0}{1}', fromJSON('{"msvc-2019":"VS19","msvc-2022":"VS22"}')[matrix.cxx_compiler] || 'VS26', matrix.arch == 'arm64' && '-arm64' || '') }}
+      VS_TAG: ${{ format('{0}{1}', fromJSON('{"msvc-2019":"VS19","msvc-2022":"VS22","clang-cl":"ClangCl"}')[matrix.cxx_compiler] || 'VS26', matrix.arch == 'arm64' && '-arm64' || '') }}
       CUDA_VERSION: ${{ matrix.cuda_version }}
       VCVARS_VER: ${{ matrix.vcvars_ver || fromJSON('{"msvc-2019":"14.2","msvc-2022":"14.4"}')[matrix.cxx_compiler] || '14.5' }}
       PLATFORM_TOOLSET: ${{ fromJSON('{"msvc-2019":"v142","msvc-2022":"v143"}')[matrix.cxx_compiler] || 'v145' }}

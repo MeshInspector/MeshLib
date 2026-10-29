@@ -465,7 +465,7 @@ jobs:
       matrix:
         platform: [x64, arm64]
         include:
-          # Both build with the image's clang-cl through CMake, as the clang-cl jobs of build-test-windows.yml:
+          # Both build with the MSYS2 clang in cl mode through CMake, as the clang-cl jobs of build-test-windows.yml:
           # x64 on the 14.4 (VS2022) toolset, which CUDA 12 needs, arm64 on VS2026.
           - platform: x64
             runner: windows-2025
@@ -501,7 +501,7 @@ jobs:
       CUDA-MINOR: ${{ matrix.cuda-minor }}
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg-triplet }}
       VCVARS_VER: ${{ matrix.vcvars-ver }}
-      CMAKE_COMPILER_ARGS: -DCMAKE_CXX_COMPILER="C:/Program Files/LLVM/bin/clang-cl.exe" -DCMAKE_C_COMPILER="C:/Program Files/LLVM/bin/clang-cl.exe" -DCMAKE_LINKER_TYPE=LLD
+      CMAKE_COMPILER_ARGS: -DCMAKE_CXX_COMPILER=C:/msys64/${{ matrix.msys2-env }}/bin/clang-cl.exe -DCMAKE_C_COMPILER=C:/msys64/${{ matrix.msys2-env }}/bin/clang-cl.exe -DCMAKE_LINKER_TYPE=LLD
       MSYS2_ENV: ${{ matrix.msys2-env }}
     steps:
       - name: Checkout
@@ -557,6 +557,11 @@ jobs:
           build-script: scripts/mrbind/install_mrbind_windows_msys2.bat
           extra-cache-key: ${{ hashFiles(format('scripts/mrbind/msys2_package_hashes{0}.txt', matrix.msys2-pkgs)) }}
           msys2-env: ${{ matrix.msys2-env }}
+
+      - name: Add clang-cl to MSYS2 clang
+        # MSYS2 ships no clang-cl.exe; clang.exe called by that name runs in cl mode
+        shell: cmd
+        run: copy /y C:\msys64\%MSYS2_ENV%\bin\clang.exe C:\msys64\%MSYS2_ENV%\bin\clang-cl.exe
 
       - name: Build
         shell: cmd

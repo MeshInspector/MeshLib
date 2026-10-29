@@ -35,6 +35,20 @@
       </td>
     </tr>
     <tr>
+      <td align="center">Windows x64 (clang-cl, Release only)</td>
+      <td align="center">
+        <a href="RELEASE_PATH/MeshLibDistClangCl_SHORT_VERSION.zip">zip</a> /
+        <a href="RELEASE_PATH/MeshLibDistClangCl_SHORT_VERSION-PDB.zip">pdb</a>
+      </td>
+    </tr>
+    <tr>
+      <td align="center">Windows arm64 (clang-cl, Release only)</td>
+      <td align="center">
+        <a href="RELEASE_PATH/MeshLibDistClangCl_SHORT_VERSION-arm64.zip">zip</a> /
+        <a href="RELEASE_PATH/MeshLibDistClangCl_SHORT_VERSION-PDB-arm64.zip">pdb</a>
+      </td>
+    </tr>
+    <tr>
       <td align="center">Ubuntu 22 LTS x64</td>
       <td align="center">
         <a href="RELEASE_PATH/meshlib_SHORT_VERSION_ubuntu22-x64-dev.deb">deb</a>

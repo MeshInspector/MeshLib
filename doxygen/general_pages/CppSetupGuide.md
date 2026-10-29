@@ -44,12 +44,15 @@ Matching your own toolset stays the tested configuration, though: MeshLib compil
 | 2022 | `MeshLibDistVS22_<version>.zip` | `0` |
 | 2026 | `MeshLibDistVS26_<version>.zip` | `0` |
 | 2026, Windows on Arm | `MeshLibDistVS26_<version>-arm64.zip` | `0` |
+| clang-cl on the 2022 toolset (`v143`), **Release configuration only** | `MeshLibDistClangCl_<version>.zip` | none |
+| clang-cl on the 2026 toolset (`v145`), Windows on Arm, **Release configuration only** | `MeshLibDistClangCl_<version>-arm64.zip` | none |
 | 2019 (toolset `v142`), **Debug configuration only** | `MeshLibDist_<version>-IteratorDebug.zip` | `2` |
 
-The release description links the per-Visual-Studio archives; `IteratorDebug` appears in the asset list only.
+The release description links the per-Visual-Studio archives and `ClangCl`; `IteratorDebug` appears in the asset list only.
 Take it if your project builds Debug with MSVC's default `_ITERATOR_DEBUG_LEVEL=2`: it ships `install/app/Debug` without `install/app/Release`, so it covers no Release build — but being a `v142` build it serves a newer Visual Studio too, under the rule above.
 Whichever archive you pick, step 2 must define `_ITERATOR_DEBUG_LEVEL` to the value in the table — `0` for the per-Visual-Studio archives, `2` for `IteratorDebug`.
 Archives predating `install/include/MRMesh/config_dist.h` need `MR_ITERATOR_DEBUG_LEVEL` set to the same value as well; newer ones declare it themselves in that header, which leaves `IteratorDebug` needing no define at all.
+`ClangCl` is the CMake build compiled by clang-cl against the Visual Studio 2022 headers and libraries (2026 for `-arm64`), so it links into an MSVC project on that toolset or newer, like `VS22` (`VS26`); it ships `install/app/Release` without `install/app/Debug`.
 
 Debug symbols ship separately: every archive above has a companion `-PDB` archive (`MeshLibDistVS26_<version>-PDB.zip`, `MeshLibDistVS26_<version>-PDB-arm64.zip`, `MeshLibDist_<version>-IteratorDebug-PDB.zip`, ...) holding only the `.pdb` files.
 Extract it over the same directory to put them back under `install/lib`, where the debugger looks for them.

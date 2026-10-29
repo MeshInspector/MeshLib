@@ -12,8 +12,13 @@ ROOT_DIR="$(realpath "$SCRIPT_DIR/../..")"
 BIN_DIR="$(realpath "$1")"
 MRBIND_DIR="$ROOT_DIR/thirdparty/mrbind"
 OUT_DIR="$ROOT_DIR/build/python_over_c"
-CLANG_VER="$(cat "$SCRIPT_DIR/clang_version.txt" | xargs)"
 PYTHON="${PYTHON:-python3}"
+# The same compiler as `CXX_FOR_BINDINGS` in `generate.mk`.
+if [[ -n "${LLVM_PREFIX:-}" ]]; then
+    CXX="$LLVM_PREFIX/bin/clang++"
+else
+    CXX="clang++-$(cat "$SCRIPT_DIR/clang_version.txt" | xargs)"
+fi
 
 rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR/pkg/meshlib"
@@ -31,6 +36,11 @@ GEN_FLAGS=(
     # The pybind11 target names the types after the demangled `typeid()`, spelled like this on Linux.
     --adjust-name '\b(std::)?(size_t|uint64_t)\b' 'unsigned long'
     --adjust-name '\b(std::)?(ptrdiff_t|int64_t)\b' 'long'
+    # The pybind11 build is parsed without `size_t` support, so its docs spell the underlying types.
+    --adjust-doc-name '\b(std::)?(size_t|uint64_t)\b' 'unsigned long'
+    --adjust-doc-name '\b(std::)?(ptrdiff_t|int64_t)\b' 'long'
+    # The C bindings merge `std::expected` and `tl::expected`, which is what `typeid()` shows.
+    --adjust-typeid-name '(^|[^:A-Za-z0-9_])expected<' '$1tl::expected<'
 )
 
 # `aliases.cpp` has the custom aliases of the pybind11 module.
@@ -51,7 +61,7 @@ done < <(sed -nE 's/^\s*MR_ALIAS\(\s*([A-Za-z0-9_.]+)\s*,\s*([A-Za-z0-9_.]+)\s*\
 grep '^Generated' "$OUT_DIR/gen.log" || true
 
 # The limited API, so one module serves every Python version.
-time "clang++-$CLANG_VER" \
+time "$CXX" \
     "$OUT_DIR/src/mrmeshpy.cpp" \
     -o "$OUT_DIR/pkg/meshlib/mrmeshpy.so" \
     -shared -fPIC -std=c++20 -O1 -w \

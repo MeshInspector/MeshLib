@@ -1,0 +1,114 @@
+name: Sign and Notarize macOS pkg
+
+on:
+  release:
+    types: [ published ]
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: Tag of the release to sign
+        required: true
+        type: string
+      upload:
+        description: Replace the release's .pkg; otherwise the signed .pkg is a workflow artifact
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  sign-notarize:
+    # notarytool --wait and the release upload are both outside our control
+    timeout-minutes: 40
+    # both packages are signed on one Mac: signing does not depend on its architecture
+    runs-on: [ macos-arm-codesign ]
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ x64, arm64 ]
+    env:
+      VERSION_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.version_tag }}
+      UPLOAD: ${{ github.event_name == 'release' || inputs.upload }}
+    steps:
+      # In a directory of its own: this Mac also runs MeshLib build jobs,
+      # whose persistent workspace a sparse checkout into its root would break
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          path: sign-pkg
+          sparse-checkout: |
+            scripts/codesign_macos_pkg.sh
+            macos
+          sparse-checkout-cone-mode: false
+
+      - name: Download pkg
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          command -v gh >/dev/null || brew install --quiet gh
+          PKG=meshlib_${VERSION_TAG}_${{ matrix.arch }}.pkg
+          echo "PKG=${PKG}" >> "${GITHUB_ENV}"
+          echo "PKG_DIR=${RUNNER_TEMP}/sign-pkg-${{ matrix.arch }}" >> "${GITHUB_ENV}"
+          rm -rf "${RUNNER_TEMP}/sign-pkg-${{ matrix.arch }}"
+          mkdir "${RUNNER_TEMP}/sign-pkg-${{ matrix.arch }}"
+          gh release download "${VERSION_TAG}" --repo ${{ github.repository }} --pattern "${PKG}" \
+            --dir "${RUNNER_TEMP}/sign-pkg-${{ matrix.arch }}"
+
+      - name: Sign
+        env:
+          KC_PASS: ${{ secrets.MACOS_BUILD_KEYCHAIN_PASS }}
+        run: |
+          KC_PATH="$HOME/Library/Keychains/build.keychain-db"
+          security unlock-keychain -p "$KC_PASS" "$KC_PATH"
+          security list-keychains -d user -s \
+            "$HOME/Library/Keychains/login.keychain-db" "$KC_PATH"
+          security set-keychain-settings -t 36000 -u "$KC_PATH"
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s -k "$KC_PASS" "$KC_PATH" > /dev/null
+
+          ./sign-pkg/scripts/codesign_macos_pkg.sh "${PKG_DIR}/${PKG}" "${PKG_DIR}/signed.pkg"
+          mv "${PKG_DIR}/signed.pkg" "${PKG_DIR}/${PKG}"
+
+      - name: Notarize
+        env:
+          APPLE_ID: ${{ secrets.MACOS_NOTARYTOOL_APPLE_ID }}
+          APPLE_PASS: ${{ secrets.MACOS_NOTARYTOOL_PASS }}
+        run: |
+          xcrun notarytool submit "${PKG_DIR}/${PKG}" \
+                                --team-id 3KYM6LJYCG \
+                                --apple-id "${APPLE_ID}" \
+                                --password "${APPLE_PASS}" \
+                                --wait
+
+      - name: Staple
+        run: |
+          xcrun stapler staple "${PKG_DIR}/${PKG}"
+          spctl -a -t install -vvv "${PKG_DIR}/${PKG}"
+
+      # --clobber deletes the released asset before sending the new one, so an
+      # interrupted upload leaves the release with nothing. Upload beside it and
+      # swap only once the bytes are there.
+      - name: Upload to release
+        if: ${{ env.UPLOAD == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd "${PKG_DIR}"
+          cp "${PKG}" "${PKG}.uploading"
+          gh release upload "${VERSION_TAG}" --repo ${{ github.repository }} "${PKG}.uploading" --clobber
+          staged=$(gh release view "${VERSION_TAG}" --repo ${{ github.repository }} --json assets \
+                     --jq ".assets[] | select(.name == \"${PKG}.uploading\") | .apiUrl")
+          # renaming onto a name still in use fails with 422, so this delete needs no check
+          gh release delete-asset "${VERSION_TAG}" --repo ${{ github.repository }} "${PKG}" --yes || true
+          gh api -X PATCH "$staged" -f name="${PKG}" --silent
+
+      - name: Upload artifact
+        if: ${{ env.UPLOAD != 'true' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: SignedPkg-${{ matrix.arch }}
+          path: ${{ env.PKG_DIR }}/${{ env.PKG }}
+          retention-days: 7

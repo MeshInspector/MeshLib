@@ -272,7 +272,7 @@ returns numpy array shapes [num coords,3] which represents coordinates from give
 
 returns numpy array shapes [num coords,3] which represents coordinates from given vector
 """
-    if not isinstance(coords, (_mr.VertCoords, _mr.FaceNormals, _mr.std_vector_Vector3_float)):
+    if not isinstance(coords, (_mr.VertCoords, _mr.FaceNormals, _mr.Contour3f)):
         raise TypeError("toNumpyArray(): incompatible function arguments")
     return _copied(_view(coords, '<f4', (coords.size(), 3)))
 

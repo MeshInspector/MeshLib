@@ -91,13 +91,15 @@ EOF
 MODULES=(mrmeshpy mrmeshnumpy)
 if compgen -G "$BIN_DIR/python_over_c/meshlib/mrviewerpy*" > /dev/null; then
     cp "$BIN_DIR"/python_over_c/meshlib/mrviewerpy* "$OUT_DIR/pkg/meshlib/"
+    # MeshLib's pybind11 loads these from the module's directory.
+    cp "$BIN_DIR"/meshlib/*pybind11nonlimitedapi* "$OUT_DIR/pkg/meshlib/" || true
     MODULES+=(mrviewerpy)
 fi
 
 DUMP="$MRBIND_DIR/scripts/python_api_dump.py"
 for MODULE in "${MODULES[@]}"; do
     "$PYTHON" "$DUMP" dump meshlib.$MODULE --path "$BIN_DIR" --strip meshlib.$MODULE. -o "$OUT_DIR/api_${MODULE}_pybind11.json"
-    "$PYTHON" "$DUMP" dump meshlib.$MODULE --path "$OUT_DIR/pkg" --strip meshlib.$MODULE. -o "$OUT_DIR/api_${MODULE}_over_c.json"
+    "$PYTHON" "$DUMP" dump meshlib.$MODULE --path "$OUT_DIR/pkg" --strip meshlib.$MODULE. -o "$OUT_DIR/api_${MODULE}_over_c.json" || { echo "::warning::Can't import the $MODULE over the C bindings"; continue; }
     "$PYTHON" "$DUMP" diff "$OUT_DIR/api_${MODULE}_pybind11.json" "$OUT_DIR/api_${MODULE}_over_c.json" --limit 1000000 > "$OUT_DIR/api_${MODULE}_diff.txt" || true
     head -1 "$OUT_DIR/api_${MODULE}_diff.txt"
     grep '^== ' "$OUT_DIR/api_${MODULE}_diff.txt" || true

@@ -817,7 +817,7 @@ MR_SUPPRESS_WARNING_POP
 static void checkNew2OldFaces( const Mesh& res, const Vector<ObjFaceId, FaceId>& new2old, const std::vector<const Mesh*>& srcMeshes )
 {
     ASSERT_EQ( new2old.size(), res.topology.faceSize() );
-    std::vector<int> numFacesPerSrc( srcMeshes.size() );
+    Vector<int, ObjId> numFacesPerSrc( srcMeshes.size() );
     for ( auto f : res.topology.getValidFaces() )
     {
         const auto [objId, srcF] = new2old[f];

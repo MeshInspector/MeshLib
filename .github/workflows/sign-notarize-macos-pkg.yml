@@ -1,9 +1,6 @@
 name: Sign and Notarize macOS pkg
 
 on:
-  # TEMP: test run on the PR branch, signs the latest release's .pkg without uploading it
-  push:
-    branches: [ macos-pkg-notarize ]
   release:
     types: [ published ]
   workflow_dispatch:
@@ -32,7 +29,7 @@ jobs:
       matrix:
         arch: [ x64, arm64 ]
     env:
-      VERSION_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.version_tag || 'v3.1.4.297' }}
+      VERSION_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.version_tag }}
       UPLOAD: ${{ github.event_name == 'release' || inputs.upload }}
     steps:
       # In a directory of its own: this Mac also runs MeshLib build jobs,

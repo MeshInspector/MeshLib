@@ -99,8 +99,9 @@ struct OneMeshContours
         { return { { intersections.data() + offsets[c], intersections.data() + offsets[c + 1] }, closed.test( c ) }; }
     [[nodiscard]] const OneMeshIntersection& intersection( size_t c, size_t i ) const { return intersections[offsets[c] + i]; }
 
+#ifndef MR_PARSING_FOR_ANY_BINDINGS // MR_BIND_IGNORE on begin() and end() still makes the bindings iterable over the hidden views
     /// iterates over the views of the contours
-    struct MR_BIND_IGNORE ConstIterator
+    struct ConstIterator
     {
         const OneMeshContours* contours = nullptr;
         size_t c = 0;
@@ -108,8 +109,9 @@ struct OneMeshContours
         ConstIterator& operator++() { ++c; return *this; }
         [[nodiscard]] bool operator==( const ConstIterator& ) const = default;
     };
-    [[nodiscard]] MR_BIND_IGNORE ConstIterator begin() const { return { this, 0 }; }
-    [[nodiscard]] MR_BIND_IGNORE ConstIterator end() const { return { this, size() }; }
+    [[nodiscard]] ConstIterator begin() const { return { this, 0 }; }
+    [[nodiscard]] ConstIterator end() const { return { this, size() }; }
+#endif
 
     /// returns a copy of contour c
     [[nodiscard]] MRMESH_API OneMeshContour contour( size_t c ) const;

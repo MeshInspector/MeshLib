@@ -4,6 +4,7 @@
 --helper-header-dir MRCMisc
 --max-header-name-length 100
 --merge-std-and-tl-expected
+--minimal-containers
 --no-handle-exceptions
 --skip-template-args-on-func dot
 --skip-template-args-on-func heapBytes

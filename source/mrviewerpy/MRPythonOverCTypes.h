@@ -46,6 +46,9 @@ MRBIND_PY_FOREIGN_TYPE( std::vector<MR::VertBitSet>, "std::vector<MR::VertBitSet
 MRBIND_PY_FOREIGN_TYPE( std::vector<MR::UndirectedEdgeBitSet>, "std::vector<MR::UndirectedEdgeBitSet>", "meshlib.mrmeshpy.std_vector_TypedBitSet_Id_UndirectedEdgeTag" )
 MRBIND_PY_FOREIGN_TYPE( std::vector<std::shared_ptr<MR::Object>>, "std::vector<std::shared_ptr<MR::Object>>", "meshlib.mrmeshpy.std_vector_std_shared_ptr_Object" )
 MRBIND_PY_FOREIGN_TYPE( std::vector<MR::Mesh>, "std::vector<MR::Mesh>", "meshlib.mrmeshpy.std_vector_Mesh" )
+MRBIND_PY_FOREIGN_TYPE( std::vector<MR::PointCloud>, "std::vector<MR::PointCloud>", "meshlib.mrmeshpy.std_vector_PointCloud" )
+MRBIND_PY_FOREIGN_TYPE( std::vector<MR::Polyline3>, "std::vector<MR::Polyline3>", "meshlib.mrmeshpy.std_vector_Polyline_Vector3_float" )
+MRBIND_PY_FOREIGN_TYPE( std::vector<MR::DistanceMap>, "std::vector<MR::DistanceMap>", "meshlib.mrmeshpy.std_vector_DistanceMap" )
 #ifndef MESHLIB_NO_VOXELS
 MRBIND_PY_FOREIGN_TYPE( std::vector<MR::VdbVolume>, "std::vector<MR::VdbVolume>", "meshlib.mrmeshpy.std_vector_VoxelsVolumeMinMax_FloatGrid" )
 #endif

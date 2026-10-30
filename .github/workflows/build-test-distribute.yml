@@ -95,7 +95,7 @@ jobs:
       - name: Build C++ and guide pages, fail on any warning
         working-directory: MeshInspector.github.io
         env:
-          CHECK_ONLY: true
+          FAIL_ON_WARNINGS: true
         run: |
           echo "Main Cpp" > "$RUNNER_TEMP/modules.txt"
           scripts/update_doc.sh MeshLib/check "$RUNNER_TEMP/modules.txt"

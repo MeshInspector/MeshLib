@@ -11,6 +11,8 @@
 #include "MRParallelFor.h"
 #include "MRMeshComponents.h"
 #include "MRMeshFillHole.h"
+#include "MRMapOrHashMap.h"
+#include "MRPartMapping.h"
 #include <random>
 
 namespace MR
@@ -85,6 +87,8 @@ struct UniteReducerParams
     bool mergeOnFail = false;
     bool collectNewFaces = false;
     const std::vector<Vector3f>* shifts{ nullptr };
+    /// if set, the sources of the faces of each merged mesh
+    std::vector<Vector<ObjFaceId, FaceId>>* new2oldFaces{ nullptr };
 };
 
 class BooleanReduce
@@ -111,12 +115,24 @@ public:
             error = y.error;
             return;
         }
+        if ( y.resultMesh.points.empty() )
+            return;
+        if ( resultMesh.points.empty() )
+        {
+            // unitePairOfMeshes would not fill the mapper
+            resultMesh = std::move( y.resultMesh );
+            resShift = y.resShift;
+            newFaces = std::move( y.newFaces );
+            new2oldFaces = std::move( y.new2oldFaces );
+            return;
+        }
+        const bool collectNew2Old = params_.new2oldFaces != nullptr;
         Vector3f shift = y.resShift - resShift;
         BooleanResultMapper mapper;
         Expected<Mesh> res;
         UnitePairOfMehsesParams upParams;
         upParams.commonParams = params_.commonParams;
-        upParams.mapper = params_.collectNewFaces ? &mapper : nullptr;
+        upParams.mapper = params_.collectNewFaces || collectNew2Old ? &mapper : nullptr;
         upParams.shift = params_.shifts ? &shift : nullptr;
         if ( params_.commonParams.mergeMode )
         {
@@ -136,10 +152,10 @@ public:
             else
             {
                 FaceMap fMap;
-                resultMesh.addMesh( y.resultMesh, params_.collectNewFaces ? &fMap : nullptr );
+                resultMesh.addMesh( y.resultMesh, params_.collectNewFaces || collectNew2Old ? &fMap : nullptr );
                 if ( params_.collectNewFaces )
                 {
-                    newFaces.resize( fMap.size() );
+                    newFaces.resize( resultMesh.topology.faceSize() );
                     for ( auto f : y.newFaces )
                     {
                         if ( f >= fMap.size() )
@@ -147,6 +163,13 @@ public:
                         if ( auto mF = fMap[f] )
                             newFaces.set( mF );
                     }
+                }
+                if ( collectNew2Old )
+                {
+                    new2oldFaces.resize( resultMesh.topology.faceSize() );
+                    for ( FaceId f = 0_f; f < fMap.size(); ++f )
+                        if ( auto mF = fMap[f] )
+                            new2oldFaces[mF] = getAt( y.new2oldFaces, f );
                 }
                 return;
             }
@@ -159,6 +182,22 @@ public:
                     | mapper.map( newFaces, BooleanResultMapper::MapObject::A )
                     | mapper.map( y.newFaces, BooleanResultMapper::MapObject::B );
         }
+        if ( collectNew2Old )
+        {
+            Vector<ObjFaceId, FaceId> resNew2Old( resultMesh.topology.faceSize() );
+            auto mapSources = [&] ( BooleanResultMapper::MapObject obj, const Vector<ObjFaceId, FaceId>& old2src )
+            {
+                const auto new2old = mapper.getNew2OldFaceMap( obj );
+                ParallelFor( new2old, [&] ( FaceId f )
+                {
+                    if ( auto oldF = new2old[f]; oldF && f < resNew2Old.size() )
+                        resNew2Old[f] = getAt( old2src, oldF );
+                } );
+            };
+            mapSources( BooleanResultMapper::MapObject::A, new2oldFaces );
+            mapSources( BooleanResultMapper::MapObject::B, y.new2oldFaces );
+            new2oldFaces = std::move( resNew2Old );
+        }
     }
 
     void operator()( const tbb::blocked_range<int>& r )
@@ -169,12 +208,15 @@ public:
             resShift = ( *params_.shifts )[r.begin()];
         resultMesh = std::move( mergedMeshes_[r.begin()] );
         newFaces.resize( resultMesh.topology.faceSize() );
+        if ( params_.new2oldFaces )
+            new2oldFaces = std::move( ( *params_.new2oldFaces )[r.begin()] );
     }
 
     Mesh resultMesh;
     std::string error;
     Vector3f resShift;
     FaceBitSet newFaces;
+    Vector<ObjFaceId, FaceId> new2oldFaces;
 private:
     UniteReducerParams params_;
 
@@ -185,6 +227,8 @@ Expected<Mesh> uniteManyMeshes(
     const std::vector<const Mesh*>& meshes, const UniteManyMeshesParams& params /*= {} */ )
 {
     MR_TIMER;
+    if ( params.new2oldFaces )
+        params.new2oldFaces->clear();
     if ( meshes.empty() )
         return Mesh{};
 
@@ -294,6 +338,7 @@ Expected<Mesh> uniteManyMeshes(
 
     // merge non-intersecting groups
     std::vector<Mesh> mergedMeshes( separateComponentsProcess ? nonIntersectingGroups.size() : meshes.size() );
+    std::vector<Vector<ObjFaceId, FaceId>> mergedNew2Old( params.new2oldFaces ? mergedMeshes.size() : 0 );
     if ( separateComponentsProcess )
     {
         ParallelFor( nonIntersectingGroups, [&] ( size_t i )
@@ -301,7 +346,17 @@ Expected<Mesh> uniteManyMeshes(
             auto& mergedMesh = mergedMeshes[i];
             auto& mergeGroup = nonIntersectingGroups[i];
             for ( auto meshIndex : mergeGroup )
-                mergedMesh.addMesh( *meshes[meshIndex] );
+            {
+                FaceMap fMap;
+                mergedMesh.addMesh( *meshes[meshIndex], params.new2oldFaces ? &fMap : nullptr );
+                if ( !params.new2oldFaces )
+                    continue;
+                auto& new2old = mergedNew2Old[i];
+                new2old.resize( mergedMesh.topology.faceSize() );
+                for ( FaceId f = 0_f; f < fMap.size(); ++f )
+                    if ( auto mF = fMap[f] )
+                        new2old[mF] = { ObjId( meshIndex ), f };
+            }
         } );
     }
     else
@@ -309,6 +364,12 @@ Expected<Mesh> uniteManyMeshes(
         ParallelFor( meshes, [&] ( size_t i )
         {
             mergedMeshes[i] = *meshes[i];
+            if ( !params.new2oldFaces )
+                return;
+            auto& new2old = mergedNew2Old[i];
+            new2old.resize( mergedMeshes[i].topology.faceSize() );
+            for ( auto f : mergedMeshes[i].topology.getValidFaces() )
+                new2old[f] = { ObjId( i ), f };
         } );
     }
 
@@ -336,6 +397,7 @@ Expected<Mesh> uniteManyMeshes(
     urParams.collectNewFaces = params.newFaces != nullptr;
     urParams.mergeOnFail = params.mergeOnFail;
     urParams.shifts = params.useRandomShifts ? &randomShifts : nullptr;
+    urParams.new2oldFaces = params.new2oldFaces ? &mergedNew2Old : nullptr;
     BooleanReduce reducer( mergedMeshes, urParams );
     tbb::parallel_deterministic_reduce( tbb::blocked_range<int>( 0, int( mergedMeshes.size() ), 1 ), reducer );
     if ( !reducer.error.empty() )
@@ -346,13 +408,20 @@ Expected<Mesh> uniteManyMeshes(
 
     if ( params.newFaces != nullptr )
         *params.newFaces = std::move( reducer.newFaces );
+    if ( params.new2oldFaces )
+    {
+        reducer.new2oldFaces.resize( reducer.resultMesh.topology.faceSize() );
+        *params.new2oldFaces = std::move( reducer.new2oldFaces );
+    }
     return reducer.resultMesh;
 }
 
 namespace
 {
-void normalizeUniteMesh( Mesh& mesh, bool needClosed, const UniteMeshNormalizationParams& params )
+/// returns false if the mesh was replaced by the result of self-boolean, so its faces do not correspond to the original ones
+bool normalizeUniteMesh( Mesh& mesh, bool needClosed, const UniteMeshNormalizationParams& params )
 {
+    bool facesKept = true;
     if ( needClosed )
     {
         FillHoleParams fhp;
@@ -367,6 +436,7 @@ void normalizeUniteMesh( Mesh& mesh, bool needClosed, const UniteMeshNormalizati
         {
             sbRes->deleteFaces( sbRes->topology.getValidFaces() - MeshComponents::getLargestComponent( *sbRes ) );
             mesh = std::move( *sbRes );
+            facesKept = false;
         }
     }
     if ( params.flipInverted && mesh.volume() < 0.0f )
@@ -377,6 +447,7 @@ void normalizeUniteMesh( Mesh& mesh, bool needClosed, const UniteMeshNormalizati
         auto center = mesh.findCenterFromFaces();
         mesh.transform( AffineXf3f::xfAround( Matrix3f::scale( 1.0f + params.expansionRatio ), center ) );
     }
+    return facesKept;
 }
 }
 
@@ -406,12 +477,15 @@ Expected<Mesh> uniteComponents( const Mesh& mesh,
     const auto numComps = comps.offsets.size() - 1;
     std::vector<Mesh> components( numComps );
     std::vector<const Mesh*> meshPtrs( numComps );
+    // component face -> input mesh face
+    std::vector<FaceMapOrHashMap> comp2orig( params.new2oldFaces ? numComps : 0 );
     auto keepGoing = ParallelFor( components, [&] ( size_t i )
     {
         FaceBitSet compBs( mesh.topology.faceSize() );
         comps.setComponentBits( RegionId( i ), compBs );
-        components[i].addMeshPart( MeshPart( mesh, &compBs ) );
-        normalizeUniteMesh( components[i], params.forceCut || normalizeParams.flipInverted, normalizeParams );
+        components[i].addMeshPart( MeshPart( mesh, &compBs ), false, {}, {}, { .tgt2srcFaces = params.new2oldFaces ? &comp2orig[i] : nullptr } );
+        if ( !normalizeUniteMesh( components[i], params.forceCut || normalizeParams.flipInverted, normalizeParams ) && params.new2oldFaces )
+            comp2orig[i].clear();
         meshPtrs[i] = &components[i];
 
         compBs = {}; // reduce peek memory
@@ -420,7 +494,17 @@ Expected<Mesh> uniteComponents( const Mesh& mesh,
         return unexpectedOperationCanceled();
     auto np = params;
     np.progressCb = subprogress( params.progressCb, 0.4f, 1.0f );
-    return uniteManyMeshes( meshPtrs, np );
+    auto res = uniteManyMeshes( meshPtrs, np );
+    if ( res && params.new2oldFaces )
+    {
+        ParallelFor( *params.new2oldFaces, [&] ( FaceId f )
+        {
+            auto& src = ( *params.new2oldFaces )[f];
+            if ( src.objId.valid() )
+                src.fId = getAt( *comp2orig[src.objId].getMap(), src.fId );
+        } );
+    }
+    return res;
 }
 
 }

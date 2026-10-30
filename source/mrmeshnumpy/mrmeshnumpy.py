@@ -72,8 +72,8 @@ def _copy(dst, src):
     _parallel(len(dst), copy, _MIN_CHUNK * len(dst) // max(1, dst.size))
 
 
-def _float64(src):
-    res = np.empty(src.shape)
+def _copied(src):
+    res = np.empty(src.shape, dtype=src.dtype)
     _copy(res, src)
     return res
 
@@ -260,25 +260,25 @@ def toNumpyArray(coords):
     """toNumpyArray(*args, **kwargs)
 Overloaded function.
 
-1. toNumpyArray(coords: meshlib.mrmeshpy.VertCoords) -> numpy.ndarray[numpy.float64]
+1. toNumpyArray(coords: meshlib.mrmeshpy.VertCoords) -> numpy.ndarray[numpy.float32]
 
 returns numpy array shapes [num coords,3] which represents coordinates from given vector
 
-2. toNumpyArray(coords: meshlib.mrmeshpy.FaceNormals) -> numpy.ndarray[numpy.float64]
+2. toNumpyArray(coords: meshlib.mrmeshpy.FaceNormals) -> numpy.ndarray[numpy.float32]
 
 returns numpy array shapes [num coords,3] which represents coordinates from given vector
 
-3. toNumpyArray(coords: meshlib.mrmeshpy.std_vector_Vector3_float) -> numpy.ndarray[numpy.float64]
+3. toNumpyArray(coords: meshlib.mrmeshpy.std_vector_Vector3_float) -> numpy.ndarray[numpy.float32]
 
 returns numpy array shapes [num coords,3] which represents coordinates from given vector
 """
     if not isinstance(coords, (_mr.VertCoords, _mr.FaceNormals, _mr.std_vector_Vector3_float)):
         raise TypeError("toNumpyArray(): incompatible function arguments")
-    return _float64(_view(coords, '<f4', (coords.size(), 3)))
+    return _copied(_view(coords, '<f4', (coords.size(), 3)))
 
 
 def getNumpyVerts(mesh):
-    """getNumpyVerts(mesh: meshlib.mrmeshpy.Mesh) -> numpy.ndarray[numpy.float64]
+    """getNumpyVerts(mesh: meshlib.mrmeshpy.Mesh) -> numpy.ndarray[numpy.float32]
 
 returns numpy array shapes [num verts,3] which represents coordinates of all mesh points (including invalid ones)
 """
@@ -294,12 +294,12 @@ returns numpy array with bools for each bit of given bitset
 
 
 def _per_vertex(mesh, scalars):
-    """`scalars` (0 in invalid vertices) up to the last valid vertex, as float64."""
-    return _float64(_view(scalars, '<f4', (scalars.size(),))[:int(mesh.topology.lastValidVert()) + 1])
+    """`scalars` (0 in invalid vertices) up to the last valid vertex, sharing their memory."""
+    return _view(scalars, '<f4', (scalars.size(),))[:int(mesh.topology.lastValidVert()) + 1]
 
 
 def getNumpyMeanCurvature(mesh):
-    """getNumpyMeanCurvature(mesh: meshlib.mrmeshpy.Mesh) -> numpy.ndarray[numpy.float64]
+    """getNumpyMeanCurvature(mesh: meshlib.mrmeshpy.Mesh) -> numpy.ndarray[numpy.float32]
 
 retunrs numpy array with discrete mean curvature for each vertex of a mesh
 """
@@ -307,7 +307,7 @@ retunrs numpy array with discrete mean curvature for each vertex of a mesh
 
 
 def getNumpyCurvature(mesh):
-    """getNumpyCurvature(mesh: meshlib.mrmeshpy.Mesh) -> numpy.ndarray[numpy.float64]
+    """getNumpyCurvature(mesh: meshlib.mrmeshpy.Mesh) -> numpy.ndarray[numpy.float32]
 
 retunrs numpy array with discrete mean curvature for each vertex of a mesh
 """
@@ -315,7 +315,7 @@ retunrs numpy array with discrete mean curvature for each vertex of a mesh
 
 
 def getNumpyGaussianCurvature(mesh):
-    """getNumpyGaussianCurvature(mesh: meshlib.mrmeshpy.Mesh) -> numpy.ndarray[numpy.float64]
+    """getNumpyGaussianCurvature(mesh: meshlib.mrmeshpy.Mesh) -> numpy.ndarray[numpy.float32]
 
 retunrs numpy array with discrete Gaussian curvature for each vertex of a mesh
 """
@@ -428,7 +428,7 @@ Convert numpy 3D array of bools with shape (x,y,z) to VoxelBitSet indexed as in 
         """getNumpy3Darray(*args, **kwargs)
 Overloaded function.
 
-1. getNumpy3Darray(simpleVolume: meshlib.mrmeshpy.SimpleVolume) -> numpy.ndarray[numpy.float64]
+1. getNumpy3Darray(simpleVolume: meshlib.mrmeshpy.SimpleVolume) -> numpy.ndarray[numpy.float32]
 
 Convert SimpleVolume to numpy 3D array
 
@@ -439,7 +439,7 @@ Convert VoxelBitSet of the volume with given dimensions to numpy 3D array of boo
         if len(args) + len(kwargs) == 1:
             volume = args[0] if args else kwargs['simpleVolume']
             d = volume.dims
-            return _float64(_view(volume.data, '<f4', (d.z, d.y, d.x)).T)
+            return _copied(_view(volume.data, '<f4', (d.z, d.y, d.x)).T)
         bitset = args[0] if args else kwargs['voxelBitSet']
         d = args[1] if len(args) > 1 else kwargs['dims']
         size = d.x * d.y * d.z

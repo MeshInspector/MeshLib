@@ -17,7 +17,7 @@ def fromNumpyArray(coords: typing_extensions.Buffer) -> meshlib.mrmeshpy.VertCoo
     constructs mrmeshpy.VertCoords from numpy ndarray with shape (n,3)
     """
 @typing.overload
-def getNumpy3Darray(simpleVolume: meshlib.mrmeshpy.SimpleVolume) -> numpy.ndarray[numpy.float64]:
+def getNumpy3Darray(simpleVolume: meshlib.mrmeshpy.SimpleVolume) -> numpy.ndarray[numpy.float32]:
     """
     Convert SimpleVolume to numpy 3D array
     """
@@ -30,7 +30,7 @@ def getNumpyBitSet(bitset: meshlib.mrmeshpy.BitSet) -> numpy.ndarray[bool]:
     """
     returns numpy array with bools for each bit of given bitset
     """
-def getNumpyCurvature(mesh: meshlib.mrmeshpy.Mesh) -> numpy.ndarray[numpy.float64]:
+def getNumpyCurvature(mesh: meshlib.mrmeshpy.Mesh) -> numpy.ndarray[numpy.float32]:
     """
     retunrs numpy array with discrete mean curvature for each vertex of a mesh
     """
@@ -38,15 +38,15 @@ def getNumpyFaces(topology: meshlib.mrmeshpy.MeshTopology) -> numpy.ndarray[nump
     """
     returns numpy array shapes [num faces,3] which represents vertices of mesh valid faces 
     """
-def getNumpyGaussianCurvature(mesh: meshlib.mrmeshpy.Mesh) -> numpy.ndarray[numpy.float64]:
+def getNumpyGaussianCurvature(mesh: meshlib.mrmeshpy.Mesh) -> numpy.ndarray[numpy.float32]:
     """
     retunrs numpy array with discrete Gaussian curvature for each vertex of a mesh
     """
-def getNumpyMeanCurvature(mesh: meshlib.mrmeshpy.Mesh) -> numpy.ndarray[numpy.float64]:
+def getNumpyMeanCurvature(mesh: meshlib.mrmeshpy.Mesh) -> numpy.ndarray[numpy.float32]:
     """
     retunrs numpy array with discrete mean curvature for each vertex of a mesh
     """
-def getNumpyVerts(mesh: meshlib.mrmeshpy.Mesh) -> numpy.ndarray[numpy.float64]:
+def getNumpyVerts(mesh: meshlib.mrmeshpy.Mesh) -> numpy.ndarray[numpy.float32]:
     """
     returns numpy array shapes [num verts,3] which represents coordinates of all mesh points (including invalid ones)
     """
@@ -71,17 +71,17 @@ def simpleVolumeFrom3Darray(3DvoxelsArray: typing_extensions.Buffer) -> meshlib.
     Convert numpy 3D array to SimpleVolume
     """
 @typing.overload
-def toNumpyArray(coords: meshlib.mrmeshpy.VertCoords) -> numpy.ndarray[numpy.float64]:
+def toNumpyArray(coords: meshlib.mrmeshpy.VertCoords) -> numpy.ndarray[numpy.float32]:
     """
     returns numpy array shapes [num coords,3] which represents coordinates from given vector
     """
 @typing.overload
-def toNumpyArray(coords: meshlib.mrmeshpy.FaceNormals) -> numpy.ndarray[numpy.float64]:
+def toNumpyArray(coords: meshlib.mrmeshpy.FaceNormals) -> numpy.ndarray[numpy.float32]:
     """
     returns numpy array shapes [num coords,3] which represents coordinates from given vector
     """
 @typing.overload
-def toNumpyArray(coords: meshlib.mrmeshpy.std_vector_Vector3_float) -> numpy.ndarray[numpy.float64]:
+def toNumpyArray(coords: meshlib.mrmeshpy.std_vector_Vector3_float) -> numpy.ndarray[numpy.float32]:
     """
     returns numpy array shapes [num coords,3] which represents coordinates from given vector
     """

@@ -60,6 +60,46 @@ jobs:
       - name: Check third-party license notices
         run: python3 scripts/check_third_party_licenses.py
 
+  # The documentation site is built only on release; this builds its C++ API and guide pages
+  # the same way (the scripts of MeshInspector.github.io) and fails on any doxygen warning.
+  check-doxygen:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Install Doxygen
+        uses: ssciwr/doxygen-install@fa3e94d34131d3990b6b8ba939ab982964aa3758 # v1
+        with:
+          version: "1.14.0"
+
+      - name: Checkout MeshLib
+        uses: actions/checkout@v7
+        with:
+          path: MeshLib
+
+      - name: Checkout documentation site scripts
+        uses: actions/checkout@v7
+        with:
+          repository: MeshInspector/MeshInspector.github.io
+          ref: doxygen-check-mode
+          path: MeshInspector.github.io
+          filter: blob:none
+          sparse-checkout: |
+            scripts
+            preprocessors
+            img
+            doxygen-awesome-css
+          submodules: true
+
+      - name: Build C++ and guide pages, fail on any warning
+        working-directory: MeshInspector.github.io
+        env:
+          CHECK_ONLY: true
+        run: |
+          echo "Main Cpp" > "$RUNNER_TEMP/modules.txt"
+          scripts/update_doc.sh MeshLib/check "$RUNNER_TEMP/modules.txt"
+
   prepare-image:
     needs: config
     uses: ./.github/workflows/prepare-images.yml

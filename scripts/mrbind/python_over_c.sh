@@ -103,8 +103,8 @@ case $OS in
         LINK_FLAGS=(-Wl,-rpath,"$BIN_DIR")
         if [[ $OS == macos ]]; then
             C2_FILE="$BIN_DIR/libMeshLibC2.dylib"
-            # Like the pybind11 modules: the Python symbols come from the interpreter.
-            LINK_FLAGS+=(-undefined dynamic_lookup)
+            # Like the pybind11 modules: the Python symbols come from the interpreter. Homebrew's Clang needs the SDK.
+            LINK_FLAGS+=(-undefined dynamic_lookup -isysroot "$(xcrun --show-sdk-path)")
         fi
         time "$CXX" "$OUT_DIR/src/mrmeshpy.cpp" -o "$MODULE_FILE" \
             -shared -fPIC -std=c++20 -O1 -w -DPy_LIMITED_API=0x03080000 \

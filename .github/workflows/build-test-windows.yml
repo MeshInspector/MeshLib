@@ -380,6 +380,36 @@ jobs:
         working-directory: source\${{ env.MR_ARCH }}\${{ matrix.config }}
         run: py -3 -u ..\..\..\scripts\run_python_test_script.py -d '..\test_python' -a ' --junit-xml=../unit_tests_report_pytest.xml'
 
+      # Experimental and non-blocking: `mrmeshpy` generated over the C bindings, see the same step on Ubuntu.
+      - name: Python bindings over the C bindings (experimental)
+        if: ${{ inputs.mrbind && inputs.mrbind_c && matrix.cxx_compiler == 'clang-cl' }}
+        continue-on-error: true
+        timeout-minutes: 60
+        shell: cmd
+        env:
+          GETTEXT_ROOT: C:\msys64\clang64
+          VCPKG_ROOT: C:\vcpkg
+          VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet }}
+          MSYS2_DIR: C:\msys64
+        run: |
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          cmake -S . -B source\TempOutput %CMAKE_COMPILER_ARGS% -DMESHLIB_BUILD_PYTHON_OVER_C=ON || exit /b 1
+          cmake --build source\TempOutput -j %NUMBER_OF_PROCESSORS% --target mrviewerpy_over_c || echo ::warning::mrviewerpy_over_c failed to build
+          for /f "delims=" %%i in ('py -3 -c "import sys; print(sys.executable)"') do set PYTHON=%%i
+          set OVER_C_VIEWER_DIR=%CD%\source\TempOutput\bin
+          "C:\Program Files\Git\bin\bash.exe" scripts/mrbind/python_over_c.sh source/%MR_ARCH%/${{ matrix.config }} || exit /b 1
+
+      - name: Upload Python bindings over the C bindings
+        if: ${{ inputs.mrbind && inputs.mrbind_c && matrix.cxx_compiler == 'clang-cl' && !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: PythonOverC-windows-${{ env.MR_ARCH }}
+          path: |
+            build/python_over_c/*.json
+            build/python_over_c/*.txt
+            build/python_over_c/*.log
+          retention-days: 7
+
       - name: Python Regression Tests
         if: ${{ inputs.internal_build && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug' }}
         uses: ./.github/actions/python-regression-tests

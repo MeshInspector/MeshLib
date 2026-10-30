@@ -300,7 +300,7 @@ jobs:
 
       # Experimental and non-blocking: `mrmeshpy` generated over the C bindings, its API compared with the pybind11 one.
       - name: Python bindings over the C bindings (experimental)
-        if: ${{ inputs.mrbind && env.RUN_RUST == 'true' }}
+        if: ${{ inputs.mrbind && inputs.mrbind_c && matrix.config == 'Release' && matrix.compiler == 'GCC' }}
         continue-on-error: true
         timeout-minutes: 60
         env:
@@ -311,7 +311,7 @@ jobs:
           bash scripts/mrbind/python_over_c.sh build/${{ matrix.config }}/bin
 
       - name: Upload Python bindings over the C bindings
-        if: ${{ inputs.mrbind && env.RUN_RUST == 'true' && !cancelled() }}
+        if: ${{ inputs.mrbind && inputs.mrbind_c && matrix.config == 'Release' && matrix.compiler == 'GCC' && !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
           name: PythonOverC-${{ matrix.os }}-${{ matrix.arch }}

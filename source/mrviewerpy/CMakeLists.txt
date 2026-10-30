@@ -61,7 +61,15 @@ IF(MESHLIB_BUILD_PYTHON_OVER_C)
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/python_over_c/meshlib"
   )
   IF(WIN32)
-    set_target_properties(mrviewerpy_over_c PROPERTIES SUFFIX ".pyd")
+    # A `.pyd` is a runtime output.
+    set_target_properties(mrviewerpy_over_c PROPERTIES
+      SUFFIX ".pyd"
+      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/python_over_c/meshlib"
+    )
+  ENDIF()
+  IF(APPLE)
+    set_target_properties(mrviewerpy_over_c PROPERTIES SUFFIX ".so")
+    target_link_options(mrviewerpy_over_c PRIVATE -undefined dynamic_lookup)
   ENDIF()
   target_include_directories(mrviewerpy_over_c PRIVATE "${MESHLIB_THIRDPARTY_DIR}/mrbind/include")
   target_compile_options(mrviewerpy_over_c PRIVATE

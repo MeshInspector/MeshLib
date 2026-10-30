@@ -79,17 +79,23 @@ time "$CXX" \
     -L"$BIN_DIR" -lMeshLibC2 \
     -Wl,-rpath,"$BIN_DIR"
 
-# `mrmeshnumpy` is a pybind11 module over the pybind11 `mrmeshpy`, so it's stubbed out for now.
+# `mrmeshnumpy` in Python over this `mrmeshpy`; the module only re-exports the public functions.
 cat > "$OUT_DIR/pkg/meshlib/__init__.py" <<'EOF'
 EOF
+cp "$SCRIPT_DIR/mrmeshnumpy_over_c.py" "$OUT_DIR/pkg/meshlib/_mrmeshnumpy.py"
 cat > "$OUT_DIR/pkg/meshlib/mrmeshnumpy.py" <<'EOF'
-def __getattr__(name):
-    raise NotImplementedError("mrmeshnumpy is not available over the C bindings yet")
+from ._mrmeshnumpy import *  # noqa: F401,F403
 EOF
 
 DUMP="$MRBIND_DIR/scripts/python_api_dump.py"
-"$PYTHON" "$DUMP" dump meshlib.mrmeshpy --path "$BIN_DIR" --strip meshlib.mrmeshpy. -o "$OUT_DIR/api_pybind11.json"
-"$PYTHON" "$DUMP" dump meshlib.mrmeshpy --path "$OUT_DIR/pkg" --strip meshlib.mrmeshpy. -o "$OUT_DIR/api_over_c.json"
-"$PYTHON" "$DUMP" diff "$OUT_DIR/api_pybind11.json" "$OUT_DIR/api_over_c.json" --limit 1000000 > "$OUT_DIR/api_diff.txt" || true
-head -1 "$OUT_DIR/api_diff.txt"
-grep '^== ' "$OUT_DIR/api_diff.txt" || true
+for MODULE in mrmeshpy mrmeshnumpy; do
+    "$PYTHON" "$DUMP" dump meshlib.$MODULE --path "$BIN_DIR" --strip meshlib.$MODULE. -o "$OUT_DIR/api_${MODULE}_pybind11.json"
+    "$PYTHON" "$DUMP" dump meshlib.$MODULE --path "$OUT_DIR/pkg" --strip meshlib.$MODULE. -o "$OUT_DIR/api_${MODULE}_over_c.json"
+    "$PYTHON" "$DUMP" diff "$OUT_DIR/api_${MODULE}_pybind11.json" "$OUT_DIR/api_${MODULE}_over_c.json" --limit 1000000 > "$OUT_DIR/api_${MODULE}_diff.txt" || true
+    head -1 "$OUT_DIR/api_${MODULE}_diff.txt"
+    grep '^== ' "$OUT_DIR/api_${MODULE}_diff.txt" || true
+done
+
+# The Python tests, like `run_python_test_script.py` runs them.
+(cd "$ROOT_DIR/test_python" && MeshLibPyModulesPath="$OUT_DIR/pkg" "$PYTHON" -m pytest -q -p no:cacheprovider -rA --tb=line --basetemp="$OUT_DIR/pytest_temp" > "$OUT_DIR/tests.txt" 2>&1) || true
+tail -1 "$OUT_DIR/tests.txt"

@@ -80,11 +80,13 @@ jobs:
           APPLE_ID: ${{ secrets.MACOS_NOTARYTOOL_APPLE_ID }}
           APPLE_PASS: ${{ secrets.MACOS_NOTARYTOOL_PASS }}
         run: |
-          xcrun notarytool submit "${PKG_DIR}/${PKG}" \
-                                --team-id 3KYM6LJYCG \
-                                --apple-id "${APPLE_ID}" \
-                                --password "${APPLE_PASS}" \
-                                --wait
+          AUTH=(--team-id 3KYM6LJYCG --apple-id "${APPLE_ID}" --password "${APPLE_PASS}")
+          xcrun notarytool submit "${PKG_DIR}/${PKG}" "${AUTH[@]}" --wait --output-format json | tee "${PKG_DIR}/notarize.json"
+          ID=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' < "${PKG_DIR}/notarize.json")
+          STATUS=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["status"])' < "${PKG_DIR}/notarize.json")
+          # notarytool exits with 0 on a rejected submission too; the log lists the rejected files
+          xcrun notarytool log "${ID}" "${AUTH[@]}"
+          [ "${STATUS}" = Accepted ]
 
       - name: Staple
         run: |

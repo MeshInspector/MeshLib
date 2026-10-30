@@ -18,7 +18,7 @@ enum class MRMESH_CLASS PointsVisualizePropertyType
 template <> struct IsVisualizeMaskEnum<PointsVisualizePropertyType> : std::true_type {};
 
 /// an object that stores a points
-/// \ingroup ModelHolderGroup
+/// \ingroup DataModelGroup
 class MRMESH_CLASS ObjectPointsHolder : public VisualObject
 {
 public:
@@ -130,7 +130,7 @@ public:
     /// returns rendering discretization
     /// display each `renderDiscretization`-th point only,
     /// starting from 0 index, total number is \ref numRenderingValidPoints()
-    /// \detail defined by maximum rendered points number as:
+    /// \details defined by maximum rendered points number as:
     /// \ref numValidPoints() / \ref getMaxRenderingPoints() (rounded up)
     /// updated when setting `maxRenderingPoints` or changing the cloud (setting `DIRTY_FACE` flag)
     int getRenderDiscretization() const { return renderDiscretization_; }

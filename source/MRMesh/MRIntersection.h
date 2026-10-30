@@ -202,7 +202,7 @@ LineSegm3<T> closestPoints( const Line3<T>& line, const Box3<T> & box )
     static constexpr int otherDir[3][2] = { { 1, 2 }, { 2, 0 }, { 0, 1 } };
     for ( int iDir = 0; iDir < 3; ++iDir )
     {
-        // consider box edges parallel to unit vector #iDir
+        // consider box edges parallel to unit vector iDir
         Vector3<T> q[4] = { box.min, box.min, box.min, box.min };
         {
             const int iDir1 = otherDir[iDir][0];

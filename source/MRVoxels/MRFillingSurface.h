@@ -60,10 +60,10 @@ MRVOXELS_API Expected<Mesh> build( const Vector3f& size, const MeshParams& param
 /// Constructs TPMS-filling for the given @p mesh
 MRVOXELS_API Expected<Mesh> fill( const Mesh& mesh, const MeshParams& params, ProgressCallback cb = {} );
 
-/// Returns number of voxels that would be used to perform \ref fillWithTPMS
+/// Returns number of voxels that would be used to perform \ref fill
 MRVOXELS_API size_t getNumberOfVoxels( const Mesh& mesh, float frequency, float resolution );
 
-/// Returns number of voxels that would be used to perform \ref buildTPMS or \ref buildTPMSVolume
+/// Returns number of voxels that would be used to perform \ref build or \ref buildVolume
 MRVOXELS_API size_t getNumberOfVoxels( const Vector3f& size, float frequency, float resolution );
 
 /// Returns approximated ISO value corresponding to the given density

@@ -190,7 +190,6 @@ struct DecimateSettings
  * \ingroup DecimateGroup
  *
  * \sa \ref decimateMesh
- * \sa \ref decimateParallelMesh
  * \sa \ref resolveMeshDegenerations
  */
 struct DecimateResult
@@ -217,7 +216,7 @@ struct DecimateResult
 MRMESH_API DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings = {} );
 
 /// Performs mesh simplification with per-element attributes according to given settings;
-/// \detail settings.region limits the simplification like in decimateMesh (whole mesh if null), and face selection is not used as a region;
+/// \details settings.region limits the simplification like in decimateMesh (whole mesh if null), and face selection is not used as a region;
 /// the attributes without values for some mesh elements are padded with default values (see resizeAttributesToMesh)
 MRMESH_API DecimateResult decimateObjectMeshData( ObjectMeshData & data, const DecimateSettings & settings );
 

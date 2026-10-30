@@ -42,7 +42,7 @@ npm pkg set type=module
 
 ### Migrating from the 3.x Packages
 The packages up to 3.1.x shipped a hand-written Embind module with a part of the API; the generated API is different:
- - The default export (`import createMeshLib`, `const ml = await createMeshLib()`) became a namespace import and an `init()` call: `import * as ml from '@meshinspector/meshlib'; await ml.init();`.
+ - The default export (`import createMeshLib`, `const ml = await createMeshLib()`) became a namespace import and an `init()` call: `import * as ml from "@meshinspector/meshlib"; await ml.init();`.
  - On the CDN the entry point is `index.mjs` instead of `meshlib.mjs`.
  - The classes, functions and fields follow the C++ API one to one (see [How the API Maps to C++](#how-the-api-maps-to-c) below), so the helpers of the old module have no direct counterparts: look up the C++ function instead.
  - Objects are still freed with `.delete()` (or `using`), and the typed-array conversions are `toArray()`/`view()`/`fromArray()`.
@@ -84,7 +84,7 @@ The bundler must treat `.wasm` files as static assets, so that the import resolv
 
 - **esbuild**: pass `--loader:.wasm=file`
 - **Rollup**: add `@rollup/plugin-url` with `include: /\.wasm$/`
-- **Parcel**: use the `url:` scheme on the import specifier: `import wasmUrl from 'url:@meshinspector/meshlib/MeshLibC2.wasm';`
+- **Parcel**: use the `url:` scheme on the import specifier: `import wasmUrl from "url:@meshinspector/meshlib/MeshLibC2.wasm";`
 
 The options of `init()` go to the Emscripten module factory (`locateFile`, `print`, `printErr`, `mainScriptUrlOrBlob`, ...).
 

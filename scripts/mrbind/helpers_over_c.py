@@ -10,17 +10,24 @@ def fixSelfIntersections(mesh, voxelSize):
 def voxelBooleanSubtract(mesh1, mesh2, voxelSize):
     convert = MeshVoxelsConverter()
     convert.voxelSize = voxelSize
-    return convert(convert(mesh1) - convert(mesh2))
+    gridA = convert(mesh1)
+    gridA -= convert(mesh2)
+    return convert(gridA)
 
 def voxelBooleanUnite(mesh1, mesh2, voxelSize):
     convert = MeshVoxelsConverter()
     convert.voxelSize = voxelSize
-    return convert(convert(mesh1) + convert(mesh2))
+    gridA = convert(mesh1)
+    gridA += convert(mesh2)
+    return convert(gridA)
 
 def voxelBooleanIntersect(mesh1, mesh2, voxelSize):
     convert = MeshVoxelsConverter()
     convert.voxelSize = voxelSize
-    return convert(convert(mesh1) * convert(mesh2))
+    gridA = convert(mesh1)
+    # `*=` of `FloatGrid` is `__imatmul__` in both modules.
+    gridA @= convert(mesh2)
+    return convert(gridA)
 
 def projectAllMeshVertices(refMesh, mesh, refXf=None, xf=None, upDistLimitSq=3.4028234663852886e+38, loDistLimitSq=0.0):
     params = MeshProjectionParameters()

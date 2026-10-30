@@ -23,11 +23,11 @@ fn mesh_collide_precise()
     assert!(sizes[2] == 69 || sizes[2] == 71); // with or without the FMA instruction
     assert!(sizes[3] == 9 || sizes[3] == 7); // with or without the FMA instruction
 
-    let mut contours_a = meshlib::Vector_MR_OneMeshContour::new();
-    let mut contours_b = meshlib::Vector_MR_OneMeshContour::new();
+    let mut contours_a = meshlib::OneMeshContours::new();
+    let mut contours_b = meshlib::OneMeshContours::new();
     meshlib::get_one_mesh_intersection_contours(&mesh_a, &mesh_b, &contours, Some(&mut contours_a), Some(&mut contours_b), &conv, None, None, None);
     assert_eq!(contours_a.size(), 4);
     assert_eq!(contours_b.size(), 4);
-    let pos_count: usize = (0..contours_a.size()).map(|i| contours_a.index(i).intersections().size()).sum();
-    assert_eq!(pos_count, 156);
+    // the intersections of all contours are in one array
+    assert_eq!(contours_a.intersections().size(), 156);
 }

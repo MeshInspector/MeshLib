@@ -490,7 +490,7 @@ std::string OpenDirectoryMenuItem::isAvailable( const std::vector<std::shared_pt
 
 bool OpenDirectoryMenuItem::action()
 {
-    openFolderDialogAsync( [this] ( auto&& path ) { openDirectory( path ); } );
+    openFolderDialogAsync( [this] ( auto&& path ) { openDirectory( path ); }, {}, true );
     return false;
 }
 
@@ -542,7 +542,7 @@ bool OpenDICOMsMenuItem::action()
         if ( directory.empty() )
             return;
         sOpenDICOMs( directory );
-    } );
+    }, {}, true );
     return false;
 }
 #endif

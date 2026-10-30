@@ -122,7 +122,7 @@ private:
     const std::vector<std::vector<Buttons>>* buttonsMapPtr_ = nullptr;
 
     /*         |   <--- packet values --->
-     *   #byte |   1          2
+     *    byte |   1          2
      *   ------+--------------------------
      *       0 |   -          -
      *       1 |   custom_1   custom_2
@@ -133,7 +133,7 @@ private:
     };
 
     /*         |  <--- packet values --->
-     *   #byte |    1      2       4       8     16      32      64      126
+     *    byte |    1      2       4       8     16      32      64      126
      *   ------+------------------------------------------------------------------
      *       1 |  menu   fit     T               R       F
      *       2 |  rot                            1       2       3        4
@@ -150,7 +150,7 @@ private:
         { Buttons::SMB_SHIFT,    Buttons::SMB_CTRL,     Buttons::SMB_LOCK_ROT, Buttons::SMB_NO,       Buttons::SMB_NO,       Buttons::SMB_NO,       Buttons::SMB_NO,       Buttons::SMB_NO,},      // 4th byte
     };
 
-    // @TODO !!! NOT TESTED !!!
+    // TODO: !!! NOT TESTED !!!
     std::vector<std::vector<Buttons>> buttonMapEnterprise = {
         {  }, // 0th byte (unused)
         { Buttons::SMB_CUSTOM_1,     Buttons::SMB_CUSTOM_2}

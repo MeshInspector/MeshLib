@@ -118,12 +118,13 @@ case $OS in
         C2_LIB="${MESHLIBC2_LIB:-$(ls "$BIN_DIR"/MeshLibC2.lib "$ROOT_DIR"/source/TempOutput/{bin,lib}/MeshLibC2.lib 2>/dev/null | head -1 || true)}"
         PY_LIBS="$("$PYTHON" -c 'import os, sys; print(os.path.join(sys.base_prefix, "libs"))')"
         # `python3.lib` is the stable ABI's `python3.dll`. MSVC's own runtime and STL, like the C bindings.
-        time env MSYS2_ARG_CONV_EXCL="*" "$CLANG_CL" /nologo /std:c++20 /EHsc /O1 /MD /bigobj -w -fuse-ld=lld \
+        time env MSYS2_ARG_CONV_EXCL="*" "$CLANG_CL" /nologo /c /std:c++20 /EHsc /O1 /MD /bigobj -w \
             -DPy_LIMITED_API=0x03080000 -DNOMINMAX \
             -I"$(native "$OUT_DIR/src")" -I"$(native "$C2_DIR/include")" -I"$PY_INCLUDE" \
-            "$(native "$OUT_DIR/src/mrmeshpy.cpp")" /LD /Fe"$(native "$MODULE_FILE")" /Fo"$(native "$OUT_DIR/mrmeshpy.obj")" \
-            /link "$(native "$C2_LIB")" /LIBPATH:"$PY_LIBS" python3.lib
-        rm -f "$OUT_DIR/pkg/meshlib/mrmeshpy.lib" "$OUT_DIR/pkg/meshlib/mrmeshpy.exp"
+            "$(native "$OUT_DIR/src/mrmeshpy.cpp")" /Fo"$(native "$OUT_DIR/mrmeshpy.obj")"
+        # `lld-link` directly, like the CMake build: the clang-cl driver also asks for `clang_rt.builtins.lib`, which MSYS2 doesn't have.
+        env MSYS2_ARG_CONV_EXCL="*" "$(dirname "$CLANG_CL")/lld-link.exe" /nologo /DLL /OUT:"$(native "$MODULE_FILE")" /IMPLIB:"$(native "$OUT_DIR/mrmeshpy.lib")" \
+            "$(native "$OUT_DIR/mrmeshpy.obj")" "$(native "$C2_LIB")" /LIBPATH:"$PY_LIBS" python3.lib
         ;;
 esac
 

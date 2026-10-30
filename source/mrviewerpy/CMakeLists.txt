@@ -65,6 +65,8 @@ IF(MESHLIB_BUILD_PYTHON_OVER_C)
     set_target_properties(mrviewerpy_over_c PROPERTIES
       SUFFIX ".pyd"
       RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/python_over_c/meshlib"
+      # Not `bin/mrviewerpy.lib`, which the pybind11 one makes.
+      ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/python_over_c"
     )
   ENDIF()
   IF(APPLE)

@@ -44,7 +44,7 @@ npm pkg set type=module
 The packages up to 3.1.x shipped a hand-written Embind module with a part of the API; the generated API is different:
  - The default export (`import createMeshLib`, `const ml = await createMeshLib()`) became a namespace import and an `init()` call: `import * as ml from "@meshinspector/meshlib"; await ml.init();`.
  - On the CDN the entry point is `index.mjs` instead of `meshlib.mjs`.
- - The classes, functions and fields follow the C++ API one to one (see [How the API Maps to C++](#how-the-api-maps-to-c) below), so the helpers of the old module have no direct counterparts: look up the C++ function instead.
+ - The classes, functions and fields follow the C++ API one to one (see [How the API Maps to C++](#MeshLibJsApiMapping) below), so the helpers of the old module have no direct counterparts: look up the C++ function instead.
  - Objects are still freed with `.delete()` (or `using`), and the typed-array conversions are `toArray()`/`view()`/`fromArray()`.
 
 ### Use from CDN
@@ -163,7 +163,7 @@ console.log('volume =', mesh.volume()); // ~8
 > [!NOTE]
 > This example loads the module at the top level, which downloads the wasm on startup. In the browser, consider the lazy alternative in [Payload Size](\ref MeshLibJsPayloadSize).
 
-## How the API Maps to C++
+## How the API Maps to C++ {#MeshLibJsApiMapping}
 The bindings follow the C++ API: the same classes, functions, parameters and default values, documented in the [C++ reference](\ref APIPage). The differences come from JavaScript itself:
 
  - **Fields are properties**: `settings.maxError = 0.05`, `mesh.topology`, `box.min.x`. The math types (`Vector3f`, `Matrix3f`, `AffineXf3f`, `Box3f`, the ids) are small structs with accessor properties over wasm memory.

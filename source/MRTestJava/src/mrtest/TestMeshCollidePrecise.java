@@ -10,7 +10,7 @@ import meshlib.Matrix3f;
 import meshlib.Mesh;
 import meshlib.MeshPart;
 import meshlib.Vector3f;
-import meshlib.Vector_MR_OneMeshContour;
+import meshlib.OneMeshContours;
 import meshlib.Vector_MR_Vector_MR_VarEdgeTri;
 import meshlib.Vector_MR_VarEdgeTri;
 
@@ -39,14 +39,12 @@ public final class TestMeshCollidePrecise
         check(sizes[2] == 69 || sizes[2] == 71, "contour 2: " + sizes[2]); // with or without the FMA instruction
         check(sizes[3] == 9 || sizes[3] == 7, "contour 3: " + sizes[3]); // with or without the FMA instruction
 
-        Vector_MR_OneMeshContour contoursA = new Vector_MR_OneMeshContour();
-        Vector_MR_OneMeshContour contoursB = new Vector_MR_OneMeshContour();
+        OneMeshContours contoursA = new OneMeshContours();
+        OneMeshContours contoursB = new OneMeshContours();
         Functions.getOneMeshIntersectionContours(meshA, meshB, contours, contoursA, contoursB, conv, null, null, null);
         checkEq(contoursA.size(), 4, "contours A");
         checkEq(contoursB.size(), 4, "contours B");
-        long posCount = 0;
-        for (long i = 0; i < contoursA.size(); i++)
-            posCount += contoursA.index(i).intersections().size();
-        checkEq(posCount, 156, "intersections in contours");
+        // the intersections of all contours are in one array
+        checkEq(contoursA.intersections().size(), 156, "intersections in contours");
     }
 }

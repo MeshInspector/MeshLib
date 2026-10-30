@@ -6,8 +6,7 @@
 namespace MR
 {
 
-struct OneMeshContour;
-using OneMeshContours = Vector<OneMeshContour>;
+struct OneMeshContours;
 
 using ContinuousContour = Vector<VarEdgeTri>;
 using ContinuousContours = Vector<ContinuousContour>;

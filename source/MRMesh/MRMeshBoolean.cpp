@@ -192,7 +192,11 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
     removeTwoPointLoops( contours ); // both contours of a pair together, as they have the same points
 
     auto holePairs = detail::findSelfContoursMapping( contours );
-    auto intContours = getOneMeshSelfIntersectionContours( mesh, contours, converters );
+    const auto flatIntContours = getOneMeshSelfIntersectionContours( mesh, contours, converters );
+    // the pairs below merge contours, so they are edited one by one
+    Vector<OneMeshContour> intContours( flatIntContours.size() );
+    for ( size_t i = 0; i < intContours.size(); ++i )
+        intContours[i] = flatIntContours.contour( i );
 
     // update non-closed
     ParallelFor( holePairs, [&] ( size_t hpId )
@@ -249,8 +253,8 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
         cf.insert( cf.end(), prevVET );
         cs.clear();
 
-        auto prevOMI = OneMeshIntersection{ .primitiveId = svId,.coordinate = mesh.points[svId] };
-        auto nextOMI = OneMeshIntersection{ .primitiveId = fvId,.coordinate = mesh.points[fvId] };     
+        auto prevOMI = OneMeshIntersection{ svId, mesh.points[svId] };
+        auto nextOMI = OneMeshIntersection{ fvId, mesh.points[fvId] };     
         icf.insert( icf.begin(), prevOMI );
         icf.insert( icf.end(), nextOMI );
         icf.insert( icf.end(), std::make_move_iterator( ics.begin() ), std::make_move_iterator( ics.end() ) );
@@ -429,8 +433,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
             else
                 cmParams.fillPart = needInsideA ? CutMeshParameters::FillPart::Left : CutMeshParameters::FillPart::Right;
             auto res = cutMesh( meshA, meshAContours, cmParams );
-            meshAContours.clear();
-            meshAContours.shrink_to_fit(); // free memory
+            meshAContours = {}; // free memory
             result.meshABadContourFaces = std::move( res.fbsWithContourIntersections );
             cutA = std::move( res.resultCut );
         } );
@@ -450,8 +453,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         else
             cmParams.fillPart = needInsideB ? CutMeshParameters::FillPart::Right : CutMeshParameters::FillPart::Left;
         auto res = cutMesh( meshB, meshBContours, cmParams );
-        meshBContours.clear();
-        meshBContours.shrink_to_fit(); // free memory
+        meshBContours = {}; // free memory
         result.meshBBadContourFaces = std::move( res.fbsWithContourIntersections );
         cutB = std::move( res.resultCut );
     }

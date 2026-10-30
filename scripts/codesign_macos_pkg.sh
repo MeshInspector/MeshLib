@@ -47,9 +47,12 @@ pkgbuild \
 
 productbuild \
   --distribution "${MACOS_DIR}/Distribution.xml" \
-  --package-path "${WORK_DIR}/MeshLib.pkg" \
+  --package-path "${WORK_DIR}" \
   --resources "${WORK_DIR}/expanded/Resources" \
   --sign "${DEVELOPER_ID_INSTALLER}" \
   "${OUT_PKG}"
 
 pkgutil --check-signature "${OUT_PKG}"
+# productbuild only warns when it can't find the component package
+pkgutil --expand "${OUT_PKG}" "${WORK_DIR}/check"
+[ -f "${WORK_DIR}/check/MeshLib.pkg/Payload" ]

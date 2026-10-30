@@ -94,7 +94,7 @@ struct CutMeshResult
   * \return New edges that correspond to given contours, find more \ref MR::CutMeshResult
   * \parblock
   * \warning Input contours should have no intersections, faces where contours intersects (`bad faces`) will not be allowed for fill,
-  * unless \ref CutMeshParameters::forceCutMode is set
+  * unless a force cut mode is set (see \ref CutMeshParameters::ForceCutMode)
   * \endparblock
   * \parblock
   * \warning Every two consecutive intersections of a contour should lie in one face, and a contour should not fold back

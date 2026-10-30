@@ -50,7 +50,7 @@ GEN_FLAGS=(
     --adjust-typeid-name '\b(std::)?int32_t\b' 'int'
 )
 
-# `aliases.cpp` has the custom aliases of the pybind11 module.
+# `aliases.cpp` has the custom aliases of the pybind11 module; its `helpers.cpp` functions are in `helpers_over_c.py`.
 ALIAS_FLAGS=()
 while read -r alias target; do
     ALIAS_FLAGS+=(--alias "$alias" "$target")
@@ -64,6 +64,7 @@ done < <(sed -nE 's/^\s*MR_ALIAS\(\s*([A-Za-z0-9_.]+)\s*,\s*([A-Za-z0-9_.]+)\s*\
     --module-qualname meshlib.mrmeshpy \
     "${GEN_FLAGS[@]}" \
     "${ALIAS_FLAGS[@]}" \
+    --extra-python "$SCRIPT_DIR/helpers_over_c.py" \
     --verbose 2> "$OUT_DIR/gen.log"
 grep '^Generated' "$OUT_DIR/gen.log" || true
 

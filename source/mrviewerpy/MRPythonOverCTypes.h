@@ -11,6 +11,7 @@
 #include "MRMesh/MRBitSet.h"
 #include "MRMesh/MRDistanceMap.h"
 #include "MRMesh/MRImage.h"
+#include "MRMesh/MRLine.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRObject.h"
 #include "MRMesh/MRPointCloud.h"
@@ -34,6 +35,17 @@ MRBIND_PY_FOREIGN_TYPE( MR::Polyline3, "MR::Polyline3", "meshlib.mrmeshpy.Polyli
 MRBIND_PY_FOREIGN_TYPE( MR::DistanceMap, "MR::DistanceMap", "meshlib.mrmeshpy.DistanceMap" )
 MRBIND_PY_FOREIGN_TYPE( MR::Image, "MR::Image", "meshlib.mrmeshpy.Image" )
 MRBIND_PY_FOREIGN_TYPE( MR::Object, "MR::Object", "meshlib.mrmeshpy.Object" )
+MRBIND_PY_FOREIGN_TYPE( MR::Line3f, "MR::Line3f", "meshlib.mrmeshpy.Line3f" )
 #ifndef MESHLIB_NO_VOXELS
 MRBIND_PY_FOREIGN_TYPE( MR::VdbVolume, "MR::VdbVolume", "meshlib.mrmeshpy.VdbVolume" )
+#endif
+
+// The vectors that have classes in the bindings; the other ones are lists (`pybind11/stl.h`).
+MRBIND_PY_FOREIGN_TYPE( std::vector<MR::FaceBitSet>, "std::vector<MR::FaceBitSet>", "meshlib.mrmeshpy.std_vector_TypedBitSet_Id_FaceTag" )
+MRBIND_PY_FOREIGN_TYPE( std::vector<MR::VertBitSet>, "std::vector<MR::VertBitSet>", "meshlib.mrmeshpy.std_vector_TypedBitSet_Id_VertTag" )
+MRBIND_PY_FOREIGN_TYPE( std::vector<MR::UndirectedEdgeBitSet>, "std::vector<MR::UndirectedEdgeBitSet>", "meshlib.mrmeshpy.std_vector_TypedBitSet_Id_UndirectedEdgeTag" )
+MRBIND_PY_FOREIGN_TYPE( std::vector<std::shared_ptr<MR::Object>>, "std::vector<std::shared_ptr<MR::Object>>", "meshlib.mrmeshpy.std_vector_std_shared_ptr_Object" )
+MRBIND_PY_FOREIGN_TYPE( std::vector<MR::Mesh>, "std::vector<MR::Mesh>", "meshlib.mrmeshpy.std_vector_Mesh" )
+#ifndef MESHLIB_NO_VOXELS
+MRBIND_PY_FOREIGN_TYPE( std::vector<MR::VdbVolume>, "std::vector<MR::VdbVolume>", "meshlib.mrmeshpy.std_vector_VoxelsVolumeMinMax_FloatGrid" )
 #endif

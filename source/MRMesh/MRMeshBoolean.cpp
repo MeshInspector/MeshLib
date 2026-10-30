@@ -192,11 +192,16 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
     removeTwoPointLoops( contours ); // both contours of a pair together, as they have the same points
 
     auto holePairs = detail::findSelfContoursMapping( contours );
-    const auto flatIntContours = getOneMeshSelfIntersectionContours( mesh, contours, converters );
-    // the pairs below merge contours, so they are edited one by one
-    Vector<OneMeshContour> intContours( flatIntContours.size() );
-    for ( size_t i = 0; i < intContours.size(); ++i )
-        intContours[i] = flatIntContours.contour( i );
+    auto intContours = getOneMeshSelfIntersectionContours( mesh, contours, converters );
+    // what the pairs below do with the contours: the first contour of a pair is closed through the vertices sv and fv and followed by
+    // the second one, which is dropped then; or both contours of a pair are dropped
+    struct PairChange
+    {
+        int second = -1; // set in the first contour of a merged pair
+        VertId sv, fv;
+        bool dropped = false;
+    };
+    Vector<PairChange> changes( contours.size() );
 
     // update non-closed
     ParallelFor( holePairs, [&] ( size_t hpId )
@@ -208,18 +213,13 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
 
         if ( cf.capacity() < 2 * cf.size() + 3 )
             cf.reserve( 2 * cf.size() + 3 );
-        auto& icf = intContours[f].intersections;
-        if ( icf.capacity() < 2 * icf.size() + 3 )
-            icf.reserve( 2 * icf.size() + 3 );
 
         auto& cs = contours[s];
-        auto& ics = intContours[s].intersections;
         auto clearPair = [&]
         {
             cs.clear();
             cf.clear();
-            ics.clear();
-            icf.clear();
+            changes[f].dropped = changes[s].dropped = true;
         };
 
         // close the contour through the third vertices of the faces where it starts and ends (a fold at a vertex shared by both sheets);
@@ -252,16 +252,38 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
         cf.insert( cf.end(), std::make_move_iterator( cs.begin() ), std::make_move_iterator( cs.end() ) );
         cf.insert( cf.end(), prevVET );
         cs.clear();
-
-        auto prevOMI = OneMeshIntersection{ svId, mesh.points[svId] };
-        auto nextOMI = OneMeshIntersection{ fvId, mesh.points[fvId] };     
-        icf.insert( icf.begin(), prevOMI );
-        icf.insert( icf.end(), nextOMI );
-        icf.insert( icf.end(), std::make_move_iterator( ics.begin() ), std::make_move_iterator( ics.end() ) );
-        icf.insert( icf.end(), prevOMI );
-        ics.clear();
-        intContours[f].closed = true;
+        changes[f] = { .second = int( s ), .sv = svId, .fv = fvId };
+        changes[s].dropped = true;
     } );
+
+    if ( !holePairs.empty() )
+    {
+        // the intersections of the changed contours in a new array; the contours keep their indices
+        OneMeshContours changed;
+        auto& out = changed.intersections;
+        out.reserve( intContours.intersections.size() + 3 * holePairs.size() );
+        auto append = [&] ( const OneMeshContourView& c ) { out.insert( out.end(), c.intersections.begin(), c.intersections.end() ); };
+        Vector<int> offsets( contours.size() + 1 ); // not grown in place: GCC sees push_back() to the default { 0 } as out of its bounds
+        for ( int j = 0; j < contours.size(); ++j )
+        {
+            const auto& ch = changes[j];
+            if ( ch.second >= 0 )
+            {
+                out.emplace_back( ch.sv, mesh.points[ch.sv] );
+                append( intContours[j] );
+                out.emplace_back( ch.fv, mesh.points[ch.fv] );
+                append( intContours[ch.second] );
+                out.emplace_back( ch.sv, mesh.points[ch.sv] );
+            }
+            else if ( !ch.dropped )
+                append( intContours[j] );
+            if ( ch.second >= 0 || intContours.closed.test( j ) )
+                changed.closed.autoResizeSet( j );
+            offsets[j + 1] = int( out.size() );
+        }
+        changed.offsets = std::move( offsets );
+        intContours = std::move( changed );
+    }
 
     // meshAVertsNum = 0 because both meshes are actually the same and no need to change the IDs of any mesh vertices
     const SortIntersectionsData sortData{ inMesh, contours, converters.toInt, nullptr, 0, false };

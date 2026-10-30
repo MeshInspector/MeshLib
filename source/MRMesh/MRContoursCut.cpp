@@ -69,7 +69,7 @@ struct PreCutResult
     EdgeDataMap edgeData;
     std::vector<EdgePath> paths;
     PathsOldFaces oldEdgesInfo;
-    const std::vector<int>* offsets = nullptr; // of the contours
+    const Vector<int>* offsets = nullptr; // of the contours
     HashMap<FaceId, std::array<EdgeId, 3>> vertFaces; // the old faces of path edges at mesh vertices, removed by doPreCutMesh, and their edges
 
     // the old faces of the path edges of contour c
@@ -1311,7 +1311,7 @@ Expected<OneMeshContours> offsetSurfaceLineToMeshContours( const Mesh& mesh, con
     auto isoLines = extractIsolines( meshAfterCut.topology, distances, mmOffset.max );
 
     // the offsets are filled in a vector of their own: GCC sees resize() of the default { 0 } as out of its bounds
-    std::vector<int> offsets( isoLines.size() + 1 );
+    Vector<int> offsets( isoLines.size() + 1 );
     OneMeshContours res;
     for ( int i = 0; i < isoLines.size(); ++i )
     {
@@ -1546,12 +1546,12 @@ Expected<FaceBitSet> cutMeshByContours( Mesh& mesh, const Contours3f& contours, 
         maybeOneMeshContours[ic] = surfaceLineToMeshContour( mesh, surfaceLine );
     } );
 
-    Vector<OneMeshContour> oneMeshContours( contours.size() );
-    for( size_t ic = 0; ic < contours.size(); ++ic )
+    OneMeshContours oneMeshContours;
+    for ( auto& c : maybeOneMeshContours )
     {
-        if ( !maybeOneMeshContours[ic] )
-            return unexpected( std::move( maybeOneMeshContours[ic].error() ) );
-        oneMeshContours[ic] = std::move( *maybeOneMeshContours[ic] );
+        if ( !c )
+            return unexpected( std::move( c.error() ) );
+        oneMeshContours.push_back( *c );
     }
 
     auto cutRes = cutMesh( mesh, oneMeshContours );
@@ -1569,7 +1569,7 @@ Expected<std::vector<MR::EdgePath>> cutMeshByProjection( Mesh& mesh, const Conto
         return unexpected( "Invalid direction" );
     }
 
-    Vector<OneMeshContour> cutConts( contours.size() );
+    Vector<OneMeshContour> projected( contours.size() ); // every contour is found in parallel, then appended to cutConts
     std::string error;
     auto rayPrecomp = IntersectionPrecomputes<float>( settings.direction );
     tbb::task_group_context ctx;
@@ -1627,10 +1627,13 @@ Expected<std::vector<MR::EdgePath>> cutMeshByProjection( Mesh& mesh, const Conto
                 error = std::move( cutContRes.error() );
             return;
         }
-        cutConts[i] = std::move( *cutContRes );
+        projected[i] = std::move( *cutContRes );
     } );
     if ( ctx.is_group_execution_cancelled() )
         return unexpected( std::move( error ) );
+    OneMeshContours cutConts;
+    for ( const auto& c : projected )
+        cutConts.push_back( c );
 
     auto cutRes = cutMesh( mesh, cutConts );
     if ( cutRes.fbsWithContourIntersections.any() )

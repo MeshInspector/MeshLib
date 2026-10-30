@@ -541,7 +541,7 @@ void getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const
         inverseXf = rigidB2A->inverse();
     // the terminal vertices before and after the open self-intersection contours
     const auto& topologyA = meshA.topology;
-    std::vector<std::array<VertId, 2>> terminals;
+    Vector<std::array<VertId, 2>> terminals;
     if ( addSelfyTerminalVerts )
     {
         terminals.resize( contours.size() );
@@ -565,7 +565,7 @@ void getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const
 
     // contour j of the output has its intersections from outOffsets[j] + (a vertex before it), after the input ones from inOffsets[j];
     // only the sizes here, which are next to each other: reading the contours themselves on this thread costs a cache miss per contour
-    std::vector<int> inOffsets( contours.size() + 1 ), outOffsets( contours.size() + 1 );
+    Vector<int> inOffsets( contours.size() + 1 ), outOffsets( contours.size() + 1 );
     for ( int j = 0; j < contours.size(); ++j )
     {
         const auto n = int( contours[j].size() );
@@ -687,7 +687,7 @@ void OneMeshContours::push_back( const OneMeshContourView& contour )
     offsets.push_back( int( intersections.size() ) );
 }
 
-void parallelForContourPieces( const std::vector<int>& offsets, const std::function<void( int c, int i0, int i1 )>& f )
+void parallelForContourPieces( const Vector<int>& offsets, const std::function<void( int c, int i0, int i1 )>& f )
 {
     assert( !offsets.empty() && offsets.front() == 0 );
     tbb::parallel_for( tbb::blocked_range<int>( 0, offsets.back() ), [&] ( const tbb::blocked_range<int>& range )
@@ -712,7 +712,7 @@ OneMeshContours getOneMeshSelfIntersectionContours( const Mesh& mesh, const Cont
     if ( rigidB2A )
         inverseXf = rigidB2A->inverse();
     // the offsets are filled in a vector of their own: GCC sees resize() of the default { 0 } as out of its bounds
-    std::vector<int> offsets( contours.size() + 1 );
+    Vector<int> offsets( contours.size() + 1 );
     for ( int j = 0; j < contours.size(); ++j )
     {
         offsets[j + 1] = offsets[j] + int( contours[j].size() );
@@ -1120,7 +1120,7 @@ OneMeshContours surfacePathsToMeshContours( const Mesh& mesh, const std::vector<
     MR_TIMER;
     OneMeshContours res;
     // the offsets are filled in a vector of their own: GCC sees push_back() to the default { 0 } as out of its bounds
-    std::vector<int> offsets( surfacePaths.size() + 1 );
+    Vector<int> offsets( surfacePaths.size() + 1 );
 
     for ( int j = 0; j < surfacePaths.size(); ++j )
     {

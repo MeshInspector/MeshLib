@@ -86,7 +86,7 @@ struct MR_BIND_IGNORE OneMeshContourView
 struct OneMeshContours
 {
     Vector<OneMeshIntersection> intersections;
-    std::vector<int> offsets{ 0 }; ///< the number of contours + 1 elements: contour c is intersections[offsets[c], offsets[c + 1])
+    Vector<int> offsets{ 0 }; ///< the number of contours + 1 elements: contour c is intersections[offsets[c], offsets[c + 1])
     BitSet closed;
 
     OneMeshContours() = default;
@@ -120,7 +120,7 @@ struct OneMeshContours
 };
 
 /// calls f( c, i0, i1 ) in parallel on pieces [i0, i1) of all elements of contours with given offsets, every piece within contour c
-MR_BIND_IGNORE MRMESH_API void parallelForContourPieces( const std::vector<int>& offsets, const std::function<void( int c, int i0, int i1 )>& f );
+MR_BIND_IGNORE MRMESH_API void parallelForContourPieces( const Vector<int>& offsets, const std::function<void( int c, int i0, int i1 )>& f );
 
 // Divides faces that fully own contours into 3 parts with center in center mass of one of the face contours
 // if there is more than one contour on face it guarantee to subdivide at least one lone contour on this face

@@ -1361,10 +1361,7 @@ void selfCutBadFaces( const Mesh& mesh, std::array<FaceBitSet, 2>& bad )
 {
     const auto conv = getVectorConverters( mesh );
     auto contours = orderSelfIntersectionContours( mesh.topology, findSelfCollidingEdgeTrisPrecise( mesh, conv.toInt ) );
-    const auto flatInters = getOneMeshSelfIntersectionContours( mesh, contours, conv );
-    Vector<OneMeshContour> inters( flatInters.size() );
-    for ( size_t i = 0; i < inters.size(); ++i )
-        inters[i] = flatInters.contour( i );
+    const auto selfInters = getOneMeshSelfIntersectionContours( mesh, contours, conv );
     // the same crossing of an edge and a triangle, seen from the other sheet
     auto mirrors = [] ( const VarEdgeTri& a, const VarEdgeTri& b )
     {
@@ -1383,20 +1380,40 @@ void selfCutBadFaces( const Mesh& mesh, std::array<FaceBitSet, 2>& bad )
         c.push_back( first );
         other.clear();
     };
-    auto vertPoint = [&] ( VertId v ) { return OneMeshIntersection{ v, mesh.points[v] }; };
+    // the joined contours keep their indices: contour k + 1 joined to contour k becomes empty
+    OneMeshContours inters;
+    auto& out = inters.intersections;
+    auto append = [&] ( size_t j ) { out.insert( out.end(), selfInters[j].intersections.begin(), selfInters[j].intersections.end() ); };
+    auto appendVert = [&] ( VertId v ) { out.emplace_back( v, mesh.points[v] ); };
+    Vector<int> offsets( contours.size() + 1 );
     for ( size_t k = 0; k < contours.size(); k += 2 )
     {
         auto& c = contours[k];
         ASSERT_TRUE( std::any_of( contours[k + 1].begin(), contours[k + 1].end(), [&] ( const VarEdgeTri& x ) { return mirrors( x, c.front() ); } ) );
         if ( isClosed( c ) )
+        {
+            for ( size_t j : { k, k + 1 } )
+            {
+                append( j );
+                offsets[j + 1] = int( out.size() );
+                if ( selfInters.closed.test( j ) )
+                    inters.closed.autoResizeSet( j );
+            }
             continue;
+        }
         const auto sv = mesh.topology.dest( mesh.topology.prev( c.front().edge ) );
         const auto fv = mesh.topology.dest( mesh.topology.next( c.back().edge ) );
         ASSERT_TRUE( isCorner( sv, c.front().tri() ) && isCorner( fv, c.back().tri() ) );
-        join( inters[k].intersections, inters[k + 1].intersections, vertPoint( sv ), vertPoint( fv ) );
-        inters[k].closed = true;
+        appendVert( sv );
+        append( k );
+        appendVert( fv );
+        append( k + 1 );
+        appendVert( sv );
+        offsets[k + 1] = offsets[k + 2] = int( out.size() );
+        inters.closed.autoResizeSet( k );
         join( c, contours[k + 1], c.front(), c.back() );
     }
+    inters.offsets = std::move( offsets );
     const SortIntersectionsData sortData{ mesh, contours, conv.toInt, nullptr, 0, false };
     Mesh plain = mesh, forced = mesh;
     bad = { cutMesh( plain, inters, { .sortData = &sortData } ).fbsWithContourIntersections,

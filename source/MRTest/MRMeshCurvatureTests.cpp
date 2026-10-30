@@ -29,6 +29,20 @@ TEST( MRMesh, DiscreteCurvatures )
         EXPECT_NEAR( sumGauss, mesh == &sphere ? 4 * PI : 0, 1e-3 );
     }
 
+    // only the vertices of the region are computed
+    VertBitSet region( sphere.topology.vertSize() );
+    for ( int i = 0; i < (int)region.size(); i += 2 )
+        region.set( VertId( i ) );
+    const auto meanInRegion = sphere.discreteMeanCurvatures( &region );
+    const auto gaussInRegion = sphere.discreteGaussianCurvatures( &region );
+    const auto mean = sphere.discreteMeanCurvatures();
+    const auto gauss = sphere.discreteGaussianCurvatures();
+    for ( auto v : sphere.topology.getValidVerts() )
+    {
+        EXPECT_EQ( meanInRegion[v], region.test( v ) ? mean[v] : 0.0f );
+        EXPECT_EQ( gaussInRegion[v], region.test( v ) ? gauss[v] : 0.0f );
+    }
+
     // invalid vertices get 0
     const VertId v0 = sphere.topology.getValidVerts().find_first();
     FaceBitSet ring;

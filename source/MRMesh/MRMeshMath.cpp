@@ -652,22 +652,22 @@ float discreteMeanCurvature( const MeshTopology & topology, const VertCoords & p
     return ( sumArea > 0 ) ? 1.5f * sumAngLen / sumArea : 0;
 }
 
-VertScalars discreteMeanCurvatures( const MeshTopology & topology, const VertCoords & points )
+VertScalars discreteMeanCurvatures( const MeshTopology & topology, const VertCoords & points, const VertBitSet * region )
 {
     MR_TIMER;
     VertScalars res( topology.vertSize() );
-    BitSetParallelFor( topology.getValidVerts(), [&] ( VertId v )
+    BitSetParallelFor( topology.getVertIds( region ), [&] ( VertId v )
     {
         res[v] = discreteMeanCurvature( topology, points, v );
     } );
     return res;
 }
 
-VertScalars discreteGaussianCurvatures( const MeshTopology & topology, const VertCoords & points )
+VertScalars discreteGaussianCurvatures( const MeshTopology & topology, const VertCoords & points, const VertBitSet * region )
 {
     MR_TIMER;
     VertScalars res( topology.vertSize() );
-    BitSetParallelFor( topology.getValidVerts(), [&] ( VertId v )
+    BitSetParallelFor( topology.getVertIds( region ), [&] ( VertId v )
     {
         res[v] = discreteGaussianCurvature( topology, points, v );
     } );

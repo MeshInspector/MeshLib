@@ -99,7 +99,8 @@ struct OneMeshContours
         { return { { intersections.data() + offsets[c], intersections.data() + offsets[c + 1] }, closed.test( c ) }; }
     [[nodiscard]] const OneMeshIntersection& intersection( size_t c, size_t i ) const { return intersections[offsets[c] + i]; }
 
-#ifndef MR_PARSING_FOR_ANY_BINDINGS // MR_BIND_IGNORE on begin() and end() still makes the bindings iterable over the hidden views
+// not in the bindings: they would get an iterator over the views, which they lack (MR_BIND_IGNORE does not stop pybind11 from that)
+#if !defined MR_PARSING_FOR_ANY_BINDINGS && !defined MR_COMPILING_ANY_BINDINGS
     /// iterates over the views of the contours
     struct ConstIterator
     {

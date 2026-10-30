@@ -17,7 +17,7 @@ namespace
 {
 
 // returns 4 * (contour area)^2
-float calcLoneContourAreaSq( const OneMeshContour& contour )
+float calcLoneContourAreaSq( const OneMeshContourView& contour )
 {
     Vector3f dblDirArea;
     for ( int i = 0; i + 1 < contour.intersections.size(); ++i )
@@ -25,14 +25,14 @@ float calcLoneContourAreaSq( const OneMeshContour& contour )
     return dblDirArea.lengthSq();
 }
 
-bool isClosedContourTrivial( const MeshTopology& topology, const OneMeshContour& contour )
+bool isClosedContourTrivial( const MeshTopology& topology, const OneMeshContourView& contour )
 {
     assert( contour.closed );
     FaceBitSet fbs( topology.faceSize() );
     for ( const auto& inter : contour.intersections )
     {
-        assert( std::holds_alternative<EdgeId>( inter.primitiveId ) );
-        auto eid = std::get<EdgeId>( inter.primitiveId );
+        assert( inter.isEdge() );
+        auto eid = inter.edge();
         if ( auto l = topology.left( eid ) )
             fbs.set( l );
     }
@@ -341,14 +341,16 @@ std::vector<int> detectLoneContours( const ContinuousContours& contours, bool ig
 void removeLoneDegeneratedContours( const MeshTopology& edgesTopology, OneMeshContours& faceContours, OneMeshContours& edgeContours )
 {
     MR_TIMER;
-    for ( int i = int( faceContours.size() ) - 1; i >= 0; --i )
+    OneMeshContours keptFace, keptEdge;
+    for ( size_t i = 0; i < faceContours.size(); ++i )
     {
         if ( faceContours[i].closed && calcLoneContourAreaSq( faceContours[i] ) == 0.0f && isClosedContourTrivial( edgesTopology, edgeContours[i] ) )
-        {
-            faceContours.erase( faceContours.begin() + i );
-            edgeContours.erase( edgeContours.begin() + i );
-        }
+            continue;
+        keptFace.push_back( faceContours[i] );
+        keptEdge.push_back( edgeContours[i] );
     }
+    faceContours = std::move( keptFace );
+    edgeContours = std::move( keptEdge );
 }
 
 void removeLoneContours( ContinuousContours& contours, bool ignoreOpen )

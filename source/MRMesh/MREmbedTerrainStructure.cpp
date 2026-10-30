@@ -293,9 +293,8 @@ Expected<TerrainEmbedder::MappedMeshContours> TerrainEmbedder::prepareTerrainCut
 
     MappedMeshContours res;
     res.filtBowTiesMap = std::move( filterBt.initIndices );
-    res.contours.resize( noBowtiesMtps.size() );
     res.map.resize( noBowtiesMtps.size() );
-    for ( int i = 0; i < res.contours.size(); ++i )
+    for ( int i = 0; i < noBowtiesMtps.size(); ++i )
     {
         auto cont = noBowtiesMtps[i];
         cont.push_back( cont.front() );
@@ -333,7 +332,7 @@ Expected<TerrainEmbedder::MappedMeshContours> TerrainEmbedder::prepareTerrainCut
         }, &res.map[i] );
         if ( !contourRes.has_value() )
             return unexpected( contourRes.error() );
-        res.contours[i] = std::move( *contourRes );
+        res.contours.push_back( *contourRes );
     }
     // a contour inside one triangle of the terrain, crossing none of its edges, is connected with the rest of the triangle by cutMesh in cutTerrain
     res.offsetMap = std::move( offCont.idsShifts );

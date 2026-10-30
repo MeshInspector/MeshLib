@@ -1390,8 +1390,8 @@ Expected<OneMeshContours> offsetSurfaceLineToMeshContours( const Mesh& mesh, con
 
     Mesh meshAfterCut = mesh;
     NewEdgesMap nEM;
-    // force fill because we don't really care about intermediate mesh quality
-    auto cutRes = cutMesh( meshAfterCut, initCutContoursVec, { .forceFill = true, .new2oldEdgesMap = &nEM } );
+    // force cut because we don't really care about intermediate mesh quality
+    auto cutRes = cutMesh( meshAfterCut, initCutContoursVec, { .forceCutMode = CutMeshParameters::ForceCutMode::All, .new2oldEdgesMap = &nEM } );
 
     const auto& initCutContours = initCutContoursVec[0];
 
@@ -1547,13 +1547,13 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     const auto loneFaces = findLoneFaces( mesh.topology, contours );
     const auto firstNewEdge = UndirectedEdgeId( mesh.topology.undirectedEdgeSize() );
     auto preRes = doPreCutMesh( mesh, contours, params.sortData );
-    // under force fill, the faces where the contours really cross (touching is fine) are bad too, found before the old edges are cut;
-    // with sortData, the contours are split where they cross in these faces, which needs their sides before the cut
+    // under force cut, the faces where the contours really cross (touching is fine) are bad too, found before the old edges are cut;
+    // to split the contours where they cross in these faces, their sides are needed before the cut
     Vector<CutFace> crossingFaces;
-    if ( params.forceFill )
+    if ( params.forceCutMode != CutMeshParameters::ForceCutMode::None )
     {
         res.fbsWithContourIntersections = findCrossingFaces( mesh, contours, preRes, firstNewEdge, params.sortData );
-        if ( params.sortData )
+        if ( params.forceCutMode == CutMeshParameters::ForceCutMode::SplitCrossings && params.sortData )
         {
             crossingFaces.reserve( res.fbsWithContourIntersections.count() );
             for ( auto f : res.fbsWithContourIntersections )
@@ -1582,7 +1582,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     connectLoneContours( mesh, loneFaces, preRes, firstNewEdge, exact, params.new2oldEdgesMap, badLoneFaces );
 
     res.fbsWithContourIntersections = getBadFacesAfterCut( mesh.topology, preRes ) | badLoneFaces | res.fbsWithContourIntersections;
-    if ( !params.forceFill && res.fbsWithContourIntersections.any() )
+    if ( params.forceCutMode == CutMeshParameters::ForceCutMode::None && res.fbsWithContourIntersections.any() )
         return res;
 
     // find one edge for every hole to fill

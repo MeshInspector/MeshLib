@@ -286,7 +286,7 @@ TEST( MRMesh, CutMeshContourTurnsBackOnBoundary )
         }
     }
 
-    auto res = cutMesh( mesh, { *contour }, { .forceFill = true } );
+    auto res = cutMesh( mesh, { *contour }, { .forceCutMode = CutMeshParameters::ForceCutMode::All } );
     EXPECT_TRUE( mesh.topology.checkValidity() );
     EXPECT_TRUE( res.fbsWithContourIntersections.none() );
     EXPECT_EQ( res.resultCut.size(), 1 );
@@ -350,7 +350,7 @@ TEST( MRMesh, ContourThroughBoundaryCorner )
             }
 
             auto cut = mesh;
-            auto res = cutMesh( cut, { *contour }, { .forceFill = true } );
+            auto res = cutMesh( cut, { *contour }, { .forceCutMode = CutMeshParameters::ForceCutMode::All } );
             EXPECT_TRUE( cut.topology.checkValidity() );
             EXPECT_TRUE( res.fbsWithContourIntersections.none() );
             EXPECT_EQ( res.resultCut.size(), 1 );
@@ -403,7 +403,7 @@ TEST( MRMesh, ContourTouchesBoundaryAtEarTip )
         ASSERT_TRUE( contour->closed );
 
         Mesh cut = mesh;
-        auto res = cutMesh( cut, { *contour }, { .forceFill = true } );
+        auto res = cutMesh( cut, { *contour }, { .forceCutMode = CutMeshParameters::ForceCutMode::All } );
         EXPECT_TRUE( cut.topology.checkValidity() );
         EXPECT_TRUE( res.fbsWithContourIntersections.none() );
         EXPECT_EQ( res.resultCut.size(), 1 );
@@ -436,7 +436,7 @@ TEST( MRMesh, CutMeshContourTurnsInsideFace )
             { a, mesh.points[a] } };
 
         Mesh cut = mesh;
-        auto res = cutMesh( cut, { contour }, { .forceFill = true } );
+        auto res = cutMesh( cut, { contour }, { .forceCutMode = CutMeshParameters::ForceCutMode::All } );
         EXPECT_TRUE( cut.topology.checkValidity() );
         EXPECT_TRUE( res.fbsWithContourIntersections.none() );
         EXPECT_EQ( res.resultCut.size(), 1 );
@@ -664,7 +664,7 @@ TEST( MRMesh, CutMeshSelfCrossingLoneContour )
     for ( bool forceFill : { false, true } )
     {
         Mesh cut = mesh;
-        const auto res = cutMesh( cut, { *contour }, { .forceFill = forceFill } );
+        const auto res = cutMesh( cut, { *contour }, { .forceCutMode = forceFill ? CutMeshParameters::ForceCutMode::All : CutMeshParameters::ForceCutMode::None } );
         EXPECT_TRUE( cut.topology.checkValidity() );
         EXPECT_TRUE( res.fbsWithContourIntersections.test( f ) );
         EXPECT_TRUE( cut.topology.hasFace( f ) );
@@ -696,7 +696,7 @@ TEST( MRMesh, CutMeshLoneContourInZeroAreaFace )
     for ( bool forceFill : { false, true } )
     {
         Mesh cut = mesh;
-        const auto res = cutMesh( cut, { island }, { .forceFill = forceFill } );
+        const auto res = cutMesh( cut, { island }, { .forceCutMode = forceFill ? CutMeshParameters::ForceCutMode::All : CutMeshParameters::ForceCutMode::None } );
         EXPECT_TRUE( cut.topology.checkValidity() );
         EXPECT_TRUE( res.fbsWithContourIntersections.test( 1_f ) );
         EXPECT_TRUE( cut.topology.hasFace( 1_f ) );
@@ -705,7 +705,7 @@ TEST( MRMesh, CutMeshLoneContourInZeroAreaFace )
         EXPECT_EQ( cut.topology.findNumHoles(), forceFill ? 1 : 3 );
 
         cut = mesh;
-        const auto bad = cutMesh( cut, { through }, { .forceFill = forceFill } ).fbsWithContourIntersections;
+        const auto bad = cutMesh( cut, { through }, { .forceCutMode = forceFill ? CutMeshParameters::ForceCutMode::All : CutMeshParameters::ForceCutMode::None } ).fbsWithContourIntersections;
         EXPECT_EQ( bad.count(), forceFill ? 1 : 0 );
         EXPECT_EQ( bad.test( 1_f ), forceFill );
     }
@@ -829,7 +829,7 @@ void checkForcedCutAtCrossings( const std::vector<Mesh>& boxes, int numBadFaces,
 
         Mesh cut = cube;
         FaceMap new2Old;
-        const auto res = cutMesh( cut, cubeContours, { .sortData = &sortData, .new2OldMap = &new2Old, .forceFill = true } );
+        const auto res = cutMesh( cut, cubeContours, { .sortData = &sortData, .new2OldMap = &new2Old, .forceCutMode = CutMeshParameters::ForceCutMode::SplitCrossings } );
         EXPECT_EQ( res.fbsWithContourIntersections.count(), numBadFaces ) << "cube is " << ( cubeIsA ? "A" : "B" );
         const auto& tp = cut.topology;
         EXPECT_TRUE( tp.checkValidity() );
@@ -1247,7 +1247,7 @@ TEST( MRMesh, ForceFillCrossingsEven )
             Mesh cut = square;
             EXPECT_TRUE( cutMesh( cut, { across, tent( top, n ) } ).fbsWithContourIntersections.none() );
             cut = square;
-            const auto forced = cutMesh( cut, { across, tent( top, n ) }, { .forceFill = true } ).fbsWithContourIntersections;
+            const auto forced = cutMesh( cut, { across, tent( top, n ) }, { .forceCutMode = CutMeshParameters::ForceCutMode::All } ).fbsWithContourIntersections;
             EXPECT_EQ( forced.count(), top < 2 ? 0 : 1 );
             EXPECT_EQ( forced.test( 0_f ), top > 2 );
         }
@@ -1264,7 +1264,7 @@ TEST( MRMesh, ForceFillCrossingsOneFace )
     auto check = [&] ( const OneMeshContours& contours, bool bad )
     {
         Mesh cut = square;
-        const auto forced = cutMesh( cut, contours, { .forceFill = true } ).fbsWithContourIntersections;
+        const auto forced = cutMesh( cut, contours, { .forceCutMode = CutMeshParameters::ForceCutMode::All } ).fbsWithContourIntersections;
         EXPECT_EQ( forced.count(), bad ? 1 : 0 );
         EXPECT_EQ( forced.test( 0_f ), bad );
     };
@@ -1473,7 +1473,7 @@ void selfCutBadFaces( const Mesh& mesh, std::array<FaceBitSet, 2>& bad )
     const SortIntersectionsData sortData{ mesh, contours, conv.toInt, nullptr, 0, false };
     Mesh plain = mesh, forced = mesh;
     bad = { cutMesh( plain, inters, { .sortData = &sortData } ).fbsWithContourIntersections,
-        cutMesh( forced, inters, { .sortData = &sortData, .forceFill = true } ).fbsWithContourIntersections };
+        cutMesh( forced, inters, { .sortData = &sortData, .forceCutMode = CutMeshParameters::ForceCutMode::All } ).fbsWithContourIntersections };
 }
 
 } //anonymous namespace

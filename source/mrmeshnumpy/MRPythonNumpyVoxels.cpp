@@ -50,12 +50,12 @@ MR::SimpleVolumeMinMax simpleVolumeFrom3Darray( const pybind11::buffer& voxelsAr
     return res;
 }
 
-pybind11::array_t<double> getNumpy3Darray( const MR::SimpleVolume& simpleVolume )
+pybind11::array_t<float> getNumpy3Darray( const MR::SimpleVolume& simpleVolume )
 {
     using namespace MR;
     // Allocate and initialize some data;
     const size_t size = size_t( simpleVolume.dims.x ) * simpleVolume.dims.y * simpleVolume.dims.z;
-    double* data = new double[size];
+    float* data = new float[size];
 
     const size_t cZ = simpleVolume.dims.z;
     const size_t cZY = simpleVolume.dims.z * simpleVolume.dims.y;
@@ -70,13 +70,13 @@ pybind11::array_t<double> getNumpy3Darray( const MR::SimpleVolume& simpleVolume 
     // memory when destroyed:
     pybind11::capsule freeWhenDone( data, [] ( void* f )
     {
-        bool* data = reinterpret_cast< bool* >( f );
+        float* data = reinterpret_cast< float* >( f );
         delete[] data;
     } );
 
-    return pybind11::array_t<double>(
+    return pybind11::array_t<float>(
         { simpleVolume.dims.x, simpleVolume.dims.y, simpleVolume.dims.z }, // shape
-        { simpleVolume.dims.y * simpleVolume.dims.z * sizeof( double ), simpleVolume.dims.z * sizeof( double ), sizeof( double ) }, // C-style contiguous strides for bool
+        { simpleVolume.dims.y * simpleVolume.dims.z * sizeof( float ), simpleVolume.dims.z * sizeof( float ), sizeof( float ) }, // C-style contiguous strides for float
         data, // the data pointer
         freeWhenDone ); // numpy array references this parent
 }

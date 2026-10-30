@@ -351,14 +351,14 @@ pybind11::array_t<int> getNumpyFaces( const MR::MeshTopology& topology )
 
 // returns numpy array shapes [num verts,3] which represents coordinates from given vector
 template <typename V>
-static pybind11::array_t<double> toNumpyArrayImpl( const V& coords )
+static pybind11::array_t<float> toNumpyArrayImpl( const V& coords )
 {
     using namespace MR;
     auto numVerts = coords.size();
     const MR::Vector3f* src = coords.data();
     // Allocate and initialize some data;
     const auto size = numVerts * 3;
-    double* data = new double[size];
+    float* data = new float[size];
     ParallelFor( size_t( 0 ), numVerts, [&]( size_t i )
     {
         auto ind = 3 * i;
@@ -370,34 +370,34 @@ static pybind11::array_t<double> toNumpyArrayImpl( const V& coords )
     // memory when destroyed:
     pybind11::capsule freeWhenDone( data, [] ( void* f )
     {
-        double* data = reinterpret_cast< double* >( f );
+        float* data = reinterpret_cast< float* >( f );
         delete[] data;
     } );
 
-    return pybind11::array_t<double>(
+    return pybind11::array_t<float>(
         { (int)numVerts, 3 }, // shape
-        { 3 * sizeof( double ), sizeof( double ) }, // C-style contiguous strides for double
+        { 3 * sizeof( float ), sizeof( float ) }, // C-style contiguous strides for float
         data, // the data pointer
         freeWhenDone ); // numpy array references this parent
 }
 
-pybind11::array_t<double> toNumpyArray( const std::vector<MR::Vector3f>& coords )
+pybind11::array_t<float> toNumpyArray( const std::vector<MR::Vector3f>& coords )
 {
     return toNumpyArrayImpl( coords );
 }
 
-pybind11::array_t<double> toNumpyArray( const MR::VertCoords& coords )
+pybind11::array_t<float> toNumpyArray( const MR::VertCoords& coords )
 {
     return toNumpyArrayImpl( coords );
 }
 
-pybind11::array_t<double> toNumpyArray( const MR::FaceNormals& norms )
+pybind11::array_t<float> toNumpyArray( const MR::FaceNormals& norms )
 {
     return toNumpyArrayImpl( norms );
 }
 
 // returns numpy array shapes [num verts,3] which represents coordinates of all mesh points (including invalid ones)
-pybind11::array_t<double> getNumpyVerts( const MR::Mesh& mesh )
+pybind11::array_t<float> getNumpyVerts( const MR::Mesh& mesh )
 {
     return toNumpyArray( mesh.points );
 }
@@ -428,60 +428,60 @@ pybind11::array_t<bool> getNumpyBitSet( const MR::BitSet& bitSet )
         freeWhenDone ); // numpy array references this parent
 }
 
-pybind11::array_t<double> getNumpyMeanCurvature( const MR::Mesh& mesh )
+pybind11::array_t<float> getNumpyMeanCurvature( const MR::Mesh& mesh )
 {
     using namespace MR;
     // Allocate and initialize some data;
     int numVerts = mesh.topology.lastValidVert() + 1;
-    double* data = new double[numVerts];
+    float* data = new float[numVerts];
     ParallelFor( 0_v, VertId( numVerts ), [&]( VertId v )
     {
         if ( mesh.topology.hasVert( v ) )
-            data[v] = double( mesh.discreteMeanCurvature( v ) );
+            data[v] = mesh.discreteMeanCurvature( v );
         else
-            data[v] = 0.0;
+            data[v] = 0;
     } );
 
     // Create a Python object that will free the allocated
     // memory when destroyed:
     pybind11::capsule freeWhenDone( data, [] ( void* f )
     {
-        double* data = reinterpret_cast< double* >( f );
+        float* data = reinterpret_cast< float* >( f );
         delete[] data;
     } );
 
-    return pybind11::array_t<double>(
+    return pybind11::array_t<float>(
         { numVerts }, // shape
-        { sizeof( double ) }, // C-style contiguous strides for double
+        { sizeof( float ) }, // C-style contiguous strides for float
         data, // the data pointer
         freeWhenDone ); // numpy array references this parent
 }
 
-pybind11::array_t<double> getNumpyGaussianCurvature( const MR::Mesh& mesh )
+pybind11::array_t<float> getNumpyGaussianCurvature( const MR::Mesh& mesh )
 {
     using namespace MR;
     // Allocate and initialize some data;
     int numVerts = mesh.topology.lastValidVert() + 1;
-    double* data = new double[numVerts];
+    float* data = new float[numVerts];
     ParallelFor( 0_v, VertId( numVerts ), [&]( VertId v )
     {
         if ( mesh.topology.hasVert( v ) )
-            data[v] = double( mesh.discreteGaussianCurvature( v ) );
+            data[v] = mesh.discreteGaussianCurvature( v );
         else
-            data[v] = 0.0;
+            data[v] = 0;
     } );
 
     // Create a Python object that will free the allocated
     // memory when destroyed:
     pybind11::capsule freeWhenDone( data, [] ( void* f )
     {
-        double* data = reinterpret_cast< double* >( f );
+        float* data = reinterpret_cast< float* >( f );
         delete[] data;
     } );
 
-    return pybind11::array_t<double>(
+    return pybind11::array_t<float>(
         { numVerts }, // shape
-        { sizeof( double ) }, // C-style contiguous strides for double
+        { sizeof( float ) }, // C-style contiguous strides for float
         data, // the data pointer
         freeWhenDone ); // numpy array references this parent
 }
@@ -494,9 +494,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, NumpyMeshData, [] ( pybind11::module_& m 
     m.def( "getNumpyFaces", &getNumpyFaces, pybind11::arg( "topology" ), "returns numpy array shapes [num faces,3] which represents vertices of mesh valid faces " );
     m.def( "getNumpyVerts", &getNumpyVerts, pybind11::arg( "mesh" ), "returns numpy array shapes [num verts,3] which represents coordinates of all mesh points (including invalid ones)" );
     m.def( "getNumpyBitSet", &getNumpyBitSet, pybind11::arg( "bitset" ), "returns numpy array with bools for each bit of given bitset" );
-    m.def( "toNumpyArray", ( pybind11::array_t<double>( * )( const MR::VertCoords& ) )& toNumpyArray, pybind11::arg( "coords" ), "returns numpy array shapes [num coords,3] which represents coordinates from given vector" );
-    m.def( "toNumpyArray", ( pybind11::array_t<double>( * )( const MR::FaceNormals& ) )& toNumpyArray, pybind11::arg( "coords" ), "returns numpy array shapes [num coords,3] which represents coordinates from given vector" );
-    m.def( "toNumpyArray", ( pybind11::array_t<double>( * )( const std::vector<MR::Vector3f>& ) )& toNumpyArray, pybind11::arg( "coords" ), "returns numpy array shapes [num coords,3] which represents coordinates from given vector" );
+    m.def( "toNumpyArray", ( pybind11::array_t<float>( * )( const MR::VertCoords& ) )& toNumpyArray, pybind11::arg( "coords" ), "returns numpy array shapes [num coords,3] which represents coordinates from given vector" );
+    m.def( "toNumpyArray", ( pybind11::array_t<float>( * )( const MR::FaceNormals& ) )& toNumpyArray, pybind11::arg( "coords" ), "returns numpy array shapes [num coords,3] which represents coordinates from given vector" );
+    m.def( "toNumpyArray", ( pybind11::array_t<float>( * )( const std::vector<MR::Vector3f>& ) )& toNumpyArray, pybind11::arg( "coords" ), "returns numpy array shapes [num coords,3] which represents coordinates from given vector" );
     m.def( "fromNumpyArray", &fromNumpyArray, pybind11::arg( "coords" ), "constructs mrmeshpy.VertCoords from numpy ndarray with shape (n,3)" );
 } )
 

@@ -192,17 +192,14 @@ def getNumpyBitSet(bitset):
     return _bools(bitset)
 
 
-def _curvature(mesh, f):
+def _per_vertex(mesh, scalars):
+    """`scalars` (`VertScalars`, 0 in the invalid vertices) up to the last valid vertex, as float64."""
     num_verts = int(mesh.topology.lastValidVert()) + 1
-    valid = _bools(mesh.topology.getValidVerts(), num_verts)
-    res = np.zeros(num_verts, dtype=np.float64)
-    for v in np.flatnonzero(valid[:num_verts]):
-        res[v] = f(mesh.topology, mesh.points, _mr.VertId(int(v)))
-    return res
+    return _view(scalars, ctypes.c_float, scalars.size())[:num_verts].astype(np.float64)
 
 
 def getNumpyMeanCurvature(mesh):
-    return _curvature(mesh, _mr.discreteMeanCurvature)
+    return _per_vertex(mesh, mesh.discreteMeanCurvatures())
 
 
 def getNumpyCurvature(mesh):
@@ -210,7 +207,7 @@ def getNumpyCurvature(mesh):
 
 
 def getNumpyGaussianCurvature(mesh):
-    return _curvature(mesh, _mr.discreteGaussianCurvature)
+    return _per_vertex(mesh, mesh.discreteGaussianCurvatures())
 
 
 def fromNumpyArray(coords):

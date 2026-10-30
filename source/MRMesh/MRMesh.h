@@ -306,6 +306,14 @@ struct [[nodiscard]] Mesh
     /// optionally returns whether the vertex is on boundary
     [[nodiscard]] float discreteGaussianCurvature( VertId v, bool * outBoundaryVert = nullptr ) const { return MR::discreteGaussianCurvature( topology, points, v, outBoundaryVert ); }
 
+    /// computes discrete mean curvature (see discreteMeanCurvature( v )) in the vertices of given region (or in all valid vertices if region is null),
+    /// and puts 0 in all other vertices
+    [[nodiscard]] VertScalars discreteMeanCurvatures( const VertBitSet * region = nullptr ) const { return MR::discreteMeanCurvatures( topology, points, region ); }
+
+    /// computes discrete Gaussian curvature (see discreteGaussianCurvature( v )) in the vertices of given region (or in all valid vertices if region is null),
+    /// and puts 0 in all other vertices
+    [[nodiscard]] VertScalars discreteGaussianCurvatures( const VertBitSet * region = nullptr ) const { return MR::discreteGaussianCurvatures( topology, points, region ); }
+
     /// finds all mesh edges with the cosine of dihedral angle (see dihedralAngleCos) in [minSharpCos, maxSharpCos]
     [[nodiscard]] UndirectedEdgeBitSet findSharpEdges( float minSharpCos, float maxSharpCos ) const { return MR::findSharpEdges( topology, points, minSharpCos, maxSharpCos ); }
 

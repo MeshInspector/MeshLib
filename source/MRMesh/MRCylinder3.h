@@ -5,7 +5,7 @@
 
 namespace MR
 {
-// A class describing a cylinder as a mathematical object.A cylinder is represented by a centerline, a radius, and a length.template <typename T>
+/// A class describing a cylinder as a mathematical object. A cylinder is represented by a centerline, a radius, and a length.
 // TODO: Cylinder3 could be infinite. For example for infinite Cylinder3 we could use negative length or length = -1
 template <typename T>
 class Cylinder3

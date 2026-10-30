@@ -35,7 +35,7 @@ struct AlphaShapeData
     /// a bit larger than the doubled ball radius to compensate the rounding of integer coordinates
     float searchRadius = 0;
 
-    /// returns point #v of the cloud (which must be the cloud given to getAlphaShapeData)
+    /// returns point v of the cloud (which must be the cloud given to getAlphaShapeData)
     /// together with its integer coordinates
     [[nodiscard]] MRMESH_API PreciseVertCoords coords( const PointCloud & cloud, VertId v ) const;
 };
@@ -100,25 +100,25 @@ struct AlphaShapeStats
     }
 };
 
-/// a neighbour of the point #v in the search of alpha-shape triangles around it
+/// a neighbour of the point v in the search of alpha-shape triangles around it
 struct AlphaShapeNei
 {
     /// the neighbour's id together with its integer coordinates
     PreciseVertCoords coords;
 
-    /// the exact squared distance from #v in the units of the same integer grid
+    /// the exact squared distance from v in the units of the same integer grid
     MR_BIND_IGNORE FastInt128 distSq;
 };
 
 /// finds all triangles of alpha-shape with negative alpha = -1/radius,
-/// where each triangle contains point #v and two other points;
+/// where each triangle contains point v and two other points;
 /// the valid points sharing one position in the integer grid are merged: only the point with
-/// the smallest id among them appears in the triangles (in particular, #v itself gets no
+/// the smallest id among them appears in the triangles (in particular, v itself gets no
 /// triangles if it has such a twin), so the triangles found around all the points agree
 MRMESH_API void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v,
     const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud and the same radius
     Triangulation & appendTris,  ///< found triangles will be appended here
-    std::vector<AlphaShapeNei> & neis, ///< temporary storage to avoid memory allocations, it will be filled with the neighbours of point #v within data.searchRadius sorted by distance, except the duplicates and the ones redundant for the search; cleared if #v duplicates a point with a smaller id
+    std::vector<AlphaShapeNei> & neis, ///< temporary storage to avoid memory allocations, it will be filled with the neighbours of point v within data.searchRadius sorted by distance, except the duplicates and the ones redundant for the search; cleared if v duplicates a point with a smaller id
     bool onlyLargerVids,         ///< if true then two other points must have larger ids (to avoid finding same triangles several times)
     AlphaShapeStats * stats = nullptr ); ///< optional statistics of the work done, which is increased here
 
@@ -128,19 +128,19 @@ struct BallPivotCandidate
     /// the point's id together with its integer coordinates
     PreciseVertCoords coords;
 
-    /// orient3d( vi, vj, vk, this point ): whether the rotation around the line from #vi to #vj
-    /// from the half-plane via #vk to the half-plane via this point is clockwise
+    /// orient3d( vi, vj, vk, this point ): whether the rotation around the line from vi to vj
+    /// from the half-plane via vk to the half-plane via this point is clockwise
     bool cwFromVk = false;
 };
 
 /// pivots the ball of the given radius from triangle (vi, vj, vk) over its edge (vi, vj):
-/// among the points touchable by a ball together with #vi and #vj (except #vk), ordered by the
-/// rotation of their half-planes counter-clockwise from #vk's one around the line directed from #vi to #vj
+/// among the points touchable by a ball together with vi and vj (except vk), ordered by the
+/// rotation of their half-planes counter-clockwise from vk's one around the line directed from vi to vj
 /// (as seen by the viewer the line's direction points at), finds the first point x such that the ball
-/// via #vi, #vj and x with the center on #vk's side of the half-plane of x has none of those points nor #vk strictly inside;
+/// via vi, vj and x with the center on vk's side of the half-plane of x has none of those points nor vk strictly inside;
 /// the predicates are exact with simulation-of-simplicity resolving the ties;
-/// returns #vk if no such point exists: the ball rotates to the other side of triangle (vi, vj, vk) touching no other point;
-/// the ball via #vi, #vj and #vk with the center on the positive side of that triangle must exist and be empty,
+/// returns vk if no such point exists: the ball rotates to the other side of triangle (vi, vj, vk) touching no other point;
+/// the ball via vi, vj and vk with the center on the positive side of that triangle must exist and be empty,
 /// otherwise the returned point is not the one touched first by the rotating ball; in particular, for a triangle
 /// (vi, vj, vk) of findAlphaShapeAllTriangles, (vj, vi, x) is one of them as well, x being the returned point
 [[nodiscard]] MRMESH_API VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, VertId vk,

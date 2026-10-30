@@ -235,7 +235,7 @@ public:
     /// select pairs with origin samples on floating object;
     /// setFltSamples weights each pair by the double area of mesh triangles around its sample vertex,
     /// sampleFltPoints performs grid sampling and gives all pairs equal weights;
-    /// \param nonVertexSamples if true, a mesh with triangles too big for the sampling is sampled from its dense point cloud
+    /// \p nonVertexSamples if true, a mesh with triangles too big for the sampling is sampled from its dense point cloud
     ///        (see meshToDensePointCloud) to get the samples inside the triangles and on the edges as well; otherwise only its vertices are sampled
     MRMESH_API void setFltSamples( const VertBitSet& fltSamples );
     MRMESH_API void sampleFltPoints( float samplingVoxelSize, bool nonVertexSamples = true );

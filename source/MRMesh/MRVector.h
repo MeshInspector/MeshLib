@@ -125,7 +125,7 @@ public:
             vec[ p + i ] = val;
     }
 
-    /// sets the element #i to the given value, adjusting the size of the vector to include new element
+    /// sets the element i to the given value, adjusting the size of the vector to include new element
     void autoResizeSet( I i, T val ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::is_copy_assignable_v<T> )
     {
         autoResizeSet( i, 1, val );

@@ -89,26 +89,26 @@ MRMESH_API MeshTopology fromFaceSoup( const std::vector<VertId> & verts, const V
 
 struct UniteCloseParams
 {
-    ///< vertices located closer to each other than \param closeDist will be united
+    /// vertices located closer to each other than this distance will be united
     float closeDist = 0.0f;
 
-    ///< if true then only boundary vertices can be united, all internal vertices (even close ones) will remain
+    /// if true then only boundary vertices can be united, all internal vertices (even close ones) will remain
     bool uniteOnlyBd = true;
 
-    ///< if true, only vertices from this region can be affected
+    /// if true, only vertices from this region can be affected
     VertBitSet* region = nullptr;
 
-    ///< if true - try to duplicates non-manifold vertices instead of removing faces
+    /// if true - try to duplicates non-manifold vertices instead of removing faces
     bool duplicateNonManifold = false;
 
-    ///< is the mapping of vertices: before -> after
+    /// is the mapping of vertices: before -> after
     VertMap* optionalVertOldToNew = nullptr;
 
-    ///< this can be used to map attributes to duplicated vertices
+    /// this can be used to map attributes to duplicated vertices
     std::vector<MeshBuilder::VertDuplication>* optionalDuplications = nullptr;
 };
 
-/// the function finds groups of mesh vertices located closer to each other than \param closeDist, and unites such vertices in one;
+/// the function finds groups of mesh vertices located closer to each other than \p closeDist, and unites such vertices in one;
 /// then the mesh is rebuilt from the remaining triangles
 /// \param optionalVertOldToNew is the mapping of vertices: before -> after
 /// \param uniteOnlyBd if true then only boundary vertices can be united, all internal vertices (even close ones) will remain
@@ -116,7 +116,7 @@ struct UniteCloseParams
 MR_BIND_OVERLOAD_SUFFIX(dist) MRMESH_API int uniteCloseVertices( Mesh & mesh, float closeDist, bool uniteOnlyBd = true,
     VertMap * optionalVertOldToNew = nullptr );
 
-/// the function finds groups of mesh vertices located closer to each other than \param params.closeDist, and unites such vertices in one;
+/// the function finds groups of mesh vertices located closer to each other than \p params.closeDist, and unites such vertices in one;
 /// then the mesh is rebuilt from the remaining triangles
 /// \return the number of vertices united, 0 means no change in the mesh
 MR_BIND_OVERLOAD_SUFFIX() MRMESH_API int uniteCloseVertices( Mesh& mesh, const UniteCloseParams& params = {} );

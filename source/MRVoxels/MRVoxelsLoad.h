@@ -12,12 +12,12 @@
 namespace MR
 {
 
-namespace VoxelsLoad
-{
-
 /// \defgroup VoxelsLoadGroup Voxels Load
 /// \ingroup IOGroup
 /// \{
+
+namespace VoxelsLoad
+{
 
 struct RawParameters
 {

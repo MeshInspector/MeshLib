@@ -380,6 +380,22 @@ bool isNonIntersectingInside( const MeshPart& a, const MeshPart& b, const Affine
     return isNonIntersectingInside( a.mesh, aFace, b, rigidB2A );
 }
 
+namespace
+{
+
+// a point projecting on the boundary of b is beyond the edge of an open surface, so it is outside whatever side it is on
+bool projectsOnBoundary( const MeshPart& b, const MeshTriPoint& mtp )
+{
+    const auto& topo = b.mesh.topology;
+    if ( auto v = mtp.inVertex( topo ) )
+        return topo.isBdVertex( v, b.region );
+    if ( auto ep = mtp.onEdge( topo ) )
+        return topo.isBdEdge( ep.e, b.region );
+    return false;
+}
+
+} //anonymous namespace
+
 bool isNonIntersectingInside( const Mesh& a, FaceId aFace, const MeshPart& b, const AffineXf3f* rigidB2A /*= nullptr */ )
 {
     if ( !aFace )
@@ -389,8 +405,8 @@ bool isNonIntersectingInside( const Mesh& a, FaceId aFace, const MeshPart& b, co
     if ( rigidB2A )
         aPoint = rigidB2A->inverse()( aPoint );
 
-    auto signDist = b.mesh.signedDistance( aPoint, FLT_MAX, b.region );
-    return signDist && signDist < 0;
+    auto sd = findSignedDistance( aPoint, b );
+    return sd && sd->dist < 0 && !projectsOnBoundary( b, sd->mtp );
 }
 
 namespace
@@ -450,8 +466,8 @@ bool isNonIntersectingInsidePrecise( const Mesh& a, FaceId aFace, const MeshPart
     if ( xfA )
         aPoint = ( *xfA )( aPoint );
     const auto proj = findProjection( aPoint, b, FLT_MAX, xfB );
-    if ( !proj )
-        return false; //no projection on b at all
+    if ( !proj || projectsOnBoundary( b, proj.mtp ) )
+        return false; //no projection on b at all, or beyond its boundary
 
     PreciseVertCoords probe;
     probe.id = VertId( int( aVert ) + aVertShift );

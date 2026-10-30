@@ -857,7 +857,6 @@ bool Viewer::setupWindow_( const LaunchParams& params )
     if ( params.showMRVersionInTitle )
         windowTitle->setVersion( GetMRVersionString() );
 
-    glfwSetInputMode( window, GLFW_CURSOR, GLFW_CURSOR_NORMAL );
     // Register callbacks
     glfwSetKeyCallback( window, glfw_key_callback );
     glfwSetCursorPosCallback( window, glfw_mouse_move );

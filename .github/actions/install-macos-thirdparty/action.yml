@@ -135,6 +135,11 @@ runs:
       if: ${{ steps.thirdparty-cache.outputs.cache-hit != 'true' }}
       shell: bash
       env:
+        # build_thirdparty.sh reruns install_brew_requirements.sh: without these,
+        # brew auto-updates and upgrades kegs mid-job (tbb -> python@3.15 source build on macOS 13)
+        HOMEBREW_NO_AUTO_UPDATE: '1'
+        HOMEBREW_NO_INSTALL_UPGRADE: '1'
+        HOMEBREW_NO_INSTALL_CLEANUP: '1'
         CMAKE_CXX_COMPILER: ${{ inputs.cxx-compiler }}
         CMAKE_C_COMPILER: ${{ inputs.c-compiler }}
       run: ./scripts/build_thirdparty.sh

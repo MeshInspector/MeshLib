@@ -392,10 +392,13 @@ jobs:
           VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet }}
           MSYS2_DIR: C:\msys64
         run: |
+          rem The Python of vcpkg's version, which setup_win_python_reqs.py installs the requirements into. Before VsDevCmd.bat, which changes VCPKG_ROOT.
+          for /d %%d in (%VCPKG_ROOT%\installed\%VCPKG_TARGET_TRIPLET%\include\python3.*) do set PYVER=%%~nxd
+          set PYVER=%PYVER:python=%
+          for /f "delims=" %%i in ('py -%PYVER% -c "import sys; print(sys.executable)"') do set PYTHON=%%i
           call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           cmake -S . -B source\TempOutput %CMAKE_COMPILER_ARGS% -DMESHLIB_BUILD_PYTHON_OVER_C=ON || exit /b 1
           cmake --build source\TempOutput -j %NUMBER_OF_PROCESSORS% --target mrviewerpy_over_c || echo ::warning::mrviewerpy_over_c failed to build
-          for /f "delims=" %%i in ('py -3 -c "import sys; print(sys.executable)"') do set PYTHON=%%i
           set OVER_C_VIEWER_DIR=%CD%\source\TempOutput\bin
           "C:\Program Files\Git\bin\bash.exe" scripts/mrbind/python_over_c.sh source/%MR_ARCH%/${{ matrix.config }} || exit /b 1
 

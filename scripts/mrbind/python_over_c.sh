@@ -97,6 +97,18 @@ if compgen -G "$BIN_DIR/python_over_c/meshlib/mrviewerpy*" > /dev/null; then
     MODULES+=(mrviewerpy)
 fi
 
+# Sizes of the binaries as in a wheel: stripped, and deflate-compressed.
+"$PYTHON" - "$BIN_DIR/meshlib/mrmeshpy.so" "$OUT_DIR/pkg/meshlib/mrmeshpy.so" "$BIN_DIR/libMeshLibC2.so" > "$OUT_DIR/sizes.txt" <<'EOF'
+import os, shutil, subprocess, sys, tempfile, zlib
+for path in sys.argv[1:]:
+    stripped = os.path.join(tempfile.mkdtemp(), "f")
+    shutil.copy(path, stripped)
+    subprocess.run(["strip", "--strip-unneeded", stripped], check=True)
+    data = open(stripped, "rb").read()
+    print(f"{path}: {os.path.getsize(path)} bytes, stripped {len(data)}, compressed {len(zlib.compress(data, 6))}")
+EOF
+cat "$OUT_DIR/sizes.txt"
+
 DUMP="$MRBIND_DIR/scripts/python_api_dump.py"
 for MODULE in "${MODULES[@]}"; do
     "$PYTHON" "$DUMP" dump meshlib.$MODULE --path "$BIN_DIR" --strip meshlib.$MODULE. -o "$OUT_DIR/api_${MODULE}_pybind11.json"

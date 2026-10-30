@@ -22,6 +22,7 @@
 #include <MRMesh/MRMakePlane.h>
 #include <MRMesh/MREmbedTerrainStructure.h>
 #include <MRMesh/MRMeshProject.h>
+#include <MRMesh/MRUniteManyMeshes.h>
 #include <MRPch/MRSuppressWarning.h>
 #include <gtest/gtest.h>
 #include <algorithm>
@@ -850,5 +851,58 @@ TEST( MRMesh, UpdateCollidingEdgeTrisPrecise )
 }
 
 MR_SUPPRESS_WARNING_POP
+
+// checks that each face of the united mesh lies in the plane of its source face
+static void checkNew2OldFaces( const Mesh& res, const Vector<ObjFaceId, FaceId>& new2old, const std::vector<const Mesh*>& srcMeshes )
+{
+    ASSERT_EQ( new2old.size(), res.topology.faceSize() );
+    Vector<int, ObjId> numFacesPerSrc( srcMeshes.size() );
+    for ( auto f : res.topology.getValidFaces() )
+    {
+        const auto [objId, srcF] = new2old[f];
+        ASSERT_TRUE( objId.valid() && int( objId ) < int( srcMeshes.size() ) );
+        const auto& src = *srcMeshes[objId];
+        ASSERT_TRUE( src.topology.hasFace( srcF ) );
+        ++numFacesPerSrc[objId];
+        const auto n = src.normal( srcF );
+        const auto p0 = src.orgPnt( src.topology.edgeWithLeft( srcF ) );
+        for ( auto v : res.topology.getTriVerts( f ) )
+            EXPECT_NEAR( dot( n, res.points[v] - p0 ), 0.0f, 1e-4f );
+    }
+    for ( auto num : numFacesPerSrc )
+        EXPECT_GT( num, 0 );
+}
+
+TEST( MRMesh, UniteManyMeshesNew2OldFaces )
+{
+    const auto cubeA = makeCube();
+    const auto cubeB = makeCube( Vector3f::diagonal( 1.0f ), Vector3f() );
+    auto sphere = makeUVSphere( 1.0f, 8, 8 );
+    sphere.transform( AffineXf3f::translation( Vector3f( 5, 0, 0 ) ) );
+    const std::vector<const Mesh*> meshes{ &cubeA, &cubeB, &sphere };
+
+    for ( auto mode : { NestedComponenetsMode::Remove, NestedComponenetsMode::Merge, NestedComponenetsMode::Union } )
+    {
+        for ( bool randomShifts : { false, true } )
+        {
+            Vector<ObjFaceId, FaceId> new2old;
+            auto res = uniteManyMeshes( meshes, { .useRandomShifts = randomShifts, .new2oldFaces = &new2old, .nestedComponentsMode = mode } );
+            ASSERT_TRUE( res.has_value() );
+            EXPECT_EQ( MeshComponents::getNumComponents( *res ), size_t( 2 ) );
+            checkNew2OldFaces( *res, new2old, meshes );
+        }
+    }
+
+    Mesh all;
+    for ( auto m : meshes )
+        all.addMesh( *m );
+    Vector<ObjFaceId, FaceId> new2old;
+    auto res = uniteComponents( all, { .new2oldFaces = &new2old } );
+    ASSERT_TRUE( res.has_value() );
+    for ( auto& src : new2old )
+        if ( src.objId.valid() )
+            src.objId = ObjId( 0 );
+    checkNew2OldFaces( *res, new2old, { &all } );
+}
 
 } //namespace MR

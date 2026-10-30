@@ -711,13 +711,15 @@ OneMeshContours getOneMeshSelfIntersectionContours( const Mesh& mesh, const Cont
     AffineXf3f inverseXf;
     if ( rigidB2A )
         inverseXf = rigidB2A->inverse();
-    res.offsets.resize( contours.size() + 1 );
+    // the offsets are filled in a vector of their own: GCC sees resize() of the default { 0 } as out of its bounds
+    std::vector<int> offsets( contours.size() + 1 );
     for ( int j = 0; j < contours.size(); ++j )
     {
-        res.offsets[j + 1] = res.offsets[j] + int( contours[j].size() );
+        offsets[j + 1] = offsets[j] + int( contours[j].size() );
         if ( isClosed( contours[j] ) )
             res.closed.autoResizeSet( j );
     }
+    res.offsets = std::move( offsets );
     res.intersections.resizeNoInit( res.offsets.back() );
 
     parallelForContourPieces( res.offsets, [&] ( int j, int k0, int k1 )
@@ -1117,6 +1119,8 @@ OneMeshContours surfacePathsToMeshContours( const Mesh& mesh, const std::vector<
 {
     MR_TIMER;
     OneMeshContours res;
+    // the offsets are filled in a vector of their own: GCC sees push_back() to the default { 0 } as out of its bounds
+    std::vector<int> offsets( surfacePaths.size() + 1 );
 
     for ( int j = 0; j < surfacePaths.size(); ++j )
     {
@@ -1133,7 +1137,7 @@ OneMeshContours surfacePathsToMeshContours( const Mesh& mesh, const std::vector<
 
         const auto start = res.intersections.size();
         res.intersections.resize( start + curInContour.size() );
-        res.offsets.push_back( int( res.intersections.size() ) );
+        offsets[j + 1] = int( res.intersections.size() );
         ParallelFor( curInContour, [&] ( size_t i )
         {
             const auto& inIntersection = curInContour[i];
@@ -1146,6 +1150,7 @@ OneMeshContours surfacePathsToMeshContours( const Mesh& mesh, const std::vector<
             outIntersection.coordinate = mesh.edgePoint( inIntersection );
         } );
     }
+    res.offsets = std::move( offsets );
     return res;
 }
 

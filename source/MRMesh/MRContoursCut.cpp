@@ -1310,16 +1310,18 @@ Expected<OneMeshContours> offsetSurfaceLineToMeshContours( const Mesh& mesh, con
         distances = computeSurfaceDistances( meshAfterCut, startVerticesValues, FLT_MAX );
     auto isoLines = extractIsolines( meshAfterCut.topology, distances, mmOffset.max );
 
+    // the offsets are filled in a vector of their own: GCC sees resize() of the default { 0 } as out of its bounds
+    std::vector<int> offsets( isoLines.size() + 1 );
     OneMeshContours res;
-    res.offsets.resize( isoLines.size() + 1 );
     for ( int i = 0; i < isoLines.size(); ++i )
     {
         // an iso-line that reaches the mesh boundary is open: it starts and ends on boundary edges
         assert( isoLines[i].size() > 1 );
-        res.offsets[i + 1] = res.offsets[i] + int( isoLines[i].size() );
+        offsets[i + 1] = offsets[i] + int( isoLines[i].size() );
         if ( isoLines[i].front() == isoLines[i].back() )
             res.closed.autoResizeSet( i );
     }
+    res.offsets = std::move( offsets );
     res.intersections.resizeNoInit( res.offsets.back() );
     parallelForContourPieces( res.offsets, [&] ( int i, int k0, int k1 )
     {

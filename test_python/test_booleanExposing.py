@@ -86,7 +86,7 @@ def test_intersection_contours():
     aConts = mrmesh.OneMeshContours()
     bConts = mrmesh.OneMeshContours()
     mrmesh.getOneMeshIntersectionContours(meshA,meshB,orderedIntersections,aConts,bConts,conv)
-    assert aConts[0].intersections.size() > 0
-    assert aConts[0].closed
-    assert aConts[0].intersections.size() == bConts[0].intersections.size()
-    assert bConts[0].closed
+    assert aConts.contour(0).intersections.size() > 0
+    assert aConts.contour(0).closed
+    assert aConts.contour(0).intersections.size() == bConts.contour(0).intersections.size()
+    assert bConts.contour(0).closed

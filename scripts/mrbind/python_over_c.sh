@@ -118,6 +118,8 @@ for MODULE in "${MODULES[@]}"; do
     grep '^== ' "$OUT_DIR/api_${MODULE}_diff.txt" || true
 done
 
-# The Python tests, like `run_python_test_script.py` runs them.
-(cd "$ROOT_DIR/test_python" && MeshLibPyModulesPath="$OUT_DIR/pkg" "$PYTHON" -m pytest -q -p no:cacheprovider -rA --tb=line --basetemp="$OUT_DIR/pytest_temp" > "$OUT_DIR/tests.txt" 2>&1) || true
+# The Python tests, like `run_python_test_script.py` runs them; under a virtual display for the viewer tests, as in CI.
+XVFB=()
+if command -v xvfb-run > /dev/null; then XVFB=(xvfb-run -a); fi
+(cd "$ROOT_DIR/test_python" && MeshLibPyModulesPath="$OUT_DIR/pkg" "${XVFB[@]}" "$PYTHON" -m pytest -q -p no:cacheprovider -rA --tb=line --basetemp="$OUT_DIR/pytest_temp" > "$OUT_DIR/tests.txt" 2>&1) || true
 tail -1 "$OUT_DIR/tests.txt"

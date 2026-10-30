@@ -10,6 +10,7 @@
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRRegionBoundary.h>
 #include <MRMesh/MRMakeSphereMesh.h>
+#include <MRMesh/MRMeshCollide.h>
 #include <MRMesh/MRMeshCollidePrecise.h>
 #include <MRMesh/MRMeshFixer.h>
 #include <MRMesh/MREdgeIterator.h>
@@ -21,6 +22,7 @@
 #include <MRMesh/MRMakePlane.h>
 #include <MRMesh/MREmbedTerrainStructure.h>
 #include <MRMesh/MRMeshProject.h>
+#include <MRMesh/MRUniteManyMeshes.h>
 #include <MRPch/MRSuppressWarning.h>
 #include <gtest/gtest.h>
 #include <algorithm>
@@ -146,6 +148,44 @@ TEST( MRMesh, BooleanDisjointMeshes )
     expectUnionKeepsBoth(
         makeBox( { 0.f, 0.f, 0.f }, { 1.f, 1.f, 1.f } ),
         makeBox( { 5.f, 5.f, 5.f }, { 6.f, 6.f, 6.f } ) );
+}
+
+// open square of two triangles in the plane z = min.z with the normal +Z
+static Mesh makeSquare( const Vector3f& min, float size )
+{
+    Mesh res;
+    res.points = VertCoords{ min, min + Vector3f( size, 0.f, 0.f ), min + Vector3f( size, size, 0.f ), min + Vector3f( 0.f, size, 0.f ) };
+    res.topology = MeshBuilder::fromTriangles( { { 0_v, 1_v, 2_v }, { 0_v, 2_v, 3_v } } );
+    return res;
+}
+
+// a is behind the plane of b but projects on its boundary, so it is not inside of b, and union must keep it
+TEST( MRMesh, BooleanBeyondOpenBoundary )
+{
+    const Mesh a = makeSquare( { 0.f, 0.f, 0.f }, 1.f );
+    const Mesh b = makeSquare( { 100.f, 100.f, 10.f }, 1.f );
+    EXPECT_FALSE( isInside( a, b ) );
+    EXPECT_FALSE( isInside( b, a ) );
+    // behind the plane of an open surface away from its boundary is still inside
+    EXPECT_TRUE( isInside( makeSquare( { 40.f, 20.f, -1.f }, 1.f ), makeSquare( { 0.f, 0.f, 0.f }, 100.f ) ) );
+
+    const auto xf = AffineXf3f::translation( { 7.3f, -2.1f, 0.6f } ) *
+        AffineXf3f::linear( Matrix3f::rotation( Vector3f( 1.f, 2.f, 3.f ).normalized(), 0.7f ) );
+    for ( bool swapped : { false, true } )
+    {
+        const Mesh& m0 = swapped ? b : a;
+        const Mesh& m1 = swapped ? a : b;
+
+        const auto res = boolean( m0, m1, BooleanOperation::Union );
+        ASSERT_TRUE( res.valid() );
+        EXPECT_EQ( res.mesh.topology.numValidFaces(), 4 );
+
+        Mesh m1xf = m1;
+        m1xf.transform( xf.inverse() );
+        const auto resXf = boolean( m0, m1xf, BooleanOperation::Union, &xf );
+        ASSERT_TRUE( resXf.valid() );
+        EXPECT_EQ( resXf.mesh.topology.numValidFaces(), 4 );
+    }
 }
 
 // a small sphere pierces a big triangle of the cube without crossing its edges (a lone contour), alone, so that nothing else
@@ -811,5 +851,58 @@ TEST( MRMesh, UpdateCollidingEdgeTrisPrecise )
 }
 
 MR_SUPPRESS_WARNING_POP
+
+// checks that each face of the united mesh lies in the plane of its source face
+static void checkNew2OldFaces( const Mesh& res, const Vector<ObjFaceId, FaceId>& new2old, const std::vector<const Mesh*>& srcMeshes )
+{
+    ASSERT_EQ( new2old.size(), res.topology.faceSize() );
+    Vector<int, ObjId> numFacesPerSrc( srcMeshes.size() );
+    for ( auto f : res.topology.getValidFaces() )
+    {
+        const auto [objId, srcF] = new2old[f];
+        ASSERT_TRUE( objId.valid() && int( objId ) < int( srcMeshes.size() ) );
+        const auto& src = *srcMeshes[objId];
+        ASSERT_TRUE( src.topology.hasFace( srcF ) );
+        ++numFacesPerSrc[objId];
+        const auto n = src.normal( srcF );
+        const auto p0 = src.orgPnt( src.topology.edgeWithLeft( srcF ) );
+        for ( auto v : res.topology.getTriVerts( f ) )
+            EXPECT_NEAR( dot( n, res.points[v] - p0 ), 0.0f, 1e-4f );
+    }
+    for ( auto num : numFacesPerSrc )
+        EXPECT_GT( num, 0 );
+}
+
+TEST( MRMesh, UniteManyMeshesNew2OldFaces )
+{
+    const auto cubeA = makeCube();
+    const auto cubeB = makeCube( Vector3f::diagonal( 1.0f ), Vector3f() );
+    auto sphere = makeUVSphere( 1.0f, 8, 8 );
+    sphere.transform( AffineXf3f::translation( Vector3f( 5, 0, 0 ) ) );
+    const std::vector<const Mesh*> meshes{ &cubeA, &cubeB, &sphere };
+
+    for ( auto mode : { NestedComponenetsMode::Remove, NestedComponenetsMode::Merge, NestedComponenetsMode::Union } )
+    {
+        for ( bool randomShifts : { false, true } )
+        {
+            Vector<ObjFaceId, FaceId> new2old;
+            auto res = uniteManyMeshes( meshes, { .useRandomShifts = randomShifts, .new2oldFaces = &new2old, .nestedComponentsMode = mode } );
+            ASSERT_TRUE( res.has_value() );
+            EXPECT_EQ( MeshComponents::getNumComponents( *res ), size_t( 2 ) );
+            checkNew2OldFaces( *res, new2old, meshes );
+        }
+    }
+
+    Mesh all;
+    for ( auto m : meshes )
+        all.addMesh( *m );
+    Vector<ObjFaceId, FaceId> new2old;
+    auto res = uniteComponents( all, { .new2oldFaces = &new2old } );
+    ASSERT_TRUE( res.has_value() );
+    for ( auto& src : new2old )
+        if ( src.objId.valid() )
+            src.objId = ObjId( 0 );
+    checkNew2OldFaces( *res, new2old, { &all } );
+}
 
 } //namespace MR

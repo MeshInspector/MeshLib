@@ -269,13 +269,13 @@ public:
     /// creates new face-id not associated with any edge yet
     [[nodiscard]] FaceId addFaceId() { edgePerFace_.emplace_back(); if ( updateValids_ ) { validFaces_.push_back( false ); } return edgePerFace_.backId(); }
 
-    /// deletes the face, also deletes its edges and vertices if they were not shared by other faces and not in \param keepFaces
+    /// deletes the face, also deletes its edges and vertices if they were not shared by other faces and not in \p keepEdges
     MRMESH_API void deleteFace( FaceId f, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
     /// deletes from this topology:
     /// 1) all the gives faces,
-    /// 2) all the vertices, which had incident only deleted faces and no edges from \param keepEdges,
-    /// 3) make lone all the edges, which had to the left/right only deleted faces except for the edges from \param keepEdges;
+    /// 2) all the vertices, which had incident only deleted faces and no edges from \p keepEdges,
+    /// 3) make lone all the edges, which had to the left/right only deleted faces except for the edges from \p keepEdges;
     /// return bit sets of all vacant elements in this topology after deletion
     MRMESH_API VacantElements deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
@@ -461,8 +461,8 @@ public:
     MRMESH_API VertId splitFace( FaceId f, FaceBitSet * region = nullptr, FaceHashMap * new2Old = nullptr );
 
     /// flip orientation (normals) of
-    /// * all mesh elements if \param fullComponents is nullptr, or
-    /// * given mesh components in \param fullComponents.
+    /// * all mesh elements if \p fullComponents is nullptr, or
+    /// * given mesh components in \p fullComponents.
     /// The behavior is undefined if fullComponents is given but there are connected components with some edges included and not-included there.
     MRMESH_API void flipOrientation( const UndirectedEdgeBitSet * fullComponents = nullptr );
 

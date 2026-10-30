@@ -40,6 +40,7 @@
     <ClCompile Include="MRCameraPointsTriangulationTests.cpp" />
     <ClCompile Include="MRDicomTests.cpp" />
     <ClCompile Include="MREdgeLengthMeshTests.cpp" />
+    <ClCompile Include="MRMeshCurvatureTests.cpp" />
     <ClCompile Include="MRExampleTest.cpp" />
     <ClCompile Include="MRExtractIsolinesTests.cpp" />
     <ClCompile Include="MRFastIntTests.cpp" />

@@ -49,6 +49,7 @@ MR_BIND_OVERLOAD_SUFFIX() [[nodiscard]] MRMESH_API Expected<std::vector<FaceFace
 /**
  * \brief checks that arbitrary mesh part A is inside of closed mesh part B
  * The version of `isInside` without collision check; it is user's responsibility to guarantee that the meshes don't collide
+ * If B is open, A is outside of B when the point of A tested projects on the boundary of B
  * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
  */
 [[nodiscard]] MRMESH_API bool isNonIntersectingInside( const MeshPart & a, const MeshPart & b, const AffineXf3f * rigidB2A = nullptr );
@@ -56,6 +57,7 @@ MR_BIND_OVERLOAD_SUFFIX() [[nodiscard]] MRMESH_API Expected<std::vector<FaceFace
 /**
  * \brief checks that arbitrary mesh A part (whole part is represented by one face `partFace`) is inside of closed mesh part B
  * The version of `isInside` without collision check; it is user's responsibility to guarantee that the meshes don't collide
+ * If B is open, A is outside of B when the point of A tested projects on the boundary of B
  * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
  */
 [[nodiscard]] MRMESH_API bool isNonIntersectingInside( const Mesh& a, FaceId partFace, const MeshPart& b, const AffineXf3f* rigidB2A = nullptr );
@@ -64,6 +66,7 @@ MR_BIND_OVERLOAD_SUFFIX() [[nodiscard]] MRMESH_API Expected<std::vector<FaceFace
  * \brief checks that arbitrary mesh A part (whole part is represented by one face `partFace`) is inside of closed mesh part B
  * The version of `isNonIntersectingInside` deciding by the precise orient3d predicate, which is never undefined,
  * unlike the sign of the distance in the area where the meshes touch one another
+ * If B is open, A is outside of B when the vertex of A tested projects on the boundary of B
  * \param conv float-to-int converter valid for the points of both meshes after the transformations below
  * \param aVertShift the value added to the vertex ids of mesh a, and \param bVertShift - of mesh b;
  * the shifted ids must be distinct, and every call on the same meshes must shift them equally,

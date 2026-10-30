@@ -96,7 +96,7 @@ protected:
         return r;
     }
 
-    /// sets new root \param r for the element \param a and all its ancestors, returns new root \param r
+    /// sets new root \p r for the element \p a and all its ancestors, returns new root \p r
     I updateRoot_( I a, const I r )
     {
         // update parents
@@ -112,7 +112,7 @@ protected:
     /// find the root of given element, and set it as parent for it and other parents
     I updateRoot_( I a ) { return updateRoot_( a, findRootNoUpdate_( a ) ); }
 
-    /// sets new root \param r for the element \param a and all its ancestors if they are in the range [begin, end)
+    /// sets new root \p r for the element \p a and all its ancestors if they are in the range [begin, end)
     I updateRootInRange_( I a, const I r, I begin, I end )
     {
         assert( begin < end );

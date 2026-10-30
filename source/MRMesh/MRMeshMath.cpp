@@ -652,6 +652,28 @@ float discreteMeanCurvature( const MeshTopology & topology, const VertCoords & p
     return ( sumArea > 0 ) ? 1.5f * sumAngLen / sumArea : 0;
 }
 
+VertScalars discreteMeanCurvatures( const MeshTopology & topology, const VertCoords & points )
+{
+    MR_TIMER;
+    VertScalars res( topology.vertSize() );
+    BitSetParallelFor( topology.getValidVerts(), [&] ( VertId v )
+    {
+        res[v] = discreteMeanCurvature( topology, points, v );
+    } );
+    return res;
+}
+
+VertScalars discreteGaussianCurvatures( const MeshTopology & topology, const VertCoords & points )
+{
+    MR_TIMER;
+    VertScalars res( topology.vertSize() );
+    BitSetParallelFor( topology.getValidVerts(), [&] ( VertId v )
+    {
+        res[v] = discreteGaussianCurvature( topology, points, v );
+    } );
+    return res;
+}
+
 UndirectedEdgeBitSet findSharpEdges( const MeshTopology & topology, const VertCoords & points, float minSharpCos, float maxSharpCos )
 {
     MR_TIMER;

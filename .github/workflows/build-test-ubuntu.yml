@@ -303,7 +303,12 @@ jobs:
         if: ${{ inputs.mrbind && env.RUN_RUST == 'true' }}
         continue-on-error: true
         timeout-minutes: 60
-        run: bash scripts/mrbind/python_over_c.sh build/${{ matrix.config }}/bin
+        env:
+          MR_VERSION: ${{ inputs.app_version }}
+        run: |
+          cmake -S . -B build/${{ matrix.config }} -DMESHLIB_BUILD_PYTHON_OVER_C=ON
+          cmake --build build/${{ matrix.config }} -j $(nproc) --target mrviewerpy_over_c || echo "::warning::mrviewerpy_over_c failed to build"
+          bash scripts/mrbind/python_over_c.sh build/${{ matrix.config }}/bin
 
       - name: Upload Python bindings over the C bindings
         if: ${{ inputs.mrbind && env.RUN_RUST == 'true' && !cancelled() }}

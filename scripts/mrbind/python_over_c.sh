@@ -87,8 +87,15 @@ cat > "$OUT_DIR/pkg/meshlib/mrmeshnumpy.py" <<'EOF'
 from ._mrmeshnumpy import *  # noqa: F401,F403
 EOF
 
+# `mrviewerpy` over this `mrmeshpy`, if built: the `mrviewerpy_over_c` target (`MESHLIB_BUILD_PYTHON_OVER_C`).
+MODULES=(mrmeshpy mrmeshnumpy)
+if compgen -G "$BIN_DIR/python_over_c/meshlib/mrviewerpy*" > /dev/null; then
+    cp "$BIN_DIR"/python_over_c/meshlib/mrviewerpy* "$OUT_DIR/pkg/meshlib/"
+    MODULES+=(mrviewerpy)
+fi
+
 DUMP="$MRBIND_DIR/scripts/python_api_dump.py"
-for MODULE in mrmeshpy mrmeshnumpy; do
+for MODULE in "${MODULES[@]}"; do
     "$PYTHON" "$DUMP" dump meshlib.$MODULE --path "$BIN_DIR" --strip meshlib.$MODULE. -o "$OUT_DIR/api_${MODULE}_pybind11.json"
     "$PYTHON" "$DUMP" dump meshlib.$MODULE --path "$OUT_DIR/pkg" --strip meshlib.$MODULE. -o "$OUT_DIR/api_${MODULE}_over_c.json"
     "$PYTHON" "$DUMP" diff "$OUT_DIR/api_${MODULE}_pybind11.json" "$OUT_DIR/api_${MODULE}_over_c.json" --limit 1000000 > "$OUT_DIR/api_${MODULE}_diff.txt" || true

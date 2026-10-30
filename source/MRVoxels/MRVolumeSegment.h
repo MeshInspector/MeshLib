@@ -58,7 +58,7 @@ struct VoxelMetricParameters;
  *
  * <table border=0> <caption id="VolumeSegmenter_examples"></caption>
  * <tr> <td> \image html voxel_segmentation/voxel_segmentation_0_0.png "Before (a)" width = 350cm </td>
- *      <td> \image html voxel_segmentation/voxel_segmentation_0_1.png "Before (b)" width = 350cm </td> </tr>
+ *      <td> \image html voxel_segmentation/voxel_segmentation_0_1.png "Before (b)" width = 350cm </td>
  *      <td> \image html voxel_segmentation/voxel_segmentation_0_2.png "After" width = 350cm </td> </tr>
  * </table>
  */

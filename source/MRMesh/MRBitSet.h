@@ -294,10 +294,10 @@ public:
     using base::base;
     using IndexType = I;
 
-    /// copies all bits from another BitSet (or a descending class, e.g. TypedBitSet<U>)
+    /// copies all bits from another BitSet (or a descending class, e.g. `TypedBitSet<U>`)
     explicit TypedBitSet( const BitSet & src ) : BitSet( src ) {}
 
-    /// moves all bits from another BitSet (or a descending class, e.g. TypedBitSet<U>)
+    /// moves all bits from another BitSet (or a descending class, e.g. `TypedBitSet<U>`)
     explicit TypedBitSet( BitSet && src ) : BitSet( std::move( src ) ) {}
 
     MR_BIND_OVERLOAD_SUFFIX(range) TypedBitSet & set( IndexType n, size_type len, bool val ) { base::set( n, len, val ); return * this; }

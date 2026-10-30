@@ -152,7 +152,7 @@ MR_BIND_IGNORE MRMESH_API MeshTopology* triangulateDisjointContoursTopology( con
  * @return std::nullopt if the loops intersect or a chord would land in a face instead of a hole, so that
  *         the caller can fall back on filling every loop separately; otherwise a plan with numTris == 0
  *         for \ref executeHoleFillPlan, which then only adds edges (empty if already monotone, a no-op).
- *         Validate it with \ref isFillingMultipleEdgeFree: a chord may duplicate an off-loop mesh edge
+ *         Validate it with \ref isFillingMultipleEdgeFree, since a chord may duplicate an off-loop mesh edge
  */
 MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal );
 
@@ -173,7 +173,7 @@ MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const M
     const std::array<PreciseVertCoords, 3>& tri, const std::function<PreciseCutPoint( VertId )>& pointOf,
     const std::function<std::array<PreciseVertCoords, 3>( UndirectedEdgeId )>& cutOf );
 
-/// same as above on the float predicates of \ref getMonotonePlan( mesh, loops, normal ), projected counterclockwise around \p normal (oriented as
+/// same as above on the float predicates of getMonotonePlan( mesh, loops, normal ), projected counterclockwise around \p normal (oriented as
 /// the triangle), which sets the sweep and left and right; the rounding, also of the crossings, can add or remove one near another point or edge,
 /// and a side edge crossing another edge is a usual pair; std::nullopt on a multiple edge
 MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal );

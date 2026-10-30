@@ -30,7 +30,7 @@ namespace PointCloudComponents
     int minSize, ProgressCallback pc = {} );
 
 /// gets all components of point cloud connected by a distance no greater than \param maxDist
-/// \detail if components number more than the maxComponentCount, they will be combined into groups of the same size 
+/// \details if components number more than the maxComponentCount, they will be combined into groups of the same size 
 /// \note be careful, if point cloud is large enough and has many components, the memory overflow will occur
 /// \param maxComponentCount should be more than 1
 /// \return pair components bitsets vector and number components in one group if components number more than maxComponentCount

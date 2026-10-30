@@ -27,7 +27,6 @@ public:
 
     /// (re)initialize Laplacian for the region being deformed, here region properties are remembered and precomputed;
     /// \param freeVerts must not include all vertices of a mesh connected component;
-    /// \param usePoints is not nullptr, then these points will be used instead of passed to a constructor for weights computation and shape memory
     void init( const VertBitSet & freeVerts, EdgeWeights weights, VertexMass vmass = VertexMass::Unit, RememberShape rem = RememberShape::Yes )
         { initFromPoints( points_, freeVerts, weights, vmass, rem ); }
 

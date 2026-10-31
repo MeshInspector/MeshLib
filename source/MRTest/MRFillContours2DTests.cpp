@@ -347,7 +347,7 @@ TEST( MRMesh, cutMeshAlongBoundaryFillsSpikedHoles )
         }
     }
 
-    cutMesh( mesh, { *contour }, { .forceFill = true } );
+    cutMesh( mesh, { *contour }, { .forceFillMode = CutMeshParameters::ForceFill::All } );
     EXPECT_TRUE( mesh.topology.checkValidity() );
     EXPECT_EQ( mesh.topology.findNumHoles(), 1 );
 }

@@ -307,7 +307,8 @@ IF(NOT MR_EMSCRIPTEN)
     add_subdirectory(${PROJECT_SOURCE_DIR}/MREmbeddedPython ./MREmbeddedPython)
 
     IF(MESHLIB_BUILD_PYTHON_MODULES)
-      add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshnumpy ./mrmeshnumpy)
+      # pure Python over mrmeshpy, which scripts/mrbind/generate.mk builds and copies it next to
+      install(FILES ${PROJECT_SOURCE_DIR}/mrmeshnumpy/mrmeshnumpy.py ${PROJECT_SOURCE_DIR}/mrmeshnumpy/mrmeshnumpy.pyi DESTINATION "${MR_PY_LIB_DIR}")
       IF(MESHLIB_BUILD_MRVIEWER)
         add_subdirectory(${PROJECT_SOURCE_DIR}/mrviewerpy ./mrviewerpy)
       ENDIF()

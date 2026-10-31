@@ -31,3 +31,12 @@ LIB_DIR = {
     'Windows': SOURCE_DIR / "source" / WIN_ARCH / "Release",
 }[SYSTEM]
 LIB_DIR_MESHLIB = LIB_DIR / "meshlib"
+
+# modules written in Python, not compiled; their stubs are written by hand, next to them
+PYTHON_SOURCE_MODULES = [
+    "mrmeshnumpy",
+]
+
+
+def module_file_name(module):
+    return f"{module}.py" if module in PYTHON_SOURCE_MODULES else f"{module}{LIB_EXTENSION}"

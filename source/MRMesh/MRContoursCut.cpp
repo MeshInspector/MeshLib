@@ -530,18 +530,19 @@ FaceHoles makeFaceHoles( MeshTopology& topology, const Vector<CutFace>& faces, c
     FaceHoles res{ Vector<EdgePath>( faces.size() ), Vector<EdgeLoops>( faces.size() ), BitSet( faces.size() ) };
     for ( int i = 0; i < preRes.paths.size(); ++i )
     {
-        // the contour point at the origin of path edge j: the pieces of an edge split at crossings share it (see insertCrossings)
+        // pk is the contour point at the origin of path edge j: j until insertCrossings splits edges, whose pieces then share it;
+        // a path edge is invalid where doPreCutMesh found no old edge, and is in no face then
         for ( int j = 0, k = 0; j < preRes.paths[i].size(); ++j )
         {
+            const auto e = preRes.paths[i][j];
             const auto pk = k;
-            if ( topology.dest( preRes.paths[i][j] ) < exact.firstCrossing )
+            if ( exact.crossings.empty() || !e || topology.dest( e ) < exact.firstCrossing )
                 ++k;
             const auto f = preRes.oldEdgesInfo[i][j].left;
             const auto it = std::lower_bound( faces.begin(), faces.end(), f, [] ( const CutFace& cf, FaceId g ) { return cf.f < g; } );
             if ( it == faces.end() || it->f != f )
                 continue;
             auto& edges = res.edges[it - faces.begin()];
-            const auto e = preRes.paths[i][j];
             edges.push_back( e );
             if ( e.undirected() >= firstNewEdge ) // a new edge is inside the face, while an old one has it on the left only
                 edges.push_back( e.sym() );
@@ -626,7 +627,7 @@ void connectLoneContours( Mesh& mesh, const Vector<CutFace>& loneFaces, const Pr
     addMonotoneChords( mesh, loneFaces, holes.loops, holes.removedHere, exact, new2OldEdgeMap, badFaces );
 }
 
-// splits both edges of every crossing at a new vertex, in the order that findCrossings gives (along every edge), as MeshTopology::splitEdge does;
+// splits both edges (without faces) of every crossing at one new vertex shared by them, in the order that findCrossings gives (along every edge);
 // adds the pieces of every split edge to `pieces` in the order along the edge, the last one keeping the id of the edge
 void splitCrossings( Mesh& mesh, const Vector<EdgePair>& crossings, FaceId oldFace, HashMap<UndirectedEdgeId, EdgePath>& pieces,
     NewEdgesMap* new2OldEdgeMap )

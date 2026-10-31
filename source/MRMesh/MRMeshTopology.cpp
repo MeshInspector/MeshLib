@@ -1022,6 +1022,22 @@ void MeshTopology::deleteFace( FaceId f, const UndirectedEdgeBitSet * keepEdges 
     }
 }
 
+void MeshTopology::deleteFacesKeepEdges( const FaceBitSet & fs )
+{
+    BitSetParallelFor( fs, [&]( FaceId f )
+    {
+        assert( edgePerFace_[f].valid() );
+        setLeft_( edgePerFace_[f], FaceId{} );
+        edgePerFace_[f] = EdgeId{};
+    } );
+    if ( updateValids_ )
+    {
+        assert( fs.is_subset_of( validFaces_ ) );
+        validFaces_ -= fs;
+        numValidFaces_ -= int( fs.count() );
+    }
+}
+
 auto MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges ) -> VacantElements
 {
     MR_TIMER;

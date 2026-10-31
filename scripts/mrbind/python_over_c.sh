@@ -67,6 +67,10 @@ GEN_FLAGS+=(
 if [[ $OS != macos ]]; then
     GEN_FLAGS+=(--adjust-alias-name "\\bphmap::Hash<${SIZE_T}>" 'phmap::Hash<uint64_t>')
 fi
+# The description comes from Linux, where the `size_t` literals are `0ul`.
+if [[ $OS == windows ]]; then
+    GEN_FLAGS+=(--adjust-alias-name '\b([0-9]+)ul\b' '$1ull')
+fi
 # `typeid()` expands the alias templates and `int32_t`, and spells the default template arguments.
 GEN_FLAGS+=(
     --adjust-typeid-name '\bMR::VoxelValueGetter<([^<>]*)>' 'std::function<$1(MR::Vector3<int> const &)>'

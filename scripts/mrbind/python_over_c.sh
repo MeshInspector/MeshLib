@@ -46,27 +46,43 @@ GEN_FLAGS=(
     --adjust-typeid-name '(^|[^:A-Za-z0-9_])expected<' '$1tl::expected<'
 )
 # The pybind11 target names the types after the demangled `typeid()`, which spells the integer typedefs as their
-#   underlying types (but not in the aliases, those are spelled as written); its build is parsed without the `size_t`
-#   support, so its docs spell them too.
+#   underlying types; its build is parsed without the `size_t` support, so its docs and most of its aliases spell them too.
 case $OS in
     linux) INTS=('size_t|uint64_t' 'unsigned long' 'ptrdiff_t|int64_t' 'long') ;;
     macos) INTS=('size_t' 'unsigned long' 'uint64_t' 'unsigned long long' 'ptrdiff_t' 'long' 'int64_t' 'long long') ;;
     windows) INTS=('size_t|uint64_t' 'unsigned long long' 'ptrdiff_t|int64_t' 'long long') ;;
 esac
 for ((i = 0; i < ${#INTS[@]}; i += 2)); do
-    GEN_FLAGS+=(--adjust-type-name "\\b(std::)?(${INTS[i]})\\b" "${INTS[i + 1]}" --adjust-doc-name "\\b(std::)?(${INTS[i]})\\b" "${INTS[i + 1]}")
+    GEN_FLAGS+=(--adjust-name "\\b(std::)?(${INTS[i]})\\b" "${INTS[i + 1]}" --adjust-doc-name "\\b(std::)?(${INTS[i]})\\b" "${INTS[i + 1]}")
 done
-# `typeid()` expands the alias templates, and spells the default template arguments.
-GEN_FLAGS+=(--adjust-typeid-name '\bMR::VoxelValueGetter<([^<>]*)>' 'std::function<$1(MR::Vector3<int> const &)>')
+# The aliases that keep `size_t` (and `uint64_t`) as written.
+SIZE_T="${INTS[1]}"
+GEN_FLAGS+=(
+    --adjust-alias-name "^HashMap<${SIZE_T}, ${SIZE_T}>\$" 'HashMap<size_t, size_t>'
+    --adjust-alias-name "^std::vector<${SIZE_T}>\$" 'std::vector<size_t>'
+    --adjust-alias-name "^std::vector<std::pair<${SIZE_T}, ${SIZE_T}>>\$" 'std::vector<std::pair<size_t, size_t>>'
+    --adjust-alias-name "\\b${SIZE_T}\\(" 'size_t('
+)
+if [[ $OS != macos ]]; then
+    GEN_FLAGS+=(--adjust-alias-name "\\bphmap::Hash<${SIZE_T}>" 'phmap::Hash<uint64_t>')
+fi
+# `typeid()` expands the alias templates and `int32_t`, and spells the default template arguments.
+GEN_FLAGS+=(
+    --adjust-typeid-name '\bMR::VoxelValueGetter<([^<>]*)>' 'std::function<$1(MR::Vector3<int> const &)>'
+    --adjust-typeid-name '\b(std::)?int32_t\b' 'int'
+)
 if [[ $OS != windows ]]; then
     # How the Itanium demangler spells these: the size of a nested `std::array` and the other `size_t` template arguments
-    #   as `3ul`, and `int32_t` expanded.
+    #   as `3ul`.
     GEN_FLAGS+=(
         --adjust-typeid-name '([<,] ?std::array<[^<>]*(?:<[^<>]*(?:<[^<>]*>)?[^<>]*>)?[^<>]*), ([0-9]+)>' '$1, $2ul>'
         --adjust-typeid-name '([<,] ?MR::Polynomial<[^<>,]+, )([0-9]+)>' '$1$2ul>'
         --adjust-typeid-name '([<,] ?MR::Vector<[^<>,]+)>' '$1, unsigned long>'
-        --adjust-typeid-name '\b(std::)?int32_t\b' 'int'
     )
+    # libc++ has `std::filesystem` in an inline namespace.
+    if [[ $OS == macos ]]; then
+        GEN_FLAGS+=(--adjust-typeid-name '\bstd::filesystem::path\b' 'std::__fs::filesystem::path')
+    fi
 else
     # How MSVC spells these: the calling convention of the function types.
     GEN_FLAGS+=(

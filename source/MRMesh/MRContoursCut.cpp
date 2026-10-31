@@ -677,7 +677,7 @@ void insertPieces( PreCutResult& preRes, const HashMap<UndirectedEdgeId, EdgePat
     for ( int i = 0; i < preRes.paths.size(); ++i )
     {
         auto& path = preRes.paths[i];
-        if ( std::none_of( path.begin(), path.end(), [&] ( EdgeId e ) { return pieces.contains( e.undirected() ); } ) )
+        if ( std::none_of( path.begin(), path.end(), [&] ( EdgeId e ) { return e && pieces.contains( e.undirected() ); } ) )
             continue;
         auto& oldEdgesInfo = preRes.oldEdgesInfo[i];
         EdgePath newPath;
@@ -685,7 +685,7 @@ void insertPieces( PreCutResult& preRes, const HashMap<UndirectedEdgeId, EdgePat
         for ( int j = 0; j < path.size(); ++j )
         {
             const auto e = path[j];
-            const auto it = pieces.find( e.undirected() );
+            const auto it = e ? pieces.find( e.undirected() ) : pieces.end();
             if ( it == pieces.end() )
                 newPath.push_back( e );
             else if ( it->second.back() == e ) // the pieces go along the last one, which keeps the id of the edge

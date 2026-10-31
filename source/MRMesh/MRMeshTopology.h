@@ -29,6 +29,10 @@ public:
     /// creates an edge not associated with any vertex or face
     [[nodiscard]] MRMESH_API EdgeId makeEdge();
 
+    /// creates given number of edges not associated with any vertex or face (in parallel if there are many),
+    /// returns the first of them; edge i is the first + 2 * i, the same as from makeEdge() called num times
+    [[nodiscard]] MRMESH_API EdgeId makeEdges( int num );
+
     /// checks whether the edge is disconnected from all other edges and disassociated from all vertices and faces (as if after makeEdge)
     [[nodiscard]] MRMESH_API bool isLoneEdge( EdgeId a ) const;
 

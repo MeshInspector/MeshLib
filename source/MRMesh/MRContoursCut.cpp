@@ -143,6 +143,20 @@ PreciseCutPoint preciseCutPoint( const Mesh& mesh, const OneMeshContours& contou
     return res;
 }
 
+// whether path edge i of the contour (from intersection i to i + 1) is a new edge: neither an edge of the old mesh,
+// nor the same edge as another path edge where the contour touches a point from a mesh vertex and goes back
+bool isNewPathEdge( const OneMeshContourView& contour, int i )
+{
+    const auto& inters = contour.intersections;
+    const auto vert = inters[i].vert();
+    const auto nextVert = inters[i + 1].vert();
+    if ( vert && nextVert )
+        return false;
+    if ( !vert && nextVert && i > 0 && inters[i - 1].vert() == nextVert )
+        return false;
+    return !( vert && contour.closed && i + 2 == inters.size() && inters[1].samePrimitive( inters[i] ) );
+}
+
 PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const SortIntersectionsData* sortData )
 {
     MR_TIMER;
@@ -289,6 +303,12 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
         const auto& inContour = contours[contourId].intersections;
         if ( inContour.size() < 2 )
             continue;
+        // the new path edges of the contour at once, taken in the order makeEdge() would make them
+        int newPathEdges = 0;
+        for ( int i = 0; i + 1 < inContour.size(); ++i )
+            if ( isNewPathEdge( contours[contourId], i ) )
+                ++newPathEdges;
+        auto newEdge = topology.makeEdges( newPathEdges );
         const auto* faces = res.oldEdgesInfo.data() + contours.offsets[contourId];
         auto& path = res.paths[contourId];
         path.resize( inContour.size() - 1 );
@@ -303,15 +323,17 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
             if ( i + 1 < inContour.size() )
             {
                 const auto nextVert = inContour[i + 1].vert();
-                const auto prevVert = i > 0 ? inContour[i - 1].vert() : VertId{};
                 if ( vert && nextVert )
                     out = topology.findEdge( vert, nextVert );
-                else if ( !vert && nextVert && prevVert == nextVert )
+                else if ( isNewPathEdge( contours[contourId], i ) )
+                {
+                    out = newEdge;
+                    newEdge += 2;
+                }
+                else if ( !vert )
                     out = in; // the contour touches this point from a mesh vertex and goes back along the same edge
-                else if ( vert && closed && i + 2 == inContour.size() && inContour[1].samePrimitive( inter ) )
-                    out = path.front().sym(); // the same at the first point of a closed contour (out == in for x, v, x)
                 else
-                    out = topology.makeEdge();
+                    out = path.front().sym(); // the same at the first point of a closed contour (out == in for x, v, x)
                 path[i] = out;
             }
             if ( vert )

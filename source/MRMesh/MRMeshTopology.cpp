@@ -76,6 +76,27 @@ EdgeId MeshTopology::makeEdge()
     return he0;
 }
 
+EdgeId MeshTopology::makeEdges( int num )
+{
+    assert( num >= 0 );
+    assert( edges_.size() % 2 == 0 );
+    const EdgeId first( int( edges_.size() ) );
+    edges_.resizeNoInit( edges_.size() + 2 * size_t( num ) );
+    auto init = [&] ( EdgeId e )
+    {
+        auto& r = edges_[e];
+        r.next = r.prev = e;
+        r.org = {};
+        r.left = {};
+    };
+    if ( num < 8192 )
+        for ( auto e = first; e < edges_.endId(); ++e )
+            init( e );
+    else
+        ParallelFor( first, edges_.endId(), init );
+    return first;
+}
+
 bool MeshTopology::isLoneEdge( EdgeId a ) const
 {
     assert( a.valid() );

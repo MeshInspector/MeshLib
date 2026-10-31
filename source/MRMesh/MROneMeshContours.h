@@ -96,7 +96,7 @@ struct OneMeshContours
     [[nodiscard]] size_t size() const { return offsets.size() - 1; }
     [[nodiscard]] bool empty() const { return offsets.size() == 1; }
     [[nodiscard]] MR_BIND_IGNORE OneMeshContourView operator[]( size_t c ) const
-        { return { { intersections.data() + offsets[c], intersections.data() + offsets[c + 1] }, closed.test( c ) }; }
+        { return { { intersections.data() + offsets[c], size_t( offsets[c + 1] - offsets[c] ) }, closed.test( c ) }; }
     [[nodiscard]] const OneMeshIntersection& intersection( size_t c, size_t i ) const { return intersections[offsets[c] + i]; }
 
 // not in the bindings: they would get an iterator over the views, which they lack (MR_BIND_IGNORE does not stop pybind11 from that)

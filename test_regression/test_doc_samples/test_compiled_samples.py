@@ -86,6 +86,11 @@ def printed_numbers(text: str):
     return [float(x) for x in NUMBER.findall(text)]
 
 
+def shown(text: str):
+    """The text escaped to ASCII, since the console of a CI job may not print the `\u00b1` of some examples."""
+    return text.encode("ascii", "backslashreplace").decode()
+
+
 def prepare_inputs(case: dict, run_dir: Path):
     for name, source in case.get("inputs", {}).items():
         target = run_dir / name
@@ -103,8 +108,8 @@ def run_example(name: str, lang: str, cmd: str, case: dict, run_dir: Path):
     argv = shlex.split(cmd.replace("{name}", name), posix=os.name != "nt") + case.get("args", [])  # keeps Windows backslashes
     res = subprocess.run(argv, cwd=run_dir, capture_output=True, text=True, encoding="utf-8", errors="replace",
                          timeout=600)
-    print(f"--- {lang}: {' '.join(argv)}\n{res.stdout}{res.stderr}")
-    assert res.returncode == 0, f"{lang} {name} exited with {res.returncode}:\n{res.stderr}"
+    print(shown(f"--- {lang}: {' '.join(argv)}\n{res.stdout}{res.stderr}"))
+    assert res.returncode == 0, shown(f"{lang} {name} exited with {res.returncode}:\n{res.stderr}")
     for out in case.get("outputs", []) + case.get("points", []):
         assert (run_dir / out).is_file(), f"{lang} {name} did not write {out}"
     return res.stdout
@@ -140,7 +145,7 @@ def test_compiled_doc_example(tmp_path, name, doc_example_cmds):
             numbers = printed_numbers(stdout)
             assert len(numbers) == len(base_numbers) and all(
                 math.isclose(a, b, rel_tol=1e-3, abs_tol=1e-5) for a, b in zip(numbers, base_numbers)), \
-                f"{lang} {name} printed other numbers than {base}:\n{stdout}\n{base}:\n{base_stdout}"
+                shown(f"{lang} {name} printed other numbers than {base}:\n{stdout}\n{base}:\n{base_stdout}")
             for out in case.get("outputs", []):
                 mesh, base_mesh = mrmeshpy.loadMesh(run_dir / out), mrmeshpy.loadMesh(base_dir / out)
                 if mesh != base_mesh:

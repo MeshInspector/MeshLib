@@ -633,39 +633,34 @@ void splitCrossings( Mesh& mesh, const Vector<EdgePair>& crossings, FaceId oldFa
     NewEdgesMap* new2OldEdgeMap )
 {
     auto& tp = mesh.topology;
-    const VertId firstNewVert( tp.vertSize() );
-    // in the middle of the closest points of the edges, before the edges change
+    // the points of the new vertices, which splitEdge adds in this order: in the middle of the closest points of the edges, before they change
+    VertId v( tp.vertSize() );
     for ( const auto& [a, b] : crossings )
     {
         const auto cp = findTwoLineSegmClosestPoints( LineSegm3d( mesh.edgeSegment( a ) ), LineSegm3d( mesh.edgeSegment( b ) ) );
-        mesh.addPoint( Vector3f( 0.5 * ( cp.a + cp.b ) ) );
+        mesh.points.autoResizeAt( v++ ) = Vector3f( 0.5 * ( cp.a + cp.b ) );
     }
 
-    for ( int i = 0; i < crossings.size(); ++i )
+    for ( const auto& [lower, upper] : crossings )
     {
-        // around the new vertex counterclockwise: the upper edge to its destination, the lower edge to its destination,
-        // the upper edge to its origin, the lower edge to its origin
-        std::array<EdgeId, 4> ring{ crossings[i].second, crossings[i].first };
-        for ( int j = 0; j < 2; ++j )
+        assert( !tp.isInnerOrBdEdge( lower ) && !tp.isInnerOrBdEdge( upper ) );
+        // the lower edge leaves its origin to a new piece, and both go in between the pieces of the upper edge at the new vertex: counterclockwise,
+        // the upper edge to its destination, the lower edge to its destination, the upper edge to its origin, the lower edge to its origin
+        const EdgeId upperPiece = tp.splitEdge( upper );
+        const EdgeId lowerPiece = tp.makeEdge();
+        tp.splice( lower, lowerPiece );
+        tp.splice( tp.prev( lower ), lower );
+        tp.splice( upper, lower );
+        tp.splice( upperPiece.sym(), lowerPiece.sym() );
+        for ( auto [e, piece] : { EdgePair{ upper, upperPiece }, EdgePair{ lower, lowerPiece } } )
         {
-            const EdgeId e = ring[j];
-            assert( !tp.left( e ) && !tp.right( e ) );
-            const EdgeId piece = tp.makeEdge();
             if ( new2OldEdgeMap )
                 new2OldEdgeMap->map[piece.undirected()] = oldFace;
-            // the piece goes after the edge at its origin, and then the edge leaves it
-            tp.splice( e, piece );
-            tp.splice( tp.prev( e ), e );
-            ring[j + 2] = piece.sym();
             auto& ps = pieces[e.undirected()];
             if ( ps.empty() )
                 ps.push_back( e ); // the last piece
             ps.insert( ps.end() - 1, piece );
         }
-        tp.splice( ring[0], ring[1] );
-        tp.splice( ring[1], ring[2] );
-        tp.splice( ring[2], ring[3] );
-        tp.setOrg( ring[0], firstNewVert + i );
     }
 }
 

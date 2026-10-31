@@ -128,17 +128,14 @@ case $OS in
         ;;
 esac
 
-# The package: `mrmeshnumpy` in Python over this `mrmeshpy`, which only re-exports the public functions.
+# The package, with the same pure Python `mrmeshnumpy` as the pybind11 one.
 if [[ $OS == windows ]]; then
     # Like the `windows-only` part of the pybind11 package's `__init__.py`: `MeshLibC2.dll` and its dependencies.
     printf 'import os\nos.add_dll_directory(%s)\ndel os\n' "'$(native "$BIN_DIR")'" > "$OUT_DIR/pkg/meshlib/__init__.py"
 else
     : > "$OUT_DIR/pkg/meshlib/__init__.py"
 fi
-cp "$SCRIPT_DIR/mrmeshnumpy_over_c.py" "$OUT_DIR/pkg/meshlib/_mrmeshnumpy.py"
-cat > "$OUT_DIR/pkg/meshlib/mrmeshnumpy.py" <<'EOF'
-from ._mrmeshnumpy import *  # noqa: F401,F403
-EOF
+cp "$SCRIPT_DIR"/../../source/mrmeshnumpy/mrmeshnumpy.{py,pyi} "$OUT_DIR/pkg/meshlib/"
 
 # `mrviewerpy` over this `mrmeshpy`, if built: the `mrviewerpy_over_c` target (`MESHLIB_BUILD_PYTHON_OVER_C`).
 MODULES=(mrmeshpy mrmeshnumpy)

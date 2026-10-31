@@ -31,15 +31,15 @@ EMSCRIPTEN_BINDINGS( meshlib_contours_cut )
         .value( "Left", CutMeshParameters::FillPart::Left )
         .value( "Right", CutMeshParameters::FillPart::Right );
 
-    emscripten::enum_<CutMeshParameters::ForceCutMode>( "ForceCutMode" )
-        .value( "None", CutMeshParameters::ForceCutMode::None )
-        .value( "All", CutMeshParameters::ForceCutMode::All )
-        .value( "SplitCrossings", CutMeshParameters::ForceCutMode::SplitCrossings );
+    // SplitCrossings needs sortData, which cannot be given here
+    emscripten::enum_<CutMeshParameters::ForceFill>( "ForceFill" )
+        .value( "None", CutMeshParameters::ForceFill::None )
+        .value( "All", CutMeshParameters::ForceFill::All );
 
     emscripten::class_<CutMeshParameters>( "CutMeshParameters" )
         .constructor<>()
         .property( "fillPart", &CutMeshParameters::fillPart )
-        .property( "forceCutMode", &CutMeshParameters::forceCutMode );
+        .property( "forceFillMode", &CutMeshParameters::forceFillMode );
 
     emscripten::function( "cutMesh", +[]( std::shared_ptr<Mesh> mesh, const OneMeshContours& contours, const CutMeshParameters& params )
     {

@@ -51,14 +51,14 @@ struct CutMeshParameters
     /// basically MR::cutMesh removes all faces which contours pass through, adds new edges to topology and fills all removed parts
     ///
     /// \note Bad faces here mean faces where contours have intersections and cannot be cut and filled in a good way
-    enum class ForceCutMode
+    enum class ForceFill
     {
         None, ///< if bad faces occur, nothing is filled
         All,  ///< bad faces are filled too, but their triangulation can be bad (may have self-intersections or tunnels)
         /// as All, but with sortData the contours are first split where they cross in bad faces (see \ref CutMeshResult::resultCut);
-        /// where the split fails, as All
+        /// where the split fails, as All: e.g. in a face where a contour segment ends at a mesh vertex or an open contour ends on a side of the face
         SplitCrossings
-    } forceCutMode{ ForceCutMode::None };
+    } forceFillMode{ ForceFill::None };
 
     /// Optional output map for each new edge introduced after cut maps edge from old topology or old face
     NewEdgesMap* new2oldEdgesMap{ nullptr };
@@ -72,10 +72,10 @@ struct CutMeshResult
 {
     /// Paths of new edges on mesh, they represent same contours as input, but already cut;
     /// a contour going from a mesh vertex to a point and back has an edge followed by its sym there;
-    /// with \ref CutMeshParameters::ForceCutMode::SplitCrossings and sortData, a path also passes the vertices where its contour crosses others (or itself) in bad faces
+    /// with \ref CutMeshParameters::ForceFill::SplitCrossings and sortData, a path also passes the vertices where its contour crosses others (or itself) in bad faces
     std::vector<EdgePath> resultCut;
     /// Bitset of bad triangles - triangles where input contours have intersections and cannot be cut and filled in a good way;
-    /// under force cut, also the triangles where two segments of the contours cross (segments that follow each other along a contour
+    /// under force fill, also the triangles where two segments of the contours cross (segments that follow each other along a contour
     /// or have a common mesh vertex do not), even if their cut is valid; the triangles where that cannot be told may be reported too:
     /// where the exact predicates fail on the points of the contours that they compare (e.g. coincident contours of a double-sided sheet),
     /// or, without sortData, where the corners of the triangle are on one line and more than three points of the contours are inside it
@@ -94,7 +94,7 @@ struct CutMeshResult
   * \return New edges that correspond to given contours, find more \ref MR::CutMeshResult
   * \parblock
   * \warning Input contours should have no intersections, faces where contours intersects (`bad faces`) will not be allowed for fill,
-  * unless a force cut mode is set (see \ref CutMeshParameters::ForceCutMode)
+  * unless a force fill mode is set (see \ref CutMeshParameters::ForceFill)
   * \endparblock
   * \parblock
   * \warning Every two consecutive intersections of a contour should lie in one face, and a contour should not fold back

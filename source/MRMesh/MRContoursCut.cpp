@@ -701,8 +701,8 @@ void insertPieces( PreCutResult& preRes, const HashMap<UndirectedEdgeId, EdgePat
 }
 
 // splits the path edges inside the given faces (where contours cross, see findCrossingFaces) at new vertices shared by the crossing paths,
-// puts the pieces in the paths and the definitions of the new vertices in exact; a face where an edge of the paths crosses a side,
-// a crossing edge has a face or the predicates fail stays as it is
+// puts the pieces in the paths and the definitions of the new vertices in exact; a face where an edge of the paths crosses a side
+// or the predicates fail stays as it is
 void insertCrossings( Mesh& mesh, const Vector<CutFace>& faces, PreCutResult& preRes, UndirectedEdgeId firstNewEdge,
     ExactCutPoints& exact, NewEdgesMap* new2OldEdgeMap )
 {
@@ -727,11 +727,7 @@ void insertCrossings( Mesh& mesh, const Vector<CutFace>& faces, PreCutResult& pr
                 if ( !exact.isPointOf( cf, tp.org( e ) ) )
                     return;
         const auto tri = preciseOwnTri( cf.verts, mesh, sortData );
-        auto res = PlanarTriangulation::findCrossings( mesh, holes.loops[k], tri, [&] ( VertId v ) { return exact.point( cf, tri, v ); }, cutOf );
-        // only edges without faces are split, though none is expected to have one: the cut of a side fills a face again only before
-        // the cut of another side lets path edges into it
-        if ( res && std::none_of( res->begin(), res->end(), [&] ( const EdgePair& p ) { return tp.isInnerOrBdEdge( p.first ) || tp.isInnerOrBdEdge( p.second ); } ) )
-            crossings[k] = std::move( res );
+        crossings[k] = PlanarTriangulation::findCrossings( mesh, holes.loops[k], tri, [&] ( VertId v ) { return exact.point( cf, tri, v ); }, cutOf );
     } );
 
     HashMap<UndirectedEdgeId, EdgePath> pieces;

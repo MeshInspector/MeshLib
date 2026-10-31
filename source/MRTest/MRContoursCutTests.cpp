@@ -808,17 +808,38 @@ Mesh makeBox( const Vector2f& c, float hx, float hy, float z0, float z1 )
     return makeCube( Vector3f( 2 * hx, 2 * hy, z1 - z0 ), Vector3f( c.x - hx, c.y - hy, z0 ) );
 }
 
+// the closed prism from z0 to z1 over the quadrilateral q, which may cross itself (a bow-tie, whose sides q[0]q[1] and q[2]q[3] cross)
+Mesh makePrism( const std::array<Vector2f, 4>& q, float z0, float z1 )
+{
+    VertCoords points;
+    for ( float z : { z0, z1 } )
+        for ( const auto& p : q )
+            points.emplace_back( p.x, p.y, z );
+    Triangulation t{ { 0_v, 2_v, 1_v }, { 0_v, 3_v, 2_v }, { 4_v, 5_v, 6_v }, { 4_v, 6_v, 7_v } };
+    for ( int i = 0; i < 4; ++i )
+    {
+        const VertId a( i ), b( ( i + 1 ) % 4 );
+        t.push_back( { a, b, VertId( b + 4 ) } );
+        t.push_back( { a, VertId( b + 4 ), VertId( a + 4 ) } );
+    }
+    return Mesh::fromTriangles( std::move( points ), t );
+}
+
 // cuts the cube by its contours with the boxes (one mesh crossing itself) with the exact sorting data of the boolean, the cube as mesh A and as B;
 // checks that the forced cut finds numBadFaces bad faces, leaves no holes, and keeps the area and orientation of every face of the cube,
-// and that its closed paths meet at numCrossings new vertices, each passed by two paths or twice by one
+// that its closed paths meet at numCrossings new vertices, each passed by two paths or twice by one, and that every new edge maps to the old edge
+// it is a piece of, with the old faces of that edge on its sides, or else to the old face it is inside (as the new edges of the paths and
+// their pieces at the crossings), with that face on both sides; without sortData, nothing is split, and the cut is the one of ForceFill::All
 void checkForcedCutAtCrossings( const std::vector<Mesh>& boxes, int numBadFaces, int numCrossings )
 {
     const auto cube = makeCube( Vector3f::diagonal( 2.f ), Vector3f::diagonal( -1.f ) );
+    const auto& ctp = cube.topology;
     Mesh other;
     for ( const auto& b : boxes )
         other.addMesh( b );
     for ( bool cubeIsA : { true, false } )
     {
+        SCOPED_TRACE( cubeIsA ? "cube is A" : "cube is B" );
         const auto& a = cubeIsA ? cube : other;
         const auto& b = cubeIsA ? other : cube;
         const auto conv = getVectorConverters( a, b );
@@ -829,12 +850,14 @@ void checkForcedCutAtCrossings( const std::vector<Mesh>& boxes, int numBadFaces,
 
         Mesh cut = cube;
         FaceMap new2Old;
-        const auto res = cutMesh( cut, cubeContours, { .sortData = &sortData, .new2OldMap = &new2Old, .forceFillMode = CutMeshParameters::ForceFill::SplitCrossings } );
-        EXPECT_EQ( res.fbsWithContourIntersections.count(), numBadFaces ) << "cube is " << ( cubeIsA ? "A" : "B" );
+        NewEdgesMap new2OldEdges;
+        const auto res = cutMesh( cut, cubeContours, { .sortData = &sortData, .new2OldMap = &new2Old,
+            .forceFillMode = CutMeshParameters::ForceFill::SplitCrossings, .new2oldEdgesMap = &new2OldEdges } );
+        EXPECT_EQ( res.fbsWithContourIntersections.count(), numBadFaces );
         const auto& tp = cut.topology;
         EXPECT_TRUE( tp.checkValidity() );
         EXPECT_EQ( tp.findNumHoles(), 0 );
-        std::vector<double> areas( cube.topology.faceSize() );
+        Vector<double, FaceId> areas( ctp.faceSize() );
         for ( auto f : tp.getValidFaces() )
         {
             const auto of = new2Old[f];
@@ -842,11 +865,26 @@ void checkForcedCutAtCrossings( const std::vector<Mesh>& boxes, int numBadFaces,
             EXPECT_GE( dot( Vector3d( cut.dirDblArea( f ) ), Vector3d( cube.dirDblArea( of ) ) ), 0 );
             areas[of] += cut.dblArea( f );
         }
-        for ( auto f : cube.topology.getValidFaces() )
+        for ( auto f : ctp.getValidFaces() )
             EXPECT_NEAR( areas[f], cube.dblArea( f ), 1e-5 * cube.dblArea( f ) );
 
+        for ( auto ue = UndirectedEdgeId( ctp.undirectedEdgeSize() ); ue < UndirectedEdgeId( tp.undirectedEdgeSize() ); ++ue )
+        {
+            const auto it = new2OldEdges.map.find( ue );
+            ASSERT_NE( it, new2OldEdges.map.end() ) << "edge " << ue;
+            const EdgeId e = ue;
+            const FaceId l = new2Old[tp.left( e )], r = new2Old[tp.right( e )];
+            if ( new2OldEdges.splitEdges.test( ue ) )
+            {
+                const EdgeId oe( it->second );
+                EXPECT_TRUE( ( l == ctp.left( oe ) && r == ctp.right( oe ) ) || ( l == ctp.right( oe ) && r == ctp.left( oe ) ) ) << "edge " << ue;
+            }
+            else
+                EXPECT_TRUE( l == FaceId( it->second ) && r == l ) << "edge " << ue;
+        }
+
         ASSERT_EQ( res.resultCut.size(), cubeContours.size() );
-        std::vector<int> passes( tp.vertSize() );
+        Vector<int, VertId> passes( tp.vertSize() );
         for ( const auto& path : res.resultCut )
         {
             EXPECT_TRUE( isEdgeLoop( tp, path ) );
@@ -855,6 +893,12 @@ void checkForcedCutAtCrossings( const std::vector<Mesh>& boxes, int numBadFaces,
         }
         EXPECT_EQ( std::count( passes.begin(), passes.end(), 2 ), numCrossings );
         EXPECT_EQ( std::count_if( passes.begin(), passes.end(), [] ( int n ) { return n > 2; } ), 0 );
+
+        Mesh all = cube, split = cube;
+        const auto allBad = cutMesh( all, cubeContours, { .forceFillMode = CutMeshParameters::ForceFill::All } ).fbsWithContourIntersections;
+        EXPECT_TRUE( cutMesh( split, cubeContours, { .forceFillMode = CutMeshParameters::ForceFill::SplitCrossings } ).fbsWithContourIntersections == allBad );
+        EXPECT_TRUE( split.points == all.points );
+        EXPECT_TRUE( split.topology == all.topology );
     }
 }
 
@@ -923,22 +967,30 @@ TEST( MRMesh, CutMeshLoneContourWithCrossingContour )
 
 // two overlapping boxes poke through the top of the cube in one of its triangles, so their lone contours cross there twice;
 // the forced cut connects the two crossing islands in one, and that one with the rest of the triangle
-TEST( MRMesh, CutMeshForceFillCrossingIslands )
+TEST( MRMesh, CutMeshSplitCrossingsIslands )
 {
     checkForcedCutAtCrossings( { makeBox( { 0.6f, 0.f }, 0.1f, 0.1f, 0.5f, 1.5f ), makeBox( { 0.65f, 0.05f }, 0.1f, 0.1f, 0.45f, 1.55f ) }, 1, 2 );
 }
 
 // two long boxes across the top of the cube, along x and along y, whose contours cross twice in each triangle of the top (split by y = x),
 // where a side of the box along y crosses both sides of the other one, so both triangles are bad
-TEST( MRMesh, CutMeshForceFillCrossingContours )
+TEST( MRMesh, CutMeshSplitCrossingsContours )
 {
     checkForcedCutAtCrossings( { makeBox( { 0.f, 0.2f }, 2.f, 0.1f, 0.5f, 1.5f ), makeBox( { 0.2f, 0.f }, 0.4f, 2.f, 0.45f, 1.55f ) }, 2, 4 );
 }
 
 // a long box across the top of the cube, and a small box poking through it whose lone contour crosses the contour of the long one twice
-TEST( MRMesh, CutMeshForceFillIslandCrossingContour )
+TEST( MRMesh, CutMeshSplitCrossingsIslandAndContour )
 {
     checkForcedCutAtCrossings( { makeBox( { 0.f, 0.2f }, 2.f, 0.1f, 0.5f, 1.5f ), makeBox( { -0.6f, 0.3f }, 0.1f, 0.1f, 0.45f, 1.55f ) }, 1, 2 );
+}
+
+// a prism over a bow-tie poking through the top of the cube in one of its triangles, so its lone contour there crosses itself once,
+// and the path passes the vertex of the crossing twice
+TEST( MRMesh, CutMeshSplitCrossingsSelfCrossing )
+{
+    checkForcedCutAtCrossings( { makePrism( { Vector2f( 0.5f, -0.1f ), Vector2f( 0.72f, 0.12f ), Vector2f( 0.7f, -0.08f ), Vector2f( 0.48f, 0.1f ) },
+        0.4f, 1.5f ) }, 1, 1 );
 }
 
 TEST( MRMesh, MeshCollidePrecise )
@@ -1432,8 +1484,10 @@ namespace
 // of its last one, which are corners of the intersected triangles too), from the first one along the contour on one sheet and back along
 // its pair on the other sheet, with the edge-triangle intersections of the vertex points repeated to keep both kinds of contours aligned;
 // it asserts what selfBoolean finds or requires: the pair of every contour is the next one in the order of orderSelfIntersectionContours,
-// as findSelfContoursMapping finds it, and the fold vertices are corners of the first and the last intersected triangles
-void selfCutBadFaces( const Mesh& mesh, std::array<FaceBitSet, 2>& bad )
+// as findSelfContoursMapping finds it, and the fold vertices are corners of the first and the last intersected triangles; then it calls
+// checkCut if it is given, with these contours and sortData
+void selfCutBadFaces( const Mesh& mesh, std::array<FaceBitSet, 2>& bad,
+    const std::function<void( const OneMeshContours&, const SortIntersectionsData& )>& checkCut = {} )
 {
     const auto conv = getVectorConverters( mesh );
     auto contours = orderSelfIntersectionContours( mesh.topology, findSelfCollidingEdgeTrisPrecise( mesh, conv.toInt ) );
@@ -1474,6 +1528,24 @@ void selfCutBadFaces( const Mesh& mesh, std::array<FaceBitSet, 2>& bad )
     Mesh plain = mesh, forced = mesh;
     bad = { cutMesh( plain, inters, { .sortData = &sortData } ).fbsWithContourIntersections,
         cutMesh( forced, inters, { .sortData = &sortData, .forceFillMode = CutMeshParameters::ForceFill::All } ).fbsWithContourIntersections };
+    if ( checkCut )
+        checkCut( inters, sortData );
+}
+
+// the triangles of mesh that map to old face f, every one from its smallest vertex id, sorted
+std::vector<ThreeVertIds> trianglesFrom( const Mesh& mesh, const FaceMap& new2Old, FaceId f )
+{
+    std::vector<ThreeVertIds> res;
+    for ( auto g : mesh.topology.getValidFaces() )
+    {
+        if ( new2Old[g] != f )
+            continue;
+        auto t = mesh.topology.getTriVerts( g );
+        std::rotate( t.begin(), std::min_element( t.begin(), t.end() ), t.end() );
+        res.push_back( t );
+    }
+    std::sort( res.begin(), res.end() );
+    return res;
 }
 
 } //anonymous namespace
@@ -1483,7 +1555,9 @@ void selfCutBadFaces( const Mesh& mesh, std::array<FaceBitSet, 2>& bad )
 // before the search, has 0_v and three more points, which the search tests on the exact predicates without finding a crossing; then a box
 // through the fold next to 0_v crosses the double curve twice where 0_f and 5_f, the faces of 0_v on both sheets, cross: in each of them,
 // the contour of the box enters and leaves on one side, crossing the contour of the fold from 0_v twice, which leaves valid hole loops,
-// so that only the search reports them, while the two faces of the box there have one crossing each, which the plain cut reports already
+// so that only the search reports them, while the two faces of the box there have one crossing each, which the plain cut reports already;
+// under SplitCrossings, these two crossings are split, while 0_f and 5_f, where the contour of the fold that the box crosses ends at 0_v
+// (with no triangle of the other sheet known along it), fall back to All: the same bad faces, and the same triangles in 0_f and 5_f
 TEST( MRMesh, ForceFillCrossingsFoldVertex )
 {
     const auto spindle = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 16, 0, 0 ), Vector3f( 8, 2, 2 ), Vector3f( 8, -2, -2 ),
@@ -1498,7 +1572,22 @@ TEST( MRMesh, ForceFillCrossingsFoldVertex )
     auto mesh = spindle;
     const Vector3f sides[3] = { Vector3f( -8, 3, 0 ), Vector3f( 6, 3, 0 ), Vector3f( 0, 0, 8 ) };
     mesh.addMesh( makeParallelepiped( sides, Vector3f( 2, -0.25f, -4 ) ) );
-    ASSERT_NO_FATAL_FAILURE( selfCutBadFaces( mesh, bad ) );
+    ASSERT_NO_FATAL_FAILURE( selfCutBadFaces( mesh, bad, [&] ( const OneMeshContours& inters, const SortIntersectionsData& sortData )
+    {
+        Mesh all = mesh, split = mesh;
+        FaceMap allMap, splitMap;
+        const auto allBad = cutMesh( all, inters, { .sortData = &sortData, .new2OldMap = &allMap,
+            .forceFillMode = CutMeshParameters::ForceFill::All } ).fbsWithContourIntersections;
+        const auto splitBad = cutMesh( split, inters, { .sortData = &sortData, .new2OldMap = &splitMap,
+            .forceFillMode = CutMeshParameters::ForceFill::SplitCrossings } ).fbsWithContourIntersections;
+        EXPECT_TRUE( split.topology.checkValidity() );
+        EXPECT_TRUE( splitBad == allBad );
+        // the vertices of the crossings in the faces of the box follow those of the cut
+        ASSERT_EQ( split.points.size(), all.points.size() + 2 );
+        EXPECT_TRUE( std::equal( all.points.begin(), all.points.end(), split.points.begin() ) );
+        for ( auto f : { 0_f, 5_f } )
+            EXPECT_TRUE( trianglesFrom( split, splitMap, f ) == trianglesFrom( all, allMap, f ) ) << "face " << f;
+    } ) );
     const auto& [plain, forced] = bad;
     EXPECT_EQ( plain.count(), 2 );
     const auto added = forced - plain;

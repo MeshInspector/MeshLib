@@ -127,13 +127,6 @@ jobs:
           path: ./source/MRDotNet2/src
           retention-days: 1
 
-  generate-wasm-definitions:
-    uses: ./.github/workflows/build-test-emscripten.yml
-    with:
-      docker_image_tag: latest
-      upload_artifacts: false
-      definitions_only: true
-
   # The `CBindings` artifact comes from the shared workflow, same as in pip-build.yml and
   # build-test-distribute.yml. Generating it inside `create-stubs` doesn't work: `TARGET=c`
   # targets Emscripten, and host headers are only usable on Linux x64, so on this arm64 runner
@@ -144,7 +137,7 @@ jobs:
       docker_image_tag: latest
 
   update-dev-documentation:
-    needs: [ create-stubs, generate-wasm-definitions, generate-c-bindings ]
+    needs: [ create-stubs, generate-c-bindings ]
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: ${{ inputs.output_folder }}

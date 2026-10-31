@@ -159,7 +159,7 @@ endif
 # What target language?
 TARGET=python
 #TARGET=c
-override known_target_languages := python c csharp rust java
+override known_target_languages := python c csharp rust java js
 override TARGET := $(strip $(TARGET))
 $(if $(filter-out 1,$(words $(TARGET)))$(filter-out $(known_target_languages),$(TARGET)),$(error Wrong value of `TARGET`, must be one of: $(known_target_languages)))
 override is_py := $(filter python,$(TARGET))
@@ -167,6 +167,7 @@ override is_c := $(filter c,$(TARGET))
 override is_csharp := $(filter csharp,$(TARGET))
 override is_rust := $(filter rust,$(TARGET))
 override is_java := $(filter java,$(TARGET))
+override is_js := $(filter js,$(TARGET))
 
 
 ifeq ($(TARGET),python)
@@ -272,6 +273,7 @@ MRBIND_GEN_C_EXE = $(MRBIND_EXE)_gen_c
 MRBIND_GEN_CSHARP_EXE = $(MRBIND_EXE)_gen_csharp
 MRBIND_GEN_RUST_EXE = $(MRBIND_EXE)_gen_rust
 MRBIND_GEN_JAVA_EXE = $(MRBIND_EXE)_gen_java
+MRBIND_GEN_JS_EXE = $(MRBIND_EXE)_gen_js
 
 
 # Look for MeshLib dependencies relative to this. On Linux and macOS: `MESHLIB_THIRDPARTY_ROOT_DIR` from the environment, else `./installed` from `build_cpm_thirdparty.sh` if it exists, else the project root with `./include` and `./lib`.
@@ -600,7 +602,7 @@ endif
 
 INPUT_FILES_BLACKLIST := $(call load_file,$(makefile_dir)input_file_blacklist.txt)
 INPUT_FILES_WHITELIST := %
-ifneq ($(filter c csharp rust java,$(TARGET)),)
+ifneq ($(filter c csharp rust java js,$(TARGET)),)
 TEMP_OUTPUT_DIR := $(makefile_dir)../../source/MeshLibC2/temp
 else ifneq ($(IS_WINDOWS),)
 TEMP_OUTPUT_DIR := source/TempOutput/Bindings_$(TARGET)/$(MSVC_ARCH)/$(VS_MODE)
@@ -608,7 +610,7 @@ else
 TEMP_OUTPUT_DIR := build/binds_$(TARGET)
 endif
 
-ifeq ($(filter csharp rust java,$(TARGET)),) # Stuff below is for all languages except C#, Rust and Java. Their logic is at the bottom of this makefile.
+ifeq ($(filter csharp rust java js,$(TARGET)),) # Stuff below is for all languages except C#, Rust, Java and JS. Their logic is at the bottom of this makefile.
 
 INPUT_GLOBS := *.h
 
@@ -1276,7 +1278,7 @@ build: generate
 # The library crate itself links against nothing, but its consumers need the C libraries. The committed `build.rs` reads this variable.
 	$(if $(wildcard $(MESHLIB_SHLIB_DIR)),MESHLIB_LIB_DIR=$(call quote,$(abspath $(MESHLIB_SHLIB_DIR)))) $(RUST_LINKER_ENV) cargo build --manifest-path $(call quote,$(RUST_CODE_OUTPUT_DIR)/Cargo.toml)
 
-else # If Java:
+else ifeq ($(TARGET),java) # If Java:
 
 # Java needs almost none of the logic in this file, just one simple rule.
 
@@ -1312,5 +1314,35 @@ build: generate
 	rm -rf $(call quote,$(JAVA_CODE_OUTPUT_DIR)/classes)
 	$(call quote,$(JAVAC)) -J-Xmx2g --release 22 -Xlint:all -Werror -d $(call quote,$(JAVA_CODE_OUTPUT_DIR)/classes) @$(call quote,$(JAVA_CODE_OUTPUT_DIR)/sources.txt)
 	$(call quote,$(JAR)) --create --file $(call quote,$(JAVA_CODE_OUTPUT_DIR)/meshlib.jar) -C $(call quote,$(JAVA_CODE_OUTPUT_DIR)/classes) .
+
+else # If JS:
+
+# JS needs almost none of the logic in this file, just one simple rule. There's nothing to compile: the ES modules are generated into `js`,
+# and the wasm module they import (`js/MeshLibC2.mjs`) is built by CMake with `-DMESHLIB_BUILD_JS_BINDINGS=ON`, from the C bindings.
+# The C bindings must be generated with `C_FOR_WASM=1` (or on a platform with 32-bit `long`), since the JS targets wasm32.
+
+JS_CODE_OUTPUT_DIR := $(makefile_dir)../../source/MeshLibJS
+
+JS_INPUT_JSON := $(TEMP_OUTPUT_DIR)/interop_desc.json
+
+# `JS_WASM64=1` generates the variant for the modules linked with `-sMEMORY64` (64-bit pointers), into `js64` instead of `js`.
+JS_WASM64 := 0
+override JS_WASM64 := $(filter-out 0,$(JS_WASM64))
+
+.PHONY: generate
+generate:
+	$(strip $(MRBIND_GEN_JS_EXE) \
+		--input-json $(call quote,$(JS_INPUT_JSON)) \
+		--output-dir $(call quote,$(JS_CODE_OUTPUT_DIR)/js$(if $(JS_WASM64),64)) \
+		--clean-output-dir \
+		--wasm-module ./MeshLibC2.mjs \
+		--wasm-module-node ./MeshLibC2.node.mjs \
+		--replace-namespace MR :: \
+		$(if $(JS_WASM64),--wasm64) \
+	)
+
+.DEFAULT_GOAL := build
+.PHONY: build
+build: generate
 
 endif

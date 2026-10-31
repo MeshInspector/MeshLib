@@ -1,27 +1,27 @@
-import createMeshLib from '@meshinspector/meshlib';
+import * as ml from '@meshinspector/meshlib';
 
-const ml = await createMeshLib();
+await ml.init();
 
 // Load mesh
 using mesh = ml.MeshLoad.fromAnySupportedFormat('mesh.stl');
 
-// Construct the deformer on the mesh (the JS binding takes the mesh directly)
-using ffDeformer = new ml.FreeFormDeformer(mesh);
-
 // Compute mesh bounding box
 using box = mesh.computeBoundingBox();
 
+// Construct the deformer on the mesh vertices (it references the mesh, which is declared first so it outlives the deformer)
+using ffDeformer = new ml.FreeFormDeformer(mesh.points, mesh.topology.getValidVerts());
+
 // Init deformer with a 3x3x3 grid on the mesh box
-ffDeformer.init({ x: 3, y: 3, z: 3 }, box);
+ffDeformer.init(ml.Vector3i.diagonal(3), box);
 
 // Move some control points of the grid to the center
 const center = box.center();
-ffDeformer.setRefGridPointPosition({ x: 1, y: 1, z: 0 }, center);
-ffDeformer.setRefGridPointPosition({ x: 1, y: 1, z: 2 }, center);
-ffDeformer.setRefGridPointPosition({ x: 0, y: 1, z: 1 }, center);
-ffDeformer.setRefGridPointPosition({ x: 2, y: 1, z: 1 }, center);
-ffDeformer.setRefGridPointPosition({ x: 1, y: 0, z: 1 }, center);
-ffDeformer.setRefGridPointPosition({ x: 1, y: 2, z: 1 }, center);
+ffDeformer.setRefGridPointPosition(new ml.Vector3i(1, 1, 0), center);
+ffDeformer.setRefGridPointPosition(new ml.Vector3i(1, 1, 2), center);
+ffDeformer.setRefGridPointPosition(new ml.Vector3i(0, 1, 1), center);
+ffDeformer.setRefGridPointPosition(new ml.Vector3i(2, 1, 1), center);
+ffDeformer.setRefGridPointPosition(new ml.Vector3i(1, 0, 1), center);
+ffDeformer.setRefGridPointPosition(new ml.Vector3i(1, 2, 1), center);
 
 // Apply the deformation to the mesh vertices
 ffDeformer.apply();

@@ -1,24 +1,31 @@
-import createMeshLib from '@meshinspector/meshlib';
+import * as ml from '@meshinspector/meshlib';
 
-const ml = await createMeshLib();
+await ml.init();
 
+// Load mesh
 using mesh = ml.MeshLoad.fromAnySupportedFormat('mesh.stl');
 
-// select the faces to extrude
-using facesToExtrude = ml.FaceBitSet.fromIndices(new Uint32Array([1, 2]));
+// Prepare region to extrude
+using facesToExtrude = new ml.FaceBitSet();
+facesToExtrude.resize(3, false);
+facesToExtrude.set(new ml.FaceId(1), true);
+facesToExtrude.set(new ml.FaceId(2), true);
 
-// create duplicated vertices along the region boundary
+// Create duplicated verts on region boundary
 ml.makeDegenerateBandAroundRegion(mesh, facesToExtrude);
 
-// find the vertices to move and shift them along +Z
-using topology = mesh.topology;
-using vertsForMove = ml.getIncidentVertsFromFaces(topology, facesToExtrude);
-using coords = mesh.points;
-for (const v of vertsForMove.toIndices())
-  coords.set(v, ml.Vector3.add(coords.get(v), ml.Vector3.plusZ()));
-mesh.points = coords;
+// Find vertices that will be moved
+using vertsForMove = ml.getIncidentVerts(mesh.topology, facesToExtrude);
 
-// invalidate internal caches after the manual vertex changes
+// Move each vertex (the points are accessed in place)
+for (let v = 0; v < vertsForMove.size(); ++v) {
+  const id = new ml.VertId(v);
+  if (vertsForMove.test(id))
+    mesh.points.index_mut(id).z += 1.0;
+}
+
+// Invalidate internal caches after manual changing
 mesh.invalidateCaches();
 
+// Save mesh
 ml.MeshSave.toAnySupportedFormat(mesh, 'extrudedMesh.stl');

@@ -451,7 +451,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
             cmParams.sortData = &*dataForA;
             cmParams.new2OldMap = cut2oldAPtr;
             if ( params.forceCut )
-                cmParams.forceFill = true;
+                cmParams.forceFillMode = CutMeshParameters::ForceFill::All;
             else
                 cmParams.fillPart = needInsideA ? CutMeshParameters::FillPart::Left : CutMeshParameters::FillPart::Right;
             auto res = cutMesh( meshA, meshAContours, cmParams );
@@ -471,7 +471,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         cmParams.sortData = &*dataForB;
         cmParams.new2OldMap = cut2oldBPtr;
         if ( params.forceCut )
-            cmParams.forceFill = true;
+            cmParams.forceFillMode = CutMeshParameters::ForceFill::All;
         else
             cmParams.fillPart = needInsideB ? CutMeshParameters::FillPart::Right : CutMeshParameters::FillPart::Left;
         auto res = cutMesh( meshB, meshBContours, cmParams );

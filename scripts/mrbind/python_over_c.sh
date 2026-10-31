@@ -46,20 +46,32 @@ GEN_FLAGS=(
     --adjust-typeid-name '(^|[^:A-Za-z0-9_])expected<' '$1tl::expected<'
 )
 # The pybind11 target names the types after the demangled `typeid()`, which spells the integer typedefs as their
-#   underlying types; its build is parsed without the `size_t` support, so its docs spell them too.
+#   underlying types (but not in the aliases, those are spelled as written); its build is parsed without the `size_t`
+#   support, so its docs spell them too.
 case $OS in
     linux) INTS=('size_t|uint64_t' 'unsigned long' 'ptrdiff_t|int64_t' 'long') ;;
     macos) INTS=('size_t' 'unsigned long' 'uint64_t' 'unsigned long long' 'ptrdiff_t' 'long' 'int64_t' 'long long') ;;
     windows) INTS=('size_t|uint64_t' 'unsigned long long' 'ptrdiff_t|int64_t' 'long long') ;;
 esac
 for ((i = 0; i < ${#INTS[@]}; i += 2)); do
-    GEN_FLAGS+=(--adjust-name "\\b(std::)?(${INTS[i]})\\b" "${INTS[i + 1]}" --adjust-doc-name "\\b(std::)?(${INTS[i]})\\b" "${INTS[i + 1]}")
+    GEN_FLAGS+=(--adjust-type-name "\\b(std::)?(${INTS[i]})\\b" "${INTS[i + 1]}" --adjust-doc-name "\\b(std::)?(${INTS[i]})\\b" "${INTS[i + 1]}")
 done
+# `typeid()` expands the alias templates, and spells the default template arguments.
+GEN_FLAGS+=(--adjust-typeid-name '\bMR::VoxelValueGetter<([^<>]*)>' 'std::function<$1(MR::Vector3<int> const &)>')
 if [[ $OS != windows ]]; then
-    # How the Itanium demangler spells these: the size of a nested `std::array` as `3ul`, and `int32_t` expanded.
+    # How the Itanium demangler spells these: the size of a nested `std::array` and the other `size_t` template arguments
+    #   as `3ul`, and `int32_t` expanded.
     GEN_FLAGS+=(
         --adjust-typeid-name '([<,] ?std::array<[^<>]*(?:<[^<>]*(?:<[^<>]*>)?[^<>]*>)?[^<>]*), ([0-9]+)>' '$1, $2ul>'
+        --adjust-typeid-name '([<,] ?MR::Polynomial<[^<>,]+, )([0-9]+)>' '$1$2ul>'
+        --adjust-typeid-name '([<,] ?MR::Vector<[^<>,]+)>' '$1, unsigned long>'
         --adjust-typeid-name '\b(std::)?int32_t\b' 'int'
+    )
+else
+    # How MSVC spells these: the calling convention of the function types.
+    GEN_FLAGS+=(
+        --adjust-typeid-name '([<,] ?MR::Vector<[^<>,]+)>' '$1, unsigned long long>'
+        --adjust-typeid-name '([<,] ?std::function<[^()<>]*)\(' '$1 __cdecl('
     )
 fi
 

@@ -19,7 +19,7 @@ fastmcpp
 freetype
 gdcm
 glad
-glfw3
+glfw3[wayland]
 gtest
 hidapi
 jsoncpp

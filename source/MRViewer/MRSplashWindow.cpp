@@ -200,11 +200,27 @@ void DefaultSplashWindow::positioning_( float )
     int workAreaX = 0, workAreaY = 0, workAreaW = 0, workAreaH = 0;
     glfwGetMonitorWorkarea( pMonitor, &workAreaX, &workAreaY, &workAreaW, &workAreaH );
 
+    bool wayland = false;
+#if defined( MRVIEWER_EXPERIMENTAL_WAYLAND_SUPPORT ) && defined( __linux__ )
+    wayland = glfwGetPlatform() == GLFW_PLATFORM_WAYLAND;
+    if ( wayland )
+    {
+        // GLFW reports the Wayland work area in pixels, while window sizes are in screen coordinates
+        float xscale = 1, yscale = 1;
+        glfwGetMonitorContentScale( pMonitor, &xscale, &yscale );
+        workAreaW = int( float( workAreaW ) / xscale );
+        workAreaH = int( float( workAreaH ) / yscale );
+    }
+#endif
+
     int width = std::min( int( 0.6f * float( workAreaW ) ), splashImage_->getImageWidth() );
     int height = int( float( width ) * float( splashImage_->getImageHeight() ) / float( splashImage_->getImageWidth() ) );
 
 
     glfwSetWindowSize( window_, width, height );
+
+    if ( wayland )
+        return; // Wayland does not let a client position its window
 
     int frameLeft = 0, frameTop = 0;
     glfwGetWindowFrameSize(

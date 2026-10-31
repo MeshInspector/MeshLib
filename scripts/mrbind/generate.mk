@@ -1141,6 +1141,12 @@ ifeq ($(FOR_WHEEL),) # If not on building a wheel, strip the wheel-only part.
 endif
 override all_outputs += $(INIT_SCRIPT)
 
+# `mrmeshnumpy` is pure Python over `mrmeshpy`, with a hand-written stub.
+NUMPY_SCRIPTS := $(addprefix $(MODULE_OUTPUT_DIR)/mrmeshnumpy,.py .pyi)
+$(NUMPY_SCRIPTS): $(MODULE_OUTPUT_DIR)/%: $(makefile_dir)../../source/mrmeshnumpy/% | $(MODULE_OUTPUT_DIR)
+	@cp $< $@
+override all_outputs += $(NUMPY_SCRIPTS)
+
 # Copying modules next to the exe on Windows.
 # I don't think this is actually needed, since we erase them when creating the installer.
 # That was originally done because it's hard to make VS build them directly in the correct directory,

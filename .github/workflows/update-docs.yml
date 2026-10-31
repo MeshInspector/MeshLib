@@ -93,6 +93,20 @@ jobs:
           name: WasmBindingsDts
           path: MeshLib/scripts/npm/meshlib
 
+      - name: Download Rust bindings
+        uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: RustBindings
+          path: MeshLib/RustBindings
+
+      - name: Download Java bindings
+        uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: JavaBindings
+          path: MeshLib/JavaBindings
+
       - name: Check for bindings
         id: check_bindings
         run: |
@@ -110,6 +124,14 @@ jobs:
           fi
           if [ ! -f MeshLib/scripts/npm/meshlib/index.d.mts ]; then
             echo "Failed to get Wasm definitions, aborting"
+            exit 0
+          fi
+          if [ ! -f MeshLib/RustBindings/lib.rs ]; then
+            echo "Failed to get Rust bindings, aborting"
+            exit 0
+          fi
+          if [ ! -d MeshLib/JavaBindings/src ]; then
+            echo "Failed to get Java bindings, aborting"
             exit 0
           fi
           # The declarations are now the generated `index.d.mts` + `lib/*.d.mts` (`export declare class`), not the Embind `bindings.d.mts`.

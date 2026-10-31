@@ -95,7 +95,7 @@ def setup_workspace(version, modules, plat_name):
     ]
     for module in modules:
         package_files += [
-            f"{module}{LIB_EXTENSION}",
+            module_file_name(module),
             f"{module}.pyi",
         ]
     with open(WHEEL_SCRIPT_DIR / "setup.cfg.in", 'r') as config_template_file:

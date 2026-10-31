@@ -774,7 +774,7 @@ TEST( MRMesh, SubdivideLoneContoursUpdatesAABBTree )
 
         FaceBitSet loneFaces;
         for ( const auto & c : loneIntsA )
-            loneFaces.autoResizeSet( std::get<FaceId>( c.intersections.front().primitiveId ) );
+            loneFaces.autoResizeSet( c.intersections.front().face() );
         const auto numFaces = meshA.topology.numValidFaces();
         subdivideLoneContours( meshA, loneIntsA );
         EXPECT_EQ( meshA.topology.numValidFaces(), numFaces + 2 * int( loneFaces.count() ) );

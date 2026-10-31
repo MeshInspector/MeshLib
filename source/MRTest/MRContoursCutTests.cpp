@@ -993,6 +993,15 @@ TEST( MRMesh, CutMeshSplitCrossingsSelfCrossing )
         0.4f, 1.5f ) }, 1, 1 );
 }
 
+// a prism over a bow-tie through the top of the cube, with the crossing of the bow-tie inside one triangle of the top: one lobe stays
+// in the triangle, and the other one goes out across the diagonal and back, so the contour enters the triangle, crosses itself there
+// and leaves it, and the part of the triangle around the inner lobe passes the vertex of the crossing twice
+TEST( MRMesh, CutMeshSplitCrossingsSelfCrossingContour )
+{
+    checkForcedCutAtCrossings( { makePrism( { Vector2f( 0.52f, -0.6f ), Vector2f( 0.1f, 0.8f ), Vector2f( 0.7f, 0.8f ), Vector2f( 0.28f, -0.6f ) },
+        0.4f, 1.5f ) }, 1, 1 );
+}
+
 TEST( MRMesh, MeshCollidePrecise )
 {
     const auto meshA = makeTorus( 1.1f, 0.5f, 8, 8 );

@@ -18,10 +18,10 @@ class Triangulation
         pc.points().reserve(10000);
         for (int i = 0; i < 100; i++)
         {
-            double u = 2 * Math.PI * i / (100.0 - 1.0);
+            float u = 2 * (float)Math.PI * i / (100.0f - 1.0f);
             for (int j = 0; j < 100; j++)
             {
-                double v = Math.PI * j / (100.0 - 1.0);
+                float v = (float)Math.PI * j / (100.0f - 1.0f);
 
                 pc.addPoint(new Vector3f(
                     (float)(Math.cos(u) * Math.sin(v)),

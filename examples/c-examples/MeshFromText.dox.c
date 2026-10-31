@@ -13,7 +13,7 @@ int main( int argc, char** argv )
     int rc = EXIT_FAILURE;
     if ( argc < 3 )
     {
-        fprintf( stderr, "Usage: MeshFromText fontpath text" );
+        fprintf( stderr, "Usage: MeshFromText fontpath text\n" );
         goto bad_usage;
     }
 

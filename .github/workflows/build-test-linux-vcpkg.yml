@@ -246,6 +246,31 @@ jobs:
         working-directory: ./build/${{ matrix.config }}/bin
         run: xvfb-run -a python3 -u ./../../../scripts/run_python_test_script.py -d '../test_python' -a ' --junit-xml=../unit_tests_report_pytest.xml'
 
+      # Experimental and non-blocking: `mrmeshpy` generated over the C bindings, see the same step on Ubuntu.
+      - name: Python bindings over the C bindings (experimental)
+        if: ${{ inputs.mrbind && inputs.mrbind_c && matrix.config == 'Release' }}
+        continue-on-error: true
+        timeout-minutes: 60
+        env:
+          MR_VERSION: ${{ inputs.app_version }}
+        run: |
+          # Like the Python bindings step: GCC 11's libstdc++, and the PR108636 stub it builds.
+          export OVER_C_EXTRA_FLAGS="--gcc-install-dir=${{ matrix.gcc-install-dir }} $PWD/libstdcxx_fs_path_compat.o"
+          cmake -S . -B build/${{ matrix.config }} -DMESHLIB_BUILD_PYTHON_OVER_C=ON
+          cmake --build build/${{ matrix.config }} -j $(nproc) --target mrviewerpy_over_c || echo "::warning::mrviewerpy_over_c failed to build"
+          bash scripts/mrbind/python_over_c.sh build/${{ matrix.config }}/bin
+
+      - name: Upload Python bindings over the C bindings
+        if: ${{ inputs.mrbind && inputs.mrbind_c && matrix.config == 'Release' && !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: PythonOverC-linux-vcpkg-${{ matrix.arch }}
+          path: |
+            build/python_over_c/*.json
+            build/python_over_c/*.txt
+            build/python_over_c/*.log
+          retention-days: 7
+
       - name: Python Regression Tests
         if: ${{ inputs.internal_build && inputs.mrbind }}
         uses: ./.github/actions/python-regression-tests

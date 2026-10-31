@@ -51,3 +51,36 @@ install(
   TARGETS ${PROJECT_NAME}
   DESTINATION "${MR_PY_LIB_DIR}"
 )
+
+# Experimental: the same module over the `mrmeshpy` generated over the C bindings, see `scripts/mrbind/python_over_c.sh`.
+IF(MESHLIB_BUILD_PYTHON_OVER_C)
+  add_library(mrviewerpy_over_c SHARED ${SOURCES} ${HEADERS})
+  set_target_properties(mrviewerpy_over_c PROPERTIES
+    PREFIX ""
+    OUTPUT_NAME mrviewerpy
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/python_over_c/meshlib"
+  )
+  IF(WIN32)
+    # A `.pyd` is a runtime output.
+    set_target_properties(mrviewerpy_over_c PROPERTIES
+      SUFFIX ".pyd"
+      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/python_over_c/meshlib"
+      # Not `bin/mrviewerpy.lib`, which the pybind11 one makes.
+      ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/python_over_c"
+    )
+  ENDIF()
+  IF(APPLE)
+    set_target_properties(mrviewerpy_over_c PROPERTIES SUFFIX ".so")
+    target_link_options(mrviewerpy_over_c PRIVATE -undefined dynamic_lookup)
+  ENDIF()
+  target_include_directories(mrviewerpy_over_c PRIVATE "${MESHLIB_THIRDPARTY_DIR}/mrbind/include")
+  target_compile_options(mrviewerpy_over_c PRIVATE
+    $<IF:$<CXX_COMPILER_ID:MSVC>,/FI,-include> "${CMAKE_CURRENT_SOURCE_DIR}/MRPythonOverCTypes.h"
+  )
+  target_link_libraries(mrviewerpy_over_c PRIVATE MRPython MRViewer ${CMAKE_DL_LIBS})
+  IF(MESHLIB_BUILD_VOXELS)
+    target_link_libraries(mrviewerpy_over_c PRIVATE MRVoxels)
+  ELSE()
+    target_compile_definitions(mrviewerpy_over_c PRIVATE MESHLIB_NO_VOXELS)
+  ENDIF()
+ENDIF()

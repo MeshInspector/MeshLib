@@ -298,6 +298,29 @@ jobs:
         working-directory: ./build/${{ matrix.config }}/bin
         run: xvfb-run -a python3 -u ./../../../scripts/run_python_test_script.py -d '../test_python' -a ' --junit-xml=../unit_tests_report_pytest.xml'
 
+      # Experimental and non-blocking: `mrmeshpy` generated over the C bindings, its API compared with the pybind11 one.
+      - name: Python bindings over the C bindings (experimental)
+        if: ${{ inputs.mrbind && inputs.mrbind_c && matrix.config == 'Release' && matrix.compiler == 'GCC' }}
+        continue-on-error: true
+        timeout-minutes: 60
+        env:
+          MR_VERSION: ${{ inputs.app_version }}
+        run: |
+          cmake -S . -B build/${{ matrix.config }} -DMESHLIB_BUILD_PYTHON_OVER_C=ON
+          cmake --build build/${{ matrix.config }} -j $(nproc) --target mrviewerpy_over_c || echo "::warning::mrviewerpy_over_c failed to build"
+          bash scripts/mrbind/python_over_c.sh build/${{ matrix.config }}/bin
+
+      - name: Upload Python bindings over the C bindings
+        if: ${{ inputs.mrbind && inputs.mrbind_c && matrix.config == 'Release' && matrix.compiler == 'GCC' && !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: PythonOverC-${{ matrix.os }}-${{ matrix.arch }}
+          path: |
+            build/python_over_c/*.json
+            build/python_over_c/*.txt
+            build/python_over_c/*.log
+          retention-days: 7
+
       - name: Python Regression Tests
         if: ${{ inputs.internal_build && inputs.mrbind }}
         env:

@@ -33,6 +33,7 @@ GEN_FLAGS=(
     --replace-namespace MR ::
     --adjust-name '\bMR::' ''
     --hide-field id_
+    --hide-field mask_
     # `mrcudapy` is a separate module.
     --ignore-c-file '^MRCCuda/'
     # `begin()`/`end()` are function templates for those.
@@ -76,7 +77,7 @@ if [[ $OS != windows ]]; then
     #   as `3ul`.
     GEN_FLAGS+=(
         --adjust-typeid-name '([<,] ?std::array<[^<>]*(?:<[^<>]*(?:<[^<>]*>)?[^<>]*>)?[^<>]*), ([0-9]+)>' '$1, $2ul>'
-        --adjust-typeid-name '([<,] ?MR::Polynomial<[^<>,]+, )([0-9]+)>' '$1$2ul>'
+        --adjust-typeid-name '((?:^|[<,] ?)MR::Polynomial<[^<>,]+, )([0-9]+)>' '$1$2ul>'
         --adjust-typeid-name '([<,] ?MR::Vector<[^<>,]+)>' '$1, unsigned long>'
     )
     # libc++ has `std::filesystem` in an inline namespace.

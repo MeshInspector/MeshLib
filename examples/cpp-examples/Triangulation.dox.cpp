@@ -19,11 +19,11 @@ int main()
         {
             const auto v = MR::PI_F * float( j ) / ( 100.f - 1.f );
 
-            pc.points.emplace_back(
+            pc.addPoint( {
                 std::cos( u ) * std::sin( v ),
                 std::sin( u ) * std::sin( v ),
                 std::cos( v )
-            );
+            } );
         }
     }
     // Remove duplicate points

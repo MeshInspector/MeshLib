@@ -81,19 +81,17 @@ EdgeId MeshTopology::makeEdges( int num )
     assert( num >= 0 );
     assert( edges_.size() % 2 == 0 );
     const EdgeId first( int( edges_.size() ) );
-    edges_.resizeNoInit( edges_.size() + 2 * size_t( num ) );
-    auto init = [&] ( EdgeId e )
+    const auto newSize = edges_.size() + 2 * size_t( num );
+    if ( edges_.capacity() < newSize )
+        edges_.reserve( std::max( newSize, 2 * edges_.capacity() ) ); // as push_back, not to reallocate on every call
+    edges_.resizeNoInit( newSize );
+    for ( auto e = first; e < edges_.endId(); ++e )
     {
         auto& r = edges_[e];
         r.next = r.prev = e;
         r.org = {};
         r.left = {};
-    };
-    if ( num < 8192 )
-        for ( auto e = first; e < edges_.endId(); ++e )
-            init( e );
-    else
-        ParallelFor( first, edges_.endId(), init );
+    }
     return first;
 }
 

@@ -1034,3 +1034,9 @@ def test_command_while_main_thread_runs_python_on_macos():
     assert run.returncode == 0 and "PUMPED" in run.stdout and "SHOW_RETURNED" in run.stdout, (
         "the helper's commands were not served or showViewer() did not return\n" + run.report()
     )
+
+
+def test_import_without_viewer():
+    # The import converts the defaults of the `mrmeshpy` types (e.g. `ViewportId()`), which fails if the casters are missing.
+    from meshlib import mrviewerpy as viewer_module
+    assert viewer_module.Viewer

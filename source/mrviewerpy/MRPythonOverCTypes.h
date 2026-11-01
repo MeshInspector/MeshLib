@@ -1,7 +1,8 @@
 #pragma once
 
-// Force-included into `mrviewerpy`: makes it take and return the objects of `mrmeshpy`, which is generated over the C bindings
-//   (`scripts/mrbind/generate.mk`), through its C++ interop API.
+// Included first by the `mrviewerpy` sources: makes them take and return the objects of `mrmeshpy`, which is generated over
+//   the C bindings (`scripts/mrbind/generate.mk`), through its C++ interop API. Not force-included: with the precompiled
+//   header of MSVC, `/Yu` would skip it.
 
 #define MRBIND_PY_CPP_API_CAPSULE "meshlib.mrmeshpy.__mrbind_cpp_api__"
 #include <mrbind/python_over_c/pybind11_casters.h>

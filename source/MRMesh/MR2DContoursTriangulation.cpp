@@ -1960,8 +1960,8 @@ static bool setLoopPredicates( SweepLinePredicates& p, LoopPoints& lp, const Mes
     // two vertices defined alike make the predicates fail only if the sweep compares them, unless the shifts of their edges tell them apart
     // (as the crossings of the edges of a multiple edge of the other mesh with their wedges), so every two of them are compared before
     // the sweep, and the loops are rejected if that fails: a vertex point by its id, a crossing by the ids of its segment and triangle
-    // in any order, with the index of the point
-    Vector<std::pair<std::array<int, 5>, int>> keys( verts.size() );
+    // in any order (of its two triangles for a crossing of two cuts), with the index of the point
+    Vector<std::pair<std::array<int, 6>, int>> keys( verts.size() );
     for ( int i = 0; i < verts.size(); ++i )
     {
         const auto d = pointOf( verts[i] );
@@ -1970,12 +1970,21 @@ static bool setLoopPredicates( SweepLinePredicates& p, LoopPoints& lp, const Mes
         pos = i;
         if ( d.isVertex() )
         {
-            k = { d.seg[0].id, -1, -1, -1, -1 };
+            k = { d.seg[0].id, -1, -1, -1, -1, -1 };
             continue;
         }
-        k = { d.seg[0].id, d.seg[1].id, d.tri[0].id, d.tri[1].id, d.tri[2].id };
+        if ( d.isCrossing() )
+        {
+            std::array<int, 3> a{ d.tri[0].id, d.tri[1].id, d.tri[2].id }, b{ d.tri2[0].id, d.tri2[1].id, d.tri2[2].id };
+            std::sort( a.begin(), a.end() );
+            std::sort( b.begin(), b.end() );
+            const auto [lo, hi] = std::minmax( a, b );
+            k = { lo[0], lo[1], lo[2], hi[0], hi[1], hi[2] };
+            continue;
+        }
+        k = { d.seg[0].id, d.seg[1].id, d.tri[0].id, d.tri[1].id, d.tri[2].id, -1 };
         std::sort( k.begin(), k.begin() + 2 );
-        std::sort( k.begin() + 2, k.end() );
+        std::sort( k.begin() + 2, k.begin() + 5 );
     }
     if ( preds.failed() )
         return false;

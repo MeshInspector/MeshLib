@@ -362,6 +362,20 @@ jobs:
             --build c-examples-build \
             --parallel $(nproc)
 
+      # Every doc example of every compiled language but C# runs, and its results must match the C++ example's,
+      # see test_regression/test_doc_samples/test_compiled_samples.py
+      - name: Run doc examples
+        if: ${{ inputs.internal_build && inputs.mrbind && env.RUN_RUST == 'true' && env.RUN_JAVA == 'true' && matrix.build_distribution == 'ON' }}
+        working-directory: ./build/${{ matrix.config }}/bin
+        run: |
+          ws=$GITHUB_WORKSPACE
+          export LD_LIBRARY_PATH=$PWD${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+          export DOC_EXAMPLE_CMDS="cpp=$ws/cpp-examples-build/{name}
+          c=$ws/c-examples-build/{name}
+          rust=$ws/source/MeshLibRust/target/debug/{name}
+          java=java --enable-native-access=ALL-UNNAMED -Djava.library.path=$PWD -cp $ws/source/MeshLibJava/meshlib.jar:$ws/examples/java-examples/classes {name}"
+          python3 ../../../scripts/run_python_test_script.py -d '../test_regression' -s false -a '-k test_compiled_doc_example --junit-xml=../unit_tests_report_doc_examples.xml'
+
       - name: Upload Ubuntu Developer Distribution
         if: ${{ inputs.upload_artifacts && matrix.upload_release == 'ON' }}
         uses: actions/upload-artifact@v7

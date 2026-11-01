@@ -15,5 +15,11 @@ Example of fixing degenerated faces
 - <b class="tab-title">JavaScript</b>
 \include MeshFixDegeneracies.dox.js
 \include{doc} JsUsingNote.md
+ 
+- <b class="tab-title">Rust</b>
+\include MeshFixDegeneracies.dox.rs
+ 
+- <b class="tab-title">Java</b>
+\include MeshFixDegeneracies.dox.java
 
 </div>

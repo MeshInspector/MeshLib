@@ -1,0 +1,75 @@
+{
+  "include": [
+    {
+      "arch": "x64",
+      "config": "Release",
+      "lib-source": "Homebrew",
+      "compiler": "AppleClang",
+      "llvm-keg-version": "22.1.8_2",
+      "runner": "macos-15-intel",
+      "instance": "macos-15-intel",
+      "xcode-version": "16.4"
+    },
+    {
+      "arch": "x64",
+      "config": "Release",
+      "lib-source": "vcpkg",
+      "compiler": "AppleClang",
+      "llvm-keg-version": "22.1.8_2",
+      "runner": "macos-15-intel",
+      "instance": "macos-15-intel",
+      "xcode-version": "16.4"
+    },
+    {
+      "arch": "arm64",
+      "config": "Release",
+      "lib-source": "Homebrew",
+      "compiler": "AppleClang",
+      "llvm-keg-version": "22.1.8_2",
+      "runner": "macos-15",
+      "instance": "macos-15",
+      "xcode-version": "16.4"
+    },
+    {
+      "arch": "arm64",
+      "config": "Release",
+      "lib-source": "vcpkg",
+      "compiler": "AppleClang",
+      "llvm-keg-version": "22.1.8_2",
+      "runner": "macos-15",
+      "instance": "macos-15",
+      "xcode-version": "16.4"
+    },
+    {
+      "arch": "arm64",
+      "config": "Debug",
+      "lib-source": "vcpkg",
+      "compiler": "brew-llvm22",
+      "llvm-keg-version": "22.1.8_2",
+      "cxx-compiler-template": "LLVM_PREFIX/bin/clang++",
+      "c-compiler-template": "LLVM_PREFIX/bin/clang",
+      "runner": [
+        "self-hosted",
+        "macos",
+        "arm64",
+        "build"
+      ],
+      "instance": "self-hosted-arm"
+    },
+    {
+      "arch": "x64-cross",
+      "config": "Release",
+      "lib-source": "Homebrew",
+      "compiler": "AppleClang",
+      "llvm-keg-version": "22.1.8_2",
+      "runner": [
+        "self-hosted",
+        "macos",
+        "arm64",
+        "crossplatform-build"
+      ],
+      "instance": "self-hosted-arm-x64-native",
+      "cross-osx-arch": "x86_64"
+    }
+  ]
+}

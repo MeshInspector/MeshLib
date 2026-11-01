@@ -30,6 +30,8 @@ def run_code_sample(code_path: str, args: list):
 
 @pytest.mark.parametrize("doc_case",
                          [
+                             pytest.param({'sample': "BooleanBenchmark.dox.py", 'input_files': [], 'output_files': [],
+                                           'args': ["10"]}, id="BooleanBenchmark.dox.py"),
                              pytest.param({'sample': "FreeFormDeformation.dox.py", 'input_files': ['mesh.stl'],
                                            'output_files': ['deformed_mesh.stl']}, id="FreeFormDeformation.dox.py"),
                              pytest.param({'sample': "LaplacianExample.dox.py", 'input_files': ['mesh.stl'],

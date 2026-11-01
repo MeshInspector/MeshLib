@@ -10,6 +10,10 @@ publish = false
 meshlib = { path = "../../source/MeshLibRust" }
 
 [[bin]]
+name = "BooleanBenchmark"
+path = "BooleanBenchmark.dox.rs"
+
+[[bin]]
 name = "Collision"
 path = "Collision.dox.rs"
 

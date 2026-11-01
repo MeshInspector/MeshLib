@@ -16,6 +16,7 @@ A number of these operations also run interactively in the browser: see the [liv
  - \ref ExampleMeshExport
  - \ref ExampleMeshModification
  - \ref ExampleMeshBoolean
+ - \ref ExampleBooleanBenchmark
  - \ref ExampleMeshDecimate
  - \ref ExampleMeshOffset
  - \ref ExampleMeshOffsetWeighted

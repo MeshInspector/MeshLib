@@ -17,10 +17,8 @@ int main( void )
 {
     int rc = EXIT_FAILURE;
 
-    // Load meshes:
-
-    // First mesh, which will be moved.
-    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat( "meshA.stl", NULL, NULL );
+    // Load meshes
+    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat( "meshAwithHole.stl", NULL, NULL );
     MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_value_mut( meshEx );
     if ( !mesh )
     {
@@ -28,8 +26,7 @@ int main( void )
         goto fail_mesh_loading_a;
     }
 
-    // Second mesh, static.
-    MR_expected_MR_Mesh_std_string* mesh2Ex = MR_MeshLoad_fromAnySupportedFormat( "meshB.stl", NULL, NULL );
+    MR_expected_MR_Mesh_std_string* mesh2Ex = MR_MeshLoad_fromAnySupportedFormat( "meshBwithHole.stl", NULL, NULL );
     MR_Mesh* mesh2 = MR_expected_MR_Mesh_std_string_value_mut( mesh2Ex );
     if ( !mesh2 )
     {

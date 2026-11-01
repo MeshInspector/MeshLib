@@ -41,5 +41,19 @@ Source mesh
 \image html offset_before.png
 After offset
 \image html offset_after.png
+ 
+- <b class="tab-title">Rust</b>
+\include MeshOffset.dox.rs
+Source mesh
+\image html offset_before.png
+After offset
+\image html offset_after.png
+ 
+- <b class="tab-title">Java</b>
+\include MeshOffset.dox.java
+Source mesh
+\image html offset_before.png
+After offset
+\image html offset_after.png
 
 </div>

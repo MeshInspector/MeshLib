@@ -17,5 +17,11 @@ Example of mesh ICP (finding transformation to match objects)
 - <b class="tab-title">JavaScript</b>
 \include MeshICP.dox.js
 \include{doc} JsUsingNote.md
+ 
+- <b class="tab-title">Rust</b>
+\include MeshICP.dox.rs
+ 
+- <b class="tab-title">Java</b>
+\include MeshICP.dox.java
 
 </div>

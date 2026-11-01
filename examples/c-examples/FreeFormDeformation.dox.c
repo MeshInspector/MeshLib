@@ -3,6 +3,7 @@
 #include <MRCMesh/MRMeshLoad.h>
 #include <MRCMesh/MRMeshSave.h>
 #include <MRCMisc/expected_MR_Mesh_std_string.h>
+#include <MRCMisc/expected_void_std_string.h>
 #include <MRCMisc/std_string.h>
 
 #include <stdio.h>
@@ -52,9 +53,16 @@ int main( void )
     MR_Mesh_invalidateCaches( mesh, NULL );
 
     // Save deformed mesh
-    MR_MeshSave_toAnySupportedFormat( mesh, "deformed_mesh.stl", NULL, NULL );
+    int rc = EXIT_SUCCESS;
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat( mesh, "deformed_mesh.stl", NULL, NULL );
+    if ( MR_expected_void_std_string_error( saveEx ) )
+    {
+        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );
+        rc = EXIT_FAILURE;
+    }
 
+    MR_expected_void_std_string_Destroy( saveEx );
     MR_FreeFormDeformer_Destroy( ffDeformer );
     MR_expected_MR_Mesh_std_string_Destroy( meshEx );
-    return EXIT_SUCCESS;
+    return rc;
 }

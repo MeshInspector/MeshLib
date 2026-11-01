@@ -43,11 +43,8 @@ int main( void )
     MR_DecimateSettings_Set_subdivideParts( params, 16 );
 
     // Decimate mesh
-    MR_DecimateResult* result = MR_decimateMesh( mesh, params );
+    MR_DecimateResult_Destroy( MR_decimateMesh( mesh, params ) );
     MR_DecimateSettings_Destroy( params );
-
-    printf( "Removed %d vertices, %d faces\n", *MR_DecimateResult_Get_vertsDeleted( result ), *MR_DecimateResult_Get_facesDeleted( result ) );
-    MR_DecimateResult_Destroy( result );
 
     // Save result
     MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat( mesh, "decimated_mesh.stl", NULL, NULL);

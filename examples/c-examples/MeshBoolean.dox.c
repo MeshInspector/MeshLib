@@ -68,7 +68,10 @@ int main( void )
     MR_FaceBitSet* oneFace = MR_FaceBitSet_DefaultConstruct();
     MR_FaceBitSet_autoResizeSet( oneFace, faceOfSphere1, NULL );
     MR_FaceBitSet* producedFaces = MR_BooleanResultMapper_map_MR_FaceBitSet( mapper, oneFace, MR_BooleanResultMapper_MapObject_A );
-    printf( "face %d of sphere1 produced %zu faces of the result\n", faceOfSphere1.id_, MR_FaceBitSet_count( producedFaces ) );
+    printf( "face %d of sphere1 produced %zu faces of the result:", faceOfSphere1.id_, MR_FaceBitSet_count( producedFaces ) );
+    for ( MR_FaceId f = MR_FaceBitSet_find_first( producedFaces ); f.id_ >= 0; f = MR_FaceBitSet_find_next( producedFaces, f ) )
+        printf( " %d", f.id_ );
+    printf( "\n" );
 
     // And backward: the face of sphere1 each face of the result came from
     // (invalid id for the faces that came from sphere2).

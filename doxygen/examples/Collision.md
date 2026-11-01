@@ -21,5 +21,11 @@ Following code presents example of finding collision triangles of two meshes
 - <b class="tab-title">JavaScript</b>
 \include Collision.dox.js
 \include{doc} JsUsingNote.md
+ 
+- <b class="tab-title">Rust</b>
+\include Collision.dox.rs
+ 
+- <b class="tab-title">Java</b>
+\include Collision.dox.java
 
 </div>

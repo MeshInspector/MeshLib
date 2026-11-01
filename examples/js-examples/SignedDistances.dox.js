@@ -1,20 +1,19 @@
-import createMeshLib from '@meshinspector/meshlib';
+import * as ml from '@meshinspector/meshlib';
 
-const ml = await createMeshLib();
+await ml.init();
 
-using refMesh = ml.MeshLoad.fromAnySupportedFormat('mesh1.ply');
-using mesh = ml.MeshLoad.fromAnySupportedFormat('mesh2.ply');
+using refMesh = ml.MeshLoad.fromAnySupportedFormat('mesh1.ctm');
+using mesh = ml.MeshLoad.fromAnySupportedFormat('mesh2.ctm');
 
-// distances between the points of the target mesh and the reference mesh
-// (the JS binding requires a parameters object; its defaults match the C++ overload)
-using params = new ml.MeshProjectionParameters();
-const vertDistances = ml.findSignedDistances(refMesh, mesh, params);
+// distances between the points of the target mesh and the reference mesh, as a Float32Array
+using vertDistances = ml.findSignedDistances(refMesh, mesh);
+const distances = vertDistances.toArray();
 
 // find the closest and farthest distances (a loop, not Math.min(...arr), because the
 // typed array may be large enough to overflow the call stack when spread)
 let closest = Infinity;
 let farthest = -Infinity;
-for (const d of vertDistances) {
+for (const d of distances) {
   if (d < closest) closest = d;
   if (d > farthest) farthest = d;
 }

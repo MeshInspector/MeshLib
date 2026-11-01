@@ -1087,91 +1087,118 @@ void connectEdges( MeshTopology& topology, EdgeId botEdge, EdgeId topEdge, EdgeI
     }
 }
 
+// the edge to cut: oriented as in the intersection of edgeData that was first before sorting
+EdgeId baseEdgeOf( const EdgeData& edgeData, const OneMeshContours& contours )
+{
+    const auto& intInfo = std::find_if( edgeData.begin(), edgeData.end(), [] ( const auto& data )
+    {
+        return data.beforeSortIndex == 0;
+    } )->interOnEdge;
+    return contours.intersection( intInfo.contourId, intInfo.intersectionId ).edge();
+}
+
+// the path edges at the new vertex of i-th intersection on the left and on the right of baseEdge
+std::pair<EdgeId, EdgeId> leftRightPathEdges( const MeshTopology& topology, EdgeId baseEdge,
+    const EdgeData& edgeData, int i, const OneMeshContours& contours )
+{
+    const auto& interIndex = edgeData[i].interOnEdge;
+    const bool isBaseSym = contours.intersection( interIndex.contourId, interIndex.intersectionId ).edge().sym() == baseEdge;
+    EdgeId baseLeft = edgeData[i].orgEdgeInLeftTri;
+    EdgeId baseRight = baseLeft.valid() ? topology.next( baseLeft ) : topology.edgePerVertex()[edgeData[i].newVert];
+    if ( baseLeft == baseRight )
+        baseRight = EdgeId{};
+    return isBaseSym ? std::pair{ baseRight, baseLeft } : std::pair{ baseLeft, baseRight };
+}
+
+// whether all path edges at the new vertices of the edge are on its left (first), on its right (second)
+std::pair<bool, bool> allLeftRightOnly( const MeshTopology& topology, EdgeId baseEdge,
+    const EdgeData& edgeData, const OneMeshContours& contours )
+{
+    bool isAllLeftOnly = true;
+    bool isAllRightOnly = true;
+    for ( int i = 0; i < edgeData.size(); ++i )
+    {
+        auto [leftEdge, rightEdge] = leftRightPathEdges( topology, baseEdge, edgeData, i, contours );
+        if ( rightEdge.valid() )
+            isAllLeftOnly = false;
+        if ( leftEdge.valid() )
+            isAllRightOnly = false;
+    }
+    return { isAllLeftOnly, isAllRightOnly };
+}
+
+// maps the pieces of the edge to it
+void mapEdgePieces( NewEdgesMap& new2OldEdgeMap, EdgeId baseEdge, EdgeId e0,
+    const EdgeData& edgeData, const OneMeshContours& contours )
+{
+    new2OldEdgeMap.splitEdges.autoResizeSet( e0.undirected() );
+    new2OldEdgeMap.map[e0.undirected()] = baseEdge;
+    for ( int i = 0; i + 1 < edgeData.size(); ++i )
+    {
+        const auto& interIndex = edgeData[i].interOnEdge;
+        const bool isBaseSym = contours.intersection( interIndex.contourId, interIndex.intersectionId ).edge().sym() == baseEdge;
+        const EdgeId piece = e0 + 2 * ( i + 1 );
+        new2OldEdgeMap.map[piece.undirected()] = isBaseSym ? baseEdge.sym() : baseEdge;
+        new2OldEdgeMap.splitEdges.autoResizeSet( piece.undirected() );
+    }
+}
+
+// removes the faces of the edge, detaches it from its origin and makes its other pieces,
+// returns the first of them (at the origin), the next ones are the following edges from makeEdges
+EdgeId startCutOneEdge( MeshTopology& topology, EdgeId baseEdge,
+    const EdgeData& edgeData, const OneMeshContours& contours, NewEdgesMap* new2OldEdgeMap )
+{
+    topology.setLeft( baseEdge, FaceId{} );
+    topology.setLeft( baseEdge.sym(), FaceId{} );
+
+    EdgeId ePrev = topology.prev( baseEdge );
+    if ( ePrev != baseEdge )
+        topology.splice( ePrev, baseEdge );
+    // baseEdge now becomes the last piece of split edge
+    const EdgeId e0 = topology.makeEdges( int( edgeData.size() ) );
+    if ( ePrev != baseEdge )
+        topology.splice( ePrev, e0 );
+
+    if ( new2OldEdgeMap )
+        mapEdgePieces( *new2OldEdgeMap, baseEdge, e0, edgeData, contours );
+    return e0;
+}
+
+// connects the pieces of the edge with the path edges at its new vertices;
+// touches only the pieces and the rings of the new vertices, so different edges can be finished in parallel
+void finishCutOneEdge( MeshTopology& topology, EdgeId baseEdge, EdgeId e0,
+    const EdgeData& edgeData, const OneMeshContours& contours )
+{
+    for ( int i = 0; i < edgeData.size(); ++i )
+    {
+        auto [leftEdge, rightEdge] = leftRightPathEdges( topology, baseEdge, edgeData, i, contours );
+        const EdgeId bot = e0 + 2 * i;
+        const EdgeId top = i + 1 < edgeData.size() ? bot + 2 : baseEdge;
+        connectEdges( topology, bot, top, leftEdge, rightEdge );
+    }
+}
+
 // cuts one edge and connects all intersecting contours with pieces
 void cutOneEdge( Mesh& mesh,
                  const EdgeData& edgeData, const OneMeshContours& contours,
                  FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
 {
     assert( !edgeData.empty() );
-
-    const auto& intInfo = std::find_if( edgeData.begin(), edgeData.end(), [] ( const auto& data )
-    {
-        return data.beforeSortIndex == 0;
-    } )->interOnEdge;
-    EdgeId baseEdge = contours.intersection( intInfo.contourId, intInfo.intersectionId ).edge();
+    const EdgeId baseEdge = baseEdgeOf( edgeData, contours );
 
     // will need this to restore lost face on first or last intersection (only for open contours)
     FaceId oldLeft = mesh.topology.left( baseEdge );
     FaceId oldRight = mesh.topology.left( baseEdge.sym() );
 
-    // remove incident faces
-    mesh.topology.setLeft( baseEdge, FaceId{} );
-    mesh.topology.setLeft( baseEdge.sym(), FaceId{} );
-
-    EdgeId e = baseEdge;
-    // disconnect edge e from its origin
-    EdgeId e0;
-    {
-        EdgeId ePrev = mesh.topology.prev( e );
-        if ( ePrev != e )
-            mesh.topology.splice( ePrev, e );
-        // e now becomes the second part of split edge, add first part to it
-        e0 = mesh.topology.makeEdge();
-        if ( new2OldEdgeMap )
-        {
-            new2OldEdgeMap->splitEdges.autoResizeSet( e0.undirected() );
-            new2OldEdgeMap->map[e0.undirected()] = baseEdge;
-        }
-        if ( ePrev != e )
-            mesh.topology.splice( ePrev, e0 );
-    }
-
-    bool isAllLeftOnly = true;
-    bool isAllRightOnly = true;
-    for ( int i = 0; i < edgeData.size(); ++i )
-    {
-        const auto& vertEdge = edgeData[i].orgEdgeInLeftTri;
-        const auto& interIndex = edgeData[i].interOnEdge;
-        const auto& inter = contours.intersection( interIndex.contourId, interIndex.intersectionId );
-
-        bool isBaseSym = inter.edge().sym() == baseEdge;
-
-        EdgeId leftEdge, rightEdge;
-        EdgeId& baseleft = isBaseSym ? rightEdge : leftEdge;
-        EdgeId& baserigth = isBaseSym ? leftEdge : rightEdge;
-
-        baseleft = vertEdge;
-        baserigth = baseleft.valid() ? mesh.topology.next( baseleft ) : mesh.topology.edgePerVertex()[edgeData[i].newVert];
-        if ( baseleft == baserigth )
-            baserigth = EdgeId{};
-
-        EdgeId lastEdge = e;
-        if ( i + 1 < edgeData.size() )
-        {
-            lastEdge = mesh.topology.makeEdge();
-            if ( new2OldEdgeMap )
-            {
-                new2OldEdgeMap->map[lastEdge.undirected()] = isBaseSym ? baseEdge.sym() : baseEdge;
-                new2OldEdgeMap->splitEdges.autoResizeSet( lastEdge.undirected() );
-            }
-        }
-
-        if ( isAllLeftOnly && rightEdge.valid() )
-            isAllLeftOnly = false;
-
-        if ( isAllRightOnly && leftEdge.valid() )
-            isAllRightOnly = false;
-
-        connectEdges( mesh.topology, e0, lastEdge, leftEdge, rightEdge );
-
-        e0 = lastEdge;
-    }
+    const auto [isAllLeftOnly, isAllRightOnly] = allLeftRightOnly( mesh.topology, baseEdge, edgeData, contours );
+    const EdgeId e0 = startCutOneEdge( mesh.topology, baseEdge, edgeData, contours, new2OldEdgeMap );
+    finishCutOneEdge( mesh.topology, baseEdge, e0, edgeData, contours );
 
     // fix triangle if this was last or first
     if ( isAllLeftOnly && oldRight.valid() )
-        triangulateContour( mesh, e0.sym(), oldRight, new2OldMap, new2OldEdgeMap );
+        triangulateContour( mesh, baseEdge.sym(), oldRight, new2OldMap, new2OldEdgeMap );
     if ( isAllRightOnly && oldLeft.valid() )
-        triangulateContour( mesh, e0, oldLeft, new2OldMap, new2OldEdgeMap );
+        triangulateContour( mesh, baseEdge, oldLeft, new2OldMap, new2OldEdgeMap );
 }
 
 // this function cut mesh edge and connects it with result path,

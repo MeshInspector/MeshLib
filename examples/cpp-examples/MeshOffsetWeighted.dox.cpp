@@ -4,10 +4,14 @@
 #include "MRVoxels/MRWeightedPointsShell.h"
 #include "MRVoxels/MROffset.h"
 #include "MRMesh/MRMeshSave.h"
+#include <MRIOExtras/MRIOExtras.h>
 #include <iostream>
 
 int main()
 {
+    // CTM, JPEG and other formats beyond the basic ones come with the MRIOExtras library
+    MR::loadIOExtras();
+
     // Create some mesh
     auto mesh = MR::makeTorus();
 

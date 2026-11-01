@@ -22,6 +22,7 @@
 #include "MRphmap.h"
 #include "MRFillContourByGraphCut.h"
 #include "MREdgeMetric.h"
+#include "MRTwoLineSegmDist.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
 #include <numeric>
@@ -62,14 +63,19 @@ struct PathsEdgeIndex
     FaceId right;
 };
 
-using PathsOldFaces = Vector<Vector<PathsEdgeIndex>>; // [contour][edge]
+using PathsOldFaces = Vector<PathsEdgeIndex>; // path edge i of contour c at the index of its intersection i in the contours
 using EdgeDataMap = ParallelHashMap<UndirectedEdgeId, EdgeData>;
 struct PreCutResult
 {
     EdgeDataMap edgeData;
     std::vector<EdgePath> paths;
     PathsOldFaces oldEdgesInfo;
+    const Vector<int>* offsets = nullptr; // of the contours, or of pathOffsets once insertPieces makes paths longer
+    Vector<int> pathOffsets;
     HashMap<FaceId, std::array<EdgeId, 3>> vertFaces; // the old faces of path edges at mesh vertices, removed by doPreCutMesh, and their edges
+
+    // the old faces of the path edges of contour c
+    const PathsEdgeIndex* oldFaces( int c ) const { return oldEdgesInfo.data() + ( *offsets )[c]; }
 };
 
 /// prepares precise-coordinates for a vertex of mesh A or B as the boolean's predicates take them:
@@ -100,6 +106,13 @@ std::array<PreciseVertCoords, 3> preciseOwnTri( const ThreeVertIds& t, const Mes
     return { preciseOwnVert( t[0], mesh, sortData ), preciseOwnVert( t[1], mesh, sortData ), preciseOwnVert( t[2], mesh, sortData ) };
 }
 
+/// prepares precise-coordinates for the corners of a triangle of the other mesh
+std::array<PreciseVertCoords, 3> preciseOtherTri( FaceId t, const SortIntersectionsData& sortData )
+{
+    const auto vs = sortData.otherMesh.topology.getTriVerts( t );
+    return { preciseOtherVert( vs[0], sortData ), preciseOtherVert( vs[1], sortData ), preciseOtherVert( vs[2], sortData ) };
+}
+
 /// the exact definition of intersection i of contour c inside a triangle of the mesh with given edges, counterclockwise,
 /// and tri[k] the precise coordinates of org( edges[k] ) before the cut: a corner, a side of the triangle crossing a triangle of the other mesh,
 /// or an edge of the other mesh crossing the triangle
@@ -107,18 +120,17 @@ PreciseCutPoint preciseCutPoint( const Mesh& mesh, const OneMeshContours& contou
     const std::array<EdgeId, 3>& edges, const std::array<PreciseVertCoords, 3>& tri, const SortIntersectionsData& sortData )
 {
     PreciseCutPoint res;
-    const auto& prim = contours[c].intersections[i].primitiveId;
+    const auto& prim = contours.intersection( c, i );
     const auto& et = sortData.contours[c][i];
     const auto& otherTopology = sortData.otherMesh.topology;
-    if ( const auto pe = std::get_if<EdgeId>( &prim ) )
+    if ( const auto pe = prim.edge() )
     {
         for ( int k = 0; k < 3; ++k )
-            if ( edges[k].undirected() == pe->undirected() )
+            if ( edges[k].undirected() == pe.undirected() )
                 res.seg = { tri[k], tri[( k + 1 ) % 3] };
-        const auto t = otherTopology.getTriVerts( et.tri() );
-        res.tri = { preciseOtherVert( t[0], sortData ), preciseOtherVert( t[1], sortData ), preciseOtherVert( t[2], sortData ) };
+        res.tri = preciseOtherTri( et.tri(), sortData );
     }
-    else if ( std::holds_alternative<FaceId>( prim ) )
+    else if ( prim.isFace() )
     {
         // the third vertices of the triangles of the edge tell apart the crossings of a multiple edge
         const EdgeId e = et.edge;
@@ -129,8 +141,22 @@ PreciseCutPoint preciseCutPoint( const Mesh& mesh, const OneMeshContours& contou
                 preciseOtherVert( otherTopology.getLeftTriVerts( e.sym() )[2], sortData ) };
     }
     else
-        res.seg[0] = preciseOwnVert( std::get<VertId>( prim ), mesh, sortData );
+        res.seg[0] = preciseOwnVert( prim.vert(), mesh, sortData );
     return res;
+}
+
+// whether path edge i of the contour (from intersection i to i + 1) is a new edge: neither an edge of the old mesh,
+// nor the same edge as another path edge where the contour touches a point from a mesh vertex and goes back
+bool isNewPathEdge( const OneMeshContourView& contour, int i )
+{
+    const auto& inters = contour.intersections;
+    const auto vert = inters[i].vert();
+    const auto nextVert = inters[i + 1].vert();
+    if ( vert && nextVert )
+        return false;
+    if ( !vert && nextVert && i > 0 && inters[i - 1].vert() == nextVert )
+        return false;
+    return !( vert && contour.closed && i + 2 == inters.size() && inters[1].samePrimitive( inters[i] ) );
 }
 
 PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const SortIntersectionsData* sortData )
@@ -138,82 +164,61 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
     MR_TIMER;
     auto& topology = mesh.topology;
 
-    int numVerts = 0;
-    int numEdges = 0;
     int intersectedEdges = 0;
-    for ( const auto& cont : contours )
-    {
-        auto size = int( cont.intersections.size() );
-        numVerts += size;
-        numEdges += 2 * size;
-        for ( const auto& in : cont.intersections )
-            if ( std::holds_alternative<EdgeId>( in.primitiveId ) )
-                ++intersectedEdges;
-        if ( cont.closed )
-            --numVerts;
-    }
-    numEdges += 2 * intersectedEdges;
-    const auto totalExpectedVerts = topology.vertSize() + numVerts;
-    const auto totalExpectedEdges = topology.edgeSize() + numEdges;
-
-    // the fill of the holes adds about 0.5 times as many edges and 0.6 times as many faces as the cut adds edges: reserving for both here,
-    // as many as the cut adds for headroom, copies the topology of the whole mesh to the larger buffers once, not again before the fill
-    topology.vertReserve( totalExpectedVerts );
-    topology.edgeReserve( totalExpectedEdges + numEdges );
-    topology.faceReserve( topology.faceSize() + numEdges );
-    mesh.points.reserve( totalExpectedVerts );
+    for ( const auto& in : contours.intersections )
+        if ( in.isEdge() )
+            ++intersectedEdges;
+    reserveForCut( mesh, mesh, contours );
 
     PreCutResult res;
     res.paths.resize( contours.size() );
-    res.oldEdgesInfo.resize( contours.size() );
+    res.oldEdgesInfo.resize( contours.intersections.size() );
+    res.offsets = &contours.offsets;
     res.edgeData.reserve( size_t( intersectedEdges ) );
     const auto oldEdgesSize = topology.edgeSize();
 
-    // find the old face of every path edge before the topology changes;
-    // the faces of path edges at mesh vertices are removed here (the others by cutOneEdge or connectLoneContours),
-    // and their edges show where to splice the path edges around the vertices
+    // find the old face of every path edge before the topology changes, on this thread, which then has the records of the cut edges
+    // in its cache for cutOneEdge; the faces of path edges at mesh vertices are removed here (the others by cutOneEdge or
+    // connectLoneContours), and their edges show where to splice the path edges around the vertices
     auto& vertFaces = res.vertFaces;
-    for ( int contourId = 0; contourId < contours.size(); ++contourId )
+    const auto& inters = contours.intersections;
+    for ( int c = 0; c < contours.size(); ++c )
     {
-        const auto& inContour = contours[contourId].intersections;
-        if ( inContour.size() < 2 )
-            continue;
-        auto& faces = res.oldEdgesInfo[contourId];
-        faces.resize( inContour.size() - 1 );
-        for ( int i = 0; i + 1 < inContour.size(); ++i )
+        for ( int k = contours.offsets[c]; k + 1 < contours.offsets[c + 1]; ++k )
         {
-            const auto& a = inContour[i].primitiveId;
-            const auto& b = inContour[i + 1].primitiveId;
-            const auto va = std::get_if<VertId>( &a );
-            const auto vb = std::get_if<VertId>( &b );
+            const auto& a = inters[k];
+            const auto& b = inters[k + 1];
+            auto& oldFaces = res.oldEdgesInfo[k];
+            const auto va = a.vert();
+            const auto vb = b.vert();
             if ( va && vb )
             {
                 // the path edge is an edge of the old mesh
-                const auto e = topology.findEdge( *va, *vb );
+                const auto e = topology.findEdge( va, vb );
                 assert( e );
                 if ( !e )
                     continue;
-                faces[i] = { topology.left( e ), topology.right( e ) };
+                oldFaces = { topology.left( e ), topology.right( e ) };
             }
-            else if ( const auto pe = std::get_if<EdgeId>( va ? &b : &a ) )
+            else if ( const auto pe = ( va ? b : a ).edge() )
             {
                 // a path edge leaves an edge point into the left face of the edge and arrives at it from the right face
-                const auto e = va ? pe->sym() : *pe;
-                const auto v = va ? *va : vb ? *vb : VertId{};
+                const auto e = va ? pe.sym() : pe;
+                const auto v = va ? va : vb;
                 // precondition: a mesh vertex at the other end is the third vertex of that face, so the contour does not fold back
                 // at the edge; a fold puts the path edge in the other face, where Release still gets a valid topology
                 // (a mesh vertex that is no corner of these faces is not handled)
                 const bool fold = v && ( !topology.left( e ) || topology.dest( topology.next( e ) ) != v );
                 assert( !fold );
-                faces[i].left = faces[i].right = topology.left( fold ? e.sym() : e );
+                oldFaces.left = oldFaces.right = topology.left( fold ? e.sym() : e );
             }
             else
-                faces[i].left = faces[i].right = std::get<FaceId>( va ? b : a );
-            if ( faces[i].left && ( va || vb ) )
+                oldFaces.left = oldFaces.right = ( va ? b : a ).face();
+            if ( oldFaces.left && ( va || vb ) )
             {
-                auto [it, inserted] = vertFaces.try_emplace( faces[i].left );
+                auto [it, inserted] = vertFaces.try_emplace( oldFaces.left );
                 if ( inserted )
-                    topology.getTriEdges( faces[i].left, it->second[0], it->second[1], it->second[2] );
+                    topology.getTriEdges( oldFaces.left, it->second[0], it->second[1], it->second[2] );
             }
         }
     }
@@ -265,7 +270,7 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
         }
         const auto& pv = mesh.points[v];
         const auto normal = cross( mesh.points[fv[( k + 1 ) % 3]] - pv, mesh.points[fv[( k + 2 ) % 3]] - pv );
-        const auto p = contours[c].intersections[i].coordinate - pv;
+        const auto p = contours.intersection( c, i ).coordinate - pv;
         // the last path edge there that goes before e counterclockwise, or the old edge if none does
         auto findPlace = [&] ( bool byPreds )
         {
@@ -281,7 +286,7 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
                 else
                 {
                     const auto [yc, yi] = spliceEnds.at( y );
-                    if ( !( dot( cross( contours[yc].intersections[yi].coordinate - pv, p ), normal ) > 0 ) )
+                    if ( !( dot( cross( contours.intersection( yc, yi ).coordinate - pv, p ), normal ) > 0 ) )
                         break;
                 }
                 x = y;
@@ -300,38 +305,46 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
         const auto& inContour = contours[contourId].intersections;
         if ( inContour.size() < 2 )
             continue;
-        const auto& faces = res.oldEdgesInfo[contourId];
+        // the new path edges of the contour at once, taken in the order makeEdge() would make them
+        int newPathEdges = 0;
+        for ( int i = 0; i + 1 < inContour.size(); ++i )
+            if ( isNewPathEdge( contours[contourId], i ) )
+                ++newPathEdges;
+        auto newEdge = topology.makeEdges( newPathEdges );
+        const auto* faces = res.oldEdgesInfo.data() + contours.offsets[contourId];
         auto& path = res.paths[contourId];
         path.resize( inContour.size() - 1 );
         const bool closed = contours[contourId].closed;
         for ( int i = 0; i < inContour.size(); ++i )
         {
             const auto& inter = inContour[i];
-            const auto vert = std::get_if<VertId>( &inter.primitiveId );
+            const auto vert = inter.vert();
             // the path edges to and from this intersection
             const EdgeId in = i > 0 ? path[i - 1].sym() : EdgeId{};
             EdgeId out;
             if ( i + 1 < inContour.size() )
             {
-                const auto nextVert = std::get_if<VertId>( &inContour[i + 1].primitiveId );
-                const auto prevVert = i > 0 ? std::get_if<VertId>( &inContour[i - 1].primitiveId ) : nullptr;
+                const auto nextVert = inContour[i + 1].vert();
                 if ( vert && nextVert )
-                    out = topology.findEdge( *vert, *nextVert );
-                else if ( !vert && nextVert && prevVert && *prevVert == *nextVert )
+                    out = topology.findEdge( vert, nextVert );
+                else if ( isNewPathEdge( contours[contourId], i ) )
+                {
+                    out = newEdge;
+                    newEdge += 2;
+                }
+                else if ( !vert )
                     out = in; // the contour touches this point from a mesh vertex and goes back along the same edge
-                else if ( vert && closed && i + 2 == inContour.size() && inContour[1].primitiveId == inter.primitiveId )
-                    out = path.front().sym(); // the same at the first point of a closed contour (out == in for x, v, x)
                 else
-                    out = topology.makeEdge();
+                    out = path.front().sym(); // the same at the first point of a closed contour (out == in for x, v, x)
                 path[i] = out;
             }
             if ( vert )
             {
                 // a path edge with an origin is already in place: an edge of the old mesh, or the edge back from a touched point
                 if ( out && !topology.org( out ) )
-                    spliceAtVert( *vert, faces[i].left, out, contourId, i + 1 );
+                    spliceAtVert( vert, faces[i].left, out, contourId, i + 1 );
                 if ( in && !topology.org( in ) )
-                    spliceAtVert( *vert, faces[i - 1].left, in, contourId, i - 1 );
+                    spliceAtVert( vert, faces[i - 1].left, in, contourId, i - 1 );
                 continue;
             }
             if ( closed && i + 1 == inContour.size() )
@@ -351,9 +364,9 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
             else
                 topology.setOrg( in, newVertId );
             // add note to edgeData
-            if ( auto e = std::get_if<EdgeId>( &inter.primitiveId ) )
+            if ( const auto e = inter.edge() )
             {
-                auto& edgeData = res.edgeData[e->undirected()];
+                auto& edgeData = res.edgeData[e.undirected()];
                 edgeData.reserve( 5 ); // reserve a small amount to avoid reallocations in most common scenarios
                 edgeData.emplace_back( EdgeIntersectionData{
                     .interOnEdge = IntersectionData{ContourId( contourId ),IntersectionId( i )},
@@ -391,36 +404,42 @@ void triangulateContour( Mesh& mesh, EdgeId e, FaceId oldFace, FaceMap* new2OldM
     executeTriangulateContourPlan( mesh, e, plan, oldFace, new2OldMap, new2OldEdgeMap );
 }
 
-// a lone contour is inside one face crossing none of its edges (e.g. where a tip of the other mesh pokes through it),
-// so it is an island in the hole of its face, or a slit if it is open
-struct LoneFace
+// a face of the mesh that contours go inside, with its sides before the cut
+struct CutFace
 {
     FaceId f;
     std::array<EdgeId, 3> edges; // counterclockwise, before the cut
     ThreeVertIds verts; // verts[i] = org( edges[i] )
 };
 
-// finds the faces of lone contours, before the cut changes their topology
-Vector<LoneFace> findLoneFaces( const MeshTopology& topology, const OneMeshContours& contours )
+// face f with its sides before the cut changes their topology (the faces that doPreCutMesh removed have their edges in vertFaces)
+CutFace cutFace( const MeshTopology& topology, FaceId f, const HashMap<FaceId, std::array<EdgeId, 3>>* vertFaces = nullptr )
+{
+    CutFace res{ f, vertFaces ? getAt( *vertFaces, f ) : std::array<EdgeId, 3>{} };
+    if ( !res.edges[0] )
+        topology.getTriEdges( f, res.edges[0], res.edges[1], res.edges[2] );
+    for ( int k = 0; k < 3; ++k )
+        res.verts[k] = topology.org( res.edges[k] );
+    return res;
+}
+
+// finds the faces of lone contours, sorted, before the cut changes their topology;
+// a lone contour is inside one face crossing none of its edges (e.g. where a tip of the other mesh pokes through it),
+// so it is an island in the hole of its face, or a slit if it is open
+Vector<CutFace> findLoneFaces( const MeshTopology& topology, const OneMeshContours& contours )
 {
     Vector<FaceId> faces;
     for ( const auto& c : contours )
     {
         if ( c.intersections.size() > 1 && std::all_of( c.intersections.begin(), c.intersections.end(),
-            [] ( const OneMeshIntersection& i ) { return std::holds_alternative<FaceId>( i.primitiveId ); } ) )
-            faces.push_back( std::get<FaceId>( c.intersections.front().primitiveId ) );
+            [] ( const OneMeshIntersection& i ) { return i.isFace(); } ) )
+            faces.push_back( c.intersections.front().face() );
     }
     std::sort( faces.begin(), faces.end() );
     faces.erase( std::unique( faces.begin(), faces.end() ), faces.end() );
-    Vector<LoneFace> res( faces.size() );
+    Vector<CutFace> res( faces.size() );
     for ( int i = 0; i < faces.size(); ++i )
-    {
-        auto& lf = res[i];
-        lf.f = faces[i];
-        topology.getTriEdges( lf.f, lf.edges[0], lf.edges[1], lf.edges[2] );
-        for ( int k = 0; k < 3; ++k )
-            lf.verts[k] = topology.org( lf.edges[k] );
-    }
+        res[i] = cutFace( topology, faces[i] );
     return res;
 }
 
@@ -434,42 +453,25 @@ Vector3f cornersNormal( const Mesh& mesh, const ThreeVertIds& verts )
     return normal == Vector3d() ? Vector3f() : Vector3f( normal.normalized() );
 }
 
-// connects the islands of lone contours with the rest of the holes of their faces by the chords that split the holes in monotone parts,
-// found on the exact predicates consistent with the boolean if sortData is given; the faces where that fails are added to badFaces
-// and stay in the mesh unless another contour removed them
-void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const Vector<LoneFace>& loneFaces, const PreCutResult& preRes,
-    UndirectedEdgeId firstNewEdge, const SortIntersectionsData* sortData, NewEdgesMap* new2OldEdgeMap, FaceBitSet& badFaces )
+// the exact definitions of the vertices on the hole loops of the faces that contours go inside, consistent with the boolean,
+// if sortData is given
+struct ExactCutPoints
 {
-    if ( loneFaces.empty() )
-        return;
-    MR_TIMER;
-
-    // the path edges inside every lone face, with the face on the left, and the contour points at their ends for the exact definitions
-    Vector<EdgePath> faceEdges( loneFaces.size() );
+    const Mesh& mesh;
+    const OneMeshContours& contours;
+    const SortIntersectionsData* sortData;
+    // the first vertex at a crossing of the paths (see insertCrossings), after all the vertices of the cut
+    VertId firstCrossing;
+    // the contour point of every vertex of the paths inside the faces, as {contour, point}
     HashMap<VertId, std::pair<int, int>> vertInters;
-    for ( int i = 0; i < preRes.paths.size(); ++i )
-    {
-        for ( int j = 0; j < preRes.paths[i].size(); ++j )
-        {
-            const auto f = preRes.oldEdgesInfo[i][j].left;
-            const auto it = std::lower_bound( loneFaces.begin(), loneFaces.end(), f, [] ( const LoneFace& lf, FaceId f ) { return lf.f < f; } );
-            if ( it == loneFaces.end() || it->f != f )
-                continue;
-            auto& edges = faceEdges[it - loneFaces.begin()];
-            const auto e = preRes.paths[i][j];
-            edges.push_back( e );
-            if ( e.undirected() >= firstNewEdge ) // a new edge is inside the face, while an old one has it on the left only
-                edges.push_back( e.sym() );
-            if ( !sortData )
-                continue;
-            vertInters[mesh.topology.org( e )] = { i, j };
-            vertInters[mesh.topology.dest( e )] = { i, j + 1 };
-        }
-    }
+    // the definition of every vertex at a crossing of the paths, from firstCrossing on
+    Vector<PreciseCutPoint> crossings;
 
-    // the exact definition of a vertex on the loops of a lone face
-    auto pointOf = [&] ( const LoneFace& lf, const std::array<PreciseVertCoords, 3>& tri, VertId v )
+    // the definition of vertex v on the loops of face cf with precise corners tri
+    PreciseCutPoint point( const CutFace& cf, const std::array<PreciseVertCoords, 3>& tri, VertId v ) const
     {
+        if ( v >= firstCrossing )
+            return crossings[v - firstCrossing];
         const auto it = vertInters.find( v );
         if ( it == vertInters.end() )
         {
@@ -477,72 +479,291 @@ void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const Vec
             res.seg[0] = preciseOwnVert( v, mesh, *sortData ); // a corner of the face
             return res;
         }
-        return preciseCutPoint( mesh, contours, it->second.first, it->second.second, lf.edges, tri, *sortData );
-    };
+        return preciseCutPoint( mesh, contours, it->second.first, it->second.second, cf.edges, tri, *sortData );
+    }
 
-    // the boundaries of the hole of every lone face
-    Vector<EdgeLoops> faceLoops( loneFaces.size() );
-    EdgeBitSet inLoops( mesh.topology.edgeSize() );
-    BitSet removedHere( loneFaces.size() ); // the faces that no other contour removed, to put back if their plans fail
-    for ( int i = 0; i < loneFaces.size(); ++i )
+    // whether v can be a vertex on the loops of face cf: a corner of it, a point on its side, or a point inside it
+    bool isPointOf( const CutFace& cf, VertId v ) const
     {
-        const auto& lf = loneFaces[i];
-        auto& edges = faceEdges[i];
-        if ( mesh.topology.hasFace( lf.f ) ) // no other contour removed it
+        const auto isCorner = [&] ( VertId u ) { return u == cf.verts[0] || u == cf.verts[1] || u == cf.verts[2]; };
+        const auto it = vertInters.find( v );
+        if ( it == vertInters.end() )
+            return isCorner( v );
+        const auto& in = contours.intersection( it->second.first, it->second.second );
+        if ( in.isEdge() )
+            return std::any_of( cf.edges.begin(), cf.edges.end(), [&] ( EdgeId s ) { return s.undirected() == in.edge().undirected(); } );
+        if ( in.isFace() )
+            return in.face() == cf.f;
+        return isCorner( in.vert() );
+    }
+
+    // the triangle of the other mesh along whose plane contour c goes inside a face from its point j to point j + 1, invalid if unknown:
+    // the one common to both points, of the triangle that a side of the face crosses at a point or the two of the edge crossing the face there
+    FaceId cutTriangle( int c, int j ) const
+    {
+        const auto& otherTopology = sortData->otherMesh.topology;
+        auto trianglesAt = [&] ( int k ) -> std::array<FaceId, 2>
         {
-            mesh.topology.setLeft( lf.edges[0], {} );
-            edges.push_back( lf.edges[0] );
-            removedHere.set( i );
+            const auto& in = contours.intersection( c, k );
+            const auto& et = sortData->contours[c][k];
+            if ( in.isEdge() )
+                return { et.tri(), FaceId{} };
+            if ( in.isFace() )
+                return { otherTopology.left( et.edge ), otherTopology.right( et.edge ) };
+            return {}; // a vertex of the face
+        };
+        const auto a = trianglesAt( j ), b = trianglesAt( j + 1 );
+        for ( auto t : a )
+            if ( t && ( t == b[0] || t == b[1] ) )
+                return t;
+        return {};
+    }
+};
+
+// the hole loops through the given edges, skipping the edges with a face on the left and those already in loops, which it marks in inLoops
+EdgeLoops holeLoops( const MeshTopology& topology, const EdgePath& edges, EdgeBitSet& inLoops )
+{
+    EdgeLoops res;
+    for ( auto e : edges )
+    {
+        if ( topology.left( e ) || inLoops.test( e ) )
+            continue;
+        auto& loop = res.emplace_back();
+        for ( auto le : leftRing( topology, e ) )
+        {
+            inLoops.set( le );
+            loop.push_back( le );
         }
-        for ( auto e : edges )
+    }
+    return res;
+}
+
+// the holes of faces that contours go inside
+struct FaceHoles
+{
+    Vector<EdgePath> edges; // the path edges inside every face, with the face on the left, and a side of it if it was removed here
+    Vector<EdgeLoops> loops; // the boundaries of the hole of every face
+    BitSet removedHere; // the faces that no other contour removed, to put back if their plans fail
+};
+
+// removes the faces that no other contour removed, and finds the holes of all of them; sets the contour points at the ends of the path edges
+// in exact if it has sortData, and the cut triangle of every path edge in edgeCuts (see ExactCutPoints::cutTriangle) if it is given
+FaceHoles makeFaceHoles( MeshTopology& topology, const Vector<CutFace>& faces, const PreCutResult& preRes, UndirectedEdgeId firstNewEdge,
+    ExactCutPoints& exact, HashMap<UndirectedEdgeId, FaceId>* edgeCuts = nullptr )
+{
+    FaceHoles res{ Vector<EdgePath>( faces.size() ), Vector<EdgeLoops>( faces.size() ), BitSet( faces.size() ) };
+    for ( int i = 0; i < preRes.paths.size(); ++i )
+    {
+        // pk is the contour point at the origin of path edge j: j until insertCrossings splits edges, whose pieces then share it;
+        // a path edge is invalid where doPreCutMesh found no old edge, and is in no face then
+        for ( int j = 0, k = 0; j < preRes.paths[i].size(); ++j )
         {
-            if ( mesh.topology.left( e ) || inLoops.test( e ) )
+            const auto e = preRes.paths[i][j];
+            const auto pk = k;
+            if ( exact.crossings.empty() || !e || topology.dest( e ) < exact.firstCrossing )
+                ++k;
+            const auto f = preRes.oldFaces( i )[j].left;
+            const auto it = std::lower_bound( faces.begin(), faces.end(), f, [] ( const CutFace& cf, FaceId g ) { return cf.f < g; } );
+            if ( it == faces.end() || it->f != f )
                 continue;
-            auto& loop = faceLoops[i].emplace_back();
-            for ( auto le : leftRing( mesh.topology, e ) )
-            {
-                inLoops.set( le );
-                loop.push_back( le );
-            }
+            auto& edges = res.edges[it - faces.begin()];
+            edges.push_back( e );
+            if ( e.undirected() >= firstNewEdge ) // a new edge is inside the face, while an old one has it on the left only
+                edges.push_back( e.sym() );
+            if ( !exact.sortData )
+                continue;
+            exact.vertInters[topology.org( e )] = { i, pk };
+            exact.vertInters[topology.dest( e )] = { i, pk + 1 };
+            if ( edgeCuts )
+                ( *edgeCuts )[e.undirected()] = exact.cutTriangle( i, pk );
         }
     }
 
+    EdgeBitSet inLoops( topology.edgeSize() );
+    for ( int i = 0; i < faces.size(); ++i )
+    {
+        const auto& cf = faces[i];
+        if ( topology.hasFace( cf.f ) ) // no other contour removed it
+        {
+            topology.setLeft( cf.edges[0], {} );
+            res.edges[i].push_back( cf.edges[0] );
+            res.removedHere.set( i );
+        }
+        res.loops[i] = holeLoops( topology, res.edges[i], inLoops );
+    }
+    return res;
+}
+
+// adds the chords that split the holes of the faces (bounded by all their loops together) in monotone parts, on the exact predicates
+// consistent with the boolean if exact has sortData; the faces where that fails are added to badFaces, and put back if removed here
+void addMonotoneChords( Mesh& mesh, const Vector<CutFace>& faces, const Vector<EdgeLoops>& faceLoops, const BitSet& removedHere,
+    const ExactCutPoints& exact, NewEdgesMap* new2OldEdgeMap, FaceBitSet& badFaces )
+{
     // the faces are independent, so plan them in parallel
-    Vector<std::optional<HoleFillPlan>> plans( loneFaces.size() );
+    Vector<std::optional<HoleFillPlan>> plans( faces.size() );
     ParallelFor( plans, [&] ( size_t i )
     {
-        const auto& lf = loneFaces[i];
+        const auto& cf = faces[i];
         const auto& loops = faceLoops[i];
-        if ( sortData )
+        if ( exact.sortData )
         {
-            const auto tri = preciseOwnTri( lf.verts, mesh, *sortData );
-            plans[i] = PlanarTriangulation::getMonotonePlan( mesh, loops, tri, [&] ( VertId v ) { return pointOf( lf, tri, v ); } );
+            const auto tri = preciseOwnTri( cf.verts, mesh, *exact.sortData );
+            plans[i] = PlanarTriangulation::getMonotonePlan( mesh, loops, tri, [&] ( VertId v ) { return exact.point( cf, tri, v ); } );
             return;
         }
         // the loops go counterclockwise around the normal of the face, of which only the dominant component and its sign matter
-        const auto normal = cornersNormal( mesh, lf.verts );
+        const auto normal = cornersNormal( mesh, cf.verts );
         // corners on one line give no normal, so no plane to connect the islands in: the plan stays empty, and the face is reported
         if ( normal == Vector3f() )
             return;
         plans[i] = PlanarTriangulation::getMonotonePlan( mesh, loops, normal );
     } );
 
-    for ( int i = 0; i < loneFaces.size(); ++i )
+    for ( int i = 0; i < faces.size(); ++i )
     {
         auto& plan = plans[i];
         // every island or slit needs a chord to the rest of its face, so a plan without any leaves them unconnected
         // (as where the cut of a side has already filled the face again, ending an open contour on that side)
         if ( plan && !plan->items.empty() && isFillingMultipleEdgeFree( mesh.topology, *plan ) )
-            executeTriangulateContourPlan( mesh, faceLoops[i].front().front(), *plan, loneFaces[i].f, nullptr, new2OldEdgeMap );
+            executeTriangulateContourPlan( mesh, faceLoops[i].front().front(), *plan, faces[i].f, nullptr, new2OldEdgeMap );
         else
         {
-            badFaces.autoResizeSet( loneFaces[i].f );
+            badFaces.autoResizeSet( faces[i].f );
             // the holes to fill are found by the cut paths, and the old sides of the face have none, so the face is put back;
             // no chord of it was added, so its old sides still make its ring
             if ( removedHere.test( i ) )
-                mesh.topology.setLeft( loneFaces[i].edges[0], loneFaces[i].f );
+                mesh.topology.setLeft( faces[i].edges[0], faces[i].f );
         }
     }
+}
+
+// connects the islands of lone contours with the rest of the holes of their faces by the chords that split the holes in monotone parts,
+// found on the exact predicates consistent with the boolean if exact has sortData; the faces where that fails are added to badFaces
+// and stay in the mesh unless another contour removed them
+void connectLoneContours( Mesh& mesh, const Vector<CutFace>& loneFaces, const PreCutResult& preRes, UndirectedEdgeId firstNewEdge,
+    ExactCutPoints& exact, NewEdgesMap* new2OldEdgeMap, FaceBitSet& badFaces )
+{
+    if ( loneFaces.empty() )
+        return;
+    MR_TIMER;
+
+    const auto holes = makeFaceHoles( mesh.topology, loneFaces, preRes, firstNewEdge, exact );
+    addMonotoneChords( mesh, loneFaces, holes.loops, holes.removedHere, exact, new2OldEdgeMap, badFaces );
+}
+
+// splits both edges (without faces) of every crossing at one new vertex shared by them, in the order that findCrossings gives (along every edge);
+// adds the pieces of every split edge to `pieces` in the order along the edge, the last one keeping the id of the edge
+void splitCrossings( Mesh& mesh, const Vector<EdgePair>& crossings, FaceId oldFace, HashMap<UndirectedEdgeId, EdgePath>& pieces,
+    NewEdgesMap* new2OldEdgeMap )
+{
+    auto& tp = mesh.topology;
+    // the points of the new vertices, which splitEdge adds in this order: in the middle of the closest points of the edges, before they change
+    VertId v( tp.vertSize() );
+    for ( const auto& [a, b] : crossings )
+    {
+        const auto cp = findTwoLineSegmClosestPoints( LineSegm3d( mesh.edgeSegment( a ) ), LineSegm3d( mesh.edgeSegment( b ) ) );
+        mesh.points.autoResizeAt( v++ ) = Vector3f( 0.5 * ( cp.a + cp.b ) );
+    }
+
+    for ( const auto& [lower, upper] : crossings )
+    {
+        assert( !tp.isInnerOrBdEdge( lower ) && !tp.isInnerOrBdEdge( upper ) );
+        // the lower edge leaves its origin to a new piece, and both go in between the pieces of the upper edge at the new vertex: counterclockwise,
+        // the upper edge to its destination, the lower edge to its destination, the upper edge to its origin, the lower edge to its origin
+        const EdgeId upperPiece = tp.splitEdge( upper );
+        const EdgeId lowerPiece = tp.makeEdge();
+        tp.splice( lower, lowerPiece );
+        tp.splice( tp.prev( lower ), lower );
+        tp.splice( upper, lower );
+        tp.splice( upperPiece.sym(), lowerPiece.sym() );
+        for ( auto [e, piece] : { EdgePair{ upper, upperPiece }, EdgePair{ lower, lowerPiece } } )
+        {
+            if ( new2OldEdgeMap )
+                new2OldEdgeMap->map[piece.undirected()] = oldFace;
+            auto& ps = pieces[e.undirected()];
+            if ( ps.empty() )
+                ps.push_back( e ); // the last piece
+            ps.insert( ps.end() - 1, piece );
+        }
+    }
+}
+
+// replaces every split edge of the paths by its pieces, which take the old faces of the edge
+void insertPieces( PreCutResult& preRes, const HashMap<UndirectedEdgeId, EdgePath>& pieces )
+{
+    if ( pieces.empty() )
+        return;
+    PathsOldFaces oldEdgesInfo;
+    Vector<int> offsets( preRes.paths.size() + 1 );
+    for ( int i = 0; i < preRes.paths.size(); ++i )
+    {
+        auto& path = preRes.paths[i];
+        const auto* oldFaces = preRes.oldFaces( i );
+        EdgePath newPath;
+        for ( int j = 0; j < path.size(); ++j )
+        {
+            const auto e = path[j];
+            const auto it = e ? pieces.find( e.undirected() ) : pieces.end();
+            if ( it == pieces.end() )
+                newPath.push_back( e );
+            else if ( it->second.back() == e ) // the pieces go along the last one, which keeps the id of the edge
+                newPath.insert( newPath.end(), it->second.begin(), it->second.end() );
+            else
+                for ( auto p = it->second.rbegin(); p != it->second.rend(); ++p )
+                    newPath.push_back( p->sym() );
+            oldEdgesInfo.resize( offsets[i] + newPath.size(), oldFaces[j] );
+        }
+        path = std::move( newPath );
+        offsets[i + 1] = int( oldEdgesInfo.size() );
+    }
+    preRes.oldEdgesInfo = std::move( oldEdgesInfo );
+    preRes.pathOffsets = std::move( offsets );
+    preRes.offsets = &preRes.pathOffsets;
+}
+
+// splits the path edges inside the given faces (where contours cross, see findCrossingFaces) at new vertices shared by the crossing paths,
+// puts the pieces in the paths and the definitions of the new vertices in exact; a face where an edge of the paths crosses a side
+// or the predicates fail stays as it is
+void insertCrossings( Mesh& mesh, const Vector<CutFace>& faces, PreCutResult& preRes, UndirectedEdgeId firstNewEdge,
+    ExactCutPoints& exact, NewEdgesMap* new2OldEdgeMap )
+{
+    MR_TIMER;
+    auto& tp = mesh.topology;
+    const auto& sortData = *exact.sortData;
+    HashMap<UndirectedEdgeId, FaceId> edgeCuts;
+    const auto holes = makeFaceHoles( tp, faces, preRes, firstNewEdge, exact, &edgeCuts );
+    auto cutOf = [&] ( UndirectedEdgeId ue )
+    {
+        const auto t = getAt( edgeCuts, ue );
+        return t ? preciseOtherTri( t, sortData ) : std::array<PreciseVertCoords, 3>{}; // invalid ids for an edge along a side
+    };
+
+    // the faces are independent, so find their crossings in parallel
+    Vector<std::optional<Vector<EdgePair>>> crossings( faces.size() );
+    ParallelFor( crossings, [&] ( size_t k )
+    {
+        const auto& cf = faces[k];
+        for ( const auto& loop : holes.loops[k] )
+            for ( auto e : loop )
+                if ( !exact.isPointOf( cf, tp.org( e ) ) )
+                    return;
+        const auto tri = preciseOwnTri( cf.verts, mesh, sortData );
+        crossings[k] = PlanarTriangulation::findCrossings( mesh, holes.loops[k], tri, [&] ( VertId v ) { return exact.point( cf, tri, v ); }, cutOf );
+    } );
+
+    HashMap<UndirectedEdgeId, EdgePath> pieces;
+    for ( int k = 0; k < faces.size(); ++k )
+    {
+        // a face of lone contours only stays until connectLoneContours, which removes it again
+        if ( holes.removedHere.test( k ) )
+            tp.setLeft( faces[k].edges[0], faces[k].f );
+        if ( !crossings[k] )
+            continue;
+        splitCrossings( mesh, *crossings[k], faces[k].f, pieces, new2OldEdgeMap );
+        for ( const auto& [a, b] : *crossings[k] )
+            exact.crossings.push_back( { .tri = cutOf( a.undirected() ), .tri2 = cutOf( b.undirected() ) } );
+    }
+    insertPieces( preRes, pieces );
 }
 
 [[maybe_unused]] void debugSortingInfo( EdgeId baseE,
@@ -801,7 +1022,7 @@ void sortEdgeInfo( const Mesh& mesh, const OneMeshContours& contours, EdgeData& 
 {
     assert( !edgeData.empty() );
     const auto& intInfo = edgeData.front().interOnEdge;
-    EdgeId baseEdge = std::get<EdgeId>( contours[intInfo.contourId].intersections[intInfo.intersectionId].primitiveId );
+    EdgeId baseEdge = contours.intersection( intInfo.contourId, intInfo.intersectionId ).edge();
 
     if ( sortData )
     {
@@ -877,7 +1098,7 @@ void cutOneEdge( Mesh& mesh,
     {
         return data.beforeSortIndex == 0;
     } )->interOnEdge;
-    EdgeId baseEdge = std::get<EdgeId>( contours[intInfo.contourId].intersections[intInfo.intersectionId].primitiveId );
+    EdgeId baseEdge = contours.intersection( intInfo.contourId, intInfo.intersectionId ).edge();
 
     // will need this to restore lost face on first or last intersection (only for open contours)
     FaceId oldLeft = mesh.topology.left( baseEdge );
@@ -911,9 +1132,9 @@ void cutOneEdge( Mesh& mesh,
     {
         const auto& vertEdge = edgeData[i].orgEdgeInLeftTri;
         const auto& interIndex = edgeData[i].interOnEdge;
-        const auto& inter = contours[interIndex.contourId].intersections[interIndex.intersectionId];
+        const auto& inter = contours.intersection( interIndex.contourId, interIndex.intersectionId );
 
-        bool isBaseSym = std::get<EdgeId>( inter.primitiveId ).sym() == baseEdge;
+        bool isBaseSym = inter.edge().sym() == baseEdge;
 
         EdgeId leftEdge, rightEdge;
         EdgeId& baseleft = isBaseSym ? rightEdge : leftEdge;
@@ -1017,7 +1238,7 @@ FaceBitSet getBadFacesAfterCut( const MeshTopology& topology, const PreCutResult
         for ( int edgeId = 0; edgeId < path.size(); ++edgeId )
         {
             const auto e0 = path[edgeId];
-            const auto oldf = preRes.oldEdgesInfo[pathId][edgeId].left;
+            const auto oldf = preRes.oldFaces( pathId )[edgeId].left;
             if ( !oldf )
                 continue;
             if ( visited.test( e0 ) || visited.test( e0.sym() ) )
@@ -1096,12 +1317,7 @@ bool crossesInFace( FaceCrossingsBuffers& buf, const Mesh& mesh, const OneMeshCo
     if ( buf.defs.size() <= 3 )
         return false;
 
-    std::array<EdgeId, 3> edges;
-    if ( const auto it = preRes.vertFaces.find( segs[0].f ); it != preRes.vertFaces.end() )
-        edges = it->second;
-    else
-        mesh.topology.getTriEdges( segs[0].f, edges[0], edges[1], edges[2] );
-    const ThreeVertIds verts{ mesh.topology.org( edges[0] ), mesh.topology.org( edges[1] ), mesh.topology.org( edges[2] ) };
+    const auto [f, edges, verts] = cutFace( mesh.topology, segs[0].f, &preRes.vertFaces );
     if ( sortData )
     {
         auto& preds = buf.preds ? *buf.preds : buf.preds.emplace();
@@ -1118,12 +1334,12 @@ bool crossesInFace( FaceCrossingsBuffers& buf, const Mesh& mesh, const OneMeshCo
 
     const auto normal = cornersNormal( mesh, verts );
     if ( normal == Vector3f() )
-        return true; // corners on one line give no plane to find the crossings in, so the face is bad, as in connectLoneContours
+        return true; // corners on one line give no plane to find the crossings in, so the face is bad, as in addMonotoneChords
     buf.xyz.resize( buf.defs.size() );
     for ( VertId p( 0 ); p < buf.xyz.size(); ++p )
     {
         const auto& s = segs[buf.defs[p] / 2];
-        buf.xyz[p] = contours[s.c].intersections[s.i + buf.defs[p] % 2].coordinate;
+        buf.xyz[p] = contours.intersection( s.c, s.i + buf.defs[p] % 2 ).coordinate;
     }
     return PlanarTriangulation::hasCrossing( buf.ends, buf.xyz, normal, buf.sweepCache() );
 }
@@ -1138,7 +1354,7 @@ FaceBitSet findCrossingFaces( const Mesh& mesh, const OneMeshContours& contours,
     Vector<FaceSegment> segs;
     for ( int c = 0; c < preRes.paths.size(); ++c )
         for ( int i = 0; i < preRes.paths[c].size(); ++i )
-            if ( const auto f = preRes.oldEdgesInfo[c][i].left; f && preRes.paths[c][i].undirected() >= firstNewEdge )
+            if ( const auto f = preRes.oldFaces( c )[i].left; f && preRes.paths[c][i].undirected() >= firstNewEdge )
                 segs.push_back( { f, c, i } );
     tbb::parallel_sort( segs.begin(), segs.end(), [] ( const FaceSegment& a, const FaceSegment& b )
     {
@@ -1197,7 +1413,7 @@ Expected<OneMeshContours> offsetSurfaceLineToMeshContours( const Mesh& mesh, con
     Mesh meshAfterCut = mesh;
     NewEdgesMap nEM;
     // force fill because we don't really care about intermediate mesh quality
-    auto cutRes = cutMesh( meshAfterCut, initCutContoursVec, { .forceFill = true, .new2oldEdgesMap = &nEM } );
+    auto cutRes = cutMesh( meshAfterCut, initCutContoursVec, { .forceFillMode = CutMeshParameters::ForceFill::All, .new2oldEdgesMap = &nEM } );
 
     const auto& initCutContours = initCutContoursVec[0];
 
@@ -1253,8 +1469,8 @@ Expected<OneMeshContours> offsetSurfaceLineToMeshContours( const Mesh& mesh, con
     {
         const auto inter = initCutContours.intersections[i];
         VertId interVertId;
-        if ( std::holds_alternative<VertId>( inter.primitiveId ) )
-            interVertId = std::get<VertId>( inter.primitiveId );
+        if ( inter.isVert() )
+            interVertId = inter.vert();
         else
             interVertId = currentId++;
         startVertices.set( interVertId );
@@ -1275,43 +1491,67 @@ Expected<OneMeshContours> offsetSurfaceLineToMeshContours( const Mesh& mesh, con
         distances = computeSurfaceDistances( meshAfterCut, startVerticesValues, FLT_MAX );
     auto isoLines = extractIsolines( meshAfterCut.topology, distances, mmOffset.max );
 
+    // the offsets are filled in a vector of their own: GCC sees resize() of the default { 0 } as out of its bounds
+    Vector<int> offsets( isoLines.size() + 1 );
     OneMeshContours res;
-    res.resize( isoLines.size() );
     for ( int i = 0; i < isoLines.size(); ++i )
     {
-        const auto& isoLineI = isoLines[i];
-        auto& resI = res[i];
         // an iso-line that reaches the mesh boundary is open: it starts and ends on boundary edges
-        assert( isoLineI.size() > 1 );
-        resI.closed = isoLineI.front() == isoLineI.back();
-        resI.intersections.resize( isoLineI.size() );
-        ParallelFor( resI.intersections, [&] ( size_t j )
+        assert( isoLines[i].size() > 1 );
+        offsets[i + 1] = offsets[i] + int( isoLines[i].size() );
+        if ( isoLines[i].front() == isoLines[i].back() )
+            res.closed.autoResizeSet( i );
+    }
+    res.offsets = std::move( offsets );
+    res.intersections.resizeNoInit( res.offsets.back() );
+    parallelForContourPieces( res.offsets, [&] ( int i, int k0, int k1 )
+    {
+        for ( int k = k0; k < k1; ++k )
         {
-            const auto& mep = isoLineI[j];
-            auto& inter = resI.intersections[j];
+            const auto& mep = isoLines[i][k - res.offsets[i]];
+            auto& inter = res.intersections[k];
 
-            inter.coordinate = meshAfterCut.edgePoint( mep );
+                inter.coordinate = meshAfterCut.edgePoint( mep );
 
-            auto newUE = mep.e.undirected();
-            if ( newUE < mesh.topology.undirectedEdgeSize() )
-                inter.primitiveId = mep.e;
-            else
-            {
-                if ( nEM.splitEdges.test( newUE ) )
-                {
-                    auto oldE = EdgeId( nEM.map[newUE] );
-                    if ( mep.e.odd() )
-                        oldE = oldE.sym();
-                    inter.primitiveId = oldE;
-                }
+                auto newUE = mep.e.undirected();
+                if ( newUE < mesh.topology.undirectedEdgeSize() )
+                    inter.setPrimitive( mep.e );
                 else
                 {
-                    inter.primitiveId = FaceId( nEM.map[newUE] );
+                    if ( nEM.splitEdges.test( newUE ) )
+                    {
+                        auto oldE = EdgeId( nEM.map[newUE] );
+                        if ( mep.e.odd() )
+                            oldE = oldE.sym();
+                        inter.setPrimitive( oldE );
+                    }
+                    else
+                    {
+                        inter.setPrimitive( FaceId( nEM.map[newUE] ) );
+                    }
                 }
-            }
-        } );
-    }
+        }
+    } );
     return res;
+}
+
+void reserveForCut( Mesh& mesh, const Mesh& sizeOf, const OneMeshContours& contours )
+{
+    size_t intersectedEdges = 0;
+    for ( const auto& in : contours.intersections )
+        if ( in.isEdge() )
+            ++intersectedEdges;
+    const size_t numVerts = contours.intersections.size() - contours.closed.count();
+    const size_t numEdges = 2 * ( contours.intersections.size() + intersectedEdges );
+    const auto& topology = sizeOf.topology;
+    const auto totalExpectedVerts = topology.vertSize() + numVerts;
+
+    // the fill of the holes adds about 0.5 times as many edges and 0.6 times as many faces as the cut adds edges: reserving for both here,
+    // as many as the cut adds for headroom, copies the topology of the whole mesh to the larger buffers once, not again before the fill
+    mesh.topology.vertReserve( totalExpectedVerts );
+    mesh.topology.edgeReserve( topology.edgeSize() + 2 * numEdges );
+    mesh.topology.faceReserve( topology.faceSize() + numEdges );
+    mesh.points.reserve( totalExpectedVerts );
 }
 
 CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMeshParameters& params )
@@ -1325,9 +1565,19 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     const auto loneFaces = findLoneFaces( mesh.topology, contours );
     const auto firstNewEdge = UndirectedEdgeId( mesh.topology.undirectedEdgeSize() );
     auto preRes = doPreCutMesh( mesh, contours, params.sortData );
-    // under force fill, the faces where the contours really cross (touching is fine) are bad too, found before the old edges are cut
-    if ( params.forceFill )
+    // under force fill, the faces where the contours really cross (touching is fine) are bad too, found before the old edges are cut;
+    // to split the contours where they cross in these faces, their sides are needed before the cut
+    Vector<CutFace> crossingFaces;
+    if ( params.forceFillMode != CutMeshParameters::ForceFill::None )
+    {
         res.fbsWithContourIntersections = findCrossingFaces( mesh, contours, preRes, firstNewEdge, params.sortData );
+        if ( params.forceFillMode == CutMeshParameters::ForceFill::SplitCrossings && params.sortData )
+        {
+            crossingFaces.reserve( res.fbsWithContourIntersections.count() );
+            for ( auto f : res.fbsWithContourIntersections )
+                crossingFaces.push_back( cutFace( mesh.topology, f, &preRes.vertFaces ) );
+        }
+    }
 
     if ( params.new2oldEdgesMap )
     {
@@ -1336,17 +1586,21 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         {
             for ( int j = 0; j < preRes.paths[i].size(); ++j )
             {
-                params.new2oldEdgesMap->map[preRes.paths[i][j].undirected()] = preRes.oldEdgesInfo[i][j].left;
+                params.new2oldEdgesMap->map[preRes.paths[i][j].undirected()] = preRes.oldFaces( i )[j].left;
             }
         }
     }
 
     cutEdgesIntoPieces( mesh, std::move( preRes.edgeData ), contours, params.sortData, params.new2OldMap, params.new2oldEdgesMap );
+    ExactCutPoints exact{ mesh, contours, params.sortData, VertId( mesh.topology.vertSize() ) };
+    // the crossing contours are split at the crossings, so that the holes of their faces can be filled as usual; the faces stay reported
+    if ( !crossingFaces.empty() )
+        insertCrossings( mesh, crossingFaces, preRes, firstNewEdge, exact, params.new2oldEdgesMap );
     FaceBitSet badLoneFaces;
-    connectLoneContours( mesh, contours, loneFaces, preRes, firstNewEdge, params.sortData, params.new2oldEdgesMap, badLoneFaces );
+    connectLoneContours( mesh, loneFaces, preRes, firstNewEdge, exact, params.new2oldEdgesMap, badLoneFaces );
 
     res.fbsWithContourIntersections = getBadFacesAfterCut( mesh.topology, preRes ) | badLoneFaces | res.fbsWithContourIntersections;
-    if ( !params.forceFill && res.fbsWithContourIntersections.any() )
+    if ( params.forceFillMode == CutMeshParameters::ForceFill::None && res.fbsWithContourIntersections.any() )
         return res;
 
     // find one edge for every hole to fill
@@ -1384,7 +1638,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     for ( int pathId = 0; pathId < preRes.paths.size(); ++pathId )
     {
         const auto& path = preRes.paths[pathId];
-        const auto& oldEdgesInfo = preRes.oldEdgesInfo[pathId];
+        const auto* oldEdgesInfo = preRes.oldFaces( pathId );
         for ( int edgeId = 0; edgeId < path.size(); ++edgeId )
         {
             const FaceId oldf = oldEdgesInfo[edgeId].left;
@@ -1487,12 +1741,12 @@ Expected<FaceBitSet> cutMeshByContours( Mesh& mesh, const Contours3f& contours, 
         maybeOneMeshContours[ic] = surfaceLineToMeshContour( mesh, surfaceLine );
     } );
 
-    Vector<OneMeshContour> oneMeshContours( contours.size() );
-    for( size_t ic = 0; ic < contours.size(); ++ic )
+    OneMeshContours oneMeshContours;
+    for ( auto& c : maybeOneMeshContours )
     {
-        if ( !maybeOneMeshContours[ic] )
-            return unexpected( std::move( maybeOneMeshContours[ic].error() ) );
-        oneMeshContours[ic] = std::move( *maybeOneMeshContours[ic] );
+        if ( !c )
+            return unexpected( std::move( c.error() ) );
+        oneMeshContours.push_back( *c );
     }
 
     auto cutRes = cutMesh( mesh, oneMeshContours );
@@ -1510,7 +1764,7 @@ Expected<std::vector<MR::EdgePath>> cutMeshByProjection( Mesh& mesh, const Conto
         return unexpected( "Invalid direction" );
     }
 
-    OneMeshContours cutConts( contours.size() );
+    Vector<OneMeshContour> projected( contours.size() ); // every contour is found in parallel, then appended to cutConts
     std::string error;
     auto rayPrecomp = IntersectionPrecomputes<float>( settings.direction );
     tbb::task_group_context ctx;
@@ -1568,10 +1822,13 @@ Expected<std::vector<MR::EdgePath>> cutMeshByProjection( Mesh& mesh, const Conto
                 error = std::move( cutContRes.error() );
             return;
         }
-        cutConts[i] = std::move( *cutContRes );
+        projected[i] = std::move( *cutContRes );
     } );
     if ( ctx.is_group_execution_cancelled() )
         return unexpected( std::move( error ) );
+    OneMeshContours cutConts;
+    for ( const auto& c : projected )
+        cutConts.push_back( c );
 
     auto cutRes = cutMesh( mesh, cutConts );
     if ( cutRes.fbsWithContourIntersections.any() )

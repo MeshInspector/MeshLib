@@ -3,11 +3,15 @@
 #include <MRCMesh/MRMesh.h>
 #include <MRCMesh/MRMeshPart.h>
 #include <MRCMesh/MRMeshSave.h>
+#include <MRCMesh/MRMeshTopology.h>
+#include <MRCMesh/MRRegionBoundary.h>
+#include <MRCMesh/MRSignDetectionMode.h>
 #include <MRCMesh/MRString.h>
 #include <MRCMesh/MRVector3.h>
 #include <MRCMisc/expected_MR_Mesh_std_string.h>
 #include <MRCMisc/expected_void_std_string.h>
 #include <MRCMisc/std_string.h>
+#include <MRCMisc/std_vector_std_vector_MR_EdgeId.h>
 #include <MRCVoxels/MROffset.h>
 
 #include <stdio.h>
@@ -30,10 +34,14 @@ int main( void )
     MR_GeneralOffsetParameters* params = MR_GeneralOffsetParameters_DefaultConstruct();
     // calculate voxel size depending on desired accuracy and/or memory consumption
     MR_GeneralOffsetParameters_Set_voxelSize( params, MR_suggestVoxelSize( inputMeshPart, 10000000.f ) );
-    MR_Box3f bbox = MR_Mesh_computeBoundingBox( mesh, NULL );
-    float offset = MR_Box3f_diagonal( &bbox ) * 0.1f;
+    MR_std_vector_std_vector_MR_EdgeId* holes = MR_findRightBoundary( MR_Mesh_Get_topology( mesh ), NULL, NULL );
+    if ( !MR_std_vector_std_vector_MR_EdgeId_empty( holes ) )
+        MR_GeneralOffsetParameters_Set_signDetectionMode( params, MR_SignDetectionMode_HoleWindingRule ); // use if you have holes in mesh
+    MR_std_vector_std_vector_MR_EdgeId_Destroy( holes );
 
     // Make offset mesh
+    MR_Box3f bbox = MR_Mesh_computeBoundingBox( mesh, NULL );
+    float offset = MR_Box3f_diagonal( &bbox ) * 0.1f;
     MR_expected_MR_Mesh_std_string* outputMeshEx = MR_generalOffsetMesh( inputMeshPart, offset, params );
     MR_MeshPart_Destroy( inputMeshPart );
     MR_GeneralOffsetParameters_Destroy( params );
@@ -42,7 +50,7 @@ int main( void )
 
     if ( !outputMesh )
     {
-        fprintf( stderr, "Failed to perform offset: %s", MR_std_string_data( MR_expected_MR_Mesh_std_string_error( outputMeshEx ) ) );
+        fprintf( stderr, "Failed to perform offset: %s\n", MR_std_string_data( MR_expected_MR_Mesh_std_string_error( outputMeshEx ) ) );
         goto fail_offset;
     }
 

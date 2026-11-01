@@ -30,7 +30,7 @@ int main( void )
     MR_expected_void_std_string* noiseEx = MR_addNoise_MR_Mesh( mesh, NULL, noiseSettings );
     MR_NoiseSettings_Destroy( noiseSettings );
 
-    if ( !noiseEx )
+    if ( MR_expected_void_std_string_error( noiseEx ) )
     {
         fprintf( stderr, "Failed to add noise: %s\n", MR_std_string_data( MR_expected_void_std_string_error( noiseEx ) ) );
         goto fail_noise;

@@ -4,7 +4,8 @@
 #include "MRIntersectionContour.h"
 #include "MRExpected.h"
 #include "MREnums.h"
-#include <variant>
+#include "MRBitSet.h"
+#include <span>
 
 namespace MR
 {
@@ -23,9 +24,42 @@ struct SortIntersectionsData
 // Simple point on mesh, represented by primitive id and coordinate in mesh space
 struct OneMeshIntersection
 {
-    std::variant<FaceId, EdgeId, VertId> primitiveId;
+    /// the kind of mesh primitive containing the point
+    enum class Primitive : unsigned char
+    {
+        Face,
+        Edge,
+        Vert
+    };
+
+    OneMeshIntersection() noexcept : id_( -1 ), primitive_( Primitive::Face ) {}
+    explicit OneMeshIntersection( NoInit ) noexcept : coordinate( noInit ) {}
+    OneMeshIntersection( FaceId f, const Vector3f& p ) noexcept : coordinate( p ), id_( int( f ) ), primitive_( Primitive::Face ) {}
+    OneMeshIntersection( EdgeId e, const Vector3f& p ) noexcept : coordinate( p ), id_( int( e ) ), primitive_( Primitive::Edge ) {}
+    OneMeshIntersection( VertId v, const Vector3f& p ) noexcept : coordinate( p ), id_( int( v ) ), primitive_( Primitive::Vert ) {}
+
+    [[nodiscard]] Primitive primitive() const { return primitive_; }
+    [[nodiscard]] bool isFace() const { return primitive_ == Primitive::Face; }
+    [[nodiscard]] bool isEdge() const { return primitive_ == Primitive::Edge; }
+    [[nodiscard]] bool isVert() const { return primitive_ == Primitive::Vert; }
+
+    /// the primitive containing the point if it is of that kind, otherwise invalid id
+    [[nodiscard]] FaceId face() const { return isFace() ? FaceId( id_ ) : FaceId(); }
+    [[nodiscard]] EdgeId edge() const { return isEdge() ? EdgeId( id_ ) : EdgeId(); }
+    [[nodiscard]] VertId vert() const { return isVert() ? VertId( id_ ) : VertId(); }
+
+    void setPrimitive( FaceId f ) { id_ = int( f ); primitive_ = Primitive::Face; }
+    void setPrimitive( EdgeId e ) { id_ = int( e ); primitive_ = Primitive::Edge; }
+    void setPrimitive( VertId v ) { id_ = int( v ); primitive_ = Primitive::Vert; }
+
+    /// whether both points are in the same primitive
+    [[nodiscard]] bool samePrimitive( const OneMeshIntersection& other ) const { return primitive_ == other.primitive_ && id_ == other.id_; }
 
     Vector3f coordinate;
+
+private:
+    int id_; // no default member initializers: the NoInit constructor must not write anything
+    Primitive primitive_;
 };
 
 // One contour on mesh
@@ -34,14 +68,62 @@ struct OneMeshContour
     Vector<OneMeshIntersection> intersections;
     bool closed{false};
 };
+
+// One contour of OneMeshContours, viewed in place
+struct MR_BIND_IGNORE OneMeshContourView
+{
+    std::span<const OneMeshIntersection> intersections;
+    bool closed{false};
+};
+
 /** \ingroup BooleanGroup
-  * \brief Special data type for MR::cutMesh
-  * 
+  * \brief Special data type for MR::cutMesh: the intersections of all contours in one array, one contour after another
+  *
   * This is special data for MR::cutMesh, you can convert some other contours representation to it by:\n
   * \ref MR::surfaceLineToClosedMeshContour
   * \ref MR::surfacePathsToMeshContours
   */
-using OneMeshContours = Vector<OneMeshContour>;
+struct OneMeshContours
+{
+    Vector<OneMeshIntersection> intersections;
+    Vector<int> offsets{ 0 }; ///< the number of contours + 1 elements: contour c is intersections[offsets[c], offsets[c + 1])
+    BitSet closed;
+
+    OneMeshContours() = default;
+    OneMeshContours( std::initializer_list<OneMeshContour> contours ) { for ( const auto& c : contours ) push_back( c ); }
+    MRMESH_API OneMeshContours( const Vector<OneMeshContour>& contours );
+
+    [[nodiscard]] size_t size() const { return offsets.size() - 1; }
+    [[nodiscard]] bool empty() const { return offsets.size() == 1; }
+    [[nodiscard]] MR_BIND_IGNORE OneMeshContourView operator[]( size_t c ) const
+        { return { { intersections.data() + offsets[c], size_t( offsets[c + 1] - offsets[c] ) }, closed.test( c ) }; }
+    [[nodiscard]] const OneMeshIntersection& intersection( size_t c, size_t i ) const { return intersections[offsets[c] + i]; }
+
+// not in the bindings: they would get an iterator over the views, which they lack (MR_BIND_IGNORE does not stop pybind11 from that)
+#if !defined MR_PARSING_FOR_ANY_BINDINGS && !defined MR_COMPILING_ANY_BINDINGS
+    /// iterates over the views of the contours
+    struct ConstIterator
+    {
+        const OneMeshContours* contours = nullptr;
+        size_t c = 0;
+        [[nodiscard]] OneMeshContourView operator*() const { return ( *contours )[c]; }
+        ConstIterator& operator++() { ++c; return *this; }
+        [[nodiscard]] bool operator==( const ConstIterator& ) const = default;
+    };
+    [[nodiscard]] ConstIterator begin() const { return { this, 0 }; }
+    [[nodiscard]] ConstIterator end() const { return { this, size() }; }
+#endif
+
+    /// returns a copy of contour c
+    [[nodiscard]] MRMESH_API OneMeshContour contour( size_t c ) const;
+
+    /// appends a contour
+    MR_BIND_IGNORE MRMESH_API void push_back( const OneMeshContourView& contour );
+    void push_back( const OneMeshContour& contour ) { push_back( { { contour.intersections.data(), contour.intersections.size() }, contour.closed } ); }
+};
+
+/// calls f( c, i0, i1 ) in parallel on pieces [i0, i1) of all elements of contours with given offsets, every piece within contour c
+MR_BIND_IGNORE MRMESH_API void parallelForContourPieces( const Vector<int>& offsets, const std::function<void( int c, int i0, int i1 )>& f );
 
 // Divides faces that fully own contours into 3 parts with center in center mass of one of the face contours
 // if there is more than one contour on face it guarantee to subdivide at least one lone contour on this face
@@ -50,7 +132,7 @@ using OneMeshContours = Vector<OneMeshContour>;
 MRMESH_API void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceHashMap* new2oldMap = nullptr );
 
 /// Converts contours given in topological terms as the intersections of one mesh's edge and another mesh's triangle (ContinuousContours),
-/// into contours of meshA and/or meshB given as a sequence of (primitiveId and Cartesian coordinates);
+/// into contours of meshA and/or meshB given as a sequence of (primitive id and Cartesian coordinates);
 /// converters are required for better precision in case of degenerations;
 /// note that contours should not have intersections
 MRMESH_API void getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const ContinuousContours& contours,

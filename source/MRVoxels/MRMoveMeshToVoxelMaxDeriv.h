@@ -21,7 +21,7 @@ namespace MR
 This group provides highlevel interface of the algorithm: \ref moveMeshToVoxelMaxDeriv configurable through
 \ref MoveMeshToVoxelMaxDerivSettings and the low-level structure \ref MeshOnVoxelsT that allows creation of custom correction strategy.
 
-\paragraph description Description of the algorithm.
+\par Description of the algorithm.
 
 -# **Input**: Mesh and VdbVolume with corresponding transforms. The objects must be aligned.
 -# First step is to apply preparation smoothing with force specified by \ref MoveMeshToVoxelMaxDerivSettings::preparationSmoothForce.
@@ -66,7 +66,7 @@ This group provides highlevel interface of the algorithm: \ref moveMeshToVoxelMa
 A nice visualization of \a why it works could be found in MeshInspector's plugin "Voxels Inspector". Just click on any vertex and you will see
 the values of \f$ F, Q_i \f$ on the interval \f$ \overline{N_i} \f$, as well as points of \f$ N_i \f$.
 
-\paragraph usage Usage
+\par Usage
 
 The algorithm can be used in different cases related to the CT-scanning workflows:
 - To increase precision of the mesh retrieved by marching cubes meshing from a noisy scan.

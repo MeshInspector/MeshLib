@@ -177,6 +177,7 @@ jobs:
               - "3.12"
               - "3.13"
               - "3.14"
+              - "3.15"
           rules: |
             - extend:
                 - platform: x86_64
@@ -202,6 +203,8 @@ jobs:
                   os: "fedora:42"
                 - py-version: "3.14"
                   os: "ubuntu:25.10"
+                - py-version: "3.15"
+                  os: "fedora:44"
             - if: ${{ inputs.disable_manylinux }}
               exclude:
                 - platform: x86_64
@@ -462,7 +465,7 @@ jobs:
       matrix:
         platform: [x64, arm64]
         include:
-          # Both build with the image's clang-cl through CMake, as the clang-cl jobs of build-test-windows.yml:
+          # Both build with the MSYS2 clang in cl mode through CMake, as the clang-cl jobs of build-test-windows.yml:
           # x64 on the 14.4 (VS2022) toolset, which CUDA 12 needs, arm64 on VS2026.
           - platform: x64
             runner: windows-2025
@@ -498,7 +501,7 @@ jobs:
       CUDA-MINOR: ${{ matrix.cuda-minor }}
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg-triplet }}
       VCVARS_VER: ${{ matrix.vcvars-ver }}
-      CMAKE_COMPILER_ARGS: -DCMAKE_CXX_COMPILER="C:/Program Files/LLVM/bin/clang-cl.exe" -DCMAKE_C_COMPILER="C:/Program Files/LLVM/bin/clang-cl.exe" -DCMAKE_LINKER_TYPE=LLD
+      CMAKE_COMPILER_ARGS: -DCMAKE_CXX_COMPILER=C:/msys64/${{ matrix.msys2-env }}/bin/clang-cl.exe -DCMAKE_C_COMPILER=C:/msys64/${{ matrix.msys2-env }}/bin/clang-cl.exe -DCMAKE_LINKER_TYPE=LLD
       MSYS2_ENV: ${{ matrix.msys2-env }}
     steps:
       - name: Checkout
@@ -554,6 +557,11 @@ jobs:
           build-script: scripts/mrbind/install_mrbind_windows_msys2.bat
           extra-cache-key: ${{ hashFiles(format('scripts/mrbind/msys2_package_hashes{0}.txt', matrix.msys2-pkgs)) }}
           msys2-env: ${{ matrix.msys2-env }}
+
+      - name: Add clang-cl to MSYS2 clang
+        # MSYS2 ships no clang-cl.exe; clang.exe called by that name runs in cl mode
+        shell: cmd
+        run: copy /y C:\msys64\%MSYS2_ENV%\bin\clang.exe C:\msys64\%MSYS2_ENV%\bin\clang-cl.exe
 
       - name: Build
         shell: cmd
@@ -867,6 +875,11 @@ jobs:
         if: ${{ matrix.os == 'rockylinux:9' || matrix.os == 'fedora:37' || matrix.os == 'fedora:39' || matrix.os == 'fedora:42' }}
         run: dnf -y install python3-pip
 
+      - name: Fedora 44 system setup
+        # Python 3.15 is not the system Python there, but a parallel-installable package
+        if: ${{ matrix.os == 'fedora:44' }}
+        run: dnf -y install python3.15
+
       - name: Create virtualenv
         run: |
           ${{ env.PYTHON_CMD }} -m venv .venv
@@ -935,6 +948,7 @@ jobs:
             3.12
             3.13
             3.14
+            3.15
 
       - name: Python setup (arm64)
         # python.org publishes no win-arm64 build before 3.11
@@ -946,6 +960,7 @@ jobs:
             3.12
             3.13
             3.14
+            3.15
 
       # One step per Python ABI so the GitHub Actions UI shows per-version
       # status / timing / logs. Each step is a thin wrapper around the
@@ -980,6 +995,10 @@ jobs:
       - name: Test wheel against Python 3.14
         shell: pwsh
         run: ./scripts/wheel/test_wheel_windows.ps1 -Version 3.14
+
+      - name: Test wheel against Python 3.15
+        shell: pwsh
+        run: ./scripts/wheel/test_wheel_windows.ps1 -Version 3.15
 
   macos-pip-test:
     needs: [setup, macos-pip-build]
@@ -1052,6 +1071,9 @@ jobs:
 
       - name: Test wheel against Python 3.14
         run: scripts/wheel/test_wheel_macos.sh 3.14 ${{ matrix.platform }}
+
+      - name: Test wheel against Python 3.15
+        run: scripts/wheel/test_wheel_macos.sh 3.15 ${{ matrix.platform }}
 
   upload-to-release:
     if: ${{ needs.setup.outputs.publish_prod == 'true' }}

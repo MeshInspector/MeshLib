@@ -1,28 +1,25 @@
-﻿public static class MeshExportExample
+public static class MeshExportExample
 {
     public static void Main(string[] args)
     {
-        try
-        {
-            MR.Mesh mesh = MR.makeCube(MR.Vector3f.diagonal(1), MR.Vector3f.diagonal(-0.5f));
-            Console.WriteLine("Vertices coordinates:");
-            for (int i = 0; i < (int)mesh.points.size(); ++i)
-            {
-                var p = mesh.points[new MR.VertId(i)];
-                Console.WriteLine("Vertex {0} coordinates: {1}; {2}; {3}", i, p.x, p.y, p.z);
-            }
+        // create some mesh
+        var mesh = MR.makeCube();
 
-            MR.Triangulation tri = mesh.topology.getTriangulation();
+        // all vertices of valid triangles
+        var triangles = mesh.topology.getAllTriVerts();
 
-            for (int i = 0; i < (int)tri.size(); ++i)
-            {
-                var t = tri[new MR.FaceId(i)];
-                Console.WriteLine("Triangle {0} vertices: {1}; {2}; {3}", i, t.elems._0.id, t.elems._1.id, t.elems._2.id);
-            }
-        }
-        catch (Exception e)
+        // all point coordinates
+        var points = mesh.points;
+        // triangle vertices as triples of ints (pointing to elements in points vector)
+        var vertexTriples = new int[(int)triangles.size() * 3];
+        for (int t = 0; t < (int)triangles.size(); ++t)
         {
-            Console.WriteLine("Error: {0}", e.Message);
+            var tri = triangles[(nuint)t].elems;
+            vertexTriples[3 * t + 0] = tri._0.id;
+            vertexTriples[3 * t + 1] = tri._1.id;
+            vertexTriples[3 * t + 2] = tri._2.id;
         }
+
+        // TODO: export in your format
     }
 }

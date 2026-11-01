@@ -54,19 +54,16 @@ void testMeshCollidePrecise( void )
     TEST_ASSERT( MR_Vector_MR_VarEdgeTri_size( MR_Vector_MR_Vector_MR_VarEdgeTri_index( contours, 3 ) ) == 9 ||  // without FMA instruction (default settings for x86 or old compilers for ARM)
                  MR_Vector_MR_VarEdgeTri_size( MR_Vector_MR_Vector_MR_VarEdgeTri_index( contours, 3 ) ) == 7 );  // with FMA instruction (modern compilers for ARM)
 
-    MR_Vector_MR_OneMeshContour* meshAContours = MR_Vector_MR_OneMeshContour_DefaultConstruct();
-    MR_Vector_MR_OneMeshContour* meshBContours = MR_Vector_MR_OneMeshContour_DefaultConstruct();
+    MR_OneMeshContours* meshAContours = MR_OneMeshContours_DefaultConstruct();
+    MR_OneMeshContours* meshBContours = MR_OneMeshContours_DefaultConstruct();
     MR_getOneMeshIntersectionContours( meshA, meshB, contours, meshAContours, meshBContours, conv, NULL, NULL, NULL );
-    TEST_ASSERT( MR_Vector_MR_OneMeshContour_size( meshAContours ) == 4 )
-    TEST_ASSERT( MR_Vector_MR_OneMeshContour_size( meshBContours ) == 4 )
+    TEST_ASSERT( MR_OneMeshContours_size( meshAContours ) == 4 )
+    TEST_ASSERT( MR_OneMeshContours_size( meshBContours ) == 4 )
+    // the intersections of all contours are in one array
+    TEST_ASSERT( MR_Vector_MR_OneMeshIntersection_size( MR_OneMeshContours_Get_intersections( meshAContours ) ) == 156 )
 
-    size_t posCount = 0;
-    for ( size_t i = 0; i < MR_Vector_MR_OneMeshContour_size( meshAContours ); ++i )
-        posCount += MR_Vector_MR_OneMeshIntersection_size( MR_OneMeshContour_Get_intersections( MR_Vector_MR_OneMeshContour_index( meshAContours, i ) ) );
-    TEST_ASSERT( posCount == 156 )
-
-    MR_Vector_MR_OneMeshContour_Destroy( meshBContours );
-    MR_Vector_MR_OneMeshContour_Destroy( meshAContours );
+    MR_OneMeshContours_Destroy( meshBContours );
+    MR_OneMeshContours_Destroy( meshAContours );
 
     MR_Vector_MR_Vector_MR_VarEdgeTri_Destroy( contours );
 

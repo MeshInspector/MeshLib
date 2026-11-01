@@ -43,6 +43,9 @@
     <ClCompile Include="MRMeshTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRLocalConvexityTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRBestFitTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -85,6 +88,9 @@
     <ClCompile Include="MRSurfaceDistanceBuilderTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRSharpOffsetComponentsTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRSurfacePathTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -98,6 +104,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MREdgeLengthMeshTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshCurvatureTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRLaplacianTests.cpp">

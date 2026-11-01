@@ -93,7 +93,8 @@ void convertIntFloatAllVerts( Mesh & mesh, const CoordinateConverters& conv )
     } );
 }
 
-BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params, BooleanInternalParameters intParams );
+BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params, BooleanInternalParameters intParams,
+    bool copyOriginals = false );
 
 BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
                        const AffineXf3f* rigidB2A /*= nullptr */, BooleanResultMapper* mapper /*= nullptr */, ProgressCallback cb )
@@ -104,22 +105,14 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
 BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation, const BooleanParameters& params /*= {} */ )
 {
     MR_TIMER;
-    Mesh maCpy, mbCpy;
+    // build the trees of the input meshes: important for many calls to Boolean for the same mesh to avoid tree construction on every call
     tbb::task_group taskGroup;
-    taskGroup.run( [&] ()
-    {
-        // build tree for input mesh for the cloned mesh to copy the tree,
-        // this is important for many calls to Boolean for the same mesh to avoid tree construction on every call
-        meshA.getAABBTree();
-        maCpy = meshA;
-    } );
-    // build tree for input mesh for the cloned mesh to copy the tree,
-    // this is important for many calls to Boolean for the same mesh to avoid tree construction on every call
+    taskGroup.run( [&] () { meshA.getAABBTree(); } );
     meshB.getAABBTree();
-    mbCpy = meshB;
     taskGroup.wait();
 
-    return booleanImpl( std::move( maCpy ), std::move( mbCpy ), operation, params, { .originalMeshA = &meshA,.originalMeshB = &meshB } );
+    // the meshes are copied in booleanImpl only when their cuts are known, with the room the cuts need
+    return booleanImpl( {}, {}, operation, params, { .originalMeshA = &meshA,.originalMeshB = &meshB }, true );
 }
 
 BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params /*= {} */ )
@@ -200,6 +193,15 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
 
     auto holePairs = detail::findSelfContoursMapping( contours );
     auto intContours = getOneMeshSelfIntersectionContours( mesh, contours, converters );
+    // what the pairs below do with the contours: the first contour of a pair is closed through the vertices sv and fv and followed by
+    // the second one, which is dropped then; or both contours of a pair are dropped
+    struct PairChange
+    {
+        int second = -1; // set in the first contour of a merged pair
+        VertId sv, fv;
+        bool dropped = false;
+    };
+    Vector<PairChange> changes( contours.size() );
 
     // update non-closed
     ParallelFor( holePairs, [&] ( size_t hpId )
@@ -211,18 +213,13 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
 
         if ( cf.capacity() < 2 * cf.size() + 3 )
             cf.reserve( 2 * cf.size() + 3 );
-        auto& icf = intContours[f].intersections;
-        if ( icf.capacity() < 2 * icf.size() + 3 )
-            icf.reserve( 2 * icf.size() + 3 );
 
         auto& cs = contours[s];
-        auto& ics = intContours[s].intersections;
         auto clearPair = [&]
         {
             cs.clear();
             cf.clear();
-            ics.clear();
-            icf.clear();
+            changes[f].dropped = changes[s].dropped = true;
         };
 
         // close the contour through the third vertices of the faces where it starts and ends (a fold at a vertex shared by both sheets);
@@ -255,16 +252,38 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
         cf.insert( cf.end(), std::make_move_iterator( cs.begin() ), std::make_move_iterator( cs.end() ) );
         cf.insert( cf.end(), prevVET );
         cs.clear();
-
-        auto prevOMI = OneMeshIntersection{ .primitiveId = svId,.coordinate = mesh.points[svId] };
-        auto nextOMI = OneMeshIntersection{ .primitiveId = fvId,.coordinate = mesh.points[fvId] };     
-        icf.insert( icf.begin(), prevOMI );
-        icf.insert( icf.end(), nextOMI );
-        icf.insert( icf.end(), std::make_move_iterator( ics.begin() ), std::make_move_iterator( ics.end() ) );
-        icf.insert( icf.end(), prevOMI );
-        ics.clear();
-        intContours[f].closed = true;
+        changes[f] = { .second = int( s ), .sv = svId, .fv = fvId };
+        changes[s].dropped = true;
     } );
+
+    if ( !holePairs.empty() )
+    {
+        // the intersections of the changed contours in a new array; the contours keep their indices
+        OneMeshContours changed;
+        auto& out = changed.intersections;
+        out.reserve( intContours.intersections.size() + 3 * holePairs.size() );
+        auto append = [&] ( const OneMeshContourView& c ) { out.insert( out.end(), c.intersections.begin(), c.intersections.end() ); };
+        Vector<int> offsets( contours.size() + 1 ); // not grown in place: GCC sees push_back() to the default { 0 } as out of its bounds
+        for ( int j = 0; j < contours.size(); ++j )
+        {
+            const auto& ch = changes[j];
+            if ( ch.second >= 0 )
+            {
+                out.emplace_back( ch.sv, mesh.points[ch.sv] );
+                append( intContours[j] );
+                out.emplace_back( ch.fv, mesh.points[ch.fv] );
+                append( intContours[ch.second] );
+                out.emplace_back( ch.sv, mesh.points[ch.sv] );
+            }
+            else if ( !ch.dropped )
+                append( intContours[j] );
+            if ( ch.second >= 0 || intContours.closed.test( j ) )
+                changed.closed.autoResizeSet( j );
+            offsets[j + 1] = int( out.size() );
+        }
+        changed.offsets = std::move( offsets );
+        intContours = std::move( changed );
+    }
 
     // meshAVertsNum = 0 because both meshes are actually the same and no need to change the IDs of any mesh vertices
     const SortIntersectionsData sortData{ inMesh, contours, converters.toInt, nullptr, 0, false };
@@ -322,9 +341,23 @@ Contours3f findIntersectionContours( const Mesh& meshA, const Mesh& meshB, const
     return res;
 }
 
-BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params, BooleanInternalParameters intParams )
+BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params, BooleanInternalParameters intParams,
+    bool copyOriginals )
 {
     MR_TIMER;
+    // the meshes to read until they are cut: if copyOriginals, meshA and meshB are empty and get the copies of the original meshes just before their cuts
+    const Mesh& srcA = copyOriginals ? *intParams.originalMeshA : meshA;
+    const Mesh& srcB = copyOriginals ? *intParams.originalMeshB : meshB;
+    // copies the original mesh with the capacity for its cut by these contours, so the cut does not reallocate the whole mesh
+    auto copyOriginal = [copyOriginals] ( Mesh& to, const Mesh* from, const OneMeshContours* cutContours )
+    {
+        if ( !copyOriginals )
+            return;
+        MR_NAMED_TIMER( "copyOriginal" );
+        if ( cutContours )
+            reserveForCut( to, *from, *cutContours );
+        to = *from;
+    };
     BooleanResult result;
     CoordinateConverters converters;
     ContinuousContours contours;
@@ -332,12 +365,12 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     bool needCutMeshA = operation != BooleanOperation::InsideB && operation != BooleanOperation::OutsideB;
     bool needCutMeshB = operation != BooleanOperation::InsideA && operation != BooleanOperation::OutsideA;
 
-    converters = getVectorConverters( meshA, meshB, params.rigidB2A );
-    const size_t meshAVertsNum = meshA.topology.vertSize(); // before any cut of A
+    converters = getVectorConverters( srcA, srcB, params.rigidB2A );
+    const size_t meshAVertsNum = srcA.topology.vertSize(); // before any cut of A
 
     // find and order intersections
-    contours = orderIntersectionContours( meshA.topology, meshB.topology,
-        findCollidingEdgeTrisPrecise( meshA, meshB, converters.toInt, params.rigidB2A ) );
+    contours = orderIntersectionContours( srcA.topology, srcB.topology,
+        findCollidingEdgeTrisPrecise( srcA, srcB, converters.toInt, params.rigidB2A ) );
     removeTwoPointLoops( contours );
 
     if ( params.cb && !params.cb( 0.0f ) )
@@ -373,7 +406,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
             }
             else
                 // B is stable so no need copy
-                dataForA.emplace( SortIntersectionsData{ meshB, contours, converters.toInt, params.rigidB2A, meshAVertsNum, false } );
+                dataForA.emplace( SortIntersectionsData{ srcB, contours, converters.toInt, params.rigidB2A, meshAVertsNum, false } );
         } );
     }
 
@@ -391,12 +424,12 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         }
         else
             // A is stable so no need to copy
-            dataForB.emplace( SortIntersectionsData{ meshA, contours, converters.toInt, params.rigidB2A, meshAVertsNum, true } );
+            dataForB.emplace( SortIntersectionsData{ srcA, contours, converters.toInt, params.rigidB2A, meshAVertsNum, true } );
     }
     taskGroup.wait();
 
     if ( needCutMeshA || needCutMeshB )
-        getOneMeshIntersectionContours( meshA, meshB, contours,
+        getOneMeshIntersectionContours( srcA, srcB, contours,
             needCutMeshA ? &meshAContours : nullptr,
             needCutMeshB ? &meshBContours : nullptr,
             converters, params.rigidB2A );
@@ -410,6 +443,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     {
         taskGroup.run( [&] ()
         {
+            copyOriginal( meshA, intParams.originalMeshA, &meshAContours );
             Timer t( "CutMeshA" );
             FaceMap* cut2oldAPtr = params.mapper ? &params.mapper->maps[int( BooleanResultMapper::MapObject::A )].cut2origin : nullptr;
             // cut meshes
@@ -417,12 +451,11 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
             cmParams.sortData = &*dataForA;
             cmParams.new2OldMap = cut2oldAPtr;
             if ( params.forceCut )
-                cmParams.forceFill = true;
+                cmParams.forceFillMode = CutMeshParameters::ForceFill::All;
             else
                 cmParams.fillPart = needInsideA ? CutMeshParameters::FillPart::Left : CutMeshParameters::FillPart::Right;
             auto res = cutMesh( meshA, meshAContours, cmParams );
-            meshAContours.clear();
-            meshAContours.shrink_to_fit(); // free memory
+            meshAContours = {}; // free memory
             result.meshABadContourFaces = std::move( res.fbsWithContourIntersections );
             cutA = std::move( res.resultCut );
         } );
@@ -430,6 +463,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
 
     if ( doCutB )
     {
+        copyOriginal( meshB, intParams.originalMeshB, &meshBContours );
         Timer t( "CutMeshB" );
         FaceMap* cut2oldBPtr = params.mapper ? &params.mapper->maps[int( BooleanResultMapper::MapObject::B )].cut2origin : nullptr;
         // cut meshes
@@ -437,16 +471,19 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         cmParams.sortData = &*dataForB;
         cmParams.new2OldMap = cut2oldBPtr;
         if ( params.forceCut )
-            cmParams.forceFill = true;
+            cmParams.forceFillMode = CutMeshParameters::ForceFill::All;
         else
             cmParams.fillPart = needInsideB ? CutMeshParameters::FillPart::Right : CutMeshParameters::FillPart::Left;
         auto res = cutMesh( meshB, meshBContours, cmParams );
-        meshBContours.clear();
-        meshBContours.shrink_to_fit(); // free memory
+        meshBContours = {}; // free memory
         result.meshBBadContourFaces = std::move( res.fbsWithContourIntersections );
         cutB = std::move( res.resultCut );
     }
     taskGroup.wait();
+    if ( !doCutA )
+        copyOriginal( meshA, intParams.originalMeshA, nullptr );
+    if ( !doCutB )
+        copyOriginal( meshB, intParams.originalMeshB, nullptr );
 
     // the precut outputs take the meshes only after the cuts: where one mesh is not cut (by the operation or for its precut output),
     // the cut of the other one sorts its intersections by that mesh itself, not by a copy;

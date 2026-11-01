@@ -61,7 +61,7 @@ void OpenVoxelsFromTiffPlugin::drawDialog( ImGuiContext* )
                                 "invert to have iso-surface oriented from smaller value to bigger to represent distances volume" ) );
     if ( UI::button( _tr( "Open Directory" ), { -1, 0 } ) )
     {
-        auto directory = openFolderDialog();
+        auto directory = openFolderDialog( {}, true );
         if ( directory.empty() )
         {
             ImGui::PopStyleVar( 2 );

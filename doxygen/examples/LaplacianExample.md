@@ -16,8 +16,17 @@ Example of using Laplacian deformer
 - <b class="tab-title">C</b>
 \include LaplacianDeformation.dox.c
  
+- <b class="tab-title">C#</b>
+\include LaplacianDeformation.dox.cs
+ 
 - <b class="tab-title">JavaScript</b>
 \include LaplacianDeformation.dox.js
 \include{doc} JsUsingNote.md
+ 
+- <b class="tab-title">Rust</b>
+\include LaplacianDeformation.dox.rs
+ 
+- <b class="tab-title">Java</b>
+\include LaplacianDeformation.dox.java
 
 </div>

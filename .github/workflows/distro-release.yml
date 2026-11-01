@@ -83,54 +83,13 @@ jobs:
 
   upload-distributions:
     if: ${{ !cancelled() }}
-    timeout-minutes: 10
-    runs-on: ubuntu-latest
     needs:
       - config
       - update-win-version
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Download All Developer Distributives
-        uses: actions/download-artifact@v8
-        with:
-          pattern: Distributives*
-          merge-multiple: true
-
-      - name: Rename Distributives
-        run: |
-          shopt -s nullglob
-          VERSION="${{ needs.config.outputs.app_version }}"
-          for PKG_FILE in MeshLibDist*.zip ; do
-            # An arm64 archive is named like its x64 sibling with `-arm64` appended
-            # last, so strip that suffix first and put it back at the end.
-            NAME="${PKG_FILE%.zip}"
-            ARCH_SUFFIX=""
-            case "$NAME" in
-              *-arm64) NAME="${NAME%-arm64}" ; ARCH_SUFFIX="-arm64" ;;
-            esac
-            case "$NAME" in
-              # Keep the historical layout for the iterator-debug archives:
-              # MeshLibDist-IteratorDebug[-PDB] -> MeshLibDist_<version>-IteratorDebug[-PDB]
-              *-IteratorDebug|*-IteratorDebug-PDB) NAME="${NAME/Dist/Dist_${VERSION}}" ;;
-              # Companion symbols archives: MeshLibDistVS26-PDB -> MeshLibDistVS26_<version>-PDB
-              *-PDB) NAME="${NAME%-PDB}_${VERSION}-PDB" ;;
-              # Per-VS archives: MeshLibDistVS26 -> MeshLibDistVS26_<version>
-              *) NAME="${NAME}_${VERSION}" ;;
-            esac
-            mv "$PKG_FILE" "${NAME}${ARCH_SUFFIX}.zip"
-          done
-
-      - name: Upload Distributives
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          shopt -s nullglob
-          PKG_FILES="MeshLibDist*.zip meshlib_*.zip meshlib_*.tar.xz"
-          if [ -n "$(echo $PKG_FILES)" ] ; then
-            gh release upload ${{ needs.config.outputs.release_tag }} $PKG_FILES --clobber
-          fi
+    uses: ./.github/workflows/upload-distributions.yml
+    with:
+      release_tag: ${{ needs.config.outputs.release_tag }}
+      app_version: ${{ needs.config.outputs.app_version }}
 
   update-artifacts:
     timeout-minutes: 15

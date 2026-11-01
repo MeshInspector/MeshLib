@@ -6,11 +6,10 @@ fn print_stats(icp: &MultiwayICP)
     println!("Active point pairs: {}", icp.get_num_active_pairs());
     if icp.get_num_active_pairs() > 0
     {
-        // the binding has no "no value" option here; deviation from 0 is the same root-mean-square distance
-        let p2pt_metric = icp.get_mean_sq_dist_to_point(&0.0);
-        let p2pl_metric = icp.get_mean_sq_dist_to_plane(&0.0);
-        println!("RMS point-to-point distance: {} ± {}", p2pt_metric, icp.get_mean_sq_dist_to_point(&(p2pt_metric as f64)));
-        println!("RMS point-to-plane distance: {} ± {}", p2pl_metric, icp.get_mean_sq_dist_to_plane(&(p2pl_metric as f64)));
+        let p2pt_metric = icp.get_mean_sq_dist_to_point(None);
+        let p2pl_metric = icp.get_mean_sq_dist_to_plane(None);
+        println!("RMS point-to-point distance: {} ± {}", p2pt_metric, icp.get_mean_sq_dist_to_point(Some(p2pt_metric as f64)));
+        println!("RMS point-to-plane distance: {} ± {}", p2pl_metric, icp.get_mean_sq_dist_to_plane(Some(p2pl_metric as f64)));
     }
 }
 

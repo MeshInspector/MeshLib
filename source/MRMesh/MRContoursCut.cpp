@@ -178,14 +178,13 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
     res.edgeData.reserve( size_t( intersectedEdges ) );
     const auto oldEdgesSize = topology.edgeSize();
 
-    // find the old face of every path edge before the topology changes, on this thread, which then has the records of the cut edges
-    // in its cache for cutOneEdge; the faces of path edges at mesh vertices are removed here (the others by cutOneEdge or
-    // connectLoneContours), and their edges show where to splice the path edges around the vertices
-    auto& vertFaces = res.vertFaces;
+    // find the old face of every path edge before the topology changes; the faces of path edges at mesh vertices are removed here
+    // (the others by cutOneEdge or connectLoneContours), and their edges show where to splice the path edges around the vertices
+    FaceBitSet vertFaceSet( topology.faceSize() );
     const auto& inters = contours.intersections;
-    for ( int c = 0; c < contours.size(); ++c )
+    parallelForContourPieces( contours.offsets, [&] ( int c, int k0, int k1 )
     {
-        for ( int k = contours.offsets[c]; k + 1 < contours.offsets[c + 1]; ++k )
+        for ( int k = k0; k < k1 && k + 1 < contours.offsets[c + 1]; ++k )
         {
             const auto& a = inters[k];
             const auto& b = inters[k + 1];
@@ -216,15 +215,16 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
             else
                 oldFaces.left = oldFaces.right = ( va ? b : a ).face();
             if ( oldFaces.left && ( va || vb ) )
-            {
-                auto [it, inserted] = vertFaces.try_emplace( oldFaces.left );
-                if ( inserted )
-                    topology.getTriEdges( oldFaces.left, it->second[0], it->second[1], it->second[2] );
-            }
+                vertFaceSet.atomicTestSet( oldFaces.left );
         }
-    }
-    for ( const auto& [f, edges] : vertFaces )
+    } );
+    auto& vertFaces = res.vertFaces;
+    for ( auto f : vertFaceSet )
+    {
+        auto& edges = vertFaces[f];
+        topology.getTriEdges( f, edges[0], edges[1], edges[2] );
         topology.setLeft( edges[0], {} );
+    }
 
     // the contour and intersection at the other end of every path edge spliced at a mesh vertex, by the path edge from the vertex
     HashMap<EdgeId, std::pair<int, int>> spliceEnds;

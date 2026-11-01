@@ -61,10 +61,8 @@ int main( void )
 
     // Output information string
     MR_std_string* info = MR_ICP_getStatusInfo( icp );
-    printf( "%s\n", MR_std_string_data( info ) );
+    fprintf( stderr, "%s\n", MR_std_string_data( info ) );
     MR_std_string_Destroy( info );
-
-    printf("Final transform:\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n", xf.A.x.x, xf.A.x.y, xf.A.x.z, xf.b.x, xf.A.y.x, xf.A.y.y, xf.A.y.z, xf.b.y, xf.A.z.x, xf.A.z.y, xf.A.z.z, xf.b.z);
 
     MR_ICP_Destroy( icp );
     MR_MeshOrPointsXf_Destroy( flt );

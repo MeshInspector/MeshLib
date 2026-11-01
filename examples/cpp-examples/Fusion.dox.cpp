@@ -5,10 +5,14 @@
 #include "MRVoxels/MRPointsToMeshFusion.h"
 #include <MRMesh/MRMeshSave.h>
 #include <MRMesh/MRMesh.h>
+#include <MRIOExtras/MRIOExtras.h>
 #include <iostream>
 
 int main()
 {
+    // CTM, JPEG and other formats beyond the basic ones come with the MRIOExtras library
+    MR::loadIOExtras();
+
     // load points
     auto loadRes = MR::PointsLoad::fromAnySupportedFormat( "Points.ply" );
     if ( !loadRes.has_value() )
@@ -26,7 +30,7 @@ int main()
     if ( !fusionRes.has_value() )
     {
         std::cerr << fusionRes.error() << "\n";
-        return 1; // error while saving file
+        return 1; // error while building the mesh
     }
 
     auto saveRes = MR::MeshSave::toAnySupportedFormat( *fusionRes, "Mesh.ctm" );

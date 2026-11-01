@@ -17,5 +17,11 @@ Example of filling holes
 - <b class="tab-title">JavaScript</b>
 \include MeshFillHole.dox.js
 \include{doc} JsUsingNote.md
+ 
+- <b class="tab-title">Rust</b>
+\include MeshFillHole.dox.rs
+ 
+- <b class="tab-title">Java</b>
+\include MeshFillHole.dox.java
 
 </div>

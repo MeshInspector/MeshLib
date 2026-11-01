@@ -55,8 +55,10 @@ if(DEFINED MESHLIB_INCLUDE_DIRS AND DEFINED MESHLIB_LIB_DIRS)
   foreach(TARGET Fusion MeshOffset MeshOffsetWeighted Triangulation)
     target_link_libraries(${TARGET} PRIVATE MRVoxels)
   endforeach()
-  # MeshLoadSave additionally depends on MRIOExtras
-  target_link_libraries(MeshLoadSave PRIVATE MRIOExtras)
+  # these examples additionally depend on MRIOExtras for CTM and image formats
+  foreach(TARGET ContourTriangulation Fusion MeshLoadSave MeshOffsetWeighted PointsToMesh SignedDistance SignedDistancePointToMesh SignedDistances TerrainTriangulation)
+    target_link_libraries(${TARGET} PRIVATE MRIOExtras)
+  endforeach()
   # MRBasedMainFunc additionally depends on MRViewer
   target_link_libraries(MRBasedMainFunc PRIVATE MRViewer)
 else()
@@ -73,8 +75,10 @@ else()
   foreach(TARGET Fusion MeshOffset MeshOffsetWeighted Triangulation)
     target_link_libraries(${TARGET} PRIVATE MeshLib::MRVoxels)
   endforeach()
-  # MeshLoadSave additionally depends on MRIOExtras
-  target_link_libraries(MeshLoadSave PRIVATE MeshLib::MRIOExtras)
+  # these examples additionally depend on MRIOExtras for CTM and image formats
+  foreach(TARGET ContourTriangulation Fusion MeshLoadSave MeshOffsetWeighted PointsToMesh SignedDistance SignedDistancePointToMesh SignedDistances TerrainTriangulation)
+    target_link_libraries(${TARGET} PRIVATE MeshLib::MRIOExtras)
+  endforeach()
   # MRBasedMainFunc additionally depends on MRViewer
   target_link_libraries(MRBasedMainFunc PRIVATE MeshLib::MRViewer)
 

@@ -5,6 +5,7 @@
 #include "MRMesh/MRMeshBoolean.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRSystemPath.h"
+#include "MRMesh/MRStringConvert.h"
 #include "MRViewer/MRGetSystemInfoJson.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRPch/MRJson.h"
@@ -75,8 +76,10 @@ int main( int argc, char** argv )
     {
         //Test python mrmeshpy
         {
-            // The module is imported from the package next to this executable.
-            auto str = "from meshlib import mrmeshpy\n"
+            // Directly from the package directory: the `__init__.py` of a wheel build would redirect the resources of this process.
+            auto str = "import sys\n"
+                "sys.path.insert( 0, r'" + MR::utf8string( MR::SystemPath::getPythonModulesDirectory() / "meshlib" ) + "' )\n"
+                "import mrmeshpy\n"
                 "print( \"List of python module functions available in mrmeshpy:\\n\" )\n"
                 "funcs = dir( mrmeshpy )\n"
                 "for f in funcs :\n"

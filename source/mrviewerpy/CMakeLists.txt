@@ -35,9 +35,11 @@ target_link_libraries(${PROJECT_NAME}
 
 # The objects of `mrmeshpy` (generated over the C bindings) pass through its C++ interop API, see this header.
 target_include_directories(${PROJECT_NAME} PRIVATE "${MESHLIB_THIRDPARTY_DIR}/mrbind/include")
-target_compile_options(${PROJECT_NAME} PRIVATE
-  $<IF:$<CXX_COMPILER_ID:MSVC>,/FI,-include> "${CMAKE_CURRENT_SOURCE_DIR}/MRPythonOverCTypes.h"
-)
+IF(MSVC) # Also clang-cl.
+  target_compile_options(${PROJECT_NAME} PRIVATE "/FI${CMAKE_CURRENT_SOURCE_DIR}/MRPythonOverCTypes.h")
+ELSE()
+  target_compile_options(${PROJECT_NAME} PRIVATE -include "${CMAKE_CURRENT_SOURCE_DIR}/MRPythonOverCTypes.h")
+ENDIF()
 
 # Don't emit undefined references. We need this because we don't want to link to a specific Python version.
 # The flag we're removing here is something we only set on Linux, in `CompilerOptions.cmake`.

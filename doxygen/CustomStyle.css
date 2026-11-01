@@ -60,3 +60,11 @@ html.dark-mode #livedemo a {
     padding-top: 40px;
   }
 }
+
+/* Class Index: long template-instance names have no break points
+   and overflowed into the next column; break them, indent continuation lines */
+.classindex dd {
+  overflow-wrap: anywhere;
+  padding-left: 1em;
+  text-indent: -1em;
+}

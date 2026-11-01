@@ -86,6 +86,8 @@
       <!-- API_C_PAGE -->
       <!-- API_CSHARP_PAGE -->
       <!-- API_JS_PAGE -->
+      <!-- API_RUST_PAGE -->
+      <!-- API_JAVA_PAGE -->
     </tab>
     <tab type="user" url="__BEGIN_URL__ThirdParty__END_URL__" title="Third-Party Dependencies"/>
   </navindex>

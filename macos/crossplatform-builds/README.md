@@ -41,7 +41,7 @@ Compilation is native; Rosetta is used for four things, only the last of which i
 
 1. **The `/usr/local` Homebrew itself.** Its Portable Ruby is an x86_64 binary, so every `brew` call
    there (install, `--prefix`, config) is translated, as are formula post-install hooks.
-2. **Configure-time execution of x86_64 programs:** `python3.10-config` / CMake's FindPython (the
+2. **Configure-time execution of x86_64 programs:** `python3.12-config` / CMake's FindPython (the
    `/usr/local` interpreter is x86_64) and CMake `try_run` probes.
 3. **The bindings step.** `scripts/mrbind/generate.mk` has no macOS target-arch flag; it yields an
    x86_64 `mrmeshpy.so` because the x86_64 GNU `make` from `/usr/local` is first on `PATH` and its
@@ -62,7 +62,7 @@ toolchain file with pre-seeded `try_run` results) with all testing on real Intel
 2. **Point find_package at `/usr/local`** with `-D CMAKE_PREFIX_PATH=/usr/local` so Python, OpenSSL,
    etc. resolve their x86_64 copies.
 3. **x86_64 Python vs native cmake PATH tension.** Resolve with a small PATH shim mapping
-   `cmake`/`ninja` → the arm64 brew and `python3.10*` → `/usr/local` (x86_64). See the
+   `cmake`/`ninja` → the arm64 brew and `python3.12*` → `/usr/local` (x86_64). See the
    "Configure native x86_64 cross-build environment" step.
 4. **`CMAKE_SYSTEM_PROCESSOR` stays `arm64`** (it reflects the host, since cmake is native). Harmless
    for MeshLib's own SIMD (gated on the target macros `__x86_64__`/`__aarch64__`); `MR_PLATFORM` is
@@ -111,8 +111,8 @@ Consequences:
 SHIM=$(mktemp -d)
 ln -sf "$(brew --prefix)/bin/cmake"     "$SHIM/cmake"    # native arm64 cmake/ninja
 ln -sf "$(brew --prefix)/bin/ninja"     "$SHIM/ninja"
-ln -sf /usr/local/bin/python3.10        "$SHIM/python3.10"       # x86_64 Python
-ln -sf /usr/local/bin/python3.10-config "$SHIM/python3.10-config"
+ln -sf /usr/local/bin/python3.12        "$SHIM/python3.12"       # x86_64 Python
+ln -sf /usr/local/bin/python3.12-config "$SHIM/python3.12-config"
 
 env -i HOME="$HOME" \
   PATH="$SHIM:$(brew --prefix)/bin:/usr/bin:/bin:/usr/sbin:/sbin" \

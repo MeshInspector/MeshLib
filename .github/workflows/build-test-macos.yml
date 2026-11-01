@@ -79,18 +79,19 @@ jobs:
           # The native arm64 Homebrew prefix varies across the self-hosted fleet
           # (/opt/homebrew, ~/.homebrew, ...); find it by its arm64 cmake so build
           # tools run natively, not the x86_64 copies under /usr/local (which would
-          # drag clang into Rosetta). Fail loudly rather than dangle shim symlinks.
+          # drag clang into Rosetta).
           ARM_BREW=""
           for p in /opt/homebrew "$HOME/.homebrew"; do
-            if file -b "$p/bin/cmake" 2>/dev/null | grep -q arm64; then ARM_BREW="$p"; break; fi
+            if file -b "$p/bin/cmake" 2>/dev/null | grep -q arm64 &&
+               file -b "$p/bin/ninja" 2>/dev/null | grep -q arm64; then ARM_BREW="$p"; break; fi
           done
           [ -n "$ARM_BREW" ] || { echo "::error::x86_64 cross setup: no arm64 Homebrew cmake found"; exit 1; }
-          for t in "$ARM_BREW/bin/cmake" "$ARM_BREW/bin/ninja" \
-                   "/usr/local/bin/python$PYVER" "/usr/local/bin/python$PYVER-config" /usr/local/bin/brew; do
+          for t in "$ARM_BREW/bin/cmake" "$ARM_BREW/bin/ninja" /usr/local/bin/brew; do
             [ -x "$t" ] || { echo "::error::x86_64 cross setup: missing $t"; exit 1; }
           done
           ln -sf "$ARM_BREW/bin/cmake" "$SHIM/cmake"
           ln -sf "$ARM_BREW/bin/ninja" "$SHIM/ninja"
+          # Python is installed by Install thirdparty libs later in this job.
           ln -sf "/usr/local/bin/python$PYVER" "$SHIM/python$PYVER"
           ln -sf "/usr/local/bin/python$PYVER-config" "$SHIM/python$PYVER-config"
           # A symlink-to-a-symlink breaks Homebrew's self-location, so wrap brew.
@@ -103,7 +104,7 @@ jobs:
             echo "CMAKE_PREFIX_PATH=/usr/local"
             echo "MESHLIB_HOMEBREW_PREFIX=/usr/local"
             echo "HOMEBREW_DIR=/usr/local"
-            echo "PKG_CONFIG_PATH=$(/usr/local/bin/brew --prefix python@$PYVER)/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+            echo "PKG_CONFIG_PATH=/usr/local/opt/python@$PYVER/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
           } >> "$GITHUB_ENV"
 
       - name: Set up compilers

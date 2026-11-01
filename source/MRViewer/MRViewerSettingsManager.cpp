@@ -341,10 +341,20 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
             CommandLoop::appendCommand( [&viewer, size]
             {
                 spdlog::info( "Resize window: {} {}", size.x, size.y );
-                viewer.resize( size.x, size.y );
+#if GLFW_VERSION_MAJOR > 3 || ( GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4 )
+                // Wayland tells the framebuffer scale only after the first frame is shown, so the saved framebuffer
+                // size cannot be converted into the window size here: the size is saved in screen coordinates there
+                if ( viewer.window && glfwGetPlatform() == GLFW_PLATFORM_WAYLAND )
+                    glfwSetWindowSize( viewer.window, size.x, size.y );
+                else
+#endif
+                    viewer.resize( size.x, size.y );
             } );
         }
     }
+#if GLFW_VERSION_MAJOR > 3 || ( GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4 )
+    if ( glfwGetPlatform() != GLFW_PLATFORM_WAYLAND ) // Wayland does not let a client position its window
+#endif
     if ( cfg.hasVector2i( cMainWindowPos ) )
     {
         auto pos = cfg.getVector2i( cMainWindowPos, Vector2i( 100, 100 ) );
@@ -662,7 +672,12 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     xtext["Nums"] = Json::arrayValue;
     cfg.setJsonValue( "lastExtextentions", xtext );
 
-    cfg.setVector2i( cMainWindowSize, viewer.windowSaveSize );
+    auto windowSize = viewer.windowSaveSize;
+#if GLFW_VERSION_MAJOR > 3 || ( GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4 )
+    if ( glfwGetPlatform() == GLFW_PLATFORM_WAYLAND && viewer.pixelRatio > 0 ) // in screen coordinates, see loadSettings
+        windowSize = Vector2i( int( std::lround( windowSize.x / viewer.pixelRatio ) ), int( std::lround( windowSize.y / viewer.pixelRatio ) ) );
+#endif
+    cfg.setVector2i( cMainWindowSize, windowSize );
     if ( viewer.windowSaveSize.x > 0 && viewer.windowSaveSize.y > 0 )
         cfg.setVector2i( cMainWindowPos, viewer.windowSavePos );
     cfg.setBool( cMainWindowMaximized, viewer.windowMaximized );

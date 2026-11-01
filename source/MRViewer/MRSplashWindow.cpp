@@ -199,6 +199,16 @@ void DefaultSplashWindow::positioning_( float )
 
     int workAreaX = 0, workAreaY = 0, workAreaW = 0, workAreaH = 0;
     glfwGetMonitorWorkarea( pMonitor, &workAreaX, &workAreaY, &workAreaW, &workAreaH );
+#if GLFW_VERSION_MAJOR > 3 || ( GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4 )
+    if ( glfwGetPlatform() == GLFW_PLATFORM_WAYLAND )
+    {
+        // GLFW reports the Wayland work area in pixels, while window sizes are in screen coordinates
+        float xscale = 1, yscale = 1;
+        glfwGetMonitorContentScale( pMonitor, &xscale, &yscale );
+        workAreaW = int( float( workAreaW ) / xscale );
+        workAreaH = int( float( workAreaH ) / yscale );
+    }
+#endif
 
     int width = std::min( int( 0.6f * float( workAreaW ) ), splashImage_->getImageWidth() );
     int height = int( float( width ) * float( splashImage_->getImageHeight() ) / float( splashImage_->getImageWidth() ) );
@@ -206,14 +216,19 @@ void DefaultSplashWindow::positioning_( float )
 
     glfwSetWindowSize( window_, width, height );
 
-    int frameLeft = 0, frameTop = 0;
-    glfwGetWindowFrameSize(
-        window_, nullptr /*sic*/, &frameTop, nullptr,
-        nullptr ); // Note that we keep `frameLeft` as zero, otherwise the centering is not perfect. A bug?
-    glfwSetWindowPos(
-        window_, 
-        workAreaX + ( workAreaW - width + frameLeft ) / 2,
-        workAreaY + ( workAreaH - height + frameTop ) / 2 );
+#if GLFW_VERSION_MAJOR > 3 || ( GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4 )
+    if ( glfwGetPlatform() != GLFW_PLATFORM_WAYLAND ) // Wayland does not let a client position its window
+#endif
+    {
+        int frameLeft = 0, frameTop = 0;
+        glfwGetWindowFrameSize(
+            window_, nullptr /*sic*/, &frameTop, nullptr,
+            nullptr ); // Note that we keep `frameLeft` as zero, otherwise the centering is not perfect. A bug?
+        glfwSetWindowPos(
+            window_,
+            workAreaX + ( workAreaW - width + frameLeft ) / 2,
+            workAreaY + ( workAreaH - height + frameTop ) / 2 );
+    }
 }
 
 void DefaultSplashWindow::reloadFont_( float hdpiScale, float pixelRatio )

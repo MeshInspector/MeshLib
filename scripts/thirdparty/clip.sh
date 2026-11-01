@@ -12,5 +12,5 @@ CMAKE_OPTIONS="${CMAKE_OPTIONS} \
 "
 
 cmake -S "${SOURCE_DIR}" -B "${BUILD_DIR}" -D CMAKE_C_FLAGS="${CFLAGS}" ${CMAKE_OPTIONS}
-cmake --build "${BUILD_DIR}" -j `nproc`
+cmake --build "${BUILD_DIR}" -j "${NPROC:-$(nproc)}"
 cmake --install "${BUILD_DIR}"

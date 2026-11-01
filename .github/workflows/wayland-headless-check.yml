@@ -109,20 +109,20 @@ jobs:
           grep -A3 -i 'mainWindow' "${cfg}" || true
           exit $st
 
-      - name: Run B, scale 2, saved screen size 1000x600 (expect 2000x1200 framebuffer)
+      - name: Run B, scale 2, restart with the config run A saved (expect 2560x1600 framebuffer again)
         env:
           WAYLAND_DISPLAY: wl-scale2
         run: |
           cfg=$(find /home/github-user /tmp/home -name config.json 2>/dev/null | head -1)
-          ${AS_USER} python3 scripts/devops/wayland_patch_config.py "${cfg}" 1000 600 2000 1200
+          grep -A3 -i 'mainWindow' "${cfg}" || true
           set +e
-          ${AS_USER} python3 scripts/devops/wayland_headless_check.py build/Release/bin/MeshViewer 7899 2000 1200 out/runB-scale2-restored.png
+          ${AS_USER} python3 scripts/devops/wayland_headless_check.py build/Release/bin/MeshViewer 7899 2560 1600 out/runB-scale2-restored.png
           st=$?
           cp viewer_stdout.txt out/runB-stdout.txt
           cp /tmp/MeshLib/Logs/*.txt out/ 2>/dev/null || true
           exit $st
 
-      - name: Run C, scale 1, same saved config (expect 1000x600 framebuffer)
+      - name: Run C, scale 1, saved window 1000x600 (expect 1000x600 framebuffer)
         env:
           WAYLAND_DISPLAY: wl-scale1
         run: |
@@ -154,7 +154,7 @@ jobs:
           grep -q 'DEBUG splash positioning: work area 1200 x 750 -> window 720 x 424' splash-run-stdout.txt
           python3 ../scripts/devops/wayland_measure_splash.py 1500 $(ls wayland-screenshot-*.png | head -3) || true
 
-      - name: Control, master's restore code, scale 2, saved 2000x1200 framebuffer (expect the overscaled 4000x2400)
+      - name: Control, master's settings code, scale 2, fresh start then restart (expect the overscaled 5120x3200)
         env:
           WAYLAND_DISPLAY: wl-scale2
           MESHLIB_BUILD_RELEASE: "ON"
@@ -179,11 +179,14 @@ jobs:
           export PATH=${LLVM_PREFIX}/bin:${PATH}
           ./scripts/build_source.sh > /tmp/rebuild.log 2>&1 || { tail -30 /tmp/rebuild.log; exit 1; }
           chown -R github-user "${GITHUB_WORKSPACE}"
-          cfg=$(find /home/github-user /tmp/home -name config.json 2>/dev/null | head -1)
-          ${AS_USER} python3 scripts/devops/wayland_patch_config.py "${cfg}" 1000 600 2000 1200
+          rm -f /home/github-user/.local/share/MeshLib/config.json
           set +e
-          ${AS_USER} python3 scripts/devops/wayland_headless_check.py build/Release/bin/MeshViewer 7899 4000 2400 out/control-master-scale2.png
+          ${AS_USER} python3 scripts/devops/wayland_headless_check.py build/Release/bin/MeshViewer 7899 2560 1600 out/control-master-fresh.png
           st=$?
+          cp viewer_stdout.txt out/control-fresh-stdout.txt
+          grep -A3 -i 'mainWindow' /home/github-user/.local/share/MeshLib/config.json || true
+          ${AS_USER} python3 scripts/devops/wayland_headless_check.py build/Release/bin/MeshViewer 7899 5120 3200 out/control-master-restart.png
+          st=$(( st + $? ))
           cp viewer_stdout.txt out/control-stdout.txt
           git checkout -- source/MRViewer/MRViewerSettingsManager.cpp
           exit $st

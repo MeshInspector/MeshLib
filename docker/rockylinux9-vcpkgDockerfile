@@ -32,7 +32,7 @@ DNF
         $(: vcpkg requirements ) \
         curl-minimal zip unzip tar \
         $(: vcpkg package requirements ) \
-        autoconf271 autoconf-archive bison dbus-libs libtool libudev-devel libXcursor-devel libXi-devel libXinerama-devel libXrandr-devel libXtst-devel mesa-libGL-devel wayland-devel libxkbcommon-devel perl-core python3-jinja2 \
+        autoconf271 autoconf-archive bison dbus-libs libtool libudev-devel libXcursor-devel libXi-devel libXinerama-devel libXrandr-devel libXtst-devel mesa-libGL-devel perl-core python3-jinja2 \
         $(: mrbind requirements ) \
         lld llvm-devel python3-devel which zlib-devel \
         $(: CI environment ) \

@@ -1,3 +1,4 @@
+#include "MRPythonOverCTypes.h" // First, before the uses of the casters.
 #include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRObjectLinesHolder.h"
 #include "MRMesh/MRDistanceMap.h"

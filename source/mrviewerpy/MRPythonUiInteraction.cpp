@@ -1,3 +1,4 @@
+#include "MRPythonOverCTypes.h" // First, before the uses of the casters.
 #include "MRPython/MRPython.h"
 #include "MRViewer/MRPythonAppendCommand.h"
 #include "MRViewer/MRUITestEngineControl.h"

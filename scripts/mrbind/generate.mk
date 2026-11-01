@@ -449,86 +449,19 @@ endif
 $(info Shared library name pattern: $(SHIM_SHLIB_NAMING))
 
 
-# Enable PCH.
-# Not all modules we build use PCHs even if this is true. But if this is false, PCHs are disabled for all modules.
-ENABLE_PCH := 1
-override ENABLE_PCH := $(filter-out 0,$(ENABLE_PCH))
-
-# Enables the `-fpch-codegen` flag for the PCH. This is faster but sometimes doesn't work because of Clang bugs.
-# Set to `0` if you experience those bugs.
-# Example of such bug: https://github.com/llvm/llvm-project/issues/203691
-PCH_CODEGEN := 1
-override PCH_CODEGEN := $(filter-out 0,$(PCH_CODEGEN))
-
-# Those are passed when compiling the PCH. Can be empty.
-# If this is non-empty and has any flags other than `-fpch-instantiate-templates`, we compile an additional `.o` for the PCH and link it into the module.
-PCH_CODEGEN_FLAGS := -fpch-debuginfo -fpch-instantiate-templates $(if $(PCH_CODEGEN),-fpch-codegen)
-
-
 # Will those C bindings be used on Wasm? Then we disable some libraries that don't work there, and disable Cuda.
 C_FOR_WASM := 0
 override C_FOR_WASM := $(filter-out 0,$(C_FOR_WASM))
 
 
-# --- Guess the build settings for the optimal speed:
-
-# Guess the amount of RAM we have (in gigabytes), to select an appropriate build profile.
-# Also guess the number of CPU cores.
+# --- Parallelism: there are only a few translation units (the modules and the shims). Override with `-jN` or `JOBS=N`.
 ifneq ($(IS_MACOS),)
-ASSUME_RAM := $(shell bash -c 'echo $$(($(shell sysctl -n hw.memsize) / 1000000000))')
-# Physical cores only -- on macOS x86 the VM disables SMT (so logical == physical
-# already), and Apple Silicon has no SMT, so this just matches what's available.
 ASSUME_NPROC := $(call safe_shell,sysctl -n hw.physicalcpu)
 else
-# `--giga` uses 10^3 instead of 2^10, which is actually good for us, since it overreports a bit, which counters computers typically having slightly less RAM than 2^N gigs.
-ASSUME_RAM := $(shell LANG= free --giga 2>/dev/null | awk 'NR==2{print $$2}')
-ifeq ($(ASSUME_RAM),)
-# MSYS2 has no `free`. MemTotal is in KiB; convert to 10^9 bytes to match `--giga`.
-ASSUME_RAM := $(shell awk '/^MemTotal:/{printf "%d", $$2 * 1024 / 1000000000}' /proc/meminfo 2>/dev/null)
-endif
 ASSUME_NPROC := $(call safe_shell,nproc)
 endif
-
-# We clamp the nproc to this value, because when you have more cores, our heuristics fall apart (and you might run out of ram).
-# The heuristics are not necessarily bad though, it's possible that less cores than jobs can be better in some cases?
-MAX_NPROC := 16
-CAPPED_NPROC := $(ASSUME_NPROC)
-override nproc_string := $(ASSUME_NPROC) cores
-ifeq ($(call safe_shell,echo $$(($(ASSUME_NPROC) >= $(MAX_NPROC)))),1)
-CAPPED_NPROC := $(MAX_NPROC)
-override nproc_string := >=$(MAX_NPROC) cores
-endif
-
-# Pick NUM_FRAGMENTS and JOBS by machine size:
-#   < 7 cores                           -> JOBS=cores, NUM_FRAGMENTS=32 (small TUs to keep RAM in check on small boxes)
-#   >= 7 cores, RAM < 32G (or unknown)  -> JOBS=cores, NUM_FRAGMENTS=64
-#   RAM >= 64G                          -> JOBS=cores, NUM_FRAGMENTS=cores (few big fragments)
-#   32G <= RAM < 64G                    -> JOBS=cores, NUM_FRAGMENTS=cores*2
-# Then JOBS is capped from above by the RAM in GB (when known), so that the compiles don't swap.
-# Override with `-jN` or `JOBS=N`; override fragment count with `NUM_FRAGMENTS=N`.
-override ram_string := $(if $(ASSUME_RAM),$(ASSUME_RAM)G RAM,unknown RAM)
-ifeq ($(call safe_shell,echo $$(( $(ASSUME_NPROC) < 7 ))),1)
-NUM_FRAGMENTS := 32
-JOBS := $(CAPPED_NPROC)
-else ifeq ($(call safe_shell,echo $$(( $(or $(ASSUME_RAM),0) < 32 ))),1)
-NUM_FRAGMENTS := 64
-JOBS := $(CAPPED_NPROC)
-else ifeq ($(call safe_shell,echo $$(( $(ASSUME_RAM) >= 64 ))),1)
-NUM_FRAGMENTS := $(CAPPED_NPROC)
-JOBS := $(CAPPED_NPROC)
-else
-NUM_FRAGMENTS := $(call safe_shell,echo $$(( $(CAPPED_NPROC) * 2 )))
-JOBS := $(CAPPED_NPROC)
-endif
-ifeq ($(origin JOBS)$(call safe_shell,echo $$(( $(or $(ASSUME_RAM),0) > 0 && $(or $(ASSUME_RAM),0) < $(JOBS) ))),file1)
-JOBS := $(ASSUME_RAM)
-endif
+JOBS := $(ASSUME_NPROC)
 MAKEFLAGS += -j$(JOBS)
-ifeq ($(filter-out file,$(origin NUM_FRAGMENTS) $(origin JOBS)),)
-$(info Build machine: $(nproc_string), $(ram_string); defaulting to NUM_FRAGMENTS=$(NUM_FRAGMENTS) -j$(JOBS))
-else
-$(info Build machine: $(nproc_string), $(ram_string); NUM_FRAGMENTS=$(NUM_FRAGMENTS) -j$(JOBS))# This can print the wrong `-j` if you override it using `-j` instead of `JOBS=N`.
-endif
 
 # You can change this to something else to rename the module, to have it side-by-side with the legacy one.
 PACKAGE_NAME := meshlib
@@ -548,12 +481,8 @@ mrmesh_PyName := mrmeshpy
 mrmesh_InputProjects := MRMesh MRIOExtras MRSymbolMesh MRVoxels
 mrmesh_ExtraMrbindFlags := --allow MR
 mrmesh_ExtraInputDirs := $(makefile_dir)extra_headers
-mrmesh_PyEnablePch := 1
-mrmesh_PyNumFragments := $(NUM_FRAGMENTS)
-# Those files are parsed and baked into the final bindings.
-mrmesh_PyExtraInputFiles := $(makefile_dir)helpers.cpp
-# Those files are compiled as is and linked into the final bindings.
-mrmesh_PyExtraSourceFiles := $(makefile_dir)aliases.cpp
+# The C bindings libraries that the Python module links.
+mrmesh_PyCLibs := MeshLibC2
 
 # Enable Cuda? You can set this to 0 if you don't have Cuda installed.
 # Even if this is false, we emit a dummy `isCudaAvailable()` that always returns false. That's what we use
@@ -577,8 +506,7 @@ mrcuda_CSubLibraryMacroPrefix := MRC_CUDA_
 mrcuda_CSubLibraryOutputProject := MeshLibC2Cuda
 mrcuda_CSharpSubLibraryOutputProject := MRDotNet2Cuda
 mrcuda_PyName := mrcudapy
-# Which other Python modules to import at startup.
-mrcuda_PyDependsOn := $(PACKAGE_NAME).mrmeshpy
+mrcuda_PyCLibs := MeshLibC2 MeshLibC2Cuda
 
 
 
@@ -625,7 +553,6 @@ endif
 # `undefined symbol: void __cdecl std::_Literal_zero_is_expected(void)`,
 # `referenced by source/TempOutput/PythonBindings/x64/Release/binding.0.o:(public: __cdecl std::_Literal_zero::_Literal_zero<int>(int))`.
 MRBIND_FLAGS := --format=$(MRBIND_PARSER_OUTPUT_FORMAT) $(call load_file,$(makefile_dir)mrbind_flags.txt)
-MRBIND_FLAGS_FOR_EXTRA_INPUTS := $(call load_file,$(makefile_dir)mrbind_flags_for_helpers.txt)
 COMPILER_FLAGS := $(ABI_COMPAT_FLAG) $(EXTRA_CFLAGS) $(call load_file,$(makefile_dir)common_compiler_parser_flags.txt) -I. $(if $(DEPS_INCLUDE_DIR),-I$(DEPS_INCLUDE_DIR)) -I$(makefile_dir)../../source
 # Add `-frelaxed-template-template-args` if Clang is old enough to support it. Newer versions have this behavior by default.
 # Clang 18 and older need this flag. Clang 19 and 20 do the right thing by default, but still allow the flag with a deprecation warning. Clang 21 and newer consider this an unknown flag and error.
@@ -773,10 +700,6 @@ COMPILER_FLAGS += -D_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS
 # Don't export Pybind exceptions. This works around Clang bug: https://github.com/llvm/llvm-project/issues/118276
 # And I'm not sure if exporting them even did anything useful on Windows in the first place.
 COMPILER_FLAGS += -DPYBIND11_EXPORT_EXCEPTION=
-# Enabling `-fpch-codegen` apparently needs additional libraries that otherwise don't end up being used.
-ifneq ($(PCH_CODEGEN),)
-LINKER_FLAGS += -loleaut32 $(if $(filter Debug,$(VS_MODE)),-lfmtd,-lfmt)
-endif
 # Link TBB explicitly. MeshLib headers used to drag it in via the implicit `#pragma comment(lib, ...)`
 # emitted by the oneTBB headers, but `__TBB_NO_IMPLICIT_LINKAGE` now disables that, so the inline TBB
 # code instantiated in the binding translation units would otherwise leave `tbb::detail::r1::*` undefined.
@@ -937,29 +860,9 @@ endef
 $(foreach x,$(MODULES),$(eval $(call module_snippet_vars,$x)))
 
 
-# This part handles Python-specific variables.
-ifeq ($(TARGET),python)
-override define module_snippet_vars_py =
-# Unset the PCH flag on the module if PCHs are disabled globally.
-$(if $(ENABLE_PCH),,$(call var,$1_PyEnablePch :=))
-
-# Set the default number of fragments, if not specified.
-$(if $($1_PyNumFragments),,$(call var,$1_PyNumFragments := 1))
-
-# Pick whatever Python version for get_python_cflags, it shouldn't matter.
-$(call var,$1_CompilerFlagsPython := -DPy_LIMITED_API=$(python_min_version_hex) $(call get_python_cflags,$(PYTHON_HEADER_VERSION)))
-
-# Compiler + compiler-only flags, adjusted per module. Don't use those for parsing.
-$(call var,$1_CompilerFlagsFixed := $($1_CompilerFlagsPython) $(COMPILER_FLAGS) -DMB_PB11_MODULE_NAME=$($1_PyName) $(if $($1_PyDependsOn),-DMB_PB11_MODULE_DEPS=$(call quote,$(subst $(space),$(comma),$(patsubst %,"%",$($1_PyDependsOn))))))
-endef
-$(foreach x,$(MODULES),$(eval $(call module_snippet_vars_py,$x)))
-endif # $(TARGET) == python
-
-
 # This part runs the parser.
 override define module_snippet_parse =
 # Produce the one combined header including all our input headers.
-# And if PCH is enabled, this also includes the headers to bake.
 $(call var,$1__CombinedHeaderOutput := $(TEMP_OUTPUT_DIR)/$1.combined.hpp)
 $($1__CombinedHeaderOutput): $($1__InputFiles) | $(TEMP_OUTPUT_DIR)
 	$$(file >$$@,#pragma once$$(lf))
@@ -968,32 +871,17 @@ $($1__CombinedHeaderOutput): $($1__InputFiles) | $(TEMP_OUTPUT_DIR)
 	$$(file >>$$@,#include <iostream>$$(lf))
 	$(call,### Write all our headers.)
 	$$(foreach f,$($1__InputFiles),$$(file >>$$@,#include "$$f"$$(lf)))
-	$(call,### Additional headers to bake into the PCH. The condition is to speed up parsing a bit.)
-	$(call,### The pybind header sits between `pre/post_include_pybind.h`, because on MSVC Debug pybind corrupts `_DEBUG` [restores it as empty)
-	$(call,### instead of `1`, see the comments in those headers]. Without the wrappers the corrupted value gets serialized as the PCH's final)
-	$(call,### macro state, so every fragment would start with it, and anything value-sensitive [e.g. TBB's debug detection] parsed after that)
-	$(call,### point would misbehave.)
-	$(if $(is_py),\
-		$$(if $($1_PyEnablePch),$$(file >>$$@,#ifndef MR_PARSING_FOR_PB11_BINDINGS$$(lf)#include <mrbind/targets/pybind11/pre_include_pybind.h>$$(lf)#include <pybind11/pybind11.h>$$(lf)#include <mrbind/targets/pybind11/post_include_pybind.h>$$(lf)#endif))\
-		$(call,### This alternative version bakes the whole our `core.h` [which includes `<pybind11/pybind11.h>], but for some reason my measurements show it to be a tiny bit slower. Weird.)\
-		$(call,###   #ifndef MR_PARSING_FOR_PB11_BINDINGS$(lf)#define MB_PB11_STAGE -1$(lf)#include MRBIND_HEADER$(lf)#undef MB_PB11_STAGE$(lf)#endif$(lf))\
-		$(call,### Note temporarily setting `MB_PB11_STAGE=-1`, we don't want to bake any of the macros.)\
-	)
 
 # Run the parser.
-# Note, this DOESN'T use the PCH, because the macros are different (PCH enables `-DMR_COMPILING_PB11_BINDINGS`, but this needs `-DMR_PARSING_FOR_PB11_BINDINGS`).
 $(call var,$1__ParserSourceOutput := $(TEMP_OUTPUT_DIR)/$1.generated$(MRBIND_PARSER_OUTPUT_EXT))
 only-generate: $($1__ParserSourceOutput)
 $($1__ParserSourceOutput): $($1__CombinedHeaderOutput) | $(TEMP_OUTPUT_DIR)
 	@echo $(call quote,[$1] [Parsing] $($1__ParserSourceOutput))
-	@$(MRBIND_EXE) $(subst $,$$$$,$(MRBIND_FLAGS)) $($1_ExtraMrbindFlags) $$(call quote,$$<) -o $$(call quote,$$@) -- $(COMPILER_FLAGS_LIBCLANG) $(COMPILER_FLAGS) $($1_CompilerFlagsPython)
+	@$(MRBIND_EXE) $(subst $,$$$$,$(MRBIND_FLAGS)) $($1_ExtraMrbindFlags) $$(call quote,$$<) -o $$(call quote,$$@) -- $(COMPILER_FLAGS_LIBCLANG) $(COMPILER_FLAGS)
 endef
 
-ifneq ($(is_py),)
-# In Python, the parser runs once per module.
-$(foreach x,$(MODULES),$(eval $(call module_snippet_parse,$x)))
-else
-# In other languages, the parser runs once, so we generate a fake combined module and apply the parser to that.
+ifeq ($(is_py),) # Python is generated from the C bindings, without parsing.
+# The parser runs once, so we generate a fake combined module and apply the parser to that.
 $(foreach x,$(MODULES),\
 	$(call var,meshlib_InputProjects += $($x_InputProjects))\
 	$(call var,meshlib_ExtraMrbindFlags += $($x_ExtraMrbindFlags))\
@@ -1004,60 +892,68 @@ $(eval $(call module_snippet_parse,meshlib))
 endif
 
 
-# This part builds the Python modules.
+# This part builds the Python modules, generated from the description of the C bindings by `mrbind_gen_python`
+#   (see `docs/generating_python_over_c.md` in mrbind). Build `MeshLibC2` (and `MeshLibC2Cuda` for `mrcudapy`) first.
 ifeq ($(TARGET),python)
+MRBIND_GEN_PYTHON_EXE = $(MRBIND_EXE)_gen_python
+C_BINDINGS_DIR := $(makefile_dir)../../source
+PYTHON_INPUT_JSON := $(C_BINDINGS_DIR)/MeshLibC2/temp/interop_desc.json
+
+# Without a Cuda build of MeshLib, `mrcudapy` is a placeholder written in Python.
+PY_MODULES := mrmesh $(if $(and $(ENABLE_CUDA),$(wildcard $(MESHLIB_SHLIB_DIR)/*MRCuda.*)),mrcuda)
+
+# The generated code needs only the C bindings and the limited API of Python, so one module serves all Python versions.
+PY_COMPILER_FLAGS := -std=c++20 -O1 $(EXTRA_CFLAGS) -w -DPy_LIMITED_API=$(python_min_version_hex) $(call get_python_cflags,$(PYTHON_HEADER_VERSION)) \
+	-I$(C_BINDINGS_DIR)/MeshLibC2/include -I$(C_BINDINGS_DIR)/MeshLibC2Cuda/include
+PY_LINKER_FLAGS := $(EXTRA_LDFLAGS) -L$(MESHLIB_SHLIB_DIR) $(if $(IS_MACOS),-dynamiclib,-shared)
+ifneq ($(IS_WINDOWS),)
+PY_COMPILER_FLAGS += --target=$(MSVC_TARGET_ARCH)-pc-windows-msvc -D_DLL -D_MT -DNOMINMAX -Xclang --dependent-lib=$(if $(filter Debug,$(VS_MODE)),msvcrtd -D_DEBUG -D_ITERATOR_DEBUG_LEVEL=0,msvcrt)
+# `python3.lib` is the import library of the limited API.
+PY_LINKER_FLAGS += --target=$(MSVC_TARGET_ARCH)-pc-windows-msvc -rtlib=platform -Wl,-noimplib $(filter -L%,$(call get_python_ldflags,$(PYTHON_HEADER_VERSION))) -lpython3
+else
+PY_COMPILER_FLAGS += -fPIC -fvisibility=hidden
+PY_LINKER_FLAGS += -Wl,-rpath,'$(rpath_origin)' -Wl,-rpath,'$(rpath_origin)/..' -Wl,-rpath,$(call quote,$(abspath $(MESHLIB_SHLIB_DIR)))
+endif
+ifneq ($(IS_MACOS),)
+PY_COMPILER_FLAGS += -isysroot $(macos_sdk_path) $(if $(MACOS_MIN_VER),-mmacosx-version-min=$(MACOS_MIN_VER))
+# The Python symbols come from the interpreter. The padding lets the wheel tools rewrite the library paths.
+PY_LINKER_FLAGS += -isysroot $(macos_sdk_path) $(if $(MACOS_MIN_VER),-mmacosx-version-min=$(MACOS_MIN_VER)) -Xlinker -undefined -Xlinker dynamic_lookup -Wl,-headerpad_max_install_names
+endif
+
 override define module_snippet_build_py =
-# Compile the PCH.
-$(call var,$1__BakedPch :=)
-$(call var,$1__PchImportFlag :=)
-$(call var,$1__PchObject :=)
-$(if $($1_PyEnablePch),\
-  $(call var,$1__BakedPch := $(TEMP_OUTPUT_DIR)/$1.combined_pch.hpp.gch)\
-  $(call var,$1__PchImportFlag := -include$($1__BakedPch:.gch=))\
-  \
-  $($1__BakedPch): $($1__CombinedHeaderOutput) ; @echo $(call quote,[$1] [Compiling PCH] $($1__BakedPch)) && $(COMPILER) -c -o $$@ -xc++-header $$< $($1_CompilerFlagsFixed) $(PCH_CODEGEN_FLAGS)\
-)
-# PCH object file, if enabled.
-# We strip the include directories from the flags here, because Clang warns that those are unused.
-$(if $(and $($1_PyEnablePch),$(filter-out -fpch-instantiate-templates,$(PCH_CODEGEN_FLAGS))),\
-  $(call var,$1__PchObject := $(TEMP_OUTPUT_DIR)/$1.combined_pch.hpp.o)\
-  \
-  $($1__PchObject): $($1__BakedPch) ; @echo $(call quote,[$1] [Compiling PCH object] $($1__PchObject)) && $(filter-out -isystem% -I%,$(subst -isystem ,-isystem,$(subst -I ,-I,$(COMPILER) $($1_CompilerFlagsFixed)))) -c -o $$@ $($1__BakedPch)\
-)
-
-# Compile N object files (fragments) from the generated source.
-$(TEMP_OUTPUT_DIR)/$1.fragment.%.o: $($1__ParserSourceOutput) $($1__BakedPch) | $(TEMP_OUTPUT_DIR)
-	@echo $$(call quote,[$1] [Compiling] $$< (fragment $$*))
-	@$(COMPILER) $$(call quote,$$<) -c -o $$(call quote,$$@) $($1_CompilerFlagsFixed) $($1__PchImportFlag) -DMB_NUM_FRAGMENTS=$(strip $($1_PyNumFragments)) -DMB_FRAGMENT=$$* $$(if $$(filter 0,$$*),-DMB_DEFINE_IMPLEMENTATION)
-
-# A list of all object files.
-# NOTE: This is amended later, so we must refer to it lazily.
-$(call var,$1__ObjectFiles := $(patsubst %,$(TEMP_OUTPUT_DIR)/$1.fragment.%.o,$(call seq,$($1_PyNumFragments))) $($1__PchObject))
-
-# Link the module.
-# Have to evaluate `$1__ObjectFiles` lazily to observe the later updates to it. This also relies on `.SECONDEXPANSION`.
+$(call var,$1__PySourceDir := $(TEMP_OUTPUT_DIR)/$($1_PyName))
+$(call var,$1__PySource := $($1__PySourceDir)/$($1_PyName).cpp)
+$(call var,$1__PyObject := $(TEMP_OUTPUT_DIR)/$($1_PyName).o)
 $(call var,$1__LinkerOutput := $(MODULE_OUTPUT_DIR)/$($1_PyName)$(PYTHON_MODULE_SUFFIX))
 $(call var,all_outputs += $($1__LinkerOutput))
-$($1__LinkerOutput): $$$$($1__ObjectFiles) | $(MODULE_OUTPUT_DIR)
-	@echo $$(call quote,[$1] [Linking] $$@)
-	@$(LINKER) $$^ -o $$(call quote,$$@) $(LINKER_FLAGS) $(addprefix -l,$($1_InputProjects) pybind11nonlimitedapi_stubs)
-	$(call,### Catch Clang bugs involving `-fpch-codegen`. See the comment on `PCH_CODEGEN` for more details.)
-	$(call,### Those bugs can introduce undefined references, and this tries to check for them. Written by Claude, hopefully it works.)
-	$(call,### We can't use `-Wl,-z,defs` for this because of Python requirements, so we check anything but Python symbols manually here.)
-	$(if $(and $(if $(IS_WINDOWS),,1),$(if $(IS_MACOS),,1),$($1__PchObject)),@bad=$$$$(LD_LIBRARY_PATH=$(MESHLIB_SHLIB_DIR):$(DEPS_LIB_DIR) ldd -r '$$@' 2>&1 | grep 'undefined symbol' | grep -vE 'undefined symbol: _?Py' || true); if [ -n "$$$$bad" ]; then echo "Symbols missing from '$$@' and its dependencies:"; echo "$$$$bad"; exit 1; fi)
+only-generate: $($1__PySource)
+$($1__PySource): $(PYTHON_INPUT_JSON) | $(TEMP_OUTPUT_DIR)
+	@echo $(call quote,[$1] [Generating] $($1__PySource))
+	@bash $(call quote,$(makefile_dir)generate_python.sh) $(call quote,$(MRBIND_GEN_PYTHON_EXE)) $(call quote,$(PYTHON_INPUT_JSON)) $(call quote,$($1__PySourceDir)) $($1_PyName)
+$($1__PyObject): $($1__PySource)
+	@echo $(call quote,[$1] [Compiling] $($1__PySource))
+	@$(CXX_FOR_BINDINGS) $(call quote,$($1__PySource)) -c -o $(call quote,$($1__PyObject)) $(PY_COMPILER_FLAGS)
+$($1__LinkerOutput): $($1__PyObject) | $(MODULE_OUTPUT_DIR)
+	@echo $(call quote,[$1] [Linking] $($1__LinkerOutput))
+	@$(LINKER) $(call quote,$($1__PyObject)) -o $(call quote,$($1__LinkerOutput)) $(PY_LINKER_FLAGS) $(addprefix -l,$($1_PyCLibs))
 
 # A pretty target.
 .PHONY: $($1_PyName)
 $($1_PyName): $($1__LinkerOutput)
 endef
-$(foreach x,$(MODULES),$(eval $(call module_snippet_build_py,$x)))
+$(foreach x,$(PY_MODULES),$(eval $(call module_snippet_build_py,$x)))
+
+ifeq ($(filter mrcuda,$(PY_MODULES)),)
+override all_outputs += $(MODULE_OUTPUT_DIR)/mrcudapy.py
+$(MODULE_OUTPUT_DIR)/mrcudapy.py: $(makefile_dir)mrcudapy_placeholder.py | $(MODULE_OUTPUT_DIR)
+	@cp $< $@
+endif
 endif # $(TARGET) == python
 
 # This part generates the C code.
 ifeq ($(TARGET),c)
 override define module_snippet_generate_c =
 # Produce the one combined header including all our input headers.
-# And if PCH is enabled, this also includes the headers to bake.
 $(call var,$1__CCodeGenerationMarker := $(TEMP_OUTPUT_DIR)/$1.generation_marker)
 $(call var,all_outputs += $($1__CCodeGenerationMarker))
 # Currently I'm not adding a `/$1` suffix to the output directory because we only have one project enabled for C, and only run the parser once.
@@ -1098,32 +994,6 @@ endif # $(TARGET) == c
 
 ifeq ($(TARGET),python)
 
-# This snippet parses and compiles an extra file.
-# $1 is the module name, $2 is the input file name.
-override define extra_file_snippet =
-$(call var,_generated := $(TEMP_OUTPUT_DIR)/$1.extra.$(basename $(notdir $2)).cpp)
-$(call var,_object := $(_generated:.cpp=.o))
-$(call var,$1__ObjectFiles += $(_object))
-only-generate: $(_generated)
-$(_generated): $2 | $(TEMP_OUTPUT_DIR)
-	@echo $(call quote,[$1] [Generating] $(notdir $(_generated)))
-	@$(MRBIND_EXE) $(MRBIND_FLAGS_FOR_EXTRA_INPUTS) $(call quote,$2) -o $(call quote,$(_generated)) -- $(COMPILER_FLAGS_LIBCLANG) $(COMPILER_FLAGS) $($1_CompilerFlagsPython)
-$(_object): $(_generated) | $(TEMP_OUTPUT_DIR)
-	@echo $(call quote,[$1] [Compiling] $(_generated))
-	@$(COMPILER) $(call quote,$(_generated)) -c -o $(call quote,$(_object)) $($1_CompilerFlagsFixed)
-endef
-$(foreach x,$(MODULES),$(foreach y,$($x_PyExtraInputFiles),$(eval $(call extra_file_snippet,$x,$y))))
-
-# This snippet compiles an extra file as is, without passing it through the parser/generator.
-# $1 is the module name, $2 is the input file name.
-override define extra_pregen_file_snippet =
-$(call var,_object := $(TEMP_OUTPUT_DIR)/$1.custom.$(notdir $(2:.cpp=.o)))
-$(call var,$1__ObjectFiles += $(_object))
-$(_object): $2 | $(TEMP_OUTPUT_DIR)
-	@echo $(call quote,[$1] [Compiling] $2)
-	@$(COMPILER) $(call quote,$2) -c -o $(call quote,$(_object)) $($1_CompilerFlagsFixed)
-endef
-$(foreach x,$(MODULES),$(foreach y,$($x_PyExtraSourceFiles),$(eval $(call extra_pregen_file_snippet,$x,$y))))
 
 
 
@@ -1153,8 +1023,7 @@ ifneq ($(IS_WINDOWS),)
 override all_outputs += $(MESHLIB_SHLIB_DIR)/__init__.py
 $(MESHLIB_SHLIB_DIR)/__init__.py: $(INIT_SCRIPT)
 	@cp $< $@
-override modules_copied_to_bin_dir := $(patsubst %,,$(MODULES))
-$(foreach m,$(MODULES),\
+$(foreach m,$(PY_MODULES),\
 	$(call var,_in := $(MODULE_OUTPUT_DIR)/$($m_PyName)$(PYTHON_MODULE_SUFFIX))\
 	$(call var,_out := $(MESHLIB_SHLIB_DIR)/$($m_PyName)$(PYTHON_MODULE_SUFFIX))\
 	$(call var,all_outputs += $(_out))\

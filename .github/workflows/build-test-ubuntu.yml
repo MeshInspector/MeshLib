@@ -232,9 +232,6 @@ jobs:
         env:
           CXX: ${{ matrix.cxx-compiler }}
           ENABLE_CUDA: ${{ fromJSON('{"ON":1, "OFF":0}') [matrix.build_mrcuda] }}
-          # `-fpch-codegen` hits clang defect llvm/llvm-project#203691 on libstdc++-12 (a `<filesystem>`
-          # internal homed into the PCH object but never emitted, surfaces at import time). Disable on ubuntu22.
-          PCH_CODEGEN: ${{ matrix.os == 'ubuntu22' && '0' || '1' }}
         shell: bash
         run: |
           # The bindings always compile with clang++, which takes the newest GCC in the image - 16 on
@@ -243,7 +240,7 @@ jobs:
           if [[ "${{ matrix.os }}" == ubuntu26 ]]; then
             CLANG_GCC_PIN="--gcc-install-dir=/usr/lib/gcc/$(gcc-15 -dumpmachine)/15"
           fi
-          make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${ENABLE_CUDA} PCH_CODEGEN=${PCH_CODEGEN} EXTRA_CFLAGS="${CLANG_GCC_PIN}" EXTRA_LDFLAGS="${CLANG_GCC_PIN}"
+          make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${ENABLE_CUDA} EXTRA_CFLAGS="${CLANG_GCC_PIN}" EXTRA_LDFLAGS="${CLANG_GCC_PIN}"
 
       - name: Create Python Stubs
         if: ${{ inputs.mrbind && env.UPLOAD_BINDINGS_SOURCES == 'true' }}

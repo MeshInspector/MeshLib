@@ -95,7 +95,7 @@ runs:
         fi
 
     # Downstream steps only invoke these executables (mrbind, mrbind_gen_c, mrbind_gen_csharp, mrbind_gen_rust,
-    # mrbind_gen_java -- see `MRBIND_*_EXE` in scripts/mrbind/generate.mk; mrbind_gen_python in python_over_c.sh). Object files,
+    # mrbind_gen_java, mrbind_gen_python -- see `MRBIND_*_EXE` in scripts/mrbind/generate.mk). Object files,
     # static libs, and CMake/Ninja metadata aren't consumed and would just bloat
     # the cache (the build script wipes `build/` before rebuilding anyway, so we
     # don't need incremental-rebuild state either).

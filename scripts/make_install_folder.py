@@ -122,7 +122,7 @@ def copy_lib():
 
 	# The mrbind-generated modules are not part of the distribution, matching the
 	# macOS .pkg and the vcpkg archive, which are built from `cmake --install` alone.
-	for pattern in ("*/meshlib/mrmeshpy.pyd", "*/meshlib/mrcudapy.pyd",
+	for pattern in ("*/meshlib/mrmeshpy.pyd", "*/meshlib/mrcudapy.pyd", "*/meshlib/mrcudapy.py",
 	                "*/meshlib/__init__.py", "*/__init__.py"):
 		for f in glob.glob(os.path.join(it.path_to_app, pattern)):
 			os.remove(f)

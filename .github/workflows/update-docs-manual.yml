@@ -80,24 +80,7 @@ jobs:
             -DMRVOXELS_UNITY_BUILD=ON
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=OFF
 
-      - name: Generate and build MRBind bindings
-        env:
-          CXX: ${{ env.CXX-COMPILER }}
-        # PCH_CODEGEN=0: `-fpch-codegen` hits clang defect llvm/llvm-project#203691 on this image's
-        # libstdc++-12, same as the ubuntu22 opt-out in build-test-ubuntu.yml.
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{ env.CONFIG }}/bin PCH_CODEGEN=0
-
-      - name: Create Python Stubs
-        run: python3 ./scripts/wheel/create_stubs.py
-
-      - name: Upload Python Stubs
-        uses: actions/upload-artifact@v7
-        with:
-          name: PythonStubs
-          path: ./scripts/wheel/meshlib/meshlib/*.pyi
-          retention-days: 1
-
-      # `TARGET=csharp` only reads `source/MeshLibC2/temp/interop_desc.json`, which the C
+      # The Python and C# bindings are generated from `source/MeshLibC2/temp/interop_desc.json`, which the C
       # generator writes and the `CBindings` artifact carries, so the C bindings have to be
       # unpacked here first. Same steps as build-test-ubuntu.yml and pip-build.yml.
       - name: Wait for C bindings
@@ -116,6 +99,31 @@ jobs:
           rm -rf source/MeshLibC2 source/MeshLibC2Cuda
           mv MeshLib/CbindingsTmp/MeshLibC2 source
           mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
+
+      # The Python modules link them. Without MRCuda, `MeshLibC2Cuda` is built from the stubs, see build-test-ubuntu.yml.
+      - name: Build C bindings
+        run: |
+          if [ ! -e build/${{ env.CONFIG }}/bin/libMRCuda.so ]; then
+            rm -rf source/MeshLibC2Cuda/{include,src}
+            cp -r scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
+          fi
+          cmake -S . -B build/${{ env.CONFIG }} -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON
+          cmake --build build/${{ env.CONFIG }} -j $(nproc) --target MeshLibC2 MeshLibC2Cuda
+
+      - name: Generate and build MRBind bindings
+        env:
+          CXX: ${{ env.CXX-COMPILER }}
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{ env.CONFIG }}/bin
+
+      - name: Create Python Stubs
+        run: python3 ./scripts/wheel/create_stubs.py
+
+      - name: Upload Python Stubs
+        uses: actions/upload-artifact@v7
+        with:
+          name: PythonStubs
+          path: ./scripts/wheel/meshlib/meshlib/*.pyi
+          retention-days: 1
 
       - name: Generate C# bindings # generate only sources
         run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate

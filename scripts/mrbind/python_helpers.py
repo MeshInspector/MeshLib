@@ -1,4 +1,4 @@
-# The functions of `helpers.cpp` for `mrmeshpy` over the C bindings (`python_over_c.sh`), which can't compile C++.
+# Python helper functions of `mrmeshpy`, which is generated over the C bindings (see `generate_python.sh`).
 # Runs in the namespace of `mrmeshpy` when it's imported (`mrbind_gen_python --extra-python`).
 
 def fixSelfIntersections(mesh, voxelSize):

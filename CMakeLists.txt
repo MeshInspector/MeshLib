@@ -47,7 +47,6 @@ option(MESHLIB_BUILD_VOXELS "Build voxels library" ON)
 option(MESHLIB_BUILD_EXTRA_IO_FORMATS "Build extra IO format support library" ON)
 option(MESHLIB_BUILD_MCP "Enable MCP server" ON)
 option(MESHLIB_BUILD_GENERATED_C_BINDINGS "Build C bindings (assuming they are already generated)" OFF)
-option(MESHLIB_BUILD_PYTHON_OVER_C "Experimental: also build mrviewerpy over the mrmeshpy generated over the C bindings, see scripts/mrbind/python_over_c.sh" OFF)
 option(MESHLIB_BUILD_WASM_MODULE "Build the headless WebAssembly module" OFF)
 option(MESHLIB_BUILD_WASM_DEFINITIONS_ONLY "Emit only the WebAssembly module's TypeScript definitions, leaving MeshLib unlinked" OFF)
 

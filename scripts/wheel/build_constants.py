@@ -39,4 +39,6 @@ PYTHON_SOURCE_MODULES = [
 
 
 def module_file_name(module):
-    return f"{module}.py" if module in PYTHON_SOURCE_MODULES else f"{module}{LIB_EXTENSION}"
+    # Without Cuda, `mrcudapy` is a placeholder written in Python too.
+    is_python = module in PYTHON_SOURCE_MODULES or (LIB_DIR_MESHLIB / f"{module}.py").exists()
+    return f"{module}.py" if is_python else f"{module}{LIB_EXTENSION}"

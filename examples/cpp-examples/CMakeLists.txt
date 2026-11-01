@@ -6,6 +6,7 @@ project(cpp-examples CXX)
 
 set(EXAMPLES
   # code examples
+  BooleanBenchmark
   Collision
   CollisionPrecise
   CollisionSelf

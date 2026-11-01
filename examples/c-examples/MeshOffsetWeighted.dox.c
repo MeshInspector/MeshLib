@@ -13,11 +13,10 @@
 #include <MRCMisc/expected_void_std_string.h>
 #include <MRCMisc/std_string.h>
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define abs(a) a >= 0 ? a : -a;
 
 int main( void )
 {
@@ -32,12 +31,9 @@ int main( void )
     for ( size_t i = 0; i < vertSize; ++i )
     {
         const MR_Vector3f* point = MR_VertCoords_index( MR_Mesh_Get_points( mesh ), (MR_VertId){ (int)i } );
-        float weight = abs( point->x / 5.0f );
+        float weight = fabsf( point->x / 5.0f ); // Individual extra offset sizes for points
         MR_VertScalars_data_mut( scalars )[i] = weight;
-        if ( weight > maxWeight )
-        {
-            maxWeight = weight;
-        }
+        maxWeight = fmaxf( maxWeight, weight ); // should always have maximum between weights provided
     }
 
     MR_WeightedShell_ParametersMetric* params = MR_WeightedShell_ParametersMetric_DefaultConstruct();

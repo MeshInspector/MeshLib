@@ -42,19 +42,20 @@ int main( void )
     MR_Vector3f shift = MR_Vector3f_plusZ();
     size_t numPoints = MR_VertCoords_size( MR_Mesh_GetMutable_points( mesh ) );
     for ( size_t i = 0; i < numPoints; ++i )
-        if ( MR_VertBitSet_test( vertsToMove, (MR_VertId){ i } ) )
+        if ( MR_VertBitSet_test( vertsToMove, (MR_VertId){ (int)i } ) )
             points[i] = MR_add_MR_Vector3f( &points[i], &shift );
 
     // Invalidate internal caches after manual changing
     MR_Mesh_invalidateCaches( mesh, NULL );
 
-    // Save result
-    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat( mesh, "extruded_mesh.stl", NULL, NULL);
+    // Save mesh
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat( mesh, "extrudedMesh.stl", NULL, NULL);
     if ( MR_expected_void_std_string_error( saveEx ) )
         fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );
     else
         rc = EXIT_SUCCESS;
 
+    MR_expected_void_std_string_Destroy( saveEx );
     MR_VertBitSet_Destroy( vertsToMove );
     MR_FaceBitSet_Destroy( facesToExtrude );
     MR_expected_MR_Mesh_std_string_Destroy( meshEx );

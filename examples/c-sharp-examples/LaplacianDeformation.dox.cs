@@ -2,45 +2,38 @@ public static class LaplacianDeformationExample
 {
     public static void Main(string[] args)
     {
-        try
-        {
-            // Load mesh
-            var mesh = MR.MeshLoad.fromAnySupportedFormat("mesh.stl");
+        // Load mesh
+        var mesh = MR.MeshLoad.fromAnySupportedFormat("mesh.stl");
 
-            // Construct deformer on the mesh vertices
-            MR.Laplacian lDeformer = new(mesh);
+        // Construct deformer on the mesh vertices
+        MR.Laplacian lDeformer = new(mesh);
 
-            // Find an area for the deformation anchor points
-            var ancV0 = mesh.topology.getValidVerts().findFirst();
-            var ancV1 = mesh.topology.getValidVerts().findLast();
-            // Mark the anchor points in the free area
-            MR.VertBitSet freeVerts = new();
-            freeVerts.resize(mesh.topology.getValidVerts().size());
-            freeVerts.set(ancV0, true);
-            freeVerts.set(ancV1, true);
-            // Expand the free area
-            MR.expand(mesh.topology, freeVerts, 5);
+        // Find an area for the deformation anchor points
+        var ancV0 = mesh.topology.getValidVerts().findFirst();
+        var ancV1 = mesh.topology.getValidVerts().findLast();
+        // Mark the anchor points in the free area
+        MR.VertBitSet freeVerts = new();
+        freeVerts.resize(mesh.topology.getValidVerts().size());
+        freeVerts.set(ancV0, true);
+        freeVerts.set(ancV1, true);
+        // Expand the free area
+        MR.expand(mesh.topology, freeVerts, 5);
 
-            // Initialize laplacian
-            lDeformer.init(freeVerts, MR.EdgeWeights.Cotan, MR.VertexMass.NeiArea);
+        // Initialize laplacian
+        lDeformer.init(freeVerts, MR.EdgeWeights.Cotan, MR.VertexMass.NeiArea);
 
-            float shiftAmount = mesh.computeBoundingBox().diagonal() * 0.01f;
-            // Fix the anchor vertices in the required position
-            lDeformer.fixVertex(ancV0, mesh.points[ancV0] + mesh.normal(ancV0) * shiftAmount);
-            lDeformer.fixVertex(ancV1, mesh.points[ancV1] + mesh.normal(ancV1) * shiftAmount);
+        float shiftAmount = mesh.computeBoundingBox().diagonal() * 0.01f;
+        // Fix the anchor vertices in the required position
+        lDeformer.fixVertex(ancV0, mesh.points[ancV0] + mesh.normal(ancV0) * shiftAmount);
+        lDeformer.fixVertex(ancV1, mesh.points[ancV1] + mesh.normal(ancV1) * shiftAmount);
 
-            // Move the free vertices according to the anchor ones
-            lDeformer.apply();
+        // Move the free vertices according to the anchor ones
+        lDeformer.apply();
 
-            // Invalidate the mesh because of the external vertex changes
-            mesh.invalidateCaches();
+        // Invalidate the mesh because of the external vertex changes
+        mesh.invalidateCaches();
 
-            // Save the deformed mesh
-            MR.MeshSave.toAnySupportedFormat(mesh, "deformed_mesh.stl");
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine("Error: {0}", e.Message);
-        }
+        // Save the deformed mesh
+        MR.MeshSave.toAnySupportedFormat(mesh, "deformed_mesh.stl");
     }
 }

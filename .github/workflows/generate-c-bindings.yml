@@ -63,6 +63,8 @@ jobs:
         run: |
           make -f scripts/mrbind/generate.mk TARGET=c -B --trace EM_USE_HOST_HEADERS=0 ENABLE_CUDA=1
 
+        # Consumers only read include/, src/, the project files and temp/interop_desc.json (C#, Rust, Java);
+        #   the parser output and the combined header are generator inputs, 120 of the 430 MB unpacked.
       - name: Upload C bindings
         uses: actions/upload-artifact@v7
         with:
@@ -71,6 +73,8 @@ jobs:
             ./source/MeshLibC2
             ./source/MeshLibC2Wasm
             ./source/MeshLibC2Cuda
+            !./source/*/temp/*.generated.json
+            !./source/*/temp/*.combined.hpp
           retention-days: 1
 
         # Unlike the other artifact, here we strip some temporary files, and the project files.

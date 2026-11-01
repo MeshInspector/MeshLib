@@ -1,0 +1,113 @@
+name: Upload distributions
+
+# Uploads all Distributives* artifacts of the run to the release, with the version in their names,
+# and packs the Rust and Java bindings when the run has them.
+on:
+  workflow_call:
+    inputs:
+      release_tag:
+        required: true
+        type: string
+      app_version:
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  upload-distributions:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Download All Developer Distributives
+        uses: actions/download-artifact@v8
+        with:
+          pattern: Distributives*
+          merge-multiple: true
+
+      # The crate without libraries downloads them from this release (or uses a MeshLib installation), the other one bundles them for all platforms.
+      # The libraries come from the NuGet package, the generated `src` from the Ubuntu job, `Cargo.toml` and `build.rs` from the checkout.
+      - name: Download Rust bindings
+        continue-on-error: true # The job producing it may be disabled for this run.
+        uses: actions/download-artifact@v8
+        with:
+          name: RustBindings
+          path: rust_bindings_src
+
+      - name: Pack Rust bindings
+        run: |
+          # Both crates need the libraries of the NuGet package. Without it (a run without NuGet, or a re-run after its artifact
+          # was deleted) nothing is packed, so a re-run can't replace good crates of the release with broken ones.
+          if [ -d rust_bindings_src ] && [ -f MeshLib.nupkg ]; then
+            scripts/rust/pack_crate.sh ${{ inputs.app_version }} \
+              "https://github.com/${{ github.repository }}/releases/download/${{ inputs.release_tag }}" \
+              rust_bindings_src MeshLib.nupkg
+          elif [ -d rust_bindings_src ]; then
+            echo "::notice::No MeshLib.nupkg, the Rust crates are not packed."
+          fi
+          rm -rf rust_bindings_src
+
+      # The Java bindings are a jar with no native code (the C libraries come from the platform packages), one archive for all platforms:
+      # the jar and the generated sources from the Ubuntu job.
+      - name: Download Java bindings
+        continue-on-error: true # The job producing it may be disabled for this run.
+        uses: actions/download-artifact@v8
+        with:
+          name: JavaBindings
+          path: MeshLibJava
+
+      - name: Pack Java bindings
+        run: |
+          if [ -f MeshLibJava/meshlib.jar ]; then
+            zip -qr meshlib_java_bindings.zip MeshLibJava
+          fi
+
+      - name: Rename Distributives
+        run: |
+          shopt -s nullglob
+          VERSION="${{ inputs.app_version }}"
+          for PKG_FILE in MeshLibDist*.zip ; do
+            # An arm64 archive is named like its x64 sibling with `-arm64` appended
+            # last, so strip that suffix first and put it back at the end.
+            NAME="${PKG_FILE%.zip}"
+            ARCH_SUFFIX=""
+            case "$NAME" in
+              *-arm64) NAME="${NAME%-arm64}" ; ARCH_SUFFIX="-arm64" ;;
+            esac
+            case "$NAME" in
+              # Keep the historical layout for the iterator-debug archives:
+              # MeshLibDist-IteratorDebug[-PDB] -> MeshLibDist_<version>-IteratorDebug[-PDB]
+              *-IteratorDebug|*-IteratorDebug-PDB) NAME="${NAME/Dist/Dist_${VERSION}}" ;;
+              # Companion symbols archives: MeshLibDistVS26-PDB -> MeshLibDistVS26_<version>-PDB
+              *-PDB) NAME="${NAME%-PDB}_${VERSION}-PDB" ;;
+              # Per-VS archives: MeshLibDistVS26 -> MeshLibDistVS26_<version>
+              *) NAME="${NAME}_${VERSION}" ;;
+            esac
+            mv "$PKG_FILE" "${NAME}${ARCH_SUFFIX}.zip"
+          done
+          for PKG_FILE in MeshLib*.nupkg ; do
+            mv "$PKG_FILE" "${PKG_FILE/MeshLib/MeshLib_${{ inputs.app_version }}}"
+          done
+          for PKG_FILE in meshlib*-dev.deb meshlib*.pkg meshlib_*.zip meshlib_*.tar.xz; do
+            mv "$PKG_FILE" "${PKG_FILE/meshlib/meshlib_${{ inputs.app_version }}}"
+          done
+
+      - name: Upload Distributives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob
+          PKG_FILES="MeshLibDist*.zip MeshLib*.nupkg meshlib*-dev.deb meshlib*.pkg meshlib_*.zip meshlib_*.tar.xz js-meshlib-*.tgz"
+          if [ -n "$(echo $PKG_FILES)" ] ; then
+            gh release upload ${{ inputs.release_tag }} $PKG_FILES --clobber
+          fi
+
+      - name: Delete consumed Distribution artifacts
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
+        with:
+          name: Distributives*
+          failOnError: false

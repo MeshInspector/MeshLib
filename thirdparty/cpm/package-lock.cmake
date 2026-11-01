@@ -68,7 +68,7 @@ set(MESHLIB_PACKAGE_expected
 
 set(MESHLIB_PACKAGE_fastmcpp
   GIT_REPOSITORY https://github.com/MeshInspector/fastmcpp
-  GIT_TAG 0ace80c3e3704ec7f302f516234f02c0e440ef24
+  GIT_TAG 3b98eee5a3bdd697558a13208f27fddb6214bc7c
 )
 
 set(MESHLIB_PACKAGE_fmt
@@ -108,7 +108,7 @@ set(MESHLIB_PACKAGE_laz-perf
 
 set(MESHLIB_PACKAGE_libE57Format
   GIT_REPOSITORY https://github.com/MeshInspector/libE57Format
-  GIT_TAG 1816f72de58b27208a8f03c7213ba4039517402a
+  GIT_TAG 1f14b9ab86bd8599f19f8d79d8568b6a2548ebe8
 )
 
 set(MESHLIB_PACKAGE_libjpeg-turbo

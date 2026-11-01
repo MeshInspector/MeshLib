@@ -21,5 +21,11 @@ Following code presents example of finding preceise collision triangles and edge
 - <b class="tab-title">JavaScript</b>
 \include CollisionPrecise.dox.js
 \include{doc} JsUsingNote.md
+ 
+- <b class="tab-title">Rust</b>
+\include CollisionPrecise.dox.rs
+ 
+- <b class="tab-title">Java</b>
+\include CollisionPrecise.dox.java
 
 </div>

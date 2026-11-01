@@ -1934,24 +1934,34 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
     } );
 }
 
-std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops,
+// the exact predicates on the vertices of the loops of one cut triangle, for a sweep over them
+struct LoopPoints
+{
+    // the distinct vertices of the loops, sorted; verts[i] is point i of the predicates, all added before the sweep (after a crossing that
+    // findCrossings fails to add in it, the event only calls ccw on loop points, and the run stops before getNext_ compares a crossing)
+    Vector<VertId> verts;
+    CutTrianglePredicates preds;
+    Vector<VertId, VertId> pointIds; // the point of every vertex of the sweep
+};
+
+// sets the points of all vertices of the loops, and the sweep predicates on them in p; false if the predicates fail on the points;
+// samePos and point stay empty: the sweep on loops merges no points and triangulates nothing here, so it never calls them
+static bool setLoopPredicates( SweepLinePredicates& p, LoopPoints& lp, const Mesh& mesh, const EdgeLoops& loops,
     const std::array<PreciseVertCoords, 3>& tri, const std::function<PreciseCutPoint( VertId )>& pointOf )
 {
-    // the distinct vertices of the loops (a vertex can be on several loops, or twice on a slit), sorted; vertex verts[i] is point i
-    // of the predicates, all added before the sweep, since no predicate may run after a failed addPoint
-    Vector<VertId> verts;
+    auto& verts = lp.verts;
     for ( const auto& loop : loops )
         for ( auto e : loop )
             verts.push_back( mesh.topology.org( e ) );
     std::sort( verts.begin(), verts.end() );
     verts.erase( std::unique( verts.begin(), verts.end() ), verts.end() );
-    CutTrianglePredicates preds;
+    auto& preds = lp.preds;
     preds.reset( tri );
     // two vertices defined alike make the predicates fail only if the sweep compares them, unless the shifts of their edges tell them apart
     // (as the crossings of the edges of a multiple edge of the other mesh with their wedges), so every two of them are compared before
     // the sweep, and the loops are rejected if that fails: a vertex point by its id, a crossing by the ids of its segment and triangle
-    // in any order, with the index of the point
-    Vector<std::pair<std::array<int, 5>, int>> keys( verts.size() );
+    // in any order (of its two triangles for a crossing of two cuts), with the index of the point
+    Vector<std::pair<std::array<int, 6>, int>> keys( verts.size() );
     for ( int i = 0; i < verts.size(); ++i )
     {
         const auto d = pointOf( verts[i] );
@@ -1960,39 +1970,102 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
         pos = i;
         if ( d.isVertex() )
         {
-            k = { d.seg[0].id, -1, -1, -1, -1 };
+            k = { d.seg[0].id, -1, -1, -1, -1, -1 };
             continue;
         }
-        k = { d.seg[0].id, d.seg[1].id, d.tri[0].id, d.tri[1].id, d.tri[2].id };
+        if ( d.isCrossing() )
+        {
+            std::array<int, 3> a{ d.tri[0].id, d.tri[1].id, d.tri[2].id }, b{ d.tri2[0].id, d.tri2[1].id, d.tri2[2].id };
+            std::sort( a.begin(), a.end() );
+            std::sort( b.begin(), b.end() );
+            const auto [lo, hi] = std::minmax( a, b );
+            k = { lo[0], lo[1], lo[2], hi[0], hi[1], hi[2] };
+            continue;
+        }
+        k = { d.seg[0].id, d.seg[1].id, d.tri[0].id, d.tri[1].id, d.tri[2].id, -1 };
         std::sort( k.begin(), k.begin() + 2 );
-        std::sort( k.begin() + 2, k.end() );
+        std::sort( k.begin() + 2, k.begin() + 5 );
     }
     if ( preds.failed() )
-        return {};
+        return false;
     std::sort( keys.begin(), keys.end() );
     for ( size_t i = 0; i < keys.size(); ++i )
         for ( size_t j = i + 1; j < keys.size() && keys[j].first == keys[i].first; ++j )
             (void)preds.less( VertId( keys[i].second ), VertId( keys[j].second ) );
-    if ( preds.failed() )
-        return {};
 
-    Vector<VertId, VertId> pointIds; // the point of every vertex of the sweep
-    return getMonotonePlanImpl( mesh, loops, [&] ( const WholeEdgeMap&, SweepLineQueue::Cache& )
+    p.less = [&lp] ( VertId l, VertId r ) { return lp.preds.less( lp.pointIds[l], lp.pointIds[r] ); };
+    p.ccw = [&lp] ( VertId a, VertId b, VertId c ) { return lp.preds.ccw( lp.pointIds[a], lp.pointIds[b], lp.pointIds[c] ); };
+    p.ccwFromBehind = [&lp] ( VertId b, VertId pivot ) { return lp.preds.ccwFromBehind( lp.pointIds[b], lp.pointIds[pivot] ); };
+    p.addInputPoint = [&mesh, &loops, &lp] ( VertId v, int contourId, int pointId )
     {
-        // samePos, addIntersectionPoint and point stay empty: the sweep on loops merges no points, stops at the first crossing
-        // and triangulates nothing here, so it never calls them
-        SweepLinePredicates p;
-        p.less = [&] ( VertId l, VertId r ) { return preds.less( pointIds[l], pointIds[r] ); };
-        p.ccw = [&] ( VertId a, VertId b, VertId c ) { return preds.ccw( pointIds[a], pointIds[b], pointIds[c] ); };
-        p.ccwFromBehind = [&] ( VertId b, VertId pivot ) { return preds.ccwFromBehind( pointIds[b], pointIds[pivot] ); };
-        p.addInputPoint = [&] ( VertId v, int contourId, int pointId )
+        const auto it = std::lower_bound( lp.verts.begin(), lp.verts.end(), mesh.topology.org( loops[contourId][pointId] ) );
+        lp.pointIds.autoResizeSet( v, VertId( int( it - lp.verts.begin() ) ) );
+    };
+    // the predicates can still fail on invalid points that the checks above miss, as three crossings of one cut on one line
+    p.failed = [&lp] { return lp.preds.failed(); };
+    return !preds.failed();
+}
+
+std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops,
+    const std::array<PreciseVertCoords, 3>& tri, const std::function<PreciseCutPoint( VertId )>& pointOf )
+{
+    LoopPoints lp;
+    SweepLinePredicates p; // addIntersectionPoint stays empty too: the sweep stops at the first crossing
+    if ( !setLoopPredicates( p, lp, mesh, loops, tri, pointOf ) )
+        return {};
+    return getMonotonePlanImpl( mesh, loops, [&] ( const WholeEdgeMap&, SweepLineQueue::Cache& ) { return std::move( p ); } );
+}
+
+// the crossings of the edges of the loops by the sweep, which does not stop at them, with the predicates that makePredicates builds
+// for the given patch-to-input edge map
+template <typename MakePredicates>
+static std::optional<Vector<EdgePair>> findCrossingsImpl( const Mesh& mesh, const EdgeLoops& loops, MakePredicates&& makePredicates )
+{
+    SweepLineQueue::Cache cache;
+    WholeEdgeMap patchToInEdges;
+    // abortWhenIntersect is not set, so the sweep finds all crossings, in the order of the sweep; their points are not injected in its edges
+    SweepLineQueue sweep( cache, mesh.topology, makePredicates( patchToInEdges, cache ), loops,
+        { .allowTwoEdgeLoops = true, .outPatchMap = &patchToInEdges } );
+    if ( !sweep.findIntersections() )
+        return {};
+    Vector<EdgePair> res;
+    res.reserve( cache.intersections.size() );
+    for ( const auto& x : cache.intersections )
+        res.emplace_back( mapEdge( patchToInEdges, x.lower ), mapEdge( patchToInEdges, x.upper ) );
+    return res;
+}
+
+std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops, const std::array<PreciseVertCoords, 3>& tri,
+    const std::function<PreciseCutPoint( VertId )>& pointOf, const std::function<std::array<PreciseVertCoords, 3>( UndirectedEdgeId )>& cutOf )
+{
+    LoopPoints lp;
+    SweepLinePredicates p;
+    if ( !setLoopPredicates( p, lp, mesh, loops, tri, pointOf ) )
+        return {};
+    VertId nextPoint( lp.verts.size() );
+    bool alongSide = false; // an edge without a cut crosses another one
+    return findCrossingsImpl( mesh, loops, [&] ( const WholeEdgeMap& patchToInEdges, SweepLineQueue::Cache& cache )
+    {
+        p.addIntersectionPoint = [&] ( VertId v, VertId a, VertId b, VertId c, VertId d )
         {
-            const auto it = std::lower_bound( verts.begin(), verts.end(), mesh.topology.org( loops[contourId][pointId] ) );
-            pointIds.autoResizeSet( v, VertId( int( it - verts.begin() ) ) );
+            const PreciseCutPoint x{ .tri = cutOf( mapEdge( patchToInEdges, cache.tp.findEdge( a, b ) ).undirected() ),
+                .tri2 = cutOf( mapEdge( patchToInEdges, cache.tp.findEdge( c, d ) ).undirected() ) };
+            if ( !x.tri[0].id || !x.tri2[0].id )
+                alongSide = true; // the run stops at the end of this event, and no predicate takes the point before that
+            else
+                lp.preds.addPoint( nextPoint, x );
+            lp.pointIds.autoResizeSet( v, nextPoint++ );
         };
-        // the predicates can still fail on invalid points that the checks above miss, as three crossings of one cut on one line
-        p.failed = [&] { return preds.failed(); };
-        return p;
+        p.failed = [&] { return alongSide || lp.preds.failed(); };
+        return std::move( p );
+    } );
+}
+
+std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal )
+{
+    return findCrossingsImpl( mesh, loops, [&] ( const WholeEdgeMap& patchToInEdges, SweepLineQueue::Cache& cache )
+    {
+        return meshSpacePredicates( mesh, loops, normal, patchToInEdges, &cache.pts2Buffer );
     } );
 }
 

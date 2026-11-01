@@ -37,9 +37,11 @@ def setup_workspace( modules, clear_folder = True ):
 
     print(f"Copying {SYSTEM} files...")
     for module in modules:
-        lib = LIB_DIR_MESHLIB / f"{module}{LIB_EXTENSION}"
+        lib = LIB_DIR_MESHLIB / module_file_name(module)
         print(lib)
         shutil.copy(lib, WHEEL_SRC_DIR)
+        if module in PYTHON_SOURCE_MODULES:
+            shutil.copy(LIB_DIR_MESHLIB / f"{module}.pyi", WHEEL_SRC_DIR)
     for pybind_shim in LIB_DIR_MESHLIB.glob("*pybind11nonlimitedapi_meshlib_*"):
         print(pybind_shim)
         shutil.copy(pybind_shim, WHEEL_SRC_DIR)
@@ -56,6 +58,8 @@ def generate_stubs(modules):
 
     os.chdir(WHEEL_ROOT_DIR)
     for module in modules:
+        if module in PYTHON_SOURCE_MODULES:
+            continue
         subprocess.check_call(
             [*pybind11_stubgen_command, "--exit-code", "--output-dir", ".", f"meshlib.{module}"],
             env=env,

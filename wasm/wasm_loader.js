@@ -1,8 +1,17 @@
+// download and "Preparing..." statuses interleave, so the bar only moves forward
+var wasmLoadProgress = 0;
+// uncompressed size of the .data packages: the packager counts decoded bytes,
+// but takes the total from Content-Length, which is the compressed size
+// (mirrors fetchRemotePackage and getPreloadedPackage in emsdk 4.0.19's file_packager.py;
+// recheck both and the "Downloading data" status text on emsdk updates)
+var wasmDataSize = 0;
+
 var setWasmLoadProgress = function (proc) {
     progressElement = document.getElementById("progress");
     progressHolder = document.getElementById("progress-holder");
     progressHolder.setAttribute('style', 'visibility: visible');
-    progressElement.setAttribute('style', 'width:' + Math.min(Math.max(proc, 0), 100) + "%");
+    wasmLoadProgress = Math.max(wasmLoadProgress, Math.min(proc, 100) || 0); // NaN from a 0/0 status must not stick
+    progressElement.setAttribute('style', 'width:' + wasmLoadProgress + "%");
 }
 
 var clearWasmLoadProgress = function () {
@@ -49,7 +58,7 @@ var statusElement = document.getElementById("status")
                 t && n - Module.setStatus.last.time < 30 || (Module.setStatus.last.time = n,
                     Module.setStatus.last.text = e,
                     t ? (e = t[1],
-                        setWasmLoadProgress(100 * parseInt(t[2]) / parseInt(t[4])),
+                        setWasmLoadProgress(100 * parseInt(t[2]) / Math.max(parseInt(t[4]), e.startsWith("Downloading data") ? wasmDataSize : 0)),
                         spinnerElement.hidden = !1) : (
                         e || (spinnerElement.style.display = "none",
                             statusElement.style.display = "none",
@@ -59,6 +68,10 @@ var statusElement = document.getElementById("status")
                         )),
                     statusElement.innerHTML = e)
             }
+        },
+        getPreloadedPackage: function (name, size) {
+            wasmDataSize += size;
+            return null; // download it as usual
         },
         totalDependencies: 0,
         monitorRunDependencies: function (e) {

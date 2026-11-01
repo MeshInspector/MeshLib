@@ -14,16 +14,16 @@ int main()
     pc.points.reserve( 10000 );
     for ( auto i = 0; i < 100; ++i )
     {
-        const auto u = MR::PI2_F * float( i ) / ( 100.f - 1.f );
+        const auto u = 2 * MR::PI_F * float( i ) / ( 100.f - 1.f );
         for ( auto j = 0; j < 100; ++j )
         {
             const auto v = MR::PI_F * float( j ) / ( 100.f - 1.f );
 
-            pc.points.emplace_back(
+            pc.addPoint( {
                 std::cos( u ) * std::sin( v ),
                 std::sin( u ) * std::sin( v ),
                 std::cos( v )
-            );
+            } );
         }
     }
     // Remove duplicate points

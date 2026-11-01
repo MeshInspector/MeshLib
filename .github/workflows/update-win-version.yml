@@ -24,8 +24,8 @@ jobs:
       fail-fast: false
       matrix:
         # One developer distributive per Visual Studio toolchain and target
-        # architecture. The MREDist_* inputs are produced by the matching VS build
-        # in build-test-windows.yml (named via its VS_TAG).
+        # architecture, plus the clang-cl ones. The MREDist_* inputs are produced
+        # by the matching build in build-test-windows.yml (named via its VS_TAG).
         include:
           - vcpkg_triplet: x64-windows-vs2019-meshlib
             extract_release: MREDist_VS19_Release.zip
@@ -67,6 +67,29 @@ jobs:
             cxx_compiler: msvc-2026
             build_system: MSBuild
             build_config: Release
+          # The clang-cl jobs build Release only and upload the `cmake --install` prefix as `install`,
+          # which is shipped as is: no make_install_folder.py, and the example plugin is built from
+          # its CMakeLists.txt in build-test-windows.yml instead of the .sln here.
+          - vcpkg_triplet: x64-windows-vs2022-meshlib
+            extract_release: MREDist_ClangCl_Release.zip
+            cmake_install: true
+            output_zip: MeshLibDistClangCl.zip
+            pdb_zip: MeshLibDistClangCl-PDB.zip
+            artifact_name: DistributivesWin-ClangCl
+            cxx_compiler: clang-cl
+            build_system: CMake
+            build_config: Release
+          - vcpkg_triplet: arm64-windows-meshlib
+            arch: arm64
+            runner: windows-11-vs2026-arm
+            extract_release: MREDist_ClangCl-arm64_Release.zip
+            cmake_install: true
+            output_zip: MeshLibDistClangCl-arm64.zip
+            pdb_zip: MeshLibDistClangCl-PDB-arm64.zip
+            artifact_name: DistributivesWin-ClangCl-arm64
+            cxx_compiler: clang-cl
+            build_system: CMake
+            build_config: Release
           - vcpkg_triplet: x64-windows-meshlib-iterator-debug
             extract_debug: MREDist_VS19_Debug-IteratorDebug.zip
             output_zip: MeshLibDist-IteratorDebug.zip
@@ -83,6 +106,7 @@ jobs:
 
       # headers that make_install_folder.py puts into the distribution
       - name: Checkout third-party submodules
+        if: ${{ !matrix.cmake_install }}
         shell: bash
         run: scripts/checkout_submodules.sh . thirdparty/imgui thirdparty/parallel-hashmap thirdparty/mrbind-pybind11
 
@@ -99,6 +123,7 @@ jobs:
           build_system: ${{ matrix.build_system }}
 
       - name: Set up vcpkg
+        if: ${{ !matrix.cmake_install }}
         uses: ./.github/actions/setup-vcpkg-windows
         with:
           vcpkg-version: ${{ inputs.vcpkg_version }}
@@ -115,15 +140,19 @@ jobs:
           if ("${{ matrix.extract_release }}") { 
             tar -xvzf ${{ matrix.extract_release }} 
           }
-          tar -xvzf ${{ matrix.extract_debug }}
+          if ("${{ matrix.extract_debug }}") {
+            tar -xvzf ${{ matrix.extract_debug }}
+          }
           tar -xvzf MeshLibC2Headers.zip
 
       # The install folder is assembled from source/<arch>/<config>, which
       # make_install_folder.py derives from the triplet name.
       - name: Make Install Folder
+        if: ${{ !matrix.cmake_install }}
         run: py -3 scripts\make_install_folder.py ${{ inputs.app_version }} ${{ matrix.vcpkg_triplet }}
 
       - name: Add msbuild to PATH
+        if: ${{ !matrix.cmake_install }}
         uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
         with:
           # see the same note in build-test-windows.yml: the default x86 MSBuild
@@ -148,11 +177,14 @@ jobs:
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
 
       - name: Test Example Plugin # call it after archive not to pack build results
+        if: ${{ !matrix.cmake_install }}
         env:
           IDL: ${{ matrix.vcpkg_triplet == 'x64-windows-meshlib-iterator-debug' && '2' || '0' }}
         run: |
           $platform = "${{ matrix.arch == 'arm64' && 'ARM64' || 'x64' }}"
-          msbuild -m example_plugin\example_plugin.sln -p:Configuration=Debug -p:Platform=$platform -p:MeshLibIteratorDebugLevel=$env:IDL
+          if ("${{ matrix.extract_debug }}") {
+            msbuild -m example_plugin\example_plugin.sln -p:Configuration=Debug -p:Platform=$platform -p:MeshLibIteratorDebugLevel=$env:IDL
+          }
           if ("${{ matrix.extract_release }}") {
             msbuild -m example_plugin\example_plugin.sln -p:Configuration=Release -p:Platform=$platform
           }

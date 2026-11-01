@@ -24,15 +24,7 @@
         "freetype",
         "gdcm",
         "glad",
-        {
-            "name": "glfw3",
-            "features": [
-                {
-                    "name": "wayland",
-                    "platform": "linux"
-                }
-            ]
-        },
+        "glfw3",
         "gtest",
         "hidapi",
         "jsoncpp",

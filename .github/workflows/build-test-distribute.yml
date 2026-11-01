@@ -60,6 +60,45 @@ jobs:
       - name: Check third-party license notices
         run: python3 scripts/check_third_party_licenses.py
 
+  # The documentation site is built only on release; this builds its C++ API and guide pages
+  # the same way (the scripts of MeshInspector.github.io) and fails on any doxygen warning.
+  check-doxygen:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Install Doxygen
+        uses: ssciwr/doxygen-install@fa3e94d34131d3990b6b8ba939ab982964aa3758 # v1
+        with:
+          version: "1.14.0"
+
+      - name: Checkout MeshLib
+        uses: actions/checkout@v7
+        with:
+          path: MeshLib
+
+      - name: Checkout documentation site scripts
+        uses: actions/checkout@v7
+        with:
+          repository: MeshInspector/MeshInspector.github.io
+          path: MeshInspector.github.io
+          filter: blob:none
+          sparse-checkout: |
+            scripts
+            preprocessors
+            img
+            doxygen-awesome-css
+          submodules: true
+
+      - name: Build C++ and guide pages, fail on any warning
+        working-directory: MeshInspector.github.io
+        env:
+          FAIL_ON_WARNINGS: true
+        run: |
+          echo "Main Cpp" > "$RUNNER_TEMP/modules.txt"
+          scripts/update_doc.sh MeshLib/check "$RUNNER_TEMP/modules.txt"
+
   prepare-image:
     needs: config
     uses: ./.github/workflows/prepare-images.yml
@@ -187,102 +226,9 @@ jobs:
       - linux-vcpkg-build-test
       - macos-build-test
       - emscripten-c-bindings-build-test
-    timeout-minutes: 20
-    runs-on: windows-2025
-    steps:
-     - name: Checkout
-       uses: actions/checkout@v7
-
-     - name: Download NuGet Windows Patch Archive
-       uses: actions/download-artifact@v8
-       with:
-         pattern: DotNetPatchArchiveWindows-x64
-         path: windows_x64_runtime
-
-     - name: Download NuGet Windows Arm Patch Archive
-       uses: actions/download-artifact@v8
-       with:
-         pattern: DotNetPatchArchiveWindows-arm64
-         path: windows_arm64_runtime
-
-     - name: Download NuGet Linux x64 Patch Archive
-       uses: actions/download-artifact@v8
-       with:
-         pattern: DotNetPatchArchiveLinux-x64
-         path: linux_x64_runtime
-
-     - name: Download NuGet Linux Arm Patch Archive
-       uses: actions/download-artifact@v8
-       with:
-         pattern: DotNetPatchArchiveLinux-arm64
-         path: linux_arm64_runtime
-
-     - name: Download NuGet MacOS x64 Patch Archive
-       uses: actions/download-artifact@v8
-       with:
-         pattern: DotNetPatchArchiveMacOs-x64
-         path: macos_x64_runtime
-
-     - name: Download NuGet MacOS Arm Patch Archive
-       uses: actions/download-artifact@v8
-       with:
-         pattern: DotNetPatchArchiveMacOs-arm64
-         path: macos_arm64_runtime
-
-     - name: Download NuGet DLL and XML
-       uses: actions/download-artifact@v8
-       with:
-         pattern: DotNetDllXml
-         path: dotnet_dll
-         merge-multiple: true
-
-     - name: Download C# Wasm Archive (single thread)
-       uses: actions/download-artifact@v8
-       with:
-         pattern: DotNetPatchArchiveWasm-*
-         path: browser_wasm_runtime
-         merge-multiple: true
-
-     - name: Build C# Wasm package
-       run: |
-         mkdir meshlib_dotnet-wasm
-         mkdir meshlib_dotnet-wasm/native
-         move dotnet_dll/MRDotNet2Static.dll meshlib_dotnet-wasm
-         move browser_wasm_runtime/* meshlib_dotnet-wasm/native
-         Compress-Archive -Path meshlib_dotnet-wasm -DestinationPath meshlib_dotnet-wasm.zip
-
-     - name: Generate NuGet specification
-       run: |
-        echo ${{ needs.config.outputs.app_version }}
-        py -3 scripts\nuget_patch\generate_nuget_spec.py dotnet_dll windows_x64_runtime windows_arm64_runtime linux_x64_runtime linux_arm64_runtime macos_x64_runtime macos_arm64_runtime ${{ needs.config.outputs.app_version }}
-
-     - name: Download NuGet Executable
-       run:  curl https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -o nuget.exe
-
-     - name: Build NuGet package
-       run: nuget.exe pack Package.nuspec -OutputFileNamesWithoutVersion
-
-     - name: Upload NuGet Package
-       uses: actions/upload-artifact@v7
-       with:
-         name: DistributivesNuGet
-         path: MeshLib.nupkg
-         retention-days: 1
-
-     - name: Upload C# Wasm Package
-       uses: actions/upload-artifact@v7
-       with:
-         name: DistributivesDotNetWasm
-         path: meshlib_dotnet-wasm.zip
-         retention-days: 1
-
-     - name: Delete consumed NuGet input artifacts
-       uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
-       with:
-         name: |
-           DotNetPatchArchive*
-           DotNetDllXml
-         failOnError: false
+    uses: ./.github/workflows/create-nuget-package.yml
+    with:
+      app_version: ${{ needs.config.outputs.app_version }}
 
   upload-distributions:
     # Don't publish if any build failed (its distributive is missing); skipped builds are fine.
@@ -296,8 +242,6 @@ jobs:
         && needs.emscripten-build-test.result != 'failure'
         && needs.emscripten-c-bindings-build-test.result != 'failure'
         && needs.macos-build-test.result != 'failure' }}
-    timeout-minutes: 10
-    runs-on: ubuntu-latest
     needs:
       - config
       - versioning-and-release-url
@@ -308,98 +252,10 @@ jobs:
       - linux-vcpkg-build-test
       - emscripten-build-test
       - macos-build-test
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Download All Developer Distributives
-        uses: actions/download-artifact@v8
-        with:
-          pattern: Distributives*
-          merge-multiple: true
-
-      # The crate without libraries downloads them from this release (or uses a MeshLib installation), the other one bundles them for all platforms.
-      # The libraries come from the NuGet package, the generated `src` from the Ubuntu job, `Cargo.toml` and `build.rs` from the checkout.
-      - name: Download Rust bindings
-        continue-on-error: true # The job producing it may be disabled for this run.
-        uses: actions/download-artifact@v8
-        with:
-          name: RustBindings
-          path: rust_bindings_src
-
-      - name: Pack Rust bindings
-        run: |
-          # Both crates need the libraries of the NuGet package. Without it (a run without NuGet, or a re-run after its artifact
-          # was deleted) nothing is packed, so a re-run can't replace good crates of the release with broken ones.
-          if [ -d rust_bindings_src ] && [ -f MeshLib.nupkg ]; then
-            scripts/rust/pack_crate.sh ${{ needs.config.outputs.app_version }} \
-              "https://github.com/${{ github.repository }}/releases/download/${{ needs.config.outputs.release_tag }}" \
-              rust_bindings_src MeshLib.nupkg
-          elif [ -d rust_bindings_src ]; then
-            echo "::notice::No MeshLib.nupkg, the Rust crates are not packed."
-          fi
-          rm -rf rust_bindings_src
-
-      # The Java bindings are a jar with no native code (the C libraries come from the platform packages), one archive for all platforms:
-      # the jar and the generated sources from the Ubuntu job.
-      - name: Download Java bindings
-        continue-on-error: true # The job producing it may be disabled for this run.
-        uses: actions/download-artifact@v8
-        with:
-          name: JavaBindings
-          path: MeshLibJava
-
-      - name: Pack Java bindings
-        run: |
-          if [ -f MeshLibJava/meshlib.jar ]; then
-            zip -qr meshlib_java_bindings.zip MeshLibJava
-          fi
-
-      - name: Rename Distributives
-        run: |
-          shopt -s nullglob
-          VERSION="${{ needs.config.outputs.app_version }}"
-          for PKG_FILE in MeshLibDist*.zip ; do
-            # An arm64 archive is named like its x64 sibling with `-arm64` appended
-            # last, so strip that suffix first and put it back at the end.
-            NAME="${PKG_FILE%.zip}"
-            ARCH_SUFFIX=""
-            case "$NAME" in
-              *-arm64) NAME="${NAME%-arm64}" ; ARCH_SUFFIX="-arm64" ;;
-            esac
-            case "$NAME" in
-              # Keep the historical layout for the iterator-debug archives:
-              # MeshLibDist-IteratorDebug[-PDB] -> MeshLibDist_<version>-IteratorDebug[-PDB]
-              *-IteratorDebug|*-IteratorDebug-PDB) NAME="${NAME/Dist/Dist_${VERSION}}" ;;
-              # Companion symbols archives: MeshLibDistVS26-PDB -> MeshLibDistVS26_<version>-PDB
-              *-PDB) NAME="${NAME%-PDB}_${VERSION}-PDB" ;;
-              # Per-VS archives: MeshLibDistVS26 -> MeshLibDistVS26_<version>
-              *) NAME="${NAME}_${VERSION}" ;;
-            esac
-            mv "$PKG_FILE" "${NAME}${ARCH_SUFFIX}.zip"
-          done
-          for PKG_FILE in MeshLib*.nupkg ; do
-            mv "$PKG_FILE" "${PKG_FILE/MeshLib/MeshLib_${{ needs.config.outputs.app_version }}}"
-          done
-          for PKG_FILE in meshlib*-dev.deb meshlib*.pkg meshlib_*.zip meshlib_*.tar.xz; do
-            mv "$PKG_FILE" "${PKG_FILE/meshlib/meshlib_${{ needs.config.outputs.app_version }}}"
-          done
-
-      - name: Upload Distributives
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          shopt -s nullglob
-          PKG_FILES="MeshLibDist*.zip MeshLib*.nupkg meshlib*-dev.deb meshlib*.pkg meshlib_*.zip meshlib_*.tar.xz js-meshlib-*.tgz"
-          if [ -n "$(echo $PKG_FILES)" ] ; then
-            gh release upload ${{ needs.config.outputs.release_tag }} $PKG_FILES --clobber
-          fi
-
-      - name: Delete consumed Distribution artifacts
-        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
-        with:
-          name: Distributives*
-          failOnError: false
+    uses: ./.github/workflows/upload-distributions.yml
+    with:
+      release_tag: ${{ needs.config.outputs.release_tag }}
+      app_version: ${{ needs.config.outputs.app_version }}
 
   unity-nuget-test:
     # Run whenever full-ci is requested and the Windows build is enabled, provided the

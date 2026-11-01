@@ -377,7 +377,8 @@ void shutViewerAtExit()
     }
     catch ( const std::exception& )
     {
-        return; // the loop is already on its way out
+        // the loop is already on its way out, but its teardown (e.g. MCP server shutdown)
+        // must still finish before static destructors run, or both free the same objects
     }
     gViewerFinished.wait_for( std::chrono::seconds( 10 ) ); // a stuck loop must not hold the exit forever
 #else

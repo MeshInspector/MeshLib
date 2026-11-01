@@ -41,7 +41,7 @@ MRMESH_API void trimWithPlane( Polyline3& polyline, const Plane3f& plane, const 
 
 /// This function cuts polyline with a plane
 /// \details plane cuts an edge if one end of the edge is below the plane and the other is not
-/// \return Edge segments that are closer to the plane than \param eps. Segments are oriented according by plane normal ( segment.a <= segment.b)
+/// \return Edge segments that are closer to the plane than \p eps. Segments are oriented according by plane normal ( segment.a <= segment.b)
 /// \param polyline Input polyline that will be cut by the plane
 /// \param plane Input plane to cut polyline with
 /// \param eps Maximal distance from the plane

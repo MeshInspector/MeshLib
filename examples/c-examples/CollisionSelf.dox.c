@@ -61,7 +61,6 @@ int main( void )
         fprintf( stderr, "%s\n", MR_std_string_data( MR_expected_bool_std_string_error( isSelfCollidingRes ) ) );
         goto fail_self_collision_fast;
     }
-    // print number of self-intersecting faces
     fprintf( stdout, "%d\n", *isSelfColliding );
 
     rc = EXIT_SUCCESS;

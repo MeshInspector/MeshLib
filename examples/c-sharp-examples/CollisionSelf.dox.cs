@@ -1,25 +1,17 @@
-using static MR;
-
-public class CollisionSelfExample
+public static class CollisionSelfExample
 {
     public static void Main(string[] args)
     {
-        var mesh = new MeshPart(MR.makeTorusWithSelfIntersections()); // make torus with self-intersections
+        var mesh = MR.makeTorusWithSelfIntersections(); // make torus with self-intersections
 
-        // find self-intersecting faces pairs
-        var selfCollidingPairs = findSelfCollidingTriangles(mesh);
-        for (nuint i = 0; i < selfCollidingPairs.size(); i++)
-        {
-            var pair = selfCollidingPairs[i];
-            Console.WriteLine($"{pair.aFace.id} {pair.bFace.id}"); // print each pair
-        }
+        var selfCollidingPairs = MR.findSelfCollidingTriangles(mesh); // find self-intersecting faces pairs
+        for (nuint i = 0; i < selfCollidingPairs.size(); ++i)
+            Console.WriteLine("{0} {1}", selfCollidingPairs[i].aFace.id, selfCollidingPairs[i].bFace.id); // print each pair
 
-        // find bitset of self-intersecting faces
-        var selfCollidingBitSet = MR.findSelfCollidingTrianglesBS(mesh);
+        var selfCollidingBitSet = MR.findSelfCollidingTrianglesBS(mesh); // find bitset of self-intersecting faces
         Console.WriteLine(selfCollidingBitSet.count()); // print number of self-intersecting faces
 
-        // fast check if mesh has self-intersections
-        var isSelfColliding = MR.findSelfCollidingTriangles(mesh, outCollidingPairs: null);
+        var isSelfColliding = MR.findSelfCollidingTriangles(mesh, outCollidingPairs: null); // fast check if mesh has self-intersections
         Console.WriteLine(isSelfColliding);
     }
 }

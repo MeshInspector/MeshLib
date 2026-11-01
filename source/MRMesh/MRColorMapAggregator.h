@@ -34,10 +34,10 @@ public:
     /// add color map after all (more priority)
     MRMESH_API void pushBack( const PartialColorMap& partitialColorMap );
 
-    /// insert color map before element #i (0 - minimum priority)
+    /// insert color map before element i (0 - minimum priority)
     MRMESH_API void insert( int i, const PartialColorMap& partitialColorMap );
 
-    /// replace color map in #i position
+    /// replace color map at position i
     MRMESH_API void replace( int i, const PartialColorMap& partitialColorMap );
 
     /// reset all accumulated color map
@@ -49,7 +49,7 @@ public:
     /// get partial color map map by index
     const PartialColorMap& getPartialColorMap( int i ) { return dataSet_[i]; }
 
-    /// erase n color map from #i 
+    /// erase n color map from i
     MRMESH_API void erase( int i, int n = 1 );
 
     /// color map aggregating mode

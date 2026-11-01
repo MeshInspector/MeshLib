@@ -283,6 +283,9 @@ public:
     /// return bit sets of all vacant elements in this topology after deletion
     MRMESH_API VacantElements deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
+    /// deletes the given valid faces (in parallel), keeping all their edges and vertices, which get no face on that side
+    MRMESH_API void deleteFacesKeepEdges( const FaceBitSet & fs );
+
     /// explicitly increases the size of faces vector
     MRMESH_API void faceResize( size_t newSize );
 

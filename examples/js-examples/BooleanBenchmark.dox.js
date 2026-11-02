@@ -14,6 +14,7 @@ using sphereB = new ml.Mesh(sphereA);
 
 // subtracts sphereB rotated around Z-axis by i * 0.1 degrees from sphereA;
 // sphereB itself is not modified, so the AABB trees of both meshes are built once and reused
+/** @param {number} i */
 function subtractRotated(i) {
   using rigidB2A = ml.AffineXf3f.linear(ml.Matrix3f.rotation(ml.Vector3f.plusZ(), i * 0.1 * Math.PI / 180));
   using params = new ml.BooleanParameters();

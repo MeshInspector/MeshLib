@@ -1184,13 +1184,12 @@ void cutOneEdge( MeshTopology& topology, EdgeId baseEdge,
 // this function cut mesh edge and connects it with result path,
 // after it each path edge left and right faces are invalid (they are removed)
 void cutEdgesIntoPieces( Mesh& mesh,
-                         EdgeDataMap&& edgeData, const OneMeshContours& contours,
+                         EdgeDataMap&& edgeData, const OneMeshContours& contours, const PathsOldFaces& oldEdgesInfo,
                          const SortIntersectionsData* sortData,
                          FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
 {
     MR_TIMER;
-    // sort each edge intersections in parallel, and find the faces of the cut edges that the contours enter
-    FaceBitSet entered( mesh.topology.faceSize() );
+    // sort each edge intersections in parallel
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, edgeData.subcnt(), 1 ),
         [&] ( const tbb::blocked_range<size_t>& range )
     {
@@ -1202,25 +1201,18 @@ void cutEdgesIntoPieces( Mesh& mesh,
                 // const_cast here is safe, we don't write to map, just sort internal data
                 for ( auto& edgeInfo : const_cast< EdgeDataMap::EmbeddedSet& >( subSet ) )
                 {
-                    const EdgeId baseEdge = baseEdgeOf( edgeInfo.second, contours );
-                    const auto [isAllLeftOnly, isAllRightOnly] = allLeftRightOnly( mesh.topology, baseEdge, edgeInfo.second, contours );
-                    if ( auto f = mesh.topology.left( baseEdge ); f && !isAllRightOnly )
-                        entered.atomicTestSet( f );
-                    if ( auto f = mesh.topology.right( baseEdge ); f && !isAllLeftOnly )
-                        entered.atomicTestSet( f );
                     sortEdgeInfo( mesh, contours, edgeInfo.second, sortData );
                 }
             } );
         }
     } );
 
-    // cut all, and remember the faces that the contours only touch from outside, to refill them after the cut:
-    // each once (from the first of its cut sides), and none that a contour enters, which is filled with the holes of the paths
+    // cut all, and remember the faces next to the cut edges that the contours only touch from outside (e.g. at the ends of open contours)
     std::vector<EdgeId> fillEdges;
     Vector<FaceId> fillFaces;
     auto addFill = [&] ( EdgeId e )
     {
-        if ( auto f = mesh.topology.left( e ); f && !entered.test_set( f ) )
+        if ( auto f = mesh.topology.left( e ) )
         {
             fillEdges.push_back( e );
             fillFaces.push_back( f );
@@ -1229,10 +1221,36 @@ void cutEdgesIntoPieces( Mesh& mesh,
     for ( const auto& edgeInfo : edgeData )
     {
         const EdgeId baseEdge = baseEdgeOf( edgeInfo.second, contours );
-        addFill( baseEdge.sym() );
-        addFill( baseEdge );
+        const auto [isAllLeftOnly, isAllRightOnly] = allLeftRightOnly( mesh.topology, baseEdge, edgeInfo.second, contours );
+        if ( isAllLeftOnly )
+            addFill( baseEdge.sym() );
+        if ( isAllRightOnly )
+            addFill( baseEdge );
         cutOneEdge( mesh.topology, baseEdge, edgeInfo.second, contours, new2OldEdgeMap );
     }
+    if ( fillEdges.empty() )
+        return;
+
+    // refill each face once, from the first of its cut sides, and none that a contour enters from an edge,
+    // which is filled with the holes of the paths (a path edge at an edge point is in the old face it enters)
+    FaceBitSet toFill( mesh.topology.faceSize() );
+    for ( auto f : fillFaces )
+        toFill.set( f );
+    for ( int c = 0; c < contours.size(); ++c )
+        for ( int k = contours.offsets[c]; k + 1 < contours.offsets[c + 1]; ++k )
+            if ( auto f = oldEdgesInfo[k].left; f && ( contours.intersections[k].isEdge() || contours.intersections[k + 1].isEdge() ) )
+                toFill.reset( f );
+    size_t n = 0;
+    for ( size_t i = 0; i < fillEdges.size(); ++i )
+    {
+        if ( !toFill.test( fillFaces[i] ) )
+            continue;
+        toFill.reset( fillFaces[i] );
+        fillEdges[n] = fillEdges[i];
+        fillFaces[n++] = fillFaces[i];
+    }
+    fillEdges.resize( n );
+    fillFaces.resize( n );
     if ( fillEdges.empty() )
         return;
 
@@ -1634,7 +1652,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         }
     }
 
-    cutEdgesIntoPieces( mesh, std::move( preRes.edgeData ), contours, params.sortData, params.new2OldMap, params.new2oldEdgesMap );
+    cutEdgesIntoPieces( mesh, std::move( preRes.edgeData ), contours, preRes.oldEdgesInfo, params.sortData, params.new2OldMap, params.new2oldEdgesMap );
     ExactCutPoints exact{ mesh, contours, params.sortData, VertId( mesh.topology.vertSize() ) };
     // the crossing contours are split at the crossings, so that the holes of their faces can be filled as usual; the faces stay reported
     if ( !crossingFaces.empty() )

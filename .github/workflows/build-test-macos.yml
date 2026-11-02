@@ -185,6 +185,8 @@ jobs:
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
         uses: ./.github/actions/build-mrbind
         with:
+          # The C bindings come from the generate-c-bindings job, so no parser.
+          generators-only: 'true'
           # Keyed on the runner image (matrix.instance) plus the brew-prefix hash
           # to discriminate between fleet members of the self-hosted ARM label set.
           # Shared with pip-build.yml's macOS section where the two also match.

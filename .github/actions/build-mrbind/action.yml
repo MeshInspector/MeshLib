@@ -40,6 +40,14 @@ inputs:
       saving them to cache. Default `'true'` -- gives ~5x smaller
       caches at the cost of useful stack traces if mrbind crashes.
       Set to `'false'` on a debugging branch to retain symbols.
+  generators-only:
+    required: false
+    default: 'false'
+    description: >
+      Build only the generators working from the description of the C bindings
+      (`mrbind_gen_csharp`, `mrbind_gen_rust`, `mrbind_gen_java`, `mrbind_gen_python`):
+      not the parser (which needs libclang) and `mrbind_gen_c`. For the jobs that
+      take the C bindings from the generate-c-bindings job.
   msys2-dir:
     required: false
     default: 'C:\msys64'
@@ -73,7 +81,7 @@ runs:
       continue-on-error: true
       with:
         path: ${{ inputs.mrbind-dir }}/build
-        key: mrbind-build-${{ inputs.cache-key-prefix }}-${{ steps.mrbind-sha.outputs.sha }}-${{ hashFiles(inputs.build-script, '.github/actions/build-mrbind/action.yml') }}-${{ inputs.extra-cache-key }}
+        key: mrbind-build-${{ inputs.cache-key-prefix }}${{ inputs.generators-only == 'true' && '-generators' || '' }}-${{ steps.mrbind-sha.outputs.sha }}-${{ hashFiles(inputs.build-script, '.github/actions/build-mrbind/action.yml') }}-${{ inputs.extra-cache-key }}
 
     - name: Build MRBind
       # `install_mrbind_windows_msys2.bat` defaults MSYS2_DIR to
@@ -85,6 +93,7 @@ runs:
       env:
         MSYS2_DIR: ${{ inputs.msys2-dir }}
         MSYS2_ENV: ${{ inputs.msys2-env }}
+        MRBIND_GENERATORS_ONLY: ${{ inputs.generators-only == 'true' && '1' || '' }}
       run: |
         if [ "$RUNNER_OS" = Windows ]; then
           # cmd.exe needs a Windows-style path; `call` + `/c` propagate the
@@ -124,13 +133,14 @@ runs:
       run: |
         set -eu
         case "$RUNNER_OS" in
-          Windows)
-            # Git Bash has no `strip` of its own, so use MSYS2's.
-            STRIP_EXE="$(cygpath -u '${{ inputs.msys2-dir }}')/${{ inputs.msys2-env }}/bin/strip.exe"
-            "$STRIP_EXE" "${{ inputs.mrbind-dir }}"/build/{mrbind,mrbind_gen_c,mrbind_gen_csharp,mrbind_gen_rust,mrbind_gen_java}.exe ;;
-          macOS)
-            # -S drops debug symbols but keeps the dynamic symbol table.
-            strip -S "${{ inputs.mrbind-dir }}"/build/{mrbind,mrbind_gen_c,mrbind_gen_csharp,mrbind_gen_rust,mrbind_gen_java} ;;
-          *)
-            strip "${{ inputs.mrbind-dir }}"/build/{mrbind,mrbind_gen_c,mrbind_gen_csharp,mrbind_gen_rust,mrbind_gen_java} ;;
+          # Git Bash has no `strip` of its own, so use MSYS2's.
+          Windows) STRIP=("$(cygpath -u '${{ inputs.msys2-dir }}')/${{ inputs.msys2-env }}/bin/strip.exe"); EXT=.exe ;;
+          # -S drops debug symbols but keeps the dynamic symbol table.
+          macOS) STRIP=(strip -S); EXT= ;;
+          *) STRIP=(strip); EXT= ;;
         esac
+        # With `generators-only`, the parser and `mrbind_gen_c` aren't built.
+        for exe in mrbind mrbind_gen_c mrbind_gen_csharp mrbind_gen_rust mrbind_gen_java mrbind_gen_python; do
+          path="${{ inputs.mrbind-dir }}/build/$exe$EXT"
+          if [ -f "$path" ]; then "${STRIP[@]}" "$path"; fi
+        done

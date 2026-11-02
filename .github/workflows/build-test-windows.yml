@@ -173,6 +173,8 @@ jobs:
         if: ${{ inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true' }}
         uses: ./.github/actions/build-mrbind
         with:
+          # The C bindings come from the generate-c-bindings job, so no parser.
+          generators-only: 'true'
           cache-key-prefix: ${{ matrix.arch == 'arm64' && 'windows-clangarm64' || 'windows-clang22' }}
           build-script: scripts/mrbind/install_mrbind_windows_msys2.bat
           extra-cache-key: ${{ hashFiles(format('scripts/mrbind/msys2_package_hashes{0}.txt', env.MSYS2_PKGS)) }}

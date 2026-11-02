@@ -285,6 +285,8 @@ jobs:
         env:
           GCC_INSTALL_DIR: ${{ matrix.gcc-install-dir }}
         with:
+          # The C bindings come from the generate-c-bindings job, so no parser.
+          generators-only: 'true'
           # Prefix is shared with build-test-linux-vcpkg.yml, which uses the same
           # image and script. The Dockerfile hash in extra-cache-key busts the cache
           # whenever the toolchain inside the image changes (e.g. clang upgrade).
@@ -558,6 +560,8 @@ jobs:
       - name: Build MRBind
         uses: ./.github/actions/build-mrbind
         with:
+          # The C bindings come from the generate-c-bindings job, so no parser.
+          generators-only: 'true'
           cache-key-prefix: ${{ matrix.mrbind-cache-prefix }}
           build-script: scripts/mrbind/install_mrbind_windows_msys2.bat
           extra-cache-key: ${{ hashFiles(format('scripts/mrbind/msys2_package_hashes{0}.txt', matrix.msys2-pkgs)) }}
@@ -775,6 +779,8 @@ jobs:
       - name: Build MRBind
         uses: ./.github/actions/build-mrbind
         with:
+          # The C bindings come from the generate-c-bindings job, so no parser.
+          generators-only: 'true'
           # Keyed on the runner image (matrix.instance) so this cache is shared with
           # build-test-macos.yml when its matrix.instance matches.
           cache-key-prefix: ${{ matrix.instance }}-clang

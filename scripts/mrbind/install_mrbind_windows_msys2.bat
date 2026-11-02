@@ -39,8 +39,15 @@ echo Found MSYS2 at `%MSYS2_DIR%`.
 cd %MRBIND_DIR%
 
 rem --- Build MRBind
+rem With `MRBIND_GENERATORS_ONLY=1`, only the generators working from the C bindings description: no parser and no `mrbind_gen_c`.
+set MRBIND_CONFIGURE_ARGS=
+set MRBIND_BUILD_ARGS=
+if "%MRBIND_GENERATORS_ONLY%" == "1" (
+    set MRBIND_CONFIGURE_ARGS=-DMRBIND_BUILD_PARSER=OFF
+    set MRBIND_BUILD_ARGS=--target mrbind_gen_csharp mrbind_gen_rust mrbind_gen_java mrbind_gen_python
+)
 rmdir /S /Q build
-call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -here -%MSYS2_ENV% -c "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebugInfo -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build"
+call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -here -%MSYS2_ENV% -c "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebugInfo -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo %MRBIND_CONFIGURE_ARGS% && cmake --build build %MRBIND_BUILD_ARGS%"
 
 rem Restore the original directory.
 popd

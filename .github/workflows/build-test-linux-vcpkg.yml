@@ -138,6 +138,8 @@ jobs:
         env:
           GCC_INSTALL_DIR: ${{ matrix.gcc-install-dir }}
         with:
+          # The C bindings come from the generate-c-bindings job, so no parser.
+          generators-only: 'true'
           # Prefix is shared with pip-build.yml's rocky section, which uses the same
           # image and script. The Dockerfile hash in extra-cache-key busts the cache
           # whenever the toolchain inside the image changes (e.g. clang upgrade).

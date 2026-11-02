@@ -398,12 +398,6 @@ void executeTriangulateContourPlan( Mesh& mesh, EdgeId e, HoleFillPlan& plan, Fa
     }
 }
 
-void triangulateContour( Mesh& mesh, EdgeId e, FaceId oldFace, FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
-{
-    auto plan = getPlanarHoleFillPlan( mesh, e );
-    executeTriangulateContourPlan( mesh, e, plan, oldFace, new2OldMap, new2OldEdgeMap );
-}
-
 // a face of the mesh that contours go inside, with its sides before the cut
 struct CutFace
 {
@@ -1179,26 +1173,12 @@ void finishCutOneEdge( MeshTopology& topology, EdgeId baseEdge, EdgeId e0,
 }
 
 // cuts one edge and connects all intersecting contours with pieces
-void cutOneEdge( Mesh& mesh,
-                 const EdgeData& edgeData, const OneMeshContours& contours,
-                 FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
+void cutOneEdge( MeshTopology& topology, EdgeId baseEdge,
+                 const EdgeData& edgeData, const OneMeshContours& contours, NewEdgesMap* new2OldEdgeMap )
 {
     assert( !edgeData.empty() );
-    const EdgeId baseEdge = baseEdgeOf( edgeData, contours );
-
-    // will need this to restore lost face on first or last intersection (only for open contours)
-    FaceId oldLeft = mesh.topology.left( baseEdge );
-    FaceId oldRight = mesh.topology.left( baseEdge.sym() );
-
-    const auto [isAllLeftOnly, isAllRightOnly] = allLeftRightOnly( mesh.topology, baseEdge, edgeData, contours );
-    const EdgeId e0 = startCutOneEdge( mesh.topology, baseEdge, edgeData, contours, new2OldEdgeMap );
-    finishCutOneEdge( mesh.topology, baseEdge, e0, edgeData, contours );
-
-    // fix triangle if this was last or first
-    if ( isAllLeftOnly && oldRight.valid() )
-        triangulateContour( mesh, baseEdge.sym(), oldRight, new2OldMap, new2OldEdgeMap );
-    if ( isAllRightOnly && oldLeft.valid() )
-        triangulateContour( mesh, baseEdge, oldLeft, new2OldMap, new2OldEdgeMap );
+    const EdgeId e0 = startCutOneEdge( topology, baseEdge, edgeData, contours, new2OldEdgeMap );
+    finishCutOneEdge( topology, baseEdge, e0, edgeData, contours );
 }
 
 // this function cut mesh edge and connects it with result path,
@@ -1209,7 +1189,8 @@ void cutEdgesIntoPieces( Mesh& mesh,
                          FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
 {
     MR_TIMER;
-    // sort each edge intersections in parallel
+    // sort each edge intersections in parallel, and find the faces of the cut edges that the contours enter
+    FaceBitSet entered( mesh.topology.faceSize() );
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, edgeData.subcnt(), 1 ),
         [&] ( const tbb::blocked_range<size_t>& range )
     {
@@ -1221,14 +1202,49 @@ void cutEdgesIntoPieces( Mesh& mesh,
                 // const_cast here is safe, we don't write to map, just sort internal data
                 for ( auto& edgeInfo : const_cast< EdgeDataMap::EmbeddedSet& >( subSet ) )
                 {
+                    const EdgeId baseEdge = baseEdgeOf( edgeInfo.second, contours );
+                    const auto [isAllLeftOnly, isAllRightOnly] = allLeftRightOnly( mesh.topology, baseEdge, edgeInfo.second, contours );
+                    if ( auto f = mesh.topology.left( baseEdge ); f && !isAllRightOnly )
+                        entered.atomicTestSet( f );
+                    if ( auto f = mesh.topology.right( baseEdge ); f && !isAllLeftOnly )
+                        entered.atomicTestSet( f );
                     sortEdgeInfo( mesh, contours, edgeInfo.second, sortData );
                 }
             } );
         }
     } );
-    // cut all
+
+    // cut all, and remember the faces that the contours only touch from outside, to refill them after the cut:
+    // each once (from the first of its cut sides), and none that a contour enters, which is filled with the holes of the paths
+    std::vector<EdgeId> fillEdges;
+    Vector<FaceId> fillFaces;
+    auto addFill = [&] ( EdgeId e )
+    {
+        if ( auto f = mesh.topology.left( e ); f && !entered.test_set( f ) )
+        {
+            fillEdges.push_back( e );
+            fillFaces.push_back( f );
+        }
+    };
     for ( const auto& edgeInfo : edgeData )
-        cutOneEdge( mesh, edgeInfo.second, contours, new2OldMap, new2OldEdgeMap );
+    {
+        const EdgeId baseEdge = baseEdgeOf( edgeInfo.second, contours );
+        addFill( baseEdge.sym() );
+        addFill( baseEdge );
+        cutOneEdge( mesh.topology, baseEdge, edgeInfo.second, contours, new2OldEdgeMap );
+    }
+    if ( fillEdges.empty() )
+        return;
+
+    // plan in parallel, execute in order
+    auto fillPlans = getPlanarHoleFillPlans( mesh, fillEdges );
+    for ( size_t i = 0; i < fillEdges.size(); ++i )
+    {
+        // the plan was made before the plans of other faces were executed
+        if ( !isFillingMultipleEdgeFree( mesh.topology, fillPlans[i] ) )
+            fillPlans[i] = getPlanarHoleFillPlan( mesh, fillEdges[i] );
+        executeTriangulateContourPlan( mesh, fillEdges[i], fillPlans[i], fillFaces[i], new2OldMap, new2OldEdgeMap );
+    }
 }
 
 void prepareFacesMap( const MeshTopology& topology, FaceMap& new2OldMap )

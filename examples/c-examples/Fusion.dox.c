@@ -9,14 +9,10 @@
 #include <MRCMisc/expected_void_std_string.h>
 #include <MRCMisc/std_string.h>
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#ifdef max
-#undef max
-#endif
-#define max(a,b) a > b ? a : b
 
 int main( void )
 {
@@ -35,9 +31,7 @@ int main( void )
     MR_Box3f box = MR_PointCloud_computeBoundingBox( pc, NULL );
     float voxelSize = MR_Box3f_diagonal( &box ) * 1e-2f;
     MR_PointsToMeshParameters_Set_voxelSize( params, voxelSize );
-    float avgRadius = MR_findAvgPointsRadius( pc, 50, NULL );
-    float sigma = max( voxelSize, avgRadius );
-    MR_PointsToMeshParameters_Set_sigma( params, sigma );
+    MR_PointsToMeshParameters_Set_sigma( params, fmaxf( voxelSize, MR_findAvgPointsRadius( pc, 50, NULL ) ) );
     MR_PointsToMeshParameters_Set_minWeight( params, 1.0f );
 
     MR_expected_MR_Mesh_std_string* fusionRes = MR_pointsToMeshFusion( pc, params );

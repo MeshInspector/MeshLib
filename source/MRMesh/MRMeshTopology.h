@@ -29,6 +29,10 @@ public:
     /// creates an edge not associated with any vertex or face
     [[nodiscard]] MRMESH_API EdgeId makeEdge();
 
+    /// creates given number of edges not associated with any vertex or face,
+    /// returns the first of them; edge i is the first + 2 * i, the same as from makeEdge() called num times
+    [[nodiscard]] MRMESH_API EdgeId makeEdges( int num );
+
     /// checks whether the edge is disconnected from all other edges and disassociated from all vertices and faces (as if after makeEdge)
     [[nodiscard]] MRMESH_API bool isLoneEdge( EdgeId a ) const;
 
@@ -278,6 +282,9 @@ public:
     /// 3) make lone all the edges, which had to the left/right only deleted faces except for the edges from \p keepEdges;
     /// return bit sets of all vacant elements in this topology after deletion
     MRMESH_API VacantElements deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
+
+    /// deletes the given valid faces (in parallel), keeping all their edges and vertices, which get no face on that side
+    MRMESH_API void deleteFacesKeepEdges( const FaceBitSet & fs );
 
     /// explicitly increases the size of faces vector
     MRMESH_API void faceResize( size_t newSize );

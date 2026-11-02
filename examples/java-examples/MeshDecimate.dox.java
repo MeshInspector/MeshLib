@@ -1,4 +1,3 @@
-import meshlib.DecimateResult;
 import meshlib.DecimateSettings;
 import meshlib.Functions;
 import meshlib.Mesh;
@@ -27,8 +26,7 @@ class MeshDecimate
         settings.setSubdivideParts(16);
 
         // Decimate mesh.
-        DecimateResult result = Functions.decimateMesh(mesh, settings);
-        System.out.println("Removed " + result.vertsDeleted() + " vertices, " + result.facesDeleted() + " faces");
+        Functions.decimateMesh(mesh, settings);
 
         // Save result.
         meshlib.meshsave.Functions.toAnySupportedFormat(mesh, "decimated_mesh.stl", null);

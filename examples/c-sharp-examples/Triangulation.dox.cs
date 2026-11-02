@@ -1,51 +1,40 @@
-public class TriangulationExample
+public static class TriangulationExample
 {
     public static void Main(string[] args)
     {
-        try
+        // Generate point cloud
+        MR.PointCloud pc = new();
+        pc.points.reserve(10000);
+        for (int i = 0; i < 100; ++i)
         {
-            // Generate point cloud
-            MR.PointCloud pc = new();
-
-            const float uConst = MathF.PI * 2 / 100;
-            const float vConst = MathF.PI / 101;
-            for (int i = 0; i < 100; ++i)
+            float u = MathF.PI * 2 * i / (100.0f - 1.0f);
+            for (int j = 0; j < 100; ++j)
             {
-                float u = uConst * i;
-                for (int j = 1; j < 100; ++j)
-                {
-                    float v = vConst * j;
+                float v = MathF.PI * j / (100.0f - 1.0f);
 
-                    pc.addPoint(new(
-                        MathF.Cos(u) * MathF.Sin(v),
-                        MathF.Sin(u) * MathF.Sin(v),
-                        MathF.Cos(v)
-                    ));
-                }
+                pc.addPoint(new MR.Vector3f(
+                    MathF.Cos(u) * MathF.Sin(v),
+                    MathF.Sin(u) * MathF.Sin(v),
+                    MathF.Cos(v)
+                ));
             }
-
-
-            // Triangulate it
-            MR.TriangulationParameters parameters = new();
-            MR.Mesh? triangulated = MR.triangulatePointCloud(pc, parameters).value();
-            if (triangulated is null)
-            {
-                Console.WriteLine("Error during triangulation");
-                return;
-            }
-
-            // Fix possible issues
-            MR.OffsetParameters offsetParameters = new();
-            MR.MeshPart mp = new(triangulated);
-            offsetParameters.voxelSize = MR.suggestVoxelSize(mp, 5e+6f);
-            var offset = MR.offsetMesh(mp, 0f, offsetParameters);
-
-            // Save result
-            MR.MeshSave.toAnySupportedFormat(offset, "meshA_icp.stl");
         }
-        catch (Exception e)
-        {
-            Console.WriteLine("Error: {0}", e.Message);
-        }
+        // Remove duplicate points
+        MR.UniformSamplingSettings samplingSettings = new();
+        samplingSettings.distance = 1e-3f;
+        var vs = MR.pointUniformSampling(pc, samplingSettings).value()!;
+        pc.validPoints.assign(vs);
+        pc.invalidateCaches();
+
+        // Triangulate it
+        var triangulated = MR.triangulatePointCloud(pc).value()!;
+
+        // Fix possible issues
+        MR.OffsetParameters offsetParams = new();
+        offsetParams.voxelSize = MR.suggestVoxelSize(triangulated, 5e+6f);
+        var mesh = MR.offsetMesh(triangulated, 0.0f, offsetParams);
+
+        // Save result
+        MR.MeshSave.toAnySupportedFormat(mesh, "result.stl");
     }
 }

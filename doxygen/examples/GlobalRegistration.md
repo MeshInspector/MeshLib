@@ -17,5 +17,11 @@ Example of Global Registration
 - <b class="tab-title">JavaScript</b>
 \include GlobalRegistration.dox.js
 \include{doc} JsUsingNote.md
+ 
+- <b class="tab-title">Rust</b>
+\include GlobalRegistration.dox.rs
+ 
+- <b class="tab-title">Java</b>
+\include GlobalRegistration.dox.java
 
 </div>

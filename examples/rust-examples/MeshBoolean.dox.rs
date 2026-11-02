@@ -35,7 +35,14 @@ fn main() -> Result<(), String>
     let mut one_face = FaceBitSet::new();
     one_face.auto_resize_set(face_of_sphere1, None);
     let produced_faces = mapper.map_mr_face_bit_set(&one_face, MapObject::A);
-    println!("face {} of sphere1 produced {} faces of the result", face_of_sphere1.id_, produced_faces.count());
+    print!("face {} of sphere1 produced {} faces of the result:", face_of_sphere1.id_, produced_faces.count());
+    let mut f = produced_faces.find_first();
+    while f.valid()
+    {
+        print!(" {}", f.id_);
+        f = produced_faces.find_next(f);
+    }
+    println!();
 
     // And backward: the face of sphere1 each face of the result came from
     // (invalid id for the faces that came from sphere2).

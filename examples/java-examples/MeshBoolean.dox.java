@@ -49,7 +49,10 @@ class MeshBoolean
         FaceBitSet oneFace = new FaceBitSet();
         oneFace.autoResizeSet(faceOfSphere1, true);
         FaceBitSet producedFaces = mapper.map(oneFace, BooleanResultMapper_MapObject.A);
-        System.out.println("face " + faceOfSphere1.id_() + " of sphere1 produced " + producedFaces.count() + " faces of the result");
+        System.out.print("face " + faceOfSphere1.id_() + " of sphere1 produced " + producedFaces.count() + " faces of the result:");
+        for (FaceId f = producedFaces.find_first(); f.valid(); f = producedFaces.find_next(f))
+            System.out.print(" " + f.id_());
+        System.out.println();
 
         // And backward: the face of sphere1 each face of the result came from
         // (invalid id for the faces that came from sphere2).

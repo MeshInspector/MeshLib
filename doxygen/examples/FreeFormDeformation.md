@@ -24,5 +24,11 @@ Example of using Free Form deformation of the mesh
 - <b class="tab-title">JavaScript</b>
 \include FreeFormDeformation.dox.js
 \include{doc} JsUsingNote.md
+ 
+- <b class="tab-title">Rust</b>
+\include FreeFormDeformation.dox.rs
+ 
+- <b class="tab-title">Java</b>
+\include FreeFormDeformation.dox.java
 
 </div>

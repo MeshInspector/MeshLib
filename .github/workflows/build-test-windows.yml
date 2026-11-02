@@ -48,7 +48,6 @@ jobs:
       # The C# bindings are generated and tested on the clang-cl jobs, which also produce the NuGet
       # payload (the native DLLs, MRDotNet2.dll and its XML)
       BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'clang-cl' }}
-      PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\${{ matrix.arch || 'x64' }}\${{ matrix.config }}
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
       # Upload a developer distributive per Visual Studio toolchain and target
       # architecture, plus the clang-cl ones, so update-win-version can repackage each into
@@ -386,7 +385,7 @@ jobs:
         with:
           build_config: ${{ matrix.config }}
           build_arch: ${{ env.MR_ARCH }}
-          pytest_args: "${{ env.BUILD_C_SHARP == 'true' && env.PYTEST_C_SHARP_ARGS || '' }} --run-cuda=negative --junit-xml=../unit_tests_report_regression.xml"
+          pytest_args: "--run-cuda=negative --junit-xml=../unit_tests_report_regression.xml"
           smoke: ${{ !inputs.full_config_build && matrix.config == 'Debug' }}
           test_artifacts_path: windows/${{ matrix.vcpkg_triplet }}/${{ matrix.config }}/${{ matrix.build_system }}
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
@@ -483,6 +482,24 @@ jobs:
             -DMESHLIB_INCLUDE_DIRS="%CD%/source/MeshLibC2/include" ^
             -DMESHLIB_LIB_DIRS="%CD%/source/%MR_ARCH%/${{matrix.config}}" || exit /b 1
           cmake --build c-examples-build -j || exit /b 1
+
+      # Every doc example of every compiled language runs, and its results must match the C++ example's,
+      # see test_regression/test_doc_samples/test_compiled_samples.py. Only clang-cl builds all five languages.
+      - name: Run doc examples
+        if: ${{ inputs.internal_build && inputs.mrbind_c && matrix.cxx_compiler == 'clang-cl' && matrix.config == 'Release' }}
+        working-directory: source\${{ env.MR_ARCH }}\${{ matrix.config }}
+        run: |
+          $ws = $env:GITHUB_WORKSPACE
+          $env:PATH = "$ws\install\bin;$PWD;$env:PATH"
+          $env:DOC_EXAMPLE_CMDS = @(
+            "cpp=$ws\cpp-examples-build\{name}.exe"
+            "c=$ws\c-examples-build\{name}.exe"
+            "csharp=$PWD\c-sharp-examples.exe {name}Example"
+            "rust=$ws\source\MeshLibRust\target\debug\{name}.exe"
+            "java=java --enable-native-access=ALL-UNNAMED -Djava.library.path=$ws\java_native -cp $ws\source\MeshLibJava\meshlib.jar;$ws\examples\java-examples\classes {name}"
+          ) -join "`n"
+          py -3 ..\..\..\scripts\run_python_test_script.py -d '..\test_regression' -s false -a '-k test_compiled_doc_example --junit-xml=../unit_tests_report_doc_examples.xml'
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
 
         # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
       - name: Archive files

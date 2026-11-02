@@ -16,31 +16,28 @@
 #include <math.h>
 #include <stdio.h>
 
-#define PI 3.14159265358979323846
+#define PI_F 3.14159265358979323846f
+#define PI2_F ( 2 * PI_F )
 
 int main( void )
 {
     // Generate point cloud
-    MR_VertCoords* points = MR_VertCoords_Construct( 10000 );
+    MR_PointCloud* pc = MR_PointCloud_DefaultConstruct();
+    MR_VertCoords_reserve( MR_PointCloud_GetMutable_points( pc ), 10000 );
     for ( int i = 0; i < 100; ++i )
     {
-        float u = PI*2 * (float)i / ( 100.f - 1.f );
+        const float u = PI2_F * (float)i / ( 100.f - 1.f );
         for ( int j = 0; j < 100; ++j )
         {
-            float v = PI * (float)j / ( 100.f - 1.f );
+            const float v = PI_F * (float)j / ( 100.f - 1.f );
 
-            *MR_VertCoords_index_mut( points, (MR_VertId){ i * 100 + j } ) = (MR_Vector3f){
-                cos( u ) * sin( v ),
-                sin( u ) * sin( v ),
-                cos( v )
-            };
+            MR_PointCloud_addPoint( pc, &(MR_Vector3f){
+                cosf( u ) * sinf( v ),
+                sinf( u ) * sinf( v ),
+                cosf( v )
+            } );
         }
     }
-    MR_PointCloud* pc = MR_PointCloud_DefaultConstruct();
-    MR_PointCloud_Set_points( pc, MR_PassBy_Move, points );
-    // Fill the bitset of valid points in `pc` to all ones.
-    MR_VertBitSet_resize( MR_PointCloud_GetMutable_validPoints( pc ), 10000, &(bool){true} );
-    MR_VertCoords_Destroy( points );
 
     // Remove duplicate points
     MR_UniformSamplingSettings* samplingSettings = MR_UniformSamplingSettings_DefaultConstruct();

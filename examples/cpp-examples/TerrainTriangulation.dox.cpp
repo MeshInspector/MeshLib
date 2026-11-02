@@ -3,10 +3,14 @@
 #include <MRMesh/MRDelaunayTriangulationXY.h>
 #include <MRMesh/MRMeshSave.h>
 #include <MRMesh/MRColor.h>
+#include <MRIOExtras/MRIOExtras.h>
 #include <iostream>
 
 int main()
 {
+    // CTM, JPEG and other formats beyond the basic ones come with the MRIOExtras library
+    MR::loadIOExtras();
+
     // load points
     MR::VertColors colors;
     MR::PointsLoadSettings pls;
@@ -26,7 +30,7 @@ int main()
 
     MR::SaveSettings ss;
     if ( loadRes->points.size() == colors.size() )
-    ss.colors = &colors;
+        ss.colors = &colors;
     auto saveRes = MR::MeshSave::toAnySupportedFormat( *triangulationRes, "TerrainMesh.ctm", ss );
     if ( !saveRes.has_value() )
     {

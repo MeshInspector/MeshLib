@@ -20,8 +20,7 @@ fn main() -> Result<(), String>
     settings.set_subdivide_parts(16);
 
     // Decimate mesh.
-    let result = meshlib::decimate_mesh(&mut mesh, Some(&settings));
-    println!("Removed {} vertices, {} faces", result.verts_deleted(), result.faces_deleted());
+    meshlib::decimate_mesh(&mut mesh, Some(&settings));
 
     // Save result.
     meshlib::mesh_save::to_any_supported_format(&mesh, "decimated_mesh.stl", None).into_result().map_err(|error| format!("Failed to save mesh: {error}"))?;

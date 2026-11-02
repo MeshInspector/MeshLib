@@ -18,8 +18,17 @@ Example of usage to get signed distance from mesh to mesh
 - <b class="tab-title">C</b>
 \include SignedDistance.dox.c
  
+- <b class="tab-title">C#</b>
+\include SignedDistance.dox.cs
+ 
 - <b class="tab-title">JavaScript</b>
 \include SignedDistance.dox.js
 \include{doc} JsUsingNote.md
+ 
+- <b class="tab-title">Rust</b>
+\include SignedDistance.dox.rs
+ 
+- <b class="tab-title">Java</b>
+\include SignedDistance.dox.java
 
 </div>

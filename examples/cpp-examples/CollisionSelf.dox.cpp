@@ -13,7 +13,7 @@ int main()
     if ( !selfCollidingParis.has_value() )
     {
         // check error
-        std::cerr << selfCollidingParis.error();
+        std::cerr << selfCollidingParis.error() << "\n";
         return 1;
     }
     for ( auto [fl, fr] : *selfCollidingParis )
@@ -23,7 +23,7 @@ int main()
     if ( !selfCollidingBitSet.has_value() )
     {
         // check error
-        std::cerr << selfCollidingBitSet.error();
+        std::cerr << selfCollidingBitSet.error() << "\n";
         return 1;
     }
     std::cout << selfCollidingBitSet->count() << "\n"; // print number of self-intersecting faces
@@ -32,7 +32,7 @@ int main()
     if ( !isSelfColliding.has_value() )
     {
         // check error
-        std::cerr << isSelfColliding.error();
+        std::cerr << isSelfColliding.error() << "\n";
         return 1;
     }
     std::cout << *isSelfColliding << "\n";

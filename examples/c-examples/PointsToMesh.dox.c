@@ -27,7 +27,7 @@ int main( void )
     MR_Mesh* mesh = MR_std_optional_MR_Mesh_value_mut( triangulationRes );
     if ( !mesh )
     {
-        fprintf( stderr, "Triangulation canceled" );
+        fprintf( stderr, "Triangulation canceled\n" );
         goto fail_triangulation; // can be nullopt only if canceled by progress callback
     }
 

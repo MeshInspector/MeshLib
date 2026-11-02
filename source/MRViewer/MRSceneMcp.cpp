@@ -199,7 +199,7 @@ static nlohmann::json objectRow( const Object& obj, const Object* parent )
 static nlohmann::json mcpSceneListObjectTree( const nlohmann::json& args )
 {
     nlohmann::json rows = nlohmann::json::array();
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    runOnMainThread( [&]
     {
         auto rootEx = pickRoot( args );
         if ( !rootEx )
@@ -215,7 +215,7 @@ static nlohmann::json mcpSceneListObjectTree( const nlohmann::json& args )
 static nlohmann::json mcpSceneGetObjectInfo( const nlohmann::json& args )
 {
     nlohmann::json out;
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    runOnMainThread( [&]
     {
         const uint64_t id = args.at( "id" ).get<uint64_t>();
         auto objEx = resolveId( id );
@@ -260,7 +260,7 @@ static nlohmann::json mcpSceneGetObjectInfo( const nlohmann::json& args )
 
 static nlohmann::json mcpSceneSetObjectState( const nlohmann::json& args )
 {
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    runOnMainThread( [&]
     {
         auto objEx = resolveId( args.at( "id" ).get<uint64_t>() );
         if ( !objEx )
@@ -364,13 +364,13 @@ static nlohmann::json mcpSceneSetObjectState( const nlohmann::json& args )
             }
         }
     } );
-    skipFramesAfterInput();
+    waitFramesAfterInput();
     return nlohmann::json::object();
 }
 
 static nlohmann::json mcpSceneRemoveObject( const nlohmann::json& args )
 {
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    runOnMainThread( [&]
     {
         auto objEx = resolveId( args.at( "id" ).get<uint64_t>() );
         if ( !objEx )
@@ -380,7 +380,7 @@ static nlohmann::json mcpSceneRemoveObject( const nlohmann::json& args )
         AppendHistory<ChangeSceneAction>( _t( "MCP removeObject" ), obj, ChangeSceneAction::Type::RemoveObject );
         obj->detachFromParent();
     } );
-    skipFramesAfterInput();
+    waitFramesAfterInput();
     return nlohmann::json::object();
 }
 
@@ -404,7 +404,7 @@ static std::string mimeForExt( std::string_view ext )
 static nlohmann::json mcpSceneGetObject( const nlohmann::json& args )
 {
     nlohmann::json out = nlohmann::json::object();
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    runOnMainThread( [&]
     {
         auto objEx = resolveId( args.at( "id" ).get<uint64_t>() );
         if ( !objEx )
@@ -466,7 +466,7 @@ static nlohmann::json mcpSceneGetObject( const nlohmann::json& args )
 static nlohmann::json mcpSceneAddObject( const nlohmann::json& args )
 {
     std::vector<uint64_t> addedIds;
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    runOnMainThread( [&]
     {
         std::shared_ptr<Object> parentHolder;
         Object* parent = &SceneRoot::get();
@@ -521,7 +521,7 @@ static nlohmann::json mcpSceneAddObject( const nlohmann::json& args )
             addedIds.push_back( idOf( obj.get() ) );
         }
     } );
-    skipFramesAfterInput();
+    waitFramesAfterInput();
     return nlohmann::json::object( { { "ids", addedIds } } );
 }
 
@@ -650,7 +650,8 @@ MR_ON_INIT{
                 "selected by extension) — response is `{path: <written-path>}`. Or pass `extension` (e.g. `\"stl\"`) "
                 "to receive the bytes inline as an MCP embedded-resource content block "
                 "(`content[0].resource.blob` is the base64 payload; `mimeType` is the registered model/* "
-                "media type for known mesh formats, `application/octet-stream` otherwise).",
+                "media type for known mesh formats, `application/octet-stream` otherwise). Some clients accept only "
+                "images inline (Claude chat rejects the block as an unsupported image); use `filePath` there.",
         /*input_schema*/Schema::Object{}
             .addMember(    "id",        Schema::Number{} )
             .addMemberOpt( "filePath",  Schema::String{} )

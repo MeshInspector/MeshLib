@@ -57,15 +57,32 @@ std::string pathToString( const std::vector<std::string>& path )
     return pathString;
 }
 
+static std::string_view groupDisabledReason( const TestEngine::GroupEntry& group );
+
 // Read the disabled-reason string off an internal entry. Empty means the entry accepts input.
-// Groups are never disabled.
 static std::string_view entryDisabledReason( const TestEngine::Entry& entry )
 {
     return std::visit( MR::overloaded{
         []( const TestEngine::ButtonEntry& e ) -> std::string_view { return e.disabledReason; },
         []( const TestEngine::ValueEntry& e )  -> std::string_view { return e.disabledReason; },
-        []( const TestEngine::GroupEntry& )    -> std::string_view { return {}; },
+        []( const TestEngine::GroupEntry& g )  -> std::string_view { return groupDisabledReason( g ); },
     }, entry.value );
+}
+
+// A group is disabled only if a modal blocks it: nothing in it accepts input, and some entry in it is blocked by a modal
+// (others may name their own reasons, which take precedence). Then returns that entry's reason.
+static std::string_view groupDisabledReason( const TestEngine::GroupEntry& group )
+{
+    std::string_view modalReason;
+    for ( const auto& elem : group.elems )
+    {
+        const auto reason = entryDisabledReason( elem.second );
+        if ( reason.empty() )
+            return {};
+        if ( modalReason.empty() && reason.starts_with( "blocked by modal" ) ) // see `effectiveDisabledReason` in MRUITestEngine.cpp
+            modalReason = reason;
+    }
+    return modalReason;
 }
 
 // Compose the single user-facing status string from the entry's `disabledReason`.

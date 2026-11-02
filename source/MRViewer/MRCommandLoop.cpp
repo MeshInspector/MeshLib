@@ -48,7 +48,7 @@ void CommandLoop::appendCommand( CommandFunc func, StartPosition pos )
     (void)addCommand_( func, false, pos );
 }
 
-void CommandLoop::runCommandFromGUIThread( CommandFunc func )
+void CommandLoop::runCommandFromGUIThread( CommandFunc func, std::optional<std::chrono::milliseconds> startTimeout )
 {
     bool blockThread = instance_().mainThreadId_ != std::this_thread::get_id();
     if ( !blockThread )
@@ -68,7 +68,7 @@ void CommandLoop::runCommandFromGUIThread( CommandFunc func )
         {
             exception = std::current_exception();
         }
-    }, true, StartPosition::BeforeWindowAppear );
+    }, true, StartPosition::BeforeWindowAppear, startTimeout );
     if ( !res )
         throw std::runtime_error( std::move( res.error() ) );
     if ( exception )
@@ -98,6 +98,8 @@ void CommandLoop::processCommands()
             continue;
         }
         inst.commands_.pop();
+        if ( cmd->dropped ) // its caller gave up waiting for the start
+            continue;
         cmd->started = true;
         lock.unlock();
 
@@ -155,7 +157,8 @@ CommandLoop& CommandLoop::instance_()
     return commadLoop_;
 }
 
-Expected<void> CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition state )
+Expected<void> CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition state,
+    std::optional<std::chrono::milliseconds> startTimeout )
 {
     auto& inst = instance_();
     std::shared_ptr<Command> cmd = std::make_shared<Command>();
@@ -191,6 +194,7 @@ Expected<void> CommandLoop::addCommand_( CommandFunc func, bool blockThread, Sta
         const auto startTime = steady_clock::now();
         auto warnStep = seconds( 5 );  // doubles up to cMaxWarnStep, not to flood the log
         auto nextWarn = startTime + warnStep;
+        const auto startDeadline = startTimeout ? startTime + *startTimeout : steady_clock::time_point::max();
 #ifdef __linux__
         // Re-post the wakeup only on Linux: there the event posted above can be genuinely lost, and
         // re-posting it is what gets the main thread out of glfwWaitEvents(). Elsewhere the event is
@@ -204,6 +208,8 @@ Expected<void> CommandLoop::addCommand_( CommandFunc func, bool blockThread, Sta
         for ( ;; )
         {
             auto nextWake = nextWarn;
+            if ( !cmd->started )
+                nextWake = std::min( nextWake, startDeadline );
 #ifdef __linux__
             if ( !cmd->started ) // no re-posts can help once the command is executing
                 nextWake = std::min( nextWake, nextRepost );
@@ -213,6 +219,13 @@ Expected<void> CommandLoop::addCommand_( CommandFunc func, bool blockThread, Sta
 
             const auto now = steady_clock::now();
             const bool started = cmd->started; // read under the lock
+            if ( !started && now >= startDeadline )
+            {
+                // still under the lock, so processCommands skips the command instead of starting it
+                cmd->done = cmd->dropped = true;
+                return unexpected( fmt::format( "The main thread is busy: it did not start the command within {} seconds",
+                    duration_cast<duration<double>>( *startTimeout ).count() ) );
+            }
             const bool warn = now >= nextWarn;
             if ( warn )
             {

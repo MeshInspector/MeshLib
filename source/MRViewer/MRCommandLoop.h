@@ -1,8 +1,10 @@
 #pragma once
 #include "exports.h"
 #include "MRMesh/MRExpected.h"
+#include <chrono>
 #include <queue>
 #include <functional>
+#include <optional>
 #include <condition_variable>
 #include <mutex>
 #include <thread>
@@ -44,7 +46,10 @@ public:
     // an exception thrown by func itself propagates to the caller as well;
     // call it only where an exception is already the error channel - python bindings and MCP tools -
     // and not from other C++ code, which must be exception-free: use appendCommand there
-    MRVIEWER_API static void runCommandFromGUIThread( CommandFunc func );
+    // if `startTimeout` is given and the main thread does not start the command within it (e.g. it is busy
+    // with a long computation), the command is dropped without being executed and std::runtime_error is thrown;
+    // a command that has started is always waited for
+    MRVIEWER_API static void runCommandFromGUIThread( CommandFunc func, std::optional<std::chrono::milliseconds> startTimeout = {} );
 
     // Execute all commands from loop
     MRVIEWER_API static void processCommands();
@@ -63,8 +68,10 @@ private:
     static CommandLoop& instance_();
 
     // returns an error, rather than throwing or blocking forever, if no loop can ever run a blocking
-    // command: the queue is closed, it was never started, or removeCommands dropped the command
-    static Expected<void> addCommand_( CommandFunc func, bool blockThread, StartPosition state );
+    // command: the queue is closed, it was never started, removeCommands dropped the command,
+    // or the command did not start within `startTimeout`
+    static Expected<void> addCommand_( CommandFunc func, bool blockThread, StartPosition state,
+        std::optional<std::chrono::milliseconds> startTimeout = {} );
 
     struct Command
     {
@@ -78,7 +85,7 @@ private:
         // set under CommandLoop::mutex_ once the command was executed or dropped;
         // the predicate a blocked caller waits on, see addCommand_
         bool done{ false };
-        // set under CommandLoop::mutex_ in `removeCommands`: `done`, but never executed
+        // set under CommandLoop::mutex_ in `removeCommands` or on a start timeout: `done`, but never executed
         bool dropped{ false };
     };
 

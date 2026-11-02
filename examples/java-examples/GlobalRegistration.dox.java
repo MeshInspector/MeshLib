@@ -22,11 +22,10 @@ class GlobalRegistration
         System.out.println("Active point pairs: " + icp.getNumActivePairs());
         if (icp.getNumActivePairs() > 0)
         {
-            // the deviation from zero is the root-mean-square distance
-            float p2ptMetric = icp.getMeanSqDistToPoint(0.0);
-            float p2plMetric = icp.getMeanSqDistToPlane(0.0);
-            System.out.println("RMS point-to-point distance: " + p2ptMetric + " ± " + icp.getMeanSqDistToPoint(p2ptMetric));
-            System.out.println("RMS point-to-plane distance: " + p2plMetric + " ± " + icp.getMeanSqDistToPlane(p2plMetric));
+            float p2ptMetric = icp.getMeanSqDistToPoint(null);
+            float p2plMetric = icp.getMeanSqDistToPlane(null);
+            System.out.println("RMS point-to-point distance: " + p2ptMetric + " ± " + icp.getMeanSqDistToPoint((double)p2ptMetric));
+            System.out.println("RMS point-to-plane distance: " + p2plMetric + " ± " + icp.getMeanSqDistToPlane((double)p2plMetric));
         }
     }
 

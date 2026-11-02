@@ -182,6 +182,7 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
     // connectLoneContours), and their edges show where to splice the path edges around the vertices
     auto& vertFaces = res.vertFaces;
     const auto& inters = contours.intersections;
+    FaceBitSet delFaces( mesh.topology.faceSize() );
     for ( int c = 0; c < contours.size(); ++c )
     {
         for ( int k = contours.offsets[c]; k + 1 < contours.offsets[c + 1]; ++k )
@@ -214,16 +215,16 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
             }
             else
                 oldFaces.left = oldFaces.right = ( va ? b : a ).face();
-            if ( oldFaces.left && ( va || vb ) )
+            if ( oldFaces.left && ( va || vb ) && !delFaces.test_set( oldFaces.left ) )
             {
                 auto [it, inserted] = vertFaces.try_emplace( oldFaces.left );
+                assert( inserted );
                 if ( inserted )
                     topology.getTriEdges( oldFaces.left, it->second[0], it->second[1], it->second[2] );
             }
         }
     }
-    for ( const auto& [f, edges] : vertFaces )
-        topology.setLeft( edges[0], {} );
+    mesh.topology.deleteFacesKeepEdges( delFaces );
 
     // the contour and intersection at the other end of every path edge spliced at a mesh vertex, by the path edge from the vertex
     HashMap<EdgeId, std::pair<int, int>> spliceEnds;

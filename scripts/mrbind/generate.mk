@@ -921,7 +921,7 @@ PY_LINKER_FLAGS += -isysroot $(macos_sdk_path) $(if $(MACOS_MIN_VER),-mmacosx-ve
 endif
 
 # A big module compiles slowly as one translation unit, so it's split into the fragments `<module>.cpp`, `<module>_1.cpp`, ..., compiled in parallel.
-PY_NUM_FRAGMENTS := $(call safe_shell,echo $$(( $(JOBS) * 2 )))
+PY_NUM_FRAGMENTS := $(JOBS)
 mrmesh_PyNumFragments := $(PY_NUM_FRAGMENTS)
 mrcuda_PyNumFragments := 1
 

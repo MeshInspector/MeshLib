@@ -100,7 +100,8 @@ jobs:
           mv MeshLib/CbindingsTmp/MeshLibC2 source
           mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
 
-      # The Python modules link them. Without MRCuda, `MeshLibC2Cuda` is built from the stubs, see build-test-ubuntu.yml.
+      # The artifact has only the generated sources, and the Python modules (imported by the stubs step) link the built library.
+      # Without MRCuda, `MeshLibC2Cuda` is built from the stubs, see build-test-ubuntu.yml.
       - name: Build C bindings
         run: |
           if [ ! -e build/${{ env.CONFIG }}/bin/libMRCuda.so ]; then

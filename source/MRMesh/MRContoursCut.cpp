@@ -25,7 +25,6 @@
 #include "MRTwoLineSegmDist.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
-#include <atomic>
 #include <numeric>
 #include <span>
 
@@ -1244,20 +1243,7 @@ void cutEdgesIntoPieces( Mesh& mesh,
                          FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
 {
     MR_TIMER;
-    struct EdgeCut
-    {
-        const EdgeData* data = nullptr;
-        EdgeId base, e0;
-    };
-    // the cuts in the order of the iteration over edgeData
-    Vector<int> subOffsets( edgeData.subcnt() + 1, 0 );
-    for ( size_t i = 0; i < edgeData.subcnt(); ++i )
-        edgeData.with_submap( i, [&] ( const EdgeDataMap::EmbeddedSet& subSet ) { subOffsets[i + 1] = subOffsets[i] + int( subSet.size() ); } );
-    Vector<EdgeCut> cuts( subOffsets.back() );
-
-    // sort each edge intersections in parallel, find the faces next to the cut edges, and whether some face will be triangulated
-    FaceBitSet faces( mesh.topology.faceSize() );
-    std::atomic<bool> triangulate{ false };
+    // sort each edge intersections in parallel
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, edgeData.subcnt(), 1 ),
         [&] ( const tbb::blocked_range<size_t>& range )
     {
@@ -1266,87 +1252,17 @@ void cutEdgesIntoPieces( Mesh& mesh,
         {
             edgeData.with_submap( i, [&] ( const EdgeDataMap::EmbeddedSet& subSet )
             {
-                int k = subOffsets[i];
                 // const_cast here is safe, we don't write to map, just sort internal data
                 for ( auto& edgeInfo : const_cast< EdgeDataMap::EmbeddedSet& >( subSet ) )
                 {
-                    auto& cut = cuts[k++];
-                    cut.data = &edgeInfo.second;
-                    cut.base = baseEdgeOf( edgeInfo.second, contours );
-                    if ( auto f = mesh.topology.left( cut.base ) )
-                        faces.atomicTestSet( f );
-                    if ( auto f = mesh.topology.right( cut.base ) )
-                        faces.atomicTestSet( f );
-                    if ( !triangulate.load( std::memory_order_relaxed ) )
-                    {
-                        auto [l, r] = allLeftRightOnly( mesh.topology, cut.base, edgeInfo.second, contours );
-                        if ( l || r )
-                            triangulate.store( true, std::memory_order_relaxed );
-                    }
                     sortEdgeInfo( mesh, contours, edgeInfo.second, sortData );
                 }
             } );
         }
     } );
-
-    if ( triangulate )
-    {
-        // triangulation makes edges and faces in between, so cut all in order
-        for ( const auto& c : cuts )
-            cutOneEdge( mesh, *c.data, contours, new2OldMap, new2OldEdgeMap );
-        return;
-    }
-
-    auto& topology = mesh.topology;
-    topology.deleteFacesKeepEdges( faces );
-
-    // all other pieces at once, with the same ids as from cutOneEdge one edge after another
-    int numPieces = 0;
-    for ( auto& c : cuts )
-    {
-        c.e0 = EdgeId( 2 * numPieces ); // relative to the first piece for now
-        numPieces += int( c.data->size() );
-    }
-    const EdgeId firstPiece = topology.makeEdges( numPieces );
-
-    // detach each edge from its origin, putting its first piece there instead; the edges from one vertex in their order,
-    // different vertices in parallel
-    struct VertCut
-    {
-        VertId v;
-        int cut = 0;
-        auto operator<=>( const VertCut& ) const = default;
-    };
-    Vector<VertCut> byVert( cuts.size() );
-    ParallelFor( cuts, [&] ( size_t i )
-    {
-        cuts[i].e0 += int( firstPiece );
-        byVert[i] = { topology.org( cuts[i].base ), int( i ) };
-    } );
-    tbb::parallel_sort( byVert.begin(), byVert.end() );
-    ParallelFor( byVert, [&] ( size_t i )
-    {
-        if ( i > 0 && byVert[i - 1].v == byVert[i].v )
-            return;
-        for ( size_t j = i; j < byVert.size() && byVert[j].v == byVert[i].v; ++j )
-        {
-            const auto& c = cuts[byVert[j].cut];
-            EdgeId ePrev = topology.prev( c.base );
-            if ( ePrev != c.base )
-            {
-                topology.splice( ePrev, c.base );
-                topology.splice( ePrev, c.e0 );
-            }
-        }
-    } );
-    if ( new2OldEdgeMap )
-        for ( const auto& c : cuts )
-            mapEdgePieces( *new2OldEdgeMap, c.base, c.e0, *c.data, contours );
-
-    ParallelFor( cuts, [&] ( size_t i )
-    {
-        finishCutOneEdge( topology, cuts[i].base, cuts[i].e0, *cuts[i].data, contours );
-    } );
+    // cut all
+    for ( const auto& edgeInfo : edgeData )
+        cutOneEdge( mesh, edgeInfo.second, contours, new2OldMap, new2OldEdgeMap );
 }
 
 void prepareFacesMap( const MeshTopology& topology, FaceMap& new2OldMap )

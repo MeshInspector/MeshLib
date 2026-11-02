@@ -1,5 +1,6 @@
 #include "MRWasmBindings.h"
 
+#include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshBoolean.h"
 #include "MRMesh/MRBooleanOperation.h"
@@ -32,6 +33,11 @@ EMSCRIPTEN_BINDINGS( meshlib_boolean )
     emscripten::function( "boolean", +[]( std::shared_ptr<Mesh> meshA, std::shared_ptr<Mesh> meshB, BooleanOperation operation )
     {
         return boolean( *meshA, *meshB, operation );
+    } );
+
+    emscripten::function( "booleanWithXf", +[]( std::shared_ptr<Mesh> meshA, std::shared_ptr<Mesh> meshB, BooleanOperation operation, const AffineXf3f& rigidB2A )
+    {
+        return boolean( *meshA, *meshB, operation, { .rigidB2A = &rigidB2A } );
     } );
 
     emscripten::enum_<BooleanResultMapper::MapObject>( "BooleanMapObject" )

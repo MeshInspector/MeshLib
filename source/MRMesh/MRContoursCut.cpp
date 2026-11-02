@@ -516,6 +516,20 @@ struct ExactCutPoints
         for ( auto t : a )
             if ( t && ( t == b[0] || t == b[1] ) )
                 return t;
+        // a mesh vertex at one end that is a corner of a triangle at the other end too, for the predicates: as where selfBoolean
+        // closes a contour through a fold vertex, which both sheets share, while the other mesh is the same one
+        for ( auto [k, ts] : { std::pair{ j, b }, std::pair{ j + 1, a } } )
+        {
+            const auto v = contours.intersection( c, k ).vert();
+            if ( !v )
+                continue;
+            const auto id = preciseOwnVert( v, mesh, *sortData ).id;
+            for ( auto t : ts )
+                if ( t )
+                    for ( const auto& corner : preciseOtherTri( t, *sortData ) )
+                        if ( corner.id == id )
+                            return t;
+        }
         return {};
     }
 };
@@ -722,8 +736,8 @@ void insertPieces( PreCutResult& preRes, const HashMap<UndirectedEdgeId, EdgePat
 }
 
 // splits the path edges inside the given faces (where contours cross, see findCrossingFaces) at new vertices shared by the crossing paths,
-// puts the pieces in the paths and the definitions of the new vertices in exact; a face where an edge of the paths crosses a side
-// or the predicates fail stays as it is
+// puts the pieces in the paths and the definitions of the new vertices in exact, and splits the holes of a face in monotone parts where one
+// passes a new vertex twice; a face where an edge of the paths crosses a side or the predicates fail stays as it is
 void insertCrossings( Mesh& mesh, const Vector<CutFace>& faces, PreCutResult& preRes, UndirectedEdgeId firstNewEdge,
     ExactCutPoints& exact, NewEdgesMap* new2OldEdgeMap )
 {
@@ -752,6 +766,7 @@ void insertCrossings( Mesh& mesh, const Vector<CutFace>& faces, PreCutResult& pr
     } );
 
     HashMap<UndirectedEdgeId, EdgePath> pieces;
+    Vector<CutFace> pinched;
     for ( int k = 0; k < faces.size(); ++k )
     {
         // a face of lone contours only stays until connectLoneContours, which removes it again
@@ -759,11 +774,29 @@ void insertCrossings( Mesh& mesh, const Vector<CutFace>& faces, PreCutResult& pr
             tp.setLeft( faces[k].edges[0], faces[k].f );
         if ( !crossings[k] )
             continue;
+        const VertId firstVert( tp.vertSize() );
         splitCrossings( mesh, *crossings[k], faces[k].f, pieces, new2OldEdgeMap );
         for ( const auto& [a, b] : *crossings[k] )
             exact.crossings.push_back( { .tri = cutOf( a.undirected() ), .tri2 = cutOf( b.undirected() ) } );
+        // a hole passing a new vertex twice, as the part of a face around a loop of a contour crossing itself does at the crossing
+        // (the faces of lone contours only are left to connectLoneContours)
+        bool pinch = false;
+        for ( auto v = firstVert; v < tp.vertSize() && !holes.removedHere.test( k ); ++v )
+            for ( auto e : orgRing( tp, v ) )
+                for ( auto le : leftRing( tp, e ) )
+                    pinch = pinch || ( le != e && tp.org( le ) == v );
+        if ( pinch )
+            pinched.push_back( faces[k] );
     }
     insertPieces( preRes, pieces );
+
+    // the planar fill of the holes cannot tell apart the two corners of a hole at a vertex that it passes twice (the float points can even
+    // coincide there), so the holes of such faces are split in monotone parts on the exact predicates (the faces are reported already)
+    if ( pinched.empty() )
+        return;
+    const auto pinchedHoles = makeFaceHoles( tp, pinched, preRes, firstNewEdge, exact );
+    FaceBitSet failed;
+    addMonotoneChords( mesh, pinched, pinchedHoles.loops, pinchedHoles.removedHere, exact, new2OldEdgeMap, failed );
 }
 
 [[maybe_unused]] void debugSortingInfo( EdgeId baseE,
@@ -1701,7 +1734,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         numTris += plan.numTris;
         numEdges += 2 * int( plan.items.size() );
     }
-    const auto expectedTotalTris = mesh.topology.faceSize() + numTris;
+    auto expectedTotalTris = mesh.topology.faceSize() + numTris;
     const auto expectedTotalEdges = mesh.topology.edgeSize() + numEdges;
 
     mesh.topology.faceReserve( expectedTotalTris );
@@ -1712,9 +1745,13 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     for ( size_t i = 0; i < holeRepresentativeEdges.size(); ++i )
     {
         // regenerate fill plan, if the execution of the old one (prepared before filling of other holes)
-        // leads to the appearance of multiple edges
+        // leads to the appearance of multiple edges; the new plan can make another number of triangles (as a trivial fill)
         if ( !isFillingMultipleEdgeFree( mesh.topology, fillPlans[i] ) )
+        {
+            const auto oldNumTris = fillPlans[i].numTris;
             fillPlans[i] = getPlanarHoleFillPlan( mesh, holeRepresentativeEdges[i], false );
+            expectedTotalTris += fillPlans[i].numTris - oldNumTris;
+        }
 
         executeTriangulateContourPlan( mesh, holeRepresentativeEdges[i], fillPlans[i],
             needOldFaces ? oldFaces[i] : FaceId{}, params.new2OldMap, params.new2oldEdgesMap );

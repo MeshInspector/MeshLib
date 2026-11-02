@@ -182,7 +182,7 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
     // connectLoneContours), and their edges show where to splice the path edges around the vertices
     auto& vertFaces = res.vertFaces;
     const auto& inters = contours.intersections;
-    FaceBitSet delFaces( mesh.topology.faceSize() );
+    FaceBitSet delFaces; // sized at the first path edge from a mesh vertex, which Boolean contours never have
     for ( int c = 0; c < contours.size(); ++c )
     {
         for ( int k = contours.offsets[c]; k + 1 < contours.offsets[c + 1]; ++k )
@@ -215,16 +215,20 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
             }
             else
                 oldFaces.left = oldFaces.right = ( va ? b : a ).face();
-            if ( oldFaces.left && ( va || vb ) && !delFaces.test_set( oldFaces.left ) )
+            if ( oldFaces.left && ( va || vb ) )
             {
-                auto [it, inserted] = vertFaces.try_emplace( oldFaces.left );
-                assert( inserted );
-                if ( inserted )
-                    topology.getTriEdges( oldFaces.left, it->second[0], it->second[1], it->second[2] );
+                if ( delFaces.empty() )
+                    delFaces.resize( topology.faceSize() );
+                if ( !delFaces.test_set( oldFaces.left ) )
+                {
+                    auto& fe = vertFaces[oldFaces.left];
+                    topology.getTriEdges( oldFaces.left, fe[0], fe[1], fe[2] );
+                }
             }
         }
     }
-    mesh.topology.deleteFacesKeepEdges( delFaces );
+    if ( !delFaces.empty() )
+        topology.deleteFacesKeepEdges( delFaces );
 
     // the contour and intersection at the other end of every path edge spliced at a mesh vertex, by the path edge from the vertex
     HashMap<EdgeId, std::pair<int, int>> spliceEnds;

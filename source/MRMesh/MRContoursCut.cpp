@@ -50,7 +50,6 @@ struct EdgeIntersectionData
     IntersectionData interOnEdge;
     VertId newVert;
     EdgeId orgEdgeInLeftTri;
-    int beforeSortIndex{ 0 }; // useful for next sort
 };
 
 using EdgeData = std::span<EdgeIntersectionData>; // the intersections on one old edge
@@ -158,6 +157,9 @@ bool isNewPathEdge( const OneMeshContourView& contour, int i )
         return false;
     return !( vert && contour.closed && i + 2 == inters.size() && inters[1].samePrimitive( inters[i] ) );
 }
+
+bool lessAlongEdge( const Mesh& mesh, const SortIntersectionsData* sortData, EdgeId e,
+    const EdgeIntersectionData& l, const EdgeIntersectionData& r );
 
 PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const SortIntersectionsData* sortData )
 {
@@ -372,12 +374,12 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
         }
     }
 
-    // group the intersections by edge, each group in the order of the contours
-    tbb::parallel_sort( onEdges.begin(), onEdges.end(), [] ( const auto& a, const auto& b )
+    // group the intersections by edge, each group in the order along the edge
+    tbb::parallel_sort( onEdges.begin(), onEdges.end(), [&] ( const auto& a, const auto& b )
     {
-        const auto& ia = a.second.interOnEdge;
-        const auto& ib = b.second.interOnEdge;
-        return std::tie( a.first, ia.contourId, ia.intersectionId ) < std::tie( b.first, ib.contourId, ib.intersectionId );
+        if ( a.first != b.first )
+            return a.first < b.first;
+        return lessAlongEdge( mesh, sortData, EdgeId( a.first ), a.second, b.second );
     } );
     res.edgeInters.resize( onEdges.size() );
     for ( size_t k = 0; k < onEdges.size(); ++k )
@@ -385,7 +387,6 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
         if ( k == 0 || onEdges[k].first != onEdges[k - 1].first )
             res.edgeOffsets.push_back( int( k ) );
         res.edgeInters[k] = onEdges[k].second;
-        res.edgeInters[k].beforeSortIndex = int( k ) - res.edgeOffsets.back();
     }
     res.edgeOffsets.push_back( int( onEdges.size() ) );
     return res;
@@ -1029,45 +1030,34 @@ CompareResult comparePropagateEdgeTrisIntersections( EdgeId intersectedEdge, con
     return res;
 }
 
-void sortEdgeInfo( const Mesh& mesh, const OneMeshContours& contours, EdgeData edgeData,
-    const SortIntersectionsData* sortData ) // it will probably be useful for precise sorting
+// whether intersection l is before intersection r along edge e (both on it)
+bool lessAlongEdge( const Mesh& mesh, const SortIntersectionsData* sortData, EdgeId e,
+    const EdgeIntersectionData& l, const EdgeIntersectionData& r )
 {
-    assert( !edgeData.empty() );
-    const auto& intInfo = edgeData.front().interOnEdge;
-    EdgeId baseEdge = contours.intersection( intInfo.contourId, intInfo.intersectionId ).edge();
-
+    const auto& il = l.interOnEdge;
+    const auto& ir = r.interOnEdge;
+    if ( il.contourId == ir.contourId && il.intersectionId == ir.intersectionId )
+        return false;
     if ( sortData )
     {
-        auto pred = [&]( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) -> bool
-        {
-            auto res = comparePropagateEdgeTrisIntersections( baseEdge, mesh, *sortData, l, r );
-            if ( res != CompareResult::Unknown )
-                return res == CompareResult::Less;
-
-            assert( mesh.points[l.newVert] == mesh.points[r.newVert] );
-            assert( !"cannot compare" );
-            return false;
-        };
-        std::sort( edgeData.begin(), edgeData.end(), pred );
+        const auto res = comparePropagateEdgeTrisIntersections( e, mesh, *sortData, l, r );
+        if ( res != CompareResult::Unknown )
+            return res == CompareResult::Less;
+        assert( mesh.points[l.newVert] == mesh.points[r.newVert] );
+        assert( !"cannot compare" );
     }
     else
     {
-        // sort using floating-point coordinates of new vertices
-        Vector<double> dotProds( edgeData.size() );
-        Vector3d orgPoint{ mesh.orgPnt( baseEdge ) };
-        auto abVec = Vector3d{ mesh.destPnt( baseEdge ) } - orgPoint;
-        for ( int i = 0; i < edgeData.size(); ++i )
-            dotProds[i] = dot( Vector3d{ mesh.points[edgeData[i].newVert] } - orgPoint, abVec );
-
-        auto pred = [&]( const EdgeIntersectionData& l, const EdgeIntersectionData& r ) -> bool
-        {
-            return dotProds[l.beforeSortIndex] < dotProds[r.beforeSortIndex];
-        };
-        std::sort( edgeData.begin(), edgeData.end(), pred );
+        // using floating-point coordinates of new vertices
+        const Vector3d orgPoint{ mesh.orgPnt( e ) };
+        const auto abVec = Vector3d{ mesh.destPnt( e ) } - orgPoint;
+        const auto dl = dot( Vector3d{ mesh.points[l.newVert] } - orgPoint, abVec );
+        const auto dr = dot( Vector3d{ mesh.points[r.newVert] } - orgPoint, abVec );
+        if ( dl != dr )
+            return dl < dr;
     }
-
-    // DEBUG Output
-    //debugSortingInfo( baseE, edgeData, res, dotProds, sortData );
+    // the same order on any number of threads
+    return std::tie( il.contourId, il.intersectionId ) < std::tie( ir.contourId, ir.intersectionId );
 }
 
 //            ^
@@ -1099,14 +1089,11 @@ void connectEdges( MeshTopology& topology, EdgeId botEdge, EdgeId topEdge, EdgeI
     }
 }
 
-// the edge to cut: oriented as in the intersection of edgeData that was first before sorting
+// the edge to cut, in the direction doPreCutMesh sorted its intersections along
 EdgeId baseEdgeOf( const EdgeData& edgeData, const OneMeshContours& contours )
 {
-    const auto& intInfo = std::find_if( edgeData.begin(), edgeData.end(), [] ( const auto& data )
-    {
-        return data.beforeSortIndex == 0;
-    } )->interOnEdge;
-    return contours.intersection( intInfo.contourId, intInfo.intersectionId ).edge();
+    const auto& intInfo = edgeData.front().interOnEdge;
+    return EdgeId( contours.intersection( intInfo.contourId, intInfo.intersectionId ).edge().undirected() );
 }
 
 // the path edges at the new vertex of i-th intersection on the left and on the right of baseEdge
@@ -1215,26 +1202,14 @@ void cutOneEdge( Mesh& mesh,
 
 // this function cut mesh edge and connects it with result path,
 // after it each path edge left and right faces are invalid (they are removed)
-void cutEdgesIntoPieces( Mesh& mesh,
-                         PreCutResult& preRes, const OneMeshContours& contours,
-                         const SortIntersectionsData* sortData,
+void cutEdgesIntoPieces( Mesh& mesh, PreCutResult& preRes, const OneMeshContours& contours,
                          FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
 {
     MR_TIMER;
     const auto& offsets = preRes.edgeOffsets;
-    auto edgeData = [&] ( size_t i )
-    {
-        return EdgeData( preRes.edgeInters.data() + offsets[i], size_t( offsets[i + 1] - offsets[i] ) );
-    };
-    // sort each edge intersections in parallel
-    ParallelFor( size_t( 0 ), offsets.size() - 1, [&] ( size_t i )
-    {
-        if ( offsets[i + 1] - offsets[i] > 1 )
-            sortEdgeInfo( mesh, contours, edgeData( i ), sortData );
-    } );
-    // cut all
     for ( size_t i = 0; i + 1 < offsets.size(); ++i )
-        cutOneEdge( mesh, edgeData( i ), contours, new2OldMap, new2OldEdgeMap );
+        cutOneEdge( mesh, EdgeData( preRes.edgeInters.data() + offsets[i], size_t( offsets[i + 1] - offsets[i] ) ),
+            contours, new2OldMap, new2OldEdgeMap );
 }
 
 void prepareFacesMap( const MeshTopology& topology, FaceMap& new2OldMap )
@@ -1624,7 +1599,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         }
     }
 
-    cutEdgesIntoPieces( mesh, preRes, contours, params.sortData, params.new2OldMap, params.new2oldEdgesMap );
+    cutEdgesIntoPieces( mesh, preRes, contours, params.new2OldMap, params.new2oldEdgesMap );
     ExactCutPoints exact{ mesh, contours, params.sortData, VertId( mesh.topology.vertSize() ) };
     // the crossing contours are split at the crossings, so that the holes of their faces can be filled as usual; the faces stay reported
     if ( !crossingFaces.empty() )

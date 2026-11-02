@@ -1,6 +1,6 @@
 #!/bin/bash
 # Generates the source of a Python module over the C bindings with `mrbind_gen_python`, see `generate.mk`.
-# Usage: generate_python.sh <mrbind_gen_python> <interop_desc.json of the C bindings> <output dir> <mrmeshpy|mrcudapy>
+# Usage: generate_python.sh <mrbind_gen_python> <interop_desc.json of the C bindings> <output dir> <mrmeshpy|mrcudapy> <number of fragments>
 # The names and docs follow what the pybind11 bindings had, so the flags below spell the types like `typeid()` on this platform.
 
 set -euo pipefail
@@ -9,6 +9,7 @@ GEN_PYTHON="$1"
 INPUT_JSON="$2"
 OUTPUT_DIR="$3"
 MODULE="$4"
+NUM_FRAGMENTS="$5"
 
 case "$(uname -s)" in
     Linux*) OS=linux ;;
@@ -108,5 +109,5 @@ if [[ $MODULE == mrcudapy ]]; then
 fi
 
 "$GEN_PYTHON" --input-json "$(native "$INPUT_JSON")" --output-dir "$(native "$OUTPUT_DIR")" --clean-output-dir \
-    --module-name "$MODULE" --module-qualname "meshlib.$MODULE" "${GEN_FLAGS[@]}" --verbose 2> "$OUTPUT_DIR.log" || { tail -20 "$OUTPUT_DIR.log" >&2; exit 1; }
+    --module-name "$MODULE" --module-qualname "meshlib.$MODULE" --fragments "$NUM_FRAGMENTS" "${GEN_FLAGS[@]}" --verbose 2> "$OUTPUT_DIR.log" || { tail -20 "$OUTPUT_DIR.log" >&2; exit 1; }
 grep '^Generated' "$OUTPUT_DIR.log"

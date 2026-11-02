@@ -920,22 +920,29 @@ PY_COMPILER_FLAGS += -isysroot $(macos_sdk_path) $(if $(MACOS_MIN_VER),-mmacosx-
 PY_LINKER_FLAGS += -isysroot $(macos_sdk_path) $(if $(MACOS_MIN_VER),-mmacosx-version-min=$(MACOS_MIN_VER)) -Xlinker -undefined -Xlinker dynamic_lookup -Wl,-headerpad_max_install_names
 endif
 
+# A big module compiles slowly as one translation unit, so it's split into the fragments `<module>.cpp`, `<module>_1.cpp`, ..., compiled in parallel.
+PY_NUM_FRAGMENTS := $(call safe_shell,echo $$(( $(JOBS) * 2 )))
+mrmesh_PyNumFragments := $(PY_NUM_FRAGMENTS)
+mrcuda_PyNumFragments := 1
+
 override define module_snippet_build_py =
 $(call var,$1__PySourceDir := $(TEMP_OUTPUT_DIR)/$($1_PyName))
 $(call var,$1__PySource := $($1__PySourceDir)/$($1_PyName).cpp)
-$(call var,$1__PyObject := $(TEMP_OUTPUT_DIR)/$($1_PyName).o)
+$(call var,$1__PyFragments := $($1_PyName) $(addprefix $($1_PyName)_,$(filter-out 0,$(call seq,$($1_PyNumFragments)))))
+$(call var,$1__PyObjects := $(patsubst %,$(TEMP_OUTPUT_DIR)/%.o,$($1__PyFragments)))
 $(call var,$1__LinkerOutput := $(MODULE_OUTPUT_DIR)/$($1_PyName)$(PYTHON_MODULE_SUFFIX))
 $(call var,all_outputs += $($1__LinkerOutput))
 only-generate: $($1__PySource)
+# The fragments are generated together, this is the first one.
 $($1__PySource): $(PYTHON_INPUT_JSON) | $(TEMP_OUTPUT_DIR)
 	@echo $(call quote,[$1] [Generating] $($1__PySource))
-	@bash $(call quote,$(makefile_dir)generate_python.sh) $(call quote,$(MRBIND_GEN_PYTHON_EXE)) $(call quote,$(PYTHON_INPUT_JSON)) $(call quote,$($1__PySourceDir)) $($1_PyName)
-$($1__PyObject): $($1__PySource)
-	@echo $(call quote,[$1] [Compiling] $($1__PySource))
-	@$(CXX_FOR_BINDINGS) $(call quote,$($1__PySource)) -c -o $(call quote,$($1__PyObject)) $(PY_COMPILER_FLAGS)
-$($1__LinkerOutput): $($1__PyObject) | $(MODULE_OUTPUT_DIR)
+	@bash $(call quote,$(makefile_dir)generate_python.sh) $(call quote,$(MRBIND_GEN_PYTHON_EXE)) $(call quote,$(PYTHON_INPUT_JSON)) $(call quote,$($1__PySourceDir)) $($1_PyName) $($1_PyNumFragments)
+$($1__PyObjects): $(TEMP_OUTPUT_DIR)/%.o: $($1__PySource)
+	@echo $$(call quote,[$1] [Compiling] $($1__PySourceDir)/$$*.cpp)
+	@$(CXX_FOR_BINDINGS) $$(call quote,$($1__PySourceDir)/$$*.cpp) -c -o $$(call quote,$$@) $(PY_COMPILER_FLAGS)
+$($1__LinkerOutput): $($1__PyObjects) | $(MODULE_OUTPUT_DIR)
 	@echo $(call quote,[$1] [Linking] $($1__LinkerOutput))
-	@$(LINKER) $(call quote,$($1__PyObject)) -o $(call quote,$($1__LinkerOutput)) $(PY_LINKER_FLAGS) $(addprefix -l,$($1_PyCLibs))
+	@$(LINKER) $(foreach o,$($1__PyObjects),$(call quote,$o)) -o $(call quote,$($1__LinkerOutput)) $(PY_LINKER_FLAGS) $(addprefix -l,$($1_PyCLibs))
 
 # A pretty target.
 .PHONY: $($1_PyName)

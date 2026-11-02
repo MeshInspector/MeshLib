@@ -652,8 +652,8 @@ void addMonotoneChords( Mesh& mesh, const Vector<CutFace>& faces, const Vector<E
 }
 
 // connects the islands of lone contours with the rest of the holes of their faces by the chords that split the holes in monotone parts,
-// found on the exact predicates consistent with the boolean if exact has sortData; the faces where that fails are added to badFaces
-// and stay in the mesh unless another contour removed them
+// found on the exact predicates consistent with the boolean if exact has sortData (also the holes passing a crossing twice, see insertCrossings);
+// the faces where that fails are added to badFaces and stay in the mesh unless another contour removed them
 void connectLoneContours( Mesh& mesh, const Vector<CutFace>& loneFaces, const PreCutResult& preRes, UndirectedEdgeId firstNewEdge,
     ExactCutPoints& exact, NewEdgesMap* new2OldEdgeMap, FaceBitSet& badFaces )
 {
@@ -736,10 +736,11 @@ void insertPieces( PreCutResult& preRes, const HashMap<UndirectedEdgeId, EdgePat
 }
 
 // splits the path edges inside the given faces (where contours cross, see findCrossingFaces) at new vertices shared by the crossing paths,
-// puts the pieces in the paths and the definitions of the new vertices in exact, and splits the holes of a face in monotone parts where one
-// passes a new vertex twice; a face where an edge of the paths crosses a side or the predicates fail stays as it is
+// puts the pieces in the paths and the definitions of the new vertices in exact, and adds a face where a hole passes a new vertex twice
+// to the sorted loneFaces, for connectLoneContours to split its holes in monotone parts; a face where an edge of the paths crosses a side
+// or the predicates fail stays as it is
 void insertCrossings( Mesh& mesh, const Vector<CutFace>& faces, PreCutResult& preRes, UndirectedEdgeId firstNewEdge,
-    ExactCutPoints& exact, NewEdgesMap* new2OldEdgeMap )
+    ExactCutPoints& exact, NewEdgesMap* new2OldEdgeMap, Vector<CutFace>& loneFaces )
 {
     MR_TIMER;
     auto& tp = mesh.topology;
@@ -766,7 +767,7 @@ void insertCrossings( Mesh& mesh, const Vector<CutFace>& faces, PreCutResult& pr
     } );
 
     HashMap<UndirectedEdgeId, EdgePath> pieces;
-    Vector<CutFace> pinched;
+    const auto numLone = loneFaces.size();
     for ( int k = 0; k < faces.size(); ++k )
     {
         // a face of lone contours only stays until connectLoneContours, which removes it again
@@ -779,24 +780,28 @@ void insertCrossings( Mesh& mesh, const Vector<CutFace>& faces, PreCutResult& pr
         for ( const auto& [a, b] : *crossings[k] )
             exact.crossings.push_back( { .tri = cutOf( a.undirected() ), .tri2 = cutOf( b.undirected() ) } );
         // a hole passing a new vertex twice, as the part of a face around a loop of a contour crossing itself does at the crossing
-        // (the faces of lone contours only are left to connectLoneContours)
-        bool pinch = false;
-        for ( auto v = firstVert; v < tp.vertSize() && !holes.removedHere.test( k ); ++v )
-            for ( auto e : orgRing( tp, v ) )
-                for ( auto le : leftRing( tp, e ) )
-                    pinch = pinch || ( le != e && tp.org( le ) == v );
-        if ( pinch )
-            pinched.push_back( faces[k] );
+        // (the faces of lone contours only are in loneFaces already)
+        auto passesTwice = [&]
+        {
+            for ( auto v = firstVert; v < tp.vertSize(); ++v )
+                for ( auto e : orgRing( tp, v ) )
+                    for ( auto le : leftRing( tp, e ) )
+                        if ( le != e && tp.org( le ) == v )
+                            return true;
+            return false;
+        };
+        if ( !holes.removedHere.test( k ) && passesTwice() )
+            loneFaces.push_back( faces[k] );
     }
     insertPieces( preRes, pieces );
 
     // the planar fill of the holes cannot tell apart the two corners of a hole at a vertex that it passes twice (the float points can even
-    // coincide there), so the holes of such faces are split in monotone parts on the exact predicates (the faces are reported already)
-    if ( pinched.empty() )
+    // coincide there), unlike the monotone split on the exact predicates; where that fails, the face falls back to the planar fill
+    // of its split crossings, which can leave a face that is no triangle (as without the monotone split; the face is reported already)
+    if ( loneFaces.size() == numLone )
         return;
-    const auto pinchedHoles = makeFaceHoles( tp, pinched, preRes, firstNewEdge, exact );
-    FaceBitSet failed;
-    addMonotoneChords( mesh, pinched, pinchedHoles.loops, pinchedHoles.removedHere, exact, new2OldEdgeMap, failed );
+    std::inplace_merge( loneFaces.begin(), loneFaces.begin() + numLone, loneFaces.end(), [] ( const CutFace& a, const CutFace& b ) { return a.f < b.f; } );
+    loneFaces.erase( std::unique( loneFaces.begin(), loneFaces.end(), [] ( const CutFace& a, const CutFace& b ) { return a.f == b.f; } ), loneFaces.end() );
 }
 
 [[maybe_unused]] void debugSortingInfo( EdgeId baseE,
@@ -1622,7 +1627,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     if ( params.new2OldMap )
         prepareFacesMap( mesh.topology, *params.new2OldMap );
 
-    const auto loneFaces = findLoneFaces( mesh.topology, contours );
+    auto loneFaces = findLoneFaces( mesh.topology, contours );
     const auto firstNewEdge = UndirectedEdgeId( mesh.topology.undirectedEdgeSize() );
     auto preRes = doPreCutMesh( mesh, contours, params.sortData );
     // under force fill, the faces where the contours really cross (touching is fine) are bad too, found before the old edges are cut;
@@ -1655,7 +1660,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     ExactCutPoints exact{ mesh, contours, params.sortData, VertId( mesh.topology.vertSize() ) };
     // the crossing contours are split at the crossings, so that the holes of their faces can be filled as usual; the faces stay reported
     if ( !crossingFaces.empty() )
-        insertCrossings( mesh, crossingFaces, preRes, firstNewEdge, exact, params.new2oldEdgesMap );
+        insertCrossings( mesh, crossingFaces, preRes, firstNewEdge, exact, params.new2oldEdgesMap, loneFaces );
     FaceBitSet badLoneFaces;
     connectLoneContours( mesh, loneFaces, preRes, firstNewEdge, exact, params.new2oldEdgesMap, badLoneFaces );
 

@@ -1637,7 +1637,8 @@ TEST( MRMesh, ForceFillCrossingsFoldVertex )
 // two crossing spheres with their vertices rounded to a coarse grid, cut along their intersections as selfBoolean cuts them, with sortData
 // under SplitCrossings: where the sheets meet at grid points, many points of a hole coincide in floats, and a hole passing a crossing
 // twice (around a loop of a contour crossing itself) got triangles across both its corners there from the planar fill; such holes are
-// split in monotone parts on the exact predicates before, so every face is a triangle
+// split in monotone parts on the exact predicates before, so every face is a triangle; the cut under All in selfCutBadFaces regenerates
+// a fill plan that makes another number of triangles, which the face count expected in Debug follows
 TEST( MRMesh, ForceFillCrossingsQuantizedSpheres )
 {
     Mesh mesh;

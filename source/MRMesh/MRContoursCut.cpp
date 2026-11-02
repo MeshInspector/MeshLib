@@ -53,7 +53,7 @@ struct EdgeIntersectionData
     int beforeSortIndex{ 0 }; // useful for next sort
 };
 
-using EdgeData = Vector<EdgeIntersectionData>;
+using EdgeData = std::span<EdgeIntersectionData>; // the intersections on one old edge
 
 // the faces of the old mesh on both sides of a path edge: the same face for a path edge inside it,
 // the faces of an edge of the old mesh for a path edge along it
@@ -64,10 +64,10 @@ struct PathsEdgeIndex
 };
 
 using PathsOldFaces = Vector<PathsEdgeIndex>; // path edge i of contour c at the index of its intersection i in the contours
-using EdgeDataMap = ParallelHashMap<UndirectedEdgeId, EdgeData>;
 struct PreCutResult
 {
-    EdgeDataMap edgeData;
+    Vector<EdgeIntersectionData> edgeInters; // grouped by old edge, the intersections on edge i are [edgeOffsets[i], edgeOffsets[i + 1])
+    Vector<int> edgeOffsets;
     std::vector<EdgePath> paths;
     PathsOldFaces oldEdgesInfo;
     const Vector<int>* offsets = nullptr; // of the contours, or of pathOffsets once insertPieces makes paths longer
@@ -174,7 +174,14 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
     res.paths.resize( contours.size() );
     res.oldEdgesInfo.resize( contours.intersections.size() );
     res.offsets = &contours.offsets;
-    res.edgeData.reserve( size_t( intersectedEdges ) );
+    // the group of every old edge with intersections, by the edge, and the intersections on old edges in the order of the contours
+    ParallelHashMap<UndirectedEdgeId, int> edgeGroups;
+    edgeGroups.reserve( size_t( intersectedEdges ) );
+    Vector<int> groupSizes;
+    Vector<EdgeIntersectionData> onEdges;
+    Vector<int> onEdgeGroups;
+    onEdges.reserve( intersectedEdges );
+    onEdgeGroups.reserve( intersectedEdges );
     const auto oldEdgesSize = topology.edgeSize();
 
     // find the old face of every path edge before the topology changes, on this thread, which then has the records of the cut edges
@@ -363,19 +370,35 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
             }
             else
                 topology.setOrg( in, newVertId );
-            // add note to edgeData
             if ( const auto e = inter.edge() )
             {
-                auto& edgeData = res.edgeData[e.undirected()];
-                edgeData.reserve( 5 ); // reserve a small amount to avoid reallocations in most common scenarios
-                edgeData.emplace_back( EdgeIntersectionData{
+                const auto [it, inserted] = edgeGroups.try_emplace( e.undirected(), int( groupSizes.size() ) );
+                if ( inserted )
+                    groupSizes.push_back( 0 );
+                onEdges.push_back( EdgeIntersectionData{
                     .interOnEdge = IntersectionData{ContourId( contourId ),IntersectionId( i )},
                     .newVert = newVertId,
                     .orgEdgeInLeftTri = out,
-                    .beforeSortIndex = int( edgeData.size() ) } );
+                    .beforeSortIndex = groupSizes[it->second]++ } );
+                onEdgeGroups.push_back( it->second );
             }
         }
     }
+
+    // the groups in the order of edgeGroups, in which cutEdgesIntoPieces cuts the edges
+    Vector<int> groupStarts( groupSizes.size() );
+    res.edgeOffsets.reserve( groupSizes.size() + 1 );
+    int n = 0;
+    for ( const auto& [ue, g] : edgeGroups )
+    {
+        groupStarts[g] = n;
+        res.edgeOffsets.push_back( n );
+        n += groupSizes[g];
+    }
+    res.edgeOffsets.push_back( n );
+    res.edgeInters.resize( n );
+    for ( size_t k = 0; k < onEdges.size(); ++k )
+        res.edgeInters[groupStarts[onEdgeGroups[k]] + onEdges[k].beforeSortIndex] = onEdges[k];
     return res;
 }
 
@@ -1017,7 +1040,7 @@ CompareResult comparePropagateEdgeTrisIntersections( EdgeId intersectedEdge, con
     return res;
 }
 
-void sortEdgeInfo( const Mesh& mesh, const OneMeshContours& contours, EdgeData& edgeData,
+void sortEdgeInfo( const Mesh& mesh, const OneMeshContours& contours, EdgeData edgeData,
     const SortIntersectionsData* sortData ) // it will probably be useful for precise sorting
 {
     assert( !edgeData.empty() );
@@ -1204,31 +1227,25 @@ void cutOneEdge( Mesh& mesh,
 // this function cut mesh edge and connects it with result path,
 // after it each path edge left and right faces are invalid (they are removed)
 void cutEdgesIntoPieces( Mesh& mesh,
-                         EdgeDataMap&& edgeData, const OneMeshContours& contours,
+                         PreCutResult& preRes, const OneMeshContours& contours,
                          const SortIntersectionsData* sortData,
                          FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
 {
     MR_TIMER;
-    // sort each edge intersections in parallel
-    tbb::parallel_for( tbb::blocked_range<size_t>( 0, edgeData.subcnt(), 1 ),
-        [&] ( const tbb::blocked_range<size_t>& range )
+    const auto& offsets = preRes.edgeOffsets;
+    auto edgeData = [&] ( size_t i )
     {
-        assert( range.begin() + 1 == range.end() );
-        for ( size_t i = range.begin(); i != range.end(); ++i )
-        {
-            edgeData.with_submap( i, [&] ( const EdgeDataMap::EmbeddedSet& subSet )
-            {
-                // const_cast here is safe, we don't write to map, just sort internal data
-                for ( auto& edgeInfo : const_cast< EdgeDataMap::EmbeddedSet& >( subSet ) )
-                {
-                    sortEdgeInfo( mesh, contours, edgeInfo.second, sortData );
-                }
-            } );
-        }
+        return EdgeData( preRes.edgeInters.data() + offsets[i], size_t( offsets[i + 1] - offsets[i] ) );
+    };
+    // sort each edge intersections in parallel
+    ParallelFor( size_t( 0 ), offsets.size() - 1, [&] ( size_t i )
+    {
+        if ( offsets[i + 1] - offsets[i] > 1 )
+            sortEdgeInfo( mesh, contours, edgeData( i ), sortData );
     } );
     // cut all
-    for ( const auto& edgeInfo : edgeData )
-        cutOneEdge( mesh, edgeInfo.second, contours, new2OldMap, new2OldEdgeMap );
+    for ( size_t i = 0; i + 1 < offsets.size(); ++i )
+        cutOneEdge( mesh, edgeData( i ), contours, new2OldMap, new2OldEdgeMap );
 }
 
 void prepareFacesMap( const MeshTopology& topology, FaceMap& new2OldMap )
@@ -1618,7 +1635,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         }
     }
 
-    cutEdgesIntoPieces( mesh, std::move( preRes.edgeData ), contours, params.sortData, params.new2OldMap, params.new2oldEdgesMap );
+    cutEdgesIntoPieces( mesh, preRes, contours, params.sortData, params.new2OldMap, params.new2oldEdgesMap );
     ExactCutPoints exact{ mesh, contours, params.sortData, VertId( mesh.topology.vertSize() ) };
     // the crossing contours are split at the crossings, so that the holes of their faces can be filled as usual; the faces stay reported
     if ( !crossingFaces.empty() )

@@ -411,7 +411,8 @@ MR_ON_INIT{
             .addMember( "orthographic", Schema::Bool{} )
             .addMember( "zoom",         Schema::Number{} )
             .addMember( "viewAngle",    Schema::Number{} ),
-        /*func*/mcpViewerGetCamera
+        /*func*/mcpViewerGetCamera,
+        /*readOnly*/true
     );
 
     server.addTool(
@@ -435,7 +436,8 @@ MR_ON_INIT{
             .addMemberOpt( "path",   Schema::String{} )
             .addMember(    "width",  Schema::Number{} )
             .addMember(    "height", Schema::Number{} ),
-        /*func*/mcpViewerCaptureScreenshot
+        /*func*/mcpViewerCaptureScreenshot,
+        /*readOnly*/true
     );
 
     server.addTool(
@@ -485,7 +487,8 @@ MR_ON_INIT{
         /*name*/"Close MeshInspector",
         /*desc*/"Cleanly stop MeshInspector's event loop and exit the process. Returns immediately so the MCP "
                 "response can flush before the server socket closes; the actual shutdown happens on the next frame. "
-                "After this call the gateway's `launch` tool can bring MeshInspector back up. "
+                "Until the process has exited, other tools fail and the gateway's `status` still says `running`; once it "
+                "says `not started`, the gateway's `launch` tool can bring MeshInspector back up. "
                 "If the scene has unsaved changes, an `Application Close` modal is raised instead of exiting; "
                 "check `ui_listEntries` for the modal and dismiss it with the `Cancel` / `Don't Save` / `Save` buttons. "
                 "Pass `force: true` to discard unsaved changes and exit without the modal.",

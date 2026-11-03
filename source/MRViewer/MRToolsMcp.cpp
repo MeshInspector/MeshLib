@@ -173,7 +173,8 @@ MR_ON_INIT{
                 "`tools_action` to open or fire the tool. Same id space as the ribbon `ui_pressButton` entries.",
         /*input_schema*/Schema::Object{},
         /*output_schema*/Schema::Array( Schema::String{} ),
-        /*func*/mcpToolsListAll
+        /*func*/mcpToolsListAll,
+        /*readOnly*/true
     );
 
     server.addTool(
@@ -183,7 +184,8 @@ MR_ON_INIT{
                 "open. Subset of `tools_listAll`.",
         /*input_schema*/Schema::Object{},
         /*output_schema*/Schema::Array( Schema::String{} ),
-        /*func*/mcpToolsListActive
+        /*func*/mcpToolsListActive,
+        /*readOnly*/true
     );
 
     server.addTool(
@@ -209,7 +211,8 @@ MR_ON_INIT{
                     .addMember( "helpLink", Schema::String{} )
             ) )
             .addMember( "missing", Schema::Array( Schema::String{} ) ),
-        /*func*/mcpToolsGetInfo
+        /*func*/mcpToolsGetInfo,
+        /*readOnly*/true
     );
 
     server.addTool(

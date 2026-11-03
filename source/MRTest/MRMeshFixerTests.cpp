@@ -334,6 +334,14 @@ TEST( MRMesh, EliminateDoubleTrisPillow )
     EXPECT_EQ( t.computeNotLoneUndirectedEdges(), 0 );
     EXPECT_TRUE( region.none() );
     EXPECT_TRUE( t.checkValidity() );
+
+    // a lone triangle has the same topology with a hole of three edges instead of the other triangle: it is kept
+    auto lone = MeshBuilder::fromTriangles( { { 0_v, 1_v, 2_v } } );
+    for ( auto le : leftRing( lone, 0_f ) )
+        for ( auto x : { le, le.sym() } )
+            EXPECT_FALSE( eliminateDoubleTris( lone, x, nullptr, true ) );
+    EXPECT_EQ( lone.numValidFaces(), 1 );
+    EXPECT_EQ( lone.numValidVerts(), 3 );
 }
 
 } //namespace MR

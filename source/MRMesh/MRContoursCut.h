@@ -56,7 +56,8 @@ struct CutMeshParameters
         None, ///< if bad faces occur, nothing is filled
         All,  ///< bad faces are filled too, but their triangulation can be bad (may have self-intersections or tunnels)
         /// as All, but with sortData the contours are first split where they cross in bad faces (see \ref CutMeshResult::resultCut);
-        /// where the split fails, as All: e.g. in a face where a contour segment ends at a mesh vertex or an open contour ends on a side of the face
+        /// where the split fails, as All: e.g. in a face where an open contour ends on a side of the face, or a contour segment ends
+        /// at a mesh vertex that is not a corner of the triangle of the other mesh along the segment (unlike the fold vertices of selfBoolean)
         SplitCrossings
     } forceFillMode{ ForceFill::None };
 

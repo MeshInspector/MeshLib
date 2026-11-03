@@ -87,6 +87,7 @@ void CommandLoop::processCommands()
     for ( ; ;)
     {
         std::unique_lock<std::mutex> lock( inst.mutex_ );
+        inst.lastProcessTime_ = std::chrono::steady_clock::now();
         if ( inst.commands_.empty() )
             break;
         auto cmd = inst.commands_.front();
@@ -123,6 +124,13 @@ void CommandLoop::processCommands()
         for ( auto& cmdToNotify : commandsToNotifyAtTheEnd )
             cmdToNotify->callerThreadCV.notify_one();
     }
+}
+
+std::chrono::steady_clock::time_point CommandLoop::lastProcessTime()
+{
+    auto& inst = instance_();
+    std::unique_lock<std::mutex> lock( inst.mutex_ );
+    return inst.lastProcessTime_;
 }
 
 bool CommandLoop::empty()

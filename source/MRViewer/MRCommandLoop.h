@@ -61,6 +61,10 @@ public:
     // Execute all commands from loop
     MRVIEWER_API static void processCommands();
 
+    // when the main thread last looked for commands to execute in `processCommands`;
+    // while a command waits, the main thread has been busy since then
+    MRVIEWER_API static std::chrono::steady_clock::time_point lastProcessTime();
+
     // Return true if loop is empty
     MRVIEWER_API static bool empty();
 
@@ -102,6 +106,7 @@ private:
     bool queueClosed_{ false }; // marked true in `removeCommands`
     std::thread::id mainThreadId_;
     std::queue<std::shared_ptr<Command>> commands_;
+    std::chrono::steady_clock::time_point lastProcessTime_;
     std::mutex mutex_;
 };
 

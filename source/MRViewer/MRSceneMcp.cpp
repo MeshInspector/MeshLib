@@ -571,7 +571,8 @@ MR_ON_INIT{
                 "`type` values include `\"Mesh\"`, `\"Point Cloud\"`, `\"Polyline\"`, `\"Voxel Volume\"`.",
         /*input_schema*/Schema::Object{}.addMemberOpt( "rootId", Schema::Number{} ),
         /*output_schema*/Schema::Array( entrySchema() ),
-        /*func*/mcpSceneListObjectTree
+        /*func*/mcpSceneListObjectTree,
+        /*readOnly*/true
     );
 
     server.addTool(
@@ -596,7 +597,8 @@ MR_ON_INIT{
             .addMember( "info",     Schema::Array( Schema::String{} ) )
             .addMember( "stats",    Schema::Object{} )
             .addMember( "visualization", Schema::Object{} ),
-        /*func*/mcpSceneGetObjectInfo
+        /*func*/mcpSceneGetObjectInfo,
+        /*readOnly*/true
     );
 
     server.addTool(
@@ -658,7 +660,8 @@ MR_ON_INIT{
             .addMemberOpt( "extension", Schema::String{} ),
         /*output_schema*/Schema::Object{}
             .addMemberOpt( "path", Schema::String{} ),
-        /*func*/mcpSceneGetObject
+        /*func*/mcpSceneGetObject,
+        /*readOnly*/true
     );
 
     server.addTool(

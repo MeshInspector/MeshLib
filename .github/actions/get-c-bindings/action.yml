@@ -1,0 +1,70 @@
+name: 'Get C bindings'
+description: >
+  Wait for the generate-c-bindings job, download its `CBindings` artifact to
+  MeshLib/CbindingsTmp, and put the generated sources into source/MeshLibC2 and
+  source/MeshLibC2Cuda. Without MRCuda, `MeshLibC2Cuda` gets the stubs from
+  scripts/mrbind/cuda_placeholder_generated_c, see the README there.
+  With `build-dir` (not on Windows), also builds the C bindings there.
+
+inputs:
+  cuda:
+    required: false
+    default: 'auto'
+    description: >
+      'true': the generated `MeshLibC2Cuda`; 'false': the stubs;
+      'auto': the generated one if `build-dir` has libMRCuda.so.
+  build-dir:
+    required: false
+    default: ''
+    description: The configured CMake build directory to build the C bindings in; empty to only get the sources.
+  targets:
+    required: false
+    default: 'MeshLibC2 MeshLibC2Cuda'
+    description: The targets to build in `build-dir`.
+
+runs:
+  using: composite
+  steps:
+    - name: Wait for C bindings
+      uses: ./.github/actions/wait-for-job
+      with:
+        job-name: generate-c-bindings
+
+    - name: Download C bindings
+      uses: actions/download-artifact@v8
+      with:
+        name: CBindings
+        path: MeshLib/CbindingsTmp
+
+    - name: Prepare C bindings folders
+      shell: bash
+      env:
+        CUDA: ${{ inputs.cuda }}
+        BUILD_DIR: ${{ inputs.build-dir }}
+      run: |
+        set -eu
+        if [ "$CUDA" = auto ]; then
+          CUDA=false
+          if [ -n "$BUILD_DIR" ] && [ -e "$BUILD_DIR/bin/libMRCuda.so" ]; then CUDA=true; fi
+        fi
+        rm -rf source/MeshLibC2
+        mv MeshLib/CbindingsTmp/MeshLibC2 source
+        if [ "$CUDA" = true ]; then
+          rm -rf source/MeshLibC2Cuda
+          mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
+        else
+          rm -rf source/MeshLibC2Cuda/include source/MeshLibC2Cuda/src
+          cp -R scripts/mrbind/cuda_placeholder_generated_c/include scripts/mrbind/cuda_placeholder_generated_c/src source/MeshLibC2Cuda
+        fi
+
+    - name: Build C bindings
+      if: ${{ inputs.build-dir != '' }}
+      shell: bash
+      env:
+        BUILD_DIR: ${{ inputs.build-dir }}
+        TARGETS: ${{ inputs.targets }}
+      # The sources are globbed at configure time, so reconfigure now that they are here.
+      run: |
+        set -eu
+        cmake -S . -B "$BUILD_DIR" -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON
+        cmake --build "$BUILD_DIR" -j "$(getconf _NPROCESSORS_ONLN)" --target $TARGETS

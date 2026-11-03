@@ -285,6 +285,8 @@ jobs:
         env:
           GCC_INSTALL_DIR: ${{ matrix.gcc-install-dir }}
         with:
+          # The C bindings come from the generate-c-bindings job, so no parser.
+          generators-only: 'true'
           # Prefix is shared with build-test-linux-vcpkg.yml, which uses the same
           # image and script. The Dockerfile hash in extra-cache-key busts the cache
           # whenever the toolchain inside the image changes (e.g. clang upgrade).
@@ -310,6 +312,12 @@ jobs:
             -DMESHLIB_BUILD_MCP=OFF
             -DCMAKE_CUDA_HOST_COMPILER=/opt/rh/gcc-toolset-11/root/usr/bin/g++
             -DCMAKE_CXX_FLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }}
+
+      # The Python modules are generated from the C bindings and link them.
+      - name: Get and build C bindings
+        uses: ./.github/actions/get-c-bindings
+        with:
+          build-dir: build/Release
 
       - name: Generate and build MRBind bindings
         # The stub works around libstdc++11's https://gcc.gnu.org/PR108636 (fixed in 11.4, EL8 ships
@@ -399,26 +407,6 @@ jobs:
           name: PythonStubs
           path: ./scripts/wheel/meshlib/meshlib/*.pyi
           retention-days: 1
-
-      - name: Wait for C bindings
-        if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
-        uses: ./.github/actions/wait-for-job
-        with:
-          job-name: generate-c-bindings
-
-      - name: Download C bindings
-        if: ${{ needs.setup.outputs.publish_prod == 'true' && matrix.platform == 'aarch64' }}
-        uses: actions/download-artifact@v8
-        with:
-          name: CBindings
-          path: MeshLib/CbindingsTmp
-
-      - name: Prepare C bindings folders
-        if: ${{ needs.setup.outputs.publish_prod == 'true' && matrix.platform == 'aarch64' }}
-        run: |
-          rm -rf source/MeshLibC2 source/MeshLibC2Cuda
-          mv MeshLib/CbindingsTmp/MeshLibC2 source
-          mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
 
       - name: Generate C# bindings # generate only sources
         if: ${{ needs.setup.outputs.publish_prod == 'true' && matrix.platform == 'aarch64' }}
@@ -553,6 +541,8 @@ jobs:
       - name: Build MRBind
         uses: ./.github/actions/build-mrbind
         with:
+          # The C bindings come from the generate-c-bindings job, so no parser.
+          generators-only: 'true'
           cache-key-prefix: ${{ matrix.mrbind-cache-prefix }}
           build-script: scripts/mrbind/install_mrbind_windows_msys2.bat
           extra-cache-key: ${{ hashFiles(format('scripts/mrbind/msys2_package_hashes{0}.txt', matrix.msys2-pkgs)) }}
@@ -583,6 +573,29 @@ jobs:
           )
           if not exist source\${{ matrix.platform }} mkdir source\${{ matrix.platform }} || exit /b 1
           xcopy source\TempOutput\bin\* source\${{ matrix.platform }}\Release\* /s /e /i /Y || exit /b 1
+
+      # The Python modules are generated from the C bindings and link them.
+      - name: Get C bindings
+        uses: ./.github/actions/get-c-bindings
+        with:
+          cuda: ${{ matrix.cuda-version != '' }}
+
+      - name: Build C bindings
+        shell: cmd
+        env:
+          GETTEXT_ROOT: C:\msys64\clang64
+          VCPKG_ROOT: C:\vcpkg
+          VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg-triplet }}
+        # Like the Build step: reconfigures its directory, now that the C bindings sources are here.
+        run: |
+          set "PROJ_VCPKG_ROOT=%VCPKG_ROOT%"
+          call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" ${{ matrix.vs-dev-args }} -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          cmake -S . -B source\TempOutput %CMAKE_COMPILER_ARGS% -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON || exit /b 1
+          cmake --build source\TempOutput -j %NUMBER_OF_PROCESSORS% --target MeshLibC2 MeshLibC2Cuda || exit /b 1
+          for %%b in (source\TempOutput\bin\MeshLibC2*.dll) do (
+            "%PROJ_VCPKG_ROOT%\vcpkg.exe" z-applocal --target-binary="%%b" --installed-bin-dir="%PROJ_VCPKG_ROOT%\installed\%VCPKG_TARGET_TRIPLET%\bin" >nul || exit 1
+          )
+          xcopy source\TempOutput\bin\MeshLibC2*.* source\${{ matrix.platform }}\Release\ /i /Y || exit /b 1
 
       - name: Generate and build MRBind bindings
         shell: cmd
@@ -728,6 +741,8 @@ jobs:
       - name: Build MRBind
         uses: ./.github/actions/build-mrbind
         with:
+          # The C bindings come from the generate-c-bindings job, so no parser.
+          generators-only: 'true'
           # Keyed on the runner image (matrix.instance) so this cache is shared with
           # build-test-macos.yml when its matrix.instance matches.
           cache-key-prefix: ${{ matrix.instance }}-clang
@@ -749,6 +764,13 @@ jobs:
             -DMESHLIB_BUILD_MCP=OFF
           # not realy needed
           CMAKE_C_COMPILER: /usr/bin/clang
+
+      # The Python modules are generated from the C bindings and link them.
+      - name: Get and build C bindings
+        uses: ./.github/actions/get-c-bindings
+        with:
+          cuda: 'false'
+          build-dir: build/Release
 
       - name: Generate and build MRBind bindings
         env:

@@ -33,6 +33,9 @@ target_link_libraries(${PROJECT_NAME}
     ${CMAKE_DL_LIBS}
 )
 
+# The objects of `mrmeshpy` (generated over the C bindings) pass through its C++ interop API, see this header.
+target_include_directories(${PROJECT_NAME} PRIVATE "${MESHLIB_THIRDPARTY_DIR}/mrbind/include")
+
 # Don't emit undefined references. We need this because we don't want to link to a specific Python version.
 # The flag we're removing here is something we only set on Linux, in `CompilerOptions.cmake`.
 string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
@@ -51,3 +54,4 @@ install(
   TARGETS ${PROJECT_NAME}
   DESTINATION "${MR_PY_LIB_DIR}"
 )
+

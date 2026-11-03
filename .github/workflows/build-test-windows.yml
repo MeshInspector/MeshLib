@@ -173,6 +173,8 @@ jobs:
         if: ${{ inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true' }}
         uses: ./.github/actions/build-mrbind
         with:
+          # The C bindings come from the generate-c-bindings job, so no parser.
+          generators-only: 'true'
           cache-key-prefix: ${{ matrix.arch == 'arm64' && 'windows-clangarm64' || 'windows-clang22' }}
           build-script: scripts/mrbind/install_mrbind_windows_msys2.bat
           extra-cache-key: ${{ hashFiles(format('scripts/mrbind/msys2_package_hashes{0}.txt', env.MSYS2_PKGS)) }}
@@ -222,34 +224,11 @@ jobs:
       # Both build systems wait here rather than before the Build step, so the main build
       # overlaps with generate-c-bindings: MeshLib.sln carries neither the C nor the C#
       # bindings projects, and the CMake build configures its C bindings out until now.
-      - name: Wait for C bindings
+      - name: Get C bindings
         if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
-        uses: ./.github/actions/wait-for-job
+        uses: ./.github/actions/get-c-bindings
         with:
-          job-name: generate-c-bindings
-
-      - name: Download C bindings
-        if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
-        uses: actions/download-artifact@v8
-        with:
-          name: CBindings
-          path: MeshLib/CbindingsTmp
-
-      - name: Prepare C bindings folders
-        if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
-        run: |
-          rm -r -force source/MeshLibC2
-          move MeshLib/CbindingsTmp/MeshLibC2 source
-          if ( $env:CUDA_VERSION ) {
-            rm -r -force source/MeshLibC2Cuda
-            move MeshLib/CbindingsTmp/MeshLibC2Cuda source
-          } else {
-            # No Cuda toolkit, so MRCuda is not built and the generated Cuda bindings cannot
-            # link. Keep this project's CMakeLists and stub its sources, as macOS does; see
-            # scripts/mrbind/cuda_placeholder_generated_c/README.md
-            cp -R scripts/mrbind/cuda_placeholder_generated_c/include source/MeshLibC2Cuda
-            cp -R scripts/mrbind/cuda_placeholder_generated_c/src source/MeshLibC2Cuda
-          }
+          cuda: ${{ env.CUDA_VERSION != '' }}
 
         # This consumes the JSON created by generating the C bindings.
       - name: Generate C# bindings

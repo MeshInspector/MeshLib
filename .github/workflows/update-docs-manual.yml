@@ -84,34 +84,11 @@ jobs:
 
       # The Python and C# bindings are generated from `source/MeshLibC2/temp/interop_desc.json`, which the C
       # generator writes and the `CBindings` artifact carries, so the C bindings have to be
-      # unpacked here first. Same steps as build-test-ubuntu.yml and pip-build.yml.
-      - name: Wait for C bindings
-        uses: ./.github/actions/wait-for-job
+      # unpacked here first.
+      - name: Get and build C bindings
+        uses: ./.github/actions/get-c-bindings
         with:
-          job-name: generate-c-bindings
-
-      - name: Download C bindings
-        uses: actions/download-artifact@v8
-        with:
-          name: CBindings
-          path: MeshLib/CbindingsTmp
-
-      - name: Prepare C bindings folders
-        run: |
-          rm -rf source/MeshLibC2 source/MeshLibC2Cuda
-          mv MeshLib/CbindingsTmp/MeshLibC2 source
-          mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
-
-      # The artifact has only the generated sources, and the Python modules (imported by the stubs step) link the built library.
-      # Without MRCuda, `MeshLibC2Cuda` is built from the stubs, see build-test-ubuntu.yml.
-      - name: Build C bindings
-        run: |
-          if [ ! -e build/${{ env.CONFIG }}/bin/libMRCuda.so ]; then
-            rm -rf source/MeshLibC2Cuda/{include,src}
-            cp -r scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
-          fi
-          cmake -S . -B build/${{ env.CONFIG }} -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON
-          cmake --build build/${{ env.CONFIG }} -j $(nproc) --target MeshLibC2 MeshLibC2Cuda
+          build-dir: build/${{ env.CONFIG }}
 
       - name: Generate and build MRBind bindings
         env:

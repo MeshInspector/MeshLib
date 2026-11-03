@@ -227,34 +227,15 @@ jobs:
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DMRVOXELS_UNITY_BUILD=ON
 
-      - name: Wait for C bindings
+      - name: Get and build C bindings
         if: ${{ inputs.mrbind_c }}
-        uses: ./.github/actions/wait-for-job
-        with:
-          job-name: generate-c-bindings
-
-      - name: Download C bindings
-        if: ${{ inputs.mrbind_c }}
-        uses: actions/download-artifact@v8
-        with:
-          name: CBindings
-          path: MeshLib/CbindingsTmp
-
-      - name: Prepare C bindings folders
-        if: ${{ inputs.mrbind_c }}
-        run: |
-          rm -rf source/MeshLibC2
-          mv MeshLib/CbindingsTmp/MeshLibC2 source
-          # Cuda placeholders:
-          cp -R scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
-
-      - name: Build C bindings
-        if: ${{ inputs.mrbind_c }}
+        uses: ./.github/actions/get-c-bindings
         env:
           MR_VERSION: ${{ inputs.app_version }}
-        run: |
-          cmake -S . -B build/${{ matrix.config }} -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON
-          cmake --build build/${{ matrix.config }} -j $(sysctl -n hw.logicalcpu) --target MeshLibC2 MeshLibC2Cuda MRTestC2
+        with:
+          cuda: 'false'
+          build-dir: build/${{ matrix.config }}
+          targets: MeshLibC2 MeshLibC2Cuda MRTestC2
 
       - name: MRMesh Exported Symbols
         run: |

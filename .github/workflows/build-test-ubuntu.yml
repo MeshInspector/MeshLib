@@ -143,41 +143,15 @@ jobs:
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=OFF
             -DMRVIEWER_NO_XDG_DESKTOP_PORTAL=ON
 
-      - name: Wait for C bindings
+      - name: Get and build C bindings
         if: ${{ inputs.mrbind_c }}
-        uses: ./.github/actions/wait-for-job
-        with:
-          job-name: generate-c-bindings
-
-      - name: Download C bindings
-        if: ${{ inputs.mrbind_c }}
-        uses: actions/download-artifact@v8
-        with:
-          name: CBindings
-          path: MeshLib/CbindingsTmp
-
-      - name: Prepare C bindings folders
-        if: ${{ inputs.mrbind_c }}
-        shell: bash
-        env:
-          BUILD_MRCUDA: ${{ matrix.build_mrcuda }}
-        run: |
-          rm -rf source/MeshLibC2
-          mv MeshLib/CbindingsTmp/MeshLibC2 source
-          if [[ "${BUILD_MRCUDA}" == ON ]]; then
-            rm -rf source/MeshLibC2Cuda
-            mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
-          else
-            cp -r scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
-          fi
-
-      - name: Build C bindings
-        if: ${{ inputs.mrbind_c }}
+        uses: ./.github/actions/get-c-bindings
         env:
           MR_VERSION: ${{ inputs.app_version }}
-        run: |
-          cmake -S . -B build/${{ matrix.config }} -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON
-          cmake --build build/${{ matrix.config }} -j $(nproc) --target MeshLibC2 MeshLibC2Cuda MRTestC2
+        with:
+          cuda: ${{ matrix.build_mrcuda == 'ON' }}
+          build-dir: build/${{ matrix.config }}
+          targets: MeshLibC2 MeshLibC2Cuda MRTestC2
 
       - name: PCH size (diagnostic)
         run: find ./build/${{ matrix.config }} -name 'cmake_pch.hxx.gch' -exec ls -lh {} +

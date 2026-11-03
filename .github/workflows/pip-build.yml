@@ -314,29 +314,10 @@ jobs:
             -DCMAKE_CXX_FLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }}
 
       # The Python modules are generated from the C bindings and link them.
-      - name: Wait for C bindings
-        uses: ./.github/actions/wait-for-job
+      - name: Get and build C bindings
+        uses: ./.github/actions/get-c-bindings
         with:
-          job-name: generate-c-bindings
-
-      - name: Download C bindings
-        uses: actions/download-artifact@v8
-        with:
-          name: CBindings
-          path: MeshLib/CbindingsTmp
-
-      # Without MRCuda, `MeshLibC2Cuda` is built from the stubs, see build-test-ubuntu.yml.
-      - name: Build C bindings
-        run: |
-          rm -rf source/MeshLibC2 source/MeshLibC2Cuda
-          mv MeshLib/CbindingsTmp/MeshLibC2 source
-          mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
-          if [ ! -e build/Release/bin/libMRCuda.so ]; then
-            rm -rf source/MeshLibC2Cuda/{include,src}
-            cp -r scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
-          fi
-          cmake -S . -B build/Release -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON
-          cmake --build build/Release -j $(nproc) --target MeshLibC2 MeshLibC2Cuda
+          build-dir: build/Release
 
       - name: Generate and build MRBind bindings
         # The stub works around libstdc++11's https://gcc.gnu.org/PR108636 (fixed in 11.4, EL8 ships
@@ -594,29 +575,10 @@ jobs:
           xcopy source\TempOutput\bin\* source\${{ matrix.platform }}\Release\* /s /e /i /Y || exit /b 1
 
       # The Python modules are generated from the C bindings and link them.
-      - name: Wait for C bindings
-        uses: ./.github/actions/wait-for-job
+      - name: Get C bindings
+        uses: ./.github/actions/get-c-bindings
         with:
-          job-name: generate-c-bindings
-
-      - name: Download C bindings
-        uses: actions/download-artifact@v8
-        with:
-          name: CBindings
-          path: MeshLib/CbindingsTmp
-
-      # Without MRCuda, `MeshLibC2Cuda` is built from the stubs, see build-test-windows.yml.
-      - name: Prepare C bindings folders
-        run: |
-          rm -r -force source/MeshLibC2
-          move MeshLib/CbindingsTmp/MeshLibC2 source
-          if ( "${{ matrix.cuda-version }}" ) {
-            rm -r -force source/MeshLibC2Cuda
-            move MeshLib/CbindingsTmp/MeshLibC2Cuda source
-          } else {
-            cp -R scripts/mrbind/cuda_placeholder_generated_c/include source/MeshLibC2Cuda
-            cp -R scripts/mrbind/cuda_placeholder_generated_c/src source/MeshLibC2Cuda
-          }
+          cuda: ${{ matrix.cuda-version != '' }}
 
       - name: Build C bindings
         shell: cmd
@@ -804,24 +766,11 @@ jobs:
           CMAKE_C_COMPILER: /usr/bin/clang
 
       # The Python modules are generated from the C bindings and link them.
-      - name: Wait for C bindings
-        uses: ./.github/actions/wait-for-job
+      - name: Get and build C bindings
+        uses: ./.github/actions/get-c-bindings
         with:
-          job-name: generate-c-bindings
-
-      - name: Download C bindings
-        uses: actions/download-artifact@v8
-        with:
-          name: CBindings
-          path: MeshLib/CbindingsTmp
-
-      - name: Build C bindings
-        run: |
-          rm -rf source/MeshLibC2 source/MeshLibC2Cuda/{include,src}
-          mv MeshLib/CbindingsTmp/MeshLibC2 source
-          cp -r scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
-          cmake -S . -B build/Release -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON
-          cmake --build build/Release -j $(sysctl -n hw.logicalcpu) --target MeshLibC2 MeshLibC2Cuda
+          cuda: 'false'
+          build-dir: build/Release
 
       - name: Generate and build MRBind bindings
         env:

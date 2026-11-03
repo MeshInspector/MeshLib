@@ -166,17 +166,12 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
     MR_TIMER;
     auto& topology = mesh.topology;
 
-    int intersectedEdges = 0;
-    for ( const auto& in : contours.intersections )
-        if ( in.isEdge() )
-            ++intersectedEdges;
     reserveForCut( mesh, mesh, contours );
 
     PreCutResult res;
     res.paths.resize( contours.size() );
     res.oldEdgesInfo.resize( contours.intersections.size() );
     res.offsets = &contours.offsets;
-    res.edgeInters.reserve( intersectedEdges );
     const auto oldEdgesSize = topology.edgeSize();
 
     // find the old face of every path edge before the topology changes, on this thread, which then has the records of the cut edges
@@ -302,17 +297,65 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
         topology.splice( x, e );
     };
 
+    // the new vertices, intersections on old edges and new path edges before each block of intersections
+    constexpr int blockSize = 4096;
+    const int numBlocks = ( int( inters.size() ) + blockSize - 1 ) / blockSize;
+    struct Counts { int verts = 0, edgeInters = 0, pathEdges = 0; };
+    std::vector<Counts> blockStarts( numBlocks + 1 );
+    // calls f( c, i ) for each intersection i of contour c in block b
+    auto forBlock = [&] ( int b, auto&& f )
+    {
+        const int k0 = b * blockSize;
+        const int k1 = std::min( k0 + blockSize, int( inters.size() ) );
+        int c = int( std::upper_bound( contours.offsets.begin(), contours.offsets.end(), k0 ) - contours.offsets.begin() ) - 1;
+        for ( int k = k0; k < k1; ++k )
+        {
+            while ( k >= contours.offsets[c + 1] )
+                ++c;
+            f( c, k - contours.offsets[c] );
+        }
+    };
+    auto hasNewVert = [] ( const OneMeshContourView& contour, int i )
+    {
+        const auto n = contour.intersections.size();
+        return n >= 2 && !contour.intersections[i].vert() && !( contour.closed && i + 1 == n );
+    };
+    ParallelFor( 0, numBlocks, [&] ( int b )
+    {
+        auto& n = blockStarts[b + 1];
+        forBlock( b, [&] ( int c, int i )
+        {
+            const auto contour = contours[c];
+            if ( hasNewVert( contour, i ) )
+            {
+                ++n.verts;
+                if ( contour.intersections[i].edge() )
+                    ++n.edgeInters;
+            }
+            if ( i + 1 < contour.intersections.size() && isNewPathEdge( contour, i ) )
+                ++n.pathEdges;
+        } );
+    } );
+    for ( int b = 0; b < numBlocks; ++b )
+    {
+        blockStarts[b + 1].verts += blockStarts[b].verts;
+        blockStarts[b + 1].edgeInters += blockStarts[b].edgeInters;
+        blockStarts[b + 1].pathEdges += blockStarts[b].pathEdges;
+    }
+    // the new path edges and vertices of all contours at once, in the order makeEdge() and addVertId() would make them
+    auto newEdge = topology.makeEdges( blockStarts.back().pathEdges );
+    const VertId firstNewVert( topology.vertSize() );
+    auto newVert = firstNewVert;
+    topology.vertResize( topology.vertSize() + blockStarts.back().verts );
+    if ( mesh.points.size() < topology.vertSize() )
+        mesh.points.resizeNoInit( topology.vertSize() );
+    res.edgeInters.resize( blockStarts.back().edgeInters );
+
     for ( int contourId = 0; contourId < contours.size(); ++contourId )
     {
         const auto& inContour = contours[contourId].intersections;
         if ( inContour.size() < 2 )
             continue;
-        // the new path edges of the contour at once, taken in the order makeEdge() would make them
-        int newPathEdges = 0;
-        for ( int i = 0; i + 1 < inContour.size(); ++i )
-            if ( isNewPathEdge( contours[contourId], i ) )
-                ++newPathEdges;
-        auto newEdge = topology.makeEdges( newPathEdges );
         const auto* faces = res.oldEdgesInfo.data() + contours.offsets[contourId];
         auto& path = res.paths[contourId];
         path.resize( inContour.size() - 1 );
@@ -355,8 +398,7 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
                 topology.splice( in, path.front() );
                 continue;
             }
-            const auto newVertId = topology.addVertId();
-            mesh.points.autoResizeAt( newVertId ) = inter.coordinate;
+            const auto newVertId = newVert++;
             if ( out )
             {
                 topology.setOrg( out, newVertId );
@@ -365,14 +407,31 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
             }
             else
                 topology.setOrg( in, newVertId );
-            if ( const auto e = inter.edge() )
-                res.edgeInters.push_back( EdgeIntersectionData{
-                    .oldEdge = e.undirected(),
-                    .interOnEdge = IntersectionData{ContourId( contourId ),IntersectionId( i )},
-                    .newVert = newVertId,
-                    .orgEdgeInLeftTri = out } );
         }
     }
+    assert( newVert == firstNewVert + blockStarts.back().verts );
+
+    // the coordinates of the new vertices and the intersections on old edges, by the counts and paths above
+    ParallelFor( 0, numBlocks, [&] ( int b )
+    {
+        auto v = firstNewVert + blockStarts[b].verts;
+        auto j = blockStarts[b].edgeInters;
+        forBlock( b, [&] ( int c, int i )
+        {
+            const auto contour = contours[c];
+            if ( !hasNewVert( contour, i ) )
+                return;
+            const auto& inter = contour.intersections[i];
+            mesh.points[v] = inter.coordinate;
+            if ( const auto e = inter.edge() )
+                res.edgeInters[j++] = EdgeIntersectionData{
+                    .oldEdge = e.undirected(),
+                    .interOnEdge = IntersectionData{ContourId( c ),IntersectionId( i )},
+                    .newVert = v,
+                    .orgEdgeInLeftTri = i + 1 < contour.intersections.size() ? res.paths[c][i] : EdgeId{} };
+            ++v;
+        } );
+    } );
 
     // group the intersections by edge, each group in the order along the edge
     tbb::parallel_sort( res.edgeInters.begin(), res.edgeInters.end(), [&] ( const auto& a, const auto& b )

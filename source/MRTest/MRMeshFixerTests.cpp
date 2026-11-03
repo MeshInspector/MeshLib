@@ -1,5 +1,6 @@
 #include <MRMesh/MRMeshFixer.h>
 #include <MRMesh/MRMesh.h>
+#include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRObjectMeshData.h>
 #include <MRMesh/MRMeshSubdivide.h>
 #include <MRMesh/MRMeshBoolean.h>
@@ -311,6 +312,28 @@ TEST( MRMesh, FixMeshDataDegeneracies )
             EXPECT_LT( distToBorder( data.mesh->destPnt( ue ) ), 1e-2f );
         }
     }
+}
+
+// two triangles with the same vertices glued along all three edges (a pillow) are eliminated with all their edges and vertices,
+// only if asked
+TEST( MRMesh, EliminateDoubleTrisPillow )
+{
+    auto t = MeshBuilder::fromTriangles( { { 0_v, 1_v, 2_v }, { 0_v, 2_v, 1_v } } );
+    FaceBitSet region = t.getValidFaces();
+    for ( auto e : leftRing( t, 0_f ) )
+    {
+        EXPECT_TRUE( isEdgeBetweenDoubleTris( t, e ) );
+        EXPECT_FALSE( eliminateDoubleTris( t, e, &region ) );
+    }
+    EXPECT_EQ( t.numValidFaces(), 2 );
+
+    const auto e = t.edgeWithLeft( 0_f );
+    EXPECT_EQ( eliminateDoubleTris( t, e, &region, true ), e );
+    EXPECT_EQ( t.numValidFaces(), 0 );
+    EXPECT_EQ( t.numValidVerts(), 0 );
+    EXPECT_EQ( t.computeNotLoneUndirectedEdges(), 0 );
+    EXPECT_TRUE( region.none() );
+    EXPECT_TRUE( t.checkValidity() );
 }
 
 } //namespace MR

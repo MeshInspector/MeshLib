@@ -97,11 +97,12 @@ case $MODULE in
         ;;
     mrcudapy)
         # Only the Cuda headers, with the classes of `mrmeshpy`.
-        GEN_FLAGS+=(--ignore-c-file '^(?!MRCCuda/)' --depends-on meshlib.mrmeshpy)
+        # `mrmeshpy` doesn't have the viewer's classes either.
+        GEN_FLAGS+=(--ignore-c-file '^(?!MRCCuda/)' --depends-on meshlib.mrmeshpy --ignore-for-python '\bMR::PythonViewer::')
         ;;
     mrviewerpy)
         # The calls wait for the GUI thread, which can call back into Python.
-        GEN_FLAGS+=(--ignore-c-file '^(?!MRCPythonViewer/)' --depends-on meshlib.mrmeshpy --release-gil --extra-python "$(native "$SCRIPT_DIR/mrviewerpy_helpers.py")")
+        GEN_FLAGS+=(--ignore-c-file '^(?!MRCPythonViewer/)' --depends-on meshlib.mrmeshpy --ignore-for-python '\bMR::Cuda::' --release-gil --extra-python "$(native "$SCRIPT_DIR/mrviewerpy_helpers.py")")
         ;;
     *)
         echo "Unknown module: $MODULE" >&2

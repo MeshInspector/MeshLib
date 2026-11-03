@@ -118,6 +118,7 @@ def strip_libraries():
         return
     libs = [
         *LIB_DIR.glob("libMR*.so"),
+        *LIB_DIR.glob("libMeshLibC2*.so"),
         *LIB_DIR.glob("libpybind11nonlimitedapi_stubs.so"),
         *WHEEL_SRC_DIR.glob("*.so"),
     ]

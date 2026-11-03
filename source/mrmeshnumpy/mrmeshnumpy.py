@@ -106,7 +106,8 @@ def _bools(bitset, size):
     return bits
 
 
-_Blocks = type(_mr.BitSet().bits())
+# `bits()` returns a const reference, of the `Const...` class: the mutable class is its subclass.
+_Blocks = next(c for c in type(_mr.BitSet().bits()).__subclasses__() if c.__module__ == _mr.__name__)
 
 
 def _bitset_from_bools(cls, bools):
@@ -272,7 +273,7 @@ returns numpy array shapes [num coords,3] which represents coordinates from give
 
 returns numpy array shapes [num coords,3] which represents coordinates from given vector
 """
-    if not isinstance(coords, (_mr.VertCoords, _mr.FaceNormals, _mr.Contour3f)):
+    if not isinstance(coords, (_mr.ConstVertCoords, _mr.ConstFaceNormals, _mr.ConstContour3f)):
         raise TypeError("toNumpyArray(): incompatible function arguments")
     return _copied(_view(coords, '<f4', (coords.size(), 3)))
 

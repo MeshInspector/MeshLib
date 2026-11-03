@@ -1,3 +1,4 @@
+import ctypes
 import json
 import math
 import multiprocessing
@@ -7,6 +8,21 @@ import re
 import shutil
 import subprocess
 
+# PERFORMANCE_INFORMATION from psapi.h, sizes in pages; read directly because
+# each powershell start costs ~25 s on the Windows arm64 hosted runner
+class WindowsPerformanceInfo(ctypes.Structure):
+    _fields_ = [('cb', ctypes.c_uint32)] + [(name, ctypes.c_size_t) for name in (
+        'CommitTotal', 'CommitLimit', 'CommitPeak', 'PhysicalTotal', 'PhysicalAvailable',
+        'SystemCache', 'KernelTotal', 'KernelPaged', 'KernelNonpaged', 'PageSize')] + [
+        (name, ctypes.c_uint32) for name in ('HandleCount', 'ProcessCount', 'ThreadCount')]
+
+def get_windows_performance_info():
+    info = WindowsPerformanceInfo()
+    info.cb = ctypes.sizeof(info)
+    if not ctypes.windll.psapi.GetPerformanceInfo(ctypes.byref(info), info.cb):
+        raise ctypes.WinError()
+    return info
+
 def get_ram_amount():
     system = platform.system()
     if system == "Darwin":
@@ -15,9 +31,8 @@ def get_ram_amount():
     elif system == "Linux":
         return os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES')
     elif system == "Windows":
-        ps_command = "(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory"
-        output = subprocess.check_output(['powershell', '-Command', ps_command], text=True)
-        return int(output.strip())
+        info = get_windows_performance_info()
+        return info.PhysicalTotal * info.PageSize
     else:
         raise RuntimeError(f"Unknown system: {system}")
 
@@ -129,9 +144,9 @@ def get_cpu_model():
             return get_arm_cpu_model()
         return None
     elif system == "Windows":
-        ps_command = "(Get-CimInstance Win32_Processor).Name"
-        output = subprocess.check_output(['powershell', '-Command', ps_command], text=True)
-        return output.strip().splitlines()[0]
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"HARDWARE\DESCRIPTION\System\CentralProcessor\0") as key:
+            return winreg.QueryValueEx(key, "ProcessorNameString")[0].strip()
     else:
         raise RuntimeError(f"Unknown system: {system}")
 
@@ -152,11 +167,8 @@ def get_memory_stats():
         wired = sum(meminfo.get(k, 0) for k in ('SUnreclaim', 'KernelStack', 'PageTables', 'Unevictable'))
         return meminfo.get('MemAvailable', meminfo['MemFree']) * 1024, wired * 1024
     elif system == "Windows":
-        ps_command = ("$m = Get-CimInstance Win32_PerfRawData_PerfOS_Memory; "
-                      "'{0} {1}' -f $m.AvailableBytes, $m.PoolNonpagedBytes")
-        output = subprocess.check_output(['powershell', '-Command', ps_command], text=True)
-        available, wired = output.split()
-        return int(available), int(wired)
+        info = get_windows_performance_info()
+        return info.PhysicalAvailable * info.PageSize, info.KernelNonpaged * info.PageSize
     else:
         raise RuntimeError(f"Unknown system: {system}")
 

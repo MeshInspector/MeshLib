@@ -47,6 +47,7 @@ struct IntersectionData
 
 struct EdgeIntersectionData
 {
+    UndirectedEdgeId oldEdge; // the edge of the old mesh with this intersection
     IntersectionData interOnEdge;
     VertId newVert;
     EdgeId orgEdgeInLeftTri;
@@ -65,8 +66,7 @@ struct PathsEdgeIndex
 using PathsOldFaces = Vector<PathsEdgeIndex>; // path edge i of contour c at the index of its intersection i in the contours
 struct PreCutResult
 {
-    Vector<EdgeIntersectionData> edgeInters; // grouped by old edge, the intersections on edge i are [edgeOffsets[i], edgeOffsets[i + 1])
-    Vector<int> edgeOffsets;
+    Vector<EdgeIntersectionData> edgeInters; // sorted by old edge, then along it
     std::vector<EdgePath> paths;
     PathsOldFaces oldEdgesInfo;
     const Vector<int>* offsets = nullptr; // of the contours, or of pathOffsets once insertPieces makes paths longer
@@ -176,8 +176,7 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
     res.paths.resize( contours.size() );
     res.oldEdgesInfo.resize( contours.intersections.size() );
     res.offsets = &contours.offsets;
-    Vector<std::pair<UndirectedEdgeId, EdgeIntersectionData>> onEdges; // the intersections on old edges
-    onEdges.reserve( intersectedEdges );
+    res.edgeInters.reserve( intersectedEdges );
     const auto oldEdgesSize = topology.edgeSize();
 
     // find the old face of every path edge before the topology changes, on this thread, which then has the records of the cut edges
@@ -367,28 +366,21 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
             else
                 topology.setOrg( in, newVertId );
             if ( const auto e = inter.edge() )
-                onEdges.push_back( { e.undirected(), EdgeIntersectionData{
+                res.edgeInters.push_back( EdgeIntersectionData{
+                    .oldEdge = e.undirected(),
                     .interOnEdge = IntersectionData{ContourId( contourId ),IntersectionId( i )},
                     .newVert = newVertId,
-                    .orgEdgeInLeftTri = out } } );
+                    .orgEdgeInLeftTri = out } );
         }
     }
 
     // group the intersections by edge, each group in the order along the edge
-    tbb::parallel_sort( onEdges.begin(), onEdges.end(), [&] ( const auto& a, const auto& b )
+    tbb::parallel_sort( res.edgeInters.begin(), res.edgeInters.end(), [&] ( const auto& a, const auto& b )
     {
-        if ( a.first != b.first )
-            return a.first < b.first;
-        return lessAlongEdge( mesh, sortData, EdgeId( a.first ), a.second, b.second );
+        if ( a.oldEdge != b.oldEdge )
+            return a.oldEdge < b.oldEdge;
+        return lessAlongEdge( mesh, sortData, EdgeId( a.oldEdge ), a, b );
     } );
-    res.edgeInters.resize( onEdges.size() );
-    for ( size_t k = 0; k < onEdges.size(); ++k )
-    {
-        if ( k == 0 || onEdges[k].first != onEdges[k - 1].first )
-            res.edgeOffsets.push_back( int( k ) );
-        res.edgeInters[k] = onEdges[k].second;
-    }
-    res.edgeOffsets.push_back( int( onEdges.size() ) );
     return res;
 }
 
@@ -1128,10 +1120,9 @@ void connectEdges( MeshTopology& topology, EdgeId botEdge, EdgeId topEdge, EdgeI
 }
 
 // the edge to cut, in the direction doPreCutMesh sorted its intersections along
-EdgeId baseEdgeOf( const EdgeData& edgeData, const OneMeshContours& contours )
+EdgeId baseEdgeOf( const EdgeData& edgeData )
 {
-    const auto& intInfo = edgeData.front().interOnEdge;
-    return EdgeId( contours.intersection( intInfo.contourId, intInfo.intersectionId ).edge().undirected() );
+    return EdgeId( edgeData.front().oldEdge );
 }
 
 // the path edges at the new vertex of i-th intersection on the left and on the right of baseEdge
@@ -1221,7 +1212,7 @@ void cutOneEdge( Mesh& mesh,
                  FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
 {
     assert( !edgeData.empty() );
-    const EdgeId baseEdge = baseEdgeOf( edgeData, contours );
+    const EdgeId baseEdge = baseEdgeOf( edgeData );
 
     // will need this to restore lost face on first or last intersection (only for open contours)
     FaceId oldLeft = mesh.topology.left( baseEdge );
@@ -1244,10 +1235,15 @@ void cutEdgesIntoPieces( Mesh& mesh, PreCutResult& preRes, const OneMeshContours
                          FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
 {
     MR_TIMER;
-    const auto& offsets = preRes.edgeOffsets;
-    for ( size_t i = 0; i + 1 < offsets.size(); ++i )
-        cutOneEdge( mesh, EdgeData( preRes.edgeInters.data() + offsets[i], size_t( offsets[i + 1] - offsets[i] ) ),
-            contours, new2OldMap, new2OldEdgeMap );
+    auto& inters = preRes.edgeInters;
+    for ( size_t b = 0; b < inters.size(); )
+    {
+        auto e = b + 1;
+        while ( e < inters.size() && inters[e].oldEdge == inters[b].oldEdge )
+            ++e;
+        cutOneEdge( mesh, EdgeData( inters.data() + b, e - b ), contours, new2OldMap, new2OldEdgeMap );
+        b = e;
+    }
 }
 
 void prepareFacesMap( const MeshTopology& topology, FaceMap& new2OldMap )

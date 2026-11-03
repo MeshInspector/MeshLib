@@ -4,7 +4,8 @@
 project(MeshLibC2PythonViewer CXX)
 
 IF(MSVC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4244 /wd4297 /wd4305 /wd4804")
+  # Also C4355 and C5204, from the PPL headers that `<future>` includes in older MSVC (no PCH here to hide them).
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4244 /wd4297 /wd4305 /wd4804 /wd4355 /wd5204")
   string(REPLACE "/EHsc" "/EHs" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 ELSE()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-int-in-bool-context")

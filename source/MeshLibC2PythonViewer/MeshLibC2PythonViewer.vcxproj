@@ -44,7 +44,11 @@
        wildcards into explicit file lists. -->
   <ItemGroup>
     <ClCompile Include="src\**\*.cpp" />
-    <ClCompile Include="..\MRPythonViewer\*.cpp" />
+    <!-- Not with the generated sources of the same names: their own object directory, and outside of the unity files. -->
+    <ClCompile Include="..\MRPythonViewer\*.cpp">
+      <ObjectFileName>$(IntDir)MRPythonViewer\</ObjectFileName>
+      <IncludeInUnityFile>false</IncludeInUnityFile>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\**\*.h" />

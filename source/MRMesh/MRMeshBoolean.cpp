@@ -234,7 +234,8 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
     auto intersections = findSelfCollidingEdgeTrisPrecise( mesh, converters.toInt );
     // two triangles with the same vertices glued along two edges (at a vertex of degree 2) or all three edges (a pillow) are a part without
     // volume, whose crossings with other parts are alike for both triangles, so that no cut tells them apart: such parts are eliminated
-    // with their intersections
+    // with their intersections, in one pass (where eliminating a pair makes its neighbours a pair, as in a stack of fins, and their
+    // intersections came earlier, the new pair stays)
     for ( const auto& x : intersections )
         for ( auto f : { x.tri, mesh.topology.left( x.edge ) } )
             if ( f && mesh.topology.hasFace( f ) )
@@ -383,6 +384,7 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
         if ( changes[f].dropped )
             continue;
         const auto& path = cutRes.resultCut[f];
+        assert( isEdgeLoop( mesh.topology, path ) ); // until the cuts below split the crossings that it shares with other paths
         const auto n = path.size();
         bool aligned = false;
         if ( contours[s].empty() )

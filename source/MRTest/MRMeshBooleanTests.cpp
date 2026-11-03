@@ -489,7 +489,7 @@ TEST( MRMesh, SelfBooleanNestedIntersections )
 }
 
 // three overlapping spheres in one mesh, whose surfaces meet at two triple points, where their contours cross: the outer component
-// of the result bounds the union of the spheres, and every component bounds a region of positive volume
+// of the result bounds the union of the spheres, and every component bounds a region of positive volume without crossing itself
 TEST( MRMesh, SelfBooleanThreeSpheres )
 {
     auto sphere = [] ( const Vector3f& center )
@@ -514,6 +514,7 @@ TEST( MRMesh, SelfBooleanThreeSpheres )
     double maxVolume = 0;
     for ( const auto& component : MeshComponents::getAllComponents( *res ) )
     {
+        EXPECT_TRUE( findSelfCollidingTriangles( { *res, &component } )->empty() );
         const double volume = res->volume( &component );
         EXPECT_GT( volume, 0 );
         maxVolume = std::max( maxVolume, volume );

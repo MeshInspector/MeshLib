@@ -372,13 +372,14 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
     {
         // a bad face is filled well only where the cut split the crossings in it (the faces around such a crossing come from that face),
         // and all the faces made from it are triangles: where its monotone split failed, the planar fill can leave a face that is no
-        // triangle; only the new faces can be such, as the old ones keep their sides
+        // triangle (only the new faces can be such, as the old ones keep their sides), or the face is put back whole with its old id
+        // next to the fills of its islands
         FaceBitSet split;
         for ( auto v : crossings )
             for ( auto e : orgRing( mesh.topology, v ) )
                 if ( const auto f = mesh.topology.left( e ) )
                     split.autoResizeSet( new2Old[f] );
-        auto bad = cutRes.fbsWithContourIntersections - split;
+        auto bad = cutRes.fbsWithContourIntersections - ( split - mesh.topology.getValidFaces() );
         for ( auto f = firstNewFace; f < mesh.topology.faceSize(); ++f )
             if ( cutRes.fbsWithContourIntersections.test( new2Old[f] ) && !mesh.topology.isLeftTri( mesh.topology.edgeWithLeft( f ) ) )
                 bad.set( new2Old[f] );

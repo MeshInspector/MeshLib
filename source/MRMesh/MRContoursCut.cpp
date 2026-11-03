@@ -66,8 +66,7 @@ struct PathsEdgeIndex
 using PathsOldFaces = Vector<PathsEdgeIndex>; // path edge i of contour c at the index of its intersection i in the contours
 struct PreCutResult
 {
-    Vector<EdgeIntersectionData> edgeInters; // sorted by old edge, the intersections on i-th one are [edgeOffsets[i], edgeOffsets[i + 1])
-    Vector<int> edgeOffsets;
+    Vector<EdgeIntersectionData> edgeInters; // sorted by old edge, then along it
     std::vector<EdgePath> paths;
     PathsOldFaces oldEdgesInfo;
     const Vector<int>* offsets = nullptr; // of the contours, or of pathOffsets once insertPieces makes paths longer
@@ -376,17 +375,12 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
     }
 
     // group the intersections by edge, each group in the order along the edge
-    auto& edgeInters = res.edgeInters;
-    tbb::parallel_sort( edgeInters.begin(), edgeInters.end(), [&] ( const auto& a, const auto& b )
+    tbb::parallel_sort( res.edgeInters.begin(), res.edgeInters.end(), [&] ( const auto& a, const auto& b )
     {
         if ( a.oldEdge != b.oldEdge )
             return a.oldEdge < b.oldEdge;
         return lessAlongEdge( mesh, sortData, EdgeId( a.oldEdge ), a, b );
     } );
-    for ( size_t k = 0; k < edgeInters.size(); ++k )
-        if ( k == 0 || edgeInters[k].oldEdge != edgeInters[k - 1].oldEdge )
-            res.edgeOffsets.push_back( int( k ) );
-    res.edgeOffsets.push_back( int( edgeInters.size() ) );
     return res;
 }
 
@@ -1241,10 +1235,15 @@ void cutEdgesIntoPieces( Mesh& mesh, PreCutResult& preRes, const OneMeshContours
                          FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
 {
     MR_TIMER;
-    const auto& offsets = preRes.edgeOffsets;
-    for ( size_t i = 0; i + 1 < offsets.size(); ++i )
-        cutOneEdge( mesh, EdgeData( preRes.edgeInters.data() + offsets[i], size_t( offsets[i + 1] - offsets[i] ) ),
-            contours, new2OldMap, new2OldEdgeMap );
+    auto& inters = preRes.edgeInters;
+    for ( size_t b = 0; b < inters.size(); )
+    {
+        auto e = b + 1;
+        while ( e < inters.size() && inters[e].oldEdge == inters[b].oldEdge )
+            ++e;
+        cutOneEdge( mesh, EdgeData( inters.data() + b, e - b ), contours, new2OldMap, new2OldEdgeMap );
+        b = e;
+    }
 }
 
 void prepareFacesMap( const MeshTopology& topology, FaceMap& new2OldMap )

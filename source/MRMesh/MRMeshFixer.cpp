@@ -724,13 +724,27 @@ bool isEdgeBetweenDoubleTris( const MeshTopology& topology, EdgeId e )
         topology.isLeftTri( e ) && topology.isLeftTri( e.sym() );
 }
 
-EdgeId eliminateDoubleTris( MeshTopology& topology, EdgeId e, FaceBitSet * region )
+EdgeId eliminateDoubleTris( MeshTopology& topology, EdgeId e, FaceBitSet * region, bool eliminatePillows )
 {
     const auto ex = topology.next( e.sym() );
     const EdgeId ep = topology.prev( e );
     const EdgeId en = topology.next( e );
-    if ( ex != topology.prev( e.sym() ) || ep == en || !topology.isLeftTri( e ) || !topology.isLeftTri( e.sym() ) )
+    if ( ex != topology.prev( e.sym() ) || !topology.isLeftTri( e ) || !topology.isLeftTri( e.sym() ) )
         return {};
+    if ( ep == en )
+    {
+        // a pillow: both triangles have the same three edges, so nothing of them stays
+        const auto l = topology.left( e ), r = topology.right( e );
+        if ( !eliminatePillows || !l || !r )
+            return {};
+        for ( auto f : { l, r } )
+        {
+            if ( region )
+                region->reset( f );
+            topology.deleteFace( f );
+        }
+        return e;
+    }
     // left( e ) and right( e ) are double triangles
     if ( auto f = topology.left( e ) )
     {

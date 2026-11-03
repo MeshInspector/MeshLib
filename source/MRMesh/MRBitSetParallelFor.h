@@ -65,6 +65,9 @@ MRMESH_API void forAllRanged( const Range & bitRange, FunctionRef<void ( size_t,
 MRMESH_API bool forAllRanged( const Range & bitRange, FunctionRef<void ( size_t, const Range &, void* )> f,
     FunctionRef<void* ()> ctx, const ProgressCallback& progressCb, size_t reportProgressEveryBit = 1024 );
 
+/// calls f( bit, subBitRange ) for every set bit of bs in parallel threads, skipping the blocks without set bits
+MRMESH_API void forSetRanged( const BitSet & bs, FunctionRef<void ( size_t, const Range & )> f );
+
 template <typename BS, typename F, typename ...Cb>
 auto ForAllRanged( const BS & bs, F && f, Cb && ... cb )
 {
@@ -167,7 +170,10 @@ inline auto BitSetParallelForAll( const BS & bs, tbb::enumerable_thread_specific
 template <typename BS, typename F, typename ...Cb>
 inline auto BitSetParallelFor( const BS& bs, F && f, Cb&&... cb )
 {
-    return BitSetParallelForAll( bs, [&] ( auto bit ) { if ( bs.test( bit ) ) std::forward<F>( f )( bit ); }, std::forward<Cb>( cb )... );
+    if constexpr ( sizeof...( cb ) == 0 )
+        return BitSetParallel::forSetRanged( bs, [&] ( size_t i, const BitSetParallel::Range & ) { typename BS::IndexType bit{ i }; std::forward<F>( f )( bit ); } );
+    else
+        return BitSetParallelForAll( bs, [&] ( auto bit ) { if ( bs.test( bit ) ) std::forward<F>( f )( bit ); }, std::forward<Cb>( cb )... );
 }
 
 /// executes given function f for every _set_ bit in IdRange or BitSet (bs) in parallel threads;

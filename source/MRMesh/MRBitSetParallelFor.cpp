@@ -1,6 +1,7 @@
 #include "MRBitSetParallelFor.h"
 
 #include "MRTbbThreadMutex.h"
+#include <bit>
 
 namespace MR::BitSetParallel
 {
@@ -74,6 +75,27 @@ void forAllRanged( const Range & bitRange, FunctionRef<void ( size_t, const Rang
         void* ctx_ = ctx();
         for ( auto i = bitSubRange.begin(); i < bitSubRange.end(); ++i )
             f( i, bitSubRange, ctx_ );
+    } );
+}
+
+void forSetRanged( const BitSet & bs, FunctionRef<void ( size_t, const Range & )> f )
+{
+    const Range bitRange( 0, bs.size() );
+    const auto blockRange = toBlockRange( bitRange );
+    const auto & blocks = bs.bits();
+    forBlocks( blockRange, [&] ( const Range & subRange )
+    {
+        const auto bitSubRange = toBitSubRange( bitRange, blockRange, subRange );
+        for ( auto b = subRange.begin(); b < subRange.end(); ++b )
+        {
+            for ( auto bits = blocks[b]; bits; bits &= bits - 1 )
+            {
+                const auto i = b * BitSet::bits_per_block + std::countr_zero( bits );
+                if ( i >= bitSubRange.end() )
+                    break;
+                f( i, bitSubRange );
+            }
+        }
     } );
 }
 

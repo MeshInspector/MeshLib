@@ -1231,16 +1231,16 @@ void cutEdgesIntoPieces( Mesh& mesh, PreCutResult& preRes, const OneMeshContours
         // the contours of a boolean cross every edge they meet, so no face of a cut edge is filled again: all of them are deleted at once
         Timer t( "delete faces of cut edges" );
         FaceBitSet faces( mesh.topology.faceSize() );
-        ParallelFor( inters, [&] ( size_t i )
+        for ( size_t i = 0; i < inters.size(); ++i )
         {
             if ( i > 0 && inters[i - 1].oldEdge == inters[i].oldEdge )
-                return; // the intersections of an edge are together, the first one marks its faces
+                continue; // the intersections of an edge are together, the first one marks its faces
             const EdgeId e( inters[i].oldEdge );
             if ( auto f = mesh.topology.left( e ) )
-                faces.atomicTestSet( f );
+                faces.set( f );
             if ( auto f = mesh.topology.right( e ) )
-                faces.atomicTestSet( f );
-        } );
+                faces.set( f );
+        }
         mesh.topology.deleteFacesKeepEdges( faces );
     }
     // the faces that no contour enters are filled after all edges are cut: if another side of such a face is cut too,

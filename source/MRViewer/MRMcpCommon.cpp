@@ -41,35 +41,36 @@ std::runtime_error busyError( std::string_view what )
 
 void runOnMainThread( const std::function<void()>& func )
 {
-    bool started = false;
     try
     {
-        CommandLoop::runCommandFromGUIThread( [&] { started = true; func(); }, cMainThreadTimeout );
+        CommandLoop::runCommandFromGUIThread( func, cMainThreadTimeout );
     }
-    catch ( const std::runtime_error& e )
+    catch ( const CommandLoop::StartTimeout& e )
     {
-        if ( started ) // an error of `func` itself
-            throw;
         throw busyError( e.what() );
     }
 }
 
-std::string waitFramesAfterInput()
+std::string waitFramesAfterInput( const std::function<void()>& after )
 {
     const auto deadline = std::chrono::steady_clock::now() + cMainThreadTimeout;
-    for ( int i = 0; i < getViewerInstance().forceRedrawMinimumIncrementAfterEvents; ++i )
+    auto run = [&] ( const std::function<void()>& func )
     {
         const auto left = std::chrono::duration_cast<std::chrono::milliseconds>( deadline - std::chrono::steady_clock::now() );
-        try
-        {
-            CommandLoop::runCommandFromGUIThread( [] {}, std::max( left, std::chrono::milliseconds( 0 ) ) );
-        }
-        catch ( const std::runtime_error& )
-        {
-            return fmt::format( "The input was delivered, but MeshInspector's main thread is still busy after {} seconds, "
-                "probably with the action the input started. Poll `ui_progressStatus` until `busy` is false before the next call.",
-                cMainThreadTimeout.count() );
-        }
+        CommandLoop::runCommandFromGUIThread( func, std::max( left, std::chrono::milliseconds( 0 ) ) );
+    };
+    try
+    {
+        for ( int i = 0; i < getViewerInstance().forceRedrawMinimumIncrementAfterEvents; ++i )
+            run( [] {} );
+        if ( after )
+            run( after );
+    }
+    catch ( const CommandLoop::StartTimeout& )
+    {
+        return fmt::format( "The input was delivered, but MeshInspector's main thread is still busy after {} seconds, "
+            "probably with the action the input started. Poll `ui_progressStatus` until `busy` is false before the next call.",
+            cMainThreadTimeout.count() );
     }
     return {};
 }

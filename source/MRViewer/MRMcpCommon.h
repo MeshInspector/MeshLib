@@ -38,9 +38,10 @@ std::runtime_error busyError( std::string_view what );
 // `CommandLoop::runCommandFromGUIThread`, but throws `busyError` if the main thread does not start `func` in time
 void runOnMainThread( const std::function<void()>& func );
 
-// `skipFramesAfterInput` limited to `cMainThreadTimeout` in total;
-// returns a message for the agent if the main thread is still busy after them, likely with the action the input started
-std::string waitFramesAfterInput();
+// `skipFramesAfterInput`, then `after` on the main thread, limited to `cMainThreadTimeout` in total;
+// returns a message for the agent if the main thread is still busy, likely with the action the input started
+// (then `after` did not run); a tool whose input cannot start a long action may ignore it, the next call reports it
+[[nodiscard]] std::string waitFramesAfterInput( const std::function<void()>& after = {} );
 
 // The result of a tool that sends an input: `{}`, or `{busy: <message>}` from `waitFramesAfterInput`
 nlohmann::json inputResult( std::string busy );

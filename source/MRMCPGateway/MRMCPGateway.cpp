@@ -295,8 +295,9 @@ int main( int argc, char** argv )
                 {
                     // a tool result with `isError` rather than a JSON-RPC error: Claude Desktop shows the model
                     // only a generic message for the latter, so it would not learn to call `launch`
-                    const std::string text = std::string( "The backend did not handle the call: " ) + e.what()
-                        + ". If it is not running, start it with the `launch` tool (`status` tells whether it runs).";
+                    std::string text = std::string( "The backend did not handle the call: " ) + e.what();
+                    if ( dynamic_cast<const fastmcpp::TransportError*>( &e ) ) // not an error reply of a running backend
+                        text += ". If it is not running, start it with the `launch` tool (`status` tells whether it runs).";
                     return fastmcpp::Json{
                         { "jsonrpc", "2.0" }, { "id", id },
                         { "result", {

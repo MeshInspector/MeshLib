@@ -79,15 +79,11 @@ static nlohmann::json mcpToolListAllUiEntries( const nlohmann::json& args )
 }
 
 // Drain any TestEngine status messages emitted during a just-dispatched UI action and surface
-// them as a tool error. Run on the GUI thread because TE state isn't thread-safe.
+// them as a tool error. Call on the GUI thread (as `after` of `waitFramesAfterInput`) because TE state isn't thread-safe.
 // Non-static so MRToolsMcp.cpp's `tools_action` handler can reuse it across TUs.
 void surfaceTestEngineStatusMessages()
 {
-    std::vector<std::string> msgs;
-    runOnMainThread( [&]
-    {
-        msgs = UI::TestEngine::consumeStatusMessages();
-    } );
+    const auto msgs = UI::TestEngine::consumeStatusMessages();
     if ( msgs.empty() )
         return;
     std::string joined = msgs.front();
@@ -108,10 +104,7 @@ static nlohmann::json mcpToolPressButton( const nlohmann::json& args )
         if ( !ex->empty() )
             throw std::runtime_error( fmt::format( "pressButton {}: {}", UI::TestEngine::Control::pathToString( path ), *ex ) );
     } );
-    auto busy = waitFramesAfterInput();
-    if ( busy.empty() )
-        surfaceTestEngineStatusMessages();
-    return inputResult( std::move( busy ) );
+    return inputResult( waitFramesAfterInput( surfaceTestEngineStatusMessages ) );
 }
 
 static nlohmann::json mcpToolStageFileDialogPaths( const nlohmann::json& args )
@@ -168,10 +161,7 @@ static nlohmann::json mcpToolWriteValue( const nlohmann::json& args )
         if ( !ex->empty() )
             throw std::runtime_error( fmt::format( "writeValue {}: {}", UI::TestEngine::Control::pathToString( path ), *ex ) );
     } );
-    auto busy = waitFramesAfterInput();
-    if ( busy.empty() )
-        surfaceTestEngineStatusMessages();
-    return inputResult( std::move( busy ) );
+    return inputResult( waitFramesAfterInput( surfaceTestEngineStatusMessages ) );
 }
 
 // Prepended to every path-accepting tool's `desc`. One place defines the vocabulary;
@@ -198,13 +188,14 @@ static std::string withPreamble( std::string_view specific )
 static nlohmann::json mcpToolProgressStatus( const nlohmann::json& )
 {
     nlohmann::json out = nlohmann::json::object();
-    // a short probe: an action that runs in a frame without the progress bar blocks the main thread
+    // a short probe: an action that runs in a frame without the progress bar blocks the main thread;
+    // longer than the 1 s after which CommandLoop re-posts a lost wake-up event on Linux, not to report an idle thread as busy
     bool busy = false;
     try
     {
-        CommandLoop::runCommandFromGUIThread( [] {}, std::chrono::seconds( 1 ) );
+        CommandLoop::runCommandFromGUIThread( [] {}, std::chrono::seconds( 2 ) );
     }
-    catch ( const std::runtime_error& )
+    catch ( const CommandLoop::StartTimeout& )
     {
         busy = true;
     }
@@ -334,7 +325,7 @@ MR_ON_INIT{
         /*desc*/"Snapshot of the global progress bar. Returns `{active: false}` if no long-running operation is in "
                 "flight, else `{active: true, title: string, percent: number}`. `title` is the operation name passed "
                 "to the underlying `ProgressBar::order(...)` (e.g. \"Boolean\", \"Loading\"). `percent` is 0-100. "
-                "`busy` is true if the main thread did not respond within a second, e.g. while it runs an action "
+                "`busy` is true if the main thread did not respond within 2 seconds, e.g. while it runs an action "
                 "without the progress bar; other tools then wait for it or report that MeshInspector is busy. "
                 "Poll this while `ui_*` dispatch is blocked by a `'Progress'` modal or after a tool returned `busy` — "
                 "once `active` and `busy` are both false, the UI is responsive again.",

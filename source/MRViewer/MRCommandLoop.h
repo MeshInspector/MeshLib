@@ -7,6 +7,7 @@
 #include <optional>
 #include <condition_variable>
 #include <mutex>
+#include <stdexcept>
 #include <thread>
 
 namespace MR
@@ -47,9 +48,15 @@ public:
     // call it only where an exception is already the error channel - python bindings and MCP tools -
     // and not from other C++ code, which must be exception-free: use appendCommand there
     // if `startTimeout` is given and the main thread does not start the command within it (e.g. it is busy
-    // with a long computation), the command is dropped without being executed and std::runtime_error is thrown;
+    // with a long computation), the command is dropped without being executed and StartTimeout is thrown;
     // a command that has started is always waited for
     MRVIEWER_API static void runCommandFromGUIThread( CommandFunc func, std::optional<std::chrono::milliseconds> startTimeout = {} );
+
+    // thrown by runCommandFromGUIThread if the main thread did not start the command within `startTimeout`
+    struct StartTimeout : std::runtime_error
+    {
+        using std::runtime_error::runtime_error;
+    };
 
     // Execute all commands from loop
     MRVIEWER_API static void processCommands();
@@ -68,9 +75,9 @@ private:
     static CommandLoop& instance_();
 
     // returns an error, rather than throwing or blocking forever, if no loop can ever run a blocking
-    // command: the queue is closed, it was never started, removeCommands dropped the command,
-    // or the command did not start within `startTimeout`
-    static Expected<void> addCommand_( CommandFunc func, bool blockThread, StartPosition state,
+    // command: the queue is closed, it was never started, or removeCommands dropped the command;
+    // returns false if the command did not start within `startTimeout` and was dropped, otherwise true
+    static Expected<bool> addCommand_( CommandFunc func, bool blockThread, StartPosition state,
         std::optional<std::chrono::milliseconds> startTimeout = {} );
 
     struct Command

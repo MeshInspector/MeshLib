@@ -71,6 +71,9 @@ void CommandLoop::runCommandFromGUIThread( CommandFunc func, std::optional<std::
     }, true, StartPosition::BeforeWindowAppear, startTimeout );
     if ( !res )
         throw std::runtime_error( std::move( res.error() ) );
+    if ( !*res )
+        throw StartTimeout( fmt::format( "The main thread is busy: it did not start the command within {} seconds",
+            std::chrono::duration_cast<std::chrono::duration<double>>( *startTimeout ).count() ) );
     if ( exception )
         std::rethrow_exception( exception );
 }
@@ -157,7 +160,7 @@ CommandLoop& CommandLoop::instance_()
     return commadLoop_;
 }
 
-Expected<void> CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition state,
+Expected<bool> CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition state,
     std::optional<std::chrono::milliseconds> startTimeout )
 {
     auto& inst = instance_();
@@ -172,7 +175,7 @@ Expected<void> CommandLoop::addCommand_( CommandFunc func, bool blockThread, Sta
         // a non-blocking command is dropped as before; a blocking caller must not be told it ran
         if ( blockThread )
             return unexpected( std::string( "Viewer command loop is stopped, cannot run the command" ) );
-        return {};
+        return true;
     }
     // no `setMainThreadId` yet: nobody will ever call `processCommands`, so the wait below cannot end
     if ( blockThread && inst.mainThreadId_ == std::thread::id{} )
@@ -223,8 +226,7 @@ Expected<void> CommandLoop::addCommand_( CommandFunc func, bool blockThread, Sta
             {
                 // still under the lock, so processCommands skips the command instead of starting it
                 cmd->done = cmd->dropped = true;
-                return unexpected( fmt::format( "The main thread is busy: it did not start the command within {} seconds",
-                    duration_cast<duration<double>>( *startTimeout ).count() ) );
+                return false;
             }
             const bool warn = now >= nextWarn;
             if ( warn )
@@ -261,7 +263,7 @@ Expected<void> CommandLoop::addCommand_( CommandFunc func, bool blockThread, Sta
         if ( cmd->dropped )
             return unexpected( std::string( "Viewer command loop stopped before the command was executed" ) );
     }
-    return {};
+    return true;
 }
 
 void skipFramesAfterInput()

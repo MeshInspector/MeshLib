@@ -118,7 +118,7 @@ static nlohmann::json mcpViewerFit( const nlohmann::json& args )
             throw std::runtime_error( "viewer_fit: the given objects and points contribute no bounding volume." );
         vp.preciseFitBoxToScreenBorder( { box, factor } );
     } );
-    waitFramesAfterInput();
+    (void)waitFramesAfterInput();
     return nlohmann::json::object();
 }
 
@@ -156,7 +156,7 @@ static nlohmann::json mcpViewerSetupCamera( const nlohmann::json& args )
         if ( fitMode )
             vp.preciseFitDataToScreenBorder( { factor, false, *fitMode } );
     } );
-    waitFramesAfterInput();
+    (void)waitFramesAfterInput();
     return nlohmann::json::object();
 }
 

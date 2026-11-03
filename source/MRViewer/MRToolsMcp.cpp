@@ -20,7 +20,7 @@
 namespace MR::Mcp
 {
 
-// Defined in MRUiMcp.cpp — drains TestEngine status messages and surfaces them as a tool error.
+// Defined in MRUiMcp.cpp — drains TestEngine status messages and surfaces them as a tool error; call on the GUI thread.
 void surfaceTestEngineStatusMessages();
 
 // Public type label for a ribbon item. State plugins split by `blocking()` (default: true);
@@ -156,11 +156,9 @@ static nlohmann::json mcpToolsAction( const nlohmann::json& args )
             item->action();
         } );
     } );
-    auto res = inputResult( waitFramesAfterInput() );
-    if ( res.contains( "busy" ) )
-        return res;
-    surfaceTestEngineStatusMessages();
-    runOnMainThread( [&] { res["active"] = item->isActive(); } );
+    nlohmann::json res = nlohmann::json::object();
+    if ( auto busy = waitFramesAfterInput( [&] { surfaceTestEngineStatusMessages(); res["active"] = item->isActive(); } ); !busy.empty() )
+        res["busy"] = std::move( busy );
     return res;
 }
 

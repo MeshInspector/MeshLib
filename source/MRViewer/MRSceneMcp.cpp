@@ -364,7 +364,7 @@ static nlohmann::json mcpSceneSetObjectState( const nlohmann::json& args )
             }
         }
     } );
-    waitFramesAfterInput();
+    (void)waitFramesAfterInput();
     return nlohmann::json::object();
 }
 
@@ -380,7 +380,7 @@ static nlohmann::json mcpSceneRemoveObject( const nlohmann::json& args )
         AppendHistory<ChangeSceneAction>( _t( "MCP removeObject" ), obj, ChangeSceneAction::Type::RemoveObject );
         obj->detachFromParent();
     } );
-    waitFramesAfterInput();
+    (void)waitFramesAfterInput();
     return nlohmann::json::object();
 }
 
@@ -521,7 +521,7 @@ static nlohmann::json mcpSceneAddObject( const nlohmann::json& args )
             addedIds.push_back( idOf( obj.get() ) );
         }
     } );
-    waitFramesAfterInput();
+    (void)waitFramesAfterInput();
     return nlohmann::json::object( { { "ids", addedIds } } );
 }
 

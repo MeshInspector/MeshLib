@@ -69,20 +69,32 @@ static std::string_view entryDisabledReason( const TestEngine::Entry& entry )
     }, entry.value );
 }
 
+// Whether an entry in `group` or in its subgroups accepts input; if none does, `modalReason` gets the first reason of one blocked by a modal
+static bool acceptsInput( const TestEngine::GroupEntry& group, std::string_view& modalReason )
+{
+    for ( const auto& elem : group.elems )
+    {
+        if ( const auto* subgroup = std::get_if<TestEngine::GroupEntry>( &elem.second.value ) )
+        {
+            if ( acceptsInput( *subgroup, modalReason ) )
+                return true;
+            continue;
+        }
+        const auto reason = entryDisabledReason( elem.second );
+        if ( reason.empty() )
+            return true;
+        if ( modalReason.empty() && reason.starts_with( "blocked by modal" ) ) // see `effectiveDisabledReason` in MRUITestEngine.cpp
+            modalReason = reason;
+    }
+    return false;
+}
+
 // A group is disabled only if a modal blocks it: nothing in it accepts input, and some entry in it is blocked by a modal
 // (others may name their own reasons, which take precedence). Then returns that entry's reason.
 static std::string_view groupDisabledReason( const TestEngine::GroupEntry& group )
 {
     std::string_view modalReason;
-    for ( const auto& elem : group.elems )
-    {
-        const auto reason = entryDisabledReason( elem.second );
-        if ( reason.empty() )
-            return {};
-        if ( modalReason.empty() && reason.starts_with( "blocked by modal" ) ) // see `effectiveDisabledReason` in MRUITestEngine.cpp
-            modalReason = reason;
-    }
-    return modalReason;
+    return acceptsInput( group, modalReason ) ? std::string_view{} : modalReason;
 }
 
 // Compose the single user-facing status string from the entry's `disabledReason`.

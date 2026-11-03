@@ -1221,11 +1221,25 @@ void cutOneEdge( Mesh& mesh,
 
 // this function cut mesh edge and connects it with result path,
 // after it each path edge left and right faces are invalid (they are removed)
-void cutEdgesIntoPieces( Mesh& mesh, PreCutResult& preRes, const OneMeshContours& contours,
+void cutEdgesIntoPieces( Mesh& mesh, PreCutResult& preRes, const OneMeshContours& contours, const SortIntersectionsData* sortData,
                          FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
 {
     MR_TIMER;
     auto& inters = preRes.edgeInters;
+    if ( sortData )
+    {
+        // the contours of a boolean cross every edge they meet, so no face of a cut edge is filled again: all of them are deleted at once
+        FaceBitSet faces( mesh.topology.faceSize() );
+        ParallelFor( inters, [&] ( size_t i )
+        {
+            const EdgeId e( inters[i].oldEdge );
+            if ( auto f = mesh.topology.left( e ) )
+                faces.atomicTestSet( f );
+            if ( auto f = mesh.topology.right( e ) )
+                faces.atomicTestSet( f );
+        } );
+        mesh.topology.deleteFacesKeepEdges( faces );
+    }
     // the faces that no contour enters are filled after all edges are cut: if another side of such a face is cut too,
     // a fill at the cut of the first side would give the cut of the other one a new face as the old one
     Vector<std::pair<EdgeId, FaceId>> toFill;
@@ -1628,7 +1642,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         }
     }
 
-    cutEdgesIntoPieces( mesh, preRes, contours, params.new2OldMap, params.new2oldEdgesMap );
+    cutEdgesIntoPieces( mesh, preRes, contours, params.sortData, params.new2OldMap, params.new2oldEdgesMap );
     ExactCutPoints exact{ mesh, contours, params.sortData, VertId( mesh.topology.vertSize() ) };
     // the crossing contours are split at the crossings, so that the holes of their faces can be filled as usual; the faces stay reported
     if ( !crossingFaces.empty() )

@@ -542,7 +542,7 @@ jobs:
           set "PROJ_VCPKG_ROOT=%VCPKG_ROOT%"
           call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" ${{ matrix.vs-dev-args }} -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           cmake -S . -B source\TempOutput %CMAKE_COMPILER_ARGS% -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON || exit /b 1
-          cmake --build source\TempOutput -j %NUMBER_OF_PROCESSORS% --target MeshLibC2 MeshLibC2Cuda || exit /b 1
+          cmake --build source\TempOutput -j %NUMBER_OF_PROCESSORS% --target MeshLibC2 MeshLibC2Cuda MeshLibC2PythonViewer || exit /b 1
           for %%b in (source\TempOutput\bin\MeshLibC2*.dll) do (
             "%PROJ_VCPKG_ROOT%\vcpkg.exe" z-applocal --target-binary="%%b" --installed-bin-dir="%PROJ_VCPKG_ROOT%\installed\%VCPKG_TARGET_TRIPLET%\bin" >nul || exit 1
           )

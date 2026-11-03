@@ -1229,9 +1229,12 @@ void cutEdgesIntoPieces( Mesh& mesh, PreCutResult& preRes, const OneMeshContours
     if ( sortData )
     {
         // the contours of a boolean cross every edge they meet, so no face of a cut edge is filled again: all of them are deleted at once
+        Timer t( "delete faces of cut edges" );
         FaceBitSet faces( mesh.topology.faceSize() );
         ParallelFor( inters, [&] ( size_t i )
         {
+            if ( i > 0 && inters[i - 1].oldEdge == inters[i].oldEdge )
+                return; // the intersections of an edge are together, the first one marks its faces
             const EdgeId e( inters[i].oldEdge );
             if ( auto f = mesh.topology.left( e ) )
                 faces.atomicTestSet( f );

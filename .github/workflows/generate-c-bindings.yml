@@ -68,6 +68,7 @@ jobs:
       - name: Generate Python, C#, Rust and Java bindings
         run: |
           for os in linux macos windows; do
+            mkdir -p python-sources/$os
             for module in mrmeshpy mrcudapy mrviewerpy; do
               fragments=1
               [ $module = mrmeshpy ] && fragments=8

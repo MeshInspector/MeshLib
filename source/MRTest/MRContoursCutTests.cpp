@@ -569,6 +569,52 @@ TEST( MRMesh, CutMeshOpenContourTouchesPoint )
     }
 }
 
+// open contours from the border of the squares to two sides of triangle (5, 6, 10), one ending on each from outside the triangle:
+// the triangle is filled again once, and the maps take its new faces and edges to it
+TEST( MRMesh, CutMeshOpenContoursEndOnTwoSidesOfFace )
+{
+    const Mesh mesh = makeSquares3x3();
+    auto onEdge = [&] ( int a, int b, float x, float y )
+    {
+        return OneMeshIntersection{ mesh.topology.findEdge( VertId( a ), VertId( b ) ), Vector3f( x, y, 0 ) };
+    };
+    OneMeshContour below, right;
+    below.intersections = { onEdge( 1, 2, 1.5f, 0 ), onEdge( 1, 6, 1.5f, 0.5f ), onEdge( 5, 6, 1.5f, 1 ) };
+    right.intersections = { onEdge( 7, 11, 3, 1.5f ), onEdge( 6, 11, 2.5f, 1.5f ), onEdge( 6, 10, 2, 1.5f ) };
+    // the face of makeSquares3x3 that point p is in
+    auto oldFaceOf = [] ( const Vector3f& p )
+    {
+        const float x = std::floor( p.x ), y = std::floor( p.y );
+        return FaceId( 2 * ( 3 * int( y ) + int( x ) ) + ( p.y - y < p.x - x ? 0 : 1 ) );
+    };
+    for ( bool belowFirst : { true, false } )
+    {
+        SCOPED_TRACE( belowFirst ? "below first" : "right first" );
+        Mesh cut = mesh;
+        FaceMap new2Old;
+        NewEdgesMap new2OldEdges;
+        const auto res = cutMesh( cut, belowFirst ? OneMeshContours{ below, right } : OneMeshContours{ right, below },
+            { .new2OldMap = &new2Old, .new2oldEdgesMap = &new2OldEdges } );
+        EXPECT_TRUE( cut.topology.checkValidity() );
+        EXPECT_TRUE( res.fbsWithContourIntersections.none() );
+        EXPECT_EQ( cut.topology.findNumHoles(), 1 );
+        EXPECT_NEAR( cut.area(), mesh.area(), 1e-5f );
+        for ( auto f : cut.topology.getValidFaces() )
+        {
+            EXPECT_EQ( f < new2Old.size() ? new2Old[f] : FaceId(), oldFaceOf( cut.triCenter( f ) ) ) << "face " << f;
+        }
+        for ( const auto& [ue, old] : new2OldEdges.map )
+        {
+            const EdgeId e = ue;
+            const auto mid = 0.5f * ( cut.orgPnt( e ) + cut.destPnt( e ) );
+            const float dx = mid.x - std::floor( mid.x ), dy = mid.y - std::floor( mid.y );
+            if ( new2OldEdges.splitEdges.test( ue ) || dx == 0 || dy == 0 || dx == dy )
+                continue; // a part of an old edge, or on one
+            EXPECT_EQ( FaceId( old ), oldFaceOf( mid ) ) << "edge " << e;
+        }
+    }
+}
+
 // a contour inside one triangle (a lone contour) is connected with the rest of the triangle by the cut, near the origin and far from it,
 // also where the contour fills most of the triangle; a closed contour is an island in the hole of the triangle, an open one a slit
 TEST( MRMesh, CutMeshLoneContour )

@@ -1206,10 +1206,11 @@ void finishCutOneEdge( MeshTopology& topology, EdgeId baseEdge, EdgeId e0,
     }
 }
 
-// cuts one edge and connects all intersecting contours with pieces
+// cuts one edge and connects all intersecting contours with pieces;
+// adds the hole of a removed face that no contour enters, with that face, to toFill
 void cutOneEdge( Mesh& mesh,
                  const EdgeData& edgeData, const OneMeshContours& contours,
-                 FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
+                 NewEdgesMap* new2OldEdgeMap, Vector<std::pair<EdgeId, FaceId>>& toFill )
 {
     assert( !edgeData.empty() );
     const EdgeId baseEdge = baseEdgeOf( edgeData );
@@ -1222,11 +1223,10 @@ void cutOneEdge( Mesh& mesh,
     const EdgeId e0 = startCutOneEdge( mesh.topology, baseEdge, edgeData, contours, new2OldEdgeMap );
     finishCutOneEdge( mesh.topology, baseEdge, e0, edgeData, contours );
 
-    // fix triangle if this was last or first
     if ( isAllLeftOnly && oldRight.valid() )
-        triangulateContour( mesh, baseEdge.sym(), oldRight, new2OldMap, new2OldEdgeMap );
+        toFill.push_back( { baseEdge.sym(), oldRight } );
     if ( isAllRightOnly && oldLeft.valid() )
-        triangulateContour( mesh, baseEdge, oldLeft, new2OldMap, new2OldEdgeMap );
+        toFill.push_back( { baseEdge, oldLeft } );
 }
 
 // this function cut mesh edge and connects it with result path,
@@ -1236,14 +1236,19 @@ void cutEdgesIntoPieces( Mesh& mesh, PreCutResult& preRes, const OneMeshContours
 {
     MR_TIMER;
     auto& inters = preRes.edgeInters;
+    // the faces that no contour enters are filled after all edges are cut: if another side of such a face is cut too,
+    // a fill at the cut of the first side would give the cut of the other one a new face as the old one
+    Vector<std::pair<EdgeId, FaceId>> toFill;
     for ( size_t b = 0; b < inters.size(); )
     {
         auto e = b + 1;
         while ( e < inters.size() && inters[e].oldEdge == inters[b].oldEdge )
             ++e;
-        cutOneEdge( mesh, EdgeData( inters.data() + b, e - b ), contours, new2OldMap, new2OldEdgeMap );
+        cutOneEdge( mesh, EdgeData( inters.data() + b, e - b ), contours, new2OldEdgeMap, toFill );
         b = e;
     }
+    for ( const auto& [e, f] : toFill )
+        triangulateContour( mesh, e, f, new2OldMap, new2OldEdgeMap );
 }
 
 void prepareFacesMap( const MeshTopology& topology, FaceMap& new2OldMap )

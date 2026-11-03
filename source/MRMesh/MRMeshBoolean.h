@@ -139,7 +139,8 @@ MRMESH_API BooleanResult forceBoolean( const Mesh& meshA, const Mesh& meshB, Boo
                                   const BooleanParameters& params = {} );
 
 
-/// performs boolean operation on mesh with itself, cutting simple intersections contours and flipping their connectivity
+/// performs boolean operation on mesh with itself, cutting its self-intersection contours and flipping their connectivity;
+/// the contours may cross one another where three sheets of the mesh meet at a point (nested intersections)
 /// this function is experimental and likely to change signature and/or behavior in future 
 MRMESH_API Expected<Mesh> selfBoolean( const Mesh& mesh );
 

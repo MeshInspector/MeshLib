@@ -23,6 +23,7 @@
 #include <MRMesh/MREmbedTerrainStructure.h>
 #include <MRMesh/MRMeshProject.h>
 #include <MRMesh/MRUniteManyMeshes.h>
+#include <MRMesh/MRMovementBuildBody.h>
 #include <MRPch/MRSuppressWarning.h>
 #include <gtest/gtest.h>
 #include <algorithm>
@@ -436,6 +437,79 @@ TEST( MRMesh, SelfBooleanContourToBoundary )
         EXPECT_EQ( res->topology.numValidVerts(), 5 );
         for ( auto v : mesh.topology.getValidVerts() )
             EXPECT_LT( ( res->points[v] - mesh.points[v] ).length(), 1e-6f ); // only the round trip through integer coordinates
+    }
+}
+
+// movement bodies of a circle along closed polylines with sharp turns: their self-intersections have folds and triple points
+// (three sheets through one point, where their contours cross); selfBoolean reconnects the sheets along all of them, so that every
+// component of the result bounds a region: its winding number is 0 or 1 (0 or -1 for a void) at the sample points off the surface
+TEST( MRMesh, SelfBooleanNestedIntersections )
+{
+    const Contours3f trajectories =
+    {
+        { { -0.6f, 0.9f, 0.2f }, { 0.2f, 0.7f, -0.4f }, { 0, 0.1f, 0 }, { -0.5f, 0.7f, -0.4f }, { -0.6f, 0.9f, 0.2f } },
+        { { 0, -0.9f, -0.3f }, { -0.8f, 0.7f, -0.3f }, { 0.8f, -0.3f, 0.4f }, { -0.6f, -0.3f, -0.2f }, { 0.9f, -0.2f, 0.3f }, { 0, -0.9f, -0.3f } },
+        { { -0.3f, 0.9f, 0.1f }, { -0.5f, 0.4f, -0.2f }, { -0.9f, -0.9f, 0.2f }, { 0.1f, 0.4f, -0.2f }, { 0, -0.4f, 0.1f }, { -0.3f, 0.9f, 0.1f } },
+        { { -0.8f, 0.5f, -0.2f }, { 0.6f, 0.6f, -0.4f }, { 0.7f, 1, 0 }, { 0.1f, 0.2f, -0.1f }, { 0.7f, -0.8f, 0.1f }, { -0.8f, 0.5f, -0.2f } }
+    };
+    Contour3f circle;
+    for ( int i = 0; i < 16; ++i )
+        circle.push_back( 0.15f * Vector3f( std::cos( i * PI_F / 8 ), std::sin( i * PI_F / 8 ), 0.f ) );
+    circle.push_back( circle.front() );
+    for ( const auto& trajectory : trajectories )
+    {
+        const Mesh mesh = makeMovementBuildBody( { circle }, { trajectory } );
+        const auto res = selfBoolean( mesh );
+        ASSERT_TRUE( res.has_value() ) << res.error();
+        EXPECT_TRUE( res->topology.checkValidity() );
+        EXPECT_EQ( res->topology.findNumHoles(), 0 );
+
+        const auto box = mesh.computeBoundingBox();
+        const int n = 16;
+        std::vector<Vector3f> samples;
+        for ( int i = 0; i < n; ++i )
+            for ( int j = 0; j < n; ++j )
+                for ( int k = 0; k < n; ++k )
+                    samples.push_back( box.min + mult( box.size(), Vector3f( i + 0.5f, j + 0.5f, k + 0.5f ) / float( n ) ) );
+        for ( const auto& component : MeshComponents::getAllComponents( *res ) )
+        {
+            const Mesh part = res->cloneRegion( component );
+            float minWinding = 0, maxWinding = 0;
+            for ( const auto& p : samples )
+            {
+                const float w = part.calcFastWindingNumber( p );
+                if ( std::abs( w - std::round( w ) ) > 0.2f )
+                    continue; // near the surface
+                minWinding = std::min( minWinding, std::round( w ) );
+                maxWinding = std::max( maxWinding, std::round( w ) );
+            }
+            EXPECT_LE( maxWinding - minWinding, 1 );
+        }
+    }
+}
+
+// a cube with two triangles of the same vertices and opposite orientations glued along all their edges through it, a closed part
+// without volume; its crossings with the cube are alike for both triangles, so no cut can resolve them: selfBoolean removes the part,
+// which leaves the cube as it was, also turned inside out or flattened
+TEST( MRMesh, SelfBooleanTwinTriangles )
+{
+    for ( bool flip : { false, true } )
+    {
+        for ( float zScale : { 1.f, 1e-3f } )
+        {
+            Mesh mesh = makeCube( Vector3f::diagonal( 2.f ), Vector3f::diagonal( -1.f ) );
+            mesh.addMesh( Mesh::fromTriangles( { Vector3f( 1.6f, -0.4f, 1.8f ), Vector3f( 0.3f, -1.3f, -0.9f ), Vector3f( 0.5f, 1.7f, -1.3f ) },
+                { { 0_v, 1_v, 2_v }, { 0_v, 2_v, 1_v } } ) );
+            if ( flip )
+                mesh.topology.flipOrientation();
+            mesh.transform( AffineXf3f::linear( Matrix3f::scale( 1.f, 1.f, zScale ) ) );
+            const auto res = selfBoolean( mesh );
+            ASSERT_TRUE( res.has_value() ) << res.error() << " flip " << flip << " zScale " << zScale;
+            EXPECT_TRUE( res->topology.checkValidity() );
+            EXPECT_EQ( res->topology.numValidFaces(), 12 );
+            EXPECT_EQ( res->topology.findNumHoles(), 0 );
+            EXPECT_NEAR( res->volume(), ( flip ? -8. : 8. ) * zScale, 1e-6 * 8 * zScale );
+        }
     }
 }
 

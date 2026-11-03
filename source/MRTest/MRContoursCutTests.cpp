@@ -1632,6 +1632,12 @@ TEST( MRMesh, ForceFillCrossingsFoldVertex )
     EXPECT_TRUE( added.test( 0_f ) );
     EXPECT_TRUE( added.test( 5_f ) );
     EXPECT_TRUE( ( plain - forced ).none() );
+
+    // selfBoolean closes the contours the same way, and splits all their crossings
+    const auto res = selfBoolean( mesh );
+    ASSERT_TRUE( res.has_value() ) << res.error();
+    EXPECT_TRUE( res->topology.checkValidity() );
+    EXPECT_EQ( res->topology.findNumHoles(), 0 );
 }
 
 // two crossing spheres with their vertices rounded to a coarse grid, cut along their intersections as selfBoolean cuts them, with sortData

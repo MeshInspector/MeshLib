@@ -1244,9 +1244,11 @@ void cutEdgesIntoPieces( Mesh& mesh, PreCutResult& preRes, const OneMeshContours
 void prepareFacesMap( const MeshTopology& topology, FaceMap& new2OldMap )
 {
     MR_TIMER;
-    new2OldMap.resize( topology.lastValidFace() + 1 );
-    for ( auto f : topology.getValidFaces() )
-        new2OldMap[f] = f;
+    new2OldMap.resizeNoInit( topology.lastValidFace() + 1 );
+    ParallelFor( new2OldMap, [&] ( FaceId f )
+    {
+        new2OldMap[f] = topology.hasFace( f ) ? f : FaceId{};
+    } );
 }
 
 // Checks if cut mesh has valid loops in intersections

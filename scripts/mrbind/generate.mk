@@ -176,14 +176,12 @@ FOR_WHEEL := 0
 override FOR_WHEEL := $(filter-out 0,$(FOR_WHEEL))
 $(info Those modules are for a Python wheel? $(if $(FOR_WHEEL),YES,NO))
 
-# Build `libpybind11nonlimitedapi_meshlib_X.Y.so` shims automatically, for all installed Python versions?
-# You can always build them manually via `make shims -B`.
-# The default is "yes" if we're either building for a Wheel, or if we're doing `make shims` (then we're enabling this variable to use the correct detection logic on Windows).
-BUILD_SHIMS := $(if $(or $(FOR_WHEEL),$(filter shims,$(MAKECMDGOALS))),1,0)
-override BUILD_SHIMS := $(filter-out 0,$(BUILD_SHIMS))
-$(info Build shims? $(if $(BUILD_SHIMS),YES,NO))
 
 endif # $(TARGET) == python
+
+# Set to 1 if the C# or Java sources were generated elsewhere (the generate-c-bindings CI job): `build` then only compiles them, without the generator.
+PREGENERATED := 0
+override PREGENERATED := $(filter-out 0,$(PREGENERATED))
 
 # Set to 1 if MeshLib was built in debug mode. Ignore this on Windows. By default we're trying to guess this based on the CMake cache.
 # Currently this isn't needed for anything, hence commented out.
@@ -377,7 +375,7 @@ $(if $(PYTHON_VERSIONS),,$(error Unable to guess the Python versions))
 override PYTHON_VERSIONS := $(subst $(comma), ,$(PYTHON_VERSIONS))
 # Sort the versions.
 override PYTHON_VERSIONS := $(call safe_shell,echo $(call quote,$(PYTHON_VERSIONS)) | tr ' ' '\n' | sort -V)
-$(info Targeting Python versions: $(PYTHON_VERSIONS)$(if $(BUILD_SHIMS),, (doesn't matter because we're not building shims)))
+$(info Found Python versions: $(PYTHON_VERSIONS))
 
 # Pick a Python version to use the headers from. Normally it doesn't matter which one we use, since defining `Py_LIMITED_API` should make them almost equivalent.
 # Here we use the smallest version from `PYTHON_VERSIONS`.
@@ -385,7 +383,6 @@ PYTHON_HEADER_VERSION := $(firstword $(PYTHON_VERSIONS))
 $(info Using Python headers from version: $(PYTHON_HEADER_VERSION))
 
 # The min Python version to support. We use this to compute the value of the `Py_LIMITED_API` macro.
-# It's probably a good idea to have this match the value in `source/MRPython/CMakeLists.txt`.
 PYTHON_MIN_VERSION := 3.8
 override python_min_version_hex := 0x$(call safe_shell,printf "%02x%02x" $(subst ., ,$(PYTHON_MIN_VERSION)))00f0
 $(info Python min version: $(PYTHON_MIN_VERSION) (Py_LIMITED_API=$(python_min_version_hex)))
@@ -397,7 +394,7 @@ $(info Python min version: $(PYTHON_MIN_VERSION) (Py_LIMITED_API=$(python_min_ve
 # Obtain the resulting flags by calling `$(call get_python_cflags,3.10)` (and similarly for ldflags).
 PYTHON_CFLAGS :=
 PYTHON_LDFLAGS :=
-ifneq ($(and $(IS_WINDOWS),$(BUILD_SHIMS)),)
+ifneq ($(and $(IS_WINDOWS),$(FOR_WHEEL)),)
 # On Windows wheel, hardcode the flags to point to appdata.
 PYTHON_CFLAGS := -I$(PYTHON_DIR)@XY@$(PYTHON_DIR_SUFFIX)/Include
 PYTHON_LDFLAGS := -L$(PYTHON_DIR)@XY@$(PYTHON_DIR_SUFFIX)/libs -lpython@XY@
@@ -435,18 +432,6 @@ PYTHON_MODULE_SUFFIX := .so
 endif
 $(info Using Python module suffix: $(PYTHON_MODULE_SUFFIX))
 
-# Shared library naming pattern.
-ifneq ($(IS_WINDOWS),)
-SHIM_SHLIB_NAMING := %.dll
-else
-ifneq ($(IS_MACOS),)
-# For consistency with the shims that CMake builds.
-SHIM_SHLIB_NAMING := lib%.dylib
-else
-SHIM_SHLIB_NAMING := lib%.so
-endif
-endif
-$(info Shared library name pattern: $(SHIM_SHLIB_NAMING))
 
 
 # Will those C bindings be used on Wasm? Then we disable some libraries that don't work there, and disable Cuda.
@@ -454,7 +439,7 @@ C_FOR_WASM := 0
 override C_FOR_WASM := $(filter-out 0,$(C_FOR_WASM))
 
 
-# --- Parallelism: there are only a few translation units (the modules and the shims). Override with `-jN` or `JOBS=N`.
+# --- Parallelism: there are only a few translation units (the module fragments). Override with `-jN` or `JOBS=N`.
 ifneq ($(IS_MACOS),)
 ASSUME_NPROC := $(call safe_shell,sysctl -n hw.physicalcpu)
 else
@@ -507,6 +492,17 @@ mrcuda_CSubLibraryOutputProject := MeshLibC2Cuda
 mrcuda_CSharpSubLibraryOutputProject := MRDotNet2Cuda
 mrcuda_PyName := mrcudapy
 mrcuda_PyCLibs := MeshLibC2 MeshLibC2Cuda
+
+# The API of `mrviewerpy`, written for it in `source/MRPythonViewer`. Only for Python: the other languages skip it.
+ifeq ($(C_FOR_WASM),)
+MODULES += mrviewer
+mrviewer_InputProjects := MRPythonViewer
+mrviewer_CSubLibraryMacroPrefix := MRC_PYTHON_VIEWER_
+mrviewer_CSubLibraryOutputProject := MeshLibC2PythonViewer
+mrviewer_COnlyForPython := 1
+mrviewer_PyName := mrviewerpy
+mrviewer_PyCLibs := MeshLibC2 MeshLibC2PythonViewer
+endif
 
 
 
@@ -641,8 +637,7 @@ endif # TARGETING_EMSCRIPTEN
 LINKER_TYPE := $(if $(and $(IS_LINUX),$(shell command -v ld.mold),$(wildcard $(dir $(shell command -v $(CXX_FOR_BINDINGS)))../lib/LLVMgold.so)),mold,lld)
 LINKER := $(CXX_FOR_BINDINGS) -fuse-ld=$(LINKER_TYPE)
 # Unsure if `-dynamiclib` vs `-shared` makes any difference on MacOS. I'm using the former because that's what CMake does.
-# No $(PYTHON_LDFLAGS) here, that's only for our patched Pybind library.
-LINKER_FLAGS := $(EXTRA_LDFLAGS) $(if $(DEPS_LIB_DIR),-L$(DEPS_LIB_DIR)) $(if $(DEPS_BASE_DIR),-L$(DEPS_BASE_DIR)/lib) -L$(MESHLIB_SHLIB_DIR) $(if $(is_py),-lMRPython) $(if $(IS_MACOS),-dynamiclib,-shared) $(call load_file,$(makefile_dir)linker_flags.txt)
+LINKER_FLAGS := $(EXTRA_LDFLAGS) $(if $(DEPS_LIB_DIR),-L$(DEPS_LIB_DIR)) $(if $(DEPS_BASE_DIR),-L$(DEPS_BASE_DIR)/lib) -L$(MESHLIB_SHLIB_DIR) $(if $(IS_MACOS),-dynamiclib,-shared) $(call load_file,$(makefile_dir)linker_flags.txt)
 
 # Set resource directory. Otherwise e.g. `offsetof` becomes non-constexpr,
 #   because the header override with it being constexpr is in this resource directory.
@@ -697,9 +692,6 @@ COMPILER_FLAGS += -D_DLL -D_MT
 # Only seems to matter on VS2022 and not on VS2019, for some reason.
 COMPILER_FLAGS += -DNOMINMAX
 COMPILER_FLAGS += -D_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS
-# Don't export Pybind exceptions. This works around Clang bug: https://github.com/llvm/llvm-project/issues/118276
-# And I'm not sure if exporting them even did anything useful on Windows in the first place.
-COMPILER_FLAGS += -DPYBIND11_EXPORT_EXCEPTION=
 # Link TBB explicitly. MeshLib headers used to drag it in via the implicit `#pragma comment(lib, ...)`
 # emitted by the oneTBB headers, but `__TBB_NO_IMPLICIT_LINKAGE` now disables that, so the inline TBB
 # code instantiated in the binding translation units would otherwise leave `tbb::detail::r1::*` undefined.
@@ -753,22 +745,6 @@ COMPILER_FLAGS += -mmacosx-version-min=$(MACOS_MIN_VER)
 LINKER_FLAGS += -mmacosx-version-min=$(MACOS_MIN_VER)
 endif # have MACOS_MIN_VER
 
-ifeq ($(TARGET),python)
-LINKER_FLAGS += -L$(HOMEBREW_DIR)/lib
-LINKER_FLAGS += -ltbb
-# Apple's `/usr/lib/libc++.1.dylib` does not re-export typeinfo for `__int128` (`__ZTIn`) / `unsigned __int128` (`__ZTIo`),
-# which live in `libc++abi.dylib`. Without this, importing the wheel fails with `Symbol not found: __ZTIn` on macOS.
-LINKER_FLAGS += -lc++abi
-# This fixes an error during wheel creation:
-#   /Library/Developer/CommandLineTools/usr/bin/install_name_tool: changing install names or rpaths can't be redone for: /private/var/folders/c2/_t7lgq_s3zb_r01vy_1qd6nh0000gs/T/tmpatczljnu/wheel/meshlib/mrmeshpy.so (for architecture arm64) because larger updated load commands do not fit (the program must be relinked, and you may need to use -headerpad or -headerpad_max_install_names)
-# Apparently there's not enough space in the binary to fit longer library paths, and this pads it to have to up MAXPATHLEN space for each path.
-LINKER_FLAGS += -Wl,-headerpad_max_install_names
-# Those fix a segfault when importing the module, that only happens for wheels, not raw binaries.
-# Pybind manual says you must use those.
-# Also note that this is one long flag (`-undefined dynamic_lookup`), not two independent fones.
-# Also not that you MUST NOT link the Python libs in addition to doing this, otherwise you'll still get segfaults.
-LINKER_FLAGS += -Xlinker -undefined -Xlinker dynamic_lookup
-endif # $(TARGET) == python
 endif # MacOS
 
 
@@ -781,8 +757,6 @@ ifneq ($(IS_LINUX)$(IS_MACOS),)
 COMPILER += -fvisibility=hidden -fvisibility-inlines-hidden
 COMPILER_FLAGS += -fPIC
 
-# Override Pybind ABI identifiers to force compatibility with `mrviewerpy` (which is compiled with some other compiler, but is also made to define those).
-COMPILER_FLAGS += -DPYBIND11_COMPILER_TYPE='"_meshlib"' -DPYBIND11_BUILD_ABI='"_meshlib"'
 # MacOS rpath is quirky: 1. Must use `-rpath,` instead of `-rpath=`. 2. Must specify the flag several times, apparently can't use
 #   `:` or `;` as a separators inside of one big flag. 3. As you've noticed, it uses `@loader_path` instead of `$ORIGIN`.
 rpath_origin := $(if $(IS_MACOS),@loader_path,$$$$ORIGIN)
@@ -812,39 +786,6 @@ endif
 
 override all_outputs :=
 
-
-ifeq ($(TARGET),python)
-
-# Things for our patched pybind: --- [
-# Also setting `Py_LIMITED_API` is a part of this, but it's spread all over this makefile.
-COMPILER += -DPYBIND11_NONLIMITEDAPI_LIB_SUFFIX_FOR_MODULE='"meshlib"'
-# Pybind normally sets this to 5 in Python 3.12 and newer, and to 4 before that. But we need the same number everywhere for our modules to work on
-#   multiple different Python versions. We can't set it to 4 (since that's not compatible with the new Python, see https://github.com/pybind/pybind11/pull/4570),
-#   but we can set it to 5 unconditionally (Pybind doesn't do it by default only for ABI compatibility).
-COMPILER += -DPYBIND11_INTERNALS_VERSION=5
-# ] --- end things for our patched pybind
-
-# Build the library files for different Python versions, for our patched Pybind.
-PYBIND_LIBS_OUTPUT_DIR := $(MODULE_OUTPUT_DIR)
-PYBIND_SOURCE_DIR := $(makefile_dir)../../thirdparty/mrbind-pybind11
-PYBIND_NONLIMITEDAPI_CPP := $(PYBIND_SOURCE_DIR)/source/non_limited_api/non_limited_api.cpp
-PYBIND_NONLIMITEDAPI_LIB_NAME_PREFIX := pybind11nonlimitedapi_meshlib_
-
-override shim_outputs :=
-$(foreach v,$(PYTHON_VERSIONS),\
-	$(call var,_obj := $(TEMP_OUTPUT_DIR)/$(PYBIND_NONLIMITEDAPI_LIB_NAME_PREFIX)$v.o)\
-	$(call var,_shlib := $(PYBIND_LIBS_OUTPUT_DIR)/$(patsubst %,$(SHIM_SHLIB_NAMING),$(PYBIND_NONLIMITEDAPI_LIB_NAME_PREFIX)$v))\
-	$(call var,shim_outputs += $(_shlib))\
-	$(eval $(_obj): $(PYBIND_NONLIMITEDAPI_CPP) | $(TEMP_OUTPUT_DIR) ; @echo $(call quote,[Compiling Pybind shim] $(_obj)) && $(COMPILER) $(call get_python_cflags,$v) $(COMPILER_FLAGS) $$< -c -o $$@)\
-	$(eval $(_shlib): $(_obj) ; @echo $(call quote,[Linking Pybind shim] $(_shlib)) && $(LINKER) $$^ -o $$@ $(call get_python_ldflags,$v) $(LINKER_FLAGS) -lpybind11nonlimitedapi_stubs)\
-)
-.PHONY: shims
-shims: $(shim_outputs)
-ifneq ($(BUILD_SHIMS),)
-override all_outputs += $(shim_outputs)
-endif
-
-endif # $(TARGET) == python
 
 # Those are used by `module_snippet` below.
 .PHONY: only-generate
@@ -893,7 +834,7 @@ endif
 
 
 # This part builds the Python modules, generated from the description of the C bindings by `mrbind_gen_python`
-#   (see `docs/generating_python_over_c.md` in mrbind). Build `MeshLibC2` (and `MeshLibC2Cuda` for `mrcudapy`) first.
+#   (see `docs/generating_python_over_c.md` in mrbind). Build `MeshLibC2` (and `MeshLibC2Cuda` for `mrcudapy`, `MeshLibC2PythonViewer` for `mrviewerpy`) first.
 ifeq ($(TARGET),python)
 MRBIND_GEN_PYTHON_EXE = $(MRBIND_EXE)_gen_python
 C_BINDINGS_DIR := $(makefile_dir)../../source
@@ -901,10 +842,12 @@ PYTHON_INPUT_JSON := $(C_BINDINGS_DIR)/MeshLibC2/temp/interop_desc.json
 
 # Without a Cuda build of MeshLib, `mrcudapy` is a placeholder written in Python.
 PY_MODULES := mrmesh $(if $(and $(ENABLE_CUDA),$(wildcard $(MESHLIB_SHLIB_DIR)/*MRCuda.*)),mrcuda)
+# Without the viewer, there is no `mrviewerpy`.
+PY_MODULES += $(if $(wildcard $(MESHLIB_SHLIB_DIR)/*MeshLibC2PythonViewer.*),mrviewer)
 
 # The generated code needs only the C bindings and the limited API of Python, so one module serves all Python versions.
 PY_COMPILER_FLAGS := -std=c++20 -O1 $(EXTRA_CFLAGS) -w -DPy_LIMITED_API=$(python_min_version_hex) $(call get_python_cflags,$(PYTHON_HEADER_VERSION)) \
-	-I$(C_BINDINGS_DIR)/MeshLibC2/include -I$(C_BINDINGS_DIR)/MeshLibC2Cuda/include
+	-I$(C_BINDINGS_DIR)/MeshLibC2/include -I$(C_BINDINGS_DIR)/MeshLibC2Cuda/include -I$(C_BINDINGS_DIR)/MeshLibC2PythonViewer/include
 PY_LINKER_FLAGS := $(EXTRA_LDFLAGS) -L$(MESHLIB_SHLIB_DIR) $(if $(IS_MACOS),-dynamiclib,-shared)
 ifneq ($(IS_WINDOWS),)
 PY_COMPILER_FLAGS += --target=$(MSVC_TARGET_ARCH)-pc-windows-msvc -D_DLL -D_MT -DNOMINMAX -Xclang --dependent-lib=$(if $(filter Debug,$(VS_MODE)),msvcrtd -D_DEBUG -D_ITERATOR_DEBUG_LEVEL=0,msvcrt)
@@ -925,20 +868,33 @@ endif
 PY_NUM_FRAGMENTS := $(call safe_shell,echo $$(( $(JOBS) < 16 ? $(JOBS) : 16 )))
 mrmesh_PyNumFragments := $(PY_NUM_FRAGMENTS)
 mrcuda_PyNumFragments := 1
+mrviewer_PyNumFragments := 1
+
+# The sources of the modules generated elsewhere, in `$(PYTHON_SOURCES_DIR)/<module>/` (`generate_python.sh` in the generate-c-bindings CI job),
+#   to only compile them here, without `mrbind_gen_python`.
+PYTHON_SOURCES_DIR :=
 
 override define module_snippet_build_py =
+ifeq ($(PYTHON_SOURCES_DIR),)
 $(call var,$1__PySourceDir := $(TEMP_OUTPUT_DIR)/$($1_PyName))
+else
+$(call var,$1__PySourceDir := $(PYTHON_SOURCES_DIR)/$($1_PyName))
+$(call var,$1_PyNumFragments := $(words $(wildcard $($1__PySourceDir)/$($1_PyName)*.cpp)))
+$(if $(filter 0,$($1_PyNumFragments)),$(error No pre-generated sources of `$($1_PyName)` in `$($1__PySourceDir)`))
+endif
 $(call var,$1__PySource := $($1__PySourceDir)/$($1_PyName).cpp)
 $(call var,$1__PyFragments := $($1_PyName) $(addprefix $($1_PyName)_,$(filter-out 0,$(call seq,$($1_PyNumFragments)))))
 $(call var,$1__PyObjects := $(patsubst %,$(TEMP_OUTPUT_DIR)/%.o,$($1__PyFragments)))
 $(call var,$1__LinkerOutput := $(MODULE_OUTPUT_DIR)/$($1_PyName)$(PYTHON_MODULE_SUFFIX))
 $(call var,all_outputs += $($1__LinkerOutput))
 only-generate: $($1__PySource)
+ifeq ($(PYTHON_SOURCES_DIR),)
 # The fragments are generated together, this is the first one.
 $($1__PySource): $(PYTHON_INPUT_JSON) | $(TEMP_OUTPUT_DIR)
 	@echo $(call quote,[$1] [Generating] $($1__PySource))
 	@bash $(call quote,$(makefile_dir)generate_python.sh) $(call quote,$(MRBIND_GEN_PYTHON_EXE)) $(call quote,$(PYTHON_INPUT_JSON)) $(call quote,$($1__PySourceDir)) $($1_PyName) $($1_PyNumFragments)
-$($1__PyObjects): $(TEMP_OUTPUT_DIR)/%.o: $($1__PySource)
+endif
+$($1__PyObjects): $(TEMP_OUTPUT_DIR)/%.o: $($1__PySource) | $(TEMP_OUTPUT_DIR)
 	@echo $$(call quote,[$1] [Compiling] $($1__PySourceDir)/$$*.cpp)
 	@$(CXX_FOR_BINDINGS) $$(call quote,$($1__PySourceDir)/$$*.cpp) -c -o $$(call quote,$$@) $(PY_COMPILER_FLAGS)
 $($1__LinkerOutput): $($1__PyObjects) | $(MODULE_OUTPUT_DIR)
@@ -1083,7 +1039,7 @@ generate:
 		--wrap-doc-comments-in-summary-tag \
 		--fat-objects \
 		$(call, ### Handle sub-libraries) \
-		$(foreach m,$(MODULES),$(if $(and $($m_CSubLibraryMacroPrefix),$($m_CSubLibraryOutputProject)),--imported-split-lib-name $($m_CSubLibraryMacroPrefix) $(if $(CSHARP_STATIC_DLLIMPORT),__Internal,$($m_CSubLibraryOutputProject)))) \
+		$(foreach m,$(MODULES),$(if $(and $($m_CSubLibraryMacroPrefix),$($m_CSubLibraryOutputProject)),$(if $($m_COnlyForPython),--skip-split-lib $($m_CSubLibraryMacroPrefix),--imported-split-lib-name $($m_CSubLibraryMacroPrefix) $(if $(CSHARP_STATIC_DLLIMPORT),__Internal,$($m_CSubLibraryOutputProject))))) \
 	)
 # # Can't compile sub-libraries separately yet, because we can't define the same C# partial class (which we use as namespaces) in different C# assemblies.
 # $(call, ### Now copy over the generated sub-libraries)
@@ -1101,7 +1057,7 @@ generate:
 
 .DEFAULT_GOAL := build
 .PHONY: build
-build: generate
+build: $(if $(PREGENERATED),,generate)
 # MeshLibArch places the assembly next to the native output; unset off Windows, where the
 # csproj default stands.
 	dotnet build $(call quote,$(CSHARP_CODE_OUTPUT_DIR)) $(if $(CSHARP_MODE),-c $(CSHARP_MODE)) $(if $(MSVC_ARCH),-p:MeshLibArch=$(MSVC_ARCH))
@@ -1137,7 +1093,7 @@ generate:
 		--imported-lib-name MeshLibC2 \
 		--replace-namespace MR :: \
 		$(call, ### Handle sub-libraries) \
-		$(foreach m,$(MODULES),$(if $(and $($m_CSubLibraryMacroPrefix),$($m_CSubLibraryOutputProject)),--imported-split-lib-name $($m_CSubLibraryMacroPrefix) $($m_CSubLibraryOutputProject))) \
+		$(foreach m,$(MODULES),$(if $(and $($m_CSubLibraryMacroPrefix),$($m_CSubLibraryOutputProject)),$(if $($m_COnlyForPython),--skip-split-lib $($m_CSubLibraryMacroPrefix),--imported-split-lib-name $($m_CSubLibraryMacroPrefix) $($m_CSubLibraryOutputProject)))) \
 	)
 
 # In the MSYS2 shell `link.exe` resolves to the coreutils `link`, so point cargo at the MSVC linker explicitly.
@@ -1178,12 +1134,12 @@ generate:
 		--replace-namespace MR :: \
 		--download-native-libraries \
 		$(call, ### Handle sub-libraries) \
-		$(foreach m,$(MODULES),$(if $(and $($m_CSubLibraryMacroPrefix),$($m_CSubLibraryOutputProject)),--imported-split-lib-name $($m_CSubLibraryMacroPrefix) $($m_CSubLibraryOutputProject))) \
+		$(foreach m,$(MODULES),$(if $(and $($m_CSubLibraryMacroPrefix),$($m_CSubLibraryOutputProject)),$(if $($m_COnlyForPython),--skip-split-lib $($m_CSubLibraryMacroPrefix),--imported-split-lib-name $($m_CSubLibraryMacroPrefix) $($m_CSubLibraryOutputProject)))) \
 	)
 
 .DEFAULT_GOAL := build
 .PHONY: build
-build: generate
+build: $(if $(PREGENERATED),,generate)
 # The list of sources goes through a file, there are too many of them for the command line.
 	find $(call quote,$(JAVA_CODE_OUTPUT_DIR)/src) -name '*.java' >$(call quote,$(JAVA_CODE_OUTPUT_DIR)/sources.txt)
 	rm -rf $(call quote,$(JAVA_CODE_OUTPUT_DIR)/classes)

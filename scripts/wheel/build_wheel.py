@@ -73,20 +73,14 @@ def setup_workspace(version, modules, plat_name):
         str(font_resources.relative_to(WHEEL_SRC_DIR))
         for font_resources in (WHEEL_SRC_DIR).glob("NotoSans*.*") # no folders
     ]
-    pybind_shims = []
-    py_versions = []
-    for pybind_shim in LIB_DIR_MESHLIB.glob("*pybind11nonlimitedapi_meshlib_*"):
-        shutil.copy(pybind_shim, WHEEL_SRC_DIR)
-        pybind_shim_name = os.path.basename(pybind_shim)
-        pybind_shims.append(pybind_shim_name)
-        py_versions.append(int(re.sub("\\..*", "", re.sub(".*pybind11nonlimitedapi_meshlib_3\\.", "", pybind_shim_name))));
-    py_versions.sort()
+    # The modules use the limited API of Python, so they work on all of those.
+    with open(WHEEL_SCRIPT_DIR / "python_versions.txt") as f:
+        py_versions = sorted(int(v.strip().split(".")[1]) for v in f if v.strip())
 
     shutil.copy(WHEEL_SCRIPT_DIR / "pyproject.toml", WHEEL_ROOT_DIR)
 
     # generate setup.cfg
     package_files = [
-        *pybind_shims,
         *icon_resources,
         "MRDarkTheme.json",
         "MRLightTheme.json",
@@ -119,7 +113,6 @@ def strip_libraries():
     libs = [
         *LIB_DIR.glob("libMR*.so"),
         *LIB_DIR.glob("libMeshLibC2*.so"),
-        *LIB_DIR.glob("libpybind11nonlimitedapi_stubs.so"),
         *WHEEL_SRC_DIR.glob("*.so"),
     ]
     for lib in libs:
@@ -173,8 +166,6 @@ def build_wheel():
                     #  no longer needed due to https://github.com/adang1345/delvewheel/issues/49 fix with https://github.com/adang1345/delvewheel/commit/42a52cdcc15d424b030a94cb4b51a6b72e4a3d92
                     #"--no-dll", "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll",
                     "--add-path", LIB_DIR,
-                    # This is needed to catch our `pybind11nonlimitedapi_meshlib_3.X.dll` on Windows. Otherwise they don't get patched,
-                    # and then can't find `pybind11nonlimitedapi_stubs.dll`, which does get patched.
                     "--analyze-existing",
                     "-w", out_dir,
                     wf

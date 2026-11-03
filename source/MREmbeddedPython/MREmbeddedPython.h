@@ -28,7 +28,7 @@ public:
     MREMBEDDEDPYTHON_API static bool isAvailable();
 
     // If you have used `runScript()` at least once, you should call this before terminating the program.
-    // Otherwise you can get a crash in Python cleanup. I have only observed this with our patched Pybind.
+    // Otherwise you can get a crash in Python cleanup.
     MREMBEDDEDPYTHON_API static void shutdown();
 
     // Returns true if the interpreter is busy running something.

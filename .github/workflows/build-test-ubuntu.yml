@@ -62,7 +62,6 @@ jobs:
       # one Release job per OS and architecture builds the Java bindings and runs their examples and tests
       RUN_JAVA: ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.compiler == 'GCC' && matrix.build_mrcuda == 'ON' }}
 
-
     steps:
       - name: Display job info
         run: echo "Building on ${{ matrix.os }} ${{ matrix.arch }} with ${{ matrix.compiler }} in ${{ matrix.config }} mode"
@@ -97,18 +96,6 @@ jobs:
           # No retry.sh, linux scripts retry themselves.
           scripts/checkout_submodules.sh . thirdparty/imgui thirdparty/mrbind
           scripts/checkout_submodules.sh thirdparty/mrbind deps/cppdecl
-
-      - name: Install MRBind
-        if: ${{ inputs.mrbind || inputs.mrbind_c }}
-        uses: ./.github/actions/build-mrbind
-        with:
-          # The C bindings come from the generate-c-bindings job, so no parser.
-          generators-only: 'true'
-          # The Dockerfile hash in extra-cache-key busts the cache whenever the
-          # toolchain inside the image changes (e.g. glibc, clang upgrade).
-          cache-key-prefix: ubuntu-${{ matrix.arch }}-${{ matrix.os }}
-          build-script: scripts/mrbind/install_mrbind_ubuntu.sh
-          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt', format('docker/{0}Dockerfile', matrix.os)) }}
 
       - name: Create virtualenv
         run: |
@@ -155,10 +142,6 @@ jobs:
 
       - name: PCH size (diagnostic)
         run: find ./build/${{ matrix.config }} -name 'cmake_pch.hxx.gch' -exec ls -lh {} +
-
-      - name: Generate C# bindings # generate only sources
-        if: ${{ env.UPLOAD_BINDINGS_SOURCES == 'true' }}
-        run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate
 
       - name: Upload C# bindings headers
         if: ${{ env.UPLOAD_BINDINGS_SOURCES == 'true' }}
@@ -216,7 +199,7 @@ jobs:
           if [[ "${{ matrix.os }}" == ubuntu26 ]]; then
             CLANG_GCC_PIN="--gcc-install-dir=/usr/lib/gcc/$(gcc-15 -dumpmachine)/15"
           fi
-          make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${ENABLE_CUDA} EXTRA_CFLAGS="${CLANG_GCC_PIN}" EXTRA_LDFLAGS="${CLANG_GCC_PIN}"
+          make -f scripts/mrbind/generate.mk MODE=none -B --trace PYTHON_SOURCES_DIR=source/MeshLibC2/temp/python MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${ENABLE_CUDA} EXTRA_CFLAGS="${CLANG_GCC_PIN}" EXTRA_LDFLAGS="${CLANG_GCC_PIN}"
 
       - name: Create Python Stubs
         if: ${{ inputs.mrbind && env.UPLOAD_BINDINGS_SOURCES == 'true' }}

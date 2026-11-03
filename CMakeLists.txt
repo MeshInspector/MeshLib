@@ -308,8 +308,9 @@ IF(NOT MR_EMSCRIPTEN)
     IF(MESHLIB_BUILD_PYTHON_MODULES)
       # pure Python over mrmeshpy, which scripts/mrbind/generate.mk builds and copies it next to
       install(FILES ${PROJECT_SOURCE_DIR}/mrmeshnumpy/mrmeshnumpy.py ${PROJECT_SOURCE_DIR}/mrmeshnumpy/mrmeshnumpy.pyi DESTINATION "${MR_PY_LIB_DIR}")
-      IF(MESHLIB_BUILD_MRVIEWER)
-        add_subdirectory(${PROJECT_SOURCE_DIR}/mrviewerpy ./mrviewerpy)
+      # the C++ side of `mrviewerpy`, which scripts/mrbind/generate.mk generates over its C bindings
+      IF(MESHLIB_BUILD_MRVIEWER AND MESHLIB_BUILD_GENERATED_C_BINDINGS)
+        add_subdirectory(${PROJECT_SOURCE_DIR}/MeshLibC2PythonViewer ./MeshLibC2PythonViewer)
       ENDIF()
     ENDIF()
   ENDIF()

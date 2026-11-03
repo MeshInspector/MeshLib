@@ -268,7 +268,6 @@ jobs:
           echo ${GITHUB_WORKSPACE}
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
           git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/imgui
-          git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/mrbind-pybind11
           git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/mrbind
           git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/mrbind/deps/cppdecl
           # Retried via retry.sh: submodule endpoints occasionally 500.
@@ -279,20 +278,6 @@ jobs:
         # rebuild PATH from its own base and drop a PATH exported through
         # GITHUB_ENV, and the `Install uv` step below adds one (`core.addPath`).
         run: echo "${LLVM_PREFIX}/bin" >> $GITHUB_PATH
-
-      - name: Install mrbind
-        uses: ./.github/actions/build-mrbind
-        env:
-          GCC_INSTALL_DIR: ${{ matrix.gcc-install-dir }}
-        with:
-          # The C bindings come from the generate-c-bindings job, so no parser.
-          generators-only: 'true'
-          # Prefix is shared with build-test-linux-vcpkg.yml, which uses the same
-          # image and script. The Dockerfile hash in extra-cache-key busts the cache
-          # whenever the toolchain inside the image changes (e.g. clang upgrade).
-          cache-key-prefix: ${{ matrix.os }}
-          build-script: scripts/mrbind/install_mrbind_rockylinux.sh
-          extra-cache-key: ${{ hashFiles('docker/rockylinux8-vcpkgDockerfile') }}
 
       - name: Print RAM
         # If there's not enough RAM, building MRBind bindings can fail. Not running this in the mrbind step itself, because OOM fails can erase logs from the current step.
@@ -327,6 +312,7 @@ jobs:
           make -f scripts/mrbind/generate.mk -B --trace \
             MODE=release \
             FOR_WHEEL=1 \
+            PYTHON_SOURCES_DIR=source/MeshLibC2/temp/python \
             CXX_FOR_ABI=${{ matrix.compiler }} \
             CXX_FOR_BINDINGS=${{ matrix.compiler }} \
             DEPS_BASE_DIR=${VCPKG_INSTALLED_DIR}/${VCPKG_TRIPLET} \
@@ -336,27 +322,6 @@ jobs:
       # install helper utility for Python version management
       - name: Install uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
-
-      - name: Build Python shim libs
-        run: |
-          PYTHON_VERSIONS=$(cat scripts/mrbind-pybind11/python_versions.txt | xargs)
-          GET_SYSCONFIG_VAR=${PWD}/scripts/wheel/get_sysconfig_var.py
-
-          for PYTHON_VER in ${PYTHON_VERSIONS} ; do
-            # Keep the assignment separate from `export`: the latter would mask a `uv` failure from `sh -e`.
-            PKG_CONFIG_PATH=$(uv run --no-project --python ${PYTHON_VER} ${GET_SYSCONFIG_VAR} LIBPC)
-            export PKG_CONFIG_PATH
-
-            make shims -f scripts/mrbind/generate.mk -B --trace \
-              MODE=release \
-              FOR_WHEEL=1 \
-              CXX_FOR_ABI=${{ matrix.compiler }} \
-              CXX_FOR_BINDINGS=${{ matrix.compiler }} \
-              DEPS_BASE_DIR=${VCPKG_INSTALLED_DIR}/${VCPKG_TRIPLET} \
-              PYTHON_VERSIONS=${PYTHON_VER} \
-              EXTRA_CFLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }} \
-              EXTRA_LDFLAGS="--gcc-install-dir=${{ matrix.gcc-install-dir }} $PWD/libstdcxx_fs_path_compat.o"
-          done
 
       - name: Run Tests
         run: xvfb-run -a ./build/Release/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
@@ -373,7 +338,7 @@ jobs:
 
       - name: Python Tests
         run: |
-          PYTHON_VERSIONS=$(cat scripts/mrbind-pybind11/python_versions.txt | xargs)
+          PYTHON_VERSIONS=$(cat scripts/wheel/python_versions.txt | xargs)
           REQUIREMENTS_FILE=${PWD}/requirements/python/requirements.txt
           GET_SYSCONFIG_VAR=${PWD}/scripts/wheel/get_sysconfig_var.py
 
@@ -407,10 +372,6 @@ jobs:
           name: PythonStubs
           path: ./scripts/wheel/meshlib/meshlib/*.pyi
           retention-days: 1
-
-      - name: Generate C# bindings # generate only sources
-        if: ${{ needs.setup.outputs.publish_prod == 'true' && matrix.platform == 'aarch64' }}
-        run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate
 
       - name: Upload C# bindings headers
         timeout-minutes: 10
@@ -514,7 +475,7 @@ jobs:
           internal-build: 'true'
 
       - name: Install all Python versions
-        run: scripts/mrbind-pybind11/install_all_python_versions_windows.bat
+        run: scripts/wheel/install_all_python_versions_windows.bat
 
       - name: Install CUDA
         if: ${{ matrix.cuda-version != '' }}
@@ -537,16 +498,6 @@ jobs:
         uses: ./.github/actions/install-msys2-mrbind
         with:
           packages-suffix: ${{ matrix.msys2-pkgs }}
-
-      - name: Build MRBind
-        uses: ./.github/actions/build-mrbind
-        with:
-          # The C bindings come from the generate-c-bindings job, so no parser.
-          generators-only: 'true'
-          cache-key-prefix: ${{ matrix.mrbind-cache-prefix }}
-          build-script: scripts/mrbind/install_mrbind_windows_msys2.bat
-          extra-cache-key: ${{ hashFiles(format('scripts/mrbind/msys2_package_hashes{0}.txt', matrix.msys2-pkgs)) }}
-          msys2-env: ${{ matrix.msys2-env }}
 
       - name: Add clang-cl to MSYS2 clang
         # MSYS2 ships no clang-cl.exe; clang.exe called by that name runs in cl mode
@@ -605,7 +556,7 @@ jobs:
         # one to fail the step on a generation error instead of swallowing it.
         run: |
           call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" ${{ matrix.vs-dev-args }} -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
-          call ./scripts/mrbind/generate_win.bat -B --trace MODE=release FOR_WHEEL=1 || exit /b 1
+          call ./scripts/mrbind/generate_win.bat -B --trace MODE=release FOR_WHEEL=1 PYTHON_SOURCES_DIR=source/MeshLibC2/temp/python || exit /b 1
 
       - name: Run Test
         working-directory: source\${{ matrix.platform }}\Release
@@ -704,7 +655,7 @@ jobs:
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
 
       - name: Install all Python versions
-        run: uv python install $(cat scripts/mrbind-pybind11/python_versions.txt | xargs)
+        run: uv python install $(cat scripts/wheel/python_versions.txt | xargs)
 
       - name: Create virtualenv
         run: |
@@ -738,17 +689,6 @@ jobs:
           HOMEBREW_NO_INSTALL_CLEANUP: '1'   # don't prune the known-good keg
         run: ./scripts/mrbind/install_deps_macos.sh
 
-      - name: Build MRBind
-        uses: ./.github/actions/build-mrbind
-        with:
-          # The C bindings come from the generate-c-bindings job, so no parser.
-          generators-only: 'true'
-          # Keyed on the runner image (matrix.instance) so this cache is shared with
-          # build-test-macos.yml when its matrix.instance matches.
-          cache-key-prefix: ${{ matrix.instance }}-clang
-          build-script: scripts/mrbind/install_mrbind_macos.sh
-          extra-cache-key: llvm_pgo_${{ matrix.llvm-keg-version }}-${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.brew-hash.outputs.brew-hash }}
-
       - name: Build
         run: ./scripts/build_source.sh
         env:
@@ -778,7 +718,7 @@ jobs:
         # `MACOS_MIN_VER` picked arbitrarily to match what Apple Clang uses when building MeshLib.
         # Not setting this or setting a different value cases a warning when linking the bindings, and you can get the correct (?) value from those warnings.
         run: |
-          PYTHON_VERSIONS=$(cat scripts/mrbind-pybind11/python_versions.txt | xargs)
+          PYTHON_VERSIONS=$(cat scripts/wheel/python_versions.txt | xargs)
           GET_SYSCONFIG_VAR=${PWD}/scripts/wheel/get_sysconfig_var.py
 
           PKG_CONFIG_PATH=
@@ -788,7 +728,7 @@ jobs:
           export PKG_CONFIG_PATH=${PKG_CONFIG_PATH#:}
 
           make --version
-          make -f scripts/mrbind/generate.mk -B --trace MODE=release FOR_WHEEL=1 MACOS_MIN_VER=12.7 PYTHON_VERSIONS="${PYTHON_VERSIONS}" DEPS_BASE_DIR=vcpkg_installed/${VCPKG_TRIPLET}
+          make -f scripts/mrbind/generate.mk -B --trace MODE=release FOR_WHEEL=1 PYTHON_SOURCES_DIR=source/MeshLibC2/temp/python MACOS_MIN_VER=12.7 PYTHON_VERSIONS="${PYTHON_VERSIONS}" DEPS_BASE_DIR=vcpkg_installed/${VCPKG_TRIPLET}
 
       - name: Verify meshlib.mrmeshpy import
         timeout-minutes: 3
@@ -802,7 +742,7 @@ jobs:
 
       - name: Python Tests
         run: |
-          PYTHON_VERSIONS=$(cat scripts/mrbind-pybind11/python_versions.txt | xargs)
+          PYTHON_VERSIONS=$(cat scripts/wheel/python_versions.txt | xargs)
           REQUIREMENTS_FILE=${PWD}/requirements/python/requirements.txt
 
           cd build/Release/bin
@@ -1210,7 +1150,6 @@ jobs:
         with:
           name: CsharpBindings
           failOnError: false
-
 
       - name: Delete all Windows
         if: ${{ needs.setup.outputs.publish_prod == 'true' && needs.upload-to-release.outputs.uploaded == 'true' }}

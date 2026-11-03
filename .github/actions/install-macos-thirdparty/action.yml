@@ -87,7 +87,6 @@ runs:
             thirdparty/OpenCTM-git \
             thirdparty/libE57Format \
             thirdparty/glad \
-            thirdparty/mrbind-pybind11 \
             thirdparty/tinygltf \
             thirdparty/laz-perf \
             thirdparty/draco \

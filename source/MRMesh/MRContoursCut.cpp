@@ -1138,23 +1138,6 @@ std::pair<EdgeId, EdgeId> leftRightPathEdges( const MeshTopology& topology, Edge
     return isBaseSym ? std::pair{ baseRight, baseLeft } : std::pair{ baseLeft, baseRight };
 }
 
-// whether all path edges at the new vertices of the edge are on its left (first), on its right (second)
-std::pair<bool, bool> allLeftRightOnly( const MeshTopology& topology, EdgeId baseEdge,
-    const EdgeData& edgeData, const OneMeshContours& contours )
-{
-    bool isAllLeftOnly = true;
-    bool isAllRightOnly = true;
-    for ( int i = 0; i < edgeData.size(); ++i )
-    {
-        auto [leftEdge, rightEdge] = leftRightPathEdges( topology, baseEdge, edgeData, i, contours );
-        if ( rightEdge.valid() )
-            isAllLeftOnly = false;
-        if ( leftEdge.valid() )
-            isAllRightOnly = false;
-    }
-    return { isAllLeftOnly, isAllRightOnly };
-}
-
 // maps the pieces of the edge to it
 void mapEdgePieces( NewEdgesMap& new2OldEdgeMap, EdgeId baseEdge, EdgeId e0,
     const EdgeData& edgeData, const OneMeshContours& contours )
@@ -1193,17 +1176,25 @@ EdgeId startCutOneEdge( MeshTopology& topology, EdgeId baseEdge,
 }
 
 // connects the pieces of the edge with the path edges at its new vertices;
-// touches only the pieces and the rings of the new vertices, so different edges can be finished in parallel
-void finishCutOneEdge( MeshTopology& topology, EdgeId baseEdge, EdgeId e0,
+// touches only the pieces and the rings of the new vertices, so different edges can be finished in parallel;
+// returns whether all these path edges are on the left of the edge (first), on its right (second)
+std::pair<bool, bool> finishCutOneEdge( MeshTopology& topology, EdgeId baseEdge, EdgeId e0,
     const EdgeData& edgeData, const OneMeshContours& contours )
 {
+    bool isAllLeftOnly = true;
+    bool isAllRightOnly = true;
     for ( int i = 0; i < edgeData.size(); ++i )
     {
         auto [leftEdge, rightEdge] = leftRightPathEdges( topology, baseEdge, edgeData, i, contours );
+        if ( rightEdge.valid() )
+            isAllLeftOnly = false;
+        if ( leftEdge.valid() )
+            isAllRightOnly = false;
         const EdgeId bot = e0 + 2 * i;
         const EdgeId top = i + 1 < edgeData.size() ? bot + 2 : baseEdge;
         connectEdges( topology, bot, top, leftEdge, rightEdge );
     }
+    return { isAllLeftOnly, isAllRightOnly };
 }
 
 // cuts one edge and connects all intersecting contours with pieces;
@@ -1219,9 +1210,8 @@ void cutOneEdge( Mesh& mesh,
     FaceId oldLeft = mesh.topology.left( baseEdge );
     FaceId oldRight = mesh.topology.left( baseEdge.sym() );
 
-    const auto [isAllLeftOnly, isAllRightOnly] = allLeftRightOnly( mesh.topology, baseEdge, edgeData, contours );
     const EdgeId e0 = startCutOneEdge( mesh.topology, baseEdge, edgeData, contours, new2OldEdgeMap );
-    finishCutOneEdge( mesh.topology, baseEdge, e0, edgeData, contours );
+    const auto [isAllLeftOnly, isAllRightOnly] = finishCutOneEdge( mesh.topology, baseEdge, e0, edgeData, contours );
 
     if ( isAllLeftOnly && oldRight.valid() )
         toFill.push_back( { baseEdge.sym(), oldRight } );

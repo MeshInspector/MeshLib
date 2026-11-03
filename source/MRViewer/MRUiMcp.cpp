@@ -10,6 +10,9 @@
 #include "MRViewer/MRUITestEngine.h"
 #include "MRViewer/MRUITestEngineControl.h"
 
+#include <algorithm>
+#include <thread>
+
 namespace MR::Mcp
 {
 
@@ -64,9 +67,12 @@ static nlohmann::json mcpToolListAllUiEntries( const nlohmann::json& args )
         list = std::move( *ex );
     } );
 
+    const auto filter = toLower( args.value( "filter", std::string{} ) );
     nlohmann::json ret = nlohmann::json::array();
     for ( const auto& pe : list )
     {
+        if ( !filter.empty() && toLower( pe.second.name ).find( filter ) == std::string::npos )
+            continue;
         ret.push_back( nlohmann::json::object( {
             { "path", pe.first },
             { "name", pe.second.name },
@@ -184,32 +190,43 @@ static std::string withPreamble( std::string_view specific )
     return std::string( kPathSemantics ) + std::string( specific );
 }
 
-// Returns a snapshot of the global progress bar state. Read-only; safe to call any time.
-static nlohmann::json mcpToolProgressStatus( const nlohmann::json& )
+// Returns a snapshot of the global progress bar state, after waiting up to `waitSeconds` for MeshInspector to become idle.
+// Read-only; safe to call any time.
+static nlohmann::json mcpToolProgressStatus( const nlohmann::json& args )
 {
-    nlohmann::json out = nlohmann::json::object();
-    // a short probe: an action that runs in a frame without the progress bar blocks the main thread;
-    // longer than the 1 s after which CommandLoop re-posts a lost wake-up event on Linux, not to report an idle thread as busy
-    bool busy = false;
-    try
+    using namespace std::chrono;
+    const auto deadline = steady_clock::now() + ceil<milliseconds>( duration<double>(
+        std::clamp( args.value( "waitSeconds", 0.0 ), 0.0, double( cMainThreadTimeout.count() ) ) ) );
+    for ( ;; )
     {
-        CommandLoop::runCommandFromGUIThread( [] {}, std::chrono::seconds( 2 ) );
-    }
-    catch ( const CommandLoop::StartTimeout& )
-    {
-        busy = true;
-    }
-    out["busy"] = busy;
-    // not `isFinished()`: the progress popup blocks `ui_*` until the post-processing, and operations ordered meanwhile follow it
-    if ( !MR::ProgressBar::isOrdered() )
-    {
-        out["active"] = false;
+        // a probe of at least 2 s: an action that runs in a frame without the progress bar blocks the main thread;
+        // longer than the 1 s after which CommandLoop re-posts a lost wake-up event on Linux, not to report an idle thread as busy
+        bool busy = false;
+        try
+        {
+            CommandLoop::runCommandFromGUIThread( [] {}, std::max<milliseconds>( seconds( 2 ), ceil<milliseconds>( deadline - steady_clock::now() ) ) );
+        }
+        catch ( const CommandLoop::StartTimeout& )
+        {
+            busy = true;
+        }
+        // not `isFinished()`: the progress popup blocks `ui_*` until the post-processing, and operations ordered meanwhile follow it
+        const bool active = MR::ProgressBar::isOrdered();
+        if ( !busy && active && steady_clock::now() < deadline )
+        {
+            std::this_thread::sleep_for( milliseconds( 250 ) ); // the operation runs in a background thread
+            continue;
+        }
+        nlohmann::json out = nlohmann::json::object( { { "busy", busy }, { "active", active } } );
+        if ( busy )
+            out["busyFor"] = duration_cast<seconds>( steady_clock::now() - CommandLoop::lastProcessTime() ).count();
+        if ( active )
+        {
+            out["title"]   = MR::ProgressBar::getLastOperationTitle();
+            out["percent"] = MR::ProgressBar::getProgress() * 100.f;
+        }
         return out;
     }
-    out["active"]  = true;
-    out["title"]   = MR::ProgressBar::getLastOperationTitle();
-    out["percent"] = MR::ProgressBar::getProgress() * 100.f;
-    return out;
 }
 
 MR_ON_INIT{
@@ -226,14 +243,18 @@ MR_ON_INIT{
                 .addMember( "type", Schema::String{} )
                 .addMember( "status", Schema::String{} )
         ),
-        /*func*/mcpToolListUiEntries
+        /*func*/mcpToolListUiEntries,
+        /*readOnly*/true
     );
 
     server.addTool(
         /*id*/"ui_listAllEntries",
         /*name*/"List UI entries (full subtree)",
-        /*desc*/withPreamble( "Flat depth-first dump of every entry in the subtree at `path` (omit or empty = whole tree). Each row carries its own `path`, so tree structure is recoverable. Prefer this for first-contact exploration; use `ui_listEntries` for a single level after a state change." ),
-        /*input_schema*/Schema::Object{}.addMemberOpt( "path", Schema::Array( Schema::String{} ) ),
+        /*desc*/withPreamble( "Flat depth-first dump of every entry in the subtree at `path` (omit or empty = whole tree). Each row carries its own `path`, so tree structure is recoverable. Prefer this for first-contact exploration; use `ui_listEntries` for a single level after a state change. "
+            "The whole tree is large (over 10k characters): to find an entry, pass `filter`, which keeps only the entries whose name contains it, ignoring case." ),
+        /*input_schema*/Schema::Object{}
+            .addMemberOpt( "path", Schema::Array( Schema::String{} ) )
+            .addMemberOpt( "filter", Schema::String{} ),
         /*output_schema*/Schema::Array(
             Schema::Object{}
                 .addMember( "path", Schema::Array( Schema::String{} ) )
@@ -241,7 +262,8 @@ MR_ON_INIT{
                 .addMember( "type", Schema::String{} )
                 .addMember( "status", Schema::String{} )
         ),
-        /*func*/mcpToolListAllUiEntries
+        /*func*/mcpToolListAllUiEntries,
+        /*readOnly*/true
     );
 
     server.addTool(
@@ -301,7 +323,8 @@ MR_ON_INIT{
                         Schema::Object{}.addMember( "value", Schema::Number{} ).addMember( "min", Schema::Number{} ).addMember( "max", Schema::Number{} )
                     )
             ),
-            /*func*/mcpToolReadValue<T>
+            /*func*/mcpToolReadValue<T>,
+            /*readOnly*/true
         );
 
         server.addTool(
@@ -326,16 +349,20 @@ MR_ON_INIT{
                 "flight, else `{active: true, title: string, percent: number}`. `title` is the operation name passed "
                 "to the underlying `ProgressBar::order(...)` (e.g. \"Boolean\", \"Loading\"). `percent` is 0-100. "
                 "`busy` is true if the main thread did not respond within 2 seconds, e.g. while it runs an action "
-                "without the progress bar; other tools then wait for it or report that MeshInspector is busy. "
-                "Poll this while `ui_*` dispatch is blocked by a `'Progress'` modal or after a tool returned `busy` — "
-                "once `active` and `busy` are both false, the UI is responsive again.",
-        /*input_schema*/Schema::Object{},
+                "without the progress bar, and `busyFor` then says for how many seconds it has not responded; other tools "
+                "wait for it or report that MeshInspector is busy. Once `active` and `busy` are both false, the UI is "
+                "responsive again. To wait for that, e.g. while `ui_*` dispatch is blocked by a `'Progress'` modal or after "
+                "a tool returned `busy`, pass `waitSeconds` (at most 20) instead of polling: the call returns as soon as both "
+                "are false, or after that many seconds with the state then.",
+        /*input_schema*/Schema::Object{}.addMemberOpt( "waitSeconds", Schema::Number{} ),
         /*output_schema*/Schema::Object{}
             .addMember(    "busy",    Schema::Bool{} )
+            .addMemberOpt( "busyFor", Schema::Number{} )
             .addMember(    "active",  Schema::Bool{} )
             .addMemberOpt( "title",   Schema::String{} )
             .addMemberOpt( "percent", Schema::Number{} ),
-        /*func*/mcpToolProgressStatus
+        /*func*/mcpToolProgressStatus,
+        /*readOnly*/true
     );
 }; // MR_ON_INIT
 

@@ -36,7 +36,7 @@ Expected<std::shared_ptr<Object>> resolveId( uint64_t id )
 std::runtime_error busyError( std::string_view what )
 {
     return std::runtime_error( fmt::format( "{}. If MeshInspector is still running an action started by an earlier call, "
-        "poll `ui_progressStatus` until `busy` is false, then retry.", what ) );
+        "wait with `ui_progressStatus {{waitSeconds: 20}}` until `busy` is false, then retry.", what ) );
 }
 
 void runOnMainThread( const std::function<void()>& func )
@@ -69,7 +69,8 @@ std::string waitFramesAfterInput( const std::function<void()>& after )
     catch ( const CommandLoop::StartTimeout& )
     {
         return fmt::format( "The input was delivered, but MeshInspector's main thread is still busy after {} seconds, "
-            "probably with the action the input started. Poll `ui_progressStatus` until `busy` is false before the next call.",
+            "probably with the action the input started. Wait with `ui_progressStatus {{waitSeconds: 20}}` until `busy` is false "
+            "before the next call.",
             cMainThreadTimeout.count() );
     }
     return {};

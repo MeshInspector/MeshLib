@@ -21,6 +21,7 @@
 #include "MRRingIterator.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRMeshFillHole.h"
+#include "MRMeshFixer.h"
 
 namespace MR
 {
@@ -231,32 +232,16 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
 
     // find and order intersections
     auto intersections = findSelfCollidingEdgeTrisPrecise( mesh, converters.toInt );
-    // two triangles with the same vertices glued along all three edges are a closed part without volume, whose crossings with other parts
-    // are alike for both triangles, so that no cut tells them apart: such parts are removed with their intersections
-    FaceBitSet twins;
+    // two triangles with the same vertices glued along two edges (at a vertex of degree 2) or all three edges (a pillow) are a part without
+    // volume, whose crossings with other parts are alike for both triangles, so that no cut tells them apart: such parts are eliminated
+    // with their intersections
     for ( const auto& x : intersections )
-    {
         for ( auto f : { x.tri, mesh.topology.left( x.edge ) } )
-        {
-            if ( !f || twins.test( f ) )
-                continue;
-            const auto e = mesh.topology.edgeWithLeft( f );
-            const auto g = mesh.topology.right( e );
-            bool glued = g && g != f;
-            for ( auto le : leftRing( mesh.topology, e ) )
-                glued = glued && mesh.topology.right( le ) == g;
-            if ( glued )
-            {
-                twins.autoResizeSet( f );
-                twins.autoResizeSet( g );
-            }
-        }
-    }
-    if ( twins.any() )
-    {
-        std::erase_if( intersections, [&] ( const EdgeTri& x ) { return twins.test( x.tri ) || twins.test( mesh.topology.left( x.edge ) ); } );
-        mesh.deleteFaces( twins );
-    }
+            if ( f && mesh.topology.hasFace( f ) )
+                for ( auto e : leftRing( mesh.topology, f ) )
+                    if ( eliminateDoubleTris( mesh.topology, e, nullptr, true ) )
+                        break;
+    std::erase_if( intersections, [&] ( const EdgeTri& x ) { return !mesh.topology.hasFace( x.tri ) || mesh.topology.isLoneEdge( x.edge ); } );
     auto contours = orderSelfIntersectionContours( mesh.topology, intersections );
     removeTwoPointLoops( contours ); // both contours of a pair together, as they have the same points
 

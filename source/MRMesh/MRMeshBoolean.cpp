@@ -357,6 +357,7 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
     // meshAVertsNum = 0 because both meshes are actually the same and no need to change the IDs of any mesh vertices
     const SortIntersectionsData sortData{ inMesh, contours, converters.toInt, nullptr, 0, false };
     const VertId firstNewVert( mesh.topology.vertSize() );
+    const FaceId firstNewFace( mesh.topology.faceSize() );
     FaceMap new2Old;
     // where three sheets meet at a point, the contours cross on each of them: the cut splits them there, so the paths pass the crossings
     auto cutRes = cutMesh( mesh, intContours, { .sortData = &sortData, .new2OldMap = &new2Old,
@@ -369,13 +370,18 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
                 crossings.set( v );
     if ( cutRes.fbsWithContourIntersections.any() )
     {
-        // a bad face is filled well only where the cut split the crossings in it: the faces around such a crossing come from that face
+        // a bad face is filled well only where the cut split the crossings in it (the faces around such a crossing come from that face),
+        // and all the faces made from it are triangles: where its monotone split failed, the planar fill can leave a face that is no
+        // triangle; only the new faces can be such, as the old ones keep their sides
         FaceBitSet split;
         for ( auto v : crossings )
             for ( auto e : orgRing( mesh.topology, v ) )
                 if ( const auto f = mesh.topology.left( e ) )
                     split.autoResizeSet( new2Old[f] );
-        const auto bad = cutRes.fbsWithContourIntersections - split;
+        auto bad = cutRes.fbsWithContourIntersections - split;
+        for ( auto f = firstNewFace; f < mesh.topology.faceSize(); ++f )
+            if ( cutRes.fbsWithContourIntersections.test( new2Old[f] ) && !mesh.topology.isLeftTri( mesh.topology.edgeWithLeft( f ) ) )
+                bad.set( new2Old[f] );
         if ( bad.any() )
             return unexpected( fmt::format( "Self-Boolean has nested intersections on {} faces", bad.count() ) );
     }
@@ -425,7 +431,7 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
         {
             const auto& leftLoopF = cutRes.resultCut[f];
             auto rightLoopF = cutAlongEdges( mesh, leftLoopF, holes );
-            const auto& leftLoopS = cutRes.resultCut[s];
+            const auto& leftLoopS = cutRes.resultCut[s]; // rotated and reversed above to go along leftLoopF
             auto rightLoopS = cutAlongEdges( mesh, leftLoopS, holes );
             stitchContours( mesh.topology, leftLoopF, rightLoopS );
             stitchContours( mesh.topology, leftLoopS, rightLoopF );

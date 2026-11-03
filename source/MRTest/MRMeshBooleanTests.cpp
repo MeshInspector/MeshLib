@@ -488,6 +488,40 @@ TEST( MRMesh, SelfBooleanNestedIntersections )
     }
 }
 
+// three overlapping spheres in one mesh, whose surfaces meet at two triple points, where their contours cross: the outer component
+// of the result bounds the union of the spheres, and every component bounds a region of positive volume
+TEST( MRMesh, SelfBooleanThreeSpheres )
+{
+    auto sphere = [] ( const Vector3f& center )
+    {
+        Mesh res = makeSphere( { .radius = 1.f, .numMeshVertices = 300 } );
+        res.transform( AffineXf3f::translation( center ) );
+        return res;
+    };
+    const Mesh a = sphere( { 0.f, 0.f, 0.f } ), b = sphere( { 1.03f, 0.02f, 0.05f } ), c = sphere( { 0.48f, 0.87f, -0.04f } );
+    const auto ab = boolean( a, b, BooleanOperation::Union );
+    ASSERT_TRUE( ab.valid() ) << ab.errorString;
+    const auto uni = boolean( ab.mesh, c, BooleanOperation::Union );
+    ASSERT_TRUE( uni.valid() ) << uni.errorString;
+
+    Mesh mesh = a;
+    mesh.addMesh( b );
+    mesh.addMesh( c );
+    const auto res = selfBoolean( mesh );
+    ASSERT_TRUE( res.has_value() ) << res.error();
+    EXPECT_TRUE( res->topology.checkValidity() );
+    EXPECT_EQ( res->topology.findNumHoles(), 0 );
+    double maxVolume = 0;
+    for ( const auto& component : MeshComponents::getAllComponents( *res ) )
+    {
+        const double volume = res->volume( &component );
+        EXPECT_GT( volume, 0 );
+        maxVolume = std::max( maxVolume, volume );
+    }
+    // both are made of the same pieces of the same triangles, only the new vertices can be rounded differently (5e-11 here)
+    EXPECT_NEAR( maxVolume, uni.mesh.volume(), 1e-8 * uni.mesh.volume() );
+}
+
 // a cube with two triangles of the same vertices and opposite orientations glued along all their edges through it, a closed part
 // without volume; its crossings with the cube are alike for both triangles, so no cut can resolve them: selfBoolean removes the part,
 // which leaves the cube as it was, also turned inside out or flattened

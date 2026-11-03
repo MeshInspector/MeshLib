@@ -963,7 +963,7 @@ ifeq ($(TARGET),python)
 
 # The init script.
 INIT_SCRIPT := $(MODULE_OUTPUT_DIR)/__init__.py
-$(INIT_SCRIPT): $(makefile_dir)__init__.py
+$(INIT_SCRIPT): $(makefile_dir)__init__.py | $(MODULE_OUTPUT_DIR)
 	@cp $< $@
 ifeq ($(IS_WINDOWS),) # If not on Windows, strip the windows-only part. Here and below we avoid `-i inplace` and use `awk` instead of `gawk` to not have to install `gawk` on MacOS, which can require building stuff from source on old MacOS.
 	@awk '/### windows-only: \[/{x=1} {if (!x) print} x && /### \]/{x=0}' $@ >$(call quote,$(MODULE_OUTPUT_DIR)/tmp.txt) && mv $(call quote,$(MODULE_OUTPUT_DIR)/tmp.txt) $@

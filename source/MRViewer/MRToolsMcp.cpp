@@ -5,11 +5,13 @@
 #include "MRMesh/MRObject.h"
 #include "MRPch/MRFmt.h"
 #include "MRViewer/MRCommandLoop.h"
+#include "MRViewer/MRMcpCommon.h"
 #include "MRViewer/MRRibbonMenuItem.h"
 #include "MRViewer/MRRibbonSchema.h"
 #include "MRViewer/MRSceneCache.h"
 #include "MRViewer/MRStatePlugin.h"
 #include "MRViewer/MRUITestEngine.h"
+#include "MRViewer/MRViewer.h"
 
 #include <algorithm>
 #include <string>
@@ -18,7 +20,7 @@
 namespace MR::Mcp
 {
 
-// Defined in MRUiMcp.cpp — drains TestEngine status messages and surfaces them as a tool error.
+// Defined in MRUiMcp.cpp — drains TestEngine status messages and surfaces them as a tool error; call on the GUI thread.
 void surfaceTestEngineStatusMessages();
 
 // Public type label for a ribbon item. State plugins split by `blocking()` (default: true);
@@ -70,7 +72,7 @@ static nlohmann::json mcpToolInfoJson( const std::string& id, const MenuItemInfo
 static nlohmann::json mcpToolsListAll( const nlohmann::json& )
 {
     std::vector<std::string> ids;
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    runOnMainThread( [&]
     {
         const auto& items = RibbonSchemaHolder::schema().items;
         ids.reserve( items.size() );
@@ -84,7 +86,7 @@ static nlohmann::json mcpToolsListAll( const nlohmann::json& )
 static nlohmann::json mcpToolsListActive( const nlohmann::json& )
 {
     std::vector<std::string> ids;
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    runOnMainThread( [&]
     {
         for ( const auto& [id, info] : RibbonSchemaHolder::schema().items )
         {
@@ -102,7 +104,7 @@ static nlohmann::json mcpToolsGetInfo( const nlohmann::json& args )
 
     nlohmann::json items   = nlohmann::json::array();
     nlohmann::json missing = nlohmann::json::array();
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    runOnMainThread( [&]
     {
         const auto& schemaItems = RibbonSchemaHolder::schema().items;
         // Snapshot once — same selection set every iteration.
@@ -128,14 +130,14 @@ static nlohmann::json mcpToolsGetInfo( const nlohmann::json& args )
 static nlohmann::json mcpToolsAction( const nlohmann::json& args )
 {
     const auto id = args.at( "id" ).get<std::string>();
-    bool nowActive = false;
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    std::shared_ptr<RibbonMenuItem> item;
+    runOnMainThread( [&]
     {
         auto& items = RibbonSchemaHolder::schema().items;
         auto it = items.find( id );
         if ( it == items.end() || !it->second.item )
             throw std::runtime_error( fmt::format( "tool '{}' not found", id ) );
-        auto& item = it->second.item;
+        item = it->second.item;
         if ( !item->isActive() )
         {
             const auto& selected = SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>();
@@ -143,17 +145,21 @@ static nlohmann::json mcpToolsAction( const nlohmann::json& args )
             if ( !reason.empty() )
                 throw std::runtime_error( fmt::format( "tools_action {}: {}", id, reason ) );
         }
-        // Mark the frame as TE-driven so any TE-gated hook the action triggers
-        // (file-dialog bypass via stageFileDialogPaths, etc.) sees the flag set.
-        // tools_action calls item->action() directly without going through
-        // TestEngine::createButton, which is the other code path that sets it.
-        UI::TestEngine::markFrameTriggered();
-        item->action();
-        nowActive = item->isActive();
+        // not here: a long action must not keep this call waiting, see waitFramesAfterInput
+        getViewerInstance().emplaceEvent( "mcp tools_action", [item]
+        {
+            // Mark the frame as TE-driven so any TE-gated hook the action triggers
+            // (file-dialog bypass via stageFileDialogPaths, etc.) sees the flag set.
+            // tools_action calls item->action() directly without going through
+            // TestEngine::createButton, which is the other code path that sets it.
+            UI::TestEngine::markFrameTriggered();
+            item->action();
+        } );
     } );
-    skipFramesAfterInput();
-    surfaceTestEngineStatusMessages();
-    return nlohmann::json::object( { { "active", nowActive } } );
+    nlohmann::json res = nlohmann::json::object();
+    if ( auto busy = waitFramesAfterInput( [&] { surfaceTestEngineStatusMessages(); res["active"] = item->isActive(); } ); !busy.empty() )
+        res["busy"] = std::move( busy );
+    return res;
 }
 
 MR_ON_INIT{
@@ -212,9 +218,10 @@ MR_ON_INIT{
         /*desc*/"Equivalent to clicking the tool's ribbon button. State plugins toggle open/closed; one-shot buttons "
                 "run their action. Errors if the id isn't in `tools_listAll`, or if the tool is currently disabled "
                 "(message has the same shape as `ui_pressButton` disabled errors). Returns `{active}` — the tool's "
-                "post-call active state (always `false` for one-shot buttons).",
+                "post-call active state (always `false` for one-shot buttons). If the action keeps MeshInspector busy "
+                "for more than 20 seconds, returns `{busy}` with an explanation instead, see `ui_progressStatus`.",
         /*input_schema*/Schema::Object{}.addMember( "id", Schema::String{} ),
-        /*output_schema*/Schema::Object{}.addMember( "active", Schema::Bool{} ),
+        /*output_schema*/Schema::Object{}.addMemberOpt( "active", Schema::Bool{} ).addMemberOpt( "busy", Schema::String{} ),
         /*func*/mcpToolsAction
     );
 }; // MR_ON_INIT

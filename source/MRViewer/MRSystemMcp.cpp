@@ -7,6 +7,7 @@
 #include "MRPch/MRFmt.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRGetSystemInfoJson.h"
+#include "MRViewer/MRMcpCommon.h"
 
 #include <json/json.h>
 
@@ -58,7 +59,7 @@ static nlohmann::json mcpSystemLog( const nlohmann::json& args )
 static nlohmann::json mcpSystemInfo( const nlohmann::json& )
 {
     nlohmann::json out;
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    runOnMainThread( [&]
     {
         const Json::Value sys = MR::GetSystemInfoJson();
         Json::StreamWriterBuilder builder;

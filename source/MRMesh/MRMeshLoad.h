@@ -26,10 +26,11 @@ MRMESH_API Expected<Mesh> loadMrmesh( const std::filesystem::path& file, const M
 /// important on Windows: in stream must be open in binary mode
 MRMESH_API Expected<Mesh> loadMrmesh( std::istream& in, const MeshLoadSettings& settings = {} );
 
-/// loads mesh from file in .OFF format
+/// loads mesh from file in textual or binary .OFF format
 MRMESH_API Expected<Mesh> loadOff( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
 
-/// loads mesh from stream in .OFF format
+/// loads mesh from stream in textual or binary .OFF format
+/// important on Windows: in stream must be open in binary mode
 MRMESH_API Expected<Mesh> loadOff( std::istream& in, const MeshLoadSettings& settings = {} );
 
 /// loads mesh from file in .OBJ format
@@ -103,10 +104,11 @@ MRMESH_API Expected<Mesh> fromMrmesh( const std::filesystem::path& file, const M
 /// important on Windows: in stream must be open in binary mode
 MRMESH_API Expected<Mesh> fromMrmesh( std::istream& in, const MeshLoadSettings& settings = {} );
 
-/// loads mesh from file in .OFF format
+/// loads mesh from file in textual or binary .OFF format
 MRMESH_API Expected<Mesh> fromOff( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
 
-/// loads mesh from stream in .OFF format
+/// loads mesh from stream in textual or binary .OFF format
+/// important on Windows: in stream must be open in binary mode
 MRMESH_API Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings = {} );
 
 /// loads mesh from file in .OBJ format

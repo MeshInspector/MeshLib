@@ -72,6 +72,7 @@ struct PreCutResult
     const Vector<int>* offsets = nullptr; // of the contours, or of pathOffsets once insertPieces makes paths longer
     Vector<int> pathOffsets;
     HashMap<FaceId, std::array<EdgeId, 3>> vertFaces; // the old faces of path edges at mesh vertices, removed by doPreCutMesh, and their edges
+    FaceBitSet cutEdgeFaces; // with sortData (a boolean): the faces of the cut edges, which cutEdgesIntoPieces deletes at once
 
     // the old faces of the path edges of contour c
     const PathsEdgeIndex* oldFaces( int c ) const { return oldEdgesInfo.data() + ( *offsets )[c]; }
@@ -177,6 +178,8 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
     res.oldEdgesInfo.resize( contours.intersections.size() );
     res.offsets = &contours.offsets;
     res.edgeInters.reserve( intersectedEdges );
+    if ( sortData )
+        res.cutEdgeFaces.resize( topology.faceSize() );
     const auto oldEdgesSize = topology.edgeSize();
 
     // find the old face of every path edge before the topology changes, on this thread, which then has the records of the cut edges
@@ -366,11 +369,20 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
             else
                 topology.setOrg( in, newVertId );
             if ( const auto e = inter.edge() )
+            {
                 res.edgeInters.push_back( EdgeIntersectionData{
                     .oldEdge = e.undirected(),
                     .interOnEdge = IntersectionData{ContourId( contourId ),IntersectionId( i )},
                     .newVert = newVertId,
                     .orgEdgeInLeftTri = out } );
+                if ( sortData )
+                {
+                    if ( auto f = topology.left( e ) )
+                        res.cutEdgeFaces.set( f );
+                    if ( auto f = topology.right( e ) )
+                        res.cutEdgeFaces.set( f );
+                }
+            }
         }
     }
 
@@ -1230,18 +1242,7 @@ void cutEdgesIntoPieces( Mesh& mesh, PreCutResult& preRes, const OneMeshContours
     {
         // the contours of a boolean cross every edge they meet, so no face of a cut edge is filled again: all of them are deleted at once
         Timer t( "delete faces of cut edges" );
-        FaceBitSet faces( mesh.topology.faceSize() );
-        for ( size_t i = 0; i < inters.size(); ++i )
-        {
-            if ( i > 0 && inters[i - 1].oldEdge == inters[i].oldEdge )
-                continue; // the intersections of an edge are together, the first one marks its faces
-            const EdgeId e( inters[i].oldEdge );
-            if ( auto f = mesh.topology.left( e ) )
-                faces.set( f );
-            if ( auto f = mesh.topology.right( e ) )
-                faces.set( f );
-        }
-        mesh.topology.deleteFacesKeepEdges( faces );
+        mesh.topology.deleteFacesKeepEdges( preRes.cutEdgeFaces );
     }
     // the faces that no contour enters are filled after all edges are cut: if another side of such a face is cut too,
     // a fill at the cut of the first side would give the cut of the other one a new face as the old one

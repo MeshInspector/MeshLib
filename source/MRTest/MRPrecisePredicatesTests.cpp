@@ -1718,6 +1718,11 @@ TEST( MRMesh, getToIntConverter )
     EXPECT_LE( -i0.z, INT_MAX / 2 );
     EXPECT_LE(  i1.z, INT_MAX / 2 );
     EXPECT_GT( i1.z - i0.z, 0 );
+
+    const Vector3f p{ 0.25f, -0.5f, 1.f };
+    const auto toIntPt = getToIntConverter( Box3d( Vector3d( p ), Vector3d( p ) ) );
+    EXPECT_EQ( toIntPt( p ), Vector3i{} );
+    EXPECT_EQ( getToFloatConverter( Box3d( Vector3d( p ), Vector3d( p ) ) )( Vector3i{} ), p );
 }
 
 } //namespace MR

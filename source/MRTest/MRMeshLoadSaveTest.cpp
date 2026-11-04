@@ -5,6 +5,7 @@
 #include <MRMesh/MRMeshSave.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRTriMesh.h>
+#include <MRMesh/MRBitCast.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRColor.h>
 #include <MRMesh/MRImage.h>
@@ -24,6 +25,45 @@
 
 namespace MR
 {
+
+TEST( MRMesh, LoadBinaryOff )
+{
+    std::string file = "OFF BINARY\n";
+    auto put = [&] ( auto x )
+    {
+        const auto u = bit_cast<std::uint32_t>( x );
+        for ( int shift = 24; shift >= 0; shift -= 8 )
+            file.push_back( char( ( u >> shift ) & 0xFF ) );
+    };
+    put( 5 ); put( 6 ); put( 0 );
+    for ( float c : { 0.f, 0.f, 1.f,   1.f, 0.f, 0.f,   0.f, 1.f, 0.f,   -1.f, 0.f, 0.f,   0.f, -1.f, 0.f } )
+        put( c );
+    const int tris[6][3] = { { 0, 1, 2 }, { 0, 2, 3 }, { 0, 3, 4 }, { 0, 4, 1 }, { 1, 3, 2 }, { 1, 4, 3 } };
+    for ( int f = 0; f < 6; ++f )
+    {
+        put( 3 );
+        for ( int v : tris[f] )
+            put( v );
+        // the first face has a color to be skipped
+        if ( f == 0 )
+        {
+            put( 3 ); put( 1.f ); put( 0.5f ); put( 0.f );
+        }
+        else
+            put( 0 );
+    }
+
+    std::istringstream in( file );
+    auto loadRes = MeshLoad::fromOff( in );
+    ASSERT_TRUE( loadRes.has_value() ) << loadRes.error();
+    EXPECT_EQ( loadRes->points.size(), 5 );
+    EXPECT_EQ( loadRes->topology.numValidVerts(), 5 );
+    EXPECT_EQ( loadRes->topology.numValidFaces(), 6 );
+    EXPECT_EQ( loadRes->computeBoundingBox(), Box3f( Vector3f( -1, -1, 0 ), Vector3f( 1, 1, 1 ) ) );
+
+    std::istringstream truncated( file.substr( 0, file.size() - 4 ) );
+    EXPECT_FALSE( MeshLoad::fromOff( truncated ).has_value() );
+}
 
 TEST(MRMesh, LoadSave) 
 {

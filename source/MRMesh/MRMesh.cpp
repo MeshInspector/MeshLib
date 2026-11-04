@@ -387,7 +387,16 @@ bool Mesh::addMeshPart( const MeshPart & from, bool flipOrientation,
     VertId lastPointId = topology.lastValidVert();
     if ( points.size() < lastPointId + 1 )
         points.resize( lastPointId + 1 );
-    map.src2tgtVerts->forEach( [&]( VertId fromVert, VertId thisVert ) { points[thisVert] = from.mesh.points[fromVert]; } );
+    if ( const auto* vmap = map.src2tgtVerts->getMap() )
+    {
+        ParallelFor( *vmap, [&] ( VertId fromVert )
+        {
+            if ( const auto thisVert = ( *vmap )[fromVert] )
+                points[thisVert] = from.mesh.points[fromVert];
+        } );
+    }
+    else
+        map.src2tgtVerts->forEach( [&]( VertId fromVert, VertId thisVert ) { points[thisVert] = from.mesh.points[fromVert]; } );
     return true;
 }
 

@@ -199,10 +199,6 @@ std::unique_ptr<IFillContours2DPlanCache> makeFillContours2DPlanCache()
 
 Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId, IFillContours2DPlanCache* cache /*= nullptr*/ )
 {
-    assert( !mesh.topology.left( holeEdgeId ) );
-    if ( mesh.topology.left( holeEdgeId ) )
-        return unexpected( "Hole edge has left face" );
-
     // a plan needs only the patch connectivity: triangulate into the cache without creating a Mesh;
     // the connectivity must live somewhere even if the caller gave no cache, hence the temporary one
     std::unique_ptr<IFillContours2DPlanCache> tmpCache;
@@ -217,7 +213,10 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId, 
     // so planning many holes with one cache tracks them into the same buffer
     EdgeLoops& loops = planCache.loops;
     loops.resize( 1 );
-    trackRightBoundaryLoop( mesh.topology, holeEdgeId, loops.front() );
+    // the left ring is the hole's boundary loop, and also the ring of a face to triangulate
+    loops.front().clear();
+    for ( EdgeId e : leftRing( mesh.topology, holeEdgeId ) )
+        loops.front().push_back( e );
 
     // the hole loop winds counterclockwise around this direction, same as around the fitted plane's normal it replaces
     Vector3d sumCross;

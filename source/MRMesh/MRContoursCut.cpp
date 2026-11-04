@@ -1238,12 +1238,9 @@ void cutEdgesIntoPieces( Mesh& mesh, PreCutResult& preRes, const OneMeshContours
 {
     MR_TIMER;
     auto& inters = preRes.edgeInters;
+    // the contours of a boolean cross every edge they meet, so no face of a cut edge is filled again: all of them are deleted at once
     if ( sortData )
-    {
-        // the contours of a boolean cross every edge they meet, so no face of a cut edge is filled again: all of them are deleted at once
-        Timer t( "delete faces of cut edges" );
         mesh.topology.deleteFacesKeepEdges( preRes.cutEdgeFaces );
-    }
     // the faces that no contour enters are filled after all edges are cut: if another side of such a face is cut too,
     // a fill at the cut of the first side would give the cut of the other one a new face as the old one
     Vector<std::pair<EdgeId, FaceId>> toFill;

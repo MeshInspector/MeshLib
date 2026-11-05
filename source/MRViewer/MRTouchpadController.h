@@ -86,7 +86,7 @@ private:
     virtual bool touchpadSwipeGestureUpdate_( float deltaX, float deltaY, bool kinetic ) override;
     virtual bool touchpadSwipeGestureEnd_() override;
 
-    Viewport::Parameters initZoomParams_;
+    float zoomScale_{ 1.f }; // pinch scale already applied in the current gesture
     virtual bool touchpadZoomGestureBegin_() override;
     virtual bool touchpadZoomGestureUpdate_( float scale, bool kinetic ) override;
     virtual bool touchpadZoomGestureEnd_() override;

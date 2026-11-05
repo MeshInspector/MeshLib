@@ -37,9 +37,18 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
 {
     MR_TIMER;
     bool depthTest = objMesh_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId );
+    // the shader discards fully transparent fragments, so a fully transparent color needs no transparent pass, except:
+    // a texture is composited over the colors on both sides, so their alpha < 255 lets translucent texels through;
+    // a color map fully replaces the front color, then its alpha < 255 is the way to request the transparent pass for translucent map colors
+    const bool textured = objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Texture, renderParams.viewportId ) || objMesh_->hasAncillaryTexture();
+    const bool solidFront = !textured && objMesh_->getColoringType() == ColoringType::SolidColor;
+    const auto front = objMesh_->getFrontColor( objMesh_->isSelected(), renderParams.viewportId );
+    const auto back = objMesh_->getBackColor( renderParams.viewportId );
     RenderModelPassMask desiredPass =
         !depthTest ? RenderModelPassMask::NoDepthTest :
-        ( objMesh_->getGlobalAlpha( renderParams.viewportId ) < 255 || objMesh_->getFrontColor( objMesh_->isSelected(), renderParams.viewportId ).a < 255 || objMesh_->getBackColor( renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
+        ( objMesh_->getGlobalAlpha( renderParams.viewportId ) < 255
+            || ( solidFront ? front.isTranslucent() : front.a < 255 )
+            || ( textured ? back.a < 255 : back.isTranslucent() ) ) ? RenderModelPassMask::Transparent :
         RenderModelPassMask::Opaque;
     if ( !bool( renderParams.passMask & desiredPass ) )
         return false; // Nothing to draw in this pass.
@@ -99,11 +108,11 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
     GL_EXEC( glUniform3fv( glGetUniformLocation( shader, "ligthPosEye" ), 1, &renderParams.lightPos.x ) );
     GL_EXEC( glUniform4f( fixed_colori, 0.0, 0.0, 0.0, 0.0 ) );
 
-    const auto mainColor = Vector4f( objMesh_->getFrontColor( objMesh_->isSelected(), renderParams.viewportId ) );
+    const auto mainColor = Vector4f( front );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "mainColor" ), mainColor[0], mainColor[1], mainColor[2], mainColor[3] ) );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "showSelFaces" ), objMesh_->getVisualizeProperty( MeshVisualizePropertyType::SelectedFaces, renderParams.viewportId ) ) );
     const auto selectionColor = Vector4f( objMesh_->getSelectedFacesColor( renderParams.viewportId ) );
-    const auto backColor = Vector4f( objMesh_->getBackColor( renderParams.viewportId ) );
+    const auto backColor = Vector4f( back );
     const auto selectionBackfacesColor = Vector4f( backColor.x * selectionColor.x, backColor.y * selectionColor.y, backColor.z * selectionColor.z, backColor.w * selectionColor.w );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "selectionColor" ), selectionColor[0], selectionColor[1], selectionColor[2], selectionColor[3] ) );
     GL_EXEC( glUniform4f( glGetUniformLocation( shader, "selBackColor" ), selectionBackfacesColor[0], selectionBackfacesColor[1], selectionBackfacesColor[2], selectionBackfacesColor[3] ) );
@@ -114,9 +123,7 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
         GL_EXEC( glUniform4f( glGetUniformLocation( shader, "backColor" ), backColor[0], backColor[1], backColor[2], backColor[3] ) );
 
         // Texture
-        auto useTexture = GL_EXEC( glGetUniformLocation( shader, "useTexture" ) );
-        GL_EXEC( glUniform1i( useTexture, objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Texture, renderParams.viewportId ) ||
-            objMesh_->hasAncillaryTexture() ) );
+        GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useTexture" ), textured ) );
 
         GL_EXEC( glDepthFunc( getDepthFunctionLess( renderParams.depthFunction ) ) );
         drawMesh_( true, renderParams.viewportId );

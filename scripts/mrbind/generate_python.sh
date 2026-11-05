@@ -1,6 +1,6 @@
 #!/bin/bash
 # Generates the source of a Python module over the C bindings with `mrbind_gen_python`, see `generate.mk`.
-# Usage: generate_python.sh <mrbind_gen_python> <interop_desc.json of the C bindings> <output dir> <mrmeshpy|mrcudapy> <number of fragments>
+# Usage: generate_python.sh <mrbind_gen_python> <interop_desc.json of the C bindings> <output dir> <mrmeshpy|mrcudapy|mrviewerpy> <number of fragments>
 # The names and docs follow what the pybind11 bindings had, so the flags below spell the types like `typeid()` on this platform.
 
 set -euo pipefail
@@ -12,15 +12,17 @@ MODULE="$4"
 NUM_FRAGMENTS="$5"
 
 case "$(uname -s)" in
-    Linux*) OS=linux ;;
-    Darwin*) OS=macos ;;
-    *) OS=windows ;;
+    Linux*) HOST_OS=linux ;;
+    Darwin*) HOST_OS=macos ;;
+    *) HOST_OS=windows ;;
 esac
+# The OS the module is for, `linux`, `macos` or `windows`: the CI generates them all on Linux.
+OS="${MRBIND_PYTHON_OS:-$HOST_OS}"
 
 SCRIPT_DIR="$(dirname "$BASH_SOURCE")"
 
 # The paths for the native Windows generator.
-native() { if [[ $OS == windows ]]; then cygpath -m "$1"; else echo "$1"; fi; }
+native() { if [[ $HOST_OS == windows ]]; then cygpath -m "$1"; else echo "$1"; fi; }
 
 # The pybind11-only ignores of the MeshLib headers, which the C bindings don't see.
 GEN_FLAGS=(
@@ -88,14 +90,19 @@ fi
 
 case $MODULE in
     mrmeshpy)
-        GEN_FLAGS+=(--ignore-c-file '^MRCCuda/' --extra-python "$(native "$SCRIPT_DIR/python_helpers.py")")
+        GEN_FLAGS+=(--ignore-c-file '^MRC(Cuda|PythonViewer)/' --extra-python "$(native "$SCRIPT_DIR/python_helpers.py")")
         while read -r alias target; do
             GEN_FLAGS+=(--alias "$alias" "$target")
         done < <(grep -v '^#' "$SCRIPT_DIR/python_aliases.txt" | tr -d '\r')
         ;;
     mrcudapy)
         # Only the Cuda headers, with the classes of `mrmeshpy`.
-        GEN_FLAGS+=(--ignore-c-file '^(?!MRCCuda/)' --depends-on meshlib.mrmeshpy)
+        # `mrmeshpy` doesn't have the viewer's classes either.
+        GEN_FLAGS+=(--ignore-c-file '^(?!MRCCuda/)' --depends-on meshlib.mrmeshpy --ignore-for-python '\bMR::PythonViewer::')
+        ;;
+    mrviewerpy)
+        # The calls wait for the GUI thread, which can call back into Python.
+        GEN_FLAGS+=(--ignore-c-file '^(?!MRCPythonViewer/)' --depends-on meshlib.mrmeshpy --ignore-for-python '\bMR::Cuda::' --release-gil --extra-python "$(native "$SCRIPT_DIR/mrviewerpy_helpers.py")")
         ;;
     *)
         echo "Unknown module: $MODULE" >&2
@@ -106,6 +113,8 @@ esac
 # The specific namespace replacement first.
 if [[ $MODULE == mrcudapy ]]; then
     GEN_FLAGS=(--replace-namespace MR::Cuda :: "${GEN_FLAGS[@]}")
+elif [[ $MODULE == mrviewerpy ]]; then
+    GEN_FLAGS=(--replace-namespace MR::PythonViewer :: "${GEN_FLAGS[@]}")
 fi
 
 "$GEN_PYTHON" --input-json "$(native "$INPUT_JSON")" --output-dir "$(native "$OUTPUT_DIR")" --clean-output-dir \

@@ -63,6 +63,24 @@ jobs:
         run: |
           make -f scripts/mrbind/generate.mk TARGET=c -B --trace EM_USE_HOST_HEADERS=0 ENABLE_CUDA=1
 
+        # The bindings of the other languages are generated from the description too, so the build jobs only compile them, without MRBind.
+        # The Python modules differ between the OSes only in the `typeid()` spellings of the type names (`generate_python.sh`).
+      - name: Generate Python, C#, Rust and Java bindings
+        run: |
+          for os in linux macos windows; do
+            mkdir -p python-sources/$os
+            for module in mrmeshpy mrcudapy mrviewerpy; do
+              fragments=1
+              [ $module = mrmeshpy ] && fragments=8
+              MRBIND_PYTHON_OS=$os bash scripts/mrbind/generate_python.sh thirdparty/mrbind/build/mrbind_gen_python \
+                source/MeshLibC2/temp/interop_desc.json python-sources/$os/$module $module $fragments
+            done
+          done
+          make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate
+          make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate CSHARP_STATIC_DLLIMPORT=1 CSHARP_INPUT_JSON=source/MeshLibC2Wasm/temp/interop_desc.json
+          make -f scripts/mrbind/generate.mk TARGET=rust -B --trace generate
+          make -f scripts/mrbind/generate.mk TARGET=java -B --trace generate
+
         # Consumers only read include/, src/, the project files and temp/interop_desc.json (C#, Rust, Java);
         #   the parser output and the combined header are generator inputs, 120 of the 430 MB unpacked.
       - name: Upload C bindings
@@ -73,8 +91,41 @@ jobs:
             ./source/MeshLibC2
             ./source/MeshLibC2Wasm
             ./source/MeshLibC2Cuda
+            ./source/MeshLibC2PythonViewer
             !./source/*/temp/*.generated.json
             !./source/*/temp/*.combined.hpp
+          retention-days: 1
+
+      - name: Upload C#, Rust and Java bindings
+        uses: actions/upload-artifact@v7
+        with:
+          name: BindingsSources
+          path: |
+            ./source/MRDotNet2/src
+            ./source/MRDotNet2Static/src
+            ./source/MeshLibRust/src
+            ./source/MeshLibJava/src
+          retention-days: 1
+
+      - name: Upload Python bindings (Linux)
+        uses: actions/upload-artifact@v7
+        with:
+          name: PythonSources-Linux
+          path: python-sources/linux
+          retention-days: 1
+
+      - name: Upload Python bindings (macOS)
+        uses: actions/upload-artifact@v7
+        with:
+          name: PythonSources-macOS
+          path: python-sources/macos
+          retention-days: 1
+
+      - name: Upload Python bindings (Windows)
+        uses: actions/upload-artifact@v7
+        with:
+          name: PythonSources-Windows
+          path: python-sources/windows
           retention-days: 1
 
         # Unlike the other artifact, here we strip some temporary files, and the project files.

@@ -53,7 +53,7 @@ if platformSystem == "Windows":
 if args.cmd:
     python_cmds = [str(args.cmd).strip()]
 elif args.multi_cmd:
-    with open(os.path.dirname(os.path.realpath(__file__)) + "/mrbind-pybind11/python_versions.txt") as file:
+    with open(os.path.dirname(os.path.realpath(__file__)) + "/wheel/python_versions.txt") as file:
         versions = [line.rstrip() for line in file if line.strip()]
     if platform.system() == "Windows":
         # Not every listed version exists on every host: python.org ships no win-arm64

@@ -181,19 +181,6 @@ jobs:
           HOMEBREW_NO_INSTALL_CLEANUP: '1'   # don't prune the known-good keg
         run: ./scripts/mrbind/install_deps_macos.sh
 
-      - name: Build MRBind
-        if: ${{ inputs.mrbind || inputs.mrbind_c }}
-        uses: ./.github/actions/build-mrbind
-        with:
-          # The C bindings come from the generate-c-bindings job, so no parser.
-          generators-only: 'true'
-          # Keyed on the runner image (matrix.instance) plus the brew-prefix hash
-          # to discriminate between fleet members of the self-hosted ARM label set.
-          # Shared with pip-build.yml's macOS section where the two also match.
-          cache-key-prefix: ${{ matrix.instance }}-clang
-          build-script: scripts/mrbind/install_mrbind_macos.sh
-          extra-cache-key: llvm_pgo_${{ matrix.llvm-keg-version }}-${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.brew-hash.outputs.brew-hash }}
-
       - name: Create virtualenv
         run: |
           PYTHON=python3.12
@@ -263,6 +250,7 @@ jobs:
           make -f scripts/mrbind/generate.mk \
             -B --trace \
             MODE=none \
+            PYTHON_SOURCES_DIR=source/MeshLibC2/temp/python \
             PYTHON_PKGCONF_NAME=python-$(python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])')-embed \
             MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin \
             DEPS_BASE_DIR=${DEPS_BASE_DIR}

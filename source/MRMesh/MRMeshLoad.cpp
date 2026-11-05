@@ -414,6 +414,88 @@ Expected<Mesh> fromOff( const std::filesystem::path& file, const MeshLoadSetting
     return addFileNameInError( fromOff( in, settings ), file );
 }
 
+/// binary OFF: big-endian 32-bit integers and floats following the newline after BINARY keyword
+static Expected<Mesh> fromOffBinary( std::istream& in, const MeshLoadSettings& settings )
+{
+    std::string restOfHeaderLine;
+    std::getline( in, restOfHeaderLine );
+
+    auto bufOrExpect = readCharBuffer( in );
+    if ( !bufOrExpect )
+        return unexpected( std::move( bufOrExpect.error() ) );
+    const auto* data = reinterpret_cast<const unsigned char*>( bufOrExpect->data() );
+    const size_t size = bufOrExpect->size();
+
+    auto get32 = [data] ( size_t pos )
+    {
+        const auto* p = data + pos;
+        return ( std::uint32_t( p[0] ) << 24 ) | ( std::uint32_t( p[1] ) << 16 ) | ( std::uint32_t( p[2] ) << 8 ) | std::uint32_t( p[3] );
+    };
+    size_t pos = 0;
+    auto readInt = [&] ( int& v )
+    {
+        if ( size - pos < 4 )
+            return false;
+        v = bit_cast<int>( get32( pos ) );
+        pos += 4;
+        return true;
+    };
+
+    int numPoints = 0, numPolygons = 0, numEdges = 0;
+    if ( !readInt( numPoints ) || !readInt( numPolygons ) || !readInt( numEdges ) )
+        return unexpected( std::string( "Unexpected end of binary OFF-file" ) );
+    if ( numPoints <= 0 || numPolygons <= 0 )
+        return unexpected( std::string( "Unsupported OFF-format" ) );
+    // each polygon takes at least two integers: the number of vertices and the number of color components
+    if ( ( size - pos ) / 12 < size_t( numPoints ) || ( size - pos - 12 * size_t( numPoints ) ) / 8 < size_t( numPolygons ) )
+        return unexpected( std::string( "Unexpected end of binary OFF-file" ) );
+
+    VertCoords points( numPoints );
+    if ( !ParallelFor( points, [&] ( size_t i )
+    {
+        const size_t p = pos + 12 * i;
+        points[VertId( i )] = Vector3f( bit_cast<float>( get32( p ) ), bit_cast<float>( get32( p + 4 ) ), bit_cast<float>( get32( p + 8 ) ) );
+    }, subprogress( settings.callback, 0.0f, 0.3f ) ) )
+        return unexpectedOperationCanceled();
+    pos += 12 * size_t( numPoints );
+
+    Vector<MeshBuilder::VertSpan, FaceId> faces( numPolygons );
+    std::vector<VertId> flatPolygonIndices;
+    flatPolygonIndices.reserve( 3 * size_t( numPolygons ) );
+    auto sp = subprogress( settings.callback, 0.3f, 0.7f );
+    for ( int f = 0; f < numPolygons; ++f )
+    {
+        int numPolygonPoints = 0;
+        if ( !readInt( numPolygonPoints ) )
+            return unexpected( std::string( "Unexpected end of binary OFF-file" ) );
+        if ( numPolygonPoints < 0 || ( size - pos ) / 4 < size_t( numPolygonPoints ) + 1 )
+            return unexpected( std::string( "Error when reading polygon topology" ) );
+        const int firstVertex = int( flatPolygonIndices.size() );
+        for ( int i = 0; i < numPolygonPoints; ++i )
+        {
+            int v = 0;
+            readInt( v );
+            if ( v < 0 || v >= numPoints )
+                return unexpected( std::string( "vertex id is larger than total point coordinates" ) );
+            flatPolygonIndices.emplace_back( v );
+        }
+        faces[FaceId( f )] = { firstVertex, firstVertex + numPolygonPoints };
+
+        // per-face color components are skipped
+        int numColorComponents = 0;
+        readInt( numColorComponents );
+        if ( numColorComponents < 0 || ( size - pos ) / 4 < size_t( numColorComponents ) )
+            return unexpected( std::string( "Unexpected end of binary OFF-file" ) );
+        pos += 4 * size_t( numColorComponents );
+
+        if ( !reportProgress( sp, [&] { return float( f ) / numPolygons; }, f, 0x10000 ) )
+            return unexpectedOperationCanceled();
+    }
+
+    return Mesh::fromFaceSoup( std::move( points ), flatPolygonIndices, faces,
+        { .skippedFaceCount = settings.skippedFaceCount }, subprogress( settings.callback, 0.7f, 1.0f ) );
+}
+
 Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER;
@@ -425,6 +507,17 @@ Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {
     if ( !in || header != "OFF" )
         return unexpected( std::string( "File is not in OFF-format" ) );
     // some options are not supported yet: http://www.geomview.org/docs/html/OFF.html
+
+    while ( in.peek() == ' ' || in.peek() == '\t' )
+        in.get();
+    if ( in.peek() == 'B' )
+    {
+        std::string format;
+        in >> format;
+        if ( format != "BINARY" )
+            return unexpected( std::string( "Unsupported OFF-format" ) );
+        return fromOffBinary( in, settings );
+    }
 
     int numPoints, numPolygons, numUnused;
     in >> numPoints >> numPolygons >> numUnused;

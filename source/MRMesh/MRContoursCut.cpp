@@ -384,6 +384,8 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
     return res;
 }
 
+// triangulates the hole or the face to the left of (e); a face stays as one of the triangles with its id (and its mapping),
+// the other triangles and all new edges get new ids mapped to oldFace
 void executeTriangulateContourPlan( Mesh& mesh, EdgeId e, HoleFillPlan& plan, FaceId oldFace, FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
 {
     const auto fsz0 = mesh.topology.faceSize();
@@ -1138,23 +1140,6 @@ std::pair<EdgeId, EdgeId> leftRightPathEdges( const MeshTopology& topology, Edge
     return isBaseSym ? std::pair{ baseRight, baseLeft } : std::pair{ baseLeft, baseRight };
 }
 
-// whether all path edges at the new vertices of the edge are on its left (first), on its right (second)
-std::pair<bool, bool> allLeftRightOnly( const MeshTopology& topology, EdgeId baseEdge,
-    const EdgeData& edgeData, const OneMeshContours& contours )
-{
-    bool isAllLeftOnly = true;
-    bool isAllRightOnly = true;
-    for ( int i = 0; i < edgeData.size(); ++i )
-    {
-        auto [leftEdge, rightEdge] = leftRightPathEdges( topology, baseEdge, edgeData, i, contours );
-        if ( rightEdge.valid() )
-            isAllLeftOnly = false;
-        if ( leftEdge.valid() )
-            isAllRightOnly = false;
-    }
-    return { isAllLeftOnly, isAllRightOnly };
-}
-
 // maps the pieces of the edge to it
 void mapEdgePieces( NewEdgesMap& new2OldEdgeMap, EdgeId baseEdge, EdgeId e0,
     const EdgeData& edgeData, const OneMeshContours& contours )
@@ -1193,23 +1178,32 @@ EdgeId startCutOneEdge( MeshTopology& topology, EdgeId baseEdge,
 }
 
 // connects the pieces of the edge with the path edges at its new vertices;
-// touches only the pieces and the rings of the new vertices, so different edges can be finished in parallel
-void finishCutOneEdge( MeshTopology& topology, EdgeId baseEdge, EdgeId e0,
+// touches only the pieces and the rings of the new vertices, so different edges can be finished in parallel;
+// returns whether all these path edges are on the left of the edge (first), on its right (second)
+std::pair<bool, bool> finishCutOneEdge( MeshTopology& topology, EdgeId baseEdge, EdgeId e0,
     const EdgeData& edgeData, const OneMeshContours& contours )
 {
+    bool isAllLeftOnly = true;
+    bool isAllRightOnly = true;
     for ( int i = 0; i < edgeData.size(); ++i )
     {
         auto [leftEdge, rightEdge] = leftRightPathEdges( topology, baseEdge, edgeData, i, contours );
+        if ( rightEdge.valid() )
+            isAllLeftOnly = false;
+        if ( leftEdge.valid() )
+            isAllRightOnly = false;
         const EdgeId bot = e0 + 2 * i;
         const EdgeId top = i + 1 < edgeData.size() ? bot + 2 : baseEdge;
         connectEdges( topology, bot, top, leftEdge, rightEdge );
     }
+    return { isAllLeftOnly, isAllRightOnly };
 }
 
-// cuts one edge and connects all intersecting contours with pieces
+// cuts one edge and connects all intersecting contours with pieces;
+// adds the hole of a removed face that no contour enters, with that face, to toFill
 void cutOneEdge( Mesh& mesh,
                  const EdgeData& edgeData, const OneMeshContours& contours,
-                 FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
+                 NewEdgesMap* new2OldEdgeMap, Vector<std::pair<EdgeId, FaceId>>& toFill )
 {
     assert( !edgeData.empty() );
     const EdgeId baseEdge = baseEdgeOf( edgeData );
@@ -1218,15 +1212,13 @@ void cutOneEdge( Mesh& mesh,
     FaceId oldLeft = mesh.topology.left( baseEdge );
     FaceId oldRight = mesh.topology.left( baseEdge.sym() );
 
-    const auto [isAllLeftOnly, isAllRightOnly] = allLeftRightOnly( mesh.topology, baseEdge, edgeData, contours );
     const EdgeId e0 = startCutOneEdge( mesh.topology, baseEdge, edgeData, contours, new2OldEdgeMap );
-    finishCutOneEdge( mesh.topology, baseEdge, e0, edgeData, contours );
+    const auto [isAllLeftOnly, isAllRightOnly] = finishCutOneEdge( mesh.topology, baseEdge, e0, edgeData, contours );
 
-    // fix triangle if this was last or first
     if ( isAllLeftOnly && oldRight.valid() )
-        triangulateContour( mesh, baseEdge.sym(), oldRight, new2OldMap, new2OldEdgeMap );
+        toFill.push_back( { baseEdge.sym(), oldRight } );
     if ( isAllRightOnly && oldLeft.valid() )
-        triangulateContour( mesh, baseEdge, oldLeft, new2OldMap, new2OldEdgeMap );
+        toFill.push_back( { baseEdge, oldLeft } );
 }
 
 // this function cut mesh edge and connects it with result path,
@@ -1236,22 +1228,29 @@ void cutEdgesIntoPieces( Mesh& mesh, PreCutResult& preRes, const OneMeshContours
 {
     MR_TIMER;
     auto& inters = preRes.edgeInters;
+    // the faces that no contour enters are filled after all edges are cut: if another side of such a face is cut too,
+    // a fill at the cut of the first side would give the cut of the other one a new face as the old one
+    Vector<std::pair<EdgeId, FaceId>> toFill;
     for ( size_t b = 0; b < inters.size(); )
     {
         auto e = b + 1;
         while ( e < inters.size() && inters[e].oldEdge == inters[b].oldEdge )
             ++e;
-        cutOneEdge( mesh, EdgeData( inters.data() + b, e - b ), contours, new2OldMap, new2OldEdgeMap );
+        cutOneEdge( mesh, EdgeData( inters.data() + b, e - b ), contours, new2OldEdgeMap, toFill );
         b = e;
     }
+    for ( const auto& [e, f] : toFill )
+        triangulateContour( mesh, e, f, new2OldMap, new2OldEdgeMap );
 }
 
 void prepareFacesMap( const MeshTopology& topology, FaceMap& new2OldMap )
 {
     MR_TIMER;
-    new2OldMap.resize( topology.lastValidFace() + 1 );
-    for ( auto f : topology.getValidFaces() )
-        new2OldMap[f] = f;
+    new2OldMap.resizeNoInit( topology.lastValidFace() + 1 );
+    ParallelFor( new2OldMap, [&] ( FaceId f )
+    {
+        new2OldMap[f] = topology.hasFace( f ) ? f : FaceId{};
+    } );
 }
 
 // Checks if cut mesh has valid loops in intersections
@@ -1645,34 +1644,29 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     if ( params.forceFillMode == CutMeshParameters::ForceFill::None && res.fbsWithContourIntersections.any() )
         return res;
 
-    // find one edge for every hole to fill
+    // fill every hole with one face at once, so the hole is not met again; the faces of real holes are triangulated below
     Timer t( "find edge per hole" );
-    EdgeBitSet allHoleEdges( mesh.topology.edgeSize() );
     std::vector<EdgeId> holeRepresentativeEdges;
     Vector<FaceId> oldFaces; // of corresponding holeRepresentativeEdges
-    Vector<EdgeId> pseudoHoleRepresentativeEdges;
-    Vector<FaceId> pseudoOldFaces; // of corresponding pseudoHoleRepresentativeEdges
     const bool needOldFaces = params.new2OldMap || params.new2oldEdgesMap;
+    int numNewFaces = 0;
     auto addHoleDesc = [&] ( EdgeId e, FaceId oldf, bool pseudofill )
     {
-        if ( allHoleEdges.test( e ) )
+        if ( mesh.topology.left( e ) )
             return;
+        auto nf = mesh.topology.addFaceId();
+        mesh.topology.setLeft( e, nf );
+        ++numNewFaces;
+        if ( params.new2OldMap )
+        {
+            assert( oldf.valid() );
+            params.new2OldMap->autoResizeSet( nf, oldf );
+        }
         if ( !pseudofill )
         {
             holeRepresentativeEdges.push_back( e );
             if ( needOldFaces )
                 oldFaces.push_back( oldf );
-        }
-        else
-        {
-            pseudoHoleRepresentativeEdges.push_back( e );
-            if ( needOldFaces )
-                pseudoOldFaces.push_back( oldf );
-        }
-        for ( auto ei : leftRing( mesh.topology, e ) )
-        {
-            [[maybe_unused]] auto v = allHoleEdges.test_set( ei );
-            assert( !v );
         }
     };
     bool fillLeft = params.fillPart == CutMeshParameters::FillPart::Both || params.fillPart == CutMeshParameters::FillPart::Left;
@@ -1709,13 +1703,14 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
 
     // fill contours
     t.restart( "run TriangulateContourPlans" );
-    int numTris = int( pseudoHoleRepresentativeEdges.size() );
+    int numTris = 0; // besides the face of each hole
     int numEdges = 0;
     for ( const auto& plan : fillPlans )
     {
-        numTris += plan.numTris;
+        numTris += plan.numTris - 1;
         numEdges += 2 * int( plan.items.size() );
     }
+    numNewFaces += numTris;
     auto expectedTotalTris = mesh.topology.faceSize() + numTris;
     const auto expectedTotalEdges = mesh.topology.edgeSize() + numEdges;
 
@@ -1739,24 +1734,9 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
             needOldFaces ? oldFaces[i] : FaceId{}, params.new2OldMap, params.new2oldEdgesMap );
     }
 
-    auto pseudoFill = [&] ( EdgeId eid, FaceId of )
-    {
-        auto nf = mesh.topology.addFaceId();
-        mesh.topology.setLeft( eid, nf );
-        if ( params.new2OldMap )
-        {
-            assert( of.valid() );
-            params.new2OldMap->autoResizeSet( nf, of );
-        }
-    };
-    for ( size_t i = 0; i < pseudoHoleRepresentativeEdges.size(); ++i )
-    {
-        pseudoFill( pseudoHoleRepresentativeEdges[i], needOldFaces ? pseudoOldFaces[i] : FaceId{} );
-    }
-
     assert( mesh.topology.faceSize() == expectedTotalTris );
     if ( params.new2OldMap )
-        assert( params.new2OldMap->size() == ( numTris != 0 ? expectedTotalTris : mesh.topology.lastValidFace() + 1 ) );
+        assert( params.new2OldMap->size() == ( numNewFaces != 0 ? expectedTotalTris : mesh.topology.lastValidFace() + 1 ) );
 
     res.resultCut = std::move( preRes.paths );
 

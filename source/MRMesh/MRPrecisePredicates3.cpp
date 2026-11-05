@@ -417,7 +417,8 @@ ConvertToIntVector getToIntConverter( const Box3d& box )
 
     // range is selected so that after centering each integer point is within [-max/2; +max/2] range,
     // so the difference of any two points will be within [-max; +max] range
-    double invRange = cRangeIntMax / maxDim;
+    // a box of one point (e.g. a hole loop of coincident points) maps it to zero instead of inf * 0 = NaN
+    double invRange = maxDim > 0 ? cRangeIntMax / maxDim : 1;
 
     return ConvertToIntVector{ center, invRange };
 }
@@ -430,7 +431,7 @@ ConvertToFloatVector getToFloatConverter( const Box3d& box )
 
     // range is selected so that after centering each integer point is within [-max/2; +max/2] range,
     // so the difference of any two points will be within [-max; +max] range
-    double range = maxDim / cRangeIntMax;
+    double range = maxDim > 0 ? maxDim / cRangeIntMax : 1;
 
     return ConvertToFloatVector{ range, center };
 }

@@ -61,10 +61,12 @@ static DecomposedXf decomposeXf( const AffineXf3f& xf )
 {
     Matrix3f rotation, scaling;
     decomposeMatrix3( xf.A, rotation, scaling );
+    // a mirror gives an improper rotation (det < 0), which Euler angles cannot express: move its sign to scale.x
+    const float sx = rotation.det() < 0 ? -1.f : 1.f;
     return {
         .translation = xf.b,
-        .rotationDeg = rotation.toEulerAngles() * ( 180.f / PI_F ),
-        .scale       = { scaling.x.x, scaling.y.y, scaling.z.z },
+        .rotationDeg = ( rotation * Matrix3f::scale( sx, 1.f, 1.f ) ).toEulerAngles() * ( 180.f / PI_F ),
+        .scale       = { sx * scaling.x.x, scaling.y.y, scaling.z.z },
     };
 }
 

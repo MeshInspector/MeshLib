@@ -1,4 +1,5 @@
 #include "MRViewportGL.h"
+#include "MRViewport.h"
 #include "MRGLMacro.h"
 #include "MRGLStaticHolder.h"
 #include "MRViewer.h"

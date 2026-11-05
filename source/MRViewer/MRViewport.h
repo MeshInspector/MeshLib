@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRViewportGL.h"
+#include "MRViewerFwd.h"
 #include "MRFitData.h"
 #include "MRMesh/MRIRenderObject.h"
 #include <MRMesh/MRVector3.h>
@@ -12,15 +12,41 @@
 #include <MRMesh/MRColor.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRMeshTexture.h>
+#include <MRMesh/MRUniquePtr.h>
+#include <MRMesh/MRVector4.h>
 #include "MRImGui.h"
 #include <memory>
 #include <functional>
 #include <unordered_map>
 #include <optional>
 #include <span>
+#include <vector>
 
 namespace MR
 {
+
+// colors of segment ends
+struct SegmEndColors
+{
+    Vector4f a, b;
+};
+
+inline bool operator==( const SegmEndColors& a, const SegmEndColors& b )
+{
+    return a.a == b.a && a.b == b.b;
+}
+
+// stores points and corresponding colors (sizes of vectors should be the same)
+struct ViewportPointsWithColors
+{
+    std::vector<Vector3f> points;
+    std::vector<Vector4f> colors;
+};
+
+inline bool operator==( const ViewportPointsWithColors& a, const ViewportPointsWithColors& b )
+{
+    return a.points == b.points && a.colors == b.colors;
+}
 
 inline ImVec2 position( const ViewportRectangle& rect )
 {
@@ -56,12 +82,12 @@ public:
     MRVIEWER_API ~Viewport();
 
 private: //hide copying from the user to avoid silly mistakes (copies are necessary only inside this project)
-    Viewport( const Viewport & ) = default;
-    Viewport & operator = ( const Viewport & ) = default;
+    MRVIEWER_API Viewport( const Viewport & );
+    MRVIEWER_API Viewport & operator = ( const Viewport & );
 public:
     [[nodiscard]] Viewport clone() const { return Viewport( *this ); }
-    Viewport( Viewport && ) noexcept = default;
-    Viewport & operator = ( Viewport && ) noexcept = default;
+    MRVIEWER_API Viewport( Viewport && ) noexcept;
+    MRVIEWER_API Viewport & operator = ( Viewport && ) noexcept;
 
     // Initialization
     MRVIEWER_API void init();
@@ -574,7 +600,7 @@ private:
 
     ViewportRectangle viewportRect_;
 
-    ViewportGL viewportGL_;
+    UniquePtr<ViewportGL> viewportGL_; // not copied with the viewport, see init()
 
     bool previewLinesDepthTest_ = false;
     bool previewPointsDepthTest_ = false;

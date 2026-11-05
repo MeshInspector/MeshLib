@@ -13,28 +13,6 @@
 
 namespace MR
 {
-// colors of segment ends
-struct SegmEndColors
-{
-    Vector4f a, b;
-};
-
-inline bool operator==( const SegmEndColors& a, const SegmEndColors& b )
-{
-    return a.a == b.a && a.b == b.b;
-}
-
-// stores points and corresponding colors (sizes of vectors should be the same)
-struct ViewportPointsWithColors
-{
-    std::vector<Vector3f> points;
-    std::vector<Vector4f> colors;
-};
-
-inline bool operator==( const ViewportPointsWithColors& a, const ViewportPointsWithColors& b )
-{
-    return a.points == b.points && a.colors == b.colors;
-}
 
 // This class holds data needed to render viewport primitives and accumulative picker via OpenGL
 class ViewportGL

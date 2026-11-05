@@ -83,7 +83,7 @@ Viewport::~Viewport()
 {
 }
 
-Viewport::Viewport( const Viewport& ) = default;
+Viewport::Viewport( const Viewport& other ) : Viewport() { *this = other; } // own fresh ViewportGL, see UniquePtr
 Viewport& Viewport::operator =( const Viewport& ) = default;
 Viewport::Viewport( Viewport&& ) noexcept = default;
 Viewport& Viewport::operator =( Viewport&& ) noexcept = default;

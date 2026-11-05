@@ -46,24 +46,45 @@ jobs:
         run: |
           gh release download "${TAG}" --pattern "js-meshlib-*.tgz" --repo ${{ github.repository }} --clobber
 
+        # The package is a directory of ES modules (`index.mjs`, `ffi.mjs`, `lib/`, `ns/`) importing each other, which the bundlers
+        # tree-shake; from a CDN that would be ~1100 requests, so here they're bundled into one `index.mjs` (esbuild, whitespace and
+        # syntax minified, the identifiers kept for readable stack traces). The Emscripten glue and the wasm stay separate files:
+        # the glue locates the wasm from its own URL, and the workers of the multithreaded build load it by URL. The three go
+        # under `<package>@<tag>/`, compressed once into a staging tree and uploaded per content type. The Node build and the
+        # declarations are useless from a CDN and are skipped.
+        # `<package>/index.mjs` (the unpinned entry point) only re-exports the tagged tree: replacing the files in place would let
+        # a client mix the new `index.mjs` with the cached old glue or wasm.
       - name: Upload to S3
         env:
           BUCKET: s3://cdn-meshlib-js
         run: |
-          for TGZ in js-meshlib-*.tgz ; do tar -xzf "${TGZ}" --strip-components=1 ; done
-          # Stored compressed once, served as is: every browser that runs wasm decodes Brotli, which is a third smaller than gzip here.
-          # Window 24 (16 MB) is the largest a browser accepts.
+          for TGZ in js-meshlib-*.tgz ; do
+            NAME=${TGZ#js-}            # meshlib-1.2.3-4.tgz
+            NAME=${NAME%%-[0-9]*}      # meshlib, meshlib-mt
+            mkdir -p "src/${NAME}" "pkg/${NAME}"
+            tar -xzf "${TGZ}" --strip-components=1 -C "src/${NAME}"
+            npx --yes esbuild@0.25 "src/${NAME}/index.mjs" --bundle --format=esm --platform=neutral --minify-whitespace --minify-syntax \
+              --external:./MeshLibC2.mjs --external:./MeshLibC2.node.mjs --log-level=warning --outfile="pkg/${NAME}/index.mjs"
+            cp "src/${NAME}/MeshLibC2.mjs" "src/${NAME}/MeshLibC2.wasm" "src/${NAME}/README.md" "src/${NAME}/LICENSE" "pkg/${NAME}/"
+            # Stored compressed once, served as is: every browser that runs wasm decodes Brotli, which is a third smaller than gzip here.
+            # Window 24 (16 MB) is the largest a browser accepts.
+            find "pkg/${NAME}" -type f -exec sh -c 'brotli -q 11 -w 24 -c "$1" > "$1.br" && mv "$1.br" "$1"' _ {} \;
+          done
+          # One recursive upload per content type.
           upload() {
-            local dest="$1" ; shift
-            brotli -q 11 -w 24 -c "${f}.mjs"  | aws s3 cp - "${dest}/${f}.mjs"  --content-type text/javascript   --content-encoding br "$@"
-            brotli -q 11 -w 24 -c "${f}.wasm" | aws s3 cp - "${dest}/${f}.wasm" --content-type application/wasm  --content-encoding br "$@"
+            local src="$1" dest="$2" ; shift 2
+            aws s3 cp "${src}" "${dest}" --recursive --only-show-errors --content-encoding br --exclude '*' --include '*.mjs'  --content-type text/javascript  "$@"
+            aws s3 cp "${src}" "${dest}" --recursive --only-show-errors --content-encoding br --exclude '*' --include '*.wasm' --content-type application/wasm "$@"
+            aws s3 cp "${src}" "${dest}" --recursive --only-show-errors --content-encoding br --exclude '*' --include '*.md'   --content-type text/markdown    "$@"
+            aws s3 cp "${src}" "${dest}" --recursive --only-show-errors --content-encoding br --exclude '*' --include 'LICENSE' --content-type text/plain      "$@"
           }
           for f in meshlib meshlib-mt ; do
+            [ -d "pkg/${f}" ] || continue
             if [ "${IS_DRAFT}" = "true" ] ; then
-              upload "${BUCKET}/${f}-draft"  --cache-control "public, max-age=300"
+              upload "pkg/${f}" "${BUCKET}/${f}-draft" --cache-control "public, max-age=300"
             else
-              upload "${BUCKET}/${f}@${TAG}" --cache-control "public, max-age=31536000, immutable"
-              upload "${BUCKET}/${f}"        --cache-control "public, max-age=300"
+              upload "pkg/${f}" "${BUCKET}/${f}@${TAG}" --cache-control "public, max-age=31536000, immutable"
+              printf 'export * from "../%s@%s/index.mjs";\n' "${f}" "${TAG}" | brotli -q 11 -w 24 -c | aws s3 cp - "${BUCKET}/${f}/index.mjs" --content-type text/javascript --content-encoding br --cache-control "public, max-age=300"
             fi
           done
 
@@ -79,7 +100,7 @@ jobs:
         run: |
           aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.CDN_CLOUDFRONT_DISTRIBUTION_ID }} \
-            --paths "/meshlib/*" "/meshlib-mt/*"
+            --paths "/meshlib/index.mjs" "/meshlib-mt/index.mjs"
 
   npm:
     permissions:

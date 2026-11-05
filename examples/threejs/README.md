@@ -4,10 +4,10 @@ result back.
 
 ## Build and run
 
-From the MeshLib root, in an Emscripten environment, build the module and copy it here:
+Install the package next to the demo (or build it yourself, see `source/MeshLibJS/README.md`), then serve the directory:
 
 ```sh
-MESHLIB_WASM_MODULE_TARGET=web ./scripts/build_wasm_meshlib.sh
-cp build/Release/bin/meshlib.{mjs,wasm} examples/threejs/
-python3 -m http.server -d examples/threejs 8080
+cd examples/threejs
+npm install @meshinspector/meshlib
+python3 -m http.server 8080
 ```

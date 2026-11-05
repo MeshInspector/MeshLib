@@ -1,14 +1,17 @@
-import createMeshLib from '@meshinspector/meshlib';
+import * as ml from '@meshinspector/meshlib';
 
-const ml = await createMeshLib();
+await ml.init();
 
-using mesh = ml.makeTorusWithSelfIntersections(1.0, 0.1, 16, 16); // make torus with self-intersections
+using mesh = ml.makeTorusWithSelfIntersections(); // make torus with self-intersections
+using part = new ml.MeshPart(mesh);
 
 // find self-intersecting face pairs (throws if the search is cancelled)
-const selfCollidingPairs = ml.findSelfCollidingTriangles(mesh);
-for (const { aFace, bFace } of selfCollidingPairs)
-  console.log(`${aFace} ${bFace}`);
+using selfCollidingPairs = ml.findSelfCollidingTriangles(part);
+for (let i = 0; i < selfCollidingPairs.size(); ++i) {
+  const fp = selfCollidingPairs.at(i);
+  console.log(fp.aFace.id_, fp.bFace.id_); // print each pair
+}
 
 // find the union of self-intersecting faces
-using selfCollidingFaces = ml.findSelfCollidingTrianglesBS(mesh);
+using selfCollidingFaces = ml.findSelfCollidingTrianglesBS(part);
 console.log(selfCollidingFaces.count()); // number of self-intersecting faces

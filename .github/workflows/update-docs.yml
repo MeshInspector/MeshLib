@@ -122,7 +122,7 @@ jobs:
             echo "Failed to get C# bindings, aborting"
             exit 0
           fi
-          if [ ! -f MeshLib/scripts/npm/meshlib/bindings.d.mts ]; then
+          if [ ! -f MeshLib/scripts/npm/meshlib/index.d.mts ]; then
             echo "Failed to get Wasm definitions, aborting"
             exit 0
           fi
@@ -132,6 +132,12 @@ jobs:
           fi
           if [ ! -d MeshLib/JavaBindings/src ]; then
             echo "Failed to get Java bindings, aborting"
+            exit 0
+          fi
+          # The declarations are now the generated `index.d.mts` + `lib/*.d.mts` (`export declare class`), not the Embind `bindings.d.mts`.
+          # Until MeshInspector.github.io reads them, building would publish an empty JS reference.
+          if ! grep -q "index.d.mts" MeshInspector.github.io/scripts/update_doc.sh; then
+            echo "MeshInspector.github.io doesn't read the generated JS declarations yet, aborting"
             exit 0
           fi
           echo "all_bindings=true" >> $GITHUB_OUTPUT

@@ -84,16 +84,17 @@ void AlphaSortGL::drawTransparencyTextureToScreen() const
 {
     if ( !inited_ )
         return;
-    // the passes test the nodes' depth against each sample, like the transparent pass did
+    // the passes test the nodes' depth against each sample, like the transparent pass did;
+    // LEQUAL keeps the nodes tied with an opaque surface (lines are drawn with LEQUAL, e.g. polylines on mesh edges)
     GL_EXEC( glEnable( GL_DEPTH_TEST ) );
-    GL_EXEC( glDepthFunc( GL_LESS ) );
+    GL_EXEC( glDepthFunc( GL_LEQUAL ) );
     GL_EXEC( glDepthMask( GL_FALSE ) );
     GL_EXEC( glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE ) );
     GL_EXEC( glEnable( GL_BLEND ) );
     GL_EXEC( glBlendFuncSeparate( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA ) );
 
     // one triangle covering the viewport: the passes modify the lists, so each pixel must be shaded once
-    constexpr GLfloat transparencyTextureQuad[9] =
+    constexpr GLfloat transparencyTextureTriangle[9] =
     {
         -1.0f, -1.0f, 0.0f,
         3.0f, -1.0f, 0.0f,
@@ -109,7 +110,7 @@ void AlphaSortGL::drawTransparencyTextureToScreen() const
     GL_EXEC( glUseProgram( shader ) );
 
     GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, transparency_quad_vbo ) );
-    GL_EXEC( glBufferData( GL_ARRAY_BUFFER, sizeof( transparencyTextureQuad ), transparencyTextureQuad, GL_DYNAMIC_DRAW ) );
+    GL_EXEC( glBufferData( GL_ARRAY_BUFFER, sizeof( transparencyTextureTriangle ), transparencyTextureTriangle, GL_DYNAMIC_DRAW ) );
 
     GL_EXEC( glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, 0 ) );
     GL_EXEC( glEnableVertexAttribArray( 0 ) );

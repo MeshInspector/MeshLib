@@ -102,11 +102,12 @@ void MR::Polyline<V>::addPart( const Polyline<V>& from, VertMap * outVmap, Whole
     if ( points.size() < lastPointId + 1 )
         points.resize( lastPointId + 1 );
 
-    ParallelFor( vmapRef, [&] ( VertId fromv )
+    for ( VertId fromv{ 0 }; fromv < vmapRef.size(); ++fromv )
     {
-        if ( const auto v = vmapRef[fromv] )
+        VertId v = vmapRef[fromv];
+        if ( v.valid() )
             points[v] = from.points[fromv];
-    } );
+    }
 
     invalidateCaches();
 }
@@ -126,11 +127,12 @@ void MR::Polyline<V>::addPartByMask( const Polyline<V>& from, const UndirectedEd
     if ( points.size() < lastPointId + 1 )
         points.resize( lastPointId + 1 );
 
-    ParallelFor( vmapRef, [&] ( VertId fromv )
+    for ( VertId fromv{ 0 }; fromv < vmapRef.size(); ++fromv )
     {
-        if ( const auto v = vmapRef[fromv] )
+        VertId v = vmapRef[fromv];
+        if ( v.valid() )
             points[v] = from.points[fromv];
-    } );
+    }
 
     invalidateCaches();
 }

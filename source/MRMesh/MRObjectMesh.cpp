@@ -10,7 +10,6 @@
 #include "MRTimer.h"
 #include "MRSceneSettings.h"
 #include "MRMapOrHashMap.h"
-#include "MRParallelFor.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRFmt.h"
@@ -286,38 +285,38 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
         mesh->addMesh( *obj->meshPtr(), hasFaceColorMap || needTexturePerFace ? &faceMap : nullptr, &vertMap );
 
         auto worldXf = options.overrideXfs && i < options.overrideXfs->size() ? ( *options.overrideXfs )[i] : obj->worldXf();
-        ParallelFor( vertMap, [&] ( VertId thisId )
+        for ( const auto& vInd : vertMap )
         {
-            if ( const auto mergeId = vertMap[thisId] )
-                points[mergeId] = worldXf( points[mergeId] );
-        } );
+            if ( vInd.valid() )
+                points[vInd] = worldXf( points[vInd] );
+        }
 
         if ( hasVertColorMap )
         {
             const auto& curColorMap = obj->getVertsColorMap();
-            ParallelFor( vertMap, [&] ( VertId thisId )
+            for ( VertId thisId = 0_v; thisId < vertMap.size(); ++thisId )
             {
                 if ( auto mergeId = vertMap[thisId] )
                     vertColors[mergeId] = curColorMap.size() <= thisId ? obj->getFrontColor() : curColorMap[thisId];
-            } );
+            }
         }
         if ( hasFaceColorMap )
         {
             const auto& curColorMap = obj->getFacesColorMap();
-            ParallelFor( faceMap, [&] ( FaceId thisId )
+            for ( FaceId thisId = 0_f; thisId < faceMap.size(); ++thisId )
             {
                 if ( auto mergeId = faceMap[thisId] )
                     faceColors[mergeId] = curColorMap.size() <= thisId ? obj->getFrontColor() : curColorMap[thisId];
-            } );
+            }
         }
         if ( needSaveUVCoords )
         {
             const auto& curUvCoords = obj->getUVCoords();
-            ParallelFor( vertMap, [&] ( VertId thisId )
+            for ( VertId thisId = 0_v; thisId < vertMap.size(); ++thisId )
             {
                 if ( auto mergeId = vertMap[thisId] )
                     uvCoords[mergeId] = curUvCoords[thisId];
-            } );
+            }
         }
 
         if ( needSaveTextures )
@@ -327,11 +326,11 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
                 if ( needTexturePerFace )
                 {
                     const auto& curTextPerFace = obj->getTexturePerFace();
-                    ParallelFor( faceMap, [&] ( FaceId thisId )
+                    for ( FaceId thisId = 0_f; thisId < faceMap.size(); ++thisId )
                     {
                         if ( auto mergeId = faceMap[thisId] )
                             texturePerFace[mergeId] = curTextPerFace[thisId];
-                    } );
+                    }
                 }
             }
             else
@@ -348,7 +347,7 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
 
                 const auto& curTexturePerFace = obj->getTexturePerFace();
                 const bool emptyTexturePerFace = curTexturePerFace.empty();
-                ParallelFor( faceMap, [&] ( FaceId thisId )
+                for ( FaceId thisId = 0_f; thisId < faceMap.size(); ++thisId )
                 {
                     if ( auto mergeId = faceMap[thisId] )
                     {
@@ -357,7 +356,7 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
                         else
                             texturePerFace[mergeId] = curNumTexture + curTexturePerFace[thisId];
                     }
-                } );
+                }
             }
         }
         numObject++;

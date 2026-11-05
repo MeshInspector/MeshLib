@@ -654,7 +654,8 @@ elseif(NOT OPENVDB_USE_STATIC_LIBS)
   unset(_OPENVDB_PREREQUISITE_LIST)
 endif()
 
-if(OpenVDB_USES_BLOSC)
+# OpenVDB 14+ is built with a private copy of Blosc
+if(OpenVDB_USES_BLOSC AND OpenVDB_MAJOR_VERSION VERSION_LESS 14)
   find_package(Blosc REQUIRED)
 endif()
 
@@ -719,7 +720,7 @@ endif()
 set(_OPENVDB_HIDDEN_DEPENDENCIES)
 
 if(NOT OPENVDB_USE_STATIC_LIBS)
-  if(OpenVDB_USES_BLOSC)
+  if(OpenVDB_USES_BLOSC AND OpenVDB_MAJOR_VERSION VERSION_LESS 14)
     list(APPEND _OPENVDB_HIDDEN_DEPENDENCIES Blosc::blosc)
   endif()
   if(OpenVDB_USES_ZLIB)

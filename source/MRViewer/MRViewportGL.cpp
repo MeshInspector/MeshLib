@@ -1,6 +1,5 @@
 #include "MRViewportGL.h"
 #include "MRGLMacro.h"
-#include "MRGLTexture.h"
 #include "MRGLStaticHolder.h"
 #include "MRViewer.h"
 #include "MRGladGlfw.h"
@@ -44,7 +43,7 @@ ViewportGL& ViewportGL::operator=( ViewportGL&& other ) noexcept
 
     background_vbo = other.background_vbo;
     background_vao = other.background_vao;
-    background_texture = other.background_texture;
+    background_texture = std::move( other.background_texture );
 
     inited_ = other.inited_;
 
@@ -119,7 +118,7 @@ void ViewportGL::free()
 
     GL_EXEC( glDeleteVertexArrays( 1, &background_vao ) );
     GL_EXEC( glDeleteBuffers( 1, &background_vbo ) );
-    freeBackgroundTexture();
+    background_texture.del();
 
     pickFBO_.del();
     inited_ = false;
@@ -210,18 +209,8 @@ void ViewportGL::drawBackgroundTexture( const Box2f& rectf, const MeshTexture& t
     GL_EXEC( glBindVertexArray( background_vao ) );
 
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
-    if ( !background_texture )
-    {
-        GL_EXEC( glGenTextures( 1, &background_texture ) );
-        refresh = true;
-    }
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D, background_texture ) );
-    if ( refresh )
-    {
-        assert( texture.pixels.size() >= size_t( texture.resolution.x ) * texture.resolution.y );
-        GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
-        GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, texture.resolution.x, texture.resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture.pixels.data() ) );
-    }
+    background_texture.loadDataOpt( refresh || !background_texture.valid(),
+        { .resolution = GlTexture2::ToResolution( texture.resolution ) }, texture.pixels );
     setTextureWrapType( texture.wrap );
     setTextureFilterType( texture.filter );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "pixels" ), 0 ) );
@@ -231,14 +220,6 @@ void ViewportGL::drawBackgroundTexture( const Box2f& rectf, const MeshTexture& t
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleArraySize, 2 );
     GL_EXEC( glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 ) );
-}
-
-void ViewportGL::freeBackgroundTexture()
-{
-    if ( !background_texture )
-        return;
-    GL_EXEC( glDeleteTextures( 1, &background_texture ) );
-    background_texture = 0;
 }
 
 bool ViewportGL::checkInit() const

@@ -1,5 +1,6 @@
 #pragma once
 #include "MRViewerFwd.h"
+#include "MRRenderGLHelpers.h"
 #include "MRMesh/MRVector4.h"
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRBox.h"
@@ -66,7 +67,7 @@ public:
     // texRect is the image rectangle in framebuffer coordinates, the image is uploaded to GL on `refresh` or first draw
     void drawBackgroundTexture( const Box2f& rect, const MeshTexture& texture, const Box2f& texRect, bool refresh );
     // Frees GL memory of the background texture
-    void freeBackgroundTexture();
+    void freeBackgroundTexture() { background_texture.del(); }
 
     // Check that members have been initialized
     bool checkInit() const;
@@ -144,7 +145,7 @@ private:
 
     GLuint background_vbo = 0;
     GLuint background_vao = 0;
-    GLuint background_texture = 0; // generated on first draw; a raw id keeps GL headers out of this header
+    GlTexture2 background_texture;
 };
 
 }

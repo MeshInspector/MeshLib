@@ -73,9 +73,9 @@ def setup_workspace(version, modules, plat_name):
         str(font_resources.relative_to(WHEEL_SRC_DIR))
         for font_resources in (WHEEL_SRC_DIR).glob("NotoSans*.*") # no folders
     ]
-    # The modules use the limited API of Python, so they work on all of those.
+    # The modules use the limited API of the oldest Python listed: one `cp3X-abi3` wheel for it and every later CPython.
     with open(WHEEL_SCRIPT_DIR / "python_versions.txt") as f:
-        py_versions = sorted(int(v.strip().split(".")[1]) for v in f if v.strip())
+        min_py_minor = min(int(v.strip().split(".")[1]) for v in f if v.strip())
 
     shutil.copy(WHEEL_SCRIPT_DIR / "pyproject.toml", WHEEL_ROOT_DIR)
 
@@ -96,7 +96,7 @@ def setup_workspace(version, modules, plat_name):
         config = Template(config_template_file.read()).substitute(
             VERSION=version,
             PACKAGE_DATA=", ".join(package_files),
-            PYTHON_TAG=".".join(f"py3{x}" for x in py_versions),
+            PYTHON_TAG=f"cp3{min_py_minor}",
             PLAT_NAME=plat_name,
         )
     with open(WHEEL_ROOT_DIR / "setup.cfg", 'w') as config_file:
@@ -125,6 +125,10 @@ def build_wheel():
         [sys.executable, "-m", "build", "--wheel"]
     )
 
+    # setuptools sets no ABI tag for a wheel without extension modules of its own.
+    subprocess.check_call(
+        [sys.executable, "-m", "wheel", "tags", "--abi-tag", "abi3", "--remove", *WHEEL_ROOT_DIR.glob("dist/*.whl")]
+    )
     full_wheel_file = list(WHEEL_ROOT_DIR.glob("dist/*.whl"))[0]
     core_wheel_file = split_wheel.make_core_input(full_wheel_file, WHEEL_ROOT_DIR / "dist_core")
 

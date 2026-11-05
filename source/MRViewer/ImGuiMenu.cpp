@@ -2048,6 +2048,7 @@ bool ImGuiMenu::drawAdvancedOptions( const std::vector<std::shared_ptr<VisualObj
     if ( allIsObjMesh )
     {
         make_visualize_checkbox( selectedObjs, _tr( "Polygon Offset" ), MeshVisualizePropertyType::PolygonOffsetFromCamera, viewportid );
+        make_visualize_checkbox( selectedObjs, _tr( "Cull Back Faces" ), MeshVisualizePropertyType::CullBackFaces, viewportid );
         make_width<ObjectMeshHolder, float>( selectedObjs, _tr( "Point size" ), [&] ( const ObjectMeshHolder* objMesh )
         {
             return objMesh->getPointSize();

@@ -39,7 +39,7 @@ bool RenderLinesObject::render( const ModelRenderParams& renderParams )
     bool depthTest = objLines_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId );
     RenderModelPassMask desiredPass =
         !depthTest ? RenderModelPassMask::NoDepthTest :
-        ( objLines_->getGlobalAlpha( renderParams.viewportId ) < 255 || objLines_->getFrontColor( objLines_->isSelected(), renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
+        ( objLines_->getGlobalAlpha( renderParams.viewportId ) < 255 || objLines_->getFrontColor( objLines_->isSelected(), renderParams.viewportId ).isTranslucent() ) ? RenderModelPassMask::Transparent :
         RenderModelPassMask::Opaque;
     if ( !bool( renderParams.passMask & desiredPass ) )
         return false; // Nothing to draw in this pass.

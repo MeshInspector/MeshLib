@@ -88,6 +88,7 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     root["ShowSelectedFaces"] = showSelectedFaces_.value();
     root["OnlyOddFragments"] = onlyOddFragments_.value();
     root["PolygonOffset"] = polygonOffset_.value();
+    root["CullBackFaces"] = cullBackFaces_.value();
     root["ShadingEnabled"] = shadingEnabled_.value();
     root["FaceBased"] = flatShading_.contains( MR::ViewportId( 1 ) );
     switch( coloringType_ )
@@ -184,6 +185,8 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
         onlyOddFragments_ = ViewportMask{ root["OnlyOddFragments"].asUInt() };
     if ( root["PolygonOffset"].isUInt() )
         polygonOffset_ = ViewportMask{ root["PolygonOffset"].asUInt() };
+    if ( root["CullBackFaces"].isUInt() )
+        cullBackFaces_ = ViewportMask{ root["CullBackFaces"].asUInt() };
     if ( root["ShadingEnabled"].isUInt() )
         shadingEnabled_ = ViewportMask{ root["ShadingEnabled"].asUInt() };
     if ( root["FaceBased"].isBool() ) // Support old versions
@@ -345,6 +348,8 @@ const ViewportMask &ObjectMeshHolder::getVisualizePropertyMask( AnyVisualizeMask
                 return showSelectedFaces_;
             case MeshVisualizePropertyType::PolygonOffsetFromCamera:
                 return polygonOffset_;
+            case MeshVisualizePropertyType::CullBackFaces:
+                return cullBackFaces_;
             case MeshVisualizePropertyType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
         }
         assert( false && "Invalid enum." );

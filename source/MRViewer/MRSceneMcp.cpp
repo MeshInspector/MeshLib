@@ -60,7 +60,7 @@ struct DecomposedXf { Vector3f translation, rotationDeg, scale; };
 static DecomposedXf decomposeXf( const AffineXf3f& xf )
 {
     Matrix3f rotation, scaling;
-    decomposeMatrix3( xf.A, rotation, scaling );
+    decomposeMatrix3( xf.A, rotation, scaling, true ); // Euler angles cannot express an improper rotation of a mirror
     return {
         .translation = xf.b,
         .rotationDeg = rotation.toEulerAngles() * ( 180.f / PI_F ),
@@ -567,7 +567,8 @@ MR_ON_INIT{
                 "Flat depth-first list of every descendant of `rootId` (root itself excluded; pass `rootId = 0` or "
                 "omit to walk from the scene root). Each row carries its own `parentId`, so the tree structure is "
                 "recoverable. `transform` decomposes the object's xf into `{translation:[x,y,z], rotation:[rx,ry,rz], "
-                "scale:[sx,sy,sz]}` (rotation is XYZ-Euler in degrees) — same shape `scene_setObjectState` accepts. "
+                "scale:[sx,sy,sz]}` (rotation is XYZ-Euler in degrees; a mirror has a negative scale; a shear is not "
+                "represented) — same shape `scene_setObjectState` accepts. "
                 "`type` values include `\"Mesh\"`, `\"Point Cloud\"`, `\"Polyline\"`, `\"Voxel Volume\"`.",
         /*input_schema*/Schema::Object{}.addMemberOpt( "rootId", Schema::Number{} ),
         /*output_schema*/Schema::Array( entrySchema() ),

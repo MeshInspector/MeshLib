@@ -14,6 +14,9 @@
 #include <MRMesh/MRIOFormatsRegistry.h>
 #include <MRMesh/MRObjectGcode.h>
 #include <MRMesh/MRObjectMesh.h>
+#include <MRMesh/MRObjectPoints.h>
+#include <MRMesh/MRPointCloud.h>
+#include <MRMesh/MRPointsLoad.h>
 #include <MRMesh/MRObjectSave.h>
 #include <MRMesh/MRStringConvert.h>
 #include <MRMesh/MRUniqueTemporaryFolder.h>
@@ -230,6 +233,32 @@ TEST(MRMesh, LoadPlyPointCloud)
     ASSERT_TRUE( loadRes.has_value() );
     EXPECT_EQ( loadRes->points.size(), 2 );
     EXPECT_EQ( loadRes->topology.numValidFaces(), 0 );
+}
+
+TEST(MRMesh, SaveObjectTreeAsPoints)
+{
+    // the points of every point cloud object in the tree are saved, in world coordinates
+    Object root;
+    for ( int i = 0; i < 2; ++i )
+    {
+        auto pointCloud = std::make_shared<PointCloud>();
+        pointCloud->addPoint( Vector3f( float( i ), 0, 0 ) );
+        pointCloud->addPoint( Vector3f( float( i ), 1, 0 ) );
+        auto objPoints = std::make_shared<ObjectPoints>();
+        objPoints->setPointCloud( pointCloud );
+        objPoints->setXf( AffineXf3f::translation( Vector3f( 0, 0, float( i + 1 ) ) ) );
+        root.addChild( objPoints );
+    }
+
+    UniqueTemporaryFolder dir;
+    ASSERT_TRUE( ObjectSave::toAnySupportedFormat( root, dir / "points.xyz" ).has_value() );
+    auto loaded = PointsLoad::fromAnySupportedFormat( dir / "points.xyz" );
+    ASSERT_TRUE( loaded.has_value() );
+    ASSERT_EQ( loaded->points.size(), 4 );
+    EXPECT_EQ( loaded->points[0_v], Vector3f( 0, 0, 1 ) );
+    EXPECT_EQ( loaded->points[1_v], Vector3f( 0, 1, 1 ) );
+    EXPECT_EQ( loaded->points[2_v], Vector3f( 1, 0, 2 ) );
+    EXPECT_EQ( loaded->points[3_v], Vector3f( 1, 1, 2 ) );
 }
 
 TEST(MRMesh, StlLoadAsTriMesh)

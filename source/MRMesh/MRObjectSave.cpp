@@ -1,5 +1,6 @@
 #include "MRObjectSave.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRDistanceMap.h"
 #include "MRDistanceMapSave.h"
 #include "MRGcodeSave.h"
@@ -46,9 +47,11 @@ Mesh mergeToMesh( const Object& object )
         result.addMesh( *objMesh->meshPtr(), nullptr, &vmap );
 
         const auto xf = objMesh->worldXf();
-        for ( const auto v : vmap )
-            if ( v.valid() )
+        ParallelFor( vmap, [&] ( VertId i )
+        {
+            if ( const auto v = vmap[i] )
                 result.points[v] = xf( result.points[v] );
+        } );
         result.invalidateCaches();
     }
     return result;
@@ -76,12 +79,15 @@ PointCloud mergeToPoints( const Object& object )
             continue;
 
         VertMap vmap;
-        result.addPartByMask( result, objPoints->pointCloudPtr()->validPoints, { .src2tgtVerts = &vmap } );
+        const auto& pointCloud = *objPoints->pointCloudPtr();
+        result.addPartByMask( pointCloud, pointCloud.validPoints, { .src2tgtVerts = &vmap } );
 
         const auto xf = objPoints->worldXf();
-        for ( const auto v : vmap )
-            if ( v.valid() )
+        ParallelFor( vmap, [&] ( VertId i )
+        {
+            if ( const auto v = vmap[i] )
                 result.points[v] = xf( result.points[v] );
+        } );
         result.invalidateCaches();
     }
     return result;
@@ -107,9 +113,11 @@ Polyline3 mergeToLines( const Object& object )
         result.addPart( *objLines->polylinePtr(), &vmap );
 
         const auto xf = objLines->worldXf();
-        for ( const auto& v : vmap )
-            if ( v.valid() )
+        ParallelFor( vmap, [&] ( VertId i )
+        {
+            if ( const auto v = vmap[i] )
                 result.points[v] = xf( result.points[v] );
+        } );
         result.invalidateCaches();
     }
     return result;

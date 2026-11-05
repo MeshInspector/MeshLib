@@ -8,6 +8,8 @@
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRAABBTree.h>
 #include <MRMesh/MRBuffer.h>
+#include <MRMesh/MRMapOrHashMap.h>
+#include <atomic>
 
 namespace MR
 {
@@ -441,6 +443,34 @@ TEST(MRMesh, AddMeshPart)
     EXPECT_EQ( faceHashMap.getHashMap()->size(), nf );
     EXPECT_EQ( vertHashMap.getHashMap()->size(), nv );
     EXPECT_EQ( edgeHashMap.getHashMap()->size(), ne );
+}
+
+TEST( MRMesh, MapOrHashMapForEachParallel )
+{
+    constexpr int n = 100000;
+    for ( bool hash : { false, true } )
+    {
+        auto map = hash ? VertMapOrHashMap::createHashMap() : VertMapOrHashMap::createMap( n );
+        for ( int i = 0; i < n; i += 3 )
+            setAt( map, VertId( i ), VertId( n - i ) );
+        if ( auto h = map.getHashMap() )
+            for ( int i = 0; i < n; i += 9 )
+                h->erase( VertId( i ) ); // deleted slots
+        std::vector<std::atomic<int>> visits( n );
+        map.forEachParallel( [&] ( VertId key, VertId val )
+        {
+            EXPECT_EQ( val, VertId( n - key ) );
+            ++visits[key];
+        } );
+        int numVisited = 0;
+        for ( int i = 0; i < n; ++i )
+        {
+            const int expected = i % 3 == 0 && !( hash && i % 9 == 0 ) ? 1 : 0;
+            EXPECT_EQ( visits[i], expected ) << i;
+            numVisited += visits[i];
+        }
+        EXPECT_EQ( numVisited, hash ? n / 3 + 1 - ( n / 9 + 1 ) : n / 3 + 1 );
+    }
 }
 
 TEST( MRMesh, BasicExport )

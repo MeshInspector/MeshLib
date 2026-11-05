@@ -363,7 +363,7 @@ void Mesh::addMesh( const Mesh & from, PartMapping map, bool rearrangeTriangles 
     VertId lastPointId = topology.lastValidVert();
     if ( points.size() < lastPointId + 1 )
         points.resize( lastPointId + 1 );
-    map.src2tgtVerts->forEach( [&]( VertId fromVert, VertId thisVert ) { points[thisVert] = from.points[fromVert]; } );
+    map.src2tgtVerts->forEachParallel( [&]( VertId fromVert, VertId thisVert ) { points[thisVert] = from.points[fromVert]; } );
 }
 
 void Mesh::addMeshPart( const MeshPart & from, const PartMapping & map, VacantElements * vacant )
@@ -387,7 +387,7 @@ bool Mesh::addMeshPart( const MeshPart & from, bool flipOrientation,
     VertId lastPointId = topology.lastValidVert();
     if ( points.size() < lastPointId + 1 )
         points.resize( lastPointId + 1 );
-    map.src2tgtVerts->forEach( [&]( VertId fromVert, VertId thisVert ) { points[thisVert] = from.mesh.points[fromVert]; } );
+    map.src2tgtVerts->forEachParallel( [&]( VertId fromVert, VertId thisVert ) { points[thisVert] = from.mesh.points[fromVert]; } );
     return true;
 }
 

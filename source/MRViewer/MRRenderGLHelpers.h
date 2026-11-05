@@ -246,6 +246,8 @@ public:
         FilterType filter{ FilterType::Linear }; // filter type of underlaying textures
         bool forceSimpleDepthDraw = false; // force using `simpleDepth` for all fragments even if depth texture is present
         float simpleDepth = 0.5f; // depth that is used if this framebuffer does not store depth component texture
+        unsigned depthTexture = 0; // if not zero, this depth texture is used instead of the framebuffer's own one
+        float maxDepth = 0.999f; // larger depths from the depth texture are clamped to it (antialiased pixels might have depth 1.0)
     };
     // draws this framebuffer using `quadObject`
     MRVIEWER_API void draw( QuadTextureVertexObject& quadObject, const DrawParams& params ) const;

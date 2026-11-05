@@ -1,7 +1,6 @@
 #pragma once
 #include "MRViewerFwd.h"
 #include "MRRenderGLHelpers.h"
-#include <array>
 
 namespace MR
 {
@@ -27,25 +26,10 @@ public:
     int getNumPasses() const { return numPasses_; }
     void setNumPasses( int passes ) { numPasses_ = passes; }
 private:
-    // draws a full-screen quad with DepthPeelQuad shader
-    void drawQuad_( unsigned colorTex, unsigned depthTex, bool dilate );
-
-    // number of the nearest layers composited separately, each exact on every MSAA sample
-    static constexpr int cSeparateLayers = 2;
-
-    struct Target
-    {
-        unsigned fbo = 0;
-        GlTexture2 color;
-        GlTexture2 depth;
-    };
-    // [0, cSeparateLayers): the nearest layers, each alone;
-    // [cSeparateLayers]: the next layer, the farther ones are accumulated behind it in accumFB_;
-    // [cSeparateLayers + 1]: the farthest opaque depth around each pixel
-    std::array<Target, cSeparateLayers + 2> targets_;
-
     FramebufferData accumFB_;
     QuadTextureVertexObject qt_;
+    GlTexture2 nearestDepth_; // depth of the nearest layer, `draw` is depth-tested with it
+    unsigned copyFBOs_[2] = {}; // to copy the depth of accumFB_ after the first pass into nearestDepth_
     int numPasses_{ 5 };
 };
 

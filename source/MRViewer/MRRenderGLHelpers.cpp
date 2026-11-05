@@ -268,7 +268,7 @@ void FramebufferData::draw( QuadTextureVertexObject& quadObject, const DrawParam
 #endif
     GL_EXEC( glViewport( 0, 0, params.size.x, params.size.y ) );
 
-    bool useDepthTexture = !params.forceSimpleDepthDraw && resDepthTexture_.valid();
+    bool useDepthTexture = !params.forceSimpleDepthDraw && ( params.depthTexture != 0 || resDepthTexture_.valid() );
     auto shader = GLStaticHolder::getShaderId( useDepthTexture ? GLStaticHolder::DepthOverlayQuad : GLStaticHolder::SimpleOverlayQuad );
     GL_EXEC( glUseProgram( shader ) );
 
@@ -282,10 +282,11 @@ void FramebufferData::draw( QuadTextureVertexObject& quadObject, const DrawParam
     if ( useDepthTexture )
     {
         GL_EXEC( glActiveTexture( GL_TEXTURE1 ) );
-        GL_EXEC( glBindTexture( GL_TEXTURE_2D, getDepthTexture() ) );
+        GL_EXEC( glBindTexture( GL_TEXTURE_2D, params.depthTexture != 0 ? params.depthTexture : getDepthTexture() ) );
         setTextureWrapType( params.wrap );
         setTextureFilterType( params.filter );
         GL_EXEC( glUniform1i( glGetUniformLocation( shader, "depths" ), 1 ) );
+        GL_EXEC( glUniform1f( glGetUniformLocation( shader, "maxDepth" ), params.maxDepth ) );
     }
     else
     {

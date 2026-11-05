@@ -46,7 +46,6 @@ std::string getShaderName( MR::GLStaticHolder::ShaderType type )
         "Shadow overlay shader",
         "Simple overlay shader",
         "Depth overlay shader",
-        "Depth-peel quad shader",
 
         "Volume shader",
         "Volume picker shader"
@@ -612,6 +611,7 @@ void main(void)
   uniform sampler2D pixels;
   uniform sampler2D depths;
   uniform vec2 viewportSize;
+  uniform float maxDepth;
   out vec4 outColor;                 // (out to render) fragment color
 
   void main()
@@ -622,42 +622,10 @@ void main(void)
     if ( outColor.a == 0.0 )
       discard;
     float depth = texture(depths, pos ).r;
-    if ( depth > 0.999 ) // antialiased pixels might have _depth == 1.0
-      gl_FragDepth = 0.999;
+    if ( depth > maxDepth ) // antialiased pixels might have _depth == 1.0
+      gl_FragDepth = maxDepth;
     else
       gl_FragDepth = depth;
-  }
-)";
-        }
-        else if ( type == DepthPeelQuad )
-        {
-            fragmentShader =
-                MR_GLSL_VERSION_LINE R"(
-  precision highp float;
-  precision highp int;
-  uniform sampler2D colors;
-  uniform sampler2D depths;
-  uniform bool dilate; // write the farthest depth around the pixel instead of the pixel's color and depth
-  out vec4 outColor;
-
-  void main()
-  {
-    ivec2 pos = ivec2( gl_FragCoord.xy );
-    if ( dilate )
-    {
-      ivec2 maxPos = textureSize( depths, 0 ) - ivec2( 1 );
-      float depth = 0.0;
-      for ( int y = -1; y <= 1; ++y )
-        for ( int x = -1; x <= 1; ++x )
-          depth = max( depth, texelFetch( depths, clamp( pos + ivec2( x, y ), ivec2( 0 ), maxPos ), 0 ).r );
-      outColor = vec4( 0.0 );
-      gl_FragDepth = depth;
-      return;
-    }
-    outColor = texelFetch( colors, pos, 0 );
-    if ( outColor.a == 0.0 )
-      discard;
-    gl_FragDepth = texelFetch( depths, pos, 0 ).r;
   }
 )";
         }

@@ -2,8 +2,6 @@
 #include "MRViewer.h"
 #include "MRSceneTextureGL.h"
 #include "MRViewport.h"
-#include "MRGLMacro.h"
-#include "MRGLStaticHolder.h"
 #include "MRMesh/MRSceneRoot.h"
 
 namespace MR
@@ -15,27 +13,24 @@ void DepthPeelingGL::reset( const Vector2i& size )
     {
         accumFB_.del();
         qt_.del();
-        for ( auto& t : targets_ )
-        {
-            GL_EXEC( glDeleteFramebuffers( 1, &t.fbo ) );
-            t.color.del();
-            t.depth.del();
-        }
+        nearestDepth_.del();
+        GL_EXEC( glDeleteFramebuffers( 2, copyFBOs_ ) );
     }
     accumFB_.gen( size, true, 0, true );
     qt_.gen();
-    const auto resolution = GlTexture2::ToResolution( size );
-    for ( auto& t : targets_ )
+
+    nearestDepth_.gen();
+    nearestDepth_.loadData( { .resolution = GlTexture2::ToResolution( size ), .internalFormat = GL_DEPTH_COMPONENT32F,
+        .format = GL_DEPTH_COMPONENT, .type = GL_FLOAT, .wrap = WrapType::Clamp, .filter = FilterType::Discrete }, ( const char* )nullptr );
+    GL_EXEC( glGenFramebuffers( 2, copyFBOs_ ) );
+    const unsigned depthTextures[2] = { accumFB_.getDepthTexture(), nearestDepth_.getId() };
+    const GLenum noColor = GL_NONE;
+    for ( int i = 0; i < 2; ++i )
     {
-        GL_EXEC( glGenFramebuffers( 1, &t.fbo ) );
-        GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, t.fbo ) );
-        t.color.gen();
-        t.color.loadData( { .resolution = resolution, .wrap = WrapType::Clamp, .filter = FilterType::Discrete }, ( const char* )nullptr );
-        GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, t.color.getId(), 0 ) );
-        t.depth.gen();
-        t.depth.loadData( { .resolution = resolution, .internalFormat = GL_DEPTH_COMPONENT32F, .format = GL_DEPTH_COMPONENT,
-            .type = GL_FLOAT, .wrap = WrapType::Clamp, .filter = FilterType::Discrete }, ( const char* )nullptr );
-        GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, t.depth.getId(), 0 ) );
+        GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, copyFBOs_[i] ) );
+        GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTextures[i], 0 ) );
+        GL_EXEC( glDrawBuffers( 1, &noColor ) );
+        GL_EXEC( glReadBuffer( GL_NONE ) );
         assert( glCheckFramebufferStatus( GL_FRAMEBUFFER ) == GL_FRAMEBUFFER_COMPLETE );
     }
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, 0 ) );
@@ -43,18 +38,13 @@ void DepthPeelingGL::reset( const Vector2i& size )
 
 void DepthPeelingGL::draw()
 {
-    // back to front, each layer only on the samples where it is not behind the opaque scene (as in the peeling),
+    // only on the samples where the nearest layer is not behind the opaque scene,
     // so the antialiased edges of closer opaque objects stay intact
     GL_EXEC( glEnable( GL_DEPTH_TEST ) );
     GL_EXEC( glDepthFunc( GL_LEQUAL ) );
     GL_EXEC( glDepthMask( GL_FALSE ) );
-    GL_EXEC( glEnable( GL_BLEND ) );
-    GL_EXEC( glBlendFuncSeparate( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA ) );
-    for ( int i = std::min( numPasses_, cSeparateLayers + 1 ) - 1; i >= 0; --i )
-    {
-        const bool accumulated = i == cSeparateLayers && numPasses_ > cSeparateLayers + 1;
-        drawQuad_( accumulated ? accumFB_.getColorTexture() : targets_[i].color.getId(), targets_[i].depth.getId(), false );
-    }
+    accumFB_.draw( qt_, { .size = accumFB_.getSize(),.wrap = WrapType::Clamp,.filter = FilterType::Discrete,
+        .depthTexture = numPasses_ > 1 ? nearestDepth_.getId() : 0, .maxDepth = 1.0f } );
     GL_EXEC( glDepthMask( GL_TRUE ) );
 }
 
@@ -67,56 +57,34 @@ bool DepthPeelingGL::doPasses( FramebufferData* bgFramebuffer )
     
     bgFramebuffer->copyTextureBindDef();
 
-    // the resolved depth keeps one sample of an antialiased edge, so peel against the farthest depth around the pixel:
-    // a layer hidden on some samples of the pixel is still needed on the others, and `draw` hides it per sample
-    const auto& bgDepth = targets_[cSeparateLayers + 1];
-    GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, bgDepth.fbo ) );
-    GL_EXEC( glEnable( GL_DEPTH_TEST ) );
-    GL_EXEC( glDepthFunc( GL_ALWAYS ) );
-    GL_EXEC( glDepthMask( GL_TRUE ) );
-    drawQuad_( bgFramebuffer->getColorTexture(), bgFramebuffer->getDepthTexture(), true );
-    GL_EXEC( glDepthFunc( GL_LESS ) );
-
     int numTransparent = 0;
 
-    accumFB_.bind( true, 0.0f ); // empty color and zero depth: the input of the first pass
-    accumFB_.copyTextureBindDef();
+    accumFB_.bind( true, 0.0f ); // reset depth buffer to 0.0 value for first pass
 
-    const float cOneValue = 1.0f;
     for ( int i = 0; i < numPasses_; ++i )
     {
-        auto fgColor = accumFB_.getColorTexture();
-        auto fgDepth = i == 0 ? accumFB_.getDepthTexture() : targets_[std::min( i - 1, cSeparateLayers )].depth.getId();
-        if ( i <= cSeparateLayers )
+        accumFB_.copyTextureBindDef();
+        if ( i == 1 )
         {
-            // the nearest layers and the first of the farther ones: each alone in its target
-            GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, targets_[i].fbo ) );
-            const float cZeroColor[4] = {};
-            GL_EXEC( glClearBufferfv( GL_COLOR, 0, cZeroColor ) );
+            // keep the depth of the nearest layer for `draw`
+            const auto& size = accumFB_.getSize();
+            GL_EXEC( glBindFramebuffer( GL_READ_FRAMEBUFFER, copyFBOs_[0] ) );
+            GL_EXEC( glBindFramebuffer( GL_DRAW_FRAMEBUFFER, copyFBOs_[1] ) );
+            GL_EXEC( glBlitFramebuffer( 0, 0, size.x, size.y, 0, 0, size.x, size.y, GL_DEPTH_BUFFER_BIT, GL_NEAREST ) );
         }
-        else
-        {
-            // the farther layers are accumulated behind the first of them
-            if ( i == cSeparateLayers + 1 )
-                fgColor = targets_[cSeparateLayers].color.getId();
-            else
-            {
-                accumFB_.copyTextureBindDef();
-                fgDepth = accumFB_.getDepthTexture();
-            }
-            accumFB_.bind( false );
-        }
+        accumFB_.bind( false );
+        float cOneValue = 1.0f;
         GL_EXEC( glClearBufferfv( GL_DEPTH, 0, &cOneValue ) );
         for ( const auto& viewport : getViewerInstance().viewport_list )
         {
             viewport.recursiveDraw( SceneRoot::get(), DepthFunction::Default, AffineXf3f(), RenderModelPassMask::Transparent, 
-                { bgDepth.depth.getId(), fgColor, fgDepth },
+                { bgFramebuffer->getDepthTexture(),accumFB_.getColorTexture(), accumFB_.getDepthTexture() },
                 &numTransparent );
         }
         if ( numTransparent == 0 )
             break;
     }
-    if ( numTransparent != 0 && numPasses_ > cSeparateLayers + 1 )
+    if ( numTransparent != 0 )
         accumFB_.copyTextureBindDef();
     bgFramebuffer->bind( false );
 
@@ -124,24 +92,6 @@ bool DepthPeelingGL::doPasses( FramebufferData* bgFramebuffer )
     GL_EXEC( glBlendFuncSeparate( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA ) );
 
     return numTransparent != 0;
-}
-
-void DepthPeelingGL::drawQuad_( unsigned colorTex, unsigned depthTex, bool dilate )
-{
-    const auto& size = accumFB_.getSize();
-    GL_EXEC( glViewport( 0, 0, size.x, size.y ) );
-    const auto shader = GLStaticHolder::getShaderId( GLStaticHolder::DepthPeelQuad );
-    GL_EXEC( glUseProgram( shader ) );
-    qt_.bind();
-    GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D, colorTex ) );
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "colors" ), 0 ) );
-    GL_EXEC( glActiveTexture( GL_TEXTURE1 ) );
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D, depthTex ) );
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "depths" ), 1 ) );
-    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "dilate" ), dilate ) );
-    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleArraySize, 2 );
-    GL_EXEC( glDrawArrays( GL_TRIANGLES, 0, 6 ) );
 }
 
 }

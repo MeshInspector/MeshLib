@@ -43,7 +43,6 @@ public:
         ShadowOverlayQuad,
         SimpleOverlayQuad,
         DepthOverlayQuad,
-        DepthPeelQuad,
 
         Volume,
         VolumePicker,

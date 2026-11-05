@@ -384,6 +384,8 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours, const So
     return res;
 }
 
+// triangulates the hole or the face to the left of (e); a face stays as one of the triangles with its id (and its mapping),
+// the other triangles and all new edges get new ids mapped to oldFace
 void executeTriangulateContourPlan( Mesh& mesh, EdgeId e, HoleFillPlan& plan, FaceId oldFace, FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
 {
     const auto fsz0 = mesh.topology.faceSize();
@@ -1642,34 +1644,29 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     if ( params.forceFillMode == CutMeshParameters::ForceFill::None && res.fbsWithContourIntersections.any() )
         return res;
 
-    // find one edge for every hole to fill
+    // fill every hole with one face at once, so the hole is not met again; the faces of real holes are triangulated below
     Timer t( "find edge per hole" );
-    EdgeBitSet allHoleEdges( mesh.topology.edgeSize() );
     std::vector<EdgeId> holeRepresentativeEdges;
     Vector<FaceId> oldFaces; // of corresponding holeRepresentativeEdges
-    Vector<EdgeId> pseudoHoleRepresentativeEdges;
-    Vector<FaceId> pseudoOldFaces; // of corresponding pseudoHoleRepresentativeEdges
     const bool needOldFaces = params.new2OldMap || params.new2oldEdgesMap;
+    int numNewFaces = 0;
     auto addHoleDesc = [&] ( EdgeId e, FaceId oldf, bool pseudofill )
     {
-        if ( allHoleEdges.test( e ) )
+        if ( mesh.topology.left( e ) )
             return;
+        auto nf = mesh.topology.addFaceId();
+        mesh.topology.setLeft( e, nf );
+        ++numNewFaces;
+        if ( params.new2OldMap )
+        {
+            assert( oldf.valid() );
+            params.new2OldMap->autoResizeSet( nf, oldf );
+        }
         if ( !pseudofill )
         {
             holeRepresentativeEdges.push_back( e );
             if ( needOldFaces )
                 oldFaces.push_back( oldf );
-        }
-        else
-        {
-            pseudoHoleRepresentativeEdges.push_back( e );
-            if ( needOldFaces )
-                pseudoOldFaces.push_back( oldf );
-        }
-        for ( auto ei : leftRing( mesh.topology, e ) )
-        {
-            [[maybe_unused]] auto v = allHoleEdges.test_set( ei );
-            assert( !v );
         }
     };
     bool fillLeft = params.fillPart == CutMeshParameters::FillPart::Both || params.fillPart == CutMeshParameters::FillPart::Left;
@@ -1706,13 +1703,14 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
 
     // fill contours
     t.restart( "run TriangulateContourPlans" );
-    int numTris = int( pseudoHoleRepresentativeEdges.size() );
+    int numTris = 0; // besides the face of each hole
     int numEdges = 0;
     for ( const auto& plan : fillPlans )
     {
-        numTris += plan.numTris;
+        numTris += plan.numTris - 1;
         numEdges += 2 * int( plan.items.size() );
     }
+    numNewFaces += numTris;
     auto expectedTotalTris = mesh.topology.faceSize() + numTris;
     const auto expectedTotalEdges = mesh.topology.edgeSize() + numEdges;
 
@@ -1736,24 +1734,9 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
             needOldFaces ? oldFaces[i] : FaceId{}, params.new2OldMap, params.new2oldEdgesMap );
     }
 
-    auto pseudoFill = [&] ( EdgeId eid, FaceId of )
-    {
-        auto nf = mesh.topology.addFaceId();
-        mesh.topology.setLeft( eid, nf );
-        if ( params.new2OldMap )
-        {
-            assert( of.valid() );
-            params.new2OldMap->autoResizeSet( nf, of );
-        }
-    };
-    for ( size_t i = 0; i < pseudoHoleRepresentativeEdges.size(); ++i )
-    {
-        pseudoFill( pseudoHoleRepresentativeEdges[i], needOldFaces ? pseudoOldFaces[i] : FaceId{} );
-    }
-
     assert( mesh.topology.faceSize() == expectedTotalTris );
     if ( params.new2OldMap )
-        assert( params.new2OldMap->size() == ( numTris != 0 ? expectedTotalTris : mesh.topology.lastValidFace() + 1 ) );
+        assert( params.new2OldMap->size() == ( numNewFaces != 0 ? expectedTotalTris : mesh.topology.lastValidFace() + 1 ) );
 
     res.resultCut = std::move( preRes.paths );
 

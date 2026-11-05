@@ -7,6 +7,7 @@
 #include "MRPch/MRFmt.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRGetSystemInfoJson.h"
+#include "MRViewer/MRMcpCommon.h"
 
 #include <json/json.h>
 
@@ -58,7 +59,7 @@ static nlohmann::json mcpSystemLog( const nlohmann::json& args )
 static nlohmann::json mcpSystemInfo( const nlohmann::json& )
 {
     nlohmann::json out;
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    runOnMainThread( [&]
     {
         const Json::Value sys = MR::GetSystemInfoJson();
         Json::StreamWriterBuilder builder;
@@ -82,7 +83,8 @@ MR_ON_INIT{
                 "`[trace]` client-side. Returns `[]` if file logging is disabled.",
         /*input_schema*/Schema::Object{}.addMemberOpt( "maxLines", Schema::Number{} ),
         /*output_schema*/Schema::Array( Schema::String{} ),
-        /*func*/mcpSystemLog
+        /*func*/mcpSystemLog,
+        /*readOnly*/true
     );
 
     server.addTool(
@@ -94,7 +96,8 @@ MR_ON_INIT{
                 "loosely-shaped JSON object.",
         /*input_schema*/Schema::Object{},
         /*output_schema*/Schema::Object{},
-        /*func*/mcpSystemInfo
+        /*func*/mcpSystemInfo,
+        /*readOnly*/true
     );
 }; // MR_ON_INIT
 

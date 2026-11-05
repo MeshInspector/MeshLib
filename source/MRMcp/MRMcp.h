@@ -164,11 +164,14 @@ public:
     /// @param desc A human/ai-readable explanation of what the tool does.
     /// @param inputSchema Describes the arguments. Normally it should be `Schema::Object{}` with some fields added.
     /// @param outputSchema Describes the returned JSON.
+    /// @param readOnly The tool does not change the application's state; clients get it as the `readOnlyHint` annotation,
+    ///     so they may e.g. run such calls concurrently or approve them more easily.
     /// Fails if the tool with this `id` already exists.
     /// Must be called early, before `setRunning(true)` is called for the first time, otherwise fails.
     /// Returns true on success. Asserts when returning false, so you don't have to check the return value.
     /// NOTE: Consult `docs/testing_mcp.md` for how to test your tool.
-    MRMCP_API bool addTool( std::string id, std::string name, std::string desc, Schema::Base inputSchema, Schema::Base outputSchema, ToolFunc func );
+    MRMCP_API bool addTool( std::string id, std::string name, std::string desc, Schema::Base inputSchema, Schema::Base outputSchema, ToolFunc func,
+        bool readOnly = false );
 
     [[nodiscard]] MRMCP_API const Params& getParams() const;
 

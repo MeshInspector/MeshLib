@@ -7,7 +7,7 @@ def test_delete_faces():
     faceBitSetToDelete = mrmesh.FaceBitSet()
     faceBitSetToDelete.resize(5, False)
     faceBitSetToDelete.set(mrmesh.FaceId(1), True)
-    oldFaceBS = torus.topology.getValidFaces()
+    oldFaceBS = mrmesh.FaceBitSet(torus.topology.getValidFaces())  # A copy: the result is a reference.
     torus.topology.deleteFaces(faceBitSetToDelete)
     deletedBitSet = oldFaceBS - torus.topology.getValidFaces()
     assert deletedBitSet.count() == 1

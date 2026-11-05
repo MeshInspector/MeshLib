@@ -9,7 +9,7 @@ def test_position_verts_smooth():
     torus = mrmesh.makeTorusWithSpikes(R1, R2_1, R2_2, 10, 12, None)
 
     params = mrmesh.LaplacianEdgeWeightsParam.Cotan
-    verts = torus.topology.getValidVerts()
+    verts = mrmesh.VertBitSet(torus.topology.getValidVerts())  # A modifiable copy: the result is a const reference.
     verts.set(mrmesh.VertId(0), False)
     mrmesh.positionVertsSmoothly(torus, verts, params)
 
@@ -23,7 +23,7 @@ def test_position_verts_smooth_sharpbd():
     R2_2 = 2.5
     torus = mrmesh.makeTorusWithSpikes(R1, R2_1, R2_2, 10, 12, None)
 
-    verts = torus.topology.getValidVerts()
+    verts = mrmesh.VertBitSet(torus.topology.getValidVerts())  # A modifiable copy: the result is a const reference.
     verts.set(mrmesh.VertId(0), False)
     mrmesh.positionVertsSmoothlySharpBd(torus, verts)
 

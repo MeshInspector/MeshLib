@@ -21,6 +21,7 @@
 #include "MRRingIterator.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRMeshFillHole.h"
+#include "MRMeshFixer.h"
 
 namespace MR
 {
@@ -80,6 +81,48 @@ void gatherEdgeInfo( const MeshTopology& topology, EdgeId e, FaceBitSet& faces, 
 void removeTwoPointLoops( ContinuousContours& contours )
 {
     erase_if( contours, [] ( const ContinuousContour& c ) { return c.size() == 3 && isClosed( c ); } );
+}
+
+// cuts the surface along the given edges as cutAlongEdgeLoop does along a loop: every edge loses its left face to a new edge next to it,
+// returned at the same index; then every vertex of the edges is split in its parts between the holes that this and earlier cuts marked in holes,
+// one vertex per part: also where several loops cross, or where earlier stitches have separated the edges of a loop at a crossing
+EdgePath cutAlongEdges( Mesh& mesh, const EdgePath& edges, EdgeBitSet& holes )
+{
+    auto& tp = mesh.topology;
+    EdgePath res;
+    res.reserve( edges.size() );
+    for ( auto e : edges )
+    {
+        const auto t = tp.makeEdge();
+        tp.splice( e, t );
+        tp.splice( tp.prev( e.sym() ), t.sym() );
+        res.push_back( t );
+        // the holes start from e and t.sym() counterclockwise
+        holes.autoResizeSet( e );
+        holes.autoResizeSet( t.sym() );
+    }
+    // splits the ring of the origin of h, which starts a hole: every other start of a hole there takes the part from the end of the previous hole
+    // to a new vertex, and h keeps the rest
+    auto split = [&] ( EdgeId h )
+    {
+        for ( auto x = tp.next( h ); x != h; )
+        {
+            const auto next = tp.next( x );
+            if ( !tp.left( x ) && holes.test( x ) )
+            {
+                const auto first = tp.next( h );
+                tp.splice( h, x );
+                tp.setOrg( first, tp.addVertId() );
+                mesh.points.autoResizeSet( tp.org( first ), mesh.orgPnt( h ) );
+            }
+            x = next;
+        }
+    };
+    for ( auto e : edges )
+        split( e );
+    for ( auto t : res )
+        split( t.sym() );
+    return res;
 }
 
 } //anonymous namespace
@@ -188,7 +231,19 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
     Mesh mesh = inMesh;
 
     // find and order intersections
-    auto contours = orderSelfIntersectionContours( mesh.topology, findSelfCollidingEdgeTrisPrecise( mesh, converters.toInt ) );
+    auto intersections = findSelfCollidingEdgeTrisPrecise( mesh, converters.toInt );
+    // two triangles with the same vertices glued along two edges (at a vertex of degree 2) or all three edges (a pillow) are a part without
+    // volume, whose crossings with other parts are alike for both triangles, so that no cut tells them apart: such parts are eliminated
+    // with their intersections, in one pass (where eliminating a pair makes its neighbours a pair, as in a stack of fins, and their
+    // intersections came earlier, the new pair stays)
+    for ( const auto& x : intersections )
+        for ( auto f : { x.tri, mesh.topology.left( x.edge ) } )
+            if ( f && mesh.topology.hasFace( f ) )
+                for ( auto e : leftRing( mesh.topology, f ) )
+                    if ( eliminateDoubleTris( mesh.topology, e, nullptr, true ) )
+                        break;
+    std::erase_if( intersections, [&] ( const EdgeTri& x ) { return !mesh.topology.hasFace( x.tri ) || mesh.topology.isLoneEdge( x.edge ); } );
+    auto contours = orderSelfIntersectionContours( mesh.topology, intersections );
     removeTwoPointLoops( contours ); // both contours of a pair together, as they have the same points
 
     auto holePairs = detail::findSelfContoursMapping( contours );
@@ -287,34 +342,92 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
 
     // meshAVertsNum = 0 because both meshes are actually the same and no need to change the IDs of any mesh vertices
     const SortIntersectionsData sortData{ inMesh, contours, converters.toInt, nullptr, 0, false };
-    auto cutRes = cutMesh( mesh, intContours, { .sortData = &sortData } );
+    const VertId firstNewVert( mesh.topology.vertSize() );
+    const FaceId firstNewFace( mesh.topology.faceSize() );
+    FaceMap new2Old;
+    // where three sheets meet at a point, the contours cross on each of them: the cut splits them there, so the paths pass the crossings
+    auto cutRes = cutMesh( mesh, intContours, { .sortData = &sortData, .new2OldMap = &new2Old,
+        .forceFillMode = CutMeshParameters::ForceFill::SplitCrossings } );
+    // the vertices at the crossings: new vertices that two paths leave (or one path twice), unlike the vertices at the points of the contours
+    VertBitSet leftOnce( mesh.topology.vertSize() ), crossings( mesh.topology.vertSize() );
+    for ( const auto& path : cutRes.resultCut )
+        for ( auto e : path )
+            if ( const auto v = mesh.topology.org( e ); v >= firstNewVert && leftOnce.test_set( v ) )
+                crossings.set( v );
     if ( cutRes.fbsWithContourIntersections.any() )
-        return unexpected( fmt::format( "Self-Boolean has nested intersections on {} faces", cutRes.fbsWithContourIntersections.count() ) );
+    {
+        // a bad face is filled well only where the cut split the crossings in it (the faces around such a crossing come from that face),
+        // and all the faces made from it are triangles: where its monotone split failed, the planar fill can leave a face that is no
+        // triangle (only the new faces can be such, as the old ones keep their sides), or the face is put back whole with its old id
+        // next to the fills of its islands
+        FaceBitSet split;
+        for ( auto v : crossings )
+            for ( auto e : orgRing( mesh.topology, v ) )
+                if ( const auto f = mesh.topology.left( e ) )
+                    split.autoResizeSet( new2Old[f] );
+        auto bad = cutRes.fbsWithContourIntersections - ( split - mesh.topology.getValidFaces() );
+        for ( auto f = firstNewFace; f < mesh.topology.faceSize(); ++f )
+            if ( cutRes.fbsWithContourIntersections.test( new2Old[f] ) && !mesh.topology.isLeftTri( mesh.topology.edgeWithLeft( f ) ) )
+                bad.set( new2Old[f] );
+        if ( bad.any() )
+            return unexpected( fmt::format( "Self-Boolean has nested intersections on {} faces", bad.count() ) );
+    }
     convertIntFloatAllVerts( mesh, converters );
 
+    // before any stitch changes the vertices: the second path of every closed pair goes along the first one from the same point
+    // (r counts the points of the contour, while the path passes its crossings too), and a loop closed through fold vertices
+    // goes from sv to fv on one sheet and back on the other one; the crossings must come at the same edges on both sheets,
+    // so that the stitches join crossings with crossings and the points of the contour with their own pairs
+    auto isCrossing = [&] ( EdgeId e ) { return crossings.test( mesh.topology.org( e ) ); };
     for ( auto [f, s, r] : holePairs )
     {
+        if ( changes[f].dropped )
+            continue;
+        const auto& path = cutRes.resultCut[f];
+        assert( isEdgeLoop( mesh.topology, path ) ); // until the cuts below split the crossings that it shares with other paths
+        const auto n = path.size();
+        bool aligned = false;
+        if ( contours[s].empty() )
+        {
+            aligned = n % 2 == 0 && mesh.topology.org( path[n / 2] ) == changes[f].fv;
+            for ( size_t i = 1; aligned && i < n / 2; ++i )
+                aligned = isCrossing( path[i] ) == isCrossing( path[n - i] );
+        }
+        else
+        {
+            auto& leftLoopS = cutRes.resultCut[s];
+            int j = 0;
+            for ( int k = 0; k < r || isCrossing( leftLoopS[j] ); ++j )
+                if ( !isCrossing( leftLoopS[j] ) )
+                    ++k;
+            std::rotate( leftLoopS.begin(), leftLoopS.begin() + j, leftLoopS.end() );
+            reverse( leftLoopS );
+            aligned = leftLoopS.size() == n;
+            for ( size_t i = 1; aligned && i < n; ++i )
+                aligned = isCrossing( path[i] ) == isCrossing( leftLoopS[i] );
+        }
+        if ( !aligned )
+            return unexpected( "Self-Boolean has nested intersections split differently on the sheets" );
+    }
+
+    EdgeBitSet holes; // of the cuts below, until the stitches close them
+    for ( auto [f, s, r] : holePairs )
+    {
+        if ( changes[f].dropped )
+            continue;
         if ( !contours[s].empty() ) // isClosed( contours[f] )
         {
             const auto& leftLoopF = cutRes.resultCut[f];
-            auto rightLoopF = cutAlongEdgeLoop( mesh, leftLoopF );
-            auto& leftLoopS = cutRes.resultCut[s];
-            std::rotate( leftLoopS.begin(), leftLoopS.begin() + r, leftLoopS.end() );
-            reverse( leftLoopS );
-            auto rightLoopS = cutAlongEdgeLoop( mesh, leftLoopS );
+            auto rightLoopF = cutAlongEdges( mesh, leftLoopF, holes );
+            const auto& leftLoopS = cutRes.resultCut[s]; // rotated and reversed above to go along leftLoopF
+            auto rightLoopS = cutAlongEdges( mesh, leftLoopS, holes );
             stitchContours( mesh.topology, leftLoopF, rightLoopS );
             stitchContours( mesh.topology, leftLoopS, rightLoopF );
         }
         else
         {
-            if ( !isEdgeLoop( mesh.topology, cutRes.resultCut[f] ) )
-                continue; // skip for now for simplicity, TODO: how could this be?
-            auto leftFirstLoops = splitOnSimpleLoops( mesh.topology, { std::move( cutRes.resultCut[f] ) } );
-            if ( leftFirstLoops.size() != 1 )
-                continue; // skip for now for simplicity, TODO: support this case
-            auto& leftFirstLoop = leftFirstLoops[0];
-
-            auto rightFirstLoop = cutAlongEdgeLoop( mesh, leftFirstLoop );
+            auto& leftFirstLoop = cutRes.resultCut[f];
+            auto rightFirstLoop = cutAlongEdges( mesh, leftFirstLoop, holes );
             EdgePath leftSecondPart( leftFirstLoop.begin() + leftFirstLoop.size() / 2, leftFirstLoop.end() );
             leftFirstLoop.resize( leftSecondPart.size() );
             reverse( leftSecondPart );

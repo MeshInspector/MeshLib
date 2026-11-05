@@ -440,7 +440,7 @@ void GLStaticHolder::createShader_( ShaderType type )
 	b = tmp; \
 }
 
-layout (early_fragment_tests) in;
+// no early_fragment_tests: the depth test must use gl_FragDepth
 
 out vec4 color;
 

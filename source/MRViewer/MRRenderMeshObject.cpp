@@ -20,6 +20,16 @@
 namespace MR
 {
 
+/// enables culling of back faces if the object requests it in the viewport; the caller disables GL_CULL_FACE after drawing
+static void enableBackFacesCulling( const ObjectMeshHolder& objMesh, const ModelBaseRenderParams& params )
+{
+    if ( !objMesh.getVisualizeProperty( MeshVisualizePropertyType::CullBackFaces, params.viewportId ) )
+        return;
+    GL_EXEC( glEnable( GL_CULL_FACE ) );
+    // mirroring model transformation swaps front and back faces as in the shader
+    GL_EXEC( glCullFace( params.modelMatrix.det() < 0.0f ? GL_FRONT : GL_BACK ) );
+}
+
 RenderMeshObject::RenderMeshObject( const VisualObject& visObj )
 {
     objMesh_ = dynamic_cast< const ObjectMeshHolder* >( &visObj );
@@ -48,7 +58,8 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
         !depthTest ? RenderModelPassMask::NoDepthTest :
         ( objMesh_->getGlobalAlpha( renderParams.viewportId ) < 255
             || ( solidFront ? front.isTranslucent() : front.a < 255 )
-            || ( textured ? back.a < 255 : back.isTranslucent() ) ) ? RenderModelPassMask::Transparent :
+            || ( ( textured ? back.a < 255 : back.isTranslucent() )
+                && !objMesh_->getVisualizeProperty( MeshVisualizePropertyType::CullBackFaces, renderParams.viewportId ) ) ) ? RenderModelPassMask::Transparent :
         RenderModelPassMask::Opaque;
     if ( !bool( renderParams.passMask & desiredPass ) )
         return false; // Nothing to draw in this pass.
@@ -126,7 +137,9 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
         GL_EXEC( glUniform1i( glGetUniformLocation( shader, "useTexture" ), textured ) );
 
         GL_EXEC( glDepthFunc( getDepthFunctionLess( renderParams.depthFunction ) ) );
+        enableBackFacesCulling( *objMesh_, renderParams );
         drawMesh_( true, renderParams.viewportId );
+        GL_EXEC( glDisable( GL_CULL_FACE ) );
         GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFunction::Default ) ) );
     }
     // Render wireframe
@@ -176,7 +189,9 @@ void RenderMeshObject::renderPicker( const ModelBaseRenderParams& parameters, un
     GL_EXEC( glUniform1ui( glGetUniformLocation( shader, "uniGeomId" ), geomId ) );
 
     GL_EXEC( glDepthFunc( getDepthFunctionLess( parameters.depthFunction ) ) );
+    enableBackFacesCulling( *objMesh_, parameters );
     drawMesh_( true, parameters.viewportId, true );
+    GL_EXEC( glDisable( GL_CULL_FACE ) );
     GL_EXEC( glDepthFunc( getDepthFunctionLess( DepthFunction::Default ) ) );
 }
 

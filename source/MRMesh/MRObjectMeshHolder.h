@@ -24,6 +24,7 @@ enum class MRMESH_CLASS MeshVisualizePropertyType
     OnlyOddFragments,
     BordersHighlight,
     PolygonOffsetFromCamera, // recommended for drawing edges on top of mesh
+    CullBackFaces, // back faces of triangles are not rendered (and not picked)
     _count [[maybe_unused]],
 };
 template <> struct IsVisualizeMaskEnum<MeshVisualizePropertyType> : std::true_type {};
@@ -336,6 +337,7 @@ protected:
     ViewportMask showSelectedFaces_ = ViewportMask::all();
     ViewportMask showBordersHighlight_;
     ViewportMask polygonOffset_;
+    ViewportMask cullBackFaces_;
     ViewportMask flatShading_; ///< toggle per-face or per-vertex properties
 
     // really it shoud be one enum Shading {None, Flat, Smooth, Crease}

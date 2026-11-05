@@ -12,7 +12,7 @@ This package ships the **single-threaded** build. The multi-threaded build is
 
 ## Requirements
 
-- Node.js >= 22 (>= 24 for `using`), or a current browser.
+- Node.js >= 21 (>= 24 for `using`), or a current browser.
 
 ## Install
 

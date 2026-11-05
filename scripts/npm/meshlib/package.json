@@ -44,7 +44,7 @@
     "LICENSE"
   ],
   "engines": {
-    "node": ">=22"
+    "node": ">=21"
   },
   "author": "MeshLib Team <support@meshinspector.com>",
   "license": "SEE LICENSE IN LICENSE",

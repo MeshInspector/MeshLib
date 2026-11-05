@@ -251,13 +251,12 @@ jobs:
             exit 1
           fi
 
-        # The image (and the emsdk) ship Node 22, the minimum the packages declare, which the other two variants are tested with.
-        # Its Memory64 is too old for the 64-bit module.
-      - name: Install Node 24
-        if: ${{ matrix.wasm64 == 1 }}
+        # The 32-bit modules are tested on Node 21, the minimum the packages declare;
+        # the 64-bit module needs Node 24, older Memory64 can't load it.
+      - name: Install Node
         uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: ${{ matrix.wasm64 == 1 && 24 || 21 }}
 
       - name: Test Wasm module
         run: |

@@ -12,7 +12,7 @@ geometry operations.
 
 ## Requirements
 
-- Node.js >= 22 (>= 24 for `using`), or a current browser on a [cross-origin isolated](#browser-cross-origin-isolation) page.
+- Node.js >= 21 (>= 24 for `using`), or a current browser on a [cross-origin isolated](#browser-cross-origin-isolation) page.
 
 ## Install
 

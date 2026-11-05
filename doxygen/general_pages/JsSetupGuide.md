@@ -14,7 +14,7 @@ Before installing MeshLib SDK for JavaScript, ensure you have the following:
 
 ### Runtime
 MeshLib runs in Node.js or in a modern browser.
- - **Node.js 22 or newer** (24 or newer for the `using` declarations the examples use).
+ - **Node.js 21 or newer** (24 or newer for the `using` declarations the examples use).
  - In the browser, the current versions of Chrome, Firefox, Safari and Edge.
 
 [Download Node.js](https://nodejs.org/en/download).

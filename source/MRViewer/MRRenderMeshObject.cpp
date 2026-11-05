@@ -37,8 +37,9 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
 {
     MR_TIMER;
     bool depthTest = objMesh_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId );
-    // the shader discards fully transparent fragments, so a fully transparent color needs no transparent pass,
-    // unless a texture is drawn over it (on both sides) or a color map replaces it (on front side)
+    // the shader discards fully transparent fragments, so a fully transparent color needs no transparent pass, except:
+    // a texture is composited over the colors on both sides, so their alpha < 255 lets translucent texels through;
+    // a color map fully replaces the front color, then its alpha < 255 is the way to request the transparent pass for translucent map colors
     const bool textured = objMesh_->getVisualizeProperty( MeshVisualizePropertyType::Texture, renderParams.viewportId ) || objMesh_->hasAncillaryTexture();
     const bool solidFront = !textured && objMesh_->getColoringType() == ColoringType::SolidColor;
     const auto front = objMesh_->getFrontColor( objMesh_->isSelected(), renderParams.viewportId );

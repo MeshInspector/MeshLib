@@ -35,7 +35,8 @@ RenderPointsObject::~RenderPointsObject()
 bool RenderPointsObject::render( const ModelRenderParams& renderParams )
 {
     MR_TIMER;
-    // the shader discards fully transparent fragments, so a fully transparent color needs no transparent pass, unless a color map replaces it
+    // the shader discards fully transparent fragments, so a fully transparent color needs no transparent pass;
+    // a color map fully replaces the front color, then its alpha < 255 is the way to request the transparent pass for translucent map colors
     const auto front = objPoints_->getFrontColor( objPoints_->isSelected(), renderParams.viewportId );
     bool isColorTransparent = objPoints_->getColoringType() == ColoringType::SolidColor ? front.isTranslucent() : front.a < 255;
     if ( !isColorTransparent && objPoints_->pointCloudPtr() && objPoints_->pointCloudPtr()->hasNormals() )

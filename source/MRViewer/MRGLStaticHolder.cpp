@@ -42,6 +42,7 @@ std::string getShaderName( MR::GLStaticHolder::ShaderType type )
         "Viewport points shader (no offset)",
         "Immediate tri shader",
         "Viewport border shader",
+        "Viewport background shader",
         "Alpha-sort overlay shader",
         "Shadow overlay shader",
         "Simple overlay shader",
@@ -599,6 +600,27 @@ void main(void)
     outColor = texture(pixels, pos );
     if (outColor.a == 0.0)
       discard;
+  }
+)";
+        }
+        else if ( type == ViewportBackground )
+        {
+            fragmentShader =
+                MR_GLSL_VERSION_LINE R"(
+  precision highp float;
+  precision highp int;
+  uniform sampler2D pixels;
+  uniform vec2 origin; // framebuffer position of the image's lower-left corner
+  uniform vec2 size; // image size in framebuffer pixels
+  uniform bool clipOutside; // draw nothing outside the image
+  out vec4 outColor;
+
+  void main()
+  {
+    vec2 pos = ( gl_FragCoord.xy - origin ) / size;
+    if ( clipOutside && pos != clamp( pos, 0.0, 1.0 ) )
+      discard;
+    outColor = texture( pixels, pos );
   }
 )";
         }

@@ -5,9 +5,11 @@
 namespace MR
 {
 
-/// Decomposes matrix into rotation and scaling matrices
+/// Decomposes matrix into rotation and scaling matrices;
+/// if m is a mirror (det < 0) then by default all scales are non-negative and the rotation is improper (det = -1),
+/// and with \param signedScale the rotation is proper (det = +1) and scaling.x.x is negative
 template <typename T>
-void decomposeMatrix3( const Matrix3<T>& m, Matrix3<T>& rotation, Matrix3<T>& scaling )
+void decomposeMatrix3( const Matrix3<T>& m, Matrix3<T>& rotation, Matrix3<T>& scaling, bool signedScale = false )
 {
     const auto [q, r] = m.qr();
 
@@ -20,6 +22,11 @@ void decomposeMatrix3( const Matrix3<T>& m, Matrix3<T>& rotation, Matrix3<T>& sc
             sign[i][i] = -1;
     }
     rotation = q * sign;
+    if ( signedScale && rotation.det() < 0 )
+    {
+        rotation = rotation * Matrix3<T>::scale( T( -1 ), T( 1 ), T( 1 ) );
+        scaling.x.x = -scaling.x.x;
+    }
 }
 
 /// Returns true if matrix scale is identity

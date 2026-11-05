@@ -1,5 +1,6 @@
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRMatrix3.h>
+#include <MRMesh/MRMatrix3Decompose.h>
 #include <MRMesh/MRVector3.h>
 #include <MRMesh/MRConstants.h>
 #include <MRMesh/MRQuaternion.h>
@@ -94,6 +95,28 @@ TEST(MRMesh, AffineXf3)
     const auto [q, r] = rr.qr();
     ASSERT_NEAR( ( q - Matrix3d::identity() ).norm(), 0, 1e-12 );
     ASSERT_NEAR( ( r - rr ).norm(), 0, 1e-12 );
+}
+
+TEST(MRMesh, DecomposeMatrix3)
+{
+    const auto rot = Matrix3d::rotationFromEuler( { 0.3, -0.7, 1.9 } );
+    for ( const Matrix3d& m : { Matrix3d{}, rot, Matrix3d::scale( -1., 1., 1. ), Matrix3d::scale( -1. ), rot * Matrix3d::scale( 2., -0.5, 3. ) } )
+    {
+        for ( bool signedScale : { false, true } )
+        {
+            Matrix3d r, s;
+            decomposeMatrix3( m, r, s, signedScale );
+            const bool mirror = m.det() < 0;
+            EXPECT_NEAR( ( r * s - m ).norm(), 0, 1e-12 );
+            EXPECT_NEAR( r.det(), ( !mirror || signedScale ) ? 1 : -1, 1e-12 );
+            EXPECT_EQ( s.x.x < 0, mirror && signedScale );
+            if ( r.det() > 0 )
+            {
+                // a proper rotation survives the conversion to Euler angles and back
+                EXPECT_NEAR( ( Matrix3d::rotationFromEuler( r.toEulerAngles() ) - r ).norm(), 0, 1e-12 );
+            }
+        }
+    }
 }
 
 // verifies that template can be instantiated with typical parameters

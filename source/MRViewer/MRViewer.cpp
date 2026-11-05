@@ -311,6 +311,8 @@ static void glfw_mouse_scroll( GLFWwindow* /*window*/, double /*x*/, double y )
 {
     static double prevY = 0.0;
     auto viewer = &MR::getViewerInstance();
+    if ( viewer->mouseController().isZoomInverted() )
+        y = -y;
     if ( prevY * y < 0.0 )
         viewer->popEventByName( "Mouse scroll" );
     auto eventCall = [y, viewer, prevPtr = &prevY] ()

@@ -185,18 +185,32 @@ bool TouchpadController::touchpadSwipeGestureEnd_()
 
 bool TouchpadController::touchpadZoomGestureBegin_()
 {
-    zoomScale_ = 1.f;
+    auto& viewer = getViewerInstance();
+    initZoomParams_ = viewer.viewport().getParameters();
+
     return true;
 }
 
 bool TouchpadController::touchpadZoomGestureUpdate_( float scale, bool kinetic )
 {
-    const auto prevScale = std::exchange( zoomScale_, scale );
     if ( parameters_.ignoreKineticMoves && kinetic )
         return true;
 
-    // the view angle is multiplied by exp( prevScale - scale ); as a wheel delta (0.95^delta), so that Zoom Gain and Invert Zoom apply
-    getViewerInstance().mouseScroll( ( prevScale - scale ) / std::log( 0.95f ) );
+    auto& viewer = getViewerInstance();
+    auto& viewport = viewer.viewport();
+
+    const auto currentViewAngle = viewport.getParameters().cameraViewAngle;
+
+    constexpr float minAngle = 0.001f;
+    constexpr float maxAngle = 179.99f;
+    // more natural zoom scale
+    const auto viewAngle = std::exp( 1.f - scale ) * initZoomParams_.cameraViewAngle;
+
+    const auto mult = std::clamp( viewAngle, minAngle, maxAngle ) / currentViewAngle;
+    const auto delta = std::log( mult ) / std::log( 0.95f );
+
+    viewer.mouseScroll( delta );
+
     return true;
 }
 
@@ -217,6 +231,8 @@ void TouchpadController::setParameters( const TouchpadParameters& parameters )
 
 void TouchpadController::Handler::mouseScroll( float, float dy, bool )
 {
+    if ( getViewerInstance().mouseController().isZoomInverted() )
+        dy = -dy;
     ENQUEUE_VIEWER_METHOD_ARGS( "Mouse scroll", mouseScroll, dy );
 }
 

@@ -76,7 +76,8 @@ PointCloud mergeToPoints( const Object& object )
             continue;
 
         VertMap vmap;
-        result.addPartByMask( result, objPoints->pointCloudPtr()->validPoints, { .src2tgtVerts = &vmap } );
+        const auto& pointCloud = *objPoints->pointCloudPtr();
+        result.addPartByMask( pointCloud, pointCloud.validPoints, { .src2tgtVerts = &vmap } );
 
         const auto xf = objPoints->worldXf();
         for ( const auto v : vmap )

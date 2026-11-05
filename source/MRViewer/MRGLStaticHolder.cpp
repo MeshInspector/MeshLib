@@ -445,7 +445,7 @@ out vec4 color;
 
 struct Node 
 {
-    vec4    color;
+    uvec2   color; // packHalf2x16 of rg and ba
     float   depth;
     uint    next;
 };
@@ -489,7 +489,8 @@ vec4 blendColor(uint fragsInds[MAX_FRAGMENTS], int count)
     for ( int i = count - 1; i >= 0; i-- )
     {
         float destA = color.a;
-        vec4 fragColor = nodes[fragsInds[i]].color;
+        uvec2 packedColor = nodes[fragsInds[i]].color;
+        vec4 fragColor = vec4( unpackHalf2x16( packedColor.x ), unpackHalf2x16( packedColor.y ) );
         color.a = fragColor.a + destA * ( 1.0 - fragColor.a );
         if ( color.a == 0.0 )
           color.rgb = vec3(0);

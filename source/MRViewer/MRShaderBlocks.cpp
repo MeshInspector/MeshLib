@@ -98,7 +98,7 @@ std::string getFragmentShaderHeaderBlock( bool gl4, bool alphaSort )
 
   struct Node 
   {
-    vec4 color;
+    uvec2 color; // packHalf2x16 of rg and ba
     float depth;
     uint next;
   };
@@ -120,10 +120,11 @@ std::string getFragmentShaderEndBlock( ShaderTransparencyMode transparencyMode )
     uint nodeIndex = atomicCounterIncrement ( numNodes );
     
     // is there any space ?
+    if ( nodeIndex < uint( nodes.length() ) )
     {
         uint prev = imageAtomicExchange ( heads, ivec2 ( gl_FragCoord.xy ), nodeIndex );
 
-        nodes [nodeIndex].color = outColor;
+        nodes [nodeIndex].color = uvec2( packHalf2x16( outColor.rg ), packHalf2x16( outColor.ba ) );
         nodes [nodeIndex].depth = gl_FragCoord.z;
         nodes [nodeIndex].next  = prev;
     }

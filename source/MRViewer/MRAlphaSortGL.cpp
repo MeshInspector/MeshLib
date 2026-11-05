@@ -5,14 +5,12 @@
 #include "MRGladGlfw.h"
 
 
+#ifndef __EMSCRIPTEN__
 namespace
 {
-#ifndef __EMSCRIPTEN__
 constexpr unsigned cAlphaSortStoragePixelCapacity = 12;
-#endif
-// number of the nearest transparent layers drawn in separate passes, see AlphaSortOverlayQuad shader
-constexpr int cAlphaSortNearPasses = 3;
 }
+#endif
 
 namespace MR
 {
@@ -84,21 +82,22 @@ void AlphaSortGL::drawTransparencyTextureToScreen() const
 {
     if ( !inited_ )
         return;
-    // the passes test the nodes' depth against each sample, like the transparent pass did;
+    // the overlay is drawn at the depth of the nearest transparent node, so the depth test keeps it off the samples
+    // of opaque objects in front of all transparent ones (their antialiased edges);
     // LEQUAL keeps the nodes tied with an opaque surface (lines are drawn with LEQUAL, e.g. polylines on mesh edges)
     GL_EXEC( glEnable( GL_DEPTH_TEST ) );
     GL_EXEC( glDepthFunc( GL_LEQUAL ) );
     GL_EXEC( glDepthMask( GL_FALSE ) );
     GL_EXEC( glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE ) );
-    GL_EXEC( glEnable( GL_BLEND ) );
-    GL_EXEC( glBlendFuncSeparate( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA ) );
 
-    // one triangle covering the viewport: the passes modify the lists, so each pixel must be shaded once
-    constexpr GLfloat transparencyTextureTriangle[9] =
+    constexpr GLfloat transparencyTextureQuad[18] =
     {
         -1.0f, -1.0f, 0.0f,
-        3.0f, -1.0f, 0.0f,
-        -1.0f,  3.0f, 0.0f
+        1.0f, -1.0f, 0.0f,
+        -1.0f,  1.0f, 0.0f,
+        -1.0f,  1.0f, 0.0f,
+        1.0f, -1.0f, 0.0f,
+        1.0f,  1.0f, 0.0f
     };
 
     GL_EXEC( glViewport( (GLsizei) 0, (GLsizei) 0, (GLsizei) width_, (GLsizei) height_ ) );
@@ -110,27 +109,20 @@ void AlphaSortGL::drawTransparencyTextureToScreen() const
     GL_EXEC( glUseProgram( shader ) );
 
     GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, transparency_quad_vbo ) );
-    GL_EXEC( glBufferData( GL_ARRAY_BUFFER, sizeof( transparencyTextureTriangle ), transparencyTextureTriangle, GL_DYNAMIC_DRAW ) );
+    GL_EXEC( glBufferData( GL_ARRAY_BUFFER, sizeof( GLfloat ) * 18, transparencyTextureQuad, GL_DYNAMIC_DRAW ) );
 
     GL_EXEC( glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, 0 ) );
     GL_EXEC( glEnableVertexAttribArray( 0 ) );
 
     GL_EXEC( glBindVertexArray( transparency_quad_vao ) );
 
-    // first pass: all nodes except the nearest cAlphaSortNearPasses ones; next passes: one near node each, from far to near
-    const auto nearLayersLoc = glGetUniformLocation( shader, "nearLayers" );
-    for ( int pass = 0; pass <= cAlphaSortNearPasses; ++pass )
-    {
+    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleArraySize, 2 );
+
 #ifndef __EMSCRIPTEN__
-        GL_EXEC( glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT ) );
+    GL_EXEC( glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT ) ); // the transparent pass wrote the lists
 #endif
-        GL_EXEC( glUniform1i( nearLayersLoc, pass == 0 ? cAlphaSortNearPasses : 0 ) );
-        getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleArraySize, 1 );
-        GL_EXEC( glDrawArrays( GL_TRIANGLES, 0, 3 ) );
-    }
-#ifndef __EMSCRIPTEN__
-    GL_EXEC( glMemoryBarrier( GL_TEXTURE_UPDATE_BARRIER_BIT ) ); // before clearTransparencyTextures
-#endif
+    GL_EXEC( glDrawArrays( GL_TRIANGLES, 0, static_cast <GLsizei> ( 6 ) ) );
+    GL_EXEC( glDepthFunc( GL_LESS ) );
     GL_EXEC( glDepthMask( GL_TRUE ) );
 }
 

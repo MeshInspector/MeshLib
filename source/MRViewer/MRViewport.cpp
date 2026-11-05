@@ -102,6 +102,25 @@ void Viewport::clearFramebuffers()
     if ( !viewportGL_.checkInit() )
         viewportGL_.init();
     viewportGL_.fillViewport( viewportRect_, params_.backgroundColor );
+    if ( !backgroundTexture_ )
+        return;
+    const auto& bg = *backgroundTexture_;
+    const Vector2f imageSize( bg.texture.resolution );
+    auto startPos = bg.startPos;
+    auto scaling = bg.scaling;
+    if ( bg.stretchMode != BackgroundTexture::StretchMode::None )
+    {
+        const Vector2f viewportSize( width( viewportRect_ ), height( viewportRect_ ) );
+        scaling = div( viewportSize, imageSize );
+        if ( bg.stretchMode == BackgroundTexture::StretchMode::Fit )
+            scaling = Vector2f::diagonal( std::min( scaling.x, scaling.y ) );
+        else if ( bg.stretchMode == BackgroundTexture::StretchMode::Fill )
+            scaling = Vector2f::diagonal( std::max( scaling.x, scaling.y ) );
+        startPos = ( viewportSize - mult( imageSize, scaling ) ) / 2.f;
+    }
+    const auto size = mult( imageSize, scaling );
+    const Vector2f min( viewportRect_.min.x + startPos.x, viewportRect_.max.y - startPos.y - size.y );
+    viewportGL_.drawBackgroundTexture( viewportRect_, bg.texture, { min, min + size }, std::exchange( backgroundTextureChanged_, false ) );
 }
 
 static ObjAndPick pickRenderObjectImpl( const Viewport& v, std::span<VisualObject* const> objects, const Viewport::PickRenderObjectParams& params )
@@ -532,6 +551,16 @@ void Viewport::setBackgroundColor( const Color& color )
     if ( params_.backgroundColor == color )
         return;
     params_.backgroundColor = color;
+    needRedraw_ = true;
+}
+
+void Viewport::setBackgroundTexture( std::optional<BackgroundTexture> texture )
+{
+    // upload the image again only if it changed, not on new placement, filter or wrap type
+    backgroundTextureChanged_ |= texture && ( !backgroundTexture_
+        || backgroundTexture_->texture.resolution != texture->texture.resolution
+        || backgroundTexture_->texture.pixels != texture->texture.pixels );
+    backgroundTexture_ = std::move( texture );
     needRedraw_ = true;
 }
 

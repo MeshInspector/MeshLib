@@ -62,6 +62,10 @@ public:
     // Fills viewport with given color (clear frame buffer)
     void fillViewport( const Box2f& rect, const Color& color ) const;
 
+    // Draws texture over the viewport filled with background color;
+    // texRect is the image rectangle in framebuffer coordinates, the image is uploaded to GL on `refresh` or first draw
+    void drawBackgroundTexture( const Box2f& rect, const MeshTexture& texture, const Box2f& texRect, bool refresh );
+
     // Check that members have been initialized
     bool checkInit() const;
 
@@ -135,6 +139,10 @@ private:
 
     GLuint border_line_vbo = 0;
     GLuint border_line_vao = 0;
+
+    GLuint background_vbo = 0;
+    GLuint background_vao = 0;
+    GLuint background_texture = 0; // generated on first draw
 };
 
 }

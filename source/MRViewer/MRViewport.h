@@ -11,6 +11,7 @@
 #include <MRMesh/MRMatrix4.h>
 #include <MRMesh/MRColor.h>
 #include <MRMesh/MRBox.h>
+#include <MRMesh/MRMeshTexture.h>
 #include "MRImGui.h"
 #include <memory>
 #include <functional>
@@ -360,6 +361,23 @@ public:
         bool operator==( const Viewport::Parameters& other ) const = default;
     };
 
+    /// texture drawn over the background color and below the scene
+    struct BackgroundTexture
+    {
+        MeshTexture texture; ///< image (its first row is the bottom one) with its filter and wrap types
+        Vector2f startPos; ///< position of the image's upper-left corner in viewport space: (0,0) is upper left of viewport, Y goes down
+        Vector2f scaling{ 1.f, 1.f }; ///< size of one image pixel in viewport pixels
+
+        /// how the image size follows the viewport size; all modes except None ignore startPos and scaling
+        enum class StretchMode
+        {
+            None, ///< placed by startPos and scaling
+            Stretch, ///< covers the viewport exactly, the aspect ratio is not kept
+            Fit, ///< the whole image is visible in the viewport center, the aspect ratio is kept
+            Fill ///< covers the viewport, centered and cropped, the aspect ratio is kept
+        } stretchMode = StretchMode::None;
+    };
+
     /// starts (true) or stops (false) rotation; the calls nest, so with two input devices
     /// rotating at once (e.g. mouse and touchpad) it ends only when the last of them stops
     MRVIEWER_API void setRotation( bool state );
@@ -499,6 +517,10 @@ public:
 
     MRVIEWER_API void setBackgroundColor( const Color& color );
 
+    /// sets the texture drawn over the background color, std::nullopt removes it
+    MRVIEWER_API void setBackgroundTexture( std::optional<BackgroundTexture> texture );
+    [[nodiscard]] const std::optional<BackgroundTexture>& getBackgroundTexture() const { return backgroundTexture_; }
+
     MRVIEWER_API void setClippingPlane( const Plane3f& plane );
 
     MRVIEWER_API void setLabel( std::string s );
@@ -621,6 +643,9 @@ private:
     Box3f sceneBox_;
 
     Parameters params_;
+
+    std::optional<BackgroundTexture> backgroundTexture_;
+    bool backgroundTextureChanged_{ false }; // the image has to be uploaded to GL
 };
 
 } //namespace MR

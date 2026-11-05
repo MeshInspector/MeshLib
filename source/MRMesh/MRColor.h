@@ -91,9 +91,6 @@ struct Color
     {
         return Color( r, g, b, uint8_t( std::clamp( m * a, 0.0f , 255.0f ) ) );
     }
-
-    /// returns true if the color is neither fully opaque nor fully transparent, so it has to be blended with the colors behind
-    [[nodiscard]] constexpr bool isTranslucent() const noexcept { return a > 0 && a < 255; }
 };
 
 inline bool operator ==( const Color& a, const Color& b )

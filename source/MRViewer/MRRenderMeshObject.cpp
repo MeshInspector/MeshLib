@@ -47,12 +47,11 @@ bool RenderMeshObject::render( const ModelRenderParams& renderParams )
 {
     MR_TIMER;
     bool depthTest = objMesh_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId );
-    // fully transparent color needs no transparent pass: the shader discards its fragments
     RenderModelPassMask desiredPass =
         !depthTest ? RenderModelPassMask::NoDepthTest :
         ( objMesh_->getGlobalAlpha( renderParams.viewportId ) < 255
-            || objMesh_->getFrontColor( objMesh_->isSelected(), renderParams.viewportId ).isTranslucent()
-            || ( objMesh_->getBackColor( renderParams.viewportId ).isTranslucent()
+            || objMesh_->getFrontColor( objMesh_->isSelected(), renderParams.viewportId ).a < 255
+            || ( objMesh_->getBackColor( renderParams.viewportId ).a < 255
                 && !objMesh_->getVisualizeProperty( MeshVisualizePropertyType::CullBackFaces, renderParams.viewportId ) ) ) ? RenderModelPassMask::Transparent :
         RenderModelPassMask::Opaque;
     if ( !bool( renderParams.passMask & desiredPass ) )

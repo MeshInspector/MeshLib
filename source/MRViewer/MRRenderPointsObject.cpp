@@ -35,10 +35,10 @@ RenderPointsObject::~RenderPointsObject()
 bool RenderPointsObject::render( const ModelRenderParams& renderParams )
 {
     MR_TIMER;
-    bool isColorTransparent = objPoints_->getFrontColor( objPoints_->isSelected(), renderParams.viewportId ).isTranslucent();
+    bool isColorTransparent = objPoints_->getFrontColor( objPoints_->isSelected(), renderParams.viewportId ).a < 255;
     if ( !isColorTransparent && objPoints_->pointCloudPtr() && objPoints_->pointCloudPtr()->hasNormals() )
     {
-        isColorTransparent = objPoints_->getBackColor( renderParams.viewportId ).isTranslucent();
+        isColorTransparent = objPoints_->getBackColor( renderParams.viewportId ).a < 255;
     }
     bool depthTest = objPoints_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId );
     RenderModelPassMask desiredPass =

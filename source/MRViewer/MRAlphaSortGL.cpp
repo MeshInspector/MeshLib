@@ -143,9 +143,9 @@ void AlphaSortGL::updateTransparencyTexturesSize( int width, int height )
     GL_EXEC( glBindImageTexture( 0, transparency_heads_texture_vbo, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32UI ) );
 
     GLuint maxNodes = cAlphaSortStoragePixelCapacity * GLuint( width ) * GLuint( height );
-    GLint  nodeSize = 5 * sizeof( GLfloat ) + sizeof( GLuint );
+    GLint  nodeSize = 4 * sizeof( GLuint ); // half-float color, depth, next: std430 stride of Node in the shaders
     GL_EXEC( glBindBuffer( GL_SHADER_STORAGE_BUFFER, transparency_shared_shader_data_vbo ) );
-    GL_EXEC( glBufferData( GL_SHADER_STORAGE_BUFFER, maxNodes * nodeSize, NULL, GL_DYNAMIC_DRAW ) );
+    GL_EXEC( glBufferData( GL_SHADER_STORAGE_BUFFER, GLsizeiptr( maxNodes ) * nodeSize, NULL, GL_DYNAMIC_DRAW ) ); // 64-bit: over 4 GB above ~22 Mpx
     GL_EXEC( glBindBuffer( GL_SHADER_STORAGE_BUFFER, 0 ) ); // unbind
 #endif
     std::vector<GLuint> ones( GLuint( width ) * GLuint( height ), 0xFFFFFFFF );

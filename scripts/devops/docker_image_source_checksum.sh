@@ -42,8 +42,8 @@ case "${distro}" in
     files=( "docker/${distro}Dockerfile" "${emscripten[@]}" ) ;;
   emscripten-generate-c-bindings)
     files=( "docker/${distro}Dockerfile" ) ;;
-  rockylinux8-vcpkg|rockylinux9-vcpkg)
-    files=( docker/rockylinux8-vcpkgDockerfile docker/rockylinux9-vcpkgDockerfile thirdparty/vcpkg scripts/build_vcpkg_thirdparty.sh ) ;;
+  rockylinux8-vcpkg)
+    files=( docker/rockylinux8-vcpkgDockerfile thirdparty/vcpkg scripts/build_vcpkg_thirdparty.sh ) ;;
   *)
     echo "unknown distro: ${distro}" >&2
     exit 1 ;;

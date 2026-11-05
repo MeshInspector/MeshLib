@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMacros.h"
+#include "MRParallelFor.h"
 #include "MRVector.h"
 #include "MRphmap.h"
 #include <variant>
@@ -36,6 +37,11 @@ struct MapOrHashMap
     /// executes given function for all pairs (key, value) with valid value for dense map
     template<typename F>
     void forEach( F && f ) const;
+
+    /// executes given function for all pairs (key, value) with valid value for dense map;
+    /// in case of dense map, the keys are processed in parallel threads, so f must be safe to call concurrently for different keys
+    template<typename F>
+    void forEachParallel( F && f ) const;
 
     [[nodiscard]]       Dense* getMap()       MR_LIFETIMEBOUND { return get_if<Dense>( &var ); }
     [[nodiscard]] const Dense* getMap() const MR_LIFETIMEBOUND { return get_if<Dense>( &var ); }
@@ -93,6 +99,27 @@ void MapOrHashMap<K,V>::forEach( F && f ) const
             for ( K key( 0 ); key < map.size(); ++key )
                 if ( auto val = map[key] )
                     f( key, val );
+        },
+        [&f]( const Hash& hashMap )
+        {
+            for ( const auto & [ key, val ] : hashMap )
+                f( key, val );
+        }
+    }, var );
+}
+
+template <typename K, typename V>
+template <typename F>
+void MapOrHashMap<K,V>::forEachParallel( F && f ) const
+{
+    std::visit( overloaded{
+        [&f]( const Dense& map )
+        {
+            ParallelFor( map, [&] ( K key )
+            {
+                if ( auto val = map[key] )
+                    f( key, val );
+            } );
         },
         [&f]( const Hash& hashMap )
         {

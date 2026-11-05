@@ -102,8 +102,11 @@ void Viewport::clearFramebuffers()
     if ( !viewportGL_.checkInit() )
         viewportGL_.init();
     viewportGL_.fillViewport( viewportRect_, params_.backgroundColor );
-    if ( !backgroundTexture_ )
+    if ( !backgroundTexture_ || backgroundTexture_->texture.resolution.x <= 0 || backgroundTexture_->texture.resolution.y <= 0 )
+    {
+        viewportGL_.freeBackgroundTexture(); // nothing to draw, also frees a removed image
         return;
+    }
     const auto& bg = *backgroundTexture_;
     const Vector2f imageSize( bg.texture.resolution );
     auto startPos = bg.startPos;

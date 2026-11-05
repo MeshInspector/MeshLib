@@ -1,6 +1,5 @@
 #include "MRViewportGL.h"
 #include "MRGLMacro.h"
-#include "MRGLTexture.h"
 #include "MRGLStaticHolder.h"
 #include "MRViewer.h"
 #include "MRGladGlfw.h"
@@ -44,7 +43,7 @@ ViewportGL& ViewportGL::operator=( ViewportGL&& other ) noexcept
 
     background_vbo = other.background_vbo;
     background_vao = other.background_vao;
-    background_texture = other.background_texture;
+    background_texture = std::move( other.background_texture );
 
     inited_ = other.inited_;
 
@@ -86,8 +85,15 @@ void ViewportGL::init()
     GL_EXEC( glGenBuffers( 1, &border_line_vbo ) );
 
     // background
+    constexpr GLfloat quad[8] = { -1.f, -1.f, 1.f, -1.f, -1.f, 1.f, 1.f, 1.f };
     GL_EXEC( glGenVertexArrays( 1, &background_vao ) );
     GL_EXEC( glGenBuffers( 1, &background_vbo ) );
+    GL_EXEC( glBindVertexArray( background_vao ) );
+    GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, background_vbo ) );
+    GL_EXEC( glBufferData( GL_ARRAY_BUFFER, sizeof( quad ), quad, GL_STATIC_DRAW ) );
+    GL_EXEC( glVertexAttribPointer( 0, 2, GL_FLOAT, GL_FALSE, 0, 0 ) );
+    GL_EXEC( glEnableVertexAttribArray( 0 ) );
+    GL_EXEC( glBindVertexArray( 0 ) );
 
     inited_ = true;
 }
@@ -112,8 +118,7 @@ void ViewportGL::free()
 
     GL_EXEC( glDeleteVertexArrays( 1, &background_vao ) );
     GL_EXEC( glDeleteBuffers( 1, &background_vbo ) );
-    GL_EXEC( glDeleteTextures( 1, &background_texture ) );
-    background_texture = 0;
+    background_texture.del();
 
     pickFBO_.del();
     inited_ = false;
@@ -191,8 +196,6 @@ void ViewportGL::drawBackgroundTexture( const Box2f& rectf, const MeshTexture& t
 {
     if ( !inited_ )
         return;
-    constexpr GLfloat quad[8] = { -1.f, -1.f, 1.f, -1.f, -1.f, 1.f, 1.f, 1.f };
-
     const auto rect = roundBox( rectf );
     GL_EXEC( glDisable( GL_DEPTH_TEST ) );
     GL_EXEC( glEnable( GL_BLEND ) );
@@ -204,26 +207,14 @@ void ViewportGL::drawBackgroundTexture( const Box2f& rectf, const MeshTexture& t
     GL_EXEC( glUseProgram( shader ) );
 
     GL_EXEC( glBindVertexArray( background_vao ) );
-    GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, background_vbo ) );
-    GL_EXEC( glBufferData( GL_ARRAY_BUFFER, sizeof( quad ), quad, GL_STATIC_DRAW ) );
-    GL_EXEC( glVertexAttribPointer( 0, 2, GL_FLOAT, GL_FALSE, 0, 0 ) );
-    GL_EXEC( glEnableVertexAttribArray( 0 ) );
 
     GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
-    if ( !background_texture )
-    {
-        GL_EXEC( glGenTextures( 1, &background_texture ) );
-        refresh = true;
-    }
-    GL_EXEC( glBindTexture( GL_TEXTURE_2D, background_texture ) );
-    if ( refresh )
-    {
-        GL_EXEC( glPixelStorei( GL_UNPACK_ALIGNMENT, 1 ) );
-        GL_EXEC( glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, texture.resolution.x, texture.resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture.pixels.data() ) );
-    }
+    background_texture.loadDataOpt( refresh || !background_texture.valid(),
+        { .resolution = GlTexture2::ToResolution( texture.resolution ) }, texture.pixels );
     setTextureWrapType( texture.wrap );
     setTextureFilterType( texture.filter );
     GL_EXEC( glUniform1i( glGetUniformLocation( shader, "pixels" ), 0 ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "clipOutside" ), texture.wrap == WrapType::Clamp ) );
     GL_EXEC( glUniform2f( glGetUniformLocation( shader, "origin" ), texRect.min.x, texRect.min.y ) );
     GL_EXEC( glUniform2f( glGetUniformLocation( shader, "size" ), width( texRect ), height( texRect ) ) );
 

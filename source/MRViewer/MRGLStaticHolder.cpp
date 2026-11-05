@@ -612,11 +612,15 @@ void main(void)
   uniform sampler2D pixels;
   uniform vec2 origin; // framebuffer position of the image's lower-left corner
   uniform vec2 size; // image size in framebuffer pixels
+  uniform bool clipOutside; // draw nothing outside the image
   out vec4 outColor;
 
   void main()
   {
-    outColor = texture( pixels, ( gl_FragCoord.xy - origin ) / size );
+    vec2 pos = ( gl_FragCoord.xy - origin ) / size;
+    if ( clipOutside && pos != clamp( pos, 0.0, 1.0 ) )
+      discard;
+    outColor = texture( pixels, pos );
   }
 )";
         }

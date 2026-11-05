@@ -364,9 +364,9 @@ public:
     /// texture drawn over the background color and below the scene
     struct BackgroundTexture
     {
-        MeshTexture texture; ///< image (its first row is the bottom one) with its filter and wrap types
-        Vector2f startPos; ///< position of the image's upper-left corner in viewport space: (0,0) is upper left of viewport, Y goes down
-        Vector2f scaling{ 1.f, 1.f }; ///< size of one image pixel in viewport pixels
+        MeshTexture texture; ///< image (its first row is the bottom one) with its filter and wrap types; WrapType::Clamp draws nothing outside the image
+        Vector2f startPos; ///< position of the image's upper-left corner in viewport space, in framebuffer pixels: (0,0) is upper left of viewport, Y goes down
+        Vector2f scaling{ 1.f, 1.f }; ///< size of one image pixel in framebuffer pixels
 
         /// how the image size follows the viewport size; all modes except None ignore startPos and scaling
         enum class StretchMode

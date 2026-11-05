@@ -439,9 +439,12 @@ void GLStaticHolder::createShader_( ShaderType type )
 	b = tmp; \
 }
 
-layout (early_fragment_tests) in;
+// no early_fragment_tests: the depth test must use gl_FragDepth
 
 out vec4 color;
+
+// first pass: number of the nearest nodes left for the next passes; 0 in the next passes
+uniform int nearLayers;
 
 struct Node 
 {
@@ -482,11 +485,11 @@ void sortedInsert(inout uint fragsInds[MAX_FRAGMENTS], uint nodeInd, inout int c
 }
 
 // separate function to work-around weird behavior on AMD video cards
-vec4 blendColor(uint fragsInds[MAX_FRAGMENTS], int count)
+vec4 blendColor(uint fragsInds[MAX_FRAGMENTS], int first, int count)
 {
     vec4 color = vec4(0, 0, 0, 0);
     
-    for ( int i = count - 1; i >= 0; i-- )
+    for ( int i = count - 1; i >= first; i-- )
     {
         float destA = color.a;
         vec4 fragColor = nodes[fragsInds[i]].color;
@@ -506,12 +509,27 @@ void main(void)
     if (nodesCounter == 0)
       discard;
 
+    // get the index of the head of the list
+    ivec2 pixel = ivec2( gl_FragCoord.xy );
+    uint n = imageLoad ( heads, pixel ).r;
+    if ( n == 0xFFFFFFFF )
+        discard;
+
+    // each pass draws its nodes at the depth of their nearest one, so the depth test
+    // keeps them away from the samples of closer opaque surfaces (antialiased edges)
+    if ( nearLayers == 0 )
+    {
+        // draw the farthest node left by the first pass and pop it
+        imageStore( heads, pixel, uvec4( nodes[n].next ) );
+        color = nodes[n].color;
+        gl_FragDepth = nodes[n].depth;
+        return;
+    }
+
     uint fragsInds [MAX_FRAGMENTS];
     // suppress 'used uninitialized' warning; init values are not used
     fragsInds[0] = 0;
     int count = 0;
-    // get the index of the head of the list
-    uint n = imageLoad ( heads, ivec2 ( gl_FragCoord.xy ) ).r;
 
     // sort linked list to array
     while ( n != 0xFFFFFFFF )
@@ -519,14 +537,20 @@ void main(void)
         sortedInsert(fragsInds, n, count);
         n = nodes[n].next;
     }
-    
-    if ( count == 0 )
-        discard;
-    
-    // traverse the array, and combine the colors using the alpha channel    
-    color = blendColor(fragsInds, count);
-    
-    gl_FragDepth = nodes[fragsInds[0]].depth;
+
+    // combine the colors of all nodes except the nearest ones
+    int firstFar = min( count - 1, nearLayers );
+    color = blendColor(fragsInds, firstFar, count);
+    gl_FragDepth = nodes[fragsInds[firstFar]].depth;
+
+    // relink the nearest nodes from far to near for the next passes
+    uint next = 0xFFFFFFFF;
+    for ( int i = 0; i < firstFar; ++i )
+    {
+        nodes[fragsInds[i]].next = next;
+        next = fragsInds[i];
+    }
+    imageStore( heads, pixel, uvec4( next ) );
 }
 )";
         }

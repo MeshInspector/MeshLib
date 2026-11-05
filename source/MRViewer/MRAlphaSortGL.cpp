@@ -119,7 +119,8 @@ void AlphaSortGL::drawTransparencyTextureToScreen() const
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleArraySize, 2 );
 
 #ifndef __EMSCRIPTEN__
-    GL_EXEC( glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT ) ); // the transparent pass wrote the lists
+    // the transparent pass wrote the lists and the node counter, read here and then reset by clearTransparencyTextures
+    GL_EXEC( glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_TEXTURE_UPDATE_BARRIER_BIT ) );
 #endif
     GL_EXEC( glDrawArrays( GL_TRIANGLES, 0, static_cast <GLsizei> ( 6 ) ) );
     GL_EXEC( glDepthFunc( GL_LESS ) );

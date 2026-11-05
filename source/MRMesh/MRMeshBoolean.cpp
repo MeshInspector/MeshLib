@@ -462,13 +462,24 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     const Mesh& srcA = copyOriginals ? *intParams.originalMeshA : meshA;
     const Mesh& srcB = copyOriginals ? *intParams.originalMeshB : meshB;
     // copies the original mesh with the capacity for its cut by these contours, so the cut does not reallocate the whole mesh
-    auto copyOriginal = [copyOriginals] ( Mesh& to, const Mesh* from, const OneMeshContours* cutContours )
+    // and if addContours, also with the room for all of the other mesh with its cut by them
+    auto copyOriginal = [copyOriginals, &intParams] ( Mesh& to, const Mesh* from, const OneMeshContours* cutContours,
+        const OneMeshContours* addContours = nullptr )
     {
         if ( !copyOriginals )
             return;
         MR_NAMED_TIMER( "copyOriginal" );
         if ( cutContours )
             reserveForCut( to, *from, *cutContours );
+        if ( addContours )
+        {
+            const auto& add = intParams.originalMeshB->topology;
+            const auto n = addContours->intersections.size();
+            to.topology.vertReserve( to.topology.vertCapacity() + add.vertSize() + n );
+            to.topology.edgeReserve( to.topology.edgeCapacity() + add.edgeSize() + 8 * n );
+            to.topology.faceReserve( to.topology.faceCapacity() + add.faceSize() + 4 * n );
+            to.points.reserve( to.points.capacity() + add.vertSize() + n );
+        }
         to = *from;
     };
     BooleanResult result;
@@ -552,11 +563,14 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
 
     bool needInsideA = operation == BooleanOperation::InsideA || operation == BooleanOperation::Intersection || operation == BooleanOperation::DifferenceBA;
     bool needInsideB = operation == BooleanOperation::InsideB || operation == BooleanOperation::Intersection || operation == BooleanOperation::DifferenceAB;
+    // doBooleanOperation adds the part of cut mesh B to cut mesh A: the room for all of it is reserved in the copy of A,
+    // so that the addition does not reallocate and copy the whole of A
+    const bool reserveBinA = copyOriginals && doCutA && doCutB && !params.outPreCutA;
     if ( doCutA )
     {
         taskGroup.run( [&] ()
         {
-            copyOriginal( meshA, intParams.originalMeshA, &meshAContours );
+            copyOriginal( meshA, intParams.originalMeshA, &meshAContours, reserveBinA ? &meshBContours : nullptr );
             Timer t( "CutMeshA" );
             FaceMap* cut2oldAPtr = params.mapper ? &params.mapper->maps[int( BooleanResultMapper::MapObject::A )].cut2origin : nullptr;
             // cut meshes

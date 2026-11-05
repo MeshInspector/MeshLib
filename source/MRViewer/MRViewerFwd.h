@@ -44,6 +44,7 @@ class ViewerPlugin;
 class ViewerSettingsManager;
 class ViewerSetup;
 class ViewerTitle;
+class ViewportGL;
 class Viewer;
 struct ViewerSignals;
 struct LaunchParams;

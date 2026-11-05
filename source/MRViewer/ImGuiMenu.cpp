@@ -2048,6 +2048,7 @@ bool ImGuiMenu::drawAdvancedOptions( const std::vector<std::shared_ptr<VisualObj
     if ( allIsObjMesh )
     {
         make_visualize_checkbox( selectedObjs, _tr( "Polygon Offset" ), MeshVisualizePropertyType::PolygonOffsetFromCamera, viewportid );
+        make_visualize_checkbox( selectedObjs, _tr( "Cull Back Faces" ), MeshVisualizePropertyType::CullBackFaces, viewportid );
         make_width<ObjectMeshHolder, float>( selectedObjs, _tr( "Point size" ), [&] ( const ObjectMeshHolder* objMesh )
         {
             return objMesh->getPointSize();
@@ -2838,7 +2839,7 @@ float ImGuiMenu::drawTransform_()
         Vector3f scale;
         if ( allSame )
         {
-            decomposeMatrix3( xf.A, q, r );
+            decomposeMatrix3( xf.A, q, r, true ); // a mirror gets a negative scale, Euler angles need a proper rotation
             euler = ( 180 / PI_F ) * q.toEulerAngles();
             scale = Vector3f{ r.x.x, r.y.y, r.z.z };
         }
@@ -2857,24 +2858,31 @@ float ImGuiMenu::drawTransform_()
         }
         else if ( uniformScale_ )
         {
-            float midScale = ( scale.x + scale.y + scale.z ) / 3.0f;
+            float midScale = ( std::abs( scale.x ) + std::abs( scale.y ) + std::abs( scale.z ) ) / 3.0f;
             ImGui::SetNextItemWidth( getSceneInfoItemWidth_() );
             inputChanged = UI::drag<NoUnit>( "##scaleX", midScale, midScale * 0.01f, 1e-3f, 1e+6f );
             if ( inputChanged )
-                scale.x = scale.y = scale.z = midScale;
+                for ( int i = 0; i < 3; ++i )
+                    scale[i] = std::copysign( midScale, scale[i] ); // keep the mirror
             inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
             ImGui::SameLine();
         }
         else
         {
-            inputChanged = UI::drag<NoUnit>( "##scaleX", scale.x, scale.x * 0.01f, 1e-3f, 1e+6f );
-            inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
+            // dragging keeps the sign of a scale; Ctrl+Click and typing a negative value mirrors the object
+            auto dragScale = [&]( const char* label, float& s )
+            {
+                const bool neg = s < 0;
+                const bool changed = UI::drag<NoUnit>( label, s, s * 0.01f, neg ? -1e+6f : 1e-3f, neg ? -1e-3f : 1e+6f, {}, ImGuiSliderFlags_None );
+                s = std::copysign( std::clamp( std::abs( s ), 1e-3f, 1e+6f ), s ); // typed values are not clamped
+                inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
+                return changed;
+            };
+            inputChanged = dragScale( "##scaleX", scale.x );
             ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
-            inputChanged = UI::drag<NoUnit>( "##scaleY", scale.y, scale.y * 0.01f, 1e-3f, 1e+6f ) || inputChanged;
-            inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
+            inputChanged = dragScale( "##scaleY", scale.y ) || inputChanged;
             ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
-            inputChanged = UI::drag<NoUnit>( "##scaleZ", scale.z, scale.z * 0.01f, 1e-3f, 1e+6f ) || inputChanged;
-            inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
+            inputChanged = dragScale( "##scaleZ", scale.z ) || inputChanged;
             ImGui::SameLine( 0, ImGui::GetStyle().ItemInnerSpacing.x );
         }
 

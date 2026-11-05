@@ -73,20 +73,14 @@ def setup_workspace(version, modules, plat_name):
         str(font_resources.relative_to(WHEEL_SRC_DIR))
         for font_resources in (WHEEL_SRC_DIR).glob("NotoSans*.*") # no folders
     ]
-    pybind_shims = []
-    py_versions = []
-    for pybind_shim in LIB_DIR_MESHLIB.glob("*pybind11nonlimitedapi_meshlib_*"):
-        shutil.copy(pybind_shim, WHEEL_SRC_DIR)
-        pybind_shim_name = os.path.basename(pybind_shim)
-        pybind_shims.append(pybind_shim_name)
-        py_versions.append(int(re.sub("\\..*", "", re.sub(".*pybind11nonlimitedapi_meshlib_3\\.", "", pybind_shim_name))));
-    py_versions.sort()
+    # The modules use the limited API of the oldest Python listed: one `cp3X-abi3` wheel for it and every later CPython.
+    with open(WHEEL_SCRIPT_DIR / "python_versions.txt") as f:
+        min_py_minor = min(int(v.strip().split(".")[1]) for v in f if v.strip())
 
     shutil.copy(WHEEL_SCRIPT_DIR / "pyproject.toml", WHEEL_ROOT_DIR)
 
     # generate setup.cfg
     package_files = [
-        *pybind_shims,
         *icon_resources,
         "MRDarkTheme.json",
         "MRLightTheme.json",
@@ -102,7 +96,7 @@ def setup_workspace(version, modules, plat_name):
         config = Template(config_template_file.read()).substitute(
             VERSION=version,
             PACKAGE_DATA=", ".join(package_files),
-            PYTHON_TAG=".".join(f"py3{x}" for x in py_versions),
+            PYTHON_TAG=f"cp3{min_py_minor}",
             PLAT_NAME=plat_name,
         )
     with open(WHEEL_ROOT_DIR / "setup.cfg", 'w') as config_file:
@@ -118,7 +112,7 @@ def strip_libraries():
         return
     libs = [
         *LIB_DIR.glob("libMR*.so"),
-        *LIB_DIR.glob("libpybind11nonlimitedapi_stubs.so"),
+        *LIB_DIR.glob("libMeshLibC2*.so"),
         *WHEEL_SRC_DIR.glob("*.so"),
     ]
     for lib in libs:
@@ -131,6 +125,10 @@ def build_wheel():
         [sys.executable, "-m", "build", "--wheel"]
     )
 
+    # setuptools sets no ABI tag for a wheel without extension modules of its own.
+    subprocess.check_call(
+        [sys.executable, "-m", "wheel", "tags", "--abi-tag", "abi3", "--remove", *WHEEL_ROOT_DIR.glob("dist/*.whl")]
+    )
     full_wheel_file = list(WHEEL_ROOT_DIR.glob("dist/*.whl"))[0]
     core_wheel_file = split_wheel.make_core_input(full_wheel_file, WHEEL_ROOT_DIR / "dist_core")
 
@@ -172,8 +170,6 @@ def build_wheel():
                     #  no longer needed due to https://github.com/adang1345/delvewheel/issues/49 fix with https://github.com/adang1345/delvewheel/commit/42a52cdcc15d424b030a94cb4b51a6b72e4a3d92
                     #"--no-dll", "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll",
                     "--add-path", LIB_DIR,
-                    # This is needed to catch our `pybind11nonlimitedapi_meshlib_3.X.dll` on Windows. Otherwise they don't get patched,
-                    # and then can't find `pybind11nonlimitedapi_stubs.dll`, which does get patched.
                     "--analyze-existing",
                     "-w", out_dir,
                     wf

@@ -127,20 +127,20 @@ std::shared_ptr<ObjectLines> merge( const std::vector<std::shared_ptr<ObjectLine
         line->addPartByMask( *obj->polylinePtr(), validPoints, &srcToMergeVmap );
 
         auto worldXf = obj->worldXf();
-        for ( const auto& vInd : srcToMergeVmap )
+        ParallelFor( srcToMergeVmap, [&] ( VertId thisId )
         {
-            if ( vInd.valid() )
-                points[vInd] = worldXf( points[vInd] );
-        }
+            if ( const auto mergeId = srcToMergeVmap[thisId] )
+                points[mergeId] = worldXf( points[mergeId] );
+        } );
 
         if ( hasVertColorMap )
         {
             const auto& curColorMap = obj->getVertsColorMap();
-            for ( VertId thisId = 0_v; thisId < srcToMergeVmap.size(); ++thisId )
+            ParallelFor( srcToMergeVmap, [&] ( VertId thisId )
             {
                 if ( auto mergeId = srcToMergeVmap[thisId] )
                     vertColors[mergeId] = curColorMap.size() <= thisId ? obj->getFrontColor() : curColorMap[thisId];
-            }
+            } );
         }
     }
 

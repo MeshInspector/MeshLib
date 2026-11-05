@@ -640,9 +640,6 @@
     <ClInclude Include="MRViewportGL.h">
       <Filter>Render</Filter>
     </ClInclude>
-    <ClInclude Include="MRPythonAppendCommand.h">
-      <Filter>Python</Filter>
-    </ClInclude>
     <ClInclude Include="MRSceneStateCheck.h">
       <Filter>StatePlugins</Filter>
     </ClInclude>

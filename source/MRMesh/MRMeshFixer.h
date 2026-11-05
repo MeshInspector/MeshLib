@@ -109,9 +109,12 @@ MRMESH_API Expected<void> fixMeshDataDegeneracies( ObjectMeshData& data, const F
 
 /// if the edge e has both left and right triangular faces and the degree of dest( e ) is 2,
 /// then eliminates left( e ), right( e ), e, e.sym(), next( e ), dest( e ), and returns prev( e );
+/// if the degree of org( e ) is 2 as well (a pillow: two triangles glued along all three edges, a closed part without volume),
+/// then eliminates both triangles with all their edges and vertices only if both triangles are present and \p eliminatePillows,
+/// and returns e (a lone edge now);
 /// if region is provided then eliminated faces are excluded from it;
 /// otherwise returns invalid edge
-MRMESH_API EdgeId eliminateDoubleTris( MeshTopology& topology, EdgeId e, FaceBitSet * region = nullptr );
+MRMESH_API EdgeId eliminateDoubleTris( MeshTopology& topology, EdgeId e, FaceBitSet * region = nullptr, bool eliminatePillows = false );
 
 /// eliminates all double triangles around given vertex preserving vertex valid;
 /// if region is provided then eliminated triangles are excluded from it

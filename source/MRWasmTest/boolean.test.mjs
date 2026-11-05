@@ -56,3 +56,19 @@ function isClosedGenus0( verts, tris ) {
 
   x.delete(); res.delete(); ma.delete(); mf.delete();
 }
+
+{
+  const A = cube( 0, 0, 0, 2 );
+  const ma = meshFromGeometry( A.positions, A.indices );
+  const mb = meshFromGeometry( A.positions, A.indices );
+
+  // the same cube shifted by half its size along each axis: the intersection is a unit cube
+  const shift = ml.AffineXf3f.translation( { x: 1, y: 1, z: 1 } );
+  const res = ml.booleanWithXf( ma, mb, ml.BooleanOperation.Intersection, shift );
+  assert.ok( res.valid(), 'intersection with rigidB2A succeeded' );
+  const x = res.mesh;
+  assert.ok( Math.abs( x.volume() - 1 ) < 1e-4, `intersection volume is 1 (got ${x.volume()})` );
+  assert.ok( Math.abs( mb.volume() - 8 ) < 1e-4, 'meshB is not modified' );
+
+  x.delete(); res.delete(); shift.delete(); ma.delete(); mb.delete();
+}

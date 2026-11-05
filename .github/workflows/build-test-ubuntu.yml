@@ -62,7 +62,6 @@ jobs:
       # one Release job per OS and architecture builds the Java bindings and runs their examples and tests
       RUN_JAVA: ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.compiler == 'GCC' && matrix.build_mrcuda == 'ON' }}
 
-
     steps:
       - name: Display job info
         run: echo "Building on ${{ matrix.os }} ${{ matrix.arch }} with ${{ matrix.compiler }} in ${{ matrix.config }} mode"
@@ -98,16 +97,6 @@ jobs:
           scripts/checkout_submodules.sh . thirdparty/imgui thirdparty/mrbind
           scripts/checkout_submodules.sh thirdparty/mrbind deps/cppdecl
 
-      - name: Install MRBind
-        if: ${{ inputs.mrbind || inputs.mrbind_c }}
-        uses: ./.github/actions/build-mrbind
-        with:
-          # The Dockerfile hash in extra-cache-key busts the cache whenever the
-          # toolchain inside the image changes (e.g. glibc, clang upgrade).
-          cache-key-prefix: ubuntu-${{ matrix.arch }}-${{ matrix.os }}
-          build-script: scripts/mrbind/install_mrbind_ubuntu.sh
-          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt', format('docker/{0}Dockerfile', matrix.os)) }}
-
       - name: Create virtualenv
         run: |
           python3 -m venv .venv
@@ -141,48 +130,18 @@ jobs:
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=OFF
             -DMRVIEWER_NO_XDG_DESKTOP_PORTAL=ON
 
-      - name: Wait for C bindings
+      - name: Get and build C bindings
         if: ${{ inputs.mrbind_c }}
-        uses: ./.github/actions/wait-for-job
-        with:
-          job-name: generate-c-bindings
-
-      - name: Download C bindings
-        if: ${{ inputs.mrbind_c }}
-        uses: actions/download-artifact@v8
-        with:
-          name: CBindings
-          path: MeshLib/CbindingsTmp
-
-      - name: Prepare C bindings folders
-        if: ${{ inputs.mrbind_c }}
-        shell: bash
-        env:
-          BUILD_MRCUDA: ${{ matrix.build_mrcuda }}
-        run: |
-          rm -rf source/MeshLibC2
-          mv MeshLib/CbindingsTmp/MeshLibC2 source
-          if [[ "${BUILD_MRCUDA}" == ON ]]; then
-            rm -rf source/MeshLibC2Cuda
-            mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
-          else
-            cp -r scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
-          fi
-
-      - name: Build C bindings
-        if: ${{ inputs.mrbind_c }}
+        uses: ./.github/actions/get-c-bindings
         env:
           MR_VERSION: ${{ inputs.app_version }}
-        run: |
-          cmake -S . -B build/${{ matrix.config }} -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON
-          cmake --build build/${{ matrix.config }} -j $(nproc) --target MeshLibC2 MeshLibC2Cuda MRTestC2
+        with:
+          cuda: ${{ matrix.build_mrcuda == 'ON' }}
+          build-dir: build/${{ matrix.config }}
+          targets: MeshLibC2 MeshLibC2Cuda MRTestC2
 
       - name: PCH size (diagnostic)
         run: find ./build/${{ matrix.config }} -name 'cmake_pch.hxx.gch' -exec ls -lh {} +
-
-      - name: Generate C# bindings # generate only sources
-        if: ${{ env.UPLOAD_BINDINGS_SOURCES == 'true' }}
-        run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate
 
       - name: Upload C# bindings headers
         if: ${{ env.UPLOAD_BINDINGS_SOURCES == 'true' }}
@@ -232,9 +191,6 @@ jobs:
         env:
           CXX: ${{ matrix.cxx-compiler }}
           ENABLE_CUDA: ${{ fromJSON('{"ON":1, "OFF":0}') [matrix.build_mrcuda] }}
-          # `-fpch-codegen` hits clang defect llvm/llvm-project#203691 on libstdc++-12 (a `<filesystem>`
-          # internal homed into the PCH object but never emitted, surfaces at import time). Disable on ubuntu22.
-          PCH_CODEGEN: ${{ matrix.os == 'ubuntu22' && '0' || '1' }}
         shell: bash
         run: |
           # The bindings always compile with clang++, which takes the newest GCC in the image - 16 on
@@ -243,7 +199,7 @@ jobs:
           if [[ "${{ matrix.os }}" == ubuntu26 ]]; then
             CLANG_GCC_PIN="--gcc-install-dir=/usr/lib/gcc/$(gcc-15 -dumpmachine)/15"
           fi
-          make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${ENABLE_CUDA} PCH_CODEGEN=${PCH_CODEGEN} EXTRA_CFLAGS="${CLANG_GCC_PIN}" EXTRA_LDFLAGS="${CLANG_GCC_PIN}"
+          make -f scripts/mrbind/generate.mk MODE=none -B --trace PYTHON_SOURCES_DIR=source/MeshLibC2/temp/python MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${ENABLE_CUDA} EXTRA_CFLAGS="${CLANG_GCC_PIN}" EXTRA_LDFLAGS="${CLANG_GCC_PIN}"
 
       - name: Create Python Stubs
         if: ${{ inputs.mrbind && env.UPLOAD_BINDINGS_SOURCES == 'true' }}

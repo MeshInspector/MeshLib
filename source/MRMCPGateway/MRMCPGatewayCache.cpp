@@ -82,19 +82,9 @@ bool cacheStampMatches( const std::filesystem::path& cache )
     return doc["stamp"].get<std::string>() == kBuildStamp;
 }
 
-// Reads the cache, sets its `stamp` field to kBuildStamp, atomically writes it back.
-bool embedStampInCache( const std::filesystem::path& cache )
+// Atomically writes `doc` to the cache file.
+bool writeCache( const std::filesystem::path& cache, const nlohmann::json& doc )
 {
-    std::ifstream in( cache );
-    if ( !in )
-        return false;
-    nlohmann::json doc;
-    try { in >> doc; } catch ( ... ) { return false; }
-    in.close();
-    if ( !doc.is_object() )
-        return false;
-    doc["stamp"] = kBuildStamp;
-
     auto tmp = cache;
     tmp += ".tmp";
     {
@@ -111,6 +101,21 @@ bool embedStampInCache( const std::filesystem::path& cache )
         return false;
     }
     return true;
+}
+
+// Reads the cache, sets its `stamp` field to kBuildStamp, atomically writes it back.
+bool embedStampInCache( const std::filesystem::path& cache )
+{
+    std::ifstream in( cache );
+    if ( !in )
+        return false;
+    nlohmann::json doc;
+    try { in >> doc; } catch ( ... ) { return false; }
+    in.close();
+    if ( !doc.is_object() )
+        return false;
+    doc["stamp"] = kBuildStamp;
+    return writeCache( cache, doc );
 }
 
 } // anonymous namespace
@@ -191,6 +196,15 @@ void loadCachedTools( const Config& cfg )
     for ( const auto& t : doc["tools"] )
         if ( t.is_object() )
             cachedTools.push_back( t );
+}
+
+void updateCachedTools( const Config& cfg, const std::vector<nlohmann::json>& tools )
+{
+    auto& cachedTools = getCachedTools();
+    if ( cachedTools == tools )
+        return;
+    cachedTools = tools;
+    writeCache( cachePath( cfg ), { { "stamp", kBuildStamp }, { "tools", tools } } );
 }
 
 } // namespace MR::McpGateway

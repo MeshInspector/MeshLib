@@ -5,7 +5,6 @@ SCRIPT_DIR="$(dirname "$BASH_SOURCE")"
 SUBMODULES=(
     thirdparty/imgui
     thirdparty/mrbind
-    thirdparty/mrbind-pybind11
 )
 
 # with --vcpkg the remaining thirdparty comes from vcpkg ports, otherwise build_thirdparty.sh builds it

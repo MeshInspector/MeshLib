@@ -39,6 +39,7 @@ public:
         AdditionalPointsNoOffset, // special shader for old intel gpu (Intel HD 4000)
         AdditionalQuad,
         ViewportBorder,
+        ViewportBackground,
         AlphaSortOverlayQuad,
         ShadowOverlayQuad,
         SimpleOverlayQuad,

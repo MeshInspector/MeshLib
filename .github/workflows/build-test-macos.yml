@@ -181,17 +181,6 @@ jobs:
           HOMEBREW_NO_INSTALL_CLEANUP: '1'   # don't prune the known-good keg
         run: ./scripts/mrbind/install_deps_macos.sh
 
-      - name: Build MRBind
-        if: ${{ inputs.mrbind || inputs.mrbind_c }}
-        uses: ./.github/actions/build-mrbind
-        with:
-          # Keyed on the runner image (matrix.instance) plus the brew-prefix hash
-          # to discriminate between fleet members of the self-hosted ARM label set.
-          # Shared with pip-build.yml's macOS section where the two also match.
-          cache-key-prefix: ${{ matrix.instance }}-clang
-          build-script: scripts/mrbind/install_mrbind_macos.sh
-          extra-cache-key: llvm_pgo_${{ matrix.llvm-keg-version }}-${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.brew-hash.outputs.brew-hash }}
-
       - name: Create virtualenv
         run: |
           PYTHON=python3.12
@@ -225,34 +214,15 @@ jobs:
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DMRVOXELS_UNITY_BUILD=ON
 
-      - name: Wait for C bindings
+      - name: Get and build C bindings
         if: ${{ inputs.mrbind_c }}
-        uses: ./.github/actions/wait-for-job
-        with:
-          job-name: generate-c-bindings
-
-      - name: Download C bindings
-        if: ${{ inputs.mrbind_c }}
-        uses: actions/download-artifact@v8
-        with:
-          name: CBindings
-          path: MeshLib/CbindingsTmp
-
-      - name: Prepare C bindings folders
-        if: ${{ inputs.mrbind_c }}
-        run: |
-          rm -rf source/MeshLibC2
-          mv MeshLib/CbindingsTmp/MeshLibC2 source
-          # Cuda placeholders:
-          cp -R scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
-
-      - name: Build C bindings
-        if: ${{ inputs.mrbind_c }}
+        uses: ./.github/actions/get-c-bindings
         env:
           MR_VERSION: ${{ inputs.app_version }}
-        run: |
-          cmake -S . -B build/${{ matrix.config }} -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON
-          cmake --build build/${{ matrix.config }} -j $(sysctl -n hw.logicalcpu) --target MeshLibC2 MeshLibC2Cuda MRTestC2
+        with:
+          cuda: 'false'
+          build-dir: build/${{ matrix.config }}
+          targets: MeshLibC2 MeshLibC2Cuda MRTestC2
 
       - name: MRMesh Exported Symbols
         run: |
@@ -280,6 +250,7 @@ jobs:
           make -f scripts/mrbind/generate.mk \
             -B --trace \
             MODE=none \
+            PYTHON_SOURCES_DIR=source/MeshLibC2/temp/python \
             PYTHON_PKGCONF_NAME=python-$(python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])')-embed \
             MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin \
             DEPS_BASE_DIR=${DEPS_BASE_DIR}

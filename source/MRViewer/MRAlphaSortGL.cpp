@@ -82,8 +82,12 @@ void AlphaSortGL::drawTransparencyTextureToScreen() const
 {
     if ( !inited_ )
         return;
-    GL_EXEC( glDisable( GL_DEPTH_TEST ) );
-    GL_EXEC( glDepthMask( GL_TRUE ) );
+    // the overlay is drawn at the depth of the nearest transparent node, so the depth test keeps it off the samples
+    // of opaque objects in front of all transparent ones (their antialiased edges);
+    // LEQUAL keeps the nodes tied with an opaque surface (lines are drawn with LEQUAL, e.g. polylines on mesh edges)
+    GL_EXEC( glEnable( GL_DEPTH_TEST ) );
+    GL_EXEC( glDepthFunc( GL_LEQUAL ) );
+    GL_EXEC( glDepthMask( GL_FALSE ) );
     GL_EXEC( glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE ) );
 
     constexpr GLfloat transparencyTextureQuad[18] =
@@ -114,8 +118,13 @@ void AlphaSortGL::drawTransparencyTextureToScreen() const
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleArraySize, 2 );
 
+#ifndef __EMSCRIPTEN__
+    // the transparent pass wrote the lists and the node counter, read here and then reset by clearTransparencyTextures
+    GL_EXEC( glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_TEXTURE_UPDATE_BARRIER_BIT ) );
+#endif
     GL_EXEC( glDrawArrays( GL_TRIANGLES, 0, static_cast <GLsizei> ( 6 ) ) );
-    GL_EXEC( glEnable( GL_DEPTH_TEST ) );
+    GL_EXEC( glDepthFunc( GL_LESS ) );
+    GL_EXEC( glDepthMask( GL_TRUE ) );
 }
 
 void AlphaSortGL::updateTransparencyTexturesSize( int width, int height )

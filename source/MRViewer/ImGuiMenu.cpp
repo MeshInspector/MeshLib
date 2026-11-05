@@ -2838,7 +2838,7 @@ float ImGuiMenu::drawTransform_()
         Vector3f scale;
         if ( allSame )
         {
-            decomposeMatrix3( xf.A, q, r, true ); // a mirror goes into scale.x, Euler angles need a proper rotation
+            decomposeMatrix3( xf.A, q, r, true ); // a mirror gets a negative scale, Euler angles need a proper rotation
             euler = ( 180 / PI_F ) * q.toEulerAngles();
             scale = Vector3f{ r.x.x, r.y.y, r.z.z };
         }
@@ -2857,11 +2857,12 @@ float ImGuiMenu::drawTransform_()
         }
         else if ( uniformScale_ )
         {
-            float midScale = ( std::abs( scale.x ) + scale.y + scale.z ) / 3.0f;
+            float midScale = ( std::abs( scale.x ) + std::abs( scale.y ) + std::abs( scale.z ) ) / 3.0f;
             ImGui::SetNextItemWidth( getSceneInfoItemWidth_() );
             inputChanged = UI::drag<NoUnit>( "##scaleX", midScale, midScale * 0.01f, 1e-3f, 1e+6f );
             if ( inputChanged )
-                scale = { std::copysign( midScale, scale.x ), midScale, midScale }; // keep the mirror
+                for ( int i = 0; i < 3; ++i )
+                    scale[i] = std::copysign( midScale, scale[i] ); // keep the mirror
             inputDeactivated = inputDeactivated || ImGui::IsItemDeactivatedAfterEdit();
             ImGui::SameLine();
         }

@@ -4,8 +4,15 @@
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMeshComponents.h>
 #include <MRMesh/MRUnorientedTriangle.h>
+#include <MRMesh/MRMakeSphereMesh.h>
+#include <MRMesh/MRMesh.h>
+#include <MRMesh/MRRingIterator.h>
+#include <MRMesh/MRBitSet.h>
 #include <gtest/gtest.h>
+#include <tbb/global_control.h>
 #include <algorithm>
+#include <numeric>
+#include <random>
 
 namespace MR
 {
@@ -477,6 +484,105 @@ TEST( MRMesh, computeTrianglesRepetitions )
     EXPECT_EQ( reps[0], 1 ); // {3,4,5}
     EXPECT_EQ( reps[1], 1 ); // {0,2,3}
     EXPECT_EQ( reps[2], 1 ); // {0,1,2}
+}
+
+// the same faces and the same counter-clockwise ring of neighbours around every vertex
+static void expectSameConnectivity( const MeshTopology & a, const MeshTopology & b )
+{
+    EXPECT_TRUE( b.checkValidity() );
+    EXPECT_EQ( a.edgeSize(), b.edgeSize() );
+    EXPECT_EQ( a.getValidVerts(), b.getValidVerts() );
+    ASSERT_EQ( a.getValidFaces(), b.getValidFaces() );
+    for ( FaceId f : a.getValidFaces() )
+    {
+        auto va = a.getTriVerts( f );
+        auto vb = b.getTriVerts( f );
+        std::rotate( vb.begin(), std::find( vb.begin(), vb.end(), va[0] ), vb.end() );
+        EXPECT_EQ( va, vb );
+    }
+    std::vector<VertId> ra, rb;
+    for ( VertId v : a.getValidVerts() )
+    {
+        ra.clear();
+        rb.clear();
+        for ( EdgeId e : orgRing( a, v ) )
+            ra.push_back( a.dest( e ) );
+        for ( EdgeId e : orgRing( b, v ) )
+            rb.push_back( b.dest( e ) );
+        ASSERT_EQ( ra.size(), rb.size() );
+        std::rotate( rb.begin(), std::find( rb.begin(), rb.end(), ra[0] ), rb.end() );
+        EXPECT_EQ( ra, rb );
+    }
+}
+
+TEST( MRMesh, buildFromManifoldTriangles )
+{
+    // closed mesh with shuffled vertices and triangles, as built sequentially triangle by triangle
+    const auto sphere = makeSphere( { .numMeshVertices = 3000 } );
+    Triangulation t = sphere.topology.getTriangulation();
+    std::mt19937 rng( 1 );
+    // the same on all platforms, unlike std::shuffle
+    auto shuffle = [&]( auto & v, auto id )
+    {
+        for ( size_t i = v.size(); i > 1; --i )
+            std::swap( v[decltype( id )( i - 1 )], v[decltype( id )( rng() % i )] );
+    };
+    std::vector<int> perm( sphere.topology.vertSize() );
+    std::iota( perm.begin(), perm.end(), 0 );
+    shuffle( perm, size_t{} );
+    for ( auto & tri : t )
+        for ( auto & v : tri )
+            v = VertId( perm[v] );
+    shuffle( t, FaceId{} );
+    // remove some triangles to get holes
+    for ( int i = 0; i < 30; ++i )
+        t.erase( t.begin() + int( rng() % t.size() ) );
+
+    FaceBitSet region( t.size(), true );
+    const auto seq = fromTriangles( t, { .region = &region } );
+    EXPECT_TRUE( region.none() );
+    MeshTopology direct;
+    int skipped = -1;
+    EXPECT_TRUE( direct.buildFromManifoldTriangles( t, &skipped ) );
+    EXPECT_EQ( skipped, 0 );
+    expectSameConnectivity( seq, direct );
+
+    MeshTopology oneThread;
+    {
+        tbb::global_control singleThread( tbb::global_control::max_allowed_parallelism, 1 );
+        EXPECT_TRUE( oneThread.buildFromManifoldTriangles( t ) );
+    }
+    EXPECT_EQ( oneThread, direct );
+
+    // triangles with repeated or invalid vertices are skipped
+    t.push_back( { 0_v, 0_v, 1_v } );
+    t.push_back( { VertId(), VertId(), VertId() } );
+    EXPECT_TRUE( direct.buildFromManifoldTriangles( t, &skipped ) );
+    EXPECT_EQ( skipped, 2 );
+    EXPECT_EQ( direct.numValidFaces(), int( t.size() ) - 2 );
+}
+
+TEST( MRMesh, buildFromManifoldTrianglesFails )
+{
+    // two triangles with one vertex in common: two open fans there
+    const Triangulation bowtie = { { 0_v, 1_v, 2_v }, { 0_v, 3_v, 4_v } };
+    MeshTopology topology;
+    EXPECT_TRUE( topology.buildFromManifoldTriangles( bowtie ) );
+    EXPECT_TRUE( topology.checkValidity() );
+    EXPECT_EQ( topology.findNumHoles(), fromTriangles( bowtie ).findNumHoles() );
+
+    // three triangles on edge 0-1
+    EXPECT_FALSE( topology.buildFromManifoldTriangles( { { 0_v, 1_v, 2_v }, { 1_v, 0_v, 3_v }, { 1_v, 0_v, 4_v } } ) );
+    // two triangles with edge 0-1 in the same direction
+    EXPECT_FALSE( topology.buildFromManifoldTriangles( { { 0_v, 1_v, 2_v }, { 1_v, 0_v, 3_v }, { 0_v, 1_v, 4_v } } ) );
+    // two closed fans around vertex 0
+    const Triangulation twoTetrahedra = {
+        { 0_v, 1_v, 2_v }, { 0_v, 2_v, 3_v }, { 0_v, 3_v, 1_v }, { 1_v, 3_v, 2_v },
+        { 0_v, 4_v, 5_v }, { 0_v, 5_v, 6_v }, { 0_v, 6_v, 4_v }, { 4_v, 6_v, 5_v } };
+    EXPECT_FALSE( topology.buildFromManifoldTriangles( twoTetrahedra ) );
+    // still valid after the failures
+    EXPECT_TRUE( topology.checkValidity() );
+    EXPECT_EQ( topology.numValidFaces(), 2 );
 }
 
 } //namespace MeshBuilder

@@ -529,6 +529,13 @@ MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & setti
     {
         try
         {
+            // fromTrianglesPar adds all triangles with vertices in several parts sequentially, and they are many if vertex ids have no locality
+            if ( !settings.region && settings.shiftFaceId == 0 && settings.allowNonManifoldEdge )
+            {
+                MeshTopology res;
+                if ( res.buildFromManifoldTriangles( t, settings.skippedFaceCount ) )
+                    return res;
+            }
             return fromTrianglesPar( t, settings, progressCb );
         }
         catch ( const std::bad_alloc & )

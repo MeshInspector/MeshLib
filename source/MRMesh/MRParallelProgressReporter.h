@@ -41,7 +41,7 @@ public:
     MRMESH_API PerTaskReporter newTask( float weight = 1.f );
 
     /// Actually report the progress. Designed to be invoked in loop until all tasks are completed or until the operation is cancelled
-    /// @note This function is automatically invoked from the \ref PerTaskReporter::operator() under the condition that the thread that invokes it
+    /// @note This function is automatically invoked from PerTaskReporter::operator() under the condition that the thread that invokes it
     ///     is the same as the thread from which ParallelProgressReporter was created.
     MRMESH_API bool operator()();
 

@@ -22,8 +22,8 @@ lDeformer.init(freeVerts,mm.EdgeWeights.Cotan,mm.VertexMass.NeiArea)
 
 shiftAmount = mesh.computeBoundingBox().diagonal()*0.01
 # Fix anchor vertices in required position
-lDeformer.fixVertex( ancV0, mesh.points.vec[ancV0.get()] + mesh.normal(ancV0) * shiftAmount )
-lDeformer.fixVertex( ancV1, mesh.points.vec[ancV1.get()] + mesh.normal(ancV1) * shiftAmount )
+lDeformer.fixVertex( ancV0, mesh.points[ancV0] + mesh.normal(ancV0) * shiftAmount )
+lDeformer.fixVertex( ancV1, mesh.points[ancV1] + mesh.normal(ancV1) * shiftAmount )
 
 # Move free vertices according to anchor ones
 lDeformer.apply()

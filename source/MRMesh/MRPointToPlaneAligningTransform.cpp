@@ -43,11 +43,28 @@ void PointToPlaneAligningTransform::prepare()
     sumAIsSym_ = true;
 }
 
-auto PointToPlaneAligningTransform::calculateAmendment() const -> RigidScaleXf3d
+Eigen::Matrix<double, 7, 7> PointToPlaneAligningTransform::stabilizedA_() const
 {
     assert( sumAIsSym_ );
-    Eigen::LLT<Eigen::MatrixXd> chol( sumA_.topLeftCorner<6,6>() );
-    Eigen::VectorXd solution = chol.solve( sumB_.topRows<6>() - sumA_.block<6,1>( 0, 6 ) );
+    auto res = sumA_;
+    if ( stabilizer_ > 0 )
+    {
+        const double rotStab = stabilizer_ * sumA_.topLeftCorner<3,3>().trace() / 3;
+        const double shiftStab = stabilizer_ * sumA_.block<3,3>( 3, 3 ).trace() / 3;
+        for ( int i = 0; i < 3; ++i )
+        {
+            res( i, i ) += rotStab;
+            res( 3 + i, 3 + i ) += shiftStab;
+        }
+    }
+    return res;
+}
+
+auto PointToPlaneAligningTransform::calculateAmendment() const -> RigidScaleXf3d
+{
+    const auto sumA = stabilizedA_();
+    Eigen::LLT<Eigen::MatrixXd> chol( sumA.topLeftCorner<6,6>() );
+    Eigen::VectorXd solution = chol.solve( sumB_.topRows<6>() - sumA.block<6,1>( 0, 6 ) );
 
     RigidScaleXf3d res;
     res.a = Vector3d{ solution.coeff( 0 ), solution.coeff( 1 ), solution.coeff( 2 ) };
@@ -57,8 +74,7 @@ auto PointToPlaneAligningTransform::calculateAmendment() const -> RigidScaleXf3d
 
 auto PointToPlaneAligningTransform::calculateAmendmentWithScale() const -> RigidScaleXf3d
 {
-    assert( sumAIsSym_ );
-    Eigen::LLT<Eigen::MatrixXd> chol( sumA_ );
+    Eigen::LLT<Eigen::MatrixXd> chol( stabilizedA_() );
     Eigen::VectorXd solution = chol.solve( sumB_ );
 
     RigidScaleXf3d res;
@@ -73,22 +89,22 @@ auto PointToPlaneAligningTransform::calculateFixedAxisAmendment( const Vector3d 
     if ( axis.lengthSq() <= 0 )
         return calculateAmendment();
 
-    assert( sumAIsSym_ );
+    const auto sumA = stabilizedA_();
     Eigen::Matrix<double, 4, 4> A;
     Eigen::Matrix<double, 4, 1> b;
 
     const auto k = toEigen( axis.normalized() );
 
-    A(0,0) = k.transpose() * sumA_.topLeftCorner<3,3>() * k;
+    A(0,0) = k.transpose() * sumA.topLeftCorner<3,3>() * k;
 
-    const Eigen::Matrix<double, 3, 1> tk = sumA_.block<3,3>(3, 0) * k;
+    const Eigen::Matrix<double, 3, 1> tk = sumA.block<3,3>(3, 0) * k;
     A.bottomLeftCorner<3,1>() = tk;
     A.topRightCorner<1,3>() = tk.transpose();
 
-    A.bottomRightCorner<3,3>() = sumA_.block<3,3>(3, 3);
+    A.bottomRightCorner<3,3>() = sumA.block<3,3>(3, 3);
 
-    b.topRows<1>() = k.transpose() * ( sumB_.topRows<3>() - sumA_.block<3,1>( 0, 6 ) );
-    b.bottomRows<3>() = sumB_.middleRows<3>(3) - sumA_.block<3,1>( 3, 6 );
+    b.topRows<1>() = k.transpose() * ( sumB_.topRows<3>() - sumA.block<3,1>( 0, 6 ) );
+    b.bottomRows<3>() = sumB_.middleRows<3>(3) - sumA.block<3,1>( 3, 6 );
 
     Eigen::LLT<Eigen::MatrixXd> chol(A);
     Eigen::VectorXd solution = chol.solve(b);
@@ -104,7 +120,7 @@ auto PointToPlaneAligningTransform::calculateOrthogonalAxisAmendment( const Vect
     if ( ort.lengthSq() <= 0 )
         return calculateAmendment();
 
-    assert( sumAIsSym_ );
+    const auto sumA = stabilizedA_();
     Eigen::Matrix<double, 5, 5> A;
     Eigen::Matrix<double, 5, 1> b;
     Eigen::Matrix<double, 3, 2> k;
@@ -113,16 +129,16 @@ auto PointToPlaneAligningTransform::calculateOrthogonalAxisAmendment( const Vect
     k.leftCols<1>() = toEigen( d0 );
     k.rightCols<1>() = toEigen( d1 );
 
-    A.topLeftCorner<2,2>() = k.transpose() * sumA_.topLeftCorner<3,3>() * k;
+    A.topLeftCorner<2,2>() = k.transpose() * sumA.topLeftCorner<3,3>() * k;
 
-    const Eigen::Matrix<double, 3, 2> tk = sumA_.block<3,3>(3, 0) * k;
+    const Eigen::Matrix<double, 3, 2> tk = sumA.block<3,3>(3, 0) * k;
     A.bottomLeftCorner<3,2>() = tk;
     A.topRightCorner<2,3>() = tk.transpose();
 
-    A.bottomRightCorner<3,3>() = sumA_.block<3,3>(3, 3);
+    A.bottomRightCorner<3,3>() = sumA.block<3,3>(3, 3);
 
-    b.topRows<2>() = k.transpose() * ( sumB_.topRows<3>() - sumA_.block<3,1>( 0, 6 ) );
-    b.bottomRows<3>() = sumB_.middleRows<3>(3) - sumA_.block<3,1>( 3, 6 );
+    b.topRows<2>() = k.transpose() * ( sumB_.topRows<3>() - sumA.block<3,1>( 0, 6 ) );
+    b.bottomRows<3>() = sumB_.middleRows<3>(3) - sumA.block<3,1>( 3, 6 );
 
     Eigen::LLT<Eigen::MatrixXd> chol(A);
     Eigen::VectorXd solution = chol.solve(b);
@@ -136,10 +152,10 @@ auto PointToPlaneAligningTransform::calculateOrthogonalAxisAmendment( const Vect
 
 Vector3d PointToPlaneAligningTransform::findBestTranslation( Vector3d rotAngles, double scale ) const
 {
-    assert( sumAIsSym_ );
-    Eigen::LLT<Eigen::MatrixXd> chol( sumA_.block<3,3>(3, 3) );
+    const auto sumA = stabilizedA_();
+    Eigen::LLT<Eigen::MatrixXd> chol( sumA.block<3,3>(3, 3) );
     Eigen::VectorXd solution = chol.solve( sumB_.middleRows<3>( 3 )
-        - ( sumA_.block<3,3>( 3, 0 ) * toEigen( rotAngles ) + sumA_.block<3,1>( 3, 6 ) ) * scale );
+        - ( sumA.block<3,3>( 3, 0 ) * toEigen( rotAngles ) + sumA.block<3,1>( 3, 6 ) ) * scale );
     return Vector3d{ solution.coeff(0), solution.coeff(1), solution.coeff(2) };
 }
 

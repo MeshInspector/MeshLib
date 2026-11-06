@@ -7,6 +7,8 @@
 #include "MRQuaternion.h"
 #include "MRBestFit.h"
 #include "MRBitSetParallelFor.h"
+#include "MRPointCloud.h"
+#include "MRParallelFor.h"
 #include <numeric>
 
 namespace MR
@@ -120,29 +122,67 @@ AffineXf3f ICP::autoSelectFloatXf()
 
 void ICP::setFltSamples( const VertBitSet& fltSamples )
 {
+    fltSamplesCloud_.reset();
     setupPairs( flt2refPairs_, fltSamples, flt_.obj.weights() );
 }
 
-void ICP::sampleFltPoints( float samplingVoxelSize )
+void ICP::sampleFltPoints( float samplingVoxelSize, bool nonVertexSamples )
 {
-    setupPairs( flt2refPairs_, *flt_.obj.pointsGridSampling( samplingVoxelSize ), {} );
+    fltSamplesCloud_.reset();
+    setupPairs( flt2refPairs_, nonVertexSamples ? flt_.obj.surfaceGridSampling( samplingVoxelSize, fltSamplesCloud_ )
+        : *flt_.obj.pointsGridSampling( samplingVoxelSize ), {} );
 }
 
 void ICP::setRefSamples( const VertBitSet& refSamples )
 {
+    refSamplesCloud_.reset();
     setupPairs( ref2fltPairs_, refSamples, ref_.obj.weights() );
 }
 
-void ICP::sampleRefPoints( float samplingVoxelSize )
+void ICP::sampleRefPoints( float samplingVoxelSize, bool nonVertexSamples )
 {
-    setupPairs( ref2fltPairs_, *ref_.obj.pointsGridSampling( samplingVoxelSize ), {} );
+    refSamplesCloud_.reset();
+    setupPairs( ref2fltPairs_, nonVertexSamples ? ref_.obj.surfaceGridSampling( samplingVoxelSize, refSamplesCloud_ )
+        : *ref_.obj.pointsGridSampling( samplingVoxelSize ), {} );
+}
+
+static PointCloud samplesCloud( const PointPairs & pairs, const MeshOrPoints & src )
+{
+    MR_TIMER;
+    const auto & points = src.points();
+    const auto normals = src.normals();
+    PointCloud res;
+    res.points.resizeNoInit( pairs.vec.size() );
+    if ( normals )
+        res.normals.resizeNoInit( pairs.vec.size() );
+    ParallelFor( res.points, [&]( VertId v )
+    {
+        const auto s = pairs.vec[v].srcVertId;
+        res.points[v] = points[s];
+        if ( normals )
+            res.normals[v] = normals( s );
+    } );
+    res.validPoints.resize( res.points.size(), true );
+    return res;
+}
+
+PointCloud ICP::getFltSamplesCloud() const
+{
+    return samplesCloud( flt2refPairs_, fltSamplesCloud_ ? MeshOrPoints( *fltSamplesCloud_ ) : flt_.obj );
+}
+
+PointCloud ICP::getRefSamplesCloud() const
+{
+    return samplesCloud( ref2fltPairs_, refSamplesCloud_ ? MeshOrPoints( *refSamplesCloud_ ) : ref_.obj );
 }
 
 void ICP::updatePointPairs()
 {
     MR_TIMER;
-    MR::updatePointPairs( flt2refPairs_, flt_, ref_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest, prop_.ignoreBdTgts );
-    MR::updatePointPairs( ref2fltPairs_, ref_, flt_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest, prop_.ignoreBdTgts );
+    const MeshOrPointsXf fltSrc = fltSamplesCloud_ ? MeshOrPointsXf{ *fltSamplesCloud_, flt_.xf } : flt_;
+    const MeshOrPointsXf refSrc = refSamplesCloud_ ? MeshOrPointsXf{ *refSamplesCloud_, ref_.xf } : ref_;
+    MR::updatePointPairs( flt2refPairs_, fltSrc, ref_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest, prop_.ignoreBdTgts );
+    MR::updatePointPairs( ref2fltPairs_, refSrc, flt_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest, prop_.ignoreBdTgts );
     deactivatefarDistPairs_();
 }
 
@@ -392,6 +432,7 @@ bool ICP::p2plIter_()
         p2pl.add( vp.tgtPoint - centroidRef, vp.srcPoint - centroidRef, vp.srcNorm, vp.weight );
     }
     p2pl.prepare();
+    p2pl.setStabilizer( prop_.p2plStabilizer );
 
     const AffineXf3d res = getAligningXf( p2pl, prop_.icpMode, prop_.p2plAngleLimit, prop_.p2plScaleLimit, prop_.fixedRotationAxis );
     if (std::isnan(res.b.x)) //nan check

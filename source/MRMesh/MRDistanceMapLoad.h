@@ -43,18 +43,6 @@ MR_BIND_IGNORE inline Expected<DistanceMap> fromMrDistanceMap( const std::filesy
     } );
 }
 
-#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_TIFF )
-MRMESH_API Expected<DistanceMap> fromTiff( const std::filesystem::path& path, const DistanceMapLoadSettings& settings = {} );
-[[deprecated( "Use fromTiff( path, settings )")]]
-MR_BIND_IGNORE inline Expected<DistanceMap> fromTiff( const std::filesystem::path& path, DistanceMapToWorld& params, ProgressCallback progressCb = {} )
-{
-    return fromTiff( path, {
-        .distanceMapToWorld = &params,
-        .progress = progressCb,
-    } );
-}
-#endif
-
 MRMESH_API Expected<DistanceMap> fromAnySupportedFormat( const std::filesystem::path& path, const DistanceMapLoadSettings& settings = {} );
 [[deprecated( "Use fromAnySupportedFormat( path, settings )" )]]
 MR_BIND_IGNORE inline Expected<DistanceMap> fromAnySupportedFormat( const std::filesystem::path& path, DistanceMapToWorld* params, ProgressCallback progressCb = {} )

@@ -9,21 +9,17 @@
 #include <MRCMisc/expected_void_std_string.h>
 #include <MRCMisc/std_string.h>
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#ifdef max
-#undef max
-#endif
-#define max(a,b) a > b ? a : b
 
 int main( void )
 {
     int rc = EXIT_FAILURE;
 
     // load points
-    MR_expected_MR_PointCloud_std_string* loadRes = MR_PointsLoad_fromAnySupportedFormat_2( "Points.ply", NULL, NULL );
+    MR_expected_MR_PointCloud_std_string* loadRes = MR_PointsLoad_fromAnySupportedFormat( "Points.ply", NULL, NULL );
     MR_PointCloud* pc = MR_expected_MR_PointCloud_std_string_value_mut( loadRes );
     if ( !pc )
     {
@@ -32,12 +28,10 @@ int main( void )
     }
 
     MR_PointsToMeshParameters* params = MR_PointsToMeshParameters_DefaultConstruct();
-    MR_Box3f box = MR_PointCloud_computeBoundingBox_1( pc, NULL );
+    MR_Box3f box = MR_PointCloud_computeBoundingBox( pc, NULL );
     float voxelSize = MR_Box3f_diagonal( &box ) * 1e-2f;
     MR_PointsToMeshParameters_Set_voxelSize( params, voxelSize );
-    float avgRadius = MR_findAvgPointsRadius( pc, 50, NULL );
-    float sigma = max( voxelSize, avgRadius );
-    MR_PointsToMeshParameters_Set_sigma( params, sigma );
+    MR_PointsToMeshParameters_Set_sigma( params, fmaxf( voxelSize, MR_findAvgPointsRadius( pc, 50, NULL ) ) );
     MR_PointsToMeshParameters_Set_minWeight( params, 1.0f );
 
     MR_expected_MR_Mesh_std_string* fusionRes = MR_pointsToMeshFusion( pc, params );
@@ -48,7 +42,7 @@ int main( void )
         goto fail_fuse;
     }
 
-    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, "Mesh.ctm", NULL, NULL );
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat( mesh, "Mesh.ctm", NULL, NULL );
     if ( MR_expected_void_std_string_error( saveEx ) )
     {
         fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );

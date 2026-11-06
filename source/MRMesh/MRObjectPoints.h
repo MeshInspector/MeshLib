@@ -11,7 +11,10 @@ class MRMESH_CLASS ObjectPoints : public ObjectPointsHolder
 {
 public:
     ObjectPoints() = default;
-    MRMESH_API explicit ObjectPoints( const ObjectMesh& objMesh, bool saveNormals = true );
+    /// makes the point cloud from the mesh vertices; if some triangles are selected, then only from the vertices with all incident triangles selected
+    MRMESH_API explicit ObjectPoints( const ObjectMesh& objMesh, VertNormalsMode normals = VertNormalsMode::AreaWeighted );
+    [[deprecated( "Use ObjectPoints( objMesh, VertNormalsMode )" )]] MRMESH_API MR_BIND_IGNORE
+    ObjectPoints( const ObjectMesh& objMesh, bool saveNormals );
     ObjectPoints& operator = ( ObjectPoints&& ) = default;
     ObjectPoints( ObjectPoints&& ) = default;
 

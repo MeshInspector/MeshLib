@@ -105,9 +105,67 @@ namespace
 {
 
 #if defined( _WIN32 )
+// FOS_PICKFOLDERS hides all files, so a folder dialog showing them is a regular open dialog
+// with an extra button that accepts the current folder
+class SelectFolderEvents : public IFileDialogEvents, public IFileDialogControlEvents
+{
+public:
+    static constexpr DWORD cButtonId = 1;
+    IFileDialog* dialog = nullptr;
+    std::filesystem::path folder;
+
+    virtual ~SelectFolderEvents() = default;
+
+    IFACEMETHODIMP QueryInterface( REFIID riid, void** ppv ) override
+    {
+        if ( riid == __uuidof( IUnknown ) || riid == __uuidof( IFileDialogEvents ) )
+            *ppv = static_cast<IFileDialogEvents*>( this );
+        else if ( riid == __uuidof( IFileDialogControlEvents ) )
+            *ppv = static_cast<IFileDialogControlEvents*>( this );
+        else
+        {
+            *ppv = nullptr;
+            return E_NOINTERFACE;
+        }
+        return S_OK;
+    }
+    // lives on the stack and outlives the dialog
+    IFACEMETHODIMP_( ULONG ) AddRef() override { return 2; }
+    IFACEMETHODIMP_( ULONG ) Release() override { return 1; }
+
+    IFACEMETHODIMP OnButtonClicked( IFileDialogCustomize*, DWORD id ) override
+    {
+        IShellItem* item;
+        if ( id != cButtonId || !dialog || FAILED( dialog->GetFolder( &item ) ) )
+            return S_OK;
+        PWSTR path;
+        if ( SUCCEEDED( item->GetDisplayName( SIGDN_FILESYSPATH, &path ) ) )
+        {
+            folder = path;
+            CoTaskMemFree( path );
+            dialog->Close( S_OK );
+        }
+        item->Release();
+        return S_OK;
+    }
+
+    IFACEMETHODIMP OnFileOk( IFileDialog* ) override { return S_OK; }
+    IFACEMETHODIMP OnFolderChanging( IFileDialog*, IShellItem* ) override { return S_OK; }
+    IFACEMETHODIMP OnFolderChange( IFileDialog* ) override { return S_OK; }
+    IFACEMETHODIMP OnSelectionChange( IFileDialog* ) override { return S_OK; }
+    IFACEMETHODIMP OnShareViolation( IFileDialog*, IShellItem*, FDE_SHAREVIOLATION_RESPONSE* ) override { return E_NOTIMPL; }
+    IFACEMETHODIMP OnTypeChange( IFileDialog* ) override { return S_OK; }
+    IFACEMETHODIMP OnOverwrite( IFileDialog*, IShellItem*, FDE_OVERWRITE_RESPONSE* ) override { return E_NOTIMPL; }
+    IFACEMETHODIMP OnItemSelected( IFileDialogCustomize*, DWORD, DWORD ) override { return S_OK; }
+    IFACEMETHODIMP OnCheckButtonToggled( IFileDialogCustomize*, DWORD, BOOL ) override { return S_OK; }
+    IFACEMETHODIMP OnControlActivating( IFileDialogCustomize*, DWORD ) override { return S_OK; }
+};
+
 std::vector<std::filesystem::path> windowsDialog( const MR::FileDialog::Parameters& params = {} )
 {
     std::vector<std::filesystem::path> res;
+    const bool selectFolderShowingFiles = params.folderDialog && params.showFiles;
+    SelectFolderEvents selectFolderEvents;
     //<SnippetRefCounts>
     HRESULT hr = CoInitializeEx( NULL, COINIT_APARTMENTTHREADED |
         COINIT_DISABLE_OLE1DDE );
@@ -146,8 +204,23 @@ std::vector<std::filesystem::path> windowsDialog( const MR::FileDialog::Paramete
             // Before setting, always get the options first in order
             // not to override existing options.
             pFileOpen->GetOptions( &dwFlags );
-            pFileOpen->SetOptions( dwFlags | (params.multiselect ? FOS_ALLOWMULTISELECT : 0) |
-                (params.folderDialog ? FOS_PICKFOLDERS : 0) );
+            pFileOpen->SetOptions( dwFlags | (params.multiselect && !selectFolderShowingFiles ? FOS_ALLOWMULTISELECT : 0) |
+                (params.folderDialog && !selectFolderShowingFiles ? FOS_PICKFOLDERS : 0) );
+
+            DWORD eventsCookie = 0;
+            if ( selectFolderShowingFiles )
+            {
+                IFileDialogCustomize* customize;
+                if ( SUCCEEDED( pFileOpen->QueryInterface( IID_PPV_ARGS( &customize ) ) ) )
+                {
+                    customize->AddPushButton( SelectFolderEvents::cButtonId, L"Select Folder" );
+                    customize->Release();
+                }
+                selectFolderEvents.dialog = pFileOpen;
+                if ( FAILED( pFileOpen->Advise( &selectFolderEvents, &eventsCookie ) ) )
+                    eventsCookie = 0;
+                pFileOpen->SetTitle( L"Select Folder" );
+            }
 
             if( !params.filters.empty() )
             {
@@ -178,11 +251,18 @@ std::vector<std::filesystem::path> windowsDialog( const MR::FileDialog::Paramete
 
             // Show the Open dialog box.
             hr = pFileOpen->Show( glfwGetWin32Window( glfwGetCurrentContext() ) );
+            if ( eventsCookie )
+                pFileOpen->Unadvise( eventsCookie );
 
             // Get the file name from the dialog box.
             if( SUCCEEDED( hr ) )
             {
-                if( !params.saveDialog )
+                if ( !selectFolderEvents.folder.empty() )
+                {
+                    res.push_back( selectFolderEvents.folder );
+                    MR::FileDialog::setLastUsedDir( res[0].parent_path() );
+                }
+                else if( !params.saveDialog )
                 {
                     IFileOpenDialog* fileOpenDialog = (IFileOpenDialog*) pFileOpen;
                     IShellItemArray* pItems;
@@ -204,7 +284,9 @@ std::vector<std::filesystem::path> windowsDialog( const MR::FileDialog::Paramete
                                     hr = item->GetDisplayName( SIGDN_FILESYSPATH, &pszFilePath );
                                     if( SUCCEEDED( hr ) )
                                     {
-                                        res.push_back( pszFilePath );
+                                        // a file picked in the folder dialog selects its folder
+                                        std::filesystem::path path( pszFilePath );
+                                        res.push_back( selectFolderShowingFiles ? path.parent_path() : path );
                                         CoTaskMemFree( pszFilePath );
                                     }
                                     item->Release();
@@ -563,7 +645,7 @@ void openFilesDialogAsync( std::function<void( const std::vector<std::filesystem
 #endif
 }
 
-std::filesystem::path openFolderDialog( std::filesystem::path baseFolder )
+std::filesystem::path openFolderDialog( std::filesystem::path baseFolder, bool showFiles )
 {
     // Windows dialog does not support forward slashes between folders
     baseFolder.make_preferred();
@@ -573,6 +655,7 @@ std::filesystem::path openFolderDialog( std::filesystem::path baseFolder )
     parameters.folderDialog = true;
     parameters.multiselect = false;
     parameters.saveDialog = false;
+    parameters.showFiles = showFiles;
 
     const auto results = runDialog( parameters );
     if ( results.size() == 1 )
@@ -584,11 +667,11 @@ std::filesystem::path openFolderDialog( std::filesystem::path baseFolder )
     return {};
 }
 
-void openFolderDialogAsync( std::function<void ( const std::filesystem::path& )> callback, std::filesystem::path baseFolder )
+void openFolderDialogAsync( std::function<void ( const std::filesystem::path& )> callback, std::filesystem::path baseFolder, bool showFiles )
 {
     assert( callback );
 #ifndef __EMSCRIPTEN__
-    callback( openFolderDialog( std::move( baseFolder ) ) );
+    callback( openFolderDialog( std::move( baseFolder ), showFiles ) );
 #else
     sDialogFilesCallback = [callback] ( const std::vector<std::filesystem::path>& paths )
     {
@@ -600,6 +683,7 @@ void openFolderDialogAsync( std::function<void ( const std::filesystem::path& )>
         }
     };
     (void)baseFolder;
+    (void)showFiles;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
     EM_ASM( open_directory_dialog_popup());

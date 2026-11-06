@@ -9,7 +9,7 @@ void processSelfSubtasks(
     std::vector<NodeNode>& subtasks, 
     std::vector<NodeNode>& nextSubtasks, /*/< may be same as subtasks */ 
     std::function<Processing( const NodeNode& )> processLeaf, 
-    std::function<Processing( const Box3f& lBox, const Box3f& rBox )> processNodes )
+    std::function<Processing( const NodeNode& )> processNodes )
 {
     while ( !subtasks.empty() )
     {
@@ -29,7 +29,7 @@ void processSelfSubtasks(
             continue;
         }
 
-        const auto processNode = processNodes( aNode.box, bNode.box );
+        const auto processNode = processNodes( s );
         if ( processNode == Processing::Stop )
             continue;
 

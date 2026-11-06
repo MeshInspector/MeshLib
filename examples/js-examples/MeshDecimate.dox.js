@@ -5,9 +5,9 @@ const ml = await createMeshLib();
 // Load mesh
 using mesh = ml.MeshLoad.fromAnySupportedFormat('mesh.stl');
 
-// Repack the mesh.
+// Repack the mesh without building an AABB tree, which decimation invalidates anyway.
 // Not necessary, but highly recommended to achieve the best performance in parallel processing.
-mesh.packOptimally();
+mesh.packOptimally(false);
 
 // Setup decimate parameters
 using settings = new ml.DecimateSettings();
@@ -16,8 +16,9 @@ using settings = new ml.DecimateSettings();
 settings.maxDeletedFaces = 1000; // Number of faces to be deleted
 settings.maxError = 0.05; // Maximum error when decimation stops
 
-// Number of parts for simultaneous processing, greatly improves performance by cost of minor quality loss
-settings.subdivideParts = 64;
+// Number of parts for parallel processing, greatly improves performance at the cost of minor quality loss.
+// 16 is a good choice even with fewer CPU cores, since smaller parts are processed faster; much larger values add per-part overhead
+settings.subdivideParts = 16;
 
 // Decimate mesh
 ml.decimateMesh(mesh, settings);

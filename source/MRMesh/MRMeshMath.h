@@ -300,6 +300,14 @@ MR_BIND_IGNORE inline void getTriPoints( const MeshTopology & topology, const Ve
     return 2 * PI_F - sumAngles( topology, points, v, outBoundaryVert );
 }
 
+/// computes discrete mean curvature (see discreteMeanCurvature( v )) in the vertices of given region (or in all valid vertices if region is null),
+/// and puts 0 in all other vertices
+[[nodiscard]] MRMESH_API VertScalars discreteMeanCurvatures( const MeshTopology & topology, const VertCoords & points, const VertBitSet * region = nullptr );
+
+/// computes discrete Gaussian curvature (see discreteGaussianCurvature( v )) in the vertices of given region (or in all valid vertices if region is null),
+/// and puts 0 in all other vertices
+[[nodiscard]] MRMESH_API VertScalars discreteGaussianCurvatures( const MeshTopology & topology, const VertCoords & points, const VertBitSet * region = nullptr );
+
 /// finds all mesh edges with the cosine of dihedral angle (see dihedralAngleCos) in [minSharpCos, maxSharpCos]
 [[nodiscard]] MRMESH_API UndirectedEdgeBitSet findSharpEdges( const MeshTopology & topology, const VertCoords & points, float minSharpCos, float maxSharpCos );
 

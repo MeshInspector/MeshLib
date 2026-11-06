@@ -46,9 +46,19 @@ set(MESHLIB_PACKAGE_cpr
   GIT_TAG 1.14.2
 )
 
+set(MESHLIB_PACKAGE_draco
+  GIT_REPOSITORY https://github.com/google/draco
+  GIT_TAG 15bdb3a4f15a7a8d77489ac348a7a50d93de17a3
+  PATCHES
+    ${CMAKE_CURRENT_LIST_DIR}/patches/draco-emscripten-check-only-for-js-glue.patch
+)
+
 set(MESHLIB_PACKAGE_eigen
-  GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-  GIT_TAG 5.0.1
+  VERSION 5.0.1
+  URL
+    https://gitlab.com/libeigen/eigen/-/archive/5.0.1/eigen-5.0.1.tar.gz
+    https://github.com/eigen-mirror/eigen/archive/refs/tags/5.0.1.tar.gz
+  URL_HASH SHA256=e9c326dc8c05cd1e044c71f30f1b2e34a6161a3b6ecf445d56b53ff1669e3dec
 )
 
 set(MESHLIB_PACKAGE_expected
@@ -58,7 +68,7 @@ set(MESHLIB_PACKAGE_expected
 
 set(MESHLIB_PACKAGE_fastmcpp
   GIT_REPOSITORY https://github.com/MeshInspector/fastmcpp
-  GIT_TAG 0ace80c3e3704ec7f302f516234f02c0e440ef24
+  GIT_TAG 3b98eee5a3bdd697558a13208f27fddb6214bc7c
 )
 
 set(MESHLIB_PACKAGE_fmt
@@ -81,6 +91,11 @@ set(MESHLIB_PACKAGE_googletest
   GIT_TAG b796f7d44681514f58a683a3a71ff17c94edb0c1
 )
 
+set(MESHLIB_PACKAGE_imgui
+  GIT_REPOSITORY https://github.com/ocornut/imgui.git
+  GIT_TAG v1.92.0-docking
+)
+
 set(MESHLIB_PACKAGE_jsoncpp
   GIT_REPOSITORY https://github.com/open-source-parsers/jsoncpp.git
   GIT_TAG 42e892d96e47b1f6e29844cc705e148ec4856448
@@ -93,7 +108,7 @@ set(MESHLIB_PACKAGE_laz-perf
 
 set(MESHLIB_PACKAGE_libE57Format
   GIT_REPOSITORY https://github.com/MeshInspector/libE57Format
-  GIT_TAG 1816f72de58b27208a8f03c7213ba4039517402a
+  GIT_TAG 1f14b9ab86bd8599f19f8d79d8568b6a2548ebe8
 )
 
 set(MESHLIB_PACKAGE_libjpeg-turbo
@@ -114,9 +129,10 @@ set(MESHLIB_PACKAGE_mbedtls
   GIT_TAG v3.5.0
 )
 
-set(MESHLIB_PACKAGE_mrbind-pybind11
-  GIT_REPOSITORY https://github.com/MeshInspector/mrbind-pybind11
-  GIT_TAG f11e5ce8140ea8c7e8cf8156c18394aa73823024
+# the same version as the vcpkg mimalloc port, see mr_find_mimalloc in cmake/Modules/Mimalloc.cmake
+set(MESHLIB_PACKAGE_mimalloc
+  GIT_REPOSITORY https://github.com/microsoft/mimalloc.git
+  GIT_TAG v3.5.3
 )
 
 set(MESHLIB_PACKAGE_nlohmann-json

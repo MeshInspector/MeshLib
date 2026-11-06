@@ -337,9 +337,22 @@ inline Box<V> transformed( const Box<V> & box, const AffineXf<V> & xf )
 {
     if ( !box.valid() )
         return {};
+    // every coordinate of xf( p ) is monotone in each coordinate of p, even with rounding,
+    // so its minimum and maximum over the corners of the box are reached at the corners selected by the signs of the matrix row
     Box<V> res;
-    for ( const auto & p : getCorners( box ) )
-        res.include( xf( p ) );
+    for ( int i = 0; i < Box<V>::elements; ++i )
+    {
+        const auto & row = xf.A[i];
+        V lo, hi;
+        for ( int j = 0; j < Box<V>::elements; ++j )
+        {
+            const bool pos = row[j] >= 0;
+            lo[j] = pos ? box.min[j] : box.max[j];
+            hi[j] = pos ? box.max[j] : box.min[j];
+        }
+        res.min[i] = dot( row, lo ) + xf.b[i];
+        res.max[i] = dot( row, hi ) + xf.b[i];
+    }
     return res;
 }
 /// this version returns input box as is if pointer to transformation is null

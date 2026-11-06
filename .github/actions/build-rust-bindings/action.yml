@@ -1,0 +1,52 @@
+name: Build Rust bindings
+description: >
+  Installs Rust if needed, generates the Rust bindings from the C bindings
+  (`make -f scripts/mrbind/generate.mk TARGET=rust generate`), then builds
+  and runs the Rust examples and tests against the freshly built C libraries.
+  The C bindings must have been built already.
+
+inputs:
+  lib-dir:
+    required: true
+    description: >
+      Absolute path of the directory with the MeshLib and MeshLibC2 shared
+      libraries, for linking and for the dynamic loader when running.
+  windows-vsdevcmd:
+    required: false
+    default: ''
+    description: >
+      Windows only: the `call ...\VsDevCmd.bat ...` command that sets up the
+      MSVC environment for `generate_win.bat`.
+
+runs:
+  using: composite
+  steps:
+    - name: Install Rust
+      uses: ./.github/actions/setup-rust
+
+    - name: Build and run Rust examples and tests
+      if: runner.os != 'Windows'
+      shell: bash
+      env:
+        MESHLIB_LIB_DIR: ${{ inputs.lib-dir }}
+        LD_LIBRARY_PATH: ${{ inputs.lib-dir }}
+        DYLD_LIBRARY_PATH: ${{ inputs.lib-dir }}
+      run: |
+        set -eu
+        export CARGO_TARGET_DIR="$PWD/source/MeshLibRust/target"
+        cargo build --manifest-path examples/rust-examples/Cargo.toml
+        "$CARGO_TARGET_DIR/debug/MeshBoolean"
+        cargo test --manifest-path source/MRTestRust/Cargo.toml
+
+    - name: Build and run Rust examples and tests (Windows)
+      if: runner.os == 'Windows'
+      shell: cmd
+      env:
+        MESHLIB_LIB_DIR: ${{ inputs.lib-dir }}
+      run: |
+        ${{ inputs.windows-vsdevcmd }} || exit /b 1
+        set CARGO_TARGET_DIR=%CD%\source\MeshLibRust\target
+        cargo build --manifest-path examples/rust-examples/Cargo.toml || exit /b 1
+        set PATH=${{ inputs.lib-dir }};%PATH%
+        "%CARGO_TARGET_DIR%\debug\MeshBoolean.exe" || exit /b 1
+        cargo test --manifest-path source/MRTestRust/Cargo.toml || exit /b 1

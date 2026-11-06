@@ -22,7 +22,10 @@ int main()
     // perform boolean operation
     MR::BooleanResult result = MR::boolean( sphere1, sphere2, MR::BooleanOperation::Intersection, { .mapper = &mapper } );
     if ( !result.valid() )
+    {
         std::cerr << result.errorString << std::endl;
+        return 1;
+    }
 
     MR::Mesh resultMesh = *result;
 //! [0]

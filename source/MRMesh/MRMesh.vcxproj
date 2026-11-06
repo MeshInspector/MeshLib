@@ -25,6 +25,7 @@
     <ClInclude Include="MRBoxNesting.h" />
     <ClInclude Include="MRCurve.h" />
     <ClInclude Include="MRDivRound.h" />
+    <ClInclude Include="MRRound.h" />
     <ClInclude Include="MRFastInt128.h" />
     <ClInclude Include="MRFastInt.h" />
     <ClInclude Include="MRVarBigInt.h" />
@@ -145,16 +146,22 @@
     <ClInclude Include="MRFillContours2D.h" />
     <ClInclude Include="MRGcodeProcessor.h" />
     <ClInclude Include="MRGcodeLoad.h" />
+    <ClInclude Include="MRGcodeSave.h" />
     <ClInclude Include="MRGraph.h" />
     <ClInclude Include="MRGridSettings.h" />
     <ClInclude Include="MRHeapBytes.h" />
     <ClInclude Include="MRHistoryAction.h" />
     <ClInclude Include="MRIdentifyVertices.h" />
     <ClInclude Include="MRImage.h" />
+    <ClInclude Include="MRScalarConvert.h" />
     <ClInclude Include="MRImageLoad.h" />
     <ClInclude Include="MRImageSave.h" />
+    <ClInclude Include="MRRaster.h" />
+    <ClInclude Include="MRRasterLoad.h" />
+    <ClInclude Include="MRRasterSave.h" />
     <ClInclude Include="MRInnerShell.h" />
     <ClInclude Include="MRInSphere.h" />
+    <ClInclude Include="MRCutTrianglePredicates.h" />
     <ClInclude Include="MRIOParsing.h" />
     <ClInclude Include="MRIsNaN.h" />
     <ClInclude Include="MRMapEdge.h" />
@@ -239,6 +246,7 @@
     <ClInclude Include="MRPointObject.h" />
     <ClInclude Include="MRPointToPlaneAligningTransform.h" />
     <ClInclude Include="MRPointToPointAligningTransform.h" />
+    <ClInclude Include="MRRigidXfRansac.h" />
     <ClInclude Include="MRPolyline.h" />
     <ClInclude Include="MRPolyline2Collide.h" />
     <ClInclude Include="MRPolyline2Intersect.h" />
@@ -281,7 +289,6 @@
     <ClInclude Include="MRTbbTaskArenaAndGroup.h" />
     <ClInclude Include="MRTelemetry.h" />
     <ClInclude Include="MRTextureColors.h" />
-    <ClInclude Include="MRTiffIO.h" />
     <ClInclude Include="MRRectIndexer.h" />
     <ClInclude Include="MRRestoringStreamsSink.h" />
     <ClInclude Include="MRSceneSettings.h" />
@@ -296,7 +303,6 @@
     <ClInclude Include="MRSurfaceDistanceBuilder.h" />
     <ClInclude Include="MRSurroundingContour.h" />
     <ClInclude Include="MRSymMatrix2.h" />
-    <ClInclude Include="MRTerrainTriangulation.h" />
     <ClInclude Include="MRDelaunayTriangulationXY.h" />
     <ClInclude Include="MRCameraPointsTriangulation.h" />
     <ClInclude Include="MRTimeRecord.h" />
@@ -316,6 +322,8 @@
     <ClInclude Include="MREdgeIterator.h" />
     <ClInclude Include="MRAffineXf3.h" />
     <ClInclude Include="MRBestFit.h" />
+    <ClInclude Include="MRLocalConvexity.h" />
+    <ClInclude Include="MRAllocator.h" />
     <ClInclude Include="MRBitSet.h" />
     <ClInclude Include="MRBox.h" />
     <ClInclude Include="MRCube.h" />
@@ -354,6 +362,7 @@
     <ClInclude Include="MRReducePath.h" />
     <ClInclude Include="MRPointCloud.h" />
     <ClInclude Include="MRPointCloudMakeNormals.h" />
+    <ClInclude Include="MRPointCloudFPFH.h" />
     <ClInclude Include="MRPointCloudRadius.h" />
     <ClInclude Include="MRPointsInBall.h" />
     <ClInclude Include="MRPointsLoad.h" />
@@ -361,6 +370,7 @@
     <ClInclude Include="MRPointsSave.h" />
     <ClInclude Include="MRPolylineProject.h" />
     <ClInclude Include="MRPrecisePredicates3.h" />
+    <ClInclude Include="MRPrecisePredicates3Poly.h" />
     <ClInclude Include="MRRegularMapMesher.h" />
     <ClInclude Include="MRRegularGridMesh.h" />
     <ClInclude Include="MRSceneRoot.h" />
@@ -546,6 +556,7 @@
     <ClCompile Include="MRDirectory.cpp" />
     <ClCompile Include="MRDistanceMap.cpp" />
     <ClCompile Include="MRBestFit.cpp" />
+    <ClCompile Include="MRLocalConvexity.cpp" />
     <ClCompile Include="MRBitSet.cpp" />
     <ClCompile Include="MRBase64.cpp" />
     <ClCompile Include="MRCube.cpp" />
@@ -573,8 +584,10 @@
     <ClCompile Include="MRFixSelfIntersections.cpp" />
     <ClCompile Include="MRGcodeProcessor.cpp" />
     <ClCompile Include="MRGcodeLoad.cpp" />
+    <ClCompile Include="MRGcodeSave.cpp" />
     <ClCompile Include="MRHistoryAction.cpp" />
     <ClCompile Include="MRImage.cpp" />
+    <ClCompile Include="MRScalarConvert.cpp" />
     <ClCompile Include="MRIOFilters.cpp" />
     <ClCompile Include="MRIterativeSampling.cpp" />
     <ClCompile Include="MRLevelOfDetails.cpp" />
@@ -586,9 +599,13 @@
     <ClCompile Include="MRIdentifyVertices.cpp" />
     <ClCompile Include="MRImageLoad.cpp" />
     <ClCompile Include="MRImageSave.cpp" />
+    <ClCompile Include="MRRaster.cpp" />
+    <ClCompile Include="MRRasterLoad.cpp" />
+    <ClCompile Include="MRRasterSave.cpp" />
     <ClCompile Include="MRImproveSampling.cpp" />
     <ClCompile Include="MRInnerShell.cpp" />
     <ClCompile Include="MRInSphere.cpp" />
+    <ClCompile Include="MRCutTrianglePredicates.cpp" />
     <ClCompile Include="MRIntersectionContour.cpp" />
     <ClCompile Include="MRInTreePathBuilder.cpp" />
     <ClCompile Include="MRIOFormatsRegistry.cpp" />
@@ -644,6 +661,7 @@
     <ClCompile Include="MRPlaneObject.cpp" />
     <ClCompile Include="MRPointCloud.cpp" />
     <ClCompile Include="MRPointCloudMakeNormals.cpp" />
+    <ClCompile Include="MRPointCloudFPFH.cpp" />
     <ClCompile Include="MRPointCloudRadius.cpp" />
     <ClCompile Include="MRPointCloudRelax.cpp" />
     <ClCompile Include="MRPointCloudTriangulation.cpp" />
@@ -655,6 +673,7 @@
     <ClCompile Include="MRPointsSave.cpp" />
     <ClCompile Include="MRPointToPlaneAligningTransform.cpp" />
     <ClCompile Include="MRPointToPointAligningTransform.cpp" />
+    <ClCompile Include="MRRigidXfRansac.cpp" />
     <ClCompile Include="MRPolyline.cpp" />
     <ClCompile Include="MRPolyline2Collide.cpp" />
     <ClCompile Include="MRPolyline2Intersect.cpp" />
@@ -695,7 +714,6 @@
     <ClCompile Include="MRTelemetry.cpp" />
     <ClCompile Include="MRTelemetryStlHead.cpp" />
     <ClCompile Include="MRTextureColors.cpp" />
-    <ClCompile Include="MRTiffIO.cpp" />
     <ClCompile Include="MRRectIndexer.cpp" />
     <ClCompile Include="MRSceneColors.cpp" />
     <ClCompile Include="MRMeshComponents.cpp" />

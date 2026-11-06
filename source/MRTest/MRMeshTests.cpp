@@ -5,6 +5,11 @@
 #include <gtest/gtest.h>
 #include <MRMesh/MRBitSetParallelFor.h>
 #include <MRMesh/MRPartMappingAdapters.h>
+#include <MRMesh/MRMakeSphereMesh.h>
+#include <MRMesh/MRAABBTree.h>
+#include <MRMesh/MRBuffer.h>
+#include <MRMesh/MRMapOrHashMap.h>
+#include <atomic>
 
 namespace MR
 {
@@ -440,13 +445,41 @@ TEST(MRMesh, AddMeshPart)
     EXPECT_EQ( edgeHashMap.getHashMap()->size(), ne );
 }
 
+TEST( MRMesh, MapOrHashMapForEachParallel )
+{
+    constexpr int n = 100000;
+    for ( bool hash : { false, true } )
+    {
+        auto map = hash ? VertMapOrHashMap::createHashMap() : VertMapOrHashMap::createMap( n );
+        for ( int i = 0; i < n; i += 3 )
+            setAt( map, VertId( i ), VertId( n - i ) );
+        if ( auto h = map.getHashMap() )
+            for ( int i = 0; i < n; i += 9 )
+                h->erase( VertId( i ) ); // deleted slots
+        std::vector<std::atomic<int>> visits( n );
+        map.forEachParallel( [&] ( VertId key, VertId val )
+        {
+            EXPECT_EQ( val, VertId( n - key ) );
+            ++visits[key];
+        } );
+        int numVisited = 0;
+        for ( int i = 0; i < n; ++i )
+        {
+            const int expected = i % 3 == 0 && !( hash && i % 9 == 0 ) ? 1 : 0;
+            EXPECT_EQ( visits[i], expected ) << i;
+            numVisited += visits[i];
+        }
+        EXPECT_EQ( numVisited, hash ? n / 3 + 1 - ( n / 9 + 1 ) : n / 3 + 1 );
+    }
+}
+
 TEST( MRMesh, BasicExport )
 {
     Mesh mesh = makeCube();
 
     const std::vector<ThreeVertIds> triangles = mesh.topology.getAllTriVerts();
 
-    const std::vector<Vector3f> & points =  mesh.points.vec_;
+    const VertCoords & points = mesh.points;
     const int * vertexTripples = reinterpret_cast<const int*>( triangles.data() );
 
     (void)points;
@@ -549,6 +582,22 @@ TEST( MRMesh, isOutside )
     Mesh mesh = makeCube();
     EXPECT_TRUE( mesh.isOutside( Vector3f( 2, 0, 0 ) ) );
     EXPECT_FALSE( mesh.isOutside( Vector3f( 0, 0, 0 ) ) );
+}
+
+// packOptimally( false ) orders faces by an already constructed tree, as packOptimally( true ) does, and drops the tree
+TEST( MRMesh, PackOptimallyWithCachedTree )
+{
+    const auto src = makeSphere( { .numMeshVertices = 1000 } );
+    Mesh a = src, b = src;
+    (void)a.getAABBTree();
+    (void)b.getAABBTree();
+    a.packOptimally( false );
+    b.packOptimally( true );
+    EXPECT_FALSE( a.getAABBTreeNotCreate() );
+    EXPECT_TRUE( b.getAABBTreeNotCreate() );
+    EXPECT_EQ( a.points, b.points );
+    EXPECT_EQ( a.topology, b.topology );
+    EXPECT_TRUE( a.topology.checkValidity() );
 }
 
 } //namespace MR

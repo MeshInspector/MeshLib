@@ -242,7 +242,7 @@ Expected<Mesh> makeRegularGridMesh( size_t width, size_t height,
 Expected<Mesh> makeRegularGridMesh( VertCoords points, ProgressCallback cb )
 {
     MR_TIMER;
-    tbb::parallel_sort( points.vec_.begin(), points.vec_.end(), [] ( const auto& l, const auto& r )
+    tbb::parallel_sort( begin( points ), end( points ), [] ( const auto& l, const auto& r )
     {
         return l.y < r.y;
     } );
@@ -256,7 +256,7 @@ Expected<Mesh> makeRegularGridMesh( VertCoords points, ProgressCallback cb )
     while ( gCounter != points.size() )
     {
         size_t counter = 0;
-        while ( points.vec_[gCounter + counter].y == points.vec_[gCounter].y )
+        while ( gCounter + counter < points.size() && points[VertId( gCounter + counter )].y == points[VertId( gCounter )].y )
             ++counter;
         positionOffsets.push_back( gCounter );
         lineWidths.push_back( counter );
@@ -270,7 +270,7 @@ Expected<Mesh> makeRegularGridMesh( VertCoords points, ProgressCallback cb )
     {
         if ( i + 1 == positionOffsets.size() )
             return;
-        std::sort( points.vec_.begin() + positionOffsets[i], points.vec_.begin() + positionOffsets[i + 1],
+        std::sort( begin( points ) + positionOffsets[i], begin( points ) + positionOffsets[i + 1],
             [] ( const auto& l, const auto& r ) { return l.x < r.x; } );
     }, subprogress( cb, 0.2f, 0.8f ) );
 
@@ -288,7 +288,7 @@ Expected<Mesh> makeRegularGridMesh( VertCoords points, ProgressCallback cb )
     },
         [&] ( size_t x, size_t y )->Vector3f
     {
-        return points.vec_[positionOffsets[y] + x];
+        return points[VertId( positionOffsets[y] + x )];
     }, {}, cb );
 
     if ( cb && !cb( 1.0f ) )

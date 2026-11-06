@@ -10,10 +10,21 @@
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRRegionBoundary.h>
 #include <MRMesh/MRMakeSphereMesh.h>
+#include <MRMesh/MRMeshCollide.h>
 #include <MRMesh/MRMeshCollidePrecise.h>
+#include <MRMesh/MRMeshFixer.h>
+#include <MRMesh/MREdgeIterator.h>
 #include <MRMesh/MRIntersectionContour.h>
 #include <MRMesh/MRAABBTree.h>
+#include <MRMesh/MRMeshComponents.h>
 #include <MRMesh/MRConstants.h>
+#include <MRMesh/MRRegularGridMesh.h>
+#include <MRMesh/MRMakePlane.h>
+#include <MRMesh/MREmbedTerrainStructure.h>
+#include <MRMesh/MRMeshProject.h>
+#include <MRMesh/MRUniteManyMeshes.h>
+#include <MRMesh/MRMovementBuildBody.h>
+#include <MRPch/MRSuppressWarning.h>
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <tuple>
@@ -106,7 +117,7 @@ static Mesh makeWedge( float length, float halfWidth, float halfAngle )
 {
     const float h = length * std::tan( halfAngle );
     Mesh res;
-    res.points = std::vector<Vector3f>{
+    res.points = VertCoords{
         { 0.f, -halfWidth, 0.f }, { 0.f, halfWidth, 0.f },
         { -length, -halfWidth, h }, { -length, halfWidth, h },
         { -length, -halfWidth, -h }, { -length, halfWidth, -h } };
@@ -140,10 +151,409 @@ TEST( MRMesh, BooleanDisjointMeshes )
         makeBox( { 5.f, 5.f, 5.f }, { 6.f, 6.f, 6.f } ) );
 }
 
-TEST( MRMesh, BooleanMultipleEdgePropogationSort )
+// open square of two triangles in the plane z = min.z with the normal +Z
+static Mesh makeSquare( const Vector3f& min, float size )
 {
-    Mesh meshA;
-    meshA.points = std::vector<Vector3f>
+    Mesh res;
+    res.points = VertCoords{ min, min + Vector3f( size, 0.f, 0.f ), min + Vector3f( size, size, 0.f ), min + Vector3f( 0.f, size, 0.f ) };
+    res.topology = MeshBuilder::fromTriangles( { { 0_v, 1_v, 2_v }, { 0_v, 2_v, 3_v } } );
+    return res;
+}
+
+// a is behind the plane of b but projects on its boundary, so it is not inside of b, and union must keep it
+TEST( MRMesh, BooleanBeyondOpenBoundary )
+{
+    const Mesh a = makeSquare( { 0.f, 0.f, 0.f }, 1.f );
+    const Mesh b = makeSquare( { 100.f, 100.f, 10.f }, 1.f );
+    EXPECT_FALSE( isInside( a, b ) );
+    EXPECT_FALSE( isInside( b, a ) );
+    // behind the plane of an open surface away from its boundary is still inside
+    EXPECT_TRUE( isInside( makeSquare( { 40.f, 20.f, -1.f }, 1.f ), makeSquare( { 0.f, 0.f, 0.f }, 100.f ) ) );
+
+    const auto xf = AffineXf3f::translation( { 7.3f, -2.1f, 0.6f } ) *
+        AffineXf3f::linear( Matrix3f::rotation( Vector3f( 1.f, 2.f, 3.f ).normalized(), 0.7f ) );
+    for ( bool swapped : { false, true } )
+    {
+        const Mesh& m0 = swapped ? b : a;
+        const Mesh& m1 = swapped ? a : b;
+
+        const auto res = boolean( m0, m1, BooleanOperation::Union );
+        ASSERT_TRUE( res.valid() );
+        EXPECT_EQ( res.mesh.topology.numValidFaces(), 4 );
+
+        Mesh m1xf = m1;
+        m1xf.transform( xf.inverse() );
+        const auto resXf = boolean( m0, m1xf, BooleanOperation::Union, &xf );
+        ASSERT_TRUE( resXf.valid() );
+        EXPECT_EQ( resXf.mesh.topology.numValidFaces(), 4 );
+    }
+}
+
+// a small sphere pierces a big triangle of the cube without crossing its edges (a lone contour), alone, so that nothing else
+// cuts the triangle, or with another sphere crossing the edges of the same triangle, or in the hole of a torus lying in the plane
+// of the triangle, which cuts it along two nested circles around the sphere's one; the cut connects the lone contours with the rest
+// of the triangle, and the mapper maps the faces made of the triangle back to it
+TEST( MRMesh, BooleanLoneContours )
+{
+    const Mesh cube = makeCube( Vector3f::diagonal( 4.f ), Vector3f::diagonal( -2.f ) );
+    Mesh lone = makeSphere( { .radius = 0.2f, .numMeshVertices = 200 } );
+    lone.transform( AffineXf3f::translation( Vector3f( 1.f, -0.4f, 2.f ) ) );
+    Mesh crossing = makeSphere( { .radius = 0.3f, .numMeshVertices = 300 } );
+    crossing.transform( AffineXf3f::translation( Vector3f( 0.f, 0.f, 2.f ) ) );
+    Mesh both = lone;
+    both.addMesh( crossing );
+    // the torus cuts the triangle along circles of radii about 0.4 and 0.8, and the small sphere in its hole along one of radius 0.15,
+    // around a point 1.13 or more from the sides; the torus is a little above the plane z = 2, which its inner circle of vertices would be in otherwise
+    Mesh islands = makeTorus( 0.6f, 0.2f, 16, 8 );
+    islands.transform( AffineXf3f::translation( Vector3f( 0.8f, -0.8f, 2.01f ) ) );
+    Mesh inner = makeSphere( { .radius = 0.15f, .numMeshVertices = 100 } );
+    inner.transform( AffineXf3f::translation( Vector3f( 0.8f, -0.8f, 2.f ) ) );
+    islands.addMesh( inner );
+    const auto xf = AffineXf3f::translation( Vector3f( 0.3f, -0.2f, 0.25f ) ) *
+        AffineXf3f::linear( Matrix3f::rotation( Vector3f( 1.f, 2.f, 3.f ).normalized(), 0.7f ) );
+    // the triangle of the lone contours on the top z = 2 of the cube, below its diagonal y = x
+    const FaceId loneFace = findProjection( Vector3f( 1.f, -0.4f, 2.f ), cube ).proj.face;
+    ASSERT_TRUE( loneFace.valid() );
+
+    // every face of a result comes from a valid face of one input; the faces in the plane of the triangle strictly inside it come from it,
+    // and those from it are inside it or on its sides
+    auto checkMapper = [&] ( const BooleanResult& r, const BooleanResultMapper& mapper, const Mesh& a, const Mesh& b, bool cubeIsA )
+    {
+        const auto mapA = mapper.getNew2OldFaceMap( BooleanResultMapper::MapObject::A );
+        const auto mapB = mapper.getNew2OldFaceMap( BooleanResultMapper::MapObject::B );
+        const float eps = 1e-4f;
+        int numInside = 0;
+        for ( auto f : r.mesh.topology.getValidFaces() )
+        {
+            const auto fa = f < mapA.size() ? mapA[f] : FaceId();
+            const auto fb = f < mapB.size() ? mapB[f] : FaceId();
+            EXPECT_NE( fa.valid(), fb.valid() );
+            EXPECT_TRUE( fa ? a.topology.hasFace( fa ) : b.topology.hasFace( fb ) );
+            const bool fromLone = ( cubeIsA ? fa : fb ) == loneFace;
+            const auto c = r.mesh.triCenter( f );
+            // the slivers along the contours have no reliable normal, while the other faces of the spheres there are nearly vertical
+            if ( std::abs( c.z - 2.f ) < eps && r.mesh.area( f ) > 1e-6 && std::abs( r.mesh.normal( f ).z ) > 0.99f
+                && c.y < c.x - eps && c.x < 2.f - eps && c.y > -2.f + eps )
+            {
+                EXPECT_TRUE( fromLone );
+                ++numInside;
+            }
+            if ( fromLone )
+            {
+                EXPECT_TRUE( std::abs( c.z - 2.f ) < eps && c.y < c.x + eps && c.x < 2.f + eps && c.y > -2.f - eps );
+            }
+        }
+        EXPECT_GT( numInside, 0 );
+    };
+
+    for ( const Mesh* spheres : { &lone, &both, &islands } )
+    {
+        const double tol = 1e-5 * ( cube.volume() + spheres->volume() );
+        for ( bool swap : { false, true } )
+        {
+            for ( const AffineXf3f* rigidB2A : { (const AffineXf3f*)nullptr, &xf } )
+            {
+                // rigidB2A moves the second mesh back in place
+                const Mesh& a = swap ? *spheres : cube;
+                Mesh b = swap ? cube : *spheres;
+                if ( rigidB2A )
+                    b.transform( rigidB2A->inverse() );
+                BooleanResultMapper interMapper, uniMapper, diffMapper;
+                const auto inter = boolean( a, b, BooleanOperation::Intersection, rigidB2A, &interMapper );
+                const auto uni = boolean( a, b, BooleanOperation::Union, rigidB2A, &uniMapper );
+                const auto diff = boolean( a, b, BooleanOperation::DifferenceAB, rigidB2A, &diffMapper );
+                ASSERT_TRUE( inter.valid() ) << inter.errorString;
+                ASSERT_TRUE( uni.valid() ) << uni.errorString;
+                ASSERT_TRUE( diff.valid() ) << diff.errorString;
+                for ( const auto* r : { &inter, &uni, &diff } )
+                    EXPECT_EQ( r->mesh.topology.findNumHoles(), 0 );
+                // an island left in its triangle would make a separate component; the components of the intersection are the lower halves
+                // of the spheres and of the torus, which do not touch one another
+                EXPECT_EQ( MeshComponents::getNumComponents( uni.mesh ), 1 );
+                EXPECT_EQ( MeshComponents::getNumComponents( inter.mesh ), spheres == &lone ? 1 : 2 );
+                EXPECT_NEAR( uni.mesh.volume() + inter.mesh.volume(), a.volume() + b.volume(), tol );
+                EXPECT_NEAR( diff.mesh.volume() + inter.mesh.volume(), a.volume(), tol );
+                checkMapper( inter, interMapper, a, b, !swap );
+                checkMapper( uni, uniMapper, a, b, !swap );
+                checkMapper( diff, diffMapper, a, b, !swap );
+            }
+        }
+    }
+}
+
+// the precut output of the mesh that the operation does not cut (A for InsideB, B for InsideA) takes it only after the cut
+// of the other mesh, which sorts its intersections by that mesh itself, not by a copy; here the cut of the cube connects
+// a lone contour, whose exact points are made of the vertices of the sphere
+TEST( MRMesh, BooleanPreCutOfUncutMesh )
+{
+    const Mesh cube = makeCube( Vector3f::diagonal( 4.f ), Vector3f::diagonal( -2.f ) );
+    Mesh sphere = makeSphere( { .radius = 0.2f, .numMeshVertices = 200 } );
+    sphere.transform( AffineXf3f::translation( Vector3f( 1.f, -0.4f, 2.f ) ) );
+
+    for ( bool swap : { false, true } )
+    {
+        const Mesh& a = swap ? sphere : cube;
+        const Mesh& b = swap ? cube : sphere;
+        const auto op = swap ? BooleanOperation::InsideB : BooleanOperation::InsideA;
+        const auto cubeObj = swap ? BooleanResultMapper::MapObject::B : BooleanResultMapper::MapObject::A;
+        BooleanResultMapper fullMapper;
+        const auto full = boolean( a, b, op, { .mapper = &fullMapper } );
+        ASSERT_TRUE( full.valid() ) << full.errorString;
+        EXPECT_TRUE( full.mesh.topology.checkValidity() );
+        EXPECT_EQ( full.mesh.topology.findNumHoles(), 1 ); // the disc of the cube inside the sphere
+        EXPECT_GT( full.mesh.topology.numValidFaces(), 0 );
+
+        // with the precut output, through the const& overload and the Mesh&& one, the cube is cut as without it
+        for ( bool rvalue : { false, true } )
+        {
+            BooleanPreCutResult preCut;
+            BooleanResultMapper mapper;
+            const BooleanParameters params{ .mapper = &mapper, .outPreCutA = swap ? &preCut : nullptr, .outPreCutB = swap ? nullptr : &preCut };
+            const auto res = rvalue ? boolean( Mesh( a ), Mesh( b ), op, params ) : boolean( a, b, op, params );
+            ASSERT_TRUE( res.valid() ) << res.errorString;
+            EXPECT_TRUE( res.meshABadContourFaces.none() && res.meshBBadContourFaces.none() );
+            EXPECT_TRUE( preCut.mesh == sphere );
+            EXPECT_TRUE( mapper.getMaps( cubeObj ).cut2origin == fullMapper.getMaps( cubeObj ).cut2origin );
+        }
+    }
+}
+
+// the precut output of either mesh of an operation cutting both, or of both meshes at once, has what cutMesh needs for the boolean's
+// exact cut: the cut of the precut mesh by its contours with sortData( the other mesh ) is the boolean's own one, here of a cube
+// with a lone contour of a small sphere, as mesh A and as mesh B, also with a rotated rigidB2A, through both overloads (where the Mesh&&
+// one copies no mesh: the cut of the other mesh sorts its intersections by the uncut one itself, and with both outputs nothing is cut)
+TEST( MRMesh, BooleanPreCutExactCut )
+{
+    const Mesh cube = makeCube( Vector3f::diagonal( 4.f ), Vector3f::diagonal( -2.f ) );
+    Mesh sphere = makeSphere( { .radius = 0.2f, .numMeshVertices = 200 } );
+    sphere.transform( AffineXf3f::translation( Vector3f( 1.f, -0.4f, 2.f ) ) );
+    const auto xf = AffineXf3f::translation( Vector3f( 0.3f, -0.2f, 0.25f ) ) *
+        AffineXf3f::linear( Matrix3f::rotation( Vector3f( 1.f, 2.f, 3.f ).normalized(), 0.7f ) );
+    const auto op = BooleanOperation::Intersection; // A is filled on the left of its cut, B on the right
+
+    for ( bool swap : { false, true } )
+    {
+        for ( const AffineXf3f* rigidB2A : { (const AffineXf3f*)nullptr, &xf } )
+        {
+            // rigidB2A moves the second mesh back in place
+            const Mesh& a = swap ? sphere : cube;
+            Mesh b = swap ? cube : sphere;
+            if ( rigidB2A )
+                b.transform( rigidB2A->inverse() );
+            BooleanResultMapper mapper;
+            const auto full = boolean( a, b, op, { .rigidB2A = rigidB2A, .mapper = &mapper } );
+            ASSERT_TRUE( full.valid() ) << full.errorString;
+
+            for ( bool wantA : { true, false } )
+            {
+                for ( bool wantB : { true, false } )
+                {
+                    if ( !wantA && !wantB )
+                        continue;
+                    for ( bool rvalue : { false, true } )
+                    {
+                        BooleanPreCutResult preA, preB;
+                        const BooleanParameters params{ .rigidB2A = rigidB2A, .outPreCutA = wantA ? &preA : nullptr, .outPreCutB = wantB ? &preB : nullptr };
+                        const auto res = rvalue ? boolean( Mesh( a ), Mesh( b ), op, params ) : boolean( a, b, op, params );
+                        ASSERT_TRUE( res.valid() ) << res.errorString;
+                        for ( bool isA : { true, false } )
+                        {
+                            if ( !( isA ? wantA : wantB ) )
+                                continue;
+                            SCOPED_TRACE( std::string( swap ? "sphere is A" : "cube is A" ) + ( rigidB2A ? ", rigidB2A" : "" ) +
+                                ( wantA && wantB ? ", both outputs" : "" ) + ( isA ? ", output A" : ", output B" ) + ( rvalue ? ", Mesh&&" : "" ) );
+                            const auto& pre = isA ? preA : preB;
+                            EXPECT_TRUE( pre.mesh == ( isA ? a : b ) );
+                            EXPECT_EQ( pre.isMeshA, isA );
+                            EXPECT_EQ( pre.meshAVertsNum, a.topology.vertSize() );
+                            EXPECT_FALSE( pre.intersections.empty() );
+                            EXPECT_EQ( pre.rigidB2A.has_value(), rigidB2A != nullptr );
+                            if ( rigidB2A && pre.rigidB2A )
+                            {
+                                EXPECT_TRUE( *pre.rigidB2A == *rigidB2A );
+                            }
+
+                            Mesh cut = pre.mesh;
+                            FaceMap new2Old;
+                            const auto sortData = pre.sortData( isA ? b : a );
+                            const auto cutRes = cutMesh( cut, pre.contours, { .sortData = &sortData, .new2OldMap = &new2Old,
+                                .fillPart = isA ? CutMeshParameters::FillPart::Left : CutMeshParameters::FillPart::Right } );
+                            EXPECT_TRUE( cutRes.fbsWithContourIntersections.none() );
+                            EXPECT_TRUE( new2Old == mapper.getMaps( isA ? BooleanResultMapper::MapObject::A : BooleanResultMapper::MapObject::B ).cut2origin );
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// selfBoolean of a mesh of two parts, a cube and a small sphere piercing a big triangle of it without crossing its edges
+// (a lone contour); the parts are only reconnected along their intersection, so the result keeps the sum of their volumes
+TEST( MRMesh, SelfBooleanLoneContour )
+{
+    Mesh mesh = makeCube( Vector3f::diagonal( 4.f ), Vector3f::diagonal( -2.f ) );
+    Mesh sphere = makeSphere( { .radius = 0.2f, .numMeshVertices = 200 } );
+    sphere.transform( AffineXf3f::translation( Vector3f( 1.f, -0.4f, 2.f ) ) );
+    const double volume = mesh.volume() + sphere.volume();
+    mesh.addMesh( sphere );
+
+    const auto res = selfBoolean( mesh );
+    ASSERT_TRUE( res.has_value() ) << res.error();
+    EXPECT_TRUE( res->topology.checkValidity() );
+    EXPECT_EQ( res->topology.findNumHoles(), 0 );
+    EXPECT_NEAR( res->volume(), volume, 1e-5 * volume );
+}
+
+// open fan of three triangles around 0_v: the last one crosses the first one from the shared vertex 0_v to its boundary edge 3_v-4_v;
+// the boundary walks from that edge reach 0_v and 2_v, vertices of the first triangle, so the open contour must not be closed through them;
+// edge 3_v-4_v crosses the first triangle downward or upward, so the missing face is on the right of the contour's first edge or on the left of its last one
+TEST( MRMesh, SelfBooleanContourToBoundary )
+{
+    for ( float z : { 0.5f, -0.5f } )
+    {
+        Mesh mesh;
+        mesh.points = VertCoords
+        {
+            { 0.0f, 0.0f, 0.0f },
+            { 1.0f, 0.0f, 0.0f },
+            { 0.0f, 1.0f, 0.0f },
+            { -0.2f, 0.6f, z },
+            { 0.6f, 0.2f, -z }
+        };
+        Triangulation t =
+        {
+            { 0_v, 1_v, 2_v },
+            { 0_v, 2_v, 3_v },
+            { 0_v, 3_v, 4_v }
+        };
+        mesh.topology = MeshBuilder::fromTriangles( t );
+
+        const auto res = selfBoolean( mesh );
+        ASSERT_TRUE( res.has_value() ) << res.error();
+        EXPECT_TRUE( res->topology.checkValidity() );
+        // contours running out to the boundary are not cut yet
+        EXPECT_EQ( res->topology.numValidFaces(), 3 );
+        EXPECT_EQ( res->topology.numValidVerts(), 5 );
+        for ( auto v : mesh.topology.getValidVerts() )
+            EXPECT_LT( ( res->points[v] - mesh.points[v] ).length(), 1e-6f ); // only the round trip through integer coordinates
+    }
+}
+
+// movement bodies of a circle along closed polylines with sharp turns: their self-intersections have folds and triple points
+// (three sheets through one point, where their contours cross); selfBoolean reconnects the sheets along all of them, so that every
+// component of the result bounds a region: its winding number is 0 or 1 (0 or -1 for a void) at the sample points off the surface
+TEST( MRMesh, SelfBooleanNestedIntersections )
+{
+    const Contours3f trajectories =
+    {
+        { { -0.6f, 0.9f, 0.2f }, { 0.2f, 0.7f, -0.4f }, { 0, 0.1f, 0 }, { -0.5f, 0.7f, -0.4f }, { -0.6f, 0.9f, 0.2f } },
+        { { 0, -0.9f, -0.3f }, { -0.8f, 0.7f, -0.3f }, { 0.8f, -0.3f, 0.4f }, { -0.6f, -0.3f, -0.2f }, { 0.9f, -0.2f, 0.3f }, { 0, -0.9f, -0.3f } },
+        { { -0.3f, 0.9f, 0.1f }, { -0.5f, 0.4f, -0.2f }, { -0.9f, -0.9f, 0.2f }, { 0.1f, 0.4f, -0.2f }, { 0, -0.4f, 0.1f }, { -0.3f, 0.9f, 0.1f } },
+        { { -0.8f, 0.5f, -0.2f }, { 0.6f, 0.6f, -0.4f }, { 0.7f, 1, 0 }, { 0.1f, 0.2f, -0.1f }, { 0.7f, -0.8f, 0.1f }, { -0.8f, 0.5f, -0.2f } }
+    };
+    Contour3f circle;
+    for ( int i = 0; i < 16; ++i )
+        circle.push_back( 0.15f * Vector3f( std::cos( i * PI_F / 8 ), std::sin( i * PI_F / 8 ), 0.f ) );
+    circle.push_back( circle.front() );
+    for ( const auto& trajectory : trajectories )
+    {
+        const Mesh mesh = makeMovementBuildBody( { circle }, { trajectory } );
+        const auto res = selfBoolean( mesh );
+        ASSERT_TRUE( res.has_value() ) << res.error();
+        EXPECT_TRUE( res->topology.checkValidity() );
+        EXPECT_EQ( res->topology.findNumHoles(), 0 );
+
+        const auto box = mesh.computeBoundingBox();
+        const int n = 16;
+        std::vector<Vector3f> samples;
+        for ( int i = 0; i < n; ++i )
+            for ( int j = 0; j < n; ++j )
+                for ( int k = 0; k < n; ++k )
+                    samples.push_back( box.min + mult( box.size(), Vector3f( i + 0.5f, j + 0.5f, k + 0.5f ) / float( n ) ) );
+        for ( const auto& component : MeshComponents::getAllComponents( *res ) )
+        {
+            const Mesh part = res->cloneRegion( component );
+            float minWinding = 0, maxWinding = 0;
+            for ( const auto& p : samples )
+            {
+                const float w = part.calcFastWindingNumber( p );
+                if ( std::abs( w - std::round( w ) ) > 0.2f )
+                    continue; // near the surface
+                minWinding = std::min( minWinding, std::round( w ) );
+                maxWinding = std::max( maxWinding, std::round( w ) );
+            }
+            EXPECT_LE( maxWinding - minWinding, 1 );
+        }
+    }
+}
+
+// three overlapping spheres in one mesh, whose surfaces meet at two triple points, where their contours cross: the outer component
+// of the result bounds the union of the spheres, and every component bounds a region of positive volume without crossing itself
+TEST( MRMesh, SelfBooleanThreeSpheres )
+{
+    auto sphere = [] ( const Vector3f& center )
+    {
+        Mesh res = makeSphere( { .radius = 1.f, .numMeshVertices = 300 } );
+        res.transform( AffineXf3f::translation( center ) );
+        return res;
+    };
+    const Mesh a = sphere( { 0.f, 0.f, 0.f } ), b = sphere( { 1.03f, 0.02f, 0.05f } ), c = sphere( { 0.48f, 0.87f, -0.04f } );
+    const auto ab = boolean( a, b, BooleanOperation::Union );
+    ASSERT_TRUE( ab.valid() ) << ab.errorString;
+    const auto uni = boolean( ab.mesh, c, BooleanOperation::Union );
+    ASSERT_TRUE( uni.valid() ) << uni.errorString;
+
+    Mesh mesh = a;
+    mesh.addMesh( b );
+    mesh.addMesh( c );
+    const auto res = selfBoolean( mesh );
+    ASSERT_TRUE( res.has_value() ) << res.error();
+    EXPECT_TRUE( res->topology.checkValidity() );
+    EXPECT_EQ( res->topology.findNumHoles(), 0 );
+    double maxVolume = 0;
+    for ( const auto& component : MeshComponents::getAllComponents( *res ) )
+    {
+        EXPECT_TRUE( findSelfCollidingTriangles( { *res, &component } )->empty() );
+        const double volume = res->volume( &component );
+        EXPECT_GT( volume, 0 );
+        maxVolume = std::max( maxVolume, volume );
+    }
+    // both are made of the same pieces of the same triangles, only the new vertices can be rounded differently (5e-11 here)
+    EXPECT_NEAR( maxVolume, uni.mesh.volume(), 1e-8 * uni.mesh.volume() );
+}
+
+// a cube with two triangles of the same vertices and opposite orientations glued along all their edges through it, a closed part
+// without volume; its crossings with the cube are alike for both triangles, so no cut can resolve them: selfBoolean removes the part,
+// which leaves the cube as it was, also turned inside out or flattened
+TEST( MRMesh, SelfBooleanTwinTriangles )
+{
+    for ( bool flip : { false, true } )
+    {
+        for ( float zScale : { 1.f, 1e-3f } )
+        {
+            Mesh mesh = makeCube( Vector3f::diagonal( 2.f ), Vector3f::diagonal( -1.f ) );
+            mesh.addMesh( Mesh::fromTriangles( { Vector3f( 1.6f, -0.4f, 1.8f ), Vector3f( 0.3f, -1.3f, -0.9f ), Vector3f( 0.5f, 1.7f, -1.3f ) },
+                { { 0_v, 1_v, 2_v }, { 0_v, 2_v, 1_v } } ) );
+            if ( flip )
+                mesh.topology.flipOrientation();
+            mesh.transform( AffineXf3f::linear( Matrix3f::scale( 1.f, 1.f, zScale ) ) );
+            const auto res = selfBoolean( mesh );
+            ASSERT_TRUE( res.has_value() ) << res.error() << " flip " << flip << " zScale " << zScale;
+            EXPECT_TRUE( res->topology.checkValidity() );
+            EXPECT_EQ( res->topology.numValidFaces(), 12 );
+            EXPECT_EQ( res->topology.findNumHoles(), 0 );
+            EXPECT_NEAR( res->volume(), ( flip ? -8. : 8. ) * zScale, 1e-6 * 8 * zScale );
+        }
+    }
+}
+
+// closed mesh of two parts (apexes 3_v and 6_v) stitched along their common boundary, which passes through all vertices of triangle 0_v, 2_v, 1_v
+// of each part, so these two triangles share edges 0_v-2_v and 0_v-1_v, while their edges 1_v-2_v make a multiple edge
+static Mesh makeMeshWithMultipleEdge()
+{
+    Mesh res;
+    res.points = VertCoords
     {
         {0.0f,0.0f,0.0f},
         {-0.5f,1.0f,0.0f},
@@ -152,7 +562,7 @@ TEST( MRMesh, BooleanMultipleEdgePropogationSort )
         {-1.0f,1.5f,0.0f},
         {1.0f,1.5f,0.0f}
     };
-    Triangulation tA =
+    Triangulation t =
     {
         { 0_v, 2_v, 1_v },
         { 1_v, 2_v, 3_v },
@@ -160,16 +570,18 @@ TEST( MRMesh, BooleanMultipleEdgePropogationSort )
         { 2_v, 5_v, 3_v },
         { 3_v, 5_v, 4_v }
     };
-    meshA.topology = MeshBuilder::fromTriangles( tA );
-    {
-        Mesh meshASup = meshA;
-        meshASup.points[3_v] = { 0.0f,1.5f,-0.5f };
+    res.topology = MeshBuilder::fromTriangles( t );
 
+    Mesh second = res;
+    second.points[3_v] = { 0.0f,1.5f,-0.5f };
+    auto border = trackRightBoundaryLoop( res.topology, res.topology.findHoleRepresentiveEdges()[0] );
+    res.addMeshPart( second, true, { border }, { border } );
+    return res;
+}
 
-        auto border = trackRightBoundaryLoop( meshA.topology, meshA.topology.findHoleRepresentiveEdges()[0] );
-
-        meshA.addMeshPart( meshASup, true, { border }, { border } );
-    }
+TEST( MRMesh, BooleanMultipleEdgePropogationSort )
+{
+    const Mesh meshA = makeMeshWithMultipleEdge();
 
     auto meshB = makeCube( Vector3f::diagonal( 2.0f ) );
     meshB.transform( AffineXf3f::translation( Vector3f( -1.5f, -0.2f, -0.5f ) ) );
@@ -179,6 +591,219 @@ TEST( MRMesh, BooleanMultipleEdgePropogationSort )
     {
         EXPECT_TRUE( boolean( meshA, meshB, BooleanOperation( i ) ).valid() );
         EXPECT_TRUE( boolean( meshB, meshA, BooleanOperation( i ) ).valid() );
+    }
+}
+
+// both edges of the multiple edge (see makeMeshWithMultipleEdge) cross a big triangle of the cube at one point inside it, on a lone contour
+// that goes through this point twice, from the upper half of the lens to the lower one; the exact predicates of the cut tell apart the two
+// crossings defined alike by the third vertices of the triangles of each edge, so every boolean and selfBoolean give valid closed meshes
+// with the volumes of the halves of the lens on either side of the cube's side x = 0.1
+TEST( MRMesh, BooleanMultipleEdgeThroughLoneFace )
+{
+    const Mesh lens = makeMeshWithMultipleEdge();
+    const Mesh cube = makeCube( Vector3f::diagonal( 20.f ), Vector3f( 0.1f, -9.f, -0.6f ) );
+    const double volCube = cube.volume(), volLens = lens.volume();
+    EXPECT_NEAR( volCube, 8000., 1e-6 * 8000. );
+    EXPECT_NEAR( volLens, 0.25, 1e-6 * 0.25 );
+    for ( bool swap : { false, true } )
+    {
+        const Mesh& a = swap ? lens : cube;
+        const Mesh& b = swap ? cube : lens;
+        double vols[3] = {};
+        // the volumes of the intersection and the union, and of the difference of the cube and the lens or the other way round
+        const double expected[3] = { 0.100166672, 8000.149845, swap ? 0.1498333365 : 7999.899845 };
+        for ( int i = 0; i < 3; ++i )
+        {
+            const auto op = std::array{ BooleanOperation::Intersection, BooleanOperation::Union, BooleanOperation::DifferenceAB }[i];
+            const auto res = boolean( a, b, op );
+            ASSERT_TRUE( res.valid() ) << res.errorString;
+            EXPECT_TRUE( res.mesh.topology.checkValidity() );
+            EXPECT_EQ( res.mesh.topology.findNumHoles(), 0 );
+            vols[i] = res.mesh.volume();
+            EXPECT_NEAR( vols[i], expected[i], 1e-6 * expected[i] );
+        }
+        const double volA = swap ? volLens : volCube, volB = swap ? volCube : volLens;
+        EXPECT_NEAR( vols[1] + vols[0], volA + volB, 1e-6 * ( volA + volB ) );
+        EXPECT_NEAR( vols[2], volA - vols[0], 1e-6 * ( volA + volB ) );
+    }
+
+    Mesh both = cube;
+    both.addMesh( lens );
+    const auto res = selfBoolean( both );
+    ASSERT_TRUE( res.has_value() ) << res.error();
+    EXPECT_TRUE( res->topology.checkValidity() );
+    EXPECT_EQ( res->topology.findNumHoles(), 0 );
+}
+
+// the tip at 0_v of two triangles with the same vertices (see makeMeshWithMultipleEdge) pokes through a big triangle of the cube:
+// edges 0_v-1_v and 0_v-2_v, which both triangles share, cross it at two points, on a closed lone contour of two points; it has zero area
+// and is dropped, so the boolean and selfBoolean give valid closed meshes
+TEST( MRMesh, BooleanTwoPointLoneContour )
+{
+    const Mesh lens = makeMeshWithMultipleEdge();
+    const Mesh cube = makeCube( Vector3f::diagonal( 20.f ), Vector3f( -3.f, 0.5f, -15.f ) ); // only its side y = 0.5 crosses the lens
+    for ( bool swap : { false, true } )
+    {
+        const Mesh& a = swap ? lens : cube;
+        const Mesh& b = swap ? cube : lens;
+        for ( auto op : { BooleanOperation::Intersection, BooleanOperation::Union, BooleanOperation::DifferenceAB } )
+        {
+            const auto res = boolean( a, b, op );
+            ASSERT_TRUE( res.valid() ) << res.errorString;
+            EXPECT_TRUE( res.mesh.topology.checkValidity() );
+            EXPECT_EQ( res.mesh.topology.findNumHoles(), 0 );
+        }
+    }
+
+    Mesh both = cube;
+    both.addMesh( lens );
+    const auto res = selfBoolean( both );
+    ASSERT_TRUE( res.has_value() ) << res.error();
+    EXPECT_TRUE( res->topology.checkValidity() );
+    EXPECT_EQ( res->topology.findNumHoles(), 0 );
+}
+
+// a corner of a small cube, or the lowest vertex of a small sphere, lies exactly on a big triangle of a cube, the rest of it outside;
+// the edges from that vertex meet the triangle at one point, so simulation of simplicity makes a lone contour of points that are all
+// the same in float (here with the big cube as mesh A), or no contact (as mesh B); either way the results are valid closed meshes
+// with the volumes of meshes touching at a point
+TEST( MRMesh, BooleanVertexOnFace )
+{
+    const Mesh cube = makeCube( Vector3f::diagonal( 4.f ), Vector3f::diagonal( -2.f ) );
+    const Vector3f p( 1.f, -0.4f, 2.f ); // on the top z = 2 of the cube, in its triangle below the diagonal y = x
+    Mesh corner = makeCube( Vector3f::diagonal( 0.4f ), Vector3f::diagonal( -0.2f ) );
+    corner.transform( AffineXf3f::linear( Matrix3f::rotation( Vector3f::diagonal( -1.f ), Vector3f::minusZ() ) ) ); // a corner down
+    Mesh sphere = makeSphere( { .radius = 0.2f, .numMeshVertices = 200 } );
+    for ( Mesh* m : { &corner, &sphere } )
+    {
+        VertId low;
+        for ( auto v : m->topology.getValidVerts() )
+            if ( !low || m->points[v].z < m->points[low].z )
+                low = v;
+        m->transform( AffineXf3f::translation( p - m->points[low] ) );
+        m->points[low] = p; // exactly
+        m->invalidateCaches();
+    }
+
+    for ( const Mesh* tip : { &corner, &sphere } )
+    {
+        for ( bool swap : { false, true } )
+        {
+            const Mesh& a = swap ? *tip : cube;
+            const Mesh& b = swap ? cube : *tip;
+            for ( auto op : { BooleanOperation::Intersection, BooleanOperation::Union, BooleanOperation::DifferenceAB } )
+            {
+                const auto res = boolean( a, b, op );
+                ASSERT_TRUE( res.valid() ) << res.errorString;
+                EXPECT_TRUE( res.mesh.topology.checkValidity() );
+                EXPECT_EQ( res.mesh.topology.findNumHoles(), 0 );
+                const double volume = op == BooleanOperation::Union ? a.volume() + b.volume() : op == BooleanOperation::Intersection ? 0 : a.volume();
+                EXPECT_NEAR( res.mesh.volume(), volume, 1e-6 * cube.volume() );
+            }
+        }
+    }
+}
+
+// a peak of the terrain pokes through a big triangle of the structure without crossing its edges, so the structure is cut along
+// a lone contour; far from the origin with the peak just above the structure, all points of the contour are the same in float,
+// so only the exact predicates tell how to connect it with the corners of the triangle
+TEST( MRMesh, EmbedStructureLoneContour )
+{
+    for ( float shift : { 0.f, 1000.f } )
+    {
+        const float peak = shift == 0 ? 2.f : std::nextafter( 1.f, 2.f );
+        const auto terrain = makeRegularGridMesh( 21, 21, [] ( size_t, size_t ) { return true; }, [&] ( size_t x, size_t y )
+        {
+            return Vector3f( shift + float( x ) - 10.f, shift + float( y ) - 10.f, x == 10 && y == 10 ? peak : 0.f );
+        } );
+        ASSERT_TRUE( terrain.has_value() );
+        Mesh structure = makePlane(); // the peak is inside one of its two triangles
+        structure.transform( AffineXf3f( Matrix3f::scale( 8.f ), Vector3f( shift + 1.f, shift - 1.f, 1.f ) ) );
+        const auto res = embedStructureToTerrain( *terrain, structure, { .fillAngle = PI_F / 4, .cutAngle = PI_F / 4 } );
+        ASSERT_TRUE( res.has_value() ) << res.error();
+        EXPECT_TRUE( res->topology.checkValidity() );
+        EXPECT_EQ( res->topology.findNumHoles(), 1 ); // the border of the terrain
+    }
+}
+
+// the wall of a small structure above a terrain of two big triangles reaches the terrain inside one of them, so the terrain is cut
+// along a lone contour, which the cut connects with the rest of the triangle; every face of the terrain in the result maps to
+// the triangle of the input terrain it is in
+TEST( MRMesh, EmbedStructureLoneTerrainContour )
+{
+    Mesh terrain = makePlane();
+    terrain.transform( AffineXf3f::linear( Matrix3f::scale( 40.f ) ) );
+    Mesh structure = makePlane();
+    structure.transform( AffineXf3f::translation( Vector3f( 8.f, -8.f, 0.5f ) ) ); // above the triangle below the diagonal y = x
+    const FaceId lower = findProjection( Vector3f( 8.f, -8.f, 0.f ), terrain ).proj.face;
+    ASSERT_TRUE( lower.valid() );
+    FaceMap new2Old;
+    const auto res = embedStructureToTerrain( terrain, structure, { .fillAngle = PI_F / 4, .cutAngle = PI_F / 4, .new2oldFaces = &new2Old } );
+    ASSERT_TRUE( res.has_value() ) << res.error();
+    EXPECT_TRUE( res->topology.checkValidity() );
+    EXPECT_EQ( res->topology.findNumHoles(), 1 ); // the border of the terrain
+    int numTerrainFaces = 0;
+    for ( auto f : res->topology.getValidFaces() )
+    {
+        if ( f >= new2Old.size() )
+            continue; // the faces of the structure and its walls come after those of the cut terrain
+        ++numTerrainFaces;
+        const auto c = res->triCenter( f );
+        EXPECT_TRUE( terrain.topology.hasFace( new2Old[f] ) ) << "face " << f;
+        EXPECT_EQ( new2Old[f] == lower, c.y < c.x ) << "face " << f;
+    }
+    EXPECT_GT( numTerrainFaces, 0 );
+}
+
+// two triangles sharing two vertices but not the edge between them (multiple edges connect the vertices) can meet only along
+// the segment between these vertices, so findSelfCollidingEdgeTrisPrecise skips them as the triangles with a shared edge,
+// but still finds all crossings of other edges and triangles
+TEST( MRMesh, SelfCollidingEdgeTrisPreciseMultipleEdges )
+{
+    Mesh mesh = makeMeshWithMultipleEdge();
+    ASSERT_EQ( findMultipleEdges( mesh.topology ).value().size(), 1 );
+
+    // all crossings of an edge and a triangle without common vertices, with the edge directed as in findSelfCollidingEdgeTrisPrecise
+    auto findAllCrossings = [&mesh]( const ConvertToIntVector & toInt )
+    {
+        std::vector<std::pair<EdgeId, FaceId>> res;
+        auto pvc = [&]( VertId v ) { return PreciseVertCoords{ v, toInt( mesh.points[v] ) }; };
+        for ( auto ue : undirectedEdges( mesh.topology ) )
+        {
+            const EdgeId e = ue;
+            const auto o = mesh.topology.org( e ), d = mesh.topology.dest( e );
+            for ( auto f : mesh.topology.getValidFaces() )
+            {
+                if ( mesh.topology.isTriVert( f, o ) || mesh.topology.isTriVert( f, d ) )
+                    continue;
+                const auto t = mesh.topology.getTriVerts( f );
+                if ( auto isect = doTriangleSegmentIntersect( { pvc( t[0] ), pvc( t[1] ), pvc( t[2] ), pvc( o ), pvc( d ) } ) )
+                    res.emplace_back( isect.dIsLeftFromABC ? e : e.sym(), f );
+            }
+        }
+        std::sort( res.begin(), res.end() );
+        return res;
+    };
+
+    // first the closed mesh without self-intersections; then apex 6_v of the second part is moved through the first part,
+    // and triangle 1_v, 2_v, 3_v with the multiple edge gets two crossings: its edge 2_v-3_v crosses triangle 5_v, 6_v, 4_v,
+    // and edge 4_v-6_v of triangle 4_v, 6_v, 1_v (sharing vertex 1_v with it) crosses it
+    for ( bool crossing : { false, true } )
+    {
+        if ( crossing )
+        {
+            mesh.points[6_v] = { 1.0f, 1.0f, 0.5f };
+            mesh.invalidateCaches();
+        }
+        const auto toInt = getVectorConverters( mesh ).toInt;
+        const auto expected = findAllCrossings( toInt );
+        EXPECT_EQ( expected.size(), crossing ? 2 : 0 );
+
+        std::vector<std::pair<EdgeId, FaceId>> found;
+        for ( const auto & et : findSelfCollidingEdgeTrisPrecise( mesh, toInt ) )
+            found.emplace_back( et.edge, et.tri );
+        std::sort( found.begin(), found.end() );
+        EXPECT_EQ( found, expected );
     }
 }
 
@@ -226,6 +851,10 @@ TEST( MRMesh, BooleanResultMapper )
     EXPECT_EQ( mapsB.cut2origin.size(), 320 );
 }
 
+// the tests of the functions deprecated since cutMesh connects lone contours itself
+MR_SUPPRESS_WARNING_PUSH
+MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
+
 // the spheres of the Boolean benchmark (B rotated around Z by n times 0.1 degree) have lone contours (each inside one triangle) for some n;
 // subdivideLoneContours splits those triangles and updates the AABB tree instead of its rebuild
 TEST( MRMesh, SubdivideLoneContoursUpdatesAABBTree )
@@ -254,7 +883,7 @@ TEST( MRMesh, SubdivideLoneContoursUpdatesAABBTree )
 
         FaceBitSet loneFaces;
         for ( const auto & c : loneIntsA )
-            loneFaces.autoResizeSet( std::get<FaceId>( c.intersections.front().primitiveId ) );
+            loneFaces.autoResizeSet( c.intersections.front().face() );
         const auto numFaces = meshA.topology.numValidFaces();
         subdivideLoneContours( meshA, loneIntsA );
         EXPECT_EQ( meshA.topology.numValidFaces(), numFaces + 2 * int( loneFaces.count() ) );
@@ -328,6 +957,61 @@ TEST( MRMesh, UpdateCollidingEdgeTrisPrecise )
         updateCollidingEdgeTrisPrecise( res, meshA, VertId( meshA.topology.vertSize() ), meshB, VertId( meshB.topology.vertSize() ), conv.toInt, &xf );
         EXPECT_EQ( res, newRes );
     }
+}
+
+MR_SUPPRESS_WARNING_POP
+
+// checks that each face of the united mesh lies in the plane of its source face
+static void checkNew2OldFaces( const Mesh& res, const Vector<ObjFaceId, FaceId>& new2old, const std::vector<const Mesh*>& srcMeshes )
+{
+    ASSERT_EQ( new2old.size(), res.topology.faceSize() );
+    Vector<int, ObjId> numFacesPerSrc( srcMeshes.size() );
+    for ( auto f : res.topology.getValidFaces() )
+    {
+        const auto [objId, srcF] = new2old[f];
+        ASSERT_TRUE( objId.valid() && int( objId ) < int( srcMeshes.size() ) );
+        const auto& src = *srcMeshes[objId];
+        ASSERT_TRUE( src.topology.hasFace( srcF ) );
+        ++numFacesPerSrc[objId];
+        const auto n = src.normal( srcF );
+        const auto p0 = src.orgPnt( src.topology.edgeWithLeft( srcF ) );
+        for ( auto v : res.topology.getTriVerts( f ) )
+            EXPECT_NEAR( dot( n, res.points[v] - p0 ), 0.0f, 1e-4f );
+    }
+    for ( auto num : numFacesPerSrc )
+        EXPECT_GT( num, 0 );
+}
+
+TEST( MRMesh, UniteManyMeshesNew2OldFaces )
+{
+    const auto cubeA = makeCube();
+    const auto cubeB = makeCube( Vector3f::diagonal( 1.0f ), Vector3f() );
+    auto sphere = makeUVSphere( 1.0f, 8, 8 );
+    sphere.transform( AffineXf3f::translation( Vector3f( 5, 0, 0 ) ) );
+    const std::vector<const Mesh*> meshes{ &cubeA, &cubeB, &sphere };
+
+    for ( auto mode : { NestedComponenetsMode::Remove, NestedComponenetsMode::Merge, NestedComponenetsMode::Union } )
+    {
+        for ( bool randomShifts : { false, true } )
+        {
+            Vector<ObjFaceId, FaceId> new2old;
+            auto res = uniteManyMeshes( meshes, { .useRandomShifts = randomShifts, .new2oldFaces = &new2old, .nestedComponentsMode = mode } );
+            ASSERT_TRUE( res.has_value() );
+            EXPECT_EQ( MeshComponents::getNumComponents( *res ), size_t( 2 ) );
+            checkNew2OldFaces( *res, new2old, meshes );
+        }
+    }
+
+    Mesh all;
+    for ( auto m : meshes )
+        all.addMesh( *m );
+    Vector<ObjFaceId, FaceId> new2old;
+    auto res = uniteComponents( all, { .new2oldFaces = &new2old } );
+    ASSERT_TRUE( res.has_value() );
+    for ( auto& src : new2old )
+        if ( src.objId.valid() )
+            src.objId = ObjId( 0 );
+    checkNew2OldFaces( *res, new2old, { &all } );
 }
 
 } //namespace MR

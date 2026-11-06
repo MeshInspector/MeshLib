@@ -10,6 +10,7 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -255,6 +256,75 @@ TEST( MRMesh, CompressManySmallFilesToZip )
         }
         EXPECT_EQ( verified, numBinaryFiles + numJsonFiles ) << "level " << level;
     }
+}
+
+// Zip archives made by macOS Finder contain __MACOSX/._<name> metadata entries, which must not be extracted
+TEST( MRMesh, DecompressZipSkipsMacOSMetadata )
+{
+    UniqueTemporaryFolder srcFolder;
+    ASSERT_TRUE( bool( srcFolder ) );
+    std::error_code ec;
+    std::filesystem::create_directory( srcFolder / "__MACOSX", ec );
+    std::ofstream( srcFolder / "mesh.stl", std::ios::binary ) << "solid";
+    std::ofstream( srcFolder / "__MACOSX" / "._mesh.stl", std::ios::binary ) << "AppleDouble";
+
+    UniqueTemporaryFolder dstFolder;
+    ASSERT_TRUE( bool( dstFolder ) );
+    const auto zipPath = dstFolder / "mac.zip";
+    const auto compressRes = compressZip( zipPath, srcFolder );
+    ASSERT_TRUE( compressRes.has_value() ) << compressRes.error();
+
+    UniqueTemporaryFolder outFolder;
+    ASSERT_TRUE( bool( outFolder ) );
+    const auto decompressRes = decompressZip( zipPath, outFolder );
+    ASSERT_TRUE( decompressRes.has_value() ) << decompressRes.error();
+    EXPECT_TRUE( std::filesystem::exists( outFolder / "mesh.stl", ec ) );
+    EXPECT_FALSE( std::filesystem::exists( outFolder / "__MACOSX", ec ) );
+}
+
+
+TEST( MRMesh, DecompressZipToCallback )
+{
+    UniqueTemporaryFolder srcFolder;
+    ASSERT_TRUE( bool( srcFolder ) );
+    std::error_code ec;
+    std::filesystem::create_directories( srcFolder / "sub" / "empty", ec );
+    std::ofstream( srcFolder / "a.txt", std::ios::binary ) << "first";
+    std::ofstream( srcFolder / "sub" / "b.bin", std::ios::binary ) << "second";
+
+    UniqueTemporaryFolder dstFolder;
+    ASSERT_TRUE( bool( dstFolder ) );
+    const auto zipPath = dstFolder / "cb.zip";
+    const auto compressRes = compressZip( zipPath, srcFolder );
+    ASSERT_TRUE( compressRes.has_value() ) << compressRes.error();
+
+    std::map<std::string, std::string> files;
+    auto collect = [&]( const std::string& path, std::vector<char>&& data ) -> Expected<void>
+    {
+        files[path] = std::string( data.begin(), data.end() );
+        return {};
+    };
+    const std::map<std::string, std::string> expected{ { "a.txt", "first" }, { "sub/b.bin", "second" } };
+
+    auto res = decompressZip( zipPath, collect );
+    ASSERT_TRUE( res.has_value() ) << res.error();
+    EXPECT_EQ( files, expected );
+
+    files.clear();
+    std::ifstream zipStream( zipPath, std::ios::binary );
+    res = decompressZip( zipStream, collect );
+    ASSERT_TRUE( res.has_value() ) << res.error();
+    EXPECT_EQ( files, expected );
+
+    int numCalls = 0;
+    res = decompressZip( zipPath, [&]( const std::string&, std::vector<char>&& ) -> Expected<void>
+    {
+        ++numCalls;
+        return unexpected( "stop" );
+    } );
+    ASSERT_FALSE( res.has_value() );
+    EXPECT_EQ( res.error(), "stop" );
+    EXPECT_EQ( numCalls, 1 );
 }
 
 } // namespace MR

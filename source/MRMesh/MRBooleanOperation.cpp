@@ -9,6 +9,7 @@
 #include "MRMapEdge.h"
 #include "MRPartMappingAdapters.h"
 #include "MRParallelFor.h"
+#include "MRBitSetParallelFor.h"
 #include "MRPch/MRTBB.h"
 #include "MRFillContourByGraphCut.h"
 #include "MREdgeMetric.h"
@@ -77,12 +78,22 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
             return std::nullopt;
     }
 
-    updateRootsParallel( unionFind );
+    const auto& roots = updateRootsParallel( unionFind );
 
-    // find correct part
+    // find correct part: the faces of the components with cuts by their roots in parallel,
+    // then the components without cuts one by one in the order of their faces
     auto includeRoot = needRightPart ? rightRoot : leftRoot;
     auto excludeRoot = needRightPart ? leftRoot : rightRoot;
-    for ( auto f : origin.topology.getValidFaces() )
+    FaceBitSet otherFaces( res.size() );
+    BitSetParallelFor( origin.topology.getValidFaces(), [&] ( FaceId f )
+    {
+        const auto r = roots[f];
+        if ( includeRoot && r == includeRoot )
+            res.set( f );
+        else if ( !excludeRoot || r != excludeRoot )
+            otherFaces.set( f );
+    } );
+    for ( auto f : otherFaces )
     {
         if ( includeRoot && unionFind.united( includeRoot, f ) )
         {

@@ -23,7 +23,7 @@ public:
 
     MRMESH_API static Config& instance();
 
-    /// looks up (~/.local/share/<appname>/config.json) or (AppData\<appname>\config.json)
+    /// looks up (`~/.local/share/<appname>/config.json`) or (`AppData\<appname>\config.json`)
     /// creates directory if not presented
     MRMESH_API void reset( std::string appName );
 

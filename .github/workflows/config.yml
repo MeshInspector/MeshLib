@@ -6,7 +6,7 @@ on:
       # manually defined values
       vcpkg_version:
         description: "vcpkg version"
-        value: "2026.07.29" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
+        value: "2026.10.16" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
       # automatically computed or tag-based values
       app_version:
         description: "Version without namespace: v1.2.3.4"
@@ -102,6 +102,7 @@ jobs:
       tag-upload-binaries:       ${{ steps.live-labels.outputs.tag-upload-binaries }}
       tag-upload-test-artifacts: ${{ steps.live-labels.outputs.tag-upload-test-artifacts }}
       tag-test-pip-build:        ${{ steps.live-labels.outputs.tag-test-pip-build }}
+      tag-ubsan:                 ${{ steps.live-labels.outputs.tag-ubsan }}
       # tags for disabling builds for different systems
       tag-build-release-windows: ${{ steps.live-labels.outputs.tag-build-release-windows }}
       tag-disable-windows:       ${{ steps.live-labels.outputs.tag-disable-windows }}
@@ -198,7 +199,7 @@ jobs:
 
       # install helper utility for Python version management
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
 
       - name: Check for errors
         run: uvx --python 3.12 pre-commit run --all-files --hook-stage manual
@@ -214,12 +215,13 @@ jobs:
               - 'thirdparty/vcpkg/**'
               - 'thirdparty/install.bat'
 
-      - name: Login to DockerHub
+      - name: Login to GitHub Container Registry
         if: ${{ env.CAN_PUSH_DOCKER_TAGS == 'true' }}
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
-          username: meshlib
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       # Single criterion for image selection and rebuilds: every image's
       # conventional tag (branch tag on PRs, `latest` otherwise) must point at
@@ -268,7 +270,7 @@ jobs:
 
       - name: Versioning
         if: ${{ env.upload_artifacts == 'true' }}
-        uses: paulhatch/semantic-version@4d6da96a9bc3116da3613309a11ff75fba58eb8d # v6.0.4
+        uses: paulhatch/semantic-version@79147b94804704a613626766998afe7b2bd0bb47 # v6.0.5
         id: version
         with:
           tag_prefix: "v"
@@ -345,11 +347,25 @@ jobs:
                   cxx-compiler: /usr/bin/g++-16
                   c-compiler: /usr/bin/gcc-16
                   upload_release: "OFF"
-            # Debug and Clang jobs run in full-ci only, and on x64 only
+            # Debug and Clang jobs run in full-ci only, and on x64 only; ubuntu26 Clang Release builds
+            # and tests under UBSan in full-config runs, and alone with the `ubsan` label
             - if: ${{ env.full_config_build != 'true' }}
               exclude:
                 - config: Debug
+            - if: ${{ env.full_config_build != 'true' && steps.live-labels.outputs.tag-ubsan != 'true' }}
+              exclude:
                 - compiler: Clang
+            - if: ${{ env.full_config_build != 'true' && steps.live-labels.outputs.tag-ubsan == 'true' }}
+              exclude:
+                - compiler: Clang
+                  os: ubuntu24
+            - if: ${{ env.full_config_build == 'true' || steps.live-labels.outputs.tag-ubsan == 'true' }}
+              extend:
+                - arch: x64
+                  os: ubuntu26
+                  config: Release
+                  compiler: Clang
+                  ubsan: "ON"
             - exclude:
                 - arch: arm64
                   config: Debug
@@ -380,7 +396,7 @@ jobs:
           fi
 
           jq \
-            --arg vcpkg "2026.07.29" \
+            --arg vcpkg "2026.10.16" \
             '.include[] |= (. + {"vcpkg-version": $vcpkg})' \
             "$MATRIX_FILE" > tmp.json
 

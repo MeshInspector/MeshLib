@@ -11,6 +11,8 @@
 #include "MRVolumeIndexer.h"
 #include "MRBox.h"
 #include "MRMeshIntersect.h"
+#include "MRMeshComponents.h"
+#include "MRMeshCollide.h"
 
 namespace MR
 {
@@ -69,6 +71,59 @@ LineSegm3f findLatticeEdgeEnds( const MeshTopology& t, VertId v, const Vector<Vo
     ++n1[dir];
     return { gridToMeshXf( Vector3f( box.max ) ), gridToMeshXf( Vector3f( n1 ) ) };
 }
+}
+
+// deletes every connected component having not more than maxFaces triangles and intersecting
+// a surviving component with at least as many triangles
+static void deleteSmallCollidingComponents( Mesh& mesh, int maxFaces, UndirectedEdgeBitSet& sharpEdges )
+{
+    MR_TIMER;
+    const auto [face2region, numRegions] = MeshComponents::getAllComponentsMap( mesh );
+    if ( numRegions <= 1 )
+        return;
+    Vector<int, RegionId> regionFaces( numRegions, 0 );
+    for ( auto f : mesh.topology.getValidFaces() )
+        ++regionFaces[face2region[f]];
+    FaceBitSet smallFaces( mesh.topology.faceSize() );
+    BitSetParallelFor( mesh.topology.getValidFaces(), [&]( FaceId f )
+    {
+        if ( regionFaces[face2region[f]] <= maxFaces )
+            smallFaces.set( f );
+    } );
+    if ( !smallFaces.any() )
+        return;
+
+    struct Collision { RegionId lesser, greater; }; // the component with fewer triangles, and the one it intersects
+    std::vector<Collision> collisions;
+    for ( const auto& p : findCollidingTriangles( { mesh, &smallFaces }, mesh ) )
+    {
+        const auto a = face2region[p.aFace], b = face2region[p.bFace];
+        if ( a != b && ( regionFaces[b] > regionFaces[a] || ( regionFaces[b] == regionFaces[a] && b < a ) ) )
+            collisions.push_back( { a, b } );
+    }
+    if ( collisions.empty() )
+        return;
+
+    // larger components are processed first, so the fate of (greater) is known when (lesser) is considered
+    std::sort( collisions.begin(), collisions.end(), [&]( const Collision& x, const Collision& y )
+    {
+        if ( regionFaces[x.lesser] != regionFaces[y.lesser] )
+            return regionFaces[x.lesser] > regionFaces[y.lesser];
+        return x.lesser < y.lesser;
+    } );
+    RegionBitSet deleted( numRegions );
+    for ( const auto& c : collisions )
+        if ( !deleted.test( c.greater ) )
+            deleted.set( c.lesser );
+
+    FaceBitSet delFaces( mesh.topology.faceSize() );
+    for ( auto f : smallFaces )
+        if ( deleted.test( face2region[f] ) )
+            delFaces.set( f );
+    for ( auto f : delFaces )
+        for ( auto e : leftRing( mesh.topology, f ) )
+            sharpEdges.reset( e.undirected() );
+    mesh.deleteFaces( delFaces );
 }
 
 void sharpenMarchingCubesMesh( const MeshPart& ref, Mesh& vox, Vector<VoxelId, FaceId>& face2voxel,
@@ -391,6 +446,10 @@ void sharpenMarchingCubesMesh( const MeshPart& ref, Mesh& vox, Vector<VoxelId, F
             vox.points[v] = 0.5f * ( pOld + pNew );
         }
     }
+    vox.invalidateCaches();
+
+    if ( settings.maxDeletedComponentFaces > 0 )
+        deleteSmallCollidingComponents( vox, settings.maxDeletedComponentFaces, sharpEdges );
 
     if ( settings.outSharpEdges )
         *settings.outSharpEdges = std::move( sharpEdges );

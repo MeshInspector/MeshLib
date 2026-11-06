@@ -1,4 +1,7 @@
 #include <MRMesh/MRBitSet.h>
+#include <MRMesh/MRBitSetParallelFor.h>
+#include <MRMesh/MRParallelFor.h>
+#include <atomic>
 #include <gtest/gtest.h>
 
 namespace MR
@@ -91,6 +94,88 @@ TEST(MRMesh, TaggedBitSet)
     EXPECT_EQ( VertBitSet( VertBitSet( bs0 ) -= bs1 ).count(), 1 );
     EXPECT_EQ( VertBitSet( VertBitSet( bs1 ) -= bs0 ).count(), 1 );
     EXPECT_EQ( VertBitSet( VertBitSet( bs0 ) ^= bs1 ).count(), 2 );
+}
+
+TEST( MRMesh, BitSetParallelForCancel )
+{
+    VertBitSet bs( 1 << 20 );
+    for ( size_t i = 0; i < bs.size(); i += 3 )
+        bs.set( VertId( i ) );
+
+    // without cancellation every set bit is visited
+    std::atomic<size_t> visited{ 0 };
+    tbb::task_group_context ctx;
+    BitSetParallelFor( bs, [&] ( VertId ) { ++visited; }, ctx );
+    EXPECT_FALSE( ctx.is_group_execution_cancelled() );
+    EXPECT_EQ( visited, bs.count() );
+
+    // cancellation in the first visited bit stops processing
+    visited = 0;
+    tbb::task_group_context ctx1;
+    BitSetParallelFor( bs, [&] ( VertId )
+    {
+        ++visited;
+        ctx1.cancel_group_execution();
+    }, ctx1 );
+    EXPECT_TRUE( ctx1.is_group_execution_cancelled() );
+    EXPECT_LT( visited, bs.count() );
+
+    // the same in a bit set of one block, processed in the calling thread
+    VertBitSet small( 10 );
+    small.set();
+    visited = 0;
+    tbb::task_group_context ctx2;
+    BitSetParallelFor( small, [&] ( VertId )
+    {
+        ++visited;
+        ctx2.cancel_group_execution();
+    }, ctx2 );
+    EXPECT_TRUE( ctx2.is_group_execution_cancelled() );
+    EXPECT_EQ( visited, 1 );
+}
+
+TEST( MRMesh, BitSetCountBitsAndBlocks )
+{
+    BitSet bs( 1000 );
+    EXPECT_EQ( bs.countBitsAndBlocks().bits, 0 );
+    EXPECT_EQ( bs.countBitsAndBlocks().blocks, 0 );
+    for ( size_t i : { 1, 63, 64, 700, 701 } )
+        bs.set( i );
+    auto c = bs.countBitsAndBlocks();
+    EXPECT_EQ( c.bits, 5 );
+    EXPECT_EQ( c.blocks, 3 );
+    // counting stops after the block where the limit is exceeded
+    c = bs.countBitsAndBlocks( 1 );
+    EXPECT_EQ( c.bits, 2 );
+    EXPECT_EQ( c.blocks, 1 );
+    c = bs.countBitsAndBlocks( 2 );
+    EXPECT_EQ( c.bits, 3 );
+    EXPECT_EQ( c.blocks, 2 );
+    c = bs.countBitsAndBlocks( 4 );
+    EXPECT_EQ( c.bits, 5 );
+    EXPECT_EQ( c.blocks, 3 );
+}
+
+TEST( MRMesh, BitSetAtomicTestSet )
+{
+    // odd multiplier scatters consecutive indices, so different threads hit bits of the same blocks
+    constexpr size_t n = 1 << 20;
+    auto bitOf = [] ( size_t i ) { return VertId( ( i * 7919 ) % n ); };
+
+    VertBitSet expected( n );
+    for ( size_t i = 0; i < n; i += 3 )
+        expected.set( bitOf( i ) );
+
+    // every bit is set twice (by i and i + n), and exactly one of the two calls must find it unset
+    VertBitSet bs( n );
+    std::atomic<size_t> firstSets{ 0 };
+    ParallelFor( size_t( 0 ), 2 * n, [&] ( size_t i )
+    {
+        if ( i % n % 3 == 0 && !bs.atomicTestSet( bitOf( i % n ) ) )
+            ++firstSets;
+    } );
+    EXPECT_EQ( bs, expected );
+    EXPECT_EQ( firstSets, expected.count() );
 }
 
 } //namespace MR

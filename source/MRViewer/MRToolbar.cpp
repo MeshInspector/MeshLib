@@ -241,7 +241,7 @@ void Toolbar::drawCustomizeModal_()
     if ( shouldClose )
         ImGui::CloseCurrentPopup();
 
-    MR_FINALLY_ON_SUCCESS{
+    MR_FINALLY{
         // Must clear late, otherwise `UI::checkbox()` sometimes get called twice with the same string,
         // which triggers an assertion in the UI test engine.
         if ( shouldClose )

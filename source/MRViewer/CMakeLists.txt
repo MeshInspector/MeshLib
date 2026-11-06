@@ -25,6 +25,7 @@ IF(APPLE)
 ENDIF()
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${OBJCPP_SOURCES} ${HEADERS})
+mr_add_resources(${PROJECT_NAME})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
@@ -52,7 +53,7 @@ target_link_libraries(${PROJECT_NAME}
 IF(NOT EMSCRIPTEN)
   find_package(cpr REQUIRED)
   # remove explicit macOS SDK include dir to fix Clang and system libc++ mismatch
-  if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT MESHLIB_USE_VCPKG)
     set_target_properties(CURL::libcurl PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "")
   endif()
 
@@ -88,7 +89,9 @@ IF(APPLE)
   )
 
   find_library(APPKIT_LIBRARY AppKit REQUIRED)
-  target_link_libraries(${PROJECT_NAME} PRIVATE ${APPKIT_LIBRARY})
+  find_library(COREFOUNDATION_LIBRARY CoreFoundation REQUIRED)
+  find_library(QUARTZCORE_LIBRARY QuartzCore REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE ${APPKIT_LIBRARY} ${COREFOUNDATION_LIBRARY} ${QUARTZCORE_LIBRARY})
 ENDIF()
 
 IF(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -152,7 +155,7 @@ ENDIF()
 
 file(GLOB JSONS "*.json")
 file(GLOB AWESOME_FONTS "${MESHLIB_THIRDPARTY_DIR}/fontawesome-free/*.ttf")
-file(GLOB IMGUI_FONTS "${MESHLIB_THIRDPARTY_DIR}/imgui/misc/fonts/*.ttf")
+file(GLOB IMGUI_FONTS "${IMGUI_ROOT}/misc/fonts/*.ttf")
 file(GLOB MAIN_FONTS "${MESHLIB_THIRDPARTY_DIR}/Noto_Sans/*.*")
 # desktop bundles the third-party notices next to the executable for the About dialog;
 # wasm links to them on GitHub instead, so they are not copied into the emscripten assets
@@ -164,7 +167,6 @@ IF(EMSCRIPTEN)
       ${MAIN_FONTS}
       ${AWESOME_FONTS}
       ${IMGUI_FONTS}
-      "resource"
     DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets"
   )
   file(
@@ -179,7 +181,6 @@ ELSE()
       ${AWESOME_FONTS}
       ${IMGUI_FONTS}
       ${THIRD_PARTY_NOTICES}
-      "resource"
     DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
   )
 ENDIF()
@@ -215,10 +216,6 @@ install(
 )
 install(
   FILES ${JSONS}
-  DESTINATION ${MR_RESOURCES_DIR}
-)
-install(
-  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/resource
   DESTINATION ${MR_RESOURCES_DIR}
 )
 IF(EMSCRIPTEN)

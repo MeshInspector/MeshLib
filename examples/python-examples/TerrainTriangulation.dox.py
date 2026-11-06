@@ -9,6 +9,6 @@ pc = mm.loadPoints("TerrainPoints.ply",lps)
 terrain_mesh = mm.delaunayTriangulationXY(pc)
 
 mss = mm.SaveSettings()
-if (pc.points.vec.size() == colors.size()):
+if (pc.points.size() == colors.size()):
     mss.colors = colors
 mm.saveMesh(terrain_mesh, "TerrainMesh.ctm",mss)

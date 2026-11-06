@@ -37,9 +37,9 @@ MRMESH_API Expected<void> toPly( const PointCloud& points, const std::filesystem
 MRMESH_API Expected<void> toPly( const PointCloud& points, std::ostream& out, const SaveSettings& settings = {} );
 
 /// detects the format from file extension and save points to it
-MRMESH_API Expected<void> toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings = {} );
+MR_BIND_OVERLOAD_SUFFIX() MRMESH_API Expected<void> toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings = {} );
 /// extension in `*.ext` format
-MRMESH_API Expected<void> toAnySupportedFormat( const PointCloud& points, const std::string& extension, std::ostream& out, const SaveSettings& settings = {} );
+MR_BIND_OVERLOAD_SUFFIX(stream) MRMESH_API Expected<void> toAnySupportedFormat( const PointCloud& points, const std::string& extension, std::ostream& out, const SaveSettings& settings = {} );
 
 /// \}
 

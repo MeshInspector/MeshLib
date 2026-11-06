@@ -13,7 +13,7 @@ MR::Mesh makeTorus( float primaryRadius, float secondaryRadius, int primaryResol
     float a, b;
 
     int vertexCount = primaryResolution * secondaryResolution;
-    std::vector<Vector3f> points( vertexCount );
+    VertCoords points( vertexCount );
     bool pSet = false;
     if ( pointsOut )
         pointsOut->resize( primaryResolution );
@@ -25,9 +25,9 @@ MR::Mesh makeTorus( float primaryRadius, float secondaryRadius, int primaryResol
         {
             b = 2 * j * PI_F / primaryResolution;
 
-            points[k].x = ( primaryRadius - secondaryRadius * std::cos( a ) ) * std::cos( b );
-            points[k].y = ( primaryRadius - secondaryRadius * std::cos( a ) ) * std::sin( b );
-            points[k].z = secondaryRadius * std::sin( a );
+            points[VertId( k )].x = ( primaryRadius - secondaryRadius * std::cos( a ) ) * std::cos( b );
+            points[VertId( k )].y = ( primaryRadius - secondaryRadius * std::cos( a ) ) * std::sin( b );
+            points[VertId( k )].z = secondaryRadius * std::sin( a );
             ++k;
             if ( pointsOut && !pSet )
                 ( *pointsOut )[j] = {primaryRadius * std::cos( b ),primaryRadius * std::sin( b ),0.0f};
@@ -65,7 +65,7 @@ MR::Mesh makeOuterHalfTorus( float primaryRadius, float secondaryRadius, int pri
     float a, b;
 
     int vertexCount = primaryResolution * secondaryResolution;
-    std::vector<Vector3f> points( vertexCount );
+    VertCoords points( vertexCount );
     bool pSet = false;
     if ( pointsOut )
         pointsOut->resize( primaryResolution );
@@ -77,9 +77,9 @@ MR::Mesh makeOuterHalfTorus( float primaryRadius, float secondaryRadius, int pri
         {
             b = 2 * j * PI_F / primaryResolution;
 
-            points[k].x = ( primaryRadius - secondaryRadius * std::cos( a ) ) * std::cos( b );
-            points[k].y = ( primaryRadius - secondaryRadius * std::cos( a ) ) * std::sin( b );
-            points[k].z = secondaryRadius * std::sin( a );
+            points[VertId( k )].x = ( primaryRadius - secondaryRadius * std::cos( a ) ) * std::cos( b );
+            points[VertId( k )].y = ( primaryRadius - secondaryRadius * std::cos( a ) ) * std::sin( b );
+            points[VertId( k )].z = secondaryRadius * std::sin( a );
             ++k;
             if ( pointsOut && !pSet )
                 ( *pointsOut )[j] = {primaryRadius * std::cos( b ),primaryRadius * std::sin( b ),0.0f};
@@ -118,7 +118,7 @@ MR::Mesh makeTorusWithUndercut( float primaryRadius, float secondaryRadiusInner,
     float a, b;
 
     int vertexCount = primaryResolution * secondaryResolution;
-    std::vector<Vector3f> points( vertexCount );
+    VertCoords points( vertexCount );
     bool pSet = false;
     if ( pointsOut )
         pointsOut->resize( primaryResolution );
@@ -132,9 +132,9 @@ MR::Mesh makeTorusWithUndercut( float primaryRadius, float secondaryRadiusInner,
         {
             b = 2 * j * PI_F / primaryResolution;
 
-            points[k].x = ( primaryRadius - secRadius * std::cos( a ) ) * std::cos( b );
-            points[k].y = ( primaryRadius - secRadius * std::cos( a ) ) * std::sin( b );
-            points[k].z = ( sina > 0.f ? secRadius : -secRadius ) * sina;
+            points[VertId( k )].x = ( primaryRadius - secRadius * std::cos( a ) ) * std::cos( b );
+            points[VertId( k )].y = ( primaryRadius - secRadius * std::cos( a ) ) * std::sin( b );
+            points[VertId( k )].z = ( sina > 0.f ? secRadius : -secRadius ) * sina;
             ++k;
             if ( pointsOut && !pSet )
                 ( *pointsOut )[j] = {primaryRadius * std::cos( b ),primaryRadius * std::sin( b ),0.0f};
@@ -175,7 +175,7 @@ MR::Mesh makeTorusWithSpikes( float primaryRadius, float secondaryRadiusInner, f
     const int spikeFreq = 23;
 
     int vertexCount = primaryResolution * secondaryResolution;
-    std::vector<Vector3f> points( vertexCount );
+    VertCoords points( vertexCount );
     bool pSet = false;
     if ( pointsOut )
         pointsOut->resize( primaryResolution );
@@ -188,9 +188,9 @@ MR::Mesh makeTorusWithSpikes( float primaryRadius, float secondaryRadiusInner, f
             bool isSpike = ( ( i * secondaryResolution + j ) % spikeFreq == 0 );
             b = 2 * j * PI_F / primaryResolution;
 
-            points[k].x = ( primaryRadius - ( isSpike ? secondaryRadiusOuter : secondaryRadiusInner ) * std::cos( a ) ) * std::cos( b );
-            points[k].y = ( primaryRadius - ( isSpike ? secondaryRadiusOuter : secondaryRadiusInner ) * std::cos( a ) ) * std::sin( b );
-            points[k].z = ( isSpike ? secondaryRadiusOuter : secondaryRadiusInner ) * std::sin( a );
+            points[VertId( k )].x = ( primaryRadius - ( isSpike ? secondaryRadiusOuter : secondaryRadiusInner ) * std::cos( a ) ) * std::cos( b );
+            points[VertId( k )].y = ( primaryRadius - ( isSpike ? secondaryRadiusOuter : secondaryRadiusInner ) * std::cos( a ) ) * std::sin( b );
+            points[VertId( k )].z = ( isSpike ? secondaryRadiusOuter : secondaryRadiusInner ) * std::sin( a );
             ++k;
             if ( pointsOut && !pSet )
                 ( *pointsOut )[j] = {primaryRadius * std::cos( b ),primaryRadius * std::sin( b ),0.0f};
@@ -229,7 +229,7 @@ MR::Mesh makeTorusWithComponents( float primaryRadius, float secondaryRadius, in
     float a, b;
 
     int vertexCount = primaryResolution * secondaryResolution;
-    std::vector<Vector3f> points( vertexCount );
+    VertCoords points( vertexCount );
     bool pSet = false;
     if ( pointsOut )
         pointsOut->resize( primaryResolution );
@@ -241,9 +241,9 @@ MR::Mesh makeTorusWithComponents( float primaryRadius, float secondaryRadius, in
         {
             b = 2 * j * PI_F / primaryResolution;
 
-            points[k].x = ( primaryRadius - secondaryRadius * std::cos( a ) ) * std::cos( b );
-            points[k].y = ( primaryRadius - secondaryRadius * std::cos( a ) ) * std::sin( b );
-            points[k].z = secondaryRadius * std::sin( a );
+            points[VertId( k )].x = ( primaryRadius - secondaryRadius * std::cos( a ) ) * std::cos( b );
+            points[VertId( k )].y = ( primaryRadius - secondaryRadius * std::cos( a ) ) * std::sin( b );
+            points[VertId( k )].z = secondaryRadius * std::sin( a );
             ++k;
             if ( pointsOut && !pSet )
                 ( *pointsOut )[j] = {primaryRadius * std::cos( b ),primaryRadius * std::sin( b ),0.0f};
@@ -282,7 +282,7 @@ MR::Mesh makeTorusWithSelfIntersections( float primaryRadius, float secondaryRad
     float a, b;
 
     int vertexCount = primaryResolution * secondaryResolution;
-    std::vector<Vector3f> points( vertexCount );
+    VertCoords points( vertexCount );
     bool pSet = false;
     if ( pointsOut )
         pointsOut->resize( primaryResolution );
@@ -294,9 +294,9 @@ MR::Mesh makeTorusWithSelfIntersections( float primaryRadius, float secondaryRad
         {
             b = 2 * j * PI_F / primaryResolution;
 
-            points[k].x = ( primaryRadius - secondaryRadius * std::cos( a ) ) * std::cos( b );
-            points[k].y = ( primaryRadius - secondaryRadius * std::cos( a ) ) * std::sin( b );
-            points[k].z = secondaryRadius * std::sin( 2.f * a );
+            points[VertId( k )].x = ( primaryRadius - secondaryRadius * std::cos( a ) ) * std::cos( b );
+            points[VertId( k )].y = ( primaryRadius - secondaryRadius * std::cos( a ) ) * std::sin( b );
+            points[VertId( k )].z = secondaryRadius * std::sin( 2.f * a );
             ++k;
             if ( pointsOut && !pSet )
                 ( *pointsOut )[j] = {primaryRadius * std::cos( b ),primaryRadius * std::sin( b ),0.0f};

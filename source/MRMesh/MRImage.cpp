@@ -1,4 +1,5 @@
 #include "MRImage.h"
+#include "MRRound.h"
 
 namespace MR
 {
@@ -12,7 +13,7 @@ Color Image::sampleDiscrete( const UVCoord & pos ) const
     }
     const float x = std::clamp( pos.x, 0.0f, 1.0f ) * ( resolution.x - 1 );
     const float y = std::clamp( pos.y, 0.0f, 1.0f ) * ( resolution.y - 1 );
-    return operator[]( { (int)std::lround( x ), (int)std::lround( y ) } );
+    return operator[]( { roundToInt( x ), roundToInt( y ) } );
 }
 
 Color Image::sampleBilinear( const UVCoord & pos ) const
@@ -44,10 +45,10 @@ Color Image::sampleBilinear( const UVCoord & pos ) const
     auto c = []( const Vector4f & v )
     {
         return Color(
-            uint8_t( std::lround( v.x ) ),
-            uint8_t( std::lround( v.y ) ),
-            uint8_t( std::lround( v.z ) ),
-            uint8_t( std::lround( v.w ) ) );
+            uint8_t( roundToInt( v.x ) ),
+            uint8_t( roundToInt( v.y ) ),
+            uint8_t( roundToInt( v.z ) ),
+            uint8_t( roundToInt( v.w ) ) );
     };
 
     const float dx = x - xlowf;

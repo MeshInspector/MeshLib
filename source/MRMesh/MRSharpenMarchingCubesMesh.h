@@ -30,6 +30,9 @@ struct SharpenMarchingCubesMeshSettings
     /// within its voxel's box (so the geometry of a voxel can never reach another one),
     /// and the in-plane elevation check is skipped; requires dims and gridToMeshXf to be set
     bool voxelClamp = false;
+    /// if positive, then in the end every connected component with not more than this number of triangles
+    /// intersecting a component with at least as many triangles is deleted; such tiny fragments appear near sharp creases
+    int maxDeletedComponentFaces = 0;
     /// Marching Cubes volume dimensions
     Vector3i dims;
     /// transform from integer Marching Cubes grid locations to the mesh reference frame:

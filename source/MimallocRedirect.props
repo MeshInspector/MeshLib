@@ -22,7 +22,7 @@
     against either vcpkg snapshot without per-runner edits.
 
     Verified by MRTest's MRMesh.MimallocRedirectActive unit test (gated by
-    MIMALLOC_DISABLE_REDIRECT env var). See also MimallocRedirect.cmake for the
+    MIMALLOC_DISABLE_REDIRECT env var). See also mr_enable_mimalloc in Mimalloc.cmake for the
     CMake equivalent.
   -->
   <PropertyGroup>

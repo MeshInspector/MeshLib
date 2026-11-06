@@ -82,8 +82,8 @@ void testMeshBoolean( void )
                     MR_BooleanParameters *params = MR_BooleanParameters_DefaultConstruct();
                     MR_BooleanParameters_Set_rigidB2A( params, &xf );
 
-                    MR_BooleanResult *resultAB = MR_boolean_4_const_MR_Mesh_ref( meshA, meshB, MR_BooleanOperation_Union, params );
-                    MR_BooleanResult *resultBA = MR_boolean_4_const_MR_Mesh_ref( meshB, meshA, MR_BooleanOperation_Union, params );
+                    MR_BooleanResult *resultAB = MR_boolean( meshA, meshB, MR_BooleanOperation_Union, params );
+                    MR_BooleanResult *resultBA = MR_boolean( meshB, meshA, MR_BooleanOperation_Union, params );
                     TEST_ASSERT( MR_BooleanResult_valid( resultAB ) )
                     TEST_ASSERT( MR_BooleanResult_valid( resultBA ) )
 
@@ -102,7 +102,7 @@ void testMeshBoolean( void )
 
 void testBooleanMultipleEdgePropogationSort( void )
 {
-    MR_VertCoords* pointsVec = MR_VertCoords_Construct_1_size_t( 6 );
+    MR_VertCoords* pointsVec = MR_VertCoords_Construct( 6 );
     *MR_VertCoords_index_mut( pointsVec, (MR_VertId){0} ) = (MR_Vector3f){  0.0f, 0.0f, 0.0f };
     *MR_VertCoords_index_mut( pointsVec, (MR_VertId){1} ) = (MR_Vector3f){ -0.5f, 1.0f, 0.0f };
     *MR_VertCoords_index_mut( pointsVec, (MR_VertId){2} ) = (MR_Vector3f){ +0.5f, 1.0f, 0.0f };
@@ -110,7 +110,7 @@ void testBooleanMultipleEdgePropogationSort( void )
     *MR_VertCoords_index_mut( pointsVec, (MR_VertId){4} ) = (MR_Vector3f){ -1.0f, 1.5f, 0.0f };
     *MR_VertCoords_index_mut( pointsVec, (MR_VertId){5} ) = (MR_Vector3f){ +1.0f, 1.5f, 0.0f };
 
-    MR_Triangulation *triangulation = MR_Triangulation_Construct_1_size_t( 5 );
+    MR_Triangulation *triangulation = MR_Triangulation_Construct( 5 );
     *MR_Triangulation_index_mut( triangulation, (MR_FaceId){0} ) = (MR_std_array_MR_VertId_3){{ {0}, {2}, {1} }};
     *MR_Triangulation_index_mut( triangulation, (MR_FaceId){1} ) = (MR_std_array_MR_VertId_3){{ {1}, {2}, {3} }};
     *MR_Triangulation_index_mut( triangulation, (MR_FaceId){2} ) = (MR_std_array_MR_VertId_3){{ {3}, {4}, {1} }};
@@ -139,7 +139,7 @@ void testBooleanMultipleEdgePropogationSort( void )
         const MR_FaceBitSet* meshASupFaces = MR_MeshTopology_getValidFaces( MR_Mesh_Get_topology( meshASup ) );
 
         MR_MeshPart *mp = MR_MeshPart_Construct( meshASup, meshASupFaces );
-        MR_Mesh_addMeshPart_6( meshA, mp, &(bool){true}, borderVec, borderVec, NULL, NULL );
+        MR_Mesh_addMeshPart( meshA, mp, &(bool){true}, borderVec, borderVec, NULL, NULL );
         MR_MeshPart_Destroy( mp );
 
         MR_std_vector_std_vector_MR_EdgeId_Destroy( borderVec );
@@ -158,8 +158,8 @@ void testBooleanMultipleEdgePropogationSort( void )
 
     for ( int i = 0; i < MR_BooleanOperation_Count; ++i )
     {
-        MR_BooleanResult *resultAB = MR_boolean_4_const_MR_Mesh_ref( meshA, meshB, i, NULL );
-        MR_BooleanResult *resultBA = MR_boolean_4_const_MR_Mesh_ref( meshB, meshA, i, NULL );
+        MR_BooleanResult *resultAB = MR_boolean( meshA, meshB, i, NULL );
+        MR_BooleanResult *resultBA = MR_boolean( meshB, meshA, i, NULL );
         TEST_ASSERT( MR_BooleanResult_valid( resultAB ) )
         TEST_ASSERT( MR_BooleanResult_valid( resultBA ) )
 
@@ -197,7 +197,7 @@ void testBooleanMapper( void )
     MR_BooleanParameters* parameters = MR_BooleanParameters_DefaultConstruct();
     MR_BooleanParameters_Set_mapper( parameters, mapper );
 
-    MR_BooleanResult* result = MR_boolean_4_const_MR_Mesh_ref( meshA, meshB, MR_BooleanOperation_Union, parameters );
+    MR_BooleanResult* result = MR_boolean( meshA, meshB, MR_BooleanOperation_Union, parameters );
     MR_BooleanParameters_Destroy( parameters );
 
     TEST_ASSERT( MR_BooleanResult_valid( result ) )

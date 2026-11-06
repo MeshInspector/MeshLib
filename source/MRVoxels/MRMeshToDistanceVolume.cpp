@@ -129,7 +129,7 @@ Expected<SimpleVolumeMinMax> meshToDistanceVolume( const MeshPart& mp, const Mes
             params.fwn = std::make_shared<FastWindingNumber>( mp.mesh );
         assert( !mp.region ); // only whole mesh is supported for now
         auto basis = AffineXf3f( Matrix3f::scale( params.vol.voxelSize ), params.vol.origin + 0.5f * params.vol.voxelSize );
-        if ( auto d = params.fwn->calcFromGridWithDistances( res.data.vec_, res.dims, basis, params.dist, params.vol.cb ); !d )
+        if ( auto d = params.fwn->calcFromGridWithDistances( res.data, res.dims, basis, params.dist, params.vol.cb ); !d )
         {
             return unexpected( std::move( d.error() ) );
         }
@@ -313,10 +313,10 @@ Expected<std::array<SimpleVolumeMinMax, 3>> meshToDirectionVolume( const MeshToD
     };
 
     {
-        std::vector<Vector3f> points( indexer.size() );
+        VertCoords points( indexer.size() );
         for ( auto i = VoxelId( size_t( 0 ) ); i < indexer.size(); ++i )
         {
-            points[i] = getPoint( i );
+            points[VertId( size_t( i ) )] = getPoint( i );
         }
         params.projector->findProjections( projs, points );
     }

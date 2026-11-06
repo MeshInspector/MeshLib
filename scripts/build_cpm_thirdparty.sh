@@ -6,10 +6,7 @@
 # exit if any command failed
 set -eo pipefail
 
-dt=$(date '+%d-%m-%Y_%H:%M:%S');
-logfile="`pwd`/install_thirdparty_${dt}.log"
 echo "Thirdparty build script started."
-echo "You could find output in ${logfile}"
 
 # NOTE: realpath is not supported on older macOS versions
 BASE_DIR=$( cd "$( dirname "$0" )"/.. ; pwd -P )
@@ -25,6 +22,7 @@ MESHLIB_THIRDPARTY_ROOT_DIR=$( cd "${MESHLIB_THIRDPARTY_ROOT_DIR}" ; pwd -P )
 if [[ $OSTYPE == 'darwin'* ]]; then
   echo "Host system: MacOS"
   INSTALL_REQUIREMENTS="install_brew_requirements.sh"
+  export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-12.0}"
 elif [[ $OSTYPE == 'linux'* ]]; then
   source /etc/os-release
   echo "Host system: ${NAME} ${DISTRIB_RELEASE}"
@@ -59,11 +57,6 @@ MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} \
   -D CMAKE_INSTALL_PREFIX=${MESHLIB_THIRDPARTY_ROOT_DIR} \
   -D CMAKE_BUILD_TYPE=Release \
 "
-
-# Which Python version the mrbind-pybind11 stubs and shim are built against.
-if [ -n "${MESHLIB_PYTHON_VERSION}" ] ; then
-  MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D PYBIND11_NONLIMITEDAPI_PYTHON_HEADERS_VERSION=${MESHLIB_PYTHON_VERSION}"
-fi
 
 if [ "${MR_EMSCRIPTEN}" != "ON" ] ; then
   CMAKE_C_COMPILER="${CMAKE_C_COMPILER:-${CC}}"

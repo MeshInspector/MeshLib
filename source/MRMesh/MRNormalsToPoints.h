@@ -21,7 +21,7 @@ public:
     /// \param guide target vertex positions to avoid under-determined system
     /// \param normals target face normals
     /// \param points initial approximation on input, updated approximation on output
-    /// \param maxInitialDistSq the maximum squared distance between a point and its position in (guide)
+    /// \p maxInitialDistSq the maximum squared distance between a point and its position in (guide)
     MRMESH_API void run( const VertCoords & guide, const FaceNormals & normals, VertCoords & points );
     MRMESH_API void run( const VertCoords & guide, const FaceNormals & normals, VertCoords & points, float maxInitialDistSq );
 

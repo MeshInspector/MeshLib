@@ -61,6 +61,9 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
     };
 
     addSubTask( getSubTask( aTree.rootNodeId(), bTree.rootNodeId() ) );
+    // the closest triangles found so far, their points are computed at the end
+    TriTriDistanceResultf bestTd;
+    Triangle3f bestAv, bestBv;
 
     while ( !subtasks.empty() )
     {
@@ -94,24 +97,12 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
             const auto td = findTriTriDistance( av, bv, { .upDistLimitSq = res.distSq, .upLimitCheck = UpLimitCheck::GreaterOrEqual } );
             if ( td.distSq < res.distSq )
             {
-                Vector3f aPt = td.a;
-                Vector3f bPt = td.b;
                 res.distSq = td.distSq;
-                if ( td.distSq == 0 )
-                {
-                    auto pt = findTriangleTriangleIntersection( av[0], av[1], av[2], bv[0], bv[1], bv[2] );
-                    if ( pt )
-                        aPt = bPt = *pt;
-                    else
-                    {
-                        // might fall back here in degenerated scenarios
-                        aPt = bPt = 0.5f * ( aPt + bPt );
-                    }
-                }
-                res.a.point = aPt;
-                res.a.face = aNode.leafId();
-                res.b.point = bPt;
-                res.b.face = bNode.leafId();
+                res.a.proj.face = aFace;
+                res.b.proj.face = bFace;
+                bestTd = td;
+                bestAv = av;
+                bestBv = bv;
             }
             continue;
         }
@@ -143,8 +134,36 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
         }
     }
 
-    if ( rigidB2A && res.distSq < upDistLimitSq )
-        res.b.point = rigidB2A->inverse()( res.b.point );
+    if ( res.a ) // found closer than upDistLimitSq
+    {
+        Vector3f aPt = bestTd.a;
+        Vector3f bPt = bestTd.b;
+        TriPointf aBary, bBary;
+        if ( res.distSq == 0 )
+        {
+            auto pt = findTriangleTriangleIntersection( bestAv[0], bestAv[1], bestAv[2], bestBv[0], bestBv[1], bestBv[2] );
+            if ( pt )
+                aPt = bPt = *pt;
+            else
+            {
+                // might fall back here in degenerated scenarios
+                aPt = bPt = 0.5f * ( aPt + bPt );
+            }
+            aBary = TriPointf( aPt, bestAv[0], bestAv[1], bestAv[2] );
+            bBary = TriPointf( bPt, bestBv[0], bestBv[1], bestBv[2] );
+        }
+        else
+        {
+            aBary = bestTd.aBary( bestAv );
+            bBary = bestTd.bBary( bestBv );
+        }
+        res.a.proj.point = aPt;
+        res.a.mtp = MeshTriPoint( a.mesh.topology.edgeWithLeft( res.a.proj.face ), aBary );
+        res.a.distSq = res.distSq;
+        res.b.proj.point = rigidB2A ? rigidB2A->inverse()( bPt ) : bPt;
+        res.b.mtp = MeshTriPoint( b.mesh.topology.edgeWithLeft( res.b.proj.face ), bBary );
+        res.b.distSq = res.distSq;
+    }
 
     return res;
 }
@@ -152,7 +171,7 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
 struct InternalZoneWithProjections
 {
     VertBitSet vertBS;
-    std::vector<std::pair<PointOnFace, float>> projectons;
+    std::vector<std::pair<MeshTriPoint, float>> projectons;
 };
 
 InternalZoneWithProjections findSignedDistanceOneWay( const MeshPart & a, const MeshPart & b,
@@ -190,7 +209,7 @@ InternalZoneWithProjections findSignedDistanceOneWay( const MeshPart & a, const 
             const auto distance = test.mesh.signedDistance( point, projectRes );
             if ( distance > 0.0f )
                 return;
-            res.projectons[id] = std::make_pair( projectRes.proj, distance );
+            res.projectons[id] = std::make_pair( projectRes.mtp, distance );
 
             for ( EdgeId e : orgRing( ref.mesh.topology, id ) )
             {
@@ -225,11 +244,11 @@ MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshP
     std::vector<FaceFace> collisions;
     auto status = findCollisionStatus( a, b, res, rigidB2A, &collisions );
     if ( status == MeshMeshCollisionStatus::Touching )
-        return { res.a, res.b,status, 0 }; // two meshes touch one another but do not intersect
+        return { res.a, res.b, status, 0 }; // two meshes touch one another but do not intersect
     if ( status != MeshMeshCollisionStatus::Colliding )
     {
         auto dist = status == MeshMeshCollisionStatus::BothOutside ? std::sqrt( res.distSq ) : -std::sqrt( res.distSq );
-        return { res.a, res.b,status, dist };
+        return { res.a, res.b, status, dist };
     }
 
     // colliding
@@ -237,40 +256,48 @@ MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshP
     auto zoneAndDistancesAB = findSignedDistanceOneWay( a, b, collisions, false, rigidB2A );
     auto zoneAndDistancesBA = findSignedDistanceOneWay( a, b, collisions, true, rigidB2A );
 
-    MeshMeshSignedDistanceResult signedRes;
-    signedRes.status = status;
-    signedRes.signedDist = FLT_MAX;
-
-    auto getTriByVert = [&]( const MeshTopology& topology, VertId id )->FaceId
-    {
-        for ( auto e : orgRing( topology, id ) )
-            if ( auto f = topology.left( e ) )
-                return f;
-        return FaceId{};
-    };
-
+    // the vertex of one mesh deepest inside the other one
+    VertId bestV;
+    bool bestInB = false;
+    float bestDist = FLT_MAX;
     for ( VertId id : zoneAndDistancesAB.vertBS )
     {
-        const auto& [proj, dist] = zoneAndDistancesAB.projectons[id];
-        if ( proj.valid() && dist < signedRes.signedDist )
+        const auto& [mtp, dist] = zoneAndDistancesAB.projectons[id];
+        if ( mtp.valid() && dist < bestDist )
         {
-            signedRes.a = { getTriByVert( a.mesh.topology,id ), a.mesh.points[id] };
-            signedRes.b = proj;
-            signedRes.signedDist = dist;
+            bestV = id;
+            bestDist = dist;
         }
     }
-
     for ( VertId id : zoneAndDistancesBA.vertBS )
     {
-        const auto& [proj, dist] = zoneAndDistancesBA.projectons[id];
-        if ( proj.valid() && dist < signedRes.signedDist )
+        const auto& [mtp, dist] = zoneAndDistancesBA.projectons[id];
+        if ( mtp.valid() && dist < bestDist )
         {
-            signedRes.a = proj;
-            signedRes.b = { getTriByVert( b.mesh.topology,id ), b.mesh.points[id] };
-            signedRes.signedDist = dist;
+            bestV = id;
+            bestInB = true;
+            bestDist = dist;
         }
     }
-    return ( signedRes.signedDist > 0.0f ) ? MeshMeshSignedDistanceResult{ res.a, res.b, status,0.0f } : signedRes;
+    if ( bestDist > 0.0f )
+        return { res.a, res.b, status, 0.0f };
+
+    // the vertex as a point of one of its faces
+    auto vertProj = [&]( const Mesh& mesh ) -> MeshProjectionResult
+    {
+        for ( auto e : orgRing( mesh.topology, bestV ) )
+            if ( auto f = mesh.topology.left( e ) )
+                return { .proj = { f, mesh.points[bestV] }, .mtp = { e, {} }, .distSq = sqr( bestDist ) };
+        return {};
+    };
+    // the projection of the vertex on the other mesh
+    auto otherProj = [&]( const Mesh& mesh, const MeshTriPoint& mtp ) -> MeshProjectionResult
+    {
+        return { .proj = { mesh.topology.left( mtp.e ), mesh.triPoint( mtp ) }, .mtp = mtp, .distSq = sqr( bestDist ) };
+    };
+    if ( bestInB )
+        return { otherProj( a.mesh, zoneAndDistancesBA.projectons[bestV].first ), vertProj( b.mesh ), status, bestDist };
+    return { vertProj( a.mesh ), otherProj( b.mesh, zoneAndDistancesAB.projectons[bestV].first ), status, bestDist };
 }
 
 MeshMeshCollisionStatus findCollisionStatus( const MeshPart& a, const MeshPart& b, const MeshMeshDistanceResult& distRes, 
@@ -286,14 +313,8 @@ MeshMeshCollisionStatus findCollisionStatus( const MeshPart& a, const MeshPart& 
             *collisions = std::move( thisCollisions );
         return status;
     }
-    MeshProjectionResult aRes, bRes;
-    aRes.proj = distRes.a;
-    bRes.proj = distRes.b;
-    aRes.mtp = a.mesh.toTriPoint( distRes.a );
-    bRes.mtp = b.mesh.toTriPoint( distRes.b );
-    bRes.distSq = aRes.distSq = distRes.distSq;
-    bool isBOutside = a.mesh.isOutsideByProjNorm( rigidB2A ? ( *rigidB2A )( distRes.b.point ) : distRes.b.point, aRes, a.region );
-    bool isAOutside = b.mesh.isOutsideByProjNorm( rigidB2A ? rigidB2A->inverse()( distRes.a.point ) : distRes.a.point, bRes, b.region );
+    bool isBOutside = a.mesh.isOutsideByProjNorm( rigidB2A ? ( *rigidB2A )( distRes.b.proj.point ) : distRes.b.proj.point, distRes.a, a.region );
+    bool isAOutside = b.mesh.isOutsideByProjNorm( rigidB2A ? rigidB2A->inverse()( distRes.a.proj.point ) : distRes.a.proj.point, distRes.b, b.region );
     if ( isBOutside && isAOutside )
         status = MeshMeshCollisionStatus::BothOutside;
     else if ( !isBOutside && !isAOutside )

@@ -31,6 +31,9 @@ on:
         default: false
         required: false
         type: boolean
+      vcpkg_version:
+        required: true
+        type: string
 
 jobs:
   macos-build-test:
@@ -41,52 +44,53 @@ jobs:
       matrix:
         arch: [ x64, arm64 ]
         config: [ Debug, Release ]
+        lib-source: [ Homebrew, vcpkg ]
         exclude:
           - arch: x64
             config: Debug
+          - arch: arm64
+            config: Debug
+            lib-source: Homebrew
         include:
           - arch: x64
             config: Release
             compiler: AppleClang
-            cxx-compiler-template: /usr/bin/clang++
-            c-compiler-template: /usr/bin/clang
-            # mrbind and the bindings use the PGO keg fetched from
-            # MeshInspector/toolchains releases; the app stays on AppleClang.
-            llvm-prefix-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2
+            llvm-keg-version: 22.1.8_2
             # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
             runner: macos-15-intel # github hosted
             instance: macos-15-intel
+            # set Xcode version explicitly to mitigate possible vcpkg cache invalidation
+            xcode-version: '16.4'
           - arch: arm64
             config: Release
             compiler: AppleClang
-            cxx-compiler-template: /usr/bin/clang++
-            c-compiler-template: /usr/bin/clang
-            # mrbind and the bindings use the PGO keg fetched from
-            # MeshInspector/toolchains releases; the app stays on AppleClang.
-            llvm-prefix-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2
-            # The .pkg and NuGet bundle brew dylibs that require the macOS they were bottled
-            # for, so this is built on the oldest arm64 Mac (macOS 13).
-            runner: [ self-hosted, macos, arm64, macos-13 ]
-            instance: self-hosted-arm-macos-13
+            llvm-keg-version: 22.1.8_2
+            runner: macos-15
+            instance: macos-15
+            # set Xcode version explicitly to mitigate possible vcpkg cache invalidation
+            xcode-version: '16.4'
           - arch: arm64
             config: Debug
             compiler: brew-llvm22
-            # The -O3+PGO+ThinLTO keg, built on each runner via the local/pgo
-            # tap (llvm.rb with ENV.O3, installed with --build-bottle).
-            llvm-prefix-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2
-            cxx-compiler-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2/bin/clang++
-            c-compiler-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2/bin/clang
+            llvm-keg-version: 22.1.8_2
+            cxx-compiler-template: LLVM_PREFIX/bin/clang++
+            c-compiler-template: LLVM_PREFIX/bin/clang
             runner: [ self-hosted, macos, arm64, build ] #  any macos version
             instance: self-hosted-arm
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
       actions: read   # This is required for wait-for-job
+    env:
+      DEVELOPER_DIR: ${{ matrix.xcode-version && format('/Applications/Xcode_{0}.app/Contents/Developer', matrix.xcode-version) || '' }}
+      VCPKG_TRIPLET: ${{ matrix.arch }}-osx-meshlib
     steps:
       # GitHub-hosted runners enable Spotlight by default
       # https://github.com/actions/runner-images/discussions/5032
       - name: Disable Spotlight indexing
         if: ${{ runner.environment == 'github-hosted' }}
+        # best effort: mdutil fails with -402 on a volume whose index is still transitioning
+        continue-on-error: true
         run: sudo mdutil -a -i off
 
       - name: Checkout
@@ -95,32 +99,69 @@ jobs:
       - name: macOS Diagnostics
         uses: ./.github/actions/macos-diagnostics
 
-      # LLVM_PREFIX selects the LLVM keg for the build and the mrbind scripts;
-      # resolved per machine since the self-hosted label set spans runners
-      # with different homebrew prefixes.
-      - name: Resolve LLVM prefix
-        if: ${{ matrix.llvm-prefix-template }}
-        run: echo "LLVM_PREFIX=$(echo '${{ matrix.llvm-prefix-template }}' | sed "s|BREW_PREFIX|$(brew --prefix)|")" >> $GITHUB_ENV
+      - name: Set up compilers
+        id: compilers
+        run: |
+          BREW_PREFIX=$(brew --prefix)
+          LLVM_PREFIX=${BREW_PREFIX}/Cellar/llvm-pgo/${{ matrix.llvm-keg-version }}
+          echo "LLVM_PREFIX=$LLVM_PREFIX" >> $GITHUB_ENV
+          
+          CXX=/usr/bin/clang++
+          CC=/usr/bin/clang
+          if [ -n '${{ matrix.cxx-compiler-template }}' ] ; then
+            CXX=$(echo '${{ matrix.cxx-compiler-template }}' | \
+              sed "s|BREW_PREFIX|$BREW_PREFIX|" | \
+              sed "s|LLVM_PREFIX|$LLVM_PREFIX|" )
+          fi
+          if [ -n '${{ matrix.c-compiler-template }}' ] ; then
+            CC=$(echo '${{ matrix.c-compiler-template }}' | \
+              sed "s|BREW_PREFIX|$BREW_PREFIX|" | \
+              sed "s|LLVM_PREFIX|$LLVM_PREFIX|" )
+          fi
+          echo "cxx-compiler=$CXX" >> $GITHUB_OUTPUT
+          echo "c-compiler=$CC" >> $GITHUB_OUTPUT
+
+      - name: Compute Homebrew path hash
+        id: brew-hash
+        run: |
+          BREW_HASH=$(printf %s "$(brew --prefix)" | shasum -a 256 | cut -c1-16)
+          echo "brew-hash=${BREW_HASH}" >> $GITHUB_OUTPUT
 
       - name: Checkout third-party submodules
         run: |
           # Selective init -- parent Checkout drops submodules:true.
           # https://github.com/actions/checkout/issues/1779
           # Retried via retry.sh: submodule endpoints occasionally 500.
-          bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_macos.sh
+          bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_macos.sh ${{ matrix.lib-source == 'vcpkg' && '--vcpkg' || '' }}
 
       - name: Install llvm-pgo keg
-        if: ${{ contains(matrix.llvm-prefix-template, 'llvm-pgo') }}
         uses: ./.github/actions/install-llvm-pgo-keg
 
       - name: Install thirdparty libs
-        id: thirdparty
+        if: ${{ matrix.lib-source == 'Homebrew' }}
         uses: ./.github/actions/install-macos-thirdparty
         with:
           cache-instance: ${{ matrix.instance }}
           cache-compiler: ${{ matrix.compiler }}
-          cxx-compiler-template: ${{ matrix.cxx-compiler-template }}
-          c-compiler-template: ${{ matrix.c-compiler-template }}
+          cxx-compiler: ${{ steps.compilers.outputs.cxx-compiler }}
+          c-compiler: ${{ steps.compilers.outputs.c-compiler }}
+
+      - name: Set up vcpkg
+        if: ${{ matrix.lib-source == 'vcpkg' }}
+        uses: ./.github/actions/setup-vcpkg-macos
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+          HOMEBREW_NO_INSTALL_UPGRADE: '1'
+        with:
+          vcpkg-version: ${{ inputs.vcpkg_version }}
+          vcpkg-triplet: ${{ env.VCPKG_TRIPLET }}
+          # AppleClang as in MIC: draco 1.5.7 passes --start-group to non-Apple Clang, which ld64 rejects
+          c-compiler: /usr/bin/clang
+          cxx-compiler: /usr/bin/clang++
+          toolchain: ${{ matrix.xcode-version && format('xcode{0}', matrix.xcode-version) || matrix.instance }}
+          internal-build: ${{ inputs.internal_build }}
+          # self-hosted runners have no preinstalled vcpkg; keep one per runner workspace
+          vcpkg-root: ${{ runner.environment == 'self-hosted' && format('{0}/vcpkg', runner.workspace) || '/usr/local/share/vcpkg' }}
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}
@@ -130,7 +171,7 @@ jobs:
         with:
           target_os: macos
           target_arch: ${{ matrix.arch }}
-          cxx_compiler: ${{ steps.thirdparty.outputs.cxx-compiler }}
+          cxx_compiler: ${{ steps.compilers.outputs.cxx-compiler }}
           build_config: ${{ matrix.config }}
 
       - name: Install MRBind deps
@@ -140,20 +181,14 @@ jobs:
           HOMEBREW_NO_INSTALL_CLEANUP: '1'   # don't prune the known-good keg
         run: ./scripts/mrbind/install_deps_macos.sh
 
-      - name: Build MRBind
-        if: ${{ inputs.mrbind || inputs.mrbind_c }}
-        uses: ./.github/actions/build-mrbind
-        with:
-          # Keyed on the runner image (matrix.instance) plus the brew-prefix hash
-          # to discriminate between fleet members of the self-hosted ARM label set.
-          # Shared with pip-build.yml's macOS section where the two also match.
-          cache-key-prefix: ${{ matrix.instance }}-clang
-          build-script: scripts/mrbind/install_mrbind_macos.sh
-          extra-cache-key: ${{ matrix.llvm-prefix-template }}${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.thirdparty.outputs.brew-hash }}
-
       - name: Create virtualenv
         run: |
-          python3.12 -m venv .venv
+          PYTHON=python3.12
+          if [ "${{ matrix.lib-source }}" = "vcpkg" ] ; then
+            PATH="$PWD/vcpkg_installed/${VCPKG_TRIPLET}/tools/python3:$PATH"
+            PYTHON=python3
+          fi
+          $PYTHON -m venv .venv
           . .venv/bin/activate
           echo PATH=$PATH >> $GITHUB_ENV
 
@@ -168,7 +203,9 @@ jobs:
         env:
           MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
-          CMAKE_CXX_COMPILER: ${{ steps.thirdparty.outputs.cxx-compiler }}
+          MESHLIB_USE_VCPKG: ${{ fromJSON('["OFF", "ON"]')[matrix.lib-source == 'vcpkg'] }}
+          VCPKG_MANIFEST_MODE: 'ON'
+          CMAKE_CXX_COMPILER: ${{ steps.compilers.outputs.cxx-compiler }}
           MR_VERSION: ${{ inputs.app_version }}
           MR_CMAKE_OPTIONS: >
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
@@ -177,34 +214,15 @@ jobs:
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DMRVOXELS_UNITY_BUILD=ON
 
-      - name: Wait for C bindings
+      - name: Get and build C bindings
         if: ${{ inputs.mrbind_c }}
-        uses: ./.github/actions/wait-for-job
-        with:
-          job-name: generate-c-bindings
-
-      - name: Download C bindings
-        if: ${{ inputs.mrbind_c }}
-        uses: actions/download-artifact@v8
-        with:
-          name: CBindings
-          path: MeshLib/CbindingsTmp
-
-      - name: Prepare C bindings folders
-        if: ${{ inputs.mrbind_c }}
-        run: |
-          rm -rf source/MeshLibC2
-          mv MeshLib/CbindingsTmp/MeshLibC2 source
-          # Cuda placeholders:
-          cp -R scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
-
-      - name: Build C bindings
-        if: ${{ inputs.mrbind_c }}
+        uses: ./.github/actions/get-c-bindings
         env:
           MR_VERSION: ${{ inputs.app_version }}
-        run: |
-          cmake -S . -B build/${{ matrix.config }} -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON
-          cmake --build build/${{ matrix.config }} -j $(sysctl -n hw.logicalcpu) --target MeshLibC2 MeshLibC2Cuda MRTestC2
+        with:
+          cuda: 'false'
+          build-dir: build/${{ matrix.config }}
+          targets: MeshLibC2 MeshLibC2Cuda MRTestC2
 
       - name: MRMesh Exported Symbols
         run: |
@@ -218,16 +236,24 @@ jobs:
       - name: Generate and build Python bindings
         if: ${{ inputs.mrbind }}
         env:
-          PATH: ${{ steps.thirdparty.outputs.brew-prefix }}/opt/make/libexec/gnubin:${{ steps.thirdparty.outputs.brew-prefix }}/opt/grep/libexec/gnubin:${{env.PATH}}
-          CXX: ${{ steps.thirdparty.outputs.cxx-compiler }}
+          CXX: ${{ steps.compilers.outputs.cxx-compiler }}
         run: |
+          export PATH="$(brew --prefix)/opt/make/libexec/gnubin:$(brew --prefix)/opt/grep/libexec/gnubin:$PATH"
           make --version
+          if [ "${{ matrix.lib-source }}" = "vcpkg" ] ; then
+            export PKG_CONFIG_LIBDIR="$PWD/vcpkg_installed/${VCPKG_TRIPLET}/lib/pkgconfig"
+            DEPS_BASE_DIR="vcpkg_installed/${VCPKG_TRIPLET}"
+          else
+            DEPS_BASE_DIR=.
+          fi
           # No distribution carries these; only this job's own tests use them.
           make -f scripts/mrbind/generate.mk \
             -B --trace \
             MODE=none \
-            PYTHON_PKGCONF_NAME=python-3.12-embed \
-            MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
+            PYTHON_SOURCES_DIR=source/MeshLibC2/temp/python \
+            PYTHON_PKGCONF_NAME=python-$(python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])')-embed \
+            MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin \
+            DEPS_BASE_DIR=${DEPS_BASE_DIR}
 
       - name: Run Start-and-Exit Tests
         timeout-minutes: 3
@@ -276,7 +302,11 @@ jobs:
       - name: Create Pkg
         if: ${{ matrix.config == 'Release' }}
         run: |
-          ./scripts/distribution_apple.sh ${{ inputs.app_version }}
+          if [ "${{ matrix.lib-source }}" = "vcpkg" ] ; then
+            ./scripts/distribution_vcpkg_macos.sh ${{ inputs.app_version }}
+          else
+            ./scripts/distribution_apple.sh ${{ inputs.app_version }}
+          fi
           mv MeshLib_.pkg meshlib_${{matrix.arch}}.pkg
 
       - name: Extract Pkg
@@ -290,7 +320,7 @@ jobs:
       - name: Build C++ examples
         if: ${{ matrix.config == 'Release' }}
         env:
-          CXX: ${{ steps.thirdparty.outputs.cxx-compiler }}
+          CXX: ${{ steps.compilers.outputs.cxx-compiler }}
         run: |
           cmake \
             -S examples/cpp-examples \
@@ -300,10 +330,22 @@ jobs:
             --build cpp-examples-build \
             --parallel $(sysctl -n hw.physicalcpu)
 
+      - name: Build and test Rust bindings
+        if: ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' }}
+        uses: ./.github/actions/build-rust-bindings
+        with:
+          lib-dir: ${{ github.workspace }}/build/${{ matrix.config }}/bin
+
+      - name: Build and test Java bindings
+        if: ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' }}
+        uses: ./.github/actions/build-java-bindings
+        with:
+          lib-dir: ${{ github.workspace }}/build/${{ matrix.config }}/bin
+
       - name: Build C examples
         if: ${{ matrix.config == 'Release' }}
         env:
-          CC: ${{ steps.thirdparty.outputs.c-compiler }}
+          CC: ${{ steps.compilers.outputs.c-compiler }}
         run: |
           cmake \
             -S examples/c-examples \
@@ -315,7 +357,7 @@ jobs:
           ./c-examples-build/MeshModification
 
       - name: Upload Macos Distribution
-        if: ${{ inputs.upload_artifacts && matrix.config == 'Release' }}
+        if: ${{ inputs.upload_artifacts && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' }}
         env:
           ACTIONS_ARTIFACT_UPLOAD_TIMEOUT_MS: 1800000
         uses: actions/upload-artifact@v7
@@ -330,7 +372,7 @@ jobs:
         # invoke this step with no matching .pkg and the action fails (with
         # `continue-on-error: true` the job still succeeds, but a confusing
         # `failure`-level annotation is surfaced on the run summary).
-        if: ${{ inputs.internal_build && inputs.upload_artifacts && matrix.config == 'Release' }}
+        if: ${{ inputs.internal_build && inputs.upload_artifacts && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' }}
         continue-on-error: true
         uses: ./.github/actions/collect-artifact-stats
         with:
@@ -339,7 +381,7 @@ jobs:
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
 
       - name: Create and fix fake Wheel for NuGet
-        if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' }}
+        if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' }}
         shell: bash
         run: |
           python3 -m venv ./wheel_venv
@@ -349,7 +391,7 @@ jobs:
           ./scripts/nuget_patch/fix_macos_rpath.sh ./patched_content/lib{MeshLibC2,MeshLibC2Cuda}.dylib
 
       - name: Upload NuGet files to Artifacts
-        if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' }}
+        if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' }}
         uses: actions/upload-artifact@v7
         with:
           name: DotNetPatchArchiveMacOs-${{ matrix.arch }}

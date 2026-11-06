@@ -268,8 +268,8 @@ void ObjectLinesHolder::serializeBaseFields_( Json::Value& root ) const
         root["ColoringType"] = "Solid";
     }
 
-    serializeToJson( linesColorMap_.vec_, root["LineColors"] );
-    serializeToJson( vertsColorMap_.vec_, root["VertColors"] );
+    serializeToJson( linesColorMap_, root["LineColors"] );
+    serializeToJson( vertsColorMap_, root["VertColors"] );
 
     root["LineWidth"] = lineWidth_;
 }
@@ -341,8 +341,8 @@ void ObjectLinesHolder::deserializeBaseFields_( const Json::Value& root )
         else if ( stype == "PerLine" )
             setColoringType( ColoringType::LinesColorMap );
     }
-    deserializeFromJson( root["LineColors"], linesColorMap_.vec_ );
-    deserializeFromJson( root["VertColors"], vertsColorMap_.vec_ );
+    deserializeFromJson( root["LineColors"], linesColorMap_ );
+    deserializeFromJson( root["VertColors"], vertsColorMap_ );
 
     if ( root["UseDefaultSceneProperties"].isBool() && root["UseDefaultSceneProperties"].asBool() )
         setDefaultSceneProperties_();
@@ -375,7 +375,7 @@ void ObjectLinesHolder::deserializeFields_( const Json::Value& root )
     Polyline3 polyline;
     polyline.points.resize( pointsRoot.size() );
     for ( int i = 0; i < polyline.points.size(); ++i )
-        deserializeFromJson( pointsRoot[i], polyline.points.vec_[i] );
+        deserializeFromJson( pointsRoot[i], polyline.points[VertId( i )] );
 
     int maxVertId = -1;
     for ( int i = 0; i < ( int )linesRoot.size(); ++i )

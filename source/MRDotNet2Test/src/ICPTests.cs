@@ -12,35 +12,36 @@ namespace MRTest
         [Test]
         public void TestMultiwayICP()
         {
-            var inputs = new Std.Vector_MRMeshOrPointsXf();
+            var inputs = new Vector_MRMeshOrPointsXf_MRObjId();
             Box3f maxBBox = new Box3f();
 
             inputs.pushBack( new MeshOrPointsXf(makeSphere(new SphereParams(1.0f, 1000)), new AffineXf3f()));
-            Box3f bbox = inputs[0].obj.getObjBoundingBox();
+            Box3f bbox = inputs[new ObjId(0)].obj.getObjBoundingBox();
             if (!maxBBox.valid() || bbox.volume() > maxBBox.volume())
                 maxBBox = bbox;
 
             inputs.pushBack(new MeshOrPointsXf(makeSphere(new SphereParams(1.0f, 1000)), AffineXf3f.linear(Matrix3f.rotation(Vector3f.plusZ(), 0.1f))));
-            bbox = inputs[1].obj.getObjBoundingBox();
+            bbox = inputs[new ObjId(1)].obj.getObjBoundingBox();
             if (!maxBBox.valid() || bbox.volume() > maxBBox.volume())
                 maxBBox = bbox;
 
             MultiwayICPSamplingParameters samplingParams = new MultiwayICPSamplingParameters();
             samplingParams.samplingVoxelSize = maxBBox.diagonal() * 0.03f;
 
-            MultiwayICP icp = new MultiwayICP(new Vector_MRMeshOrPointsXf_MRObjId(Misc.Move(inputs)), samplingParams);
+            MultiwayICP icp = new MultiwayICP(inputs, samplingParams);
             ICPProperties iCPProperties = new ICPProperties();
             icp.setParams(iCPProperties);
             icp.updateAllPointPairs();
 
-            Assert.That(icp.getNumActivePairs(), Is.EqualTo((nuint)1748));
-            Assert.That(icp.getNumSamples(), Is.EqualTo((nuint)1748));
+            // 1744 pairs with FMA instructions (clang-cl on arm64), 1748 without
+            Assert.That((long)icp.getNumActivePairs(), Is.InRange(1744, 1748));
+            Assert.That((long)icp.getNumSamples(), Is.InRange(1744, 1748));
             Assert.That(icp.getMeanSqDistToPoint(), Is.EqualTo(0.00254).Within(1e-5));
 
             Console.WriteLine("Calculating transformations...");
             var xfs = icp.calculateTransformations();
-            Assert.That(icp.getNumActivePairs(), Is.EqualTo((nuint)1748));
-            Assert.That(icp.getNumSamples(), Is.EqualTo((nuint)1748));
+            Assert.That((long)icp.getNumActivePairs(), Is.InRange(1744, 1748));
+            Assert.That((long)icp.getNumSamples(), Is.InRange(1744, 1748));
             Assert.That(icp.getMeanSqDistToPoint(), Is.EqualTo(0).Within(1e-5));
         }
 

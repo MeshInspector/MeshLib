@@ -20,14 +20,13 @@ namespace MR
 class Laplacian
 {
 public:
-    MRMESH_API explicit Laplacian( Mesh & mesh );
-    MRMESH_API Laplacian( const MeshTopology & topology, VertCoords & points );
+    MR_BIND_OVERLOAD_SUFFIX() MRMESH_API explicit Laplacian( Mesh & mesh );
+    MR_BIND_OVERLOAD_SUFFIX(topology) MRMESH_API Laplacian( const MeshTopology & topology, VertCoords & points );
     MRMESH_API Laplacian( Laplacian && ) noexcept;
     MRMESH_API ~Laplacian();
 
     /// (re)initialize Laplacian for the region being deformed, here region properties are remembered and precomputed;
     /// \param freeVerts must not include all vertices of a mesh connected component;
-    /// \param usePoints is not nullptr, then these points will be used instead of passed to a constructor for weights computation and shape memory
     void init( const VertBitSet & freeVerts, EdgeWeights weights, VertexMass vmass = VertexMass::Unit, RememberShape rem = RememberShape::Yes )
         { initFromPoints( points_, freeVerts, weights, vmass, rem ); }
 
@@ -37,11 +36,11 @@ public:
 
     /// notify Laplacian that given vertex has changed after init and must be fixed during apply;
     /// \param smooth whether to make the surface smooth in this vertex (sharp otherwise)
-    MRMESH_API void fixVertex( VertId v, bool smooth = true );
+    MR_BIND_OVERLOAD_SUFFIX() MRMESH_API void fixVertex( VertId v, bool smooth = true );
 
     /// sets position of given vertex after init and it must be fixed during apply (THIS METHOD CHANGES THE MESH);
     /// \param smooth whether to make the surface smooth in this vertex (sharp otherwise)
-    MRMESH_API void fixVertex( VertId v, const Vector3f & fixedPos, bool smooth = true );
+    MR_BIND_OVERLOAD_SUFFIX(pos) MRMESH_API void fixVertex( VertId v, const Vector3f & fixedPos, bool smooth = true );
 
     /// multiplies vertex equation's weight on the given factor
     MRMESH_API void multVertexWeight( VertId v, double factor );

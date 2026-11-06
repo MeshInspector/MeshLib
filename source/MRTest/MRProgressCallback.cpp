@@ -1,4 +1,5 @@
 #include <MRMesh/MRProgressCallback.h>
+#include <MRMesh/MRParallelProgressReporter.h>
 
 #include <gtest/gtest.h>
 
@@ -24,6 +25,15 @@ TEST( MRMesh, ProgressCallback )
     EXPECT_LE( progressValues[0], progressValues[1] );
     EXPECT_LE( progressValues[0], progressValues[2] );
     EXPECT_LE( progressValues[1], progressValues[2] );
+}
+
+TEST( MRMesh, ParallelProgressReporterEmptyCallback )
+{
+    const ProgressCallback emptyCb;
+    ParallelProgressReporter reporter( emptyCb );
+    auto task = reporter.newTask();
+    EXPECT_TRUE( task( 0.5f ) ); // reported from the reporter's thread, so the callback is invoked here
+    EXPECT_TRUE( reporter() );
 }
 
 } // namespace MR

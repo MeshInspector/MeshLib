@@ -363,7 +363,7 @@ void Mesh::addMesh( const Mesh & from, PartMapping map, bool rearrangeTriangles 
     VertId lastPointId = topology.lastValidVert();
     if ( points.size() < lastPointId + 1 )
         points.resize( lastPointId + 1 );
-    map.src2tgtVerts->forEach( [&]( VertId fromVert, VertId thisVert ) { points[thisVert] = from.points[fromVert]; } );
+    map.src2tgtVerts->forEachParallel( [&]( VertId fromVert, VertId thisVert ) { points[thisVert] = from.points[fromVert]; } );
 }
 
 void Mesh::addMeshPart( const MeshPart & from, const PartMapping & map, VacantElements * vacant )
@@ -387,7 +387,7 @@ bool Mesh::addMeshPart( const MeshPart & from, bool flipOrientation,
     VertId lastPointId = topology.lastValidVert();
     if ( points.size() < lastPointId + 1 )
         points.resize( lastPointId + 1 );
-    map.src2tgtVerts->forEach( [&]( VertId fromVert, VertId thisVert ) { points[thisVert] = from.mesh.points[fromVert]; } );
+    map.src2tgtVerts->forEachParallel( [&]( VertId fromVert, VertId thisVert ) { points[thisVert] = from.mesh.points[fromVert]; } );
     return true;
 }
 
@@ -465,7 +465,8 @@ Expected<PackMapping> Mesh::packOptimally( bool preserveAABBTree, ProgressCallba
 
     PackMapping map;
     AABBTreePointsOwner_.reset(); // points-tree will be invalidated anyway
-    if ( preserveAABBTree )
+    // an already constructed tree gives the face order much faster than getOptimalFaceOrdering
+    if ( preserveAABBTree || AABBTreeOwner_.get() )
     {
         getAABBTree(); // ensure that tree is constructed
         map.f.b.resize( topology.faceSize() );
@@ -476,13 +477,16 @@ Expected<PackMapping> Mesh::packOptimally( bool preserveAABBTree, ProgressCallba
                 if ( !topology.hasFace( f ) )
                     map.f.b[f] = FaceId{};
         }
-        AABBTreeOwner_.update( [&map]( AABBTree& t ) { t.getLeafOrderAndReset( map.f ); } );
+        if ( preserveAABBTree )
+            AABBTreeOwner_.update( [&map]( AABBTree& t ) { t.getLeafOrderAndReset( map.f ); } );
+        else
+        {
+            AABBTreeOwner_.get()->getLeafOrder( map.f );
+            AABBTreeOwner_.reset();
+        }
     }
     else
-    {
-        AABBTreeOwner_.reset();
         map.f = getOptimalFaceOrdering( *this );
-    }
     if ( !reportProgress( cb, 0.3f ) )
         return unexpectedOperationCanceled();
 
@@ -608,7 +612,7 @@ void Mesh::shrinkToFit()
 {
     MR_TIMER;
     topology.shrinkToFit();
-    points.vec_.shrink_to_fit();
+    points.shrink_to_fit();
 }
 
 void Mesh::mirror( const Plane3f& plane )

@@ -18,7 +18,7 @@ void testFindSignedDistances( void )
     MR_MeshProjectionParameters* params = MR_MeshProjectionParameters_DefaultConstruct();
     MR_MeshProjectionParameters_Set_xf( params, &xf );
 
-    MR_VertScalars* results = MR_findSignedDistances_4( meshA, meshB, params, NULL );
+    MR_VertScalars* results = MR_findSignedDistances( meshA, meshB, params, NULL );
     MR_MeshProjectionParameters_Destroy( params );
 
     TEST_ASSERT_INT_EQUAL( (int)MR_VertScalars_size( results ), (int)MR_VertCoords_size( MR_Mesh_Get_points( meshB ) ) );

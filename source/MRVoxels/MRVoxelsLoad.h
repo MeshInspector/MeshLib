@@ -1,10 +1,10 @@
 #pragma once
 #include "MRVoxelsFwd.h"
-#include "MRScalarConvert.h"
 #include "MRVoxelsVolume.h"
 
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRObject.h"
+#include "MRMesh/MRScalarConvert.h"
 #include <MRMesh/MRLoadedObjects.h>
 
 #include <filesystem>
@@ -12,12 +12,12 @@
 namespace MR
 {
 
-namespace VoxelsLoad
-{
-
 /// \defgroup VoxelsLoadGroup Voxels Load
 /// \ingroup IOGroup
 /// \{
+
+namespace VoxelsLoad
+{
 
 struct RawParameters
 {
@@ -89,17 +89,23 @@ enum class GridType
     LevelSet = 1
 };
 
-#ifndef MRVOXELS_NO_TIFF
-struct LoadingTiffSettings
+struct RasterFolderLoadSettings
 {
     std::filesystem::path dir;
     Vector3f voxelSize = { 1.0f, 1.0f, 1.0f };
     GridType gridType = GridType::DenseGrid;
     ProgressCallback cb = {};
 };
-/// Load voxels from a set of TIFF files
-MRVOXELS_API Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings );
-#endif // MRVOXELS_NO_TIFF
+/// Load voxels from the raster files of a folder, a layer from each file: the files are those of the extension with a raster loader
+/// that most files have, sorted by name; they must have the same RasterInfo, their values are converted by convertRasterToFloats
+MRVOXELS_API Expected<VdbVolume> loadRasterFolder( const RasterFolderLoadSettings& settings );
+
+using LoadingTiffSettings [[deprecated( "Use RasterFolderLoadSettings" )]] MR_BIND_IGNORE = RasterFolderLoadSettings;
+[[deprecated( "Use loadRasterFolder" )]]
+MR_BIND_IGNORE inline Expected<VdbVolume> loadTiffDir( const RasterFolderLoadSettings& settings )
+{
+    return loadRasterFolder( settings );
+}
 
 #ifndef MR_PARSING_FOR_ANY_BINDINGS
 using VoxelsLoader = Expected<std::vector<VdbVolume>>( * )( const std::filesystem::path&, const ProgressCallback& );

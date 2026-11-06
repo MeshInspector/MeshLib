@@ -55,7 +55,7 @@ void testVDBConversions( void )
 
     MR_expected_MR_Mesh_std_string* restoredEx = MR_gridToMesh_const_MR_FloatGrid_ref( MR_VdbVolume_Get_data( volume ), gridToMeshSettings );
     const MR_Mesh* restored = MR_expected_MR_Mesh_std_string_value( restoredEx );
-    MR_Box3f bbox = MR_Mesh_computeBoundingBox_1( restored, NULL );
+    MR_Box3f bbox = MR_Mesh_computeBoundingBox( restored, NULL );
     TEST_ASSERT( bbox.min.x > 0.199f && bbox.min.x < 0.201f );
     TEST_ASSERT( bbox.min.y > 0.199f && bbox.min.y < 0.201f );
     TEST_ASSERT( bbox.min.z > 0.199f && bbox.min.z < 0.201f );
@@ -149,7 +149,7 @@ void testAccessors( void )
     MR_VoxelBitSet* region = MR_VoxelBitSet_DefaultConstruct();
     MR_VoxelBitSet_resize( region, dims->x * dims->y * dims->z, NULL );
 
-    MR_VoxelBitSet_set_2( region, (MR_VoxelId){0}, true );
+    MR_VoxelBitSet_set( region, (MR_VoxelId){0}, true );
 
     MR_setValue_MR_VoxelBitSet( MR_VdbVolume_GetMutable_data( volume ), region, 1.0f );
     MR_VoxelBitSet_Destroy( region );

@@ -2,12 +2,15 @@
 #include <MRMesh/MRMeshDecimate.h>
 #include <MRMesh/MRCylinder.h>
 #include <MRMesh/MRMakeSphereMesh.h>
+#include <MRMesh/MRCube.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBuffer.h>
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRObjectMeshData.h>
 #include <MRMesh/MRMeshProject.h>
 #include <MRMesh/MRBitSet.h>
+#include <MRMesh/MRRegionBoundary.h>
+#include <MRMesh/MRQuadraticForm.h>
 #include <map>
 #include <tuple>
 #include <sstream>
@@ -56,6 +59,65 @@ TEST( MRMesh, MeshDecimateParallel )
     decimateMesh( mesh, settings );
     ASSERT_EQ( mesh.topology.numValidFaces(), 2 );
     ASSERT_EQ( mesh.topology.numValidVerts(), 3 );
+}
+
+// all parts modes decimate a region of the mesh in parallel and keep the sets from the settings consistent with the mesh
+TEST( MRMesh, MeshDecimatePartsModes )
+{
+    for ( auto mode : { DecimatePartsMode::PackedMesh, DecimatePartsMode::AABBTree } )
+    {
+        auto mesh = makeSphere( { .numMeshVertices = 2000 } );
+        FaceBitSet region( mesh.topology.faceSize() );
+        for ( auto f : mesh.topology.getValidFaces() )
+            if ( mesh.triCenter( f ).z > 0 )
+                region.set( f );
+        const auto numRegionFaces = int( region.count() );
+        auto notFlippable = findRegionBoundaryUndirectedEdgesInsideMesh( mesh.topology, region );
+        Vector<QuadraticForm3f, VertId> vertForms;
+
+        DecimateSettings settings;
+        settings.maxError = FLT_MAX;
+        settings.maxDeletedFaces = numRegionFaces / 2;
+        settings.region = &region;
+        settings.notFlippable = &notFlippable;
+        settings.vertForms = &vertForms;
+        settings.subdivideParts = 8;
+        settings.partsMode = mode;
+        const auto res = decimateMesh( mesh, settings );
+
+        EXPECT_GE( res.facesDeleted, numRegionFaces / 2 );
+        EXPECT_LE( res.facesDeleted, numRegionFaces / 2 + 1 );
+        EXPECT_TRUE( mesh.topology.checkValidity() );
+        EXPECT_LT( int( region.count() ), numRegionFaces * 3 / 4 );
+        EXPECT_EQ( vertForms.size(), mesh.topology.vertSize() );
+        for ( auto f : region )
+        {
+            EXPECT_TRUE( mesh.topology.hasFace( f ) );
+            EXPECT_GT( mesh.triCenter( f ).z, -0.1f ); // the region still covers the upper half of the sphere
+        }
+        for ( auto ue : notFlippable )
+            EXPECT_FALSE( mesh.topology.isLoneEdge( ue ) );
+    }
+}
+
+TEST( MRMesh, MeshDecimateWithoutQualityChecks )
+{
+    for ( int parts : { 1, 8 } )
+    {
+        auto mesh = makeSphere( { .numMeshVertices = 2000 } );
+        mesh.packOptimally( false );
+        const auto numFaces = mesh.topology.numValidFaces();
+        DecimateSettings settings;
+        settings.maxError = FLT_MAX;
+        settings.maxDeletedFaces = numFaces / 2;
+        settings.maxTriangleAspectRatio = FLT_MAX;
+        settings.preventNormalFlips = false;
+        settings.subdivideParts = parts;
+        const auto res = decimateMesh( mesh, settings );
+        EXPECT_EQ( res.facesDeleted, numFaces / 2 );
+        EXPECT_EQ( mesh.topology.numValidFaces(), numFaces - numFaces / 2 );
+        EXPECT_TRUE( mesh.topology.checkValidity() );
+    }
 }
 
 TEST( MRMesh, MeshDecimateMultipleEdgeResolve )
@@ -303,6 +365,36 @@ TEST( MRMesh, DecimateObjectMeshDataShortAttributes )
             EXPECT_EQ( data.uvCoordinates[v], before.uvCoordinates[pv] );
         }
     }
+}
+
+TEST( MRMesh, RemeshTargetTriCountBeyondInt )
+{
+    // area / targetTriArea ~ 2e13 does not fit in int: nothing to decimate, and no overflow
+    Mesh sphere = makeUVSphere( 1000.f, 8, 8 );
+    const auto numFaces = sphere.topology.numValidFaces();
+    RemeshSettings rs;
+    rs.maxEdgeSplits = 100;
+    EXPECT_TRUE( remesh( sphere, rs ) );
+    EXPECT_TRUE( sphere.topology.checkValidity() );
+    EXPECT_GT( sphere.topology.numValidFaces(), numFaces );
+}
+
+TEST( MRMesh, RemeshKeepsSharpEdges )
+{
+    // edge flips across the cube's edges used to be limited only by the absolute deviation 1, losing 1/3 of the volume
+    const Mesh cube = makeCube();
+    Mesh mesh = cube;
+    RemeshSettings rs;
+    rs.targetEdgeLen = 0.05f;
+    rs.maxAngleChangeAfterFlip = PI_F;
+    EXPECT_TRUE( remesh( mesh, rs ) );
+    EXPECT_TRUE( mesh.topology.checkValidity() );
+    EXPECT_GT( mesh.topology.numValidFaces(), 1000 );
+    EXPECT_NEAR( mesh.volume(), 1.0, 0.01 );
+    float maxDist = 0;
+    for ( auto v : mesh.topology.getValidVerts() )
+        maxDist = std::max( maxDist, std::sqrt( findProjection( mesh.points[v], cube ).distSq ) );
+    EXPECT_LT( maxDist, rs.targetEdgeLen );
 }
 
 } //namespace MR

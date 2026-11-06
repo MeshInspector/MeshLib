@@ -10,6 +10,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <cstdlib>
 #include <filesystem>
@@ -36,7 +37,7 @@ namespace
 
 // PASTED from `getExecutablePath_()` in MeshLib/source/MRMesh/MRSystemPath.cpp.
 // Adapted: returns an empty path on failure instead of `Expected<>` so the
-// gateway keeps its zero-MRMesh dependency footprint.
+// gateway keeps its zero-MRMesh dependency footprint. The returned path is absolute.
 std::filesystem::path gatewayExePath()
 {
 #if defined( _WIN32 )
@@ -50,6 +51,10 @@ std::filesystem::path gatewayExePath()
     uint32_t size = PATH_MAX;
     if ( _NSGetExecutablePath( path, &size ) != 0 )
         return {};
+    // older dyld versions may return a relative path
+    std::error_code ec;
+    if ( auto res = std::filesystem::absolute( path, ec ); !ec )
+        return res;
     return std::filesystem::path{ path };
 #else
     char path[PATH_MAX];
@@ -253,7 +258,7 @@ int main( int argc, char** argv )
     //  2. Avoid fastmcpp's initialize handler calling `proxy.list_all_resources/templates/prompts`,
     //     which each invoke our client factory and probe the backend — making `initialize` slow
     //     enough to trip `claude mcp list`'s health-check timeout when the backend is offline.
-    auto handler = [inner, transportPtr]( const fastmcpp::Json& req ) -> fastmcpp::Json
+    auto handler = [inner, transportPtr, &cfg]( const fastmcpp::Json& req ) -> fastmcpp::Json
     {
         const std::string method = req.is_object() ? req.value( "method", std::string{} ) : std::string{};
         if ( method == "initialize" )
@@ -289,9 +294,17 @@ int main( int argc, char** argv )
                 }
                 catch ( const std::exception& e )
                 {
+                    // a tool result with `isError` rather than a JSON-RPC error: Claude Desktop shows the model
+                    // only a generic message for the latter, so it would not learn to call `launch`
+                    std::string text = std::string( "The backend did not handle the call: " ) + e.what();
+                    if ( dynamic_cast<const fastmcpp::TransportError*>( &e ) ) // not an error reply of a running backend
+                        text += ". If it is not running, start it with the `launch` tool (`status` tells whether it runs).";
                     return fastmcpp::Json{
                         { "jsonrpc", "2.0" }, { "id", id },
-                        { "error", { { "code", -32603 }, { "message", e.what() } } },
+                        { "result", {
+                            { "content", fastmcpp::Json::array( { { { "type", "text" }, { "text", text } } } ) },
+                            { "isError", true },
+                        } },
                     };
                 }
             }
@@ -302,20 +315,38 @@ int main( int argc, char** argv )
         // When the backend is offline, fastmcpp's proxy returns only our local tools
         // (`launch`, `status`). Splice in the cached schema array so the MCP client
         // still sees the full proxied surface and can decide which tools to call.
-        const auto& cachedTools = getCachedTools();
-        if ( method == "tools/list" && !getBackendAlive().load() && !cachedTools.empty()
-             && resp.is_object() && resp.contains( "result" ) && resp["result"].contains( "tools" )
+        // When it runs, the proxy rebuilds its tools without fields such as `annotations`
+        // (`readOnlyHint` lets clients run calls concurrently): take the backend's own entries.
+        if ( method == "tools/list" && resp.is_object() && resp.contains( "result" ) && resp["result"].contains( "tools" )
              && resp["result"]["tools"].is_array() )
         {
+            std::vector<fastmcpp::Json> backendTools;
+            if ( !getBackendAlive().load() )
+                backendTools = getCachedTools();
+            else
+            {
+                try
+                {
+                    auto live = transportPtr->request( "tools/list", fastmcpp::Json::object() );
+                    if ( live.contains( "tools" ) && live["tools"].is_array() )
+                    {
+                        backendTools = live["tools"].get<std::vector<fastmcpp::Json>>();
+                        updateCachedTools( cfg, backendTools );
+                    }
+                }
+                catch ( const std::exception& ) {} // keep the proxied entries
+            }
             auto& tools = resp["result"]["tools"];
-            std::set<std::string> seen;
-            for ( const auto& t : tools )
-                if ( t.is_object() && t.contains( "name" ) && t["name"].is_string() )
-                    seen.insert( t["name"].get<std::string>() );
-            for ( const auto& cached : cachedTools )
-                if ( cached.contains( "name" ) && cached["name"].is_string()
-                     && !seen.count( cached["name"].get<std::string>() ) )
-                    tools.push_back( cached );
+            for ( const auto& t : backendTools )
+            {
+                if ( !t.contains( "name" ) )
+                    continue;
+                auto it = std::find_if( tools.begin(), tools.end(), [&t]( const fastmcpp::Json& p ) { return p.contains( "name" ) && p["name"] == t["name"]; } );
+                if ( it != tools.end() )
+                    *it = t;
+                else
+                    tools.push_back( t );
+            }
         }
         return resp;
     };

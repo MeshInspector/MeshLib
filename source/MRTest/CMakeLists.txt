@@ -1,6 +1,11 @@
 project(MRTest CXX)
 
 file(GLOB SOURCES "*.cpp")
+include(Mimalloc)
+# malloc is not mimalloc
+IF((EMSCRIPTEN AND NOT MR_EMSCRIPTEN_MIMALLOC) OR (NOT EMSCRIPTEN AND MRMESH_NO_MIMALLOC AND NOT (APPLE AND MESHLIB_USE_HOMEBREW)))
+  list(FILTER SOURCES EXCLUDE REGEX "MRMimallocRedirectTests\.cpp$")
+ENDIF()
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
@@ -30,10 +35,7 @@ ELSE()
   )
 ENDIF()
 
-if(WIN32)
-  include(MimallocRedirect)
-  mr_win32_enable_mimalloc_redirect(${PROJECT_NAME})
-endif()
+mr_enable_mimalloc(${PROJECT_NAME})
 
 add_test(
   NAME ${PROJECT_NAME}

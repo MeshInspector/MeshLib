@@ -1,0 +1,80 @@
+#pragma once
+
+#include "MRMeshFwd.h"
+#include "MRBox.h"
+
+namespace MR
+{
+
+/// scalar value's binary format type
+enum class ScalarType
+{
+    UInt8,
+    Int8,
+    UInt16,
+    Int16,
+    UInt32,
+    Int32,
+    UInt64,
+    Int64,
+    Float32,
+    Float64,
+    Float32_4, ///< the last value from float[4]
+    Unknown,
+    Count
+};
+
+/// returns the size in bytes of a value of given type, or 0 for ScalarType::Unknown
+[[nodiscard]] MRMESH_API size_t getScalarTypeSize( ScalarType scalarType );
+
+/// returns the minimal and the maximal values of given type, or zeros for ScalarType::Unknown
+[[nodiscard]] MRMESH_API MinMaxd getScalarTypeMinMax( ScalarType scalarType );
+
+/// get a function to convert binary data of specified format type to a scalar value:
+/// integer values are mapped from given range to [0, 1], floating-point values are returned as they are
+/// \param scalarType - binary format type
+/// \param range - (for integer types only) the range of possible values, e.g. getScalarTypeMinMax( scalarType )
+MRMESH_API std::function<float ( const char* )> getTypeConverter( ScalarType scalarType, const MinMaxd& range );
+
+
+/// More general template to pass a single value of specified format \p scalarType to a generic function \p f
+template <typename F>
+std::invoke_result_t<F, int> visitScalarType( F&& f, ScalarType scalarType, const char* c )
+{
+#define M(T) return f( *( const T* )( c ) );
+
+    switch ( scalarType )
+    {
+        case ScalarType::UInt8:
+            M( uint8_t )
+        case ScalarType::UInt16:
+            M( uint16_t )
+        case ScalarType::Int8:
+            M( int8_t )
+        case ScalarType::Int16:
+            M( int16_t )
+        case ScalarType::Int32:
+            M( int32_t )
+        case ScalarType::UInt32:
+            M( uint32_t )
+        case ScalarType::UInt64:
+            M( uint64_t )
+        case ScalarType::Int64:
+            M( int64_t )
+        case ScalarType::Float32:
+            M( float )
+        case ScalarType::Float64:
+            M( double )
+        case ScalarType::Float32_4:
+            return f( *((const float*)c + 3 ) );
+        case ScalarType::Unknown:
+            return {};
+        case ScalarType::Count:
+            MR_UNREACHABLE
+    }
+    MR_UNREACHABLE
+#undef M
+}
+
+
+} // namespace MR

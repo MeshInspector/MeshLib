@@ -135,7 +135,7 @@ public:
     /// get UV coordinates in palette for given values
     /// \param region only these vertices will be processed
     /// \param valids if given then defines subregion with valid values, and invalid values will get gray color
-    /// \param validsIfHistogram If specified, replaces \p valids for the purposes of creating the histogram and computing the percentages of vertices in different discretization steps.
+    /// \param validsForStats If specified, replaces \p valids for the purposes of creating the histogram and computing the percentages of vertices in different discretization steps.
     MRVIEWER_API VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region, const VertPredicate & valids = {}, const VertPredicate & validsForStats = {} );
 
     VertUVCoords getUVcoords( const VertScalars & values, const VertBitSet & region, const VertBitSet * valids, const VertBitSet * validsForStats = nullptr )

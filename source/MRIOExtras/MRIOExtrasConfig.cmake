@@ -3,6 +3,7 @@ include(CMakeFindDependencyMacro)
 # static builds require to find private dependencies
 if(EMSCRIPTEN)
   find_dependency(OpenCTM)
+  find_dependency(draco)
   find_dependency(LAZPERF)
 endif()
 

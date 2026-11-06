@@ -15,4 +15,4 @@ def test_fix_undercuts():
 
     mrmesh.FixUndercuts.fix(torus, params)
 
-    assert torus.points.vec.size() > 2900
+    assert torus.points.size() > 2900

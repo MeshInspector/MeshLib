@@ -11,6 +11,8 @@
       <tab type="user" url="__BEGIN_URL__MeshLibCSharpSetupGuide__END_URL__" title="C#"/>
       <tab type="user" url="__BEGIN_URL__MeshLibCSetupGuide__END_URL__" title="C"/>
       <tab type="user" url="__BEGIN_URL__MeshLibJsSetupGuide__END_URL__" title="JavaScript"/>
+      <tab type="user" url="__BEGIN_URL__MeshLibRustSetupGuide__END_URL__" title="Rust"/>
+      <tab type="user" url="__BEGIN_URL__MeshLibJavaSetupGuide__END_URL__" title="Java"/>
       <tab type="user" url="__BEGIN_URL__MeshLibCmakeSetupGuide__END_URL__" title="CMake"/>
     </tab>
     <tab type="user" url="__BEGIN_URL__License__END_URL__" title="License" />
@@ -84,6 +86,8 @@
       <!-- API_C_PAGE -->
       <!-- API_CSHARP_PAGE -->
       <!-- API_JS_PAGE -->
+      <!-- API_RUST_PAGE -->
+      <!-- API_JAVA_PAGE -->
     </tab>
     <tab type="user" url="__BEGIN_URL__ThirdParty__END_URL__" title="Third-Party Dependencies"/>
   </navindex>

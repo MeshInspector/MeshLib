@@ -14,7 +14,7 @@ int main( void )
     int rc = EXIT_FAILURE;
 
     // Load mesh.
-    MR_expected_MR_Mesh_std_string* mesh1Res = MR_MeshLoad_fromAnySupportedFormat_2( "mesh1.ctm", NULL, NULL );
+    MR_expected_MR_Mesh_std_string* mesh1Res = MR_MeshLoad_fromAnySupportedFormat( "mesh1.ctm", NULL, NULL );
     MR_Mesh* mesh1 = MR_expected_MR_Mesh_std_string_value_mut( mesh1Res );
     if ( !mesh1 )
     {
@@ -22,7 +22,7 @@ int main( void )
         goto fail_load_1;
     }
 
-    MR_expected_MR_Mesh_std_string* mesh2Res = MR_MeshLoad_fromAnySupportedFormat_2( "mesh2.ctm", NULL, NULL );
+    MR_expected_MR_Mesh_std_string* mesh2Res = MR_MeshLoad_fromAnySupportedFormat( "mesh2.ctm", NULL, NULL );
     MR_Mesh* mesh2 = MR_expected_MR_Mesh_std_string_value_mut( mesh2Res );
     if ( !mesh2 )
     {

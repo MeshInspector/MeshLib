@@ -1,10 +1,12 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRAllocator.h"
 #include "MRId.h"
 #include "MRphmap.h"
 #include "MRVector.h"
 #include "MRPch/MRBindingMacros.h"
+#include <atomic>
 #include <functional>
 #include <iosfwd>
 #include <iterator>
@@ -69,6 +71,7 @@ class BitSet
 {
 public:
     using block_type = std::uint64_t;
+    using Blocks = std::vector<block_type, Allocator<block_type>>;
     inline static constexpr size_t bits_per_block = sizeof( block_type ) * 8;
     inline static constexpr size_t npos = (size_t)-1;
 
@@ -82,7 +85,7 @@ public:
     explicit BitSet( size_t numBits, bool fillValue = false ) { resize( numBits, fillValue ); }
 
     /// creates bitset from the given blocks of bits
-    static BitSet fromBlocks( std::vector<block_type> && blocks )
+    static BitSet fromBlocks( Blocks && blocks )
     {
         BitSet res;
         res.blocks_ = std::move( blocks );
@@ -107,10 +110,23 @@ public:
     [[nodiscard]] bool test( IndexType n ) const { return n < size() ? uncheckedTest( n ) : false; } // return n < size() && uncheckedTest( n ); was compiled with extra conditional jump inside uncheckedTest() by MSVC
     [[nodiscard]] bool test_set( IndexType n, bool val = true ) { return ( val || n < size() ) ? uncheckedTestSet( n, val ) : false; }
 
-    MRMESH_API BitSet & set( IndexType n, size_type len, bool val );
-    BitSet & set( IndexType n, bool val ) { return val ? set( n ) : reset( n ); } // Not using a default argument for `val` to get better C bindings.
-    BitSet & set( IndexType n ) { assert( n < size() ); blocks_[blockIndex_( n )] |= bitMask_( n ); return * this; }
-    MRMESH_API BitSet & set();
+    MR_BIND_OVERLOAD_SUFFIX(range) MRMESH_API BitSet & set( IndexType n, size_type len, bool val );
+    MR_BIND_OVERLOAD_SUFFIX() BitSet & set( IndexType n, bool val ) { return val ? set( n ) : reset( n ); } // Not using a default argument for `val` to get better C bindings.
+    MR_BIND_OVERLOAD_SUFFIX(bit) BitSet & set( IndexType n ) { assert( n < size() ); blocks_[blockIndex_( n )] |= bitMask_( n ); return * this; }
+    MR_BIND_OVERLOAD_SUFFIX(all) MRMESH_API BitSet & set();
+
+    /// sets n-th bit and returns its previous value; it is safe to call simultaneously from several threads for any bits of the same bitset,
+    /// provided no other modification of the bitset (including resizing) is performed in parallel
+    bool atomicTestSet( IndexType n )
+    {
+        assert( n < size() );
+        const auto mask = bitMask_( n );
+#ifdef __cpp_lib_atomic_ref
+        return std::atomic_ref<block_type>( blocks_[blockIndex_( n )] ).fetch_or( mask, std::memory_order_relaxed ) & mask;
+#else
+        return __atomic_fetch_or( &blocks_[blockIndex_( n )], mask, __ATOMIC_RELAXED ) & mask;
+#endif
+    }
 
     MRMESH_API BitSet & reset( IndexType n, size_type len );
     BitSet & reset( IndexType n ) { if ( n < size() ) blocks_[blockIndex_( n )] &= ~bitMask_( n ); return * this; }
@@ -152,6 +168,13 @@ public:
     /// computes the number of set bits in the whole set
     [[nodiscard]] MRMESH_API size_type count() const noexcept;
 
+    /// the numbers of set bits and of non-empty blocks
+    struct Counts { size_type bits = 0; size_type blocks = 0; };
+
+    /// computes the numbers of set bits and of non-empty blocks, stopping as soon as the set bits exceed maxBits;
+    /// both numbers are then partial, which makes a size test of a large set cheap
+    [[nodiscard]] MRMESH_API Counts countBitsAndBlocks( size_type maxBits = ~size_type{} ) const noexcept;
+
     /// return the smallest index i such that bit i is set, or npos if *this has no on bits.
     [[nodiscard]] IndexType find_first() const { return findSetBitAfter_( 0 ); }
 
@@ -184,13 +207,13 @@ public:
     void resizeWithReserve( size_t newSize ) { resize( newSize ); }
 
     /// sets elements [pos, pos+len) to given value, adjusting the size of the set to include new elements
-    void autoResizeSet( size_t pos, size_type len, bool val = true )
+    MR_BIND_OVERLOAD_SUFFIX(range) void autoResizeSet( size_t pos, size_type len, bool val = true )
     {
         if ( pos + len > size() )
             resize( pos + len );
         set( pos, len, val );
     }
-    void autoResizeSet( size_t pos, bool val = true ) { autoResizeSet( pos, 1, val ); }
+    MR_BIND_OVERLOAD_SUFFIX() void autoResizeSet( size_t pos, bool val = true ) { autoResizeSet( pos, 1, val ); }
 
     /// same as \ref autoResizeSet and returns previous value of pos-bit
     [[nodiscard]] bool autoResizeTestSet( size_t pos, bool val = true )
@@ -257,7 +280,7 @@ private:
     [[nodiscard]] MR_BIND_IGNORE_PY friend auto end( const BitSet & ) { return SetBitIteratorT<BitSet>(); }
 
 private:
-    std::vector<block_type> blocks_;
+    Blocks blocks_;
     size_type numBits_ = 0;
 };
 
@@ -271,16 +294,17 @@ public:
     using base::base;
     using IndexType = I;
 
-    /// copies all bits from another BitSet (or a descending class, e.g. TypedBitSet<U>)
+    /// copies all bits from another BitSet (or a descending class, e.g. `TypedBitSet<U>`)
     explicit TypedBitSet( const BitSet & src ) : BitSet( src ) {}
 
-    /// moves all bits from another BitSet (or a descending class, e.g. TypedBitSet<U>)
+    /// moves all bits from another BitSet (or a descending class, e.g. `TypedBitSet<U>`)
     explicit TypedBitSet( BitSet && src ) : BitSet( std::move( src ) ) {}
 
-    TypedBitSet & set( IndexType n, size_type len, bool val ) { base::set( n, len, val ); return * this; }
-    TypedBitSet & set( IndexType n, bool val ) { base::set( n, val ); return * this; } // Not using a default argument for `val` to get better C bindings.
-    TypedBitSet & set( IndexType n ) { base::set( n ); return * this; }
-    TypedBitSet & set() { base::set(); return * this; }
+    MR_BIND_OVERLOAD_SUFFIX(range) TypedBitSet & set( IndexType n, size_type len, bool val ) { base::set( n, len, val ); return * this; }
+    MR_BIND_OVERLOAD_SUFFIX() TypedBitSet & set( IndexType n, bool val ) { base::set( n, val ); return * this; } // Not using a default argument for `val` to get better C bindings.
+    MR_BIND_OVERLOAD_SUFFIX(bit) TypedBitSet & set( IndexType n ) { base::set( n ); return * this; }
+    MR_BIND_OVERLOAD_SUFFIX(all) TypedBitSet & set() { base::set(); return * this; }
+    bool atomicTestSet( IndexType n ) { return base::atomicTestSet( n ); }
     TypedBitSet & reset( IndexType n, size_type len ) { base::reset( n, len ); return * this; }
     TypedBitSet & reset( IndexType n ) { base::reset( n ); return * this; }
     TypedBitSet & reset() { base::reset(); return * this; }
@@ -331,8 +355,8 @@ public:
     /// returns true if, there is a bit which is set in this bitset, such that the corresponding bit in bitset a is also set. Otherwise this function returns false.
     [[nodiscard]] bool intersects( const TypedBitSet & a ) const { return base::intersects( a ); }
 
-    void autoResizeSet( IndexType pos, size_type len, bool val = true ) { base::autoResizeSet( pos, len, val ); }
-    void autoResizeSet( IndexType pos, bool val = true ) { base::autoResizeSet( pos, val ); }
+    MR_BIND_OVERLOAD_SUFFIX(range) void autoResizeSet( IndexType pos, size_type len, bool val = true ) { base::autoResizeSet( pos, len, val ); }
+    MR_BIND_OVERLOAD_SUFFIX() void autoResizeSet( IndexType pos, bool val = true ) { base::autoResizeSet( pos, val ); }
     [[nodiscard]] bool autoResizeTestSet( IndexType pos, bool val = true ) { return base::autoResizeTestSet( pos, val ); }
 
     /// constructs another bit set from this where every set bit index is transformed using given map

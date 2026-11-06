@@ -202,7 +202,7 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
         const AffineXf3f basis { Matrix3f::scale( vol.voxelSize ), origin + 0.5f * vol.voxelSize };
 
         MarchingCubesByParts mesher( vol.dimensions, vmParams );
-        const auto addPart = [&] ( std::vector<float>&& data, const Vector3i& dims, [[maybe_unused]] int zOffset )
+        const auto addPart = [&] ( VoxelScalars&& data, const Vector3i& dims, [[maybe_unused]] int zOffset )
         {
             assert( data.size() <= (size_t)dims.x * dims.y * dims.z );
             assert( zOffset == mesher.nextZ() );
@@ -297,6 +297,7 @@ Expected<Mesh> sharpOffsetMesh( const MeshPart& mp, float offset, const SharpOff
     sharpenParams.maxOldVertPosCorrection = params.voxelSize * params.maxOldVertPosCorrection;
     sharpenParams.offset = offset;
     sharpenParams.voxelClamp = params.voxelClamp;
+    sharpenParams.maxDeletedComponentFaces = params.maxDeletedComponentFaces;
     sharpenParams.outSharpEdges = params.outSharpEdges;
 
     sharpenMarchingCubesMesh( mp, res.value(), map, sharpenParams );

@@ -20,7 +20,7 @@ int main( void )
 
     MR_Mesh* meshA = MR_makeUVSphere( NULL, NULL, NULL ); // make mesh A
     MR_Mesh* meshB = MR_makeUVSphere( NULL, NULL, NULL ); // make mesh B
-    MR_Vector3f shift = MR_Vector3f_Construct_3( 0.1f, 0.1f, 0.1f );
+    MR_Vector3f shift = MR_Vector3f_Construct( 0.1f, 0.1f, 0.1f );
     MR_AffineXf3f xf = MR_AffineXf3f_translation( &shift );
     MR_Mesh_transform( meshB, &xf, NULL ); // shift mesh B for better demonstration
 

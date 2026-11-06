@@ -1,6 +1,7 @@
 project(MRIOExtras CXX)
 
 option(MRIOEXTRAS_NO_CTM "Disable OpenCTM support" OFF)
+option(MRIOEXTRAS_NO_DRACO "Disable Google Draco support (.drc and compressed glTF)" OFF)
 option(MRIOEXTRAS_NO_E57 "Disable E57 support" OFF)
 option(MRIOEXTRAS_NO_GLTF "Disable glTF support" OFF)
 option(MRIOEXTRAS_NO_JPEG "Disable JPEG support" OFF)
@@ -43,35 +44,18 @@ IF(NOT MRIOEXTRAS_NO_CTM)
   target_link_libraries(${PROJECT_NAME} PRIVATE OpenCTM::OpenCTM)
 ENDIF()
 
+IF(NOT MRIOEXTRAS_NO_DRACO)
+  find_package(draco CONFIG REQUIRED
+    HINTS "${MESHLIB_THIRDPARTY_ROOT_DIR}"
+  )
+  target_link_libraries(${PROJECT_NAME} PRIVATE draco::draco)
+ENDIF()
+
 IF(NOT MRIOEXTRAS_NO_E57)
   find_package(E57Format CONFIG REQUIRED
     HINTS "${MESHLIB_THIRDPARTY_ROOT_DIR}"
   )
   target_link_libraries(${PROJECT_NAME} PRIVATE E57Format)
-
-  IF(MSVC AND DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
-    file(GLOB XERCES_DLL_RELEASE "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/xerces-c_3_*.dll")
-    file(GLOB XERCES_DLL_DEBUG "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/bin/xerces-c_3_*.dll")
-
-    # Not sure why this isn't auto-copied.
-    IF($<CONFIG:Debug>)
-      file(COPY ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/bin/E57Format-d.dll DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-      IF(XERCES_DLL_DEBUG)
-        message(STATUS "Copying Xerces Debug DLL: ${XERCES_DLL_DEBUG}")
-        file(COPY ${XERCES_DLL_DEBUG} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-      ELSE()
-        message(FATAL_ERROR "Xerces Debug DLL NOT FOUND in ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/bin/! Build will fail.")
-      ENDIF()
-    ELSE()
-      file(COPY ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/E57Format.dll DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-      IF(XERCES_DLL_RELEASE)
-        message(STATUS "Copying Xerces Release DLL: ${XERCES_DLL_RELEASE}")
-        file(COPY ${XERCES_DLL_RELEASE} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-      ELSE()
-        message(FATAL_ERROR "Xerces Release DLL NOT FOUND in ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/! Build will fail.")
-      ENDIF()
-    ENDIF()
-  ENDIF()
 ENDIF()
 
 IF(NOT MRIOEXTRAS_NO_JPEG)

@@ -1,0 +1,126 @@
+# Examples of using the generated Rust bindings. Generate them first with `make -f scripts/mrbind/generate.mk TARGET=rust`,
+# then build with `MESHLIB_LIB_DIR=<directory with the MeshLib shared libraries> cargo build`.
+[package]
+name = "rust-examples"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+meshlib = { path = "../../source/MeshLibRust" }
+
+[[bin]]
+name = "BooleanBenchmark"
+path = "BooleanBenchmark.dox.rs"
+
+[[bin]]
+name = "Collision"
+path = "Collision.dox.rs"
+
+[[bin]]
+name = "CollisionPrecise"
+path = "CollisionPrecise.dox.rs"
+
+[[bin]]
+name = "CollisionSelf"
+path = "CollisionSelf.dox.rs"
+
+[[bin]]
+name = "ContourTriangulation"
+path = "ContourTriangulation.dox.rs"
+
+[[bin]]
+name = "FreeFormDeformation"
+path = "FreeFormDeformation.dox.rs"
+
+[[bin]]
+name = "Fusion"
+path = "Fusion.dox.rs"
+
+[[bin]]
+name = "GlobalRegistration"
+path = "GlobalRegistration.dox.rs"
+
+[[bin]]
+name = "LaplacianDeformation"
+path = "LaplacianDeformation.dox.rs"
+
+[[bin]]
+name = "MeshBoolean"
+path = "MeshBoolean.dox.rs"
+
+[[bin]]
+name = "MeshDecimate"
+path = "MeshDecimate.dox.rs"
+
+[[bin]]
+name = "MeshExport"
+path = "MeshExport.dox.rs"
+
+[[bin]]
+name = "MeshExtrude"
+path = "MeshExtrude.dox.rs"
+
+[[bin]]
+name = "MeshFillHole"
+path = "MeshFillHole.dox.rs"
+
+[[bin]]
+name = "MeshFixDegeneracies"
+path = "MeshFixDegeneracies.dox.rs"
+
+[[bin]]
+name = "MeshFromText"
+path = "MeshFromText.dox.rs"
+
+[[bin]]
+name = "MeshICP"
+path = "MeshICP.dox.rs"
+
+[[bin]]
+name = "MeshLoadSave"
+path = "MeshLoadSave.dox.rs"
+
+[[bin]]
+name = "MeshModification"
+path = "MeshModification.dox.rs"
+
+[[bin]]
+name = "MeshOffset"
+path = "MeshOffset.dox.rs"
+
+[[bin]]
+name = "MeshOffsetWeighted"
+path = "MeshOffsetWeighted.dox.rs"
+
+[[bin]]
+name = "MeshStitchHole"
+path = "MeshStitchHole.dox.rs"
+
+[[bin]]
+name = "NoiseDenoise"
+path = "NoiseDenoise.dox.rs"
+
+[[bin]]
+name = "PointsToMesh"
+path = "PointsToMesh.dox.rs"
+
+[[bin]]
+name = "SignedDistance"
+path = "SignedDistance.dox.rs"
+
+[[bin]]
+name = "SignedDistancePointToMesh"
+path = "SignedDistancePointToMesh.dox.rs"
+
+[[bin]]
+name = "SignedDistances"
+path = "SignedDistances.dox.rs"
+
+[[bin]]
+name = "TerrainTriangulation"
+path = "TerrainTriangulation.dox.rs"
+
+[[bin]]
+name = "Triangulation"
+path = "Triangulation.dox.rs"

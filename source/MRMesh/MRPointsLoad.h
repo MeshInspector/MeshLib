@@ -34,9 +34,9 @@ MRMESH_API Expected<PointCloud> fromDxf( const std::filesystem::path& file, cons
 MRMESH_API Expected<PointCloud> fromDxf( std::istream& in, const PointsLoadSettings& settings = {} );
 
 /// detects the format from file extension and loads points from it
-MRMESH_API Expected<PointCloud> fromAnySupportedFormat( const std::filesystem::path& file, const PointsLoadSettings& settings = {} );
+MR_BIND_OVERLOAD_SUFFIX() MRMESH_API Expected<PointCloud> fromAnySupportedFormat( const std::filesystem::path& file, const PointsLoadSettings& settings = {} );
 /// extension in `*.ext` format
-MRMESH_API Expected<PointCloud> fromAnySupportedFormat( std::istream& in, const std::string& extension, const PointsLoadSettings& settings = {} );
+MR_BIND_OVERLOAD_SUFFIX(stream) MRMESH_API Expected<PointCloud> fromAnySupportedFormat( std::istream& in, const std::string& extension, const PointsLoadSettings& settings = {} );
 
 /// emits telemetry signal with the integer logarithm of the number of points
 MR_BIND_IGNORE MRMESH_API void telemetryLogSize( const PointCloud& cloud );

@@ -1,0 +1,12 @@
+diff --git a/adm/cmake/occt_macros.cmake b/adm/cmake/occt_macros.cmake
+--- a/adm/cmake/occt_macros.cmake
++++ b/adm/cmake/occt_macros.cmake
+@@ -459,7 +459,7 @@
+   if (${THE_IS_PRIVATE})
+     target_precompile_headers(${INPUT_TARGET} PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:<${PRECOMPILED_HEADER}$<ANGLE-R>>")
+   else()
+-    target_precompile_headers(${INPUT_TARGET} PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:<${PRECOMPILED_HEADER}$<ANGLE-R>>")
++    target_precompile_headers(${INPUT_TARGET} PUBLIC "$<BUILD_INTERFACE:$<$<COMPILE_LANGUAGE:CXX>:<${PRECOMPILED_HEADER}$<ANGLE-R>>>")
+   endif()
+ endfunction()
+ 

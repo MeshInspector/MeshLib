@@ -10,8 +10,8 @@ verts_num = mesh.points.size()
 # Create VertScalars obj with weights for every vertex
 scalars = mrmeshpy.VertScalars(verts_num)
 for i in range(verts_num):
-    weight = abs(mesh.points.vec[i].x / 5) # Individual extra offset sizes for points
-    scalars.vec[i] = weight
+    weight = abs(mesh.points[mrmeshpy.VertId(i)].x / 5) # Individual extra offset sizes for points
+    scalars[mrmeshpy.VertId(i)] = weight
 
 # ===params
 
@@ -21,7 +21,7 @@ params.voxelSize = mrmeshpy.suggestVoxelSize(mesh, 10000)
 # common basic offset applied for all point
 # Vertex-specific weighted offsets applied after the basic one
 params.offset = 0.2
-params.dist.maxWeight = max(scalars.vec) # should always have maximum between weights provided
+params.dist.maxWeight = max(scalars) # should always have maximum between weights provided
 
 # ===offset
 res = mrmeshpy.WeightedShell.meshShell(mesh, scalars, params)

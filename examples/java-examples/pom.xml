@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Builds and runs the examples with MeshLib from Maven Central: mvn compile exec:exec -Dmeshlib.version=<MeshLib version> -Dexample=MeshBoolean -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.meshinspector.examples</groupId>
+  <artifactId>meshlib-java-examples</artifactId>
+  <version>1.0</version>
+
+  <properties>
+    <meshlib.version>1.2.3.4</meshlib.version>
+    <maven.compiler.release>22</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <example>MeshBoolean</example>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.meshinspector</groupId>
+      <artifactId>meshlib</artifactId>
+      <version>${meshlib.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <!-- The examples are package-private classes in `*.dox.java` next to this file. -->
+    <sourceDirectory>.</sourceDirectory>
+    <plugins>
+      <!-- Maven before 3.9 (e.g. apt's on Ubuntu 24.04) defaults to maven-compiler-plugin 3.1, which ignores `maven.compiler.release`. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.14.1</version>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.5.0</version>
+        <configuration>
+          <executable>java</executable>
+          <arguments>
+            <argument>--enable-native-access=ALL-UNNAMED</argument>
+            <argument>-classpath</argument>
+            <classpath/>
+            <argument>${example}</argument>
+          </arguments>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

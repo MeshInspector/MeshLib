@@ -40,8 +40,8 @@ struct SymMatrix2
 
     SymMatrix2 & operator +=( const SymMatrix2<T> & b ) { xx += b.xx; xy += b.xy; yy += b.yy; return * this; }
     SymMatrix2 & operator -=( const SymMatrix2<T> & b ) { xx -= b.xx; xy -= b.xy; yy -= b.yy; return * this; }
-    SymMatrix2 & operator *=( T b ) { xx *= b; xy *= b; yy *= b; return * this; }
-    SymMatrix2 & operator /=( T b )
+    constexpr SymMatrix2 & operator *=( T b ) { xx *= b; xy *= b; yy *= b; return * this; }
+    constexpr SymMatrix2 & operator /=( T b )
     {
         if constexpr ( std::is_integral_v<T> )
             { xx /= b; xy /= b; yy /= b; return * this; }
@@ -143,9 +143,10 @@ constexpr SymMatrix2<T> SymMatrix2<T>::inverse( T det ) const noexcept
     if ( det == 0 )
         return {};
     SymMatrix2<T> res;
-    res.xx =  yy / det;
-    res.xy = -xy / det;
-    res.yy =  xx / det;
+    res.xx =  yy;
+    res.xy = -xy;
+    res.yy =  xx;
+    res /= det; // one division for floating-point T
     return res;
 }
 
@@ -203,6 +204,22 @@ Vector2<T> SymMatrix2<T>::maxEigenvector() const MR_REQUIRES_IF_SUPPORTED( std::
 template <typename T>
 SymMatrix2<T> SymMatrix2<T>::pseudoinverse( T tol, int * rank, Vector2<T> * space ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> )
 {
+    // a positive definite matrix is inverted directly, which is several times faster,
+    // if lambdaMin > tol * lambdaMax is guaranteed: lambdaMin = det / lambdaMax and lambdaMax <= trace;
+    // the tolerance is at least 1e-4 to keep the direct inverse accurate
+    if ( xx > 0 )
+    {
+        const auto d = det();
+        if ( d > 0 && d > std::max( tol, T( 1e-4 ) ) * sqr( trace() ) )
+        {
+            if ( rank )
+                *rank = 2;
+            if ( space )
+                *space = Vector2<T>{};
+            return inverse( d );
+        }
+    }
+
     SymMatrix2<T> res;
     Matrix2<T> eigenvectors;
     const auto eigenvalues = eigens( &eigenvectors );

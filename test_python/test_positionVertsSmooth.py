@@ -9,12 +9,12 @@ def test_position_verts_smooth():
     torus = mrmesh.makeTorusWithSpikes(R1, R2_1, R2_2, 10, 12, None)
 
     params = mrmesh.LaplacianEdgeWeightsParam.Cotan
-    verts = torus.topology.getValidVerts()
+    verts = mrmesh.VertBitSet(torus.topology.getValidVerts())  # A modifiable copy: the result is a const reference.
     verts.set(mrmesh.VertId(0), False)
     mrmesh.positionVertsSmoothly(torus, verts, params)
 
-    p = torus.points.vec[0]
-    for i in torus.points.vec:
+    p = torus.points[mrmesh.VertId(0)]
+    for i in torus.points:
         assert i.x * i.x + i.y * i.y + i.z * i.z == p.x * p.x + p.y * p.y + p.z * p.z
         
 def test_position_verts_smooth_sharpbd():
@@ -23,12 +23,12 @@ def test_position_verts_smooth_sharpbd():
     R2_2 = 2.5
     torus = mrmesh.makeTorusWithSpikes(R1, R2_1, R2_2, 10, 12, None)
 
-    verts = torus.topology.getValidVerts()
+    verts = mrmesh.VertBitSet(torus.topology.getValidVerts())  # A modifiable copy: the result is a const reference.
     verts.set(mrmesh.VertId(0), False)
     mrmesh.positionVertsSmoothlySharpBd(torus, verts)
 
-    p = torus.points.vec[0]
-    for i in torus.points.vec:
+    p = torus.points[mrmesh.VertId(0)]
+    for i in torus.points:
         assert i.x * i.x + i.y * i.y + i.z * i.z == p.x * p.x + p.y * p.y + p.z * p.z
 
 def test_inflate_verts_smooth():

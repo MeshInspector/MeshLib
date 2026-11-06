@@ -88,6 +88,7 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     root["ShowSelectedFaces"] = showSelectedFaces_.value();
     root["OnlyOddFragments"] = onlyOddFragments_.value();
     root["PolygonOffset"] = polygonOffset_.value();
+    root["CullBackFaces"] = cullBackFaces_.value();
     root["ShadingEnabled"] = shadingEnabled_.value();
     root["FaceBased"] = flatShading_.contains( MR::ViewportId( 1 ) );
     switch( coloringType_ )
@@ -101,11 +102,11 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     default:
         root["ColoringType"] = "Solid";
     }
-    serializeToJson( data_.faceColors.vec_, root["FaceColors"] );
+    serializeToJson( data_.faceColors, root["FaceColors"] );
 
     const auto meshSaver = MeshSave::getMeshSaver( std::string( "*" ) + actualSerializeFormat() );
     if ( !meshSaver.capabilities.storesVertexColors )
-        serializeToJson( data_.vertColors.vec_, root["VertColors"] );
+        serializeToJson( data_.vertColors, root["VertColors"] );
 
     // texture
     if ( !textures_.empty() )
@@ -116,9 +117,9 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
     }
 
     // texture id per face id
-    serializeToJson( data_.texturePerFace.vec_, root["TexturePerFace"] );
+    serializeToJson( data_.texturePerFace, root["TexturePerFace"] );
 
-    serializeToJson( data_.uvCoordinates.vec_, root["UVCoordinates"] );
+    serializeToJson( data_.uvCoordinates, root["UVCoordinates"] );
     // edges
     serializeToJson( Vector4f( edgesColor_.get() ), root["Colors"]["Edges"] );
     // vertices
@@ -184,6 +185,8 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
         onlyOddFragments_ = ViewportMask{ root["OnlyOddFragments"].asUInt() };
     if ( root["PolygonOffset"].isUInt() )
         polygonOffset_ = ViewportMask{ root["PolygonOffset"].asUInt() };
+    if ( root["CullBackFaces"].isUInt() )
+        cullBackFaces_ = ViewportMask{ root["CullBackFaces"].asUInt() };
     if ( root["ShadingEnabled"].isUInt() )
         shadingEnabled_ = ViewportMask{ root["ShadingEnabled"].asUInt() };
     if ( root["FaceBased"].isBool() ) // Support old versions
@@ -196,8 +199,8 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
         else if ( stype == "PerFace" )
             setColoringType( ColoringType::FacesColorMap );
     }
-    deserializeFromJson( root["FaceColors"], data_.faceColors.vec_ );
-    deserializeFromJson( root["VertColors"], data_.vertColors.vec_ );
+    deserializeFromJson( root["FaceColors"], data_.faceColors );
+    deserializeFromJson( root["VertColors"], data_.vertColors );
 
     Vector4f resVec;
     deserializeFromJson( selectionColor["Diffuse"], resVec );
@@ -221,10 +224,10 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
     }
 
     if ( root["TexturePerFace"].isObject() )
-        deserializeFromJson( root["TexturePerFace"], data_.texturePerFace.vec_ );
+        deserializeFromJson( root["TexturePerFace"], data_.texturePerFace );
 
     if ( root["UVCoordinates"].isObject() )
-        deserializeFromJson( root["UVCoordinates"], data_.uvCoordinates.vec_ );
+        deserializeFromJson( root["UVCoordinates"], data_.uvCoordinates );
     // edges
     deserializeFromJson( root["Colors"]["Edges"], resVec );
     edgesColor_.set( Color( resVec ) );
@@ -345,6 +348,8 @@ const ViewportMask &ObjectMeshHolder::getVisualizePropertyMask( AnyVisualizeMask
                 return showSelectedFaces_;
             case MeshVisualizePropertyType::PolygonOffsetFromCamera:
                 return polygonOffset_;
+            case MeshVisualizePropertyType::CullBackFaces:
+                return cullBackFaces_;
             case MeshVisualizePropertyType::_count: break; // MSVC warns if this is missing, despite `[[maybe_unused]]` on the `_count`.
         }
         assert( false && "Invalid enum." );

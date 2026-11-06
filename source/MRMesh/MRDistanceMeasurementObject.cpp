@@ -216,6 +216,28 @@ void DistanceMeasurementObject::serializeFields_( Json::Value& root ) const
 
     root["DrawAsNegative"] = isNegative_;
 
+    switch ( perCoordDeltas_ )
+    {
+    case DistanceMode::euclidean:
+        root["DistanceMode"] = "Euclidean";
+        break;
+    case DistanceMode::euclideanWithSignedDeltasPerAxis:
+        root["DistanceMode"] = "EuclideanWithSignedDeltasPerAxis";
+        break;
+    case DistanceMode::euclideanWithAbsoluteDeltasPerAxis:
+        root["DistanceMode"] = "EuclideanWithAbsoluteDeltasPerAxis";
+        break;
+    case DistanceMode::xAbsolute:
+        root["DistanceMode"] = "XAbsolute";
+        break;
+    case DistanceMode::yAbsolute:
+        root["DistanceMode"] = "YAbsolute";
+        break;
+    case DistanceMode::zAbsolute:
+        root["DistanceMode"] = "ZAbsolute";
+        break;
+    }
+
     if ( tolerance_ )
     {
         root["TolerancePositive"] = tolerance_->positive;
@@ -240,8 +262,22 @@ void DistanceMeasurementObject::deserializeFields_( const Json::Value& root )
     if ( const auto& json = root["DrawAsNegative"]; json.isBool() )
         isNegative_ = json.asBool();
 
-    if ( const auto& json = root["DistanceMode"]; json.isInt() )
-        perCoordDeltas_ = DistanceMode( json.asInt() );
+    if ( const auto& json = root["DistanceMode"]; json.isString() )
+    {
+        const auto name = json.asString();
+        if ( name == "Euclidean" )
+            perCoordDeltas_ = DistanceMode::euclidean;
+        else if ( name == "EuclideanWithSignedDeltasPerAxis" )
+            perCoordDeltas_ = DistanceMode::euclideanWithSignedDeltasPerAxis;
+        else if ( name == "EuclideanWithAbsoluteDeltasPerAxis" )
+            perCoordDeltas_ = DistanceMode::euclideanWithAbsoluteDeltasPerAxis;
+        else if ( name == "XAbsolute" )
+            perCoordDeltas_ = DistanceMode::xAbsolute;
+        else if ( name == "YAbsolute" )
+            perCoordDeltas_ = DistanceMode::yAbsolute;
+        else if ( name == "ZAbsolute" )
+            perCoordDeltas_ = DistanceMode::zAbsolute;
+    }
 
     { // Tolerance.
         const auto& jsonPos = root["TolerancePositive"];

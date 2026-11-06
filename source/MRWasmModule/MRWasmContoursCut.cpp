@@ -31,9 +31,9 @@ EMSCRIPTEN_BINDINGS( meshlib_contours_cut )
         .value( "Left", CutMeshParameters::FillPart::Left )
         .value( "Right", CutMeshParameters::FillPart::Right );
 
+    // SplitCrossings needs sortData, which cannot be given here
     emscripten::enum_<CutMeshParameters::ForceFill>( "ForceFill" )
         .value( "None", CutMeshParameters::ForceFill::None )
-        .value( "Good", CutMeshParameters::ForceFill::Good )
         .value( "All", CutMeshParameters::ForceFill::All );
 
     emscripten::class_<CutMeshParameters>( "CutMeshParameters" )

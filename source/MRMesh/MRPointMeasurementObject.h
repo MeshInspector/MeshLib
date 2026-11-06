@@ -75,6 +75,8 @@ protected:
 
     MRMESH_API void setupRenderObject_() const override;
 
+    MRMESH_API void setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos ) override;
+
  private:
     std::optional<Vector3f> referencePos_;
     std::optional<Vector3f> referenceNormal_; // Not necessarily normalized.

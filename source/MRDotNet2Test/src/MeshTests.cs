@@ -162,14 +162,14 @@ namespace MRTest
             var xf = AffineXf3f.translation(Vector3f.diagonal(1.0f));
             cubeMesh.transform(xf);
 
-            Assert.That(cubeMesh.points.vec[0] == new Vector3f(0.5f, 0.5f, 0.5f));
-            Assert.That(cubeMesh.points.vec[1] == new Vector3f(0.5f, 1.5f, 0.5f));
-            Assert.That(cubeMesh.points.vec[2] == new Vector3f(1.5f, 1.5f, 0.5f));
-            Assert.That(cubeMesh.points.vec[3] == new Vector3f(1.5f, 0.5f, 0.5f));
-            Assert.That(cubeMesh.points.vec[4] == new Vector3f(0.5f, 0.5f, 1.5f));
-            Assert.That(cubeMesh.points.vec[5] == new Vector3f(0.5f, 1.5f, 1.5f));
-            Assert.That(cubeMesh.points.vec[6] == new Vector3f(1.5f, 1.5f, 1.5f));
-            Assert.That(cubeMesh.points.vec[7] == new Vector3f(1.5f, 0.5f, 1.5f));
+            Assert.That(cubeMesh.points[new VertId(0)] == new Vector3f(0.5f, 0.5f, 0.5f));
+            Assert.That(cubeMesh.points[new VertId(1)] == new Vector3f(0.5f, 1.5f, 0.5f));
+            Assert.That(cubeMesh.points[new VertId(2)] == new Vector3f(1.5f, 1.5f, 0.5f));
+            Assert.That(cubeMesh.points[new VertId(3)] == new Vector3f(1.5f, 0.5f, 0.5f));
+            Assert.That(cubeMesh.points[new VertId(4)] == new Vector3f(0.5f, 0.5f, 1.5f));
+            Assert.That(cubeMesh.points[new VertId(5)] == new Vector3f(0.5f, 1.5f, 1.5f));
+            Assert.That(cubeMesh.points[new VertId(6)] == new Vector3f(1.5f, 1.5f, 1.5f));
+            Assert.That(cubeMesh.points[new VertId(7)] == new Vector3f(1.5f, 0.5f, 1.5f));
         }
 
         [Test]
@@ -185,14 +185,14 @@ namespace MRTest
             var xf = AffineXf3f.translation(Vector3f.diagonal(1.0f));
             cubeMesh.transform(xf, region);
 
-            Assert.That(cubeMesh.points.vec[0] == new Vector3f(0.5f, 0.5f, 0.5f));
-            Assert.That(cubeMesh.points.vec[1] == new Vector3f(-0.5f, 0.5f, -0.5f));
-            Assert.That(cubeMesh.points.vec[2] == new Vector3f(1.5f, 1.5f, 0.5f));
-            Assert.That(cubeMesh.points.vec[3] == new Vector3f(0.5f, -0.5f, -0.5f));
-            Assert.That(cubeMesh.points.vec[4] == new Vector3f(0.5f, 0.5f, 1.5f));
-            Assert.That(cubeMesh.points.vec[5] == new Vector3f(-0.5f, 0.5f, 0.5f));
-            Assert.That(cubeMesh.points.vec[6] == new Vector3f(1.5f, 1.5f, 1.5f));
-            Assert.That(cubeMesh.points.vec[7] == new Vector3f(0.5f, -0.5f, 0.5f));
+            Assert.That(cubeMesh.points[new VertId(0)] == new Vector3f(0.5f, 0.5f, 0.5f));
+            Assert.That(cubeMesh.points[new VertId(1)] == new Vector3f(-0.5f, 0.5f, -0.5f));
+            Assert.That(cubeMesh.points[new VertId(2)] == new Vector3f(1.5f, 1.5f, 0.5f));
+            Assert.That(cubeMesh.points[new VertId(3)] == new Vector3f(0.5f, -0.5f, -0.5f));
+            Assert.That(cubeMesh.points[new VertId(4)] == new Vector3f(0.5f, 0.5f, 1.5f));
+            Assert.That(cubeMesh.points[new VertId(5)] == new Vector3f(-0.5f, 0.5f, 0.5f));
+            Assert.That(cubeMesh.points[new VertId(6)] == new Vector3f(1.5f, 1.5f, 1.5f));
+            Assert.That(cubeMesh.points[new VertId(7)] == new Vector3f(0.5f, -0.5f, 0.5f));
         }
 
         [Test]
@@ -321,9 +321,12 @@ namespace MRTest
             Assert.That(projRes.proj.point.y, Is.EqualTo(0.507).Within(1e-3));
             Assert.That(projRes.proj.point.z, Is.EqualTo(0.803).Within(1e-3));
 
-            Assert.That(projRes.mtp.e.id, Is.EqualTo(1640));
-            Assert.That(projRes.mtp.bary.a, Is.EqualTo(0.053).Within(1e-3));
-            Assert.That(projRes.mtp.bary.b, Is.EqualTo(0.946).Within(1e-3));
+            // which edge of the triangle represents the point differs with FMA instructions (clang-cl on arm64)
+            Assert.That(mesh.topology.left(projRes.mtp.e).id, Is.EqualTo(904));
+            var mtpPoint = mesh.triPoint(projRes.mtp);
+            Assert.That(mtpPoint.x, Is.EqualTo(0.310).Within(1e-3));
+            Assert.That(mtpPoint.y, Is.EqualTo(0.507).Within(1e-3));
+            Assert.That(mtpPoint.z, Is.EqualTo(0.803).Within(1e-3));
 
             var xf = AffineXf3f.translation(Vector3f.diagonal(1.0f));
             projRes = findProjection(p, mesh, float.MaxValue, xf);
@@ -333,9 +336,10 @@ namespace MRTest
             Assert.That(projRes.proj.point.y, Is.EqualTo(1.439).Within(1e-3));
             Assert.That(projRes.proj.point.z, Is.EqualTo(1.895).Within(1e-3));
 
-            Assert.That(projRes.mtp.e.id, Is.EqualTo(1898));
-            Assert.That(projRes.mtp.bary.a, Is.EqualTo(0.5).Within(1e-3));
-            Assert.That(projRes.mtp.bary.b, Is.EqualTo(0.0).Within(1e-3));
+            mtpPoint = mesh.triPoint(projRes.mtp); // in mesh space, before xf
+            Assert.That(mtpPoint.x, Is.EqualTo(0.000).Within(1e-3));
+            Assert.That(mtpPoint.y, Is.EqualTo(0.439).Within(1e-3));
+            Assert.That(mtpPoint.z, Is.EqualTo(0.895).Within(1e-3));
         }
 
         [Test]

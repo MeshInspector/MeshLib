@@ -4,6 +4,8 @@
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
 #include <filesystem>
+#include <functional>
+#include <string>
 #include <vector>
 
 namespace MR
@@ -25,6 +27,25 @@ MRMESH_API Expected<void> decompressZip( const std::filesystem::path& zipFile, c
  * \param password if password is given then it will be used to decipher encrypted archive
  */
 MRMESH_API Expected<void> decompressZip( std::istream& zipStream, const std::filesystem::path& targetFolder, const char * password = nullptr );
+
+/// receives the path of a file inside the archive (with '/' separators) and its decompressed content;
+/// returned error stops the decompression and is passed to the caller
+using ZipFileCallback = std::function<Expected<void>( const std::string& path, std::vector<char>&& data )>;
+
+/**
+ * \brief decompresses given zip-file and passes every file from it to the callback without saving anything on disk;
+ *        folder entries are skipped
+ * \param password if password is given then it will be used to decipher encrypted archive
+ */
+MRMESH_API Expected<void> decompressZip( const std::filesystem::path& zipFile, const ZipFileCallback& callback,
+    const char * password = nullptr );
+
+/**
+ * \brief decompresses given binary stream (containing the data of a zip file only)
+ *        and passes every file from it to the callback without saving anything on disk; folder entries are skipped
+ * \param password if password is given then it will be used to decipher encrypted archive
+ */
+MRMESH_API Expected<void> decompressZip( std::istream& zipStream, const ZipFileCallback& callback, const char * password = nullptr );
 
 struct CompressZipSettings
 {

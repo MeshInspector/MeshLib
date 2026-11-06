@@ -32,6 +32,21 @@ auto BitSet::count() const noexcept -> size_type
     return res;
 }
 
+auto BitSet::countBitsAndBlocks( size_type maxBits ) const noexcept -> Counts
+{
+    Counts res;
+    for ( const auto b : blocks_ )
+    {
+        if ( !b )
+            continue;
+        ++res.blocks;
+        res.bits += std::popcount( b );
+        if ( res.bits > maxBits )
+            break;
+    }
+    return res;
+}
+
 void BitSet::setUnusedBits_()
 {
     assert ( num_blocks() == calcNumBlocks_( numBits_ ) );

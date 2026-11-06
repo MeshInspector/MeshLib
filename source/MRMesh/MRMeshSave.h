@@ -94,9 +94,9 @@ MRMESH_API Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, con
 MRMESH_API Expected<void> to3mf( const Mesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
 
 /// detects the format from file extension and save mesh to it
-MRMESH_API Expected<void> toAnySupportedFormat( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );
+MR_BIND_OVERLOAD_SUFFIX() MRMESH_API Expected<void> toAnySupportedFormat( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );
 /// extension in `*.ext` format
-MRMESH_API Expected<void> toAnySupportedFormat( const Mesh & mesh, const std::string& extension, std::ostream& out, const SaveSettings & settings = {} );
+MR_BIND_OVERLOAD_SUFFIX(stream) MRMESH_API Expected<void> toAnySupportedFormat( const Mesh & mesh, const std::string& extension, std::ostream& out, const SaveSettings & settings = {} );
 
 /// \}
 

@@ -259,7 +259,7 @@ Expected<void> PointsProjector::setPointCloud( const PointCloud& pointCloud )
 }
 
 Expected<void> PointsProjector::findProjections( std::vector<PointsProjectionResult>& results,
-    const std::vector<Vector3f>& points, const FindProjectionOnPointsSettings& settings ) const
+    const VertCoords& points, const FindProjectionOnPointsSettings& settings ) const
 {
     if ( !pointCloud_ )
         return unexpected( "No reference point cloud is set" );
@@ -268,7 +268,7 @@ Expected<void> PointsProjector::findProjections( std::vector<PointsProjectionRes
     (void)pointCloud_->getAABBTree();
 
     results.resize( points.size() );
-    ParallelFor( points, [&] ( size_t i )
+    ParallelFor( points, [&] ( VertId i )
     {
         if ( settings.valid && !settings.valid->test( i ) )
             return;

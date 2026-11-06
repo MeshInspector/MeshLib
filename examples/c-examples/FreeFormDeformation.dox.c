@@ -3,6 +3,7 @@
 #include <MRCMesh/MRMeshLoad.h>
 #include <MRCMesh/MRMeshSave.h>
 #include <MRCMisc/expected_MR_Mesh_std_string.h>
+#include <MRCMisc/expected_void_std_string.h>
 #include <MRCMisc/std_string.h>
 
 #include <stdio.h>
@@ -11,7 +12,7 @@
 int main( void )
 {
     // Load mesh
-    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat_2( "mesh.stl", NULL, NULL );
+    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat( "mesh.stl", NULL, NULL );
     MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_value_mut( meshEx );
 
     // Handle failure to load mesh
@@ -23,7 +24,7 @@ int main( void )
     }
 
     // Compute mesh bounding box
-    MR_Box3f box = MR_Mesh_computeBoundingBox_1( mesh, NULL );
+    MR_Box3f box = MR_Mesh_computeBoundingBox( mesh, NULL );
 
     // Construct deformer on mesh vertices
     MR_FreeFormDeformer* ffDeformer = MR_FreeFormDeformer_Construct_MR_Mesh( mesh, NULL );
@@ -52,9 +53,16 @@ int main( void )
     MR_Mesh_invalidateCaches( mesh, NULL );
 
     // Save deformed mesh
-    MR_MeshSave_toAnySupportedFormat_3( mesh, "deformed_mesh.stl", NULL, NULL );
+    int rc = EXIT_SUCCESS;
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat( mesh, "deformed_mesh.stl", NULL, NULL );
+    if ( MR_expected_void_std_string_error( saveEx ) )
+    {
+        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );
+        rc = EXIT_FAILURE;
+    }
 
+    MR_expected_void_std_string_Destroy( saveEx );
     MR_FreeFormDeformer_Destroy( ffDeformer );
     MR_expected_MR_Mesh_std_string_Destroy( meshEx );
-    return EXIT_SUCCESS;
+    return rc;
 }

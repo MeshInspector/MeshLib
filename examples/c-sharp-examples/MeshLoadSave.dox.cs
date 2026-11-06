@@ -1,22 +1,14 @@
-﻿public class MeshLoadSaveExample
+public static class MeshLoadSaveExample
 {
     public static void Main(string[] args)
     {
-        try
-        {
-            // This example needs an input mesh; create one if you do not have it already
-            if (!File.Exists("mesh.stl"))
-                MR.MeshSave.toAnySupportedFormat(MR.makeCube(), "mesh.stl");
+        // Load mesh
+        var mesh = MR.MeshLoad.fromAnySupportedFormat("mesh.stl");
 
-            // Load mesh
-            var mesh = MR.MeshLoad.fromAnySupportedFormat("mesh.stl");
+        // Save mesh
+        MR.MeshSave.toAnySupportedFormat(mesh, "mesh.ply");
 
-            // Save it in another format
-            MR.MeshSave.toAnySupportedFormat(mesh, "mesh.ply");
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine("Error: {0}", e.Message);
-        }
+        // More mesh formats are available in the MRIOExtras library
+        MR.MeshSave.toCtm(mesh, "mesh.ctm");
     }
 }

@@ -11,14 +11,14 @@ struct Color
 
     constexpr Color() noexcept : r{ 0 }, g{ 0 }, b{ 0 }, a{ 255 } {}
     explicit Color( NoInit ) noexcept {}
-    constexpr Color( int r, int g, int b, int a ) noexcept : r{uint8_t(r)}, g{uint8_t(g)}, b{uint8_t(b)}, a{uint8_t(a)} {}
-    constexpr Color( int r, int g, int b ) noexcept : r{uint8_t(r)}, g{uint8_t(g)}, b{uint8_t(b)}, a{255} {} // Using a separate overload instead of a default argument to produce better C bindings.
-    constexpr Color( float r, float g, float b, float a ) noexcept :
+    MR_BIND_OVERLOAD_SUFFIX() constexpr Color( int r, int g, int b, int a ) noexcept : r{uint8_t(r)}, g{uint8_t(g)}, b{uint8_t(b)}, a{uint8_t(a)} {}
+    MR_BIND_OVERLOAD_SUFFIX(rgb) constexpr Color( int r, int g, int b ) noexcept : r{uint8_t(r)}, g{uint8_t(g)}, b{uint8_t(b)}, a{255} {} // Using a separate overload instead of a default argument to produce better C bindings.
+    MR_BIND_OVERLOAD_SUFFIX(float) constexpr Color( float r, float g, float b, float a ) noexcept :
         r{ r > 1 ? uint8_t( 255 ) : ( r < 0 ? uint8_t( 0 ) : uint8_t( r * 255 ) )},
         g{ g > 1 ? uint8_t( 255 ) : ( g < 0 ? uint8_t( 0 ) : uint8_t( g * 255 ) )},
         b{ b > 1 ? uint8_t( 255 ) : ( b < 0 ? uint8_t( 0 ) : uint8_t( b * 255 ) )},
         a{ a > 1 ? uint8_t( 255 ) : ( a < 0 ? uint8_t( 0 ) : uint8_t( a * 255 ) )} {}
-    constexpr Color( float r, float g, float b ) noexcept : Color( r, g, b, 1.f ) {} // Using a separate overload instead of a default argument to produce better C bindings.
+    MR_BIND_OVERLOAD_SUFFIX(rgbFloat) constexpr Color( float r, float g, float b ) noexcept : Color( r, g, b, 1.f ) {} // Using a separate overload instead of a default argument to produce better C bindings.
 
     constexpr unsigned int getUInt32() const noexcept { return ( unsigned( r ) ) + ( unsigned( g ) << 8 ) + ( unsigned( b ) << 16 ) + ( unsigned( a ) << 24 ); }
 
@@ -91,6 +91,9 @@ struct Color
     {
         return Color( r, g, b, uint8_t( std::clamp( m * a, 0.0f , 255.0f ) ) );
     }
+
+    /// returns true if the color is neither fully opaque nor fully transparent, so it has to be blended with the colors behind
+    [[nodiscard]] constexpr bool isTranslucent() const noexcept { return a > 0 && a < 255; }
 };
 
 inline bool operator ==( const Color& a, const Color& b )

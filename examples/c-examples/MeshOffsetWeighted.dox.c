@@ -13,11 +13,10 @@
 #include <MRCMisc/expected_void_std_string.h>
 #include <MRCMisc/std_string.h>
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define abs(a) a >= 0 ? a : -a;
 
 int main( void )
 {
@@ -27,17 +26,14 @@ int main( void )
 
     // Create VertScalars obj with weights for every vertex
     size_t vertSize = MR_MeshTopology_vertSize( MR_Mesh_Get_topology( mesh ) );
-    MR_VertScalars* scalars = MR_VertScalars_Construct_1_size_t( vertSize );
+    MR_VertScalars* scalars = MR_VertScalars_Construct( vertSize );
     float maxWeight = 0.0f;
     for ( size_t i = 0; i < vertSize; ++i )
     {
-        const MR_std_vector_MR_Vector3f* points = MR_VertCoords_Get_vec_( MR_Mesh_Get_points( mesh ) );
-        float weight = abs( MR_std_vector_MR_Vector3f_at( points, i )->x / 5.0f );
+        const MR_Vector3f* point = MR_VertCoords_index( MR_Mesh_Get_points( mesh ), (MR_VertId){ (int)i } );
+        float weight = fabsf( point->x / 5.0f ); // Individual extra offset sizes for points
         MR_VertScalars_data_mut( scalars )[i] = weight;
-        if ( weight > maxWeight )
-        {
-            maxWeight = weight;
-        }
+        maxWeight = fmaxf( maxWeight, weight ); // should always have maximum between weights provided
     }
 
     MR_WeightedShell_ParametersMetric* params = MR_WeightedShell_ParametersMetric_DefaultConstruct();
@@ -50,7 +46,7 @@ int main( void )
     MR_DistanceFromWeightedPointsParams* dist = MR_WeightedShell_ParametersMetric_GetMutable_dist( params );
     MR_DistanceFromWeightedPointsParams_Set_maxWeight( dist, maxWeight );
 
-    MR_expected_MR_Mesh_std_string* res = MR_WeightedShell_meshShell_3_MR_VertScalars( mesh, scalars, params );
+    MR_expected_MR_Mesh_std_string* res = MR_WeightedShell_meshShell( mesh, scalars, params );
     MR_Mesh* resMesh = MR_expected_MR_Mesh_std_string_value_mut( res );
     if ( !resMesh )
     {
@@ -58,7 +54,7 @@ int main( void )
         goto fail_shell;
     }
 
-    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( resMesh, "offset_weighted.ctm", NULL, NULL );
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat( resMesh, "offset_weighted.ctm", NULL, NULL );
     if ( MR_expected_void_std_string_error( saveEx ) )
     {
         fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );

@@ -30,7 +30,7 @@ CreatedMesh createMesh( void )
     MR_Mesh* meshA = MR_makeCube( &meshASize, &meshABase );
     MR_Mesh* meshB = MR_makeCube( &meshBSize, &meshBBase );
 
-    MR_BooleanResult* resultAB = MR_boolean_4_const_MR_Mesh_ref( meshA, meshB, MR_BooleanOperation_Union, NULL );
+    MR_BooleanResult* resultAB = MR_boolean( meshA, meshB, MR_BooleanOperation_Union, NULL );
     MR_Mesh_Destroy( meshA );
     MR_Mesh_Destroy( meshB );
 
@@ -84,7 +84,7 @@ void testLargeComponents( void )
 {
     CreatedMesh m = createMesh();
 
-    MR_FaceBitSet* components = MR_MeshComponents_getLargeByAreaComponents_3( m.part, 0.1f, NULL );
+    MR_FaceBitSet* components = MR_MeshComponents_getLargeByAreaComponents( m.part, 0.1f, NULL );
     TEST_ASSERT( MR_FaceBitSet_test( components, (MR_FaceId){0} ) );
     TEST_ASSERT( !MR_FaceBitSet_test( components, (MR_FaceId){12} ) );
 

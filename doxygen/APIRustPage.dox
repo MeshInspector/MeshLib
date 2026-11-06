@@ -1,0 +1,10 @@
+/**
+\page APIRustPage Rust
+
+The `meshlib` crate, see the [Rust Setup Guide](../MeshLibRustSetupGuide.html). Doxygen shows the Rust items in C++ form: a function `fn f(a: A) -> R` is listed as `auto f(a: A) -> R`, the traits a type implements as its base classes.
+
+ - [Modules](namespaces.html)
+ - [Classes](classes.html)
+ - [Files](files.html)
+
+*/

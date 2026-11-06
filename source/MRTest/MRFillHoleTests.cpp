@@ -209,6 +209,48 @@ TEST( MRMesh, bridgeFillAllHoles )
     EXPECT_EQ( mesh.topology.numValidFaces(), numFaces );
 }
 
+TEST( MRMesh, HoleFillPlan2 )
+{
+    // two edges between the same two vertices bound a hole on each side
+    Mesh mesh;
+    const auto e = mesh.topology.makeEdge();
+    const auto e1 = mesh.topology.makeEdge();
+    mesh.topology.splice( e, e1 );
+    mesh.topology.splice( e.sym(), e1.sym() );
+    mesh.topology.setOrg( e, mesh.addPoint( { 0, 0, 0 } ) );
+    mesh.topology.setOrg( e.sym(), mesh.addPoint( { 1, 0, 0 } ) );
+    ASSERT_EQ( mesh.topology.getLeftDegree( e ), 2 );
+
+    // no triangle can be made on the hole's two vertices, so it is filled trivially:
+    // with a new center vertex and two triangles
+    auto p0 = getPlanarHoleFillPlan( mesh, e );
+    EXPECT_EQ( p0.items.size(), 0 );
+    EXPECT_EQ( p0.numTris, 2 );
+    EXPECT_EQ( getHoleFillPlan( mesh, e ).numTris, 2 );
+
+    auto ps = getPlanarHoleFillPlans( mesh, { e, e.sym() } );
+    ASSERT_EQ( ps.size(), 2 );
+    EXPECT_EQ( ps[0].numTris, 2 );
+    EXPECT_EQ( ps[1].items.size(), 0 );
+    EXPECT_EQ( ps[1].numTris, 2 );
+
+    FaceBitSet newFaces;
+    executeHoleFillPlan( mesh, e, p0, &newFaces );
+    EXPECT_EQ( newFaces.count(), p0.numTris );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 2 );
+    EXPECT_EQ( mesh.topology.numValidVerts(), 3 );
+    EXPECT_FALSE( mesh.topology.isClosed() );
+    EXPECT_TRUE( mesh.topology.checkValidity() );
+
+    newFaces.clear();
+    executeHoleFillPlan( mesh, e.sym(), ps[1], &newFaces );
+    EXPECT_EQ( newFaces.count(), ps[1].numTris );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 4 );
+    EXPECT_EQ( mesh.topology.numValidVerts(), 4 );
+    EXPECT_TRUE( mesh.topology.isClosed() );
+    EXPECT_TRUE( mesh.topology.checkValidity() );
+}
+
 TEST( MRMesh, HoleFillPlan3 )
 {
     Mesh mesh;

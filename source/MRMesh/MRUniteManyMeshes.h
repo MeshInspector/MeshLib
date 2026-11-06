@@ -14,6 +14,15 @@ enum class NestedComponenetsMode
     Union ///< does not separate components and call union for all input meshes, works slower than Remove and Merge method but returns valid result if input meshes has multiple components
 };
 
+/// face of one of the input meshes of uniteManyMeshes function
+struct ObjFaceId
+{
+    ObjId objId; ///< index of the mesh in the input vector
+    FaceId fId;
+
+    friend bool operator==( const ObjFaceId&, const ObjFaceId& ) = default;
+};
+
 /// Parameters structure for uniteManyMeshes function
 struct UniteManyMeshesParams
 {
@@ -34,6 +43,11 @@ struct UniteManyMeshesParams
     
     /// If set, the bitset will store new faces created by boolean operations
     FaceBitSet* newFaces{ nullptr };
+
+    /// If set, receives for each face of the result mesh the input mesh and its face, from which the result face originates;
+    /// the faces without origin (e.g. filled holes in forceCut mode) get invalid ids;
+    /// in uniteComponents, objId is the index of the component and fId is the face of the input mesh
+    Vector<ObjFaceId, FaceId>* new2oldFaces{ nullptr };
 
     /// By default function separate nested meshes and remove them, just like union operation should do
     /// read comment of NestedComponenetsMode enum for more information

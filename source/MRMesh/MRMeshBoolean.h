@@ -5,6 +5,7 @@
 #include "MRMesh.h"
 #include "MRBitSet.h"
 #include "MRExpected.h"
+#include <optional>
 #include <string>
 
 namespace MR
@@ -59,15 +60,38 @@ struct BooleanResult
   * \note Input meshes should have no self-intersections in intersecting zone
   * \note If meshes are not closed in intersecting zone some boolean operations are not allowed (as far as input meshes interior and exterior cannot be determined)
   */
-MRMESH_API BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
+MR_BIND_OVERLOAD_SUFFIX(withXf) MRMESH_API BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
                                   const AffineXf3f* rigidB2A, BooleanResultMapper* mapper = nullptr, ProgressCallback cb = {} );
 // no version of the function with rvalue-referenced meshes, because meshes' copies are currently used for sorting intersections
 
 
+/// a mesh of the boolean and its contours of intersection with the other mesh before the cut, with the boolean's data for an exact cut;
+/// the contours can include lone ones (inside one face, crossing none of its edges), which cutMesh connects exactly only given
+/// the boolean's sorting data, see sortData
 struct BooleanPreCutResult
 {
     Mesh mesh;
     OneMeshContours contours;
+
+    /// the boolean's ordered intersections of both meshes, without the closed contours of two points
+    ContinuousContours intersections;
+
+    /// the boolean's conversion of the coordinates of both meshes to integers
+    ConvertToIntVector toInt;
+
+    /// a copy of the boolean's transformation from mesh B to mesh A
+    std::optional<AffineXf3f> rigidB2A;
+
+    /// the number of vertices of mesh A before any cut
+    size_t meshAVertsNum = 0;
+
+    /// whether mesh is mesh A of the boolean
+    bool isMeshA = false;
+
+    /// the data to pass cutMesh( mesh, contours ) in CutMeshParameters::sortData for the boolean's exact cut, where otherMesh is the other mesh
+    /// of the boolean as it was passed to it; the result points into this struct and otherMesh, so both must outlive its use
+    [[nodiscard]] SortIntersectionsData sortData( const Mesh& otherMesh ) const
+        { return { otherMesh, intersections, toInt, rigidB2A ? &*rigidB2A : nullptr, meshAVertsNum, !isMeshA }; }
 };
 
 /** \struct MR::BooleanResult
@@ -103,9 +127,9 @@ struct BooleanParameters
     ProgressCallback cb = {};
 };
 
-MRMESH_API BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
+MR_BIND_OVERLOAD_SUFFIX() MRMESH_API BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
                                   const BooleanParameters& params = {} );
-MRMESH_API BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
+MR_BIND_OVERLOAD_SUFFIX(move) MRMESH_API BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
                                   const BooleanParameters& params = {} );
 
 /// calls boolean in force mode, also unites close vertices and fills holes afterwards
@@ -115,7 +139,10 @@ MRMESH_API BooleanResult forceBoolean( const Mesh& meshA, const Mesh& meshB, Boo
                                   const BooleanParameters& params = {} );
 
 
-/// performs boolean operation on mesh with itself, cutting simple intersections contours and flipping their connectivity
+/// performs boolean operation on mesh with itself, cutting its self-intersection contours and flipping their connectivity;
+/// the contours may cross one another where three sheets of the mesh meet at a point (nested intersections);
+/// two triangles with the same vertices glued along two edges or all three (a part without volume) that cross other parts are eliminated,
+/// see eliminateDoubleTris
 /// this function is experimental and likely to change signature and/or behavior in future 
 MRMESH_API Expected<Mesh> selfBoolean( const Mesh& mesh );
 

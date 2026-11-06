@@ -263,7 +263,6 @@ VdbVolume floatGridToVdbVolume( FloatGrid grid )
     return res;
 }
 
-template <>
 void putSimpleVolumeInDenseGrid(
         openvdb::FloatGrid& grid,
         const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb
@@ -282,14 +281,12 @@ void putSimpleVolumeInDenseGrid(
         cb( 1.f );
 }
 
-template <>
 void putSimpleVolumeInDenseGrid(
         FloatGrid& grid,
         const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb
     )
 {
-    openvdb::FloatGrid& gridRef = *grid;
-    putSimpleVolumeInDenseGrid( gridRef, minCoord, simpleVolume, cb );
+    putSimpleVolumeInDenseGrid( ovdb( *grid ), minCoord, simpleVolume, cb );
 }
 
 template <typename VolumeType>
@@ -319,7 +316,6 @@ void putVolumeInDenseGrid(
     }
 }
 
-template <>
 void putSimpleVolumeInDenseGrid(
         openvdb::FloatGrid::Accessor& gridAccessor,
         const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb
@@ -533,12 +529,12 @@ Expected<void> makeSignedByWindingNumber( FloatGrid& grid, const Vector3f& voxel
 
     if ( auto fwnByParts = std::dynamic_pointer_cast<IFastWindingNumberByParts>( fwn ) )
     {
-        auto func = [&] ( std::vector<float>&& vals, const Vector3i&, int zOffset ) -> Expected<void>
+        auto func = [&] ( VoxelScalars&& vals, const Vector3i&, int zOffset ) -> Expected<void>
         {
             const auto offset = indexer.sizeXY() * zOffset;
             ParallelFor( size_t( 0 ), vals.size(), [&] ( size_t i )
             {
-                updateGrid( VoxelId( i + offset ), vals[i] );
+                updateGrid( VoxelId( i + offset ), vals[VoxelId( i )] );
             } );
             return {};
         };

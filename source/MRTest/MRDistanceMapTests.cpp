@@ -324,6 +324,14 @@ TEST( MRMesh, DistanceMapOffsetMap )
     ASSERT_EQ( counter, 80275 );
 }
 
+// a new map has no values
+TEST( MRMesh, DistanceMapNoValues )
+{
+    const DistanceMap dm( 3, 2 );
+    for ( size_t i = 0; i < dm.size(); ++i )
+        EXPECT_FALSE( dm.isValid( i ) );
+}
+
 TEST( MRMesh, DistanceMapInterpolation )
 {
     DistanceMap dm( 2, 2 );

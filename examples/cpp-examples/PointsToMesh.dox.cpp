@@ -2,10 +2,14 @@
 #include <MRMesh/MRPointCloud.h>
 #include <MRMesh/MRPointCloudTriangulation.h>
 #include <MRMesh/MRMeshSave.h>
+#include <MRIOExtras/MRIOExtras.h>
 #include <iostream>
 
 int main()
 {
+    // CTM, JPEG and other formats beyond the basic ones come with the MRIOExtras library
+    MR::loadIOExtras();
+
     // load points
     auto loadRes = MR::PointsLoad::fromAnySupportedFormat( "Points.ply" );
     if ( !loadRes.has_value() )

@@ -65,6 +65,20 @@ MR_BIND_IGNORE inline openvdb::CoordBBox toVdbBox( const Vector3i& dims )
                                toVdb( Vector3i( dims ) - Vector3i::diagonal(1) ) );
 }
 
+/// @brief Copy given \p simpleVolume into the \p grid, starting at \p minCoord
+/// Uses multithreaded copying, so the function is not thread safe.
+MR_BIND_IGNORE MRVOXELS_API void putSimpleVolumeInDenseGrid(
+        openvdb::FloatGrid& grid,
+        const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb = {}
+    );
+
+/// @brief Copy given \p simpleVolume into the grid of \p gridAccessor, starting at \p minCoord
+/// Can be called from different threads on the same grid, provided that the accessors are different.
+MR_BIND_IGNORE MRVOXELS_API void putSimpleVolumeInDenseGrid(
+        openvdb::FloatGrid::Accessor& gridAccessor,
+        const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb = {}
+    );
+
 /// \}
 
 }

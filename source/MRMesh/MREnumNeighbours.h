@@ -9,7 +9,7 @@ namespace MR
 class EnumNeihbourVertices
 {
 public:
-    /// invokes given predicate for vertices starting from \param start,
+    /// invokes given predicate for vertices starting from \p start,
     /// and continuing to all immediate neighbours in depth-first order until the predicate returns false
     MRMESH_API void run( const MeshTopology & topology, VertId start, const VertPredicate & pred );
     MRMESH_API void run( const MeshTopology& topology, const VertBitSet& start, const VertPredicate& pred );
@@ -25,7 +25,7 @@ private:
 /// and to first vertices with the distance more than range
 [[nodiscard]] MRMESH_API VertScalars computeSpaceDistances( const Mesh& mesh, const PointOnFace & start, float range );
 
-/// calculates all neighbor vertices within a given \param range
+/// calculates all neighbor vertices within a given range
 /// and to first vertices with the distance more than range
 /// \param rangeSq square of range
 [[nodiscard]] MRMESH_API VertBitSet findNeighborVerts( const Mesh& mesh, const PointOnFace& start, float rangeSq );
@@ -33,7 +33,7 @@ private:
 class EnumNeihbourFaces
 {
 public:
-    /// invokes given predicate for faces starting from all incident to \param start,
+    /// invokes given predicate for faces starting from all incident to \p start,
     /// and continuing to all immediate neighbours in depth-first order until the predicate returns false
     MRMESH_API void run( const MeshTopology & topology, VertId start, const FacePredicate & pred );
 

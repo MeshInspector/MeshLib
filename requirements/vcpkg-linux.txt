@@ -12,6 +12,7 @@ boost-stacktrace
 boost-url
 clip
 cpr
+draco
 dbus[core]
 eigen3
 fastmcpp
@@ -27,7 +28,7 @@ libe57format
 libharu
 libjpeg-turbo
 libzip
-mrbind-pybind11
+mimalloc
 opencascade-minimal
 openctm
 openvdb

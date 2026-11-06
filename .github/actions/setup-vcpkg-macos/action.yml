@@ -1,0 +1,120 @@
+name: 'Set up vcpkg for MeshLib (macOS)'
+description: 'Builds the vcpkg dependencies into ./vcpkg_installed, using the GitHub cache.'
+
+inputs:
+  vcpkg-version:
+    description: 'Vcpkg tag.'
+    required: true
+  vcpkg-triplet:
+    description: 'Vcpkg triplet.'
+    required: true
+  c-compiler:
+    description: 'C compiler.'
+    required: true
+  cxx-compiler:
+    description: 'C++ compiler.'
+    required: true
+  toolchain:
+    description: 'Toolchain name for the cache key.'
+    required: true
+  internal-build:
+    description: 'Write to the S3 binary cache ("true" or "false"); needs `id-token: write`.'
+    required: false
+    default: 'false'
+  vcpkg-root:
+    description: 'Vcpkg checkout; cloned if missing.'
+    required: false
+    default: '/usr/local/share/vcpkg'
+  repo-dir:
+    description: 'Path to this repository from the workspace root.'
+    required: false
+    default: '.'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up vcpkg
+      shell: bash
+      env:
+        VCPKG_ROOT: ${{ inputs.vcpkg-root }}
+      run: |
+        if [ ! -d "${VCPKG_ROOT}/.git" ] ; then
+          git clone --filter=blob:none https://github.com/microsoft/vcpkg.git "${VCPKG_ROOT}"
+        fi
+        git -C "${VCPKG_ROOT}" fetch --depth 1 origin tag "${{ inputs.vcpkg-version }}"
+        git -C "${VCPKG_ROOT}" checkout --force "${{ inputs.vcpkg-version }}"
+        "${VCPKG_ROOT}/bootstrap-vcpkg.sh" -disableMetrics
+        echo "VCPKG_ROOT=${VCPKG_ROOT}" >> $GITHUB_ENV
+        echo "${VCPKG_ROOT}" >> $GITHUB_PATH
+
+        d='${{ inputs.repo-dir }}'
+        if [ -z "$d" ] || [ "$d" = "." ]; then
+          echo "REPO_PREFIX=" >> $GITHUB_ENV
+        else
+          echo "REPO_PREFIX=${d%/}/" >> $GITHUB_ENV
+        fi
+
+    - name: Configure AWS Credentials
+      if: ${{ inputs.internal-build == 'true' }}
+      uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
+      with:
+        role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
+        aws-region: us-east-1
+        role-duration-seconds: 7200
+        retry-max-attempts: 5
+
+    - name: Resolve compilers
+      shell: bash
+      run: |
+        # /usr/bin/clang is the xcode-select shim; resolve the toolchain binary it dispatches to
+        resolve() {
+          case "$1" in
+            /usr/bin/*) xcrun --find "${1##*/}" ;;
+            *) echo "$1" ;;
+          esac
+        }
+        echo "VCPKG_CC=$(resolve '${{ inputs.c-compiler }}')" >> $GITHUB_ENV
+        echo "VCPKG_CXX=$(resolve '${{ inputs.cxx-compiler }}')" >> $GITHUB_ENV
+
+    - name: Compute vcpkg cache key
+      shell: bash
+      env:
+        VCPKG_TRIPLET: ${{ inputs.vcpkg-triplet }}
+      run: |
+        FILES_HASH=$(${REPO_PREFIX}scripts/devops/cache_key.sh \
+          ${REPO_PREFIX}thirdparty/vcpkg/vcpkg.json \
+          ${REPO_PREFIX}thirdparty/vcpkg/ports \
+          ${REPO_PREFIX}thirdparty/vcpkg/triplets/${VCPKG_TRIPLET}.cmake \
+          ${REPO_PREFIX}scripts/build_vcpkg_thirdparty.sh \
+          "${VCPKG_CXX}")
+        KEY_PREFIX="vcpkg-installed-${{ inputs.vcpkg-version }}-${VCPKG_TRIPLET}-${{ inputs.toolchain }}"
+        echo "VCPKG_CACHE_KEY_PREFIX=${KEY_PREFIX}" >> $GITHUB_ENV
+        echo "VCPKG_CACHE_KEY=${KEY_PREFIX}-${FILES_HASH}" >> $GITHUB_ENV
+
+    - name: Restore vcpkg installed tree
+      id: vcpkg-cache
+      uses: actions/cache/restore@v5
+      with:
+        path: vcpkg_installed
+        key: ${{ env.VCPKG_CACHE_KEY }}
+        # fall back to the latest tree with the same prefix
+        restore-keys: ${{ env.VCPKG_CACHE_KEY_PREFIX }}-
+
+    - name: Build thirdparty libs
+      shell: bash
+      env:
+        VCPKG_TRIPLET: ${{ inputs.vcpkg-triplet }}
+        VCPKG_VERSION: ${{ inputs.vcpkg-version }}
+      run: |
+        source ${REPO_PREFIX}thirdparty/vcpkg/configure_s3_cache.sh
+        export CC="${VCPKG_CC}"
+        export CXX="${VCPKG_CXX}"
+        export SDKROOT=$(xcrun --show-sdk-path)
+        ${REPO_PREFIX}scripts/build_vcpkg_thirdparty.sh
+
+    - name: Save vcpkg installed tree
+      if: ${{ steps.vcpkg-cache.outputs.cache-hit != 'true' }}
+      uses: actions/cache/save@v5
+      with:
+        path: vcpkg_installed
+        key: ${{ env.VCPKG_CACHE_KEY }}

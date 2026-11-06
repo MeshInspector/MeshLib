@@ -52,6 +52,7 @@ Below is a summary of all modules and their dependencies, so you can see what ea
 |<a rel="nofollow" href="https://github.com/syoyo/tinygltf">tinygltf</a>             |is a header only C++11 glTF 2.0                                              |MIT                                        |
 |<a rel="nofollow" href="https://sourceforge.net/projects/openctm/">OpenCTM</a>      |the Open Compressed Triangle Mesh file format                                |zlib/libpng                                |
 |<a rel="nofollow" href="https://github.com/hobuinc/laz-perf">LAZperf</a>            |alternative LAZ implementation for C++ and JavaScript                        |Apache 2.0                                 |
+|<a rel="nofollow" href="https://github.com/google/draco">Draco</a>                  |library for compressing and decompressing 3D meshes and point clouds         |Apache 2.0                                 |
 |<a rel="nofollow" href="https://github.com/asmaloney/libE57Format">libe57format</a> |library for reading & writing the E57 file format                            |Boost Software License                     |
 |<a rel="nofollow" href="https://leethomason.github.io/tinyxml2/">tinyxml2</a>       |an efficient, C++ XML parser                                                 |zlib                                       |
 |<a rel="nofollow" href="https://github.com/nlohmann/json">nlohmann-json</a>       |JSON for Modern C++ — used by the glTF reader/writer                         |MIT                                        |
@@ -71,7 +72,6 @@ Below is a summary of all modules and their dependencies, so you can see what ea
 |Name                                                                     |Description                                                                  |License                                    |
 |-------------------------------------------------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|
 |<a rel="nofollow" href="https://www.python.org">python3</a>              |is a high-level, general-purpose programming language.                       |PSF                                        |
-|<a rel="nofollow" href="https://github.com/pybind/pybind11">pybind11</a> |a library that exposes C++ types in Python and vice versa                    |BSD-3-Clause                               |
 
 
 ### MRVoxels
@@ -130,7 +130,7 @@ Below is a summary of all modules and their dependencies, so you can see what ea
 
 ### Bundled executables
 
-The Windows distribution ships its executables (MeshViewer, meshconv, MRTest) with the mimalloc allocator enabled; WebAssembly builds embed Emscripten's bundled copy of it.
+MeshLib libraries allocate some containers (e.g. BitSet) with the mimalloc allocator explicitly, and MeshLib's executables (MeshViewer, MRTest) replace the system allocator with the same mimalloc; the distributions ship it as a shared library, and WebAssembly builds embed Emscripten's bundled copy of it instead.
 
 |Name                                                                              |Description                                                                  |License                                    |
 |-----------------------------------------------------------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|

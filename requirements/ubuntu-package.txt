@@ -10,6 +10,7 @@ libboost-program-options-dev
 libboost-system-dev
 libboost-thread-dev
 libcurl4
+libdraco4 | libdraco8 | libdraco9
 libeigen3-dev
 libexpected-dev
 libfmt-dev

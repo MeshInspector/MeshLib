@@ -306,6 +306,14 @@ struct [[nodiscard]] Mesh
     /// optionally returns whether the vertex is on boundary
     [[nodiscard]] float discreteGaussianCurvature( VertId v, bool * outBoundaryVert = nullptr ) const { return MR::discreteGaussianCurvature( topology, points, v, outBoundaryVert ); }
 
+    /// computes discrete mean curvature (see discreteMeanCurvature( v )) in the vertices of given region (or in all valid vertices if region is null),
+    /// and puts 0 in all other vertices
+    [[nodiscard]] VertScalars discreteMeanCurvatures( const VertBitSet * region = nullptr ) const { return MR::discreteMeanCurvatures( topology, points, region ); }
+
+    /// computes discrete Gaussian curvature (see discreteGaussianCurvature( v )) in the vertices of given region (or in all valid vertices if region is null),
+    /// and puts 0 in all other vertices
+    [[nodiscard]] VertScalars discreteGaussianCurvatures( const VertBitSet * region = nullptr ) const { return MR::discreteGaussianCurvatures( topology, points, region ); }
+
     /// finds all mesh edges with the cosine of dihedral angle (see dihedralAngleCos) in [minSharpCos, maxSharpCos]
     [[nodiscard]] UndirectedEdgeBitSet findSharpEdges( float minSharpCos, float maxSharpCos ) const { return MR::findSharpEdges( topology, points, minSharpCos, maxSharpCos ); }
 
@@ -332,11 +340,11 @@ struct [[nodiscard]] Mesh
 
     /// passes through all valid vertices and finds the minimal bounding box containing all of them;
     /// if toWorld transformation is given then returns minimal bounding box in world space
-    [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const AffineXf3f * toWorld = nullptr ) const;
+    MR_BIND_OVERLOAD_SUFFIX() [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const AffineXf3f * toWorld = nullptr ) const;
 
     /// passes through all given faces (or whole mesh if region == null) and finds the minimal bounding box containing all of them
     /// if toWorld transformation is given then returns minimal bounding box in world space
-    [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const FaceBitSet* region, const AffineXf3f* toWorld = nullptr ) const;
+    MR_BIND_OVERLOAD_SUFFIX(region) [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const FaceBitSet* region, const AffineXf3f* toWorld = nullptr ) const;
 
     /// computes average length of an edge in this mesh
     [[nodiscard]] float averageEdgeLength() const { return MR::averageEdgeLength( topology, points ); }
@@ -395,21 +403,21 @@ struct [[nodiscard]] Mesh
     VertId splitFace( FaceId f, FaceBitSet * region = nullptr, FaceHashMap * new2Old = nullptr ) { return splitFace( f, triCenter( f ), region, new2Old ); }
 
     /// appends another mesh as separate connected component(s) to this
-    MRMESH_API void addMesh( const Mesh & from, PartMapping map = {}, bool rearrangeTriangles = false );
-    MRMESH_API void addMesh( const Mesh & from,
+    MR_BIND_OVERLOAD_SUFFIX() MRMESH_API void addMesh( const Mesh & from, PartMapping map = {}, bool rearrangeTriangles = false );
+    MR_BIND_OVERLOAD_SUFFIX(outMaps) MRMESH_API void addMesh( const Mesh & from,
         // optionally returns mappings: from.id -> this.id
         FaceMap * outFmap, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
 
     /// appends whole or part of another mesh as separate connected component(s) to this
     /// optional \param vacant can be passed to copy elements not at the end, but over given ones, which the user guaranties to be free/lone
-    MRMESH_API void addMeshPart( const MeshPart & from, const PartMapping & map, VacantElements * vacant = {} );
+    MR_BIND_OVERLOAD_SUFFIX(mapping) MRMESH_API void addMeshPart( const MeshPart & from, const PartMapping & map, VacantElements * vacant = {} );
 
     /// appends whole or part of another mesh to this joining added faces with existed ones along given contours
     /// \param flipOrientation true means that every (from) triangle is inverted before adding
     /// optional \param vacant can be passed to copy elements not at the end, but over given ones, which the user guaranties to be free/lone
     /// \return false if the given contours cannot be stitched, and this mesh is left unmodified then
     ///         (the src2tgt mappings in (map) argument can be partially filled nevertheless)
-    MRMESH_API bool addMeshPart( const MeshPart & from, bool flipOrientation = false,
+    MR_BIND_OVERLOAD_SUFFIX() MRMESH_API bool addMeshPart( const MeshPart & from, bool flipOrientation = false,
         const std::vector<EdgePath> & thisContours = {}, // contours on this mesh that have to be stitched with
         const std::vector<EdgePath> & fromContours = {}, // contours on from mesh during addition
         // optionally returns mappings: from.id -> this.id
@@ -428,7 +436,8 @@ struct [[nodiscard]] Mesh
     MRMESH_API Expected<void> pack( const PackMapping & map, ProgressCallback cb = {} );
 
     /// packs tightly and rearranges vertices, triangles and edges to put close in space elements in close indices
-    /// \param preserveAABBTree whether to keep valid mesh's AABB tree after return (it will take longer to compute and it will occupy more memory)
+    /// \param preserveAABBTree whether to keep valid mesh's AABB tree after return (it will take longer to compute and it will occupy more memory);
+    /// an already constructed tree is used for faster ordering of faces in any case
     MRMESH_API PackMapping packOptimally( bool preserveAABBTree = true );
     MRMESH_API Expected<PackMapping> packOptimally( bool preserveAABBTree, ProgressCallback cb );
 
@@ -493,8 +502,8 @@ struct [[nodiscard]] Mesh
     /// updates existing caches after some faces were split into parts (e.g. by splitFace() or splitEdge()) with no other changes in the mesh;
     /// it shall be considered as a faster alternative to invalidateCaches() and following rebuild of AABB tree
     /// \param new2Old maps every face appeared after the splits to the face it was split from (as filled by splitFace() and splitEdge());
-    /// it must contain only the splits made since the AABB tree was built or last updated: a map accumulated over several calls
-    /// (like new2oldMap of subdivideLoneContours in the iterations of boolean) would add the earlier faces to the tree once more
+    /// it must contain only the splits made since the AABB tree was built or last updated: a map accumulated over several updates
+    /// would add the earlier faces to the tree once more
     MRMESH_API void updateCachesAfterSplits( const FaceHashMap & new2Old );
 
     // returns the amount of memory this object occupies on heap

@@ -61,12 +61,13 @@ MRVIEWER_API std::vector<std::filesystem::path> openFilesDialog( const FileParam
 MRVIEWER_API void openFilesDialogAsync( std::function<void( const std::vector<std::filesystem::path>& )> callback, const FileParameters& params = {} );
 
 // Select one folder
+// showFiles: list the files in the folders too, if the system dialog can (on Windows picking a file selects its folder)
 // returns empty path on cancel
-MRVIEWER_API std::filesystem::path openFolderDialog( std::filesystem::path baseFolder = {} );
+MRVIEWER_API std::filesystem::path openFolderDialog( std::filesystem::path baseFolder = {}, bool showFiles = false );
 
 // Unified function to select a folder in desktop code and in emscripten
 // callback is called inside this function in desktop build and deferred in emscripten build
-MRVIEWER_API void openFolderDialogAsync( std::function<void ( const std::filesystem::path& )> callback, std::filesystem::path baseFolder = {} );
+MRVIEWER_API void openFolderDialogAsync( std::function<void ( const std::filesystem::path& )> callback, std::filesystem::path baseFolder = {}, bool showFiles = false );
 
 // Allow user to select several folders
 // returns empty path on cancel
@@ -87,6 +88,7 @@ struct Parameters : MR::FileParameters
     bool folderDialog{false}; // open dialog only
     bool multiselect{true};   // open dialog only
     bool saveDialog{false};   // true for save dialog, false for open
+    bool showFiles{false};    // folder dialog only: list the files too
 };
 
 /// loads from the configuration the path to last used folder (where the files were last saved or open);

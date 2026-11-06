@@ -15,7 +15,7 @@ int main( void )
     // Relax mesh (5 iterations)
     MR_MeshRelaxParams* meshRelaxParams = MR_MeshRelaxParams_DefaultConstruct();
     MR_MeshRelaxParams_Set_iterations( meshRelaxParams, 5 );
-    MR_relax_3_MR_Mesh( mesh, meshRelaxParams, NULL );
+    MR_relax( mesh, meshRelaxParams, NULL );
     MR_MeshRelaxParams_Destroy( meshRelaxParams );
 
     // Subdivide mesh

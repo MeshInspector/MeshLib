@@ -15,6 +15,7 @@ auto preCollapseVertAttribute( const Mesh& mesh, Vector<T, VertId>& data );
 * Please use this callback when you decimate a mesh with associated data with each vertex
 * recalculate texture coordinates and mesh vertex colors for vertices moved during decimation
 * usage example
+* \code
 *   MeshAttributesToUpdate meshParams;
 *   auto uvCoords = obj->getUVCoords();
 *   auto colorMap = obj->getVertsColorMap();
@@ -24,6 +25,7 @@ auto preCollapseVertAttribute( const Mesh& mesh, Vector<T, VertId>& data );
 *       meshParams.colorMap = &colorMap;
 *   auto preCollapse = meshPreCollapseVertAttribute( mesh, meshParams );
 *   decimateMesh( mesh, DecimateSettings{ .preCollapse = preCollapse } );
+* \endcode
 */
 MRMESH_API PreCollapseCallback meshPreCollapseVertAttribute( const Mesh& mesh, const MeshAttributesToUpdate& params );
 

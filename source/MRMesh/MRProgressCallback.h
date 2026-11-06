@@ -12,7 +12,7 @@ namespace MR
 {
 
 /// safely invokes \param cb with given value; just returning true for empty callback
-inline bool reportProgress( ProgressCallback cb, float v )
+inline bool reportProgress( const ProgressCallback& cb, float v )
 {
     if ( cb )
         return cb( v );
@@ -21,7 +21,7 @@ inline bool reportProgress( ProgressCallback cb, float v )
 
 /// safely invokes \param cb with given value if \param counter is divisible by \param divider (preferably a power of 2);
 /// just returning true for empty callback
-inline bool reportProgress( ProgressCallback cb, float v, size_t counter, int divider )
+inline bool reportProgress( const ProgressCallback& cb, float v, size_t counter, int divider )
 {
     if ( cb && ( counter % divider == 0 ) )
         return cb( v );
@@ -31,7 +31,7 @@ inline bool reportProgress( ProgressCallback cb, float v, size_t counter, int di
 /// safely invokes \param cb with the value produced by given functor;
 /// just returning true for empty callback and not evaluating the function
 template<typename F>
-inline bool reportProgress( ProgressCallback cb, F && f )
+inline bool reportProgress( const ProgressCallback& cb, F && f )
 {
     if ( cb )
         return cb( f() );
@@ -41,7 +41,7 @@ inline bool reportProgress( ProgressCallback cb, F && f )
 /// safely invokes \param cb with the value produced by given functor if \param counter is divisible by \param divider (preferably a power of 2);
 /// just returning true for empty callback and not evaluating the function
 template<typename F>
-inline bool reportProgress( ProgressCallback cb, F && f, size_t counter, int divider )
+inline bool reportProgress( const ProgressCallback& cb, F && f, size_t counter, int divider )
 {
     if ( cb && ( counter % divider == 0 ) )
         return cb( f() );

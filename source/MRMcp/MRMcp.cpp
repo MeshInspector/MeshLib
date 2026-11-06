@@ -57,6 +57,29 @@ nlohmann::json reifyStringEncodedArgs( nlohmann::json args, const nlohmann::json
     return args;
 }
 
+// Throws `fastmcpp::ValidationError` for the first member listed in the schema's `required` that `args` lacks.
+void checkRequiredArgs( const nlohmann::json& args, const nlohmann::json& schema )
+{
+    auto reqIt = schema.find( "required" );
+    if ( reqIt == schema.end() || !reqIt->is_array() )
+        return;
+    for ( const auto& name : *reqIt )
+    {
+        if ( name.is_string() && !( args.is_object() && args.contains( name.get_ref<const std::string&>() ) ) )
+            throw fastmcpp::ValidationError( "Missing required argument `" + name.get<std::string>() + "`." );
+    }
+}
+
+// MCP tool execution error: a regular `CallToolResult` with `isError`, which clients pass on to the model,
+// unlike a JSON-RPC error. fastmcpp keeps a tool result that has `content` as is.
+nlohmann::json toolErrorResult( const std::string& message )
+{
+    return nlohmann::json{
+        { "content", nlohmann::json::array( { nlohmann::json{ { "type", "text" }, { "text", message } } } ) },
+        { "isError", true },
+    };
+}
+
 } // namespace
 
 struct Server::State
@@ -115,6 +138,8 @@ nlohmann::json Server::State::buildToolEntryJson( const std::string& name ) cons
         entry["description"] = *tool.description();
     else if ( auto it = toolDescs.find( name ); it != toolDescs.end() )
         entry["description"] = it->second;
+    if ( tool.annotations() )
+        entry["annotations"] = *tool.annotations();
     const auto& outSchema = tool.output_schema();
     if ( !outSchema.is_null() && !( outSchema.is_object() && outSchema.empty() ) )
     {
@@ -238,19 +263,12 @@ void Server::State::handleToolsCall( const httplib::Request& req, httplib::Respo
         return;
     }
 
-    // Analytics: one event per genuine tool invocation. Emit the tool id only
-    // (bounded, low-cardinality) — never args, which can carry file paths or
-    // object names. Consumed by the host application's telemetry listener.
-    TelemetrySignal( "MCP Tool: " + toolId );
-
     nlohmann::json args = nlohmann::json::object();
     if ( isGet )
     {
         // URL query params become tool arguments. Each value is JSON-parsed when
         // possible (so `?width=1920` -> 1920, `?path=[]` -> [], `?on=true` -> true)
-        // and falls back to the raw string when not (`?label=foo` -> "foo"). Tool
-        // schema validation still runs in toolManager.invoke and rejects type
-        // mismatches with RpcErrorCode::InvalidParams.
+        // and falls back to the raw string when not (`?label=foo` -> "foo").
         for ( const auto& [k, v] : req.params )
         {
             auto parsed = nlohmann::json::parse( v, nullptr, /* allow_exceptions */ false );
@@ -271,6 +289,9 @@ void Server::State::handleToolsCall( const httplib::Request& req, httplib::Respo
     nlohmann::json result;
     try
     {
+        // The tool wrapper does the same check but reports it as an `isError` result; here it stays a 400.
+        const auto& schema = toolManager.get( toolId ).input_schema();
+        checkRequiredArgs( reifyStringEncodedArgs( args, schema ), schema );
         result = toolManager.invoke( toolId, args );
     }
     catch ( const fastmcpp::NotFoundError& e )
@@ -292,8 +313,13 @@ void Server::State::handleToolsCall( const httplib::Request& req, httplib::Respo
     }
     catch ( const std::exception& e )
     {
-        TelemetrySignal( "MCP Tool Failed: " + toolId );
         writeJsonError( res, 500, e.what(), RpcErrorCode::InternalError );
+        return;
+    }
+    if ( result.is_object() && result.value( "isError", false ) )
+    {
+        // "MCP Tool Failed" is emitted by the tool wrapper in `addTool()`.
+        writeJsonError( res, 500, result["content"][0].value( "text", std::string() ), RpcErrorCode::InternalError );
         return;
     }
 
@@ -321,7 +347,8 @@ Server::Server( Server&& ) = default;
 Server& Server::operator=( Server&& ) = default;
 Server::~Server() = default;
 
-bool Server::addTool( std::string id, std::string name, std::string desc, Schema::Base inputSchema, Schema::Base outputSchema, ToolFunc func )
+bool Server::addTool( std::string id, std::string name, std::string desc, Schema::Base inputSchema, Schema::Base outputSchema, ToolFunc func,
+    bool readOnly )
 {
     if ( !state_ )
     {
@@ -346,11 +373,31 @@ bool Server::addTool( std::string id, std::string name, std::string desc, Schema
         if ( statePtr->toolValidator )
         {
             if ( auto res = statePtr->toolValidator( id ); !res )
-                throw std::runtime_error( std::move( res.error() ) );
+                return toolErrorResult( res.error() );
         }
-        return inner( reifyStringEncodedArgs( args, schema ) );
+        // Analytics: tool id only, never args or error text (may carry file paths or object names).
+        TelemetrySignal( "MCP Tool: " + id );
+        try
+        {
+            auto reified = reifyStringEncodedArgs( args, schema );
+            checkRequiredArgs( reified, schema );
+            return inner( reified );
+        }
+        catch ( const fastmcpp::ValidationError& e )
+        {
+            TelemetrySignal( "MCP Tool Validation Failed: " + id );
+            return toolErrorResult( e.what() );
+        }
+        catch ( const std::exception& e )
+        {
+            TelemetrySignal( "MCP Tool Failed: " + id );
+            return toolErrorResult( e.what() );
+        }
     };
-    state_->toolManager.register_tool( fastmcpp::tools::Tool( id, std::move( schemaJson ), std::move( outputSchema ).asJson(), std::move( wrapped ), name, desc, {} ) );
+    fastmcpp::tools::Tool tool( id, std::move( schemaJson ), std::move( outputSchema ).asJson(), std::move( wrapped ), name, desc, {} );
+    if ( readOnly )
+        tool.set_annotations( { { "readOnlyHint", true } } );
+    state_->toolManager.register_tool( std::move( tool ) );
     return true;
 }
 

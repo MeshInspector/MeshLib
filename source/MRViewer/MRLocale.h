@@ -32,7 +32,7 @@ MRVIEWER_API std::vector<std::string> getAvailableLocales();
 
 /// \brief Adds a path to .mo files.
 /// The path is expected to have the following directory structure:
-///   <locale name>/LC_MESSAGES/<domain name>.mo
+///   `<locale name>/LC_MESSAGES/<domain name>.mo`
 /// The active locale is reloaded on every call.
 MRVIEWER_API void addCatalogPath( const std::filesystem::path& path );
 /// \brief Adds a new domain.

@@ -29,6 +29,10 @@ public:
     /// creates an edge not associated with any vertex or face
     [[nodiscard]] MRMESH_API EdgeId makeEdge();
 
+    /// creates given number of edges not associated with any vertex or face,
+    /// returns the first of them; edge i is the first + 2 * i, the same as from makeEdge() called num times
+    [[nodiscard]] MRMESH_API EdgeId makeEdges( int num );
+
     /// checks whether the edge is disconnected from all other edges and disassociated from all vertices and faces (as if after makeEdge)
     [[nodiscard]] MRMESH_API bool isLoneEdge( EdgeId a ) const;
 
@@ -166,10 +170,10 @@ public:
 
     /// gets 3 vertices of the left face ( face-id may not exist, but the shape must be triangular)
     /// the vertices are returned in counter-clockwise order if look from mesh outside: v0 = org( a ), v1 = dest( a )
-    MRMESH_API     void getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const;
+    MR_BIND_OVERLOAD_SUFFIX(outVerts) MRMESH_API     void getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const;
     MR_BIND_IGNORE void getLeftTriVerts( EdgeId a, VertId (&v)[3] ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); } // This one is not in the bindings because of the reference-to-array parameter.
-                   void getLeftTriVerts( EdgeId a, ThreeVertIds & v ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); }
-    [[nodiscard]] ThreeVertIds getLeftTriVerts( EdgeId a ) const { ThreeVertIds v; getLeftTriVerts( a, v[0], v[1], v[2] ); return v; }
+                   MR_BIND_OVERLOAD_SUFFIX(outArray) void getLeftTriVerts( EdgeId a, ThreeVertIds & v ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); }
+    MR_BIND_OVERLOAD_SUFFIX() [[nodiscard]] ThreeVertIds getLeftTriVerts( EdgeId a ) const { ThreeVertIds v; getLeftTriVerts( a, v[0], v[1], v[2] ); return v; }
 
     /// if given point is
     /// 1) in vertex, then invokes callback once with it;
@@ -269,15 +273,18 @@ public:
     /// creates new face-id not associated with any edge yet
     [[nodiscard]] FaceId addFaceId() { edgePerFace_.emplace_back(); if ( updateValids_ ) { validFaces_.push_back( false ); } return edgePerFace_.backId(); }
 
-    /// deletes the face, also deletes its edges and vertices if they were not shared by other faces and not in \param keepFaces
+    /// deletes the face, also deletes its edges and vertices if they were not shared by other faces and not in \p keepEdges
     MRMESH_API void deleteFace( FaceId f, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
     /// deletes from this topology:
     /// 1) all the gives faces,
-    /// 2) all the vertices, which had incident only deleted faces and no edges from \param keepEdges,
-    /// 3) make lone all the edges, which had to the left/right only deleted faces except for the edges from \param keepEdges;
+    /// 2) all the vertices, which had incident only deleted faces and no edges from \p keepEdges,
+    /// 3) make lone all the edges, which had to the left/right only deleted faces except for the edges from \p keepEdges;
     /// return bit sets of all vacant elements in this topology after deletion
     MRMESH_API VacantElements deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
+
+    /// deletes the given valid faces (in parallel), keeping all their edges and vertices, which get no face on that side
+    MRMESH_API void deleteFacesKeepEdges( const FaceBitSet & fs );
 
     /// explicitly increases the size of faces vector
     MRMESH_API void faceResize( size_t newSize );
@@ -461,8 +468,8 @@ public:
     MRMESH_API VertId splitFace( FaceId f, FaceBitSet * region = nullptr, FaceHashMap * new2Old = nullptr );
 
     /// flip orientation (normals) of
-    /// * all mesh elements if \param fullComponents is nullptr, or
-    /// * given mesh components in \param fullComponents.
+    /// * all mesh elements if \p fullComponents is nullptr, or
+    /// * given mesh components in \p fullComponents.
     /// The behavior is undefined if fullComponents is given but there are connected components with some edges included and not-included there.
     MRMESH_API void flipOrientation( const UndirectedEdgeBitSet * fullComponents = nullptr );
 
@@ -506,11 +513,11 @@ public:
     /// \param outFmap,outVmap,outEmap if given returns mappings: old.id -> new.id;
     /// \param rearrangeTriangles if true then calls rotateTriangles()
     /// and selects the order of triangles according to the order of their vertices
-    MRMESH_API void pack( FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
+    MR_BIND_OVERLOAD_SUFFIX() MRMESH_API void pack( FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
 
     /// tightly packs all arrays eliminating lone edges and invalid faces and vertices;
     /// reorder all faces, vertices and edges according to given maps, each containing old id -> new id mapping
-    MRMESH_API void pack( const PackMapping & map );
+    MR_BIND_OVERLOAD_SUFFIX(mapping) MRMESH_API void pack( const PackMapping & map );
 
     /// tightly packs all arrays eliminating lone edges and invalid faces and vertices;
     /// reorder all faces, vertices and edges according to given maps, each containing old id -> new id mapping;

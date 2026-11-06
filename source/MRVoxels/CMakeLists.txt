@@ -1,13 +1,7 @@
 project(MRVoxels CXX)
 
 option(MRVOXELS_NO_DICOM "Disable DICOM format support" OFF)
-option(MRVOXELS_NO_TIFF "Disable TIFF format support" OFF)
 option(MRVOXELS_UNITY_BUILD "Use unity build for MRVoxels" OFF)
-
-IF(MR_EMSCRIPTEN)
-  # Sync this with `scripts/mrbind/generate.mk`.
-  set(MRVOXELS_NO_TIFF ON)
-ENDIF()
 
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
@@ -45,7 +39,7 @@ ENDIF()
 
 IF(NOT MRVOXELS_NO_DICOM)
   find_package(GDCM CONFIG REQUIRED)
-  target_link_libraries(${PROJECT_NAME} PRIVATE gdcmIOD gdcmDICT gdcmDSED gdcmMEXD gdcmMSFF)
+  target_link_libraries(${PROJECT_NAME} PRIVATE gdcmIOD gdcmDICT gdcmDSED gdcmMSFF)
 ENDIF()
 
 IF(MR_PCH)

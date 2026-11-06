@@ -7,6 +7,7 @@
 #include <MRCMesh/MRMeshTopology.h>
 #include <MRCMesh/MRVector.h>
 #include <MRCMisc/expected_MR_Mesh_std_string.h>
+#include <MRCMisc/expected_void_std_string.h>
 #include <MRCMisc/std_string.h>
 
 #include <stdio.h>
@@ -15,7 +16,7 @@
 int main( void )
 {
     // Load mesh
-    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat_2( "mesh.stl", NULL, NULL );
+    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat( "mesh.stl", NULL, NULL );
     MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_value_mut( meshEx );
 
     // Handle failure to load mesh
@@ -27,7 +28,7 @@ int main( void )
     }
 
     // Construct deformer on the mesh vertices
-    MR_Laplacian* lDeformer = MR_Laplacian_Construct_1( mesh );
+    MR_Laplacian* lDeformer = MR_Laplacian_Construct( mesh );
 
     // Find an area for the deformation anchor points
     const MR_VertBitSet* verts = MR_MeshTopology_getValidVerts( MR_Mesh_Get_topology( mesh ) );
@@ -37,26 +38,26 @@ int main( void )
     MR_VertBitSet* freeVerts = MR_VertBitSet_DefaultConstruct();
     MR_VertBitSet_resize( freeVerts, MR_VertBitSet_size( verts ), NULL );
 
-    MR_VertBitSet_set_2( freeVerts, ancV0, true );
-    MR_VertBitSet_set_2( freeVerts, ancV1, true );
+    MR_VertBitSet_set( freeVerts, ancV0, true );
+    MR_VertBitSet_set( freeVerts, ancV1, true );
     // Expand the free area
     MR_expand_MR_VertBitSet( MR_Mesh_Get_topology( mesh ), freeVerts, &(int){5} );
 
     // Initialize laplacian
     MR_Laplacian_init( lDeformer, freeVerts, MR_EdgeWeights_Cotan, &(MR_VertexMass){MR_VertexMass_NeiArea}, NULL );
 
-    MR_Box3f bbox = MR_Mesh_computeBoundingBox_1( mesh, NULL );
+    MR_Box3f bbox = MR_Mesh_computeBoundingBox( mesh, NULL );
     float shiftAmount = MR_Box3f_diagonal( &bbox ) * 0.01f;
     // Fix the anchor vertices in the required position
     const MR_VertCoords* points = MR_Mesh_Get_points( mesh );
     MR_Vector3f posV0 = MR_Mesh_normal_MR_VertId( mesh, ancV0 );
     posV0 = MR_mul_MR_Vector3f_float( &posV0, shiftAmount );
     posV0 = MR_add_MR_Vector3f( MR_VertCoords_index( points, ancV0 ), &posV0 );
-    MR_Laplacian_fixVertex_3( lDeformer, ancV0, &posV0, NULL );
+    MR_Laplacian_fixVertex_pos( lDeformer, ancV0, &posV0, NULL );
     MR_Vector3f posV1 = MR_Mesh_normal_MR_VertId( mesh, ancV1 );
     posV1 = MR_mul_MR_Vector3f_float( &posV1, shiftAmount );
     posV1 = MR_add_MR_Vector3f( MR_VertCoords_index( points, ancV1 ), &posV1 );
-    MR_Laplacian_fixVertex_3( lDeformer, ancV1, &posV1, NULL );
+    MR_Laplacian_fixVertex_pos( lDeformer, ancV1, &posV1, NULL );
 
     // Move the free vertices according to the anchor ones
     MR_Laplacian_apply( lDeformer );
@@ -65,10 +66,17 @@ int main( void )
     MR_Mesh_invalidateCaches( mesh, NULL );
 
     // Save the deformed mesh
-    MR_MeshSave_toAnySupportedFormat_3( mesh, "deformed_mesh.stl", NULL, NULL );
+    int rc = EXIT_SUCCESS;
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat( mesh, "deformed_mesh.stl", NULL, NULL );
+    if ( MR_expected_void_std_string_error( saveEx ) )
+    {
+        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );
+        rc = EXIT_FAILURE;
+    }
 
+    MR_expected_void_std_string_Destroy( saveEx );
     MR_VertBitSet_Destroy( freeVerts );
     MR_Laplacian_Destroy( lDeformer );
     MR_expected_MR_Mesh_std_string_Destroy( meshEx );
-    return EXIT_SUCCESS;
+    return rc;
 }

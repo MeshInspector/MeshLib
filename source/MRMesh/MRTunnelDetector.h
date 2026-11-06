@@ -25,7 +25,7 @@ MRMESH_API Expected<std::vector<EdgeLoop>> detectBasisTunnels( const MeshPart& m
 MRMESH_API Expected<EdgeLoop> findSmallestMetricCoLoop( const MeshTopology& topology, const EdgeLoop& loop, const EdgeMetric& metric,
     const FaceBitSet* region = nullptr );
 
-/// same as \ref findMinimalCoLoop with euclidean edge length metric
+/// same as \ref findSmallestMetricCoLoop with euclidean edge length metric
 MRMESH_API Expected<EdgeLoop> findShortestCoLoop( const MeshPart& mp, const EdgeLoop& loop );
 
 /// given not-separating loop on input, finds one or several loops such that

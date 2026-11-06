@@ -23,4 +23,8 @@ void ensureFreshCache( const Config& cfg );
 /// non-fatal (logged + leaves the cache empty).
 void loadCachedTools( const Config& cfg );
 
+/// Replaces the cached tools with the running backend's list and saves it if it differs,
+/// so that an offline gateway lists what the backend offered last, e.g. after its update.
+void updateCachedTools( const Config& cfg, const std::vector<nlohmann::json>& tools );
+
 } // namespace MR::McpGateway

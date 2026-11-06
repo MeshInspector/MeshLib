@@ -18,7 +18,7 @@ public:
     virtual ~SceneObjectsListDrawer() = default;
 
     /// Main method for drawing all
-    /// \detail Not creat window. Use in window block (between ImGui::Begin and ImGui::End)
+    /// \details Not creat window. Use in window block (between ImGui::Begin and ImGui::End)
     MRVIEWER_API virtual void draw( float height );
 
     /// set flag of the object visibility activation after selection
@@ -62,7 +62,7 @@ public:
     MRVIEWER_API void setNextFrameFixScroll( int skipFrames = 1 );
 protected:
     /// override this to customize prefix for objects in scene
-    /// \detail height should be less or equal ImGui::GetFrameHeight()
+    /// \details height should be less or equal ImGui::GetFrameHeight()
     /// method should save ImGui::CursorPosY
     MRVIEWER_API virtual void drawCustomObjectPrefixInScene_( const Object&, bool )
     {}
@@ -72,7 +72,7 @@ protected:
     {}
 
     /// override this to have custom UI in "Scene" window (under opened(expanded) object line)
-    /// \detail if onlyHeight is true, should return drawing height without rendering
+    /// \details if onlyHeight is true, should return drawing height without rendering
     /// return 0.f if nothing drawing
     MRVIEWER_API virtual float drawCustomTreeObjectProperties_( Object& obj, bool onlyCalcHeight );
 

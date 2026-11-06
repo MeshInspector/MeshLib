@@ -38,11 +38,11 @@ jobs:
   ubuntu-build-test:
     # the entries carry every compiler field, so spell out the ones that identify a job;
     # the name must contain the job id for fetch_job_id.py
-    name: ubuntu-build-test (${{ matrix.arch }}, ${{ matrix.os }}, ${{ matrix.config }}, ${{ matrix.cxx-compiler }})
+    name: ubuntu-build-test (${{ matrix.arch }}, ${{ matrix.os }}, ${{ matrix.config }}, ${{ matrix.cxx-compiler }}${{ matrix.ubsan == 'ON' && ', UBSan' || '' }})
     timeout-minutes: 60
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     container:
-      image: meshlib/meshlib-${{ matrix.os }}${{ matrix.arch == 'arm64' && '-arm64' || '' }}:${{ inputs.docker_image_tag }}
+      image: ghcr.io/meshinspector/meshlib-${{ matrix.os }}${{ matrix.arch == 'arm64' && '-arm64' || '' }}:${{ inputs.docker_image_tag }}
     strategy:
       fail-fast: false
       matrix:
@@ -52,8 +52,15 @@ jobs:
       contents: read  # This is required for actions/checkout
       actions: read   # This is required for wait-for-job
     env:
+      MESHLIB_THIRDPARTY_ROOT_DIR: /usr/local/lib/MeshLib
+      # the `ubsan` label's job: every test fails on its first UBSan report, with a symbolized stack
+      UBSAN_OPTIONS: ${{ matrix.ubsan == 'ON' && 'print_stacktrace=1:halt_on_error=1' || '' }}
       # the job that uploads PythonStubs and CsharpBindings
       UPLOAD_BINDINGS_SOURCES: ${{ matrix.arch == 'arm64' && matrix.os == 'ubuntu22' && matrix.config == 'Release' }}
+      # one Release job per OS and architecture builds the Rust bindings and runs their examples
+      RUN_RUST: ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.compiler == 'GCC' && matrix.build_mrcuda == 'ON' }}
+      # one Release job per OS and architecture builds the Java bindings and runs their examples and tests
+      RUN_JAVA: ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.compiler == 'GCC' && matrix.build_mrcuda == 'ON' }}
 
     steps:
       - name: Display job info
@@ -87,23 +94,8 @@ jobs:
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory '*'
           # No retry.sh, linux scripts retry themselves.
-          scripts/clone_submodules_linux.sh --skip-prebuilt-thirdparty
-
-      - name: Install thirdparty libs
-        run: |
-          ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
-          ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
-          ln -s /usr/local/lib/meshlib-thirdparty-lib/share ./share
-
-      - name: Install MRBind
-        if: ${{ inputs.mrbind || inputs.mrbind_c }}
-        uses: ./.github/actions/build-mrbind
-        with:
-          # The Dockerfile hash in extra-cache-key busts the cache whenever the
-          # toolchain inside the image changes (e.g. glibc, clang upgrade).
-          cache-key-prefix: ubuntu-${{ matrix.arch }}-${{ matrix.os }}
-          build-script: scripts/mrbind/install_mrbind_ubuntu.sh
-          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt', format('docker/{0}Dockerfile', matrix.os)) }}
+          scripts/checkout_submodules.sh . thirdparty/imgui thirdparty/mrbind
+          scripts/checkout_submodules.sh thirdparty/mrbind deps/cppdecl
 
       - name: Create virtualenv
         run: |
@@ -119,10 +111,14 @@ jobs:
       - name: Build
         run: ./scripts/build_source.sh
         env:
+          # -shared-libsan because -Wl,-z,defs rejects a .so with the UBSan handlers unresolved;
+          # -frtlib-add-rpath makes the runtime found at load time by everything linked here
+          CXXFLAGS: ${{ matrix.ubsan == 'ON' && '-fsanitize=signed-integer-overflow,shift -shared-libsan -frtlib-add-rpath -gline-tables-only' || '' }}
           MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
           CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
+          CMAKE_LINKER_TYPE: ${{ startsWith(matrix.cxx-compiler, 'clang') && 'LLD' || '' }}
           MR_VERSION: ${{ inputs.app_version }}
           # options to be passed to cmake
           MR_CMAKE_OPTIONS: >
@@ -134,48 +130,18 @@ jobs:
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=OFF
             -DMRVIEWER_NO_XDG_DESKTOP_PORTAL=ON
 
-      - name: Wait for C bindings
+      - name: Get and build C bindings
         if: ${{ inputs.mrbind_c }}
-        uses: ./.github/actions/wait-for-job
-        with:
-          job-name: generate-c-bindings
-
-      - name: Download C bindings
-        if: ${{ inputs.mrbind_c }}
-        uses: actions/download-artifact@v8
-        with:
-          name: CBindings
-          path: MeshLib/CbindingsTmp
-
-      - name: Prepare C bindings folders
-        if: ${{ inputs.mrbind_c }}
-        shell: bash
-        env:
-          BUILD_MRCUDA: ${{ matrix.build_mrcuda }}
-        run: |
-          rm -rf source/MeshLibC2
-          mv MeshLib/CbindingsTmp/MeshLibC2 source
-          if [[ "${BUILD_MRCUDA}" == ON ]]; then
-            rm -rf source/MeshLibC2Cuda
-            mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
-          else
-            cp -r scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
-          fi
-
-      - name: Build C bindings
-        if: ${{ inputs.mrbind_c }}
+        uses: ./.github/actions/get-c-bindings
         env:
           MR_VERSION: ${{ inputs.app_version }}
-        run: |
-          cmake -S . -B build/${{ matrix.config }} -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON
-          cmake --build build/${{ matrix.config }} -j $(nproc) --target MeshLibC2 MeshLibC2Cuda MRTestC2
+        with:
+          cuda: ${{ matrix.build_mrcuda == 'ON' }}
+          build-dir: build/${{ matrix.config }}
+          targets: MeshLibC2 MeshLibC2Cuda MRTestC2
 
       - name: PCH size (diagnostic)
         run: find ./build/${{ matrix.config }} -name 'cmake_pch.hxx.gch' -exec ls -lh {} +
-
-      - name: Generate C# bindings # generate only sources
-        if: ${{ env.UPLOAD_BINDINGS_SOURCES == 'true' }}
-        run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate
 
       - name: Upload C# bindings headers
         if: ${{ env.UPLOAD_BINDINGS_SOURCES == 'true' }}
@@ -183,6 +149,38 @@ jobs:
         with:
           name: CsharpBindings
           path: ./source/MRDotNet2/src
+          retention-days: 1
+
+      - name: Build and test Rust bindings
+        if: ${{ env.RUN_RUST == 'true' }}
+        uses: ./.github/actions/build-rust-bindings
+        with:
+          lib-dir: ${{ github.workspace }}/build/${{ matrix.config }}/bin
+
+      # The generated sources are the same on every platform (verified by diffing all the CI jobs' crates),
+      # so one job uploads them for the draft release, see `upload-distributions`.
+      - name: Upload Rust bindings
+        if: ${{ env.UPLOAD_BINDINGS_SOURCES == 'true' && env.RUN_RUST == 'true' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: RustBindings
+          path: ./source/MeshLibRust/src
+          retention-days: 1
+
+      - name: Build and test Java bindings
+        if: ${{ env.RUN_JAVA == 'true' }}
+        uses: ./.github/actions/build-java-bindings
+        with:
+          lib-dir: ${{ github.workspace }}/build/${{ matrix.config }}/bin
+
+      - name: Upload Java bindings
+        if: ${{ env.UPLOAD_BINDINGS_SOURCES == 'true' && env.RUN_JAVA == 'true' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: JavaBindings
+          path: |
+            ./source/MeshLibJava/meshlib.jar
+            ./source/MeshLibJava/src
           retention-days: 1
 
       - name: MRMesh Exported Symbols
@@ -193,9 +191,6 @@ jobs:
         env:
           CXX: ${{ matrix.cxx-compiler }}
           ENABLE_CUDA: ${{ fromJSON('{"ON":1, "OFF":0}') [matrix.build_mrcuda] }}
-          # `-fpch-codegen` hits clang defect llvm/llvm-project#203691 on libstdc++-12 (a `<filesystem>`
-          # internal homed into the PCH object but never emitted, surfaces at import time). Disable on ubuntu22.
-          PCH_CODEGEN: ${{ matrix.os == 'ubuntu22' && '0' || '1' }}
         shell: bash
         run: |
           # The bindings always compile with clang++, which takes the newest GCC in the image - 16 on
@@ -204,7 +199,7 @@ jobs:
           if [[ "${{ matrix.os }}" == ubuntu26 ]]; then
             CLANG_GCC_PIN="--gcc-install-dir=/usr/lib/gcc/$(gcc-15 -dumpmachine)/15"
           fi
-          make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${ENABLE_CUDA} PCH_CODEGEN=${PCH_CODEGEN} EXTRA_CFLAGS="${CLANG_GCC_PIN}" EXTRA_LDFLAGS="${CLANG_GCC_PIN}"
+          make -f scripts/mrbind/generate.mk MODE=none -B --trace PYTHON_SOURCES_DIR=source/MeshLibC2/temp/python MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${ENABLE_CUDA} EXTRA_CFLAGS="${CLANG_GCC_PIN}" EXTRA_LDFLAGS="${CLANG_GCC_PIN}"
 
       - name: Create Python Stubs
         if: ${{ inputs.mrbind && env.UPLOAD_BINDINGS_SOURCES == 'true' }}
@@ -230,10 +225,23 @@ jobs:
           build-bin-dir: ./build/${{ matrix.config }}/bin
 
       - name: Unit Tests
+        if: ${{ matrix.ubsan != 'ON' }}
         env:
           GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
         timeout-minutes: 10
         run: ./build/${{ matrix.config }}/bin/MRTest --with-python-tests
+
+      # the reports are recoverable: list all of them in one run, then fail on any
+      - name: Unit Tests under UBSan
+        if: ${{ matrix.ubsan == 'ON' }}
+        env:
+          GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
+          UBSAN_OPTIONS: print_stacktrace=1
+        timeout-minutes: 10
+        run: |
+          set -o pipefail
+          ./build/${{ matrix.config }}/bin/MRTest --with-python-tests 2>&1 | tee mrtest.log
+          ! grep -q "runtime error" mrtest.log
 
       - name: C Unit Tests
         if: ${{ inputs.mrbind_c }}
@@ -312,6 +320,20 @@ jobs:
           cmake \
             --build c-examples-build \
             --parallel $(nproc)
+
+      # Every doc example of every compiled language but C# runs, and its results must match the C++ example's,
+      # see test_regression/test_doc_samples/test_compiled_samples.py
+      - name: Run doc examples
+        if: ${{ inputs.internal_build && inputs.mrbind && env.RUN_RUST == 'true' && env.RUN_JAVA == 'true' && matrix.build_distribution == 'ON' }}
+        working-directory: ./build/${{ matrix.config }}/bin
+        run: |
+          ws=$GITHUB_WORKSPACE
+          export LD_LIBRARY_PATH=$PWD${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+          export DOC_EXAMPLE_CMDS="cpp=$ws/cpp-examples-build/{name}
+          c=$ws/c-examples-build/{name}
+          rust=$ws/source/MeshLibRust/target/debug/{name}
+          java=java --enable-native-access=ALL-UNNAMED -Djava.library.path=$PWD -cp $ws/source/MeshLibJava/meshlib.jar:$ws/examples/java-examples/classes {name}"
+          python3 ../../../scripts/run_python_test_script.py -d '../test_regression' -s false -a '-k test_compiled_doc_example --junit-xml=../unit_tests_report_doc_examples.xml'
 
       - name: Upload Ubuntu Developer Distribution
         if: ${{ inputs.upload_artifacts && matrix.upload_release == 'ON' }}

@@ -41,7 +41,7 @@ public:
     /// if sqr(res) < minDistSq or sqr(res) >= maxDistSq, then NaN is returned for such point
     /// \param res resulting signed distances, will be resized automatically
     /// \param dims dimensions of the grid
-    virtual Expected<void> calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, const DistanceToMeshOptions& options, const ProgressCallback& cb ) = 0;
+    virtual Expected<void> calcFromGridWithDistances( VoxelScalars& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, const DistanceToMeshOptions& options, const ProgressCallback& cb ) = 0;
 };
 
 /// the class for fast approximate computation of winding number for a mesh (using its AABB tree)
@@ -60,7 +60,7 @@ public:
     MRMESH_API Expected<void> calcSelfIntersections( FaceBitSet& res, float beta, const ProgressCallback& cb ) override;
     MRMESH_API Expected<void> calcFromGrid( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, float beta, const ProgressCallback& cb ) override;
     MRMESH_API float calcWithDistances( const Vector3f& p, const DistanceToMeshOptions& options );
-    MRMESH_API Expected<void> calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, const DistanceToMeshOptions& options, const ProgressCallback& cb ) override;
+    MRMESH_API Expected<void> calcFromGridWithDistances( VoxelScalars& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, const DistanceToMeshOptions& options, const ProgressCallback& cb ) override;
 
 private:
     [[nodiscard]] float calc_( const Vector3f & q, float beta, FaceId skipFace = {} ) const;
@@ -85,7 +85,7 @@ public:
     /// \param data - block data
     /// \param dims - block dimensions
     /// \param zOffset - block offset in XY dimension
-    using GridByPartsFunc = std::function<Expected<void> ( std::vector<float>&& data, const Vector3i& dims, int zOffset )>;
+    using GridByPartsFunc = std::function<Expected<void> ( VoxelScalars&& data, const Vector3i& dims, int zOffset )>;
 
     /// calculates winding numbers in each point from a three-dimensional grid
     /// \param resFunc callback that gets a block of resulting winding numbers

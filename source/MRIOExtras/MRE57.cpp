@@ -234,9 +234,9 @@ Expected<std::vector<NamedCloud>> fromSceneE57File( const std::filesystem::path&
 
     for ( int i = 1; i < res.size(); ++i )
     {
-        res[0].cloud.points.vec_.insert( end( res[0].cloud.points ), begin( res[i].cloud.points ), end( res[i].cloud.points ) );
+        res[0].cloud.points.insert( end( res[0].cloud.points ), begin( res[i].cloud.points ), end( res[i].cloud.points ) );
         if ( keepColors )
-            res[0].colors.vec_.insert( end( res[0].colors ), begin( res[i].colors ), end( res[i].colors ) );
+            res[0].colors.insert( end( res[0].colors ), begin( res[i].colors ), end( res[i].colors ) );
     }
 
     res.resize( 1 );

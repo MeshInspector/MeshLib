@@ -68,10 +68,10 @@ bool split( std::string_view str, std::string_view sep, F&& func )
     return false;
 }
 
-/// Returns \param target with all \param from replaced with \param to, zero or more times.
+/// Returns \p target with all \p from replaced with \p to, zero or more times.
 [[nodiscard]] MRMESH_API std::string replace( std::string target, std::string_view from, std::string_view to );
 
-/// Replaces \param from with \param to in \param target (in-place), zero or more times.
+/// Replaces \p from with \p to in \p target (in-place), zero or more times.
 MRMESH_API void replaceInplace( std::string& target, std::string_view from, std::string_view to );
 
 /// Removes all whitespace character (detected by std::isspace) at the beginning and the end of string view

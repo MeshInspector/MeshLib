@@ -7,6 +7,7 @@
 #include "MRMesh/MRRenderModelParameters.h"
 #include <cstdint>
 #include <filesystem>
+#include <optional>
 
 struct GLFWwindow;
 
@@ -435,10 +436,12 @@ public:
     template <typename T>
     std::shared_ptr<T> getMenuPluginAs() const { return std::dynamic_pointer_cast<T>( getMenuPlugin() ); }
 
-    // sets stop event loop flag (this flag is glfwShouldWindowClose equivalent)
-    MRVIEWER_API void stopEventLoop();
+    // sets stop event loop flag (this flag is glfwShouldWindowClose equivalent);
+    // `launch` returns exitCode after the normal shutdown, so use it instead of std::exit to report a failure;
+    // interruptible = false: interruptCloseSignal is not emitted, so no slot can cancel this stop
+    MRVIEWER_API void stopEventLoop( int exitCode = 0, bool interruptible = true );
     // get stop event loop flag (this flag is glfwShouldWindowClose equivalent)
-    bool getStopEventLoopFlag() const { return stopEventLoop_; }
+    bool getStopEventLoopFlag() const { return stopEventLoopRequest_.has_value(); }
 
     // return true if window should close
     // calls interrupt signal and if no slot interrupts return true, otherwise return false
@@ -623,7 +626,13 @@ private:
     // forSceneTexture - true request MSAA required for scene texture (calling with !sceneTextureOn is invalid), false - request MSAA for main framebuffer
     int getRequiredMSAA_( bool sceneTextureOn, bool forSceneTexture ) const;
 
-    bool stopEventLoop_{ false };
+    // set by stopEventLoop: the loop is to stop, and `launch` returns exitCode; reset if the close is interrupted
+    struct StopEventLoopRequest
+    {
+        int exitCode = 0;
+        bool interruptible = true;
+    };
+    std::optional<StopEventLoopRequest> stopEventLoopRequest_;
 
     bool isPreLaunched_{ false };
     bool isLaunched_{ false };

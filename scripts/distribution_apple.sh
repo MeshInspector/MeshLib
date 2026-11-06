@@ -2,6 +2,13 @@
 
 set -euxo pipefail
 
+if [ -z "${MESHLIB_THIRDPARTY_ROOT_DIR:-}" ]; then
+  MESHLIB_THIRDPARTY_ROOT_DIR=.
+  if [ -d "${PWD}/installed" ]; then
+    MESHLIB_THIRDPARTY_ROOT_DIR="${PWD}/installed"
+  fi
+fi
+
 VERSION=${1:-v0.0.0.0}
 VERSION=${VERSION:1}  # v1.2.3.4 -> 1.2.3.4
 
@@ -17,8 +24,8 @@ cmake --install build/Release --prefix="${FRAMEWORK_DIR}"
 echo "version: ${VERSION}"
 echo "prefix: ${FRAMEWORK_DIR}"
 
-cp -rL ./lib "${FRAMEWORK_DIR}/lib/"
-cp -rL ./include "${FRAMEWORK_DIR}/include/"
+cp -rL "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib" "${FRAMEWORK_DIR}/lib/"
+cp -rL "${MESHLIB_THIRDPARTY_ROOT_DIR}/include" "${FRAMEWORK_DIR}/include/"
 
 cp ./LICENSE ./macos/Resources
 mkdir "${FRAMEWORK_DIR}/requirements/"

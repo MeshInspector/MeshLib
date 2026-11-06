@@ -238,7 +238,7 @@ void RibbonMenu::updateItemStatus( const std::string& itemName )
             // disable old blocking first
             if ( activeBlockingItem_.item && activeBlockingItem_.item != item )
                 itemPressed_( activeBlockingItem_.item );
-            activeBlockingItem_ = { item,false };
+            activeBlockingItem_ = { item };
         }
         else
         {
@@ -249,7 +249,7 @@ void RibbonMenu::updateItemStatus( const std::string& itemName )
             } );
             // add if it is not already in the list
             if ( nonBlockingIt == activeNonBlockingItems_.end() )
-                activeNonBlockingItems_.push_back( { item,false } );
+                activeNonBlockingItems_.push_back( { item } );
         }
     }
     else
@@ -1731,18 +1731,6 @@ void RibbonMenu::drawItemDialog_( DialogItemPtr& itemPtr )
     if ( !itemPtr.item ) // if it was closed in drawDialog
         return;
 
-    if ( !itemPtr.dialogPositionFixed )
-    {
-        itemPtr.dialogPositionFixed = true;
-        auto* window = ImGui::FindWindowByName( itemPtr.item->name().c_str() ); // this function is hidden in imgui_internal.h
-        // viewer->framebufferSize.x here because ImGui use screen space
-        if ( window )
-        {
-            ImVec2 pos = ImVec2( viewer->framebufferSize.x - window->Size.x, float( topPanelOpenedHeight_ - 1.0f ) * UI::scale() );
-            ImGui::SetWindowPos( window, pos, ImGuiCond_Always );
-        }
-    }
-
     if ( !statePlugin->dialogIsOpen() ) // still need to check here we ordered to close dialog in `drawDialog`
         itemPressed_( itemPtr.item );
     else if ( prevFrameSelectedObjectsCache_ != SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() )
@@ -1766,7 +1754,7 @@ void RibbonMenu::drawRibbonSceneList_()
     const float cMaxSceneWidth = std::max( cMinSceneWidth, std::round( viewerRef.framebufferSize.x * 0.5f ) );
     sceneSize_.x = std::max( sceneSize_.x, cMinSceneWidth );
     sceneSize_.y = std::round( viewerRef.framebufferSize.y - ( topShift - 2.0f ) * UI::scale() );
-    ImGui::SetWindowSize( "RibbonScene", sceneSize_, ImGuiCond_Always );
+    ImGui::SetWindowSize( "RibbonScene##[rect_allocator_ignore]", sceneSize_, ImGuiCond_Always );
     ImGui::SetNextWindowSizeConstraints( ImVec2( cMinSceneWidth, -1.f ), ImVec2( cMaxSceneWidth, -1.f ) ); // TODO take out limits to special place
     ImGui::PushStyleVar( ImGuiStyleVar_Alpha, 1.f );
     auto colorBg = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
@@ -1774,7 +1762,7 @@ void RibbonMenu::drawRibbonSceneList_()
     ImGui::PushStyleColor( ImGuiCol_WindowBg, colorBg );
 
     ImGui::Begin(
-        "RibbonScene", nullptr,
+        "RibbonScene##[rect_allocator_ignore]", nullptr,
         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoTitleBar |
         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoResize
     );
@@ -1796,7 +1784,7 @@ void RibbonMenu::drawRibbonSceneList_()
     ImGui::End();
     ImGui::PopStyleColor();
     ImGui::PopStyleVar();
-    auto window = ImGui::FindWindowByName( "RibbonScene" );
+    auto window = ImGui::FindWindowByName( "RibbonScene##[rect_allocator_ignore]" );
     if ( !window || manualSizeSet )
         return;
     // this check is needed when resize of app window changes size of scene window
@@ -2325,9 +2313,9 @@ void RibbonMenu::drawShortcutsWindow_()
     int leftNumKeys = 0;
     int rightNumKeys = 0;
     auto lastCategory = ShortcutManager::Category::Count;// invalid for first one
-    for ( int i = 0; i < shortcutList.size(); ++i )
+    for ( const auto& [shortcut, name] : shortcutList )
     {
-        const auto& [key, category, text] = shortcutList[i];
+        const auto category = shortcut.category;
         bool right = int( category ) >= int( ShortcutManager::Category::Count ) / 2;
         auto& catCounter = right ? rightNumCategories : leftNumCategories;
         auto& keyCounter = right ? rightNumKeys : leftNumKeys;
@@ -2392,6 +2380,35 @@ void RibbonMenu::drawShortcutsWindow_()
         ImGui::PopStyleVar();
     };
 
+    // draws the modifiers, the held key and the key in frames, which stick out above the line of the text before them by the button padding
+    auto drawKey = [&] ( const ShortcutKey& key )
+    {
+        auto drawPart = [&] ( const std::string& part )
+        {
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * UI::scale() );
+            addReadOnlyLine( part );
+            ImGui::SameLine( 0, style.ItemInnerSpacing.x );
+            ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * UI::scale() );
+            ImGui::Text( "+" );
+            ImGui::SameLine( 0, style.ItemInnerSpacing.x );
+        };
+        for ( int mod : { GLFW_MOD_CONTROL, GLFW_MOD_ALT, GLFW_MOD_SHIFT, GLFW_MOD_SUPER } )
+            if ( key.mod & mod )
+                drawPart( ShortcutManager::getModifierString( mod ) );
+        if ( key.heldKey != 0 )
+            drawPart( ShortcutManager::getKeyString( key.heldKey ) );
+
+        std::string keyStr = ShortcutManager::getKeyString( key.key );
+        bool isArrow = key.key == GLFW_KEY_UP || key.key == GLFW_KEY_DOWN || key.key == GLFW_KEY_LEFT || key.key == GLFW_KEY_RIGHT;
+        RibbonFontHolder font( RibbonFontManager::FontType::Icons, cDefaultFontSize / cBigIconSize, isArrow );
+
+        ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * UI::scale() );
+        addReadOnlyLine( keyStr );
+
+        if ( isArrow )
+            font.popFont();
+    };
+
     ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cDefaultItemSpacing * UI::scale() );
 
     ImGui::BeginChild( "##Hotkeys_table_chalid" );
@@ -2401,10 +2418,9 @@ void RibbonMenu::drawShortcutsWindow_()
         ImGui::TableNextColumn();
         bool secondColumnStarted = false;
         lastCategory = ShortcutManager::Category::Count;// invalid for first one
-        for ( int i = 0; i < shortcutList.size(); ++i )
+        for ( const auto& [shortcut, name] : shortcutList )
         {
-            const auto& [key, category, name] = shortcutList[i];
-            const auto caption = getItemCaption( name );
+            const auto category = shortcut.category;
 
             if ( !secondColumnStarted && int( category ) >= int( ShortcutManager::Category::Count ) / 2 )
             {
@@ -2422,7 +2438,9 @@ void RibbonMenu::drawShortcutsWindow_()
                 font.popFont();
                 lastCategory = category;
             }
-            // draw hotkey
+            // draw hotkey: the caption and the first key, while the tooltip of the row shows all keys
+            const auto caption = getItemCaption( name );
+            ImGui::BeginGroup();
             auto transparentColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
             transparentColor.w *= 0.5f;
             ImGui::PushStyleColor( ImGuiCol_Text, transparentColor );
@@ -2431,56 +2449,21 @@ void RibbonMenu::drawShortcutsWindow_()
 
             float textSize = ImGui::CalcTextSize( caption.c_str() ).x;
             ImGui::SameLine( 0, 260 * UI::scale() - textSize );
+            drawKey( shortcut.keys.front() );
+            ImGui::EndGroup();
 
-            if ( key.mod & GLFW_MOD_CONTROL )
+            if ( shortcut.keys.size() > 1 && ImGui::IsWindowHovered() && ImGui::IsMouseHoveringRect( ImGui::GetItemRectMin(), ImGui::GetItemRectMax() ) )
             {
-                ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * UI::scale() );
-                addReadOnlyLine( ShortcutManager::getModifierString( GLFW_MOD_CONTROL ) );
-                ImGui::SameLine( 0, style.ItemInnerSpacing.x );
-                ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * UI::scale() );
-                ImGui::Text( "+" );
-                ImGui::SameLine( 0, style.ItemInnerSpacing.x );
+                ImGui::BeginTooltip();
+                ImGui::SetCursorPosY( ImGui::GetCursorPosY() + cButtonPadding * UI::scale() ); // room for the frames of the first line
+                for ( const auto& key : shortcut.keys )
+                {
+                    ImGui::Dummy( ImVec2( 0, ImGui::GetTextLineHeight() ) );
+                    ImGui::SameLine( 0, 0 );
+                    drawKey( key );
+                }
+                ImGui::EndTooltip();
             }
-
-            if ( key.mod & GLFW_MOD_ALT )
-            {
-                ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * UI::scale() );
-                addReadOnlyLine( ShortcutManager::getModifierString( GLFW_MOD_ALT ) );
-                ImGui::SameLine( 0, style.ItemInnerSpacing.x );
-                ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * UI::scale() );
-                ImGui::Text( "+" );
-                ImGui::SameLine( 0, style.ItemInnerSpacing.x );
-            }
-
-            if ( key.mod & GLFW_MOD_SHIFT )
-            {
-                ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * UI::scale() );
-                addReadOnlyLine( ShortcutManager::getModifierString( GLFW_MOD_SHIFT ) );
-                ImGui::SameLine( 0, style.ItemInnerSpacing.x );
-                ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * UI::scale() );
-                ImGui::Text( "+" );
-                ImGui::SameLine( 0, style.ItemInnerSpacing.x );
-            }
-
-            if ( key.mod & GLFW_MOD_SUPER )
-            {
-                ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * UI::scale() );
-                addReadOnlyLine( ShortcutManager::getModifierString( GLFW_MOD_SUPER ) );
-                ImGui::SameLine( 0, style.ItemInnerSpacing.x );
-                ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * UI::scale() );
-                ImGui::Text( "+" );
-                ImGui::SameLine( 0, style.ItemInnerSpacing.x );
-            }
-
-            std::string keyStr = ShortcutManager::getKeyString( key.key );
-            bool isArrow = key.key == GLFW_KEY_UP || key.key == GLFW_KEY_DOWN || key.key == GLFW_KEY_LEFT || key.key == GLFW_KEY_RIGHT;
-            RibbonFontHolder font( RibbonFontManager::FontType::Icons, cDefaultFontSize / cBigIconSize, isArrow );
-
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * UI::scale() );
-            addReadOnlyLine( keyStr );
-
-            if ( isArrow )
-                font.popFont();
         }
 
         ImGui::PopStyleVar();
@@ -2513,7 +2496,7 @@ void RibbonMenu::beginTopPanel_()
 
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 0, 0 ) );
     ImGui::Begin(
-        "TopPanel", nullptr,
+        "TopPanel##[rect_allocator_ignore]", nullptr,
         ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoDocking
     );

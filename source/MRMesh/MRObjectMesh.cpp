@@ -10,6 +10,7 @@
 #include "MRTimer.h"
 #include "MRSceneSettings.h"
 #include "MRMapOrHashMap.h"
+#include "MRParallelFor.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRFmt.h"
@@ -285,38 +286,38 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
         mesh->addMesh( *obj->meshPtr(), hasFaceColorMap || needTexturePerFace ? &faceMap : nullptr, &vertMap );
 
         auto worldXf = options.overrideXfs && i < options.overrideXfs->size() ? ( *options.overrideXfs )[i] : obj->worldXf();
-        for ( const auto& vInd : vertMap )
+        ParallelFor( vertMap, [&] ( VertId thisId )
         {
-            if ( vInd.valid() )
-                points[vInd] = worldXf( points[vInd] );
-        }
+            if ( const auto mergeId = vertMap[thisId] )
+                points[mergeId] = worldXf( points[mergeId] );
+        } );
 
         if ( hasVertColorMap )
         {
             const auto& curColorMap = obj->getVertsColorMap();
-            for ( VertId thisId = 0_v; thisId < vertMap.size(); ++thisId )
+            ParallelFor( vertMap, [&] ( VertId thisId )
             {
                 if ( auto mergeId = vertMap[thisId] )
                     vertColors[mergeId] = curColorMap.size() <= thisId ? obj->getFrontColor() : curColorMap[thisId];
-            }
+            } );
         }
         if ( hasFaceColorMap )
         {
             const auto& curColorMap = obj->getFacesColorMap();
-            for ( FaceId thisId = 0_f; thisId < faceMap.size(); ++thisId )
+            ParallelFor( faceMap, [&] ( FaceId thisId )
             {
                 if ( auto mergeId = faceMap[thisId] )
                     faceColors[mergeId] = curColorMap.size() <= thisId ? obj->getFrontColor() : curColorMap[thisId];
-            }
+            } );
         }
         if ( needSaveUVCoords )
         {
             const auto& curUvCoords = obj->getUVCoords();
-            for ( VertId thisId = 0_v; thisId < vertMap.size(); ++thisId )
+            ParallelFor( vertMap, [&] ( VertId thisId )
             {
                 if ( auto mergeId = vertMap[thisId] )
                     uvCoords[mergeId] = curUvCoords[thisId];
-            }
+            } );
         }
 
         if ( needSaveTextures )
@@ -326,17 +327,17 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
                 if ( needTexturePerFace )
                 {
                     const auto& curTextPerFace = obj->getTexturePerFace();
-                    for ( FaceId thisId = 0_f; thisId < faceMap.size(); ++thisId )
+                    ParallelFor( faceMap, [&] ( FaceId thisId )
                     {
                         if ( auto mergeId = faceMap[thisId] )
                             texturePerFace[mergeId] = curTextPerFace[thisId];
-                    }
+                    } );
                 }
             }
             else
             {
                 const auto& curTextures = obj->getTextures();
-                mergedTextures.vec_.insert( mergedTextures.vec_.end(), curTextures.vec_.begin(), curTextures.vec_.end() );
+                mergedTextures.insert( end( mergedTextures ), begin( curTextures ), end( curTextures ) );
 
                 if ( numObject == 0 )
                     curNumTexture = TextureId( 0 );
@@ -347,7 +348,7 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
 
                 const auto& curTexturePerFace = obj->getTexturePerFace();
                 const bool emptyTexturePerFace = curTexturePerFace.empty();
-                for ( FaceId thisId = 0_f; thisId < faceMap.size(); ++thisId )
+                ParallelFor( faceMap, [&] ( FaceId thisId )
                 {
                     if ( auto mergeId = faceMap[thisId] )
                     {
@@ -356,7 +357,7 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
                         else
                             texturePerFace[mergeId] = curNumTexture + curTexturePerFace[thisId];
                     }
-                }
+                } );
             }
         }
         numObject++;

@@ -39,7 +39,7 @@ int main( void )
     MR_BooleanParameters_Set_mapper( params, mapper );
 
     // Perform the boolean operation.
-    MR_BooleanResult* result = MR_boolean_4_const_MR_Mesh_ref( sphere1, sphere2, MR_BooleanOperation_Intersection, params );
+    MR_BooleanResult* result = MR_boolean( sphere1, sphere2, MR_BooleanOperation_Intersection, params );
     MR_BooleanParameters_Destroy( params );
     if ( !MR_BooleanResult_valid( result ) )
     {
@@ -66,9 +66,12 @@ int main( void )
     // result, or drop it completely if that part of sphere1 is not in the result.
     MR_FaceId faceOfSphere1 = { 793 };
     MR_FaceBitSet* oneFace = MR_FaceBitSet_DefaultConstruct();
-    MR_FaceBitSet_autoResizeSet_2( oneFace, faceOfSphere1, NULL );
+    MR_FaceBitSet_autoResizeSet( oneFace, faceOfSphere1, NULL );
     MR_FaceBitSet* producedFaces = MR_BooleanResultMapper_map_MR_FaceBitSet( mapper, oneFace, MR_BooleanResultMapper_MapObject_A );
-    printf( "face %d of sphere1 produced %zu faces of the result\n", faceOfSphere1.id_, MR_FaceBitSet_count( producedFaces ) );
+    printf( "face %d of sphere1 produced %zu faces of the result:", faceOfSphere1.id_, MR_FaceBitSet_count( producedFaces ) );
+    for ( MR_FaceId f = MR_FaceBitSet_find_first( producedFaces ); f.id_ >= 0; f = MR_FaceBitSet_find_next( producedFaces, f ) )
+        printf( " %d", f.id_ );
+    printf( "\n" );
 
     // And backward: the face of sphere1 each face of the result came from
     // (invalid id for the faces that came from sphere2).
@@ -82,7 +85,7 @@ int main( void )
     MR_FaceBitSet_Destroy( oneFace );
 
     // Save result to an STL file.
-    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( MR_BooleanResult_Get_mesh( result ), "out_boolean.stl", NULL, NULL);
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat( MR_BooleanResult_Get_mesh( result ), "out_boolean.stl", NULL, NULL);
     if ( MR_expected_void_std_string_error( saveEx ) )
     {
         fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );

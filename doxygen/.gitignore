@@ -3,3 +3,5 @@ DoxygenLayoutCpp.xml
 DoxygenLayoutPy.xml
 DoxygenLayoutC.xml
 DoxygenLayoutJs.xml
+DoxygenLayoutRust.xml
+DoxygenLayoutJava.xml

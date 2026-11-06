@@ -33,6 +33,18 @@ def parse_step(step: dict):
         'duration_s': get_duration_s(step),
     }
 
+# GitHub may leave a finished job's conclusion null for an hour or more, so take it from the steps
+def fill_missing_conclusion(job: dict):
+    if job['conclusion'] is not None:
+        return
+    steps = job['steps']
+    if not steps or any(step['status'] != 'completed' for step in steps):
+        raise RuntimeError(f"job {job['id']} has no conclusion and has not finished all its steps")
+    conclusions = {step['conclusion'] for step in steps}
+    job['conclusion'] = next((c for c in ('failure', 'cancelled') if c in conclusions), 'success')
+    job['completed_at'] = max((step['completed_at'] for step in steps if step['completed_at']), default=None)
+    print(f"job {job['id']} has no conclusion, taken from its steps: {job['conclusion']}")
+
 def parse_job(job: dict):
     job_id = job['id']
 
@@ -49,6 +61,8 @@ def parse_job(job: dict):
     artifact_stats_filename = Path(f"ArtifactStats-{job_id}.json")
     if not stats_filename.exists():
         return None
+
+    fill_missing_conclusion(job)
 
     runner_stats = None
     try:
@@ -103,6 +117,8 @@ def fetch_page(url, headers, attempts=3, cooldown=30):
     for attempt in range(1, attempts + 1):
         try:
             resp = requests.get(url, headers=headers)
+            if resp.status_code >= 500:
+                resp.raise_for_status()
         except requests.exceptions.RequestException as e:
             if attempt == attempts:
                 raise
@@ -113,7 +129,7 @@ def fetch_page(url, headers, attempts=3, cooldown=30):
         return resp
 
 def fetch_jobs(repo: str, run_id: str):
-    url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs?per_page=100'
+    url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs?per_page=30'
     headers = {
         'Accept': 'application/vnd.github.v3+json',
         'Authorization': f'Bearer {os.environ.get("GITHUB_TOKEN")}',

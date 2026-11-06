@@ -71,8 +71,6 @@ struct SavingSettings
 /// save all slices by the active plane through all voxel planes along the active axis to an image file
 MRVOXELS_API Expected<void> saveAllSlicesToImage( const VdbVolume& vdbVolume, const SavingSettings& settings );
 
-/// \}
-
 #ifndef MR_PARSING_FOR_ANY_BINDINGS
 using VoxelsSaver = Expected<void>( * )( const VdbVolume&, const std::filesystem::path&, ProgressCallback );
 

@@ -1,10 +1,14 @@
 #include "MRMesh/MRMeshLoad.h"
 #include "MRMesh/MRPointsToMeshProjector.h"
 #include "MRMesh/MRMesh.h"
+#include <MRIOExtras/MRIOExtras.h>
 #include <iostream>
 
 int main()
 {
+    // CTM, JPEG and other formats beyond the basic ones come with the MRIOExtras library
+    MR::loadIOExtras();
+
     auto refMesh = MR::MeshLoad::fromAnySupportedFormat( "mesh1.ctm" );
     if ( !refMesh.has_value() )
     {

@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-ARG VCPKG_VERSION=2026.07.29
+ARG VCPKG_VERSION=2026.10.16
 ARG VCPKG_TRIPLET=x64-linux-meshlib
 
 
@@ -35,11 +35,15 @@ DNF
         autoconf2.7x autoconf-archive bison dbus-libs libtool libudev-devel libXcursor-devel libXi-devel libXinerama-devel libXrandr-devel libXtst-devel mesa-libGL-devel perl-core \
         $(: mrbind requirements ) \
         python3.12-devel which zlib-devel expat \
+        $(: mold requirements ) \
+        libatomic \
         $(: CI environment ) \
         gh time python3.12-pip rpm-build xorg-x11-server-Xvfb mesa-dri-drivers gettext
     dnf clean all
-    TOOLCHAIN=clang-22.1.8-pgo-dylib-linux
+    TOOLCHAIN=clang-22.1.8_2-pgo-dylib-linux
     retry.sh -- curl -fsSL "https://github.com/MeshInspector/toolchains/releases/download/${TOOLCHAIN}/${TOOLCHAIN}-$(uname -m).tar.gz" | tar -C /opt -xz
+    # install mold
+    retry.sh -- curl -fsSL "https://github.com/rui314/mold/releases/download/v2.42.1/mold-2.42.1-$(uname -m)-linux.tar.gz" | tar -C /usr/local -xz --strip-components=1
     # install aws cli
     curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "awscliv2.zip"
     unzip awscliv2.zip
@@ -64,11 +68,6 @@ ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
 
 WORKDIR /root
 
-COPY thirdparty/vcpkg/vcpkg.json MeshLib/vcpkg.json
-COPY thirdparty/vcpkg/ports MeshLib/ports
-COPY thirdparty/vcpkg/triplets MeshLib/triplets
-COPY thirdparty/vcpkg/configure_s3_cache.sh MeshLib/configure_s3_cache.sh
-
 # bootstrap vcpkg
 ENV VCPKG_ROOT=/root/vcpkg
 ENV VCPKG_DISABLE_METRICS=1
@@ -83,19 +82,26 @@ RUN <<EOF bash
     # also prepare a clean copy for the production stage
     cp -a vcpkg /opt/
 EOF
+ENV PATH=$VCPKG_ROOT:$PATH
+
+WORKDIR /root/MeshLib
+
+COPY scripts/build_vcpkg_thirdparty.sh scripts/build_vcpkg_thirdparty.sh
+COPY thirdparty/vcpkg thirdparty/vcpkg
 
 # build vcpkg packages
-ENV VCPKG_DEFAULT_HOST_TRIPLET=$VCPKG_TRIPLET
 RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
     --mount=type=secret,id=AWS_SECRET_ACCESS_KEY \
     --mount=type=secret,id=AWS_SESSION_TOKEN <<EOF
     set -e
-    source /root/MeshLib/configure_s3_cache.sh
+    source ./thirdparty/vcpkg/configure_s3_cache.sh
     source /opt/rh/gcc-toolset-11/enable
     source /opt/autoconf27/enable
+    # enable debug output
+    export CI=true
     # network may flake
     retry.sh -- \
-        /root/vcpkg/vcpkg install --x-manifest-root=/root/MeshLib --x-install-root=/opt/vcpkg_installed --debug
+        ./scripts/build_vcpkg_thirdparty.sh /opt/vcpkg_installed
 EOF
 
 

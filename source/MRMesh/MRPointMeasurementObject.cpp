@@ -33,6 +33,12 @@ AllVisualizeProperties PointMeasurementObject::getAllVisualizeProperties() const
     return ret;
 }
 
+void PointMeasurementObject::setAllVisualizeProperties_( const AllVisualizeProperties& properties, std::size_t& pos )
+{
+    VisualObject::setAllVisualizeProperties_( properties, pos );
+    setAllVisualizePropertiesForEnum<PointMeasurementVisualizePropertyType>( properties, pos );
+}
+
 const ViewportMask& PointMeasurementObject::getVisualizePropertyMask( AnyVisualizeMaskEnum type ) const
 {
     if ( auto value = type.tryGet<PointMeasurementVisualizePropertyType>() )
@@ -207,6 +213,8 @@ void PointMeasurementObject::serializeFields_( Json::Value& root ) const
     MeasurementObject::serializeFields_( root );
     root["Type"].append( StaticTypeName() );
 
+    root["CapVisibility"] = capVisibility_.value();
+
     if ( referencePos_ )
         serializeToJson( *referencePos_, root["ReferencePos"] );
     else
@@ -232,6 +240,9 @@ void PointMeasurementObject::serializeFields_( Json::Value& root ) const
 void PointMeasurementObject::deserializeFields_( const Json::Value& root )
 {
     MeasurementObject::deserializeFields_( root );
+
+    if ( const auto& json = root["CapVisibility"]; json.isUInt() )
+        capVisibility_ = ViewportMask( json.asUInt() );
 
     if ( const auto& json = root["ReferencePos"]; json.isObject() )
     {

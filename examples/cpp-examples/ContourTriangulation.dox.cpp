@@ -4,10 +4,14 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MR2DContoursTriangulation.h>
 #include <MRMesh/MRMeshSave.h>
+#include <MRIOExtras/MRIOExtras.h>
 #include <iostream>
 
 int main()
 {
+    // CTM, JPEG and other formats beyond the basic ones come with the MRIOExtras library
+    MR::loadIOExtras();
+
     // load image as distance map
     auto imageLoadRes = MR::ImageLoad::fromAnySupportedFormat( "logo.jpg" );
     if ( !imageLoadRes.has_value() )

@@ -1,6 +1,8 @@
 #pragma once
 
 #include "MRVector3.h"
+#include "MRTriPoint.h"
+#include <cstdint>
 #include <limits>
 
 namespace MR
@@ -24,6 +26,17 @@ struct TriTriDistanceResult
     /// overlap==true means that the triangles are intersecting and not just touch one another => distSq == 0
     /// if distSq == 0 and overlap == false, then the triangles just touch one another
     bool overlap = true;
+
+    /// the edges of the triangles with points a and b, numbered as in TriPoint::onEdge() (which also contain a point found in a vertex),
+    /// or -1 if the point is inside its triangle
+    std::int8_t aEdge = -1, bEdge = -1;
+
+    /// barycentric coordinates of point a in triangle ta, given to findTriTriDistance as the first one;
+    /// unlike the ones computed from the position of the point, they place a point found on an edge or in a vertex there
+    [[nodiscard]] TriPoint<T> aBary( const Triangle3<T>& ta ) const { return TriPoint<T>( a, ta[0], ta[1], ta[2], aEdge ); }
+
+    /// barycentric coordinates of point b in triangle tb, given to findTriTriDistance as the second one
+    [[nodiscard]] TriPoint<T> bBary( const Triangle3<T>& tb ) const { return TriPoint<T>( b, tb[0], tb[1], tb[2], bEdge ); }
 };
 using TriTriDistanceResultf = TriTriDistanceResult<float>;
 using TriTriDistanceResultd = TriTriDistanceResult<double>;
@@ -39,7 +52,7 @@ struct TriTriDistanceParams
 {
     /// upper limit on the distance in question, if the real distance is larger (or equal depending on upLimitCheck)
     /// then findTriTriDistance exits earlier returning lower bound on distSq >= upDistLimitSq
-    /// and the points a and b can be arbitrary
+    /// and the points a and b with their edges can be arbitrary
     T upDistLimitSq = std::numeric_limits<T>::max();
 
     UpLimitCheck upLimitCheck = UpLimitCheck::Greater;

@@ -18,16 +18,16 @@ def test_boolean():
     torus2 = mrmesh.makeTorus(2, 1, 10, 10, None)
     torus2.transform(diffXf)
 
-    p = torus.points.vec.size()
+    p = torus.points.size()
 
     torusS = mrmesh.voxelBooleanSubtract(torus, torus2, 0.05)
-    p_sub = torusS.points.vec.size()
+    p_sub = torusS.points.size()
 
     torusU = mrmesh.voxelBooleanUnite(torus, torus2, 0.05)
-    p_union = torusU.points.vec.size()
+    p_union = torusU.points.size()
 
     torusI = mrmesh.voxelBooleanIntersect(torus, torus2, 0.05)
-    p_intersect = torusI.points.vec.size()
+    p_intersect = torusI.points.size()
 
     assert p == 100
     assert p_sub == 43132

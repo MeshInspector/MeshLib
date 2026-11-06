@@ -1,16 +1,5 @@
 project(MRMesh CXX)
 
-option(MRMESH_NO_TIFF "Disable TIFF support" OFF)
-option(MRMESH_NO_GTEST "Disable building Google tests" OFF)
-
-IF(DEFINED BUILD_TESTING AND NOT BUILD_TESTING)
-  set(MRMESH_NO_GTEST ON)
-ENDIF()
-
-IF(MR_EMSCRIPTEN)
-  set(MRMESH_NO_TIFF ON)
-ENDIF()
-
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h" "*.hpp")
 # MRPchCreate.cpp only drives the MSVC/MSBuild precompiled header; CMake generates its own.
@@ -18,6 +7,7 @@ list(REMOVE_ITEM SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/MRPchCreate.cpp")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
+include(Mimalloc)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
 # Emscripten's Boost package doesn't contain CMake config files
@@ -70,6 +60,15 @@ if(NOT libzip_FOUND)
 endif()
 target_link_libraries(${PROJECT_NAME} PRIVATE libzip::zip)
 
+# MR::Allocator, see MRAllocator.h
+IF(MRMESH_NO_MIMALLOC)
+  # also for code built against installed MeshLib, which does not see config_cmake.h
+  target_compile_definitions(${PROJECT_NAME} PUBLIC MRMESH_NO_MIMALLOC=1)
+ELSE()
+  mr_find_mimalloc()
+  target_link_libraries(${PROJECT_NAME} PUBLIC mimalloc)
+ENDIF()
+
 IF(APPLE)
   # for Boost.Stacktrace
   target_compile_definitions(${PROJECT_NAME} PUBLIC _GNU_SOURCE)
@@ -87,11 +86,6 @@ IF(EMSCRIPTEN)
     EIGEN_STACK_ALLOCATION_LIMIT=0
   )
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
-ENDIF()
-
-IF(NOT MRMESH_NO_TIFF)
-  find_package(TIFF REQUIRED)
-  target_link_libraries(${PROJECT_NAME} PRIVATE TIFF::TIFF)
 ENDIF()
 
 IF(MR_PCH)
@@ -133,6 +127,7 @@ configure_package_config_file(
   ${PROJECT_NAME}Config.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
   INSTALL_DESTINATION ${MR_CONFIG_DIR}
+  PATH_VARS MR_MAIN_LIB_DIR
 )
 install(
   FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake

@@ -3,7 +3,9 @@
 #include <MRMesh/MRMeshBuilderTypes.h>
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMeshComponents.h>
+#include <MRMesh/MRUnorientedTriangle.h>
 #include <gtest/gtest.h>
+#include <algorithm>
 
 namespace MR
 {
@@ -478,5 +480,21 @@ TEST( MRMesh, computeTrianglesRepetitions )
 }
 
 } //namespace MeshBuilder
+
+TEST( MRMesh, UnorientedTriangleHash )
+{
+    // all triangles with close vertex ids get distinct hash values
+    for ( int first : { 0, 1'000'000'000 } )
+    {
+        constexpr int n = 64;
+        std::vector<size_t> hashes;
+        for ( int a = first; a < first + n; ++a )
+            for ( int b = a + 1; b < first + n; ++b )
+                for ( int c = b + 1; c < first + n; ++c )
+                    hashes.push_back( std::hash<UnorientedTriangle>{}( UnorientedTriangle( { VertId( a ), VertId( b ), VertId( c ) } ) ) );
+        std::sort( hashes.begin(), hashes.end() );
+        EXPECT_EQ( std::adjacent_find( hashes.begin(), hashes.end() ), hashes.end() );
+    }
+}
 
 } //namespace MR

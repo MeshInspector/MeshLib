@@ -24,7 +24,7 @@ MRMESH_API std::vector<UndirectedEdgeBitSet> getAllComponents( const PolylineTop
 
 /// gets all connected components of polyline topology
 /// \ingroup ComponentsGroup
-/// \detail if components  number more than the maxComponentCount, they will be combined into groups of the same size 
+/// \details if components  number more than the maxComponentCount, they will be combined into groups of the same size 
 /// \param maxComponentCount should be more than 1
 /// \return pair components bitsets vector and number components in one group if components number more than maxComponentCount
 MRMESH_API std::pair<std::vector<UndirectedEdgeBitSet>, int> getAllComponents( const PolylineTopology& topology, int maxComponentCount );

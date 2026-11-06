@@ -16,7 +16,6 @@ it.path_to_copyright_header = os.path.join(os.path.dirname(os.path.abspath(__fil
 
 path_to_imgui = os.path.join(os.path.join(it.base_path,'thirdparty'),'imgui')
 path_to_phmap = os.path.join(os.path.join(it.base_path,'thirdparty'),'parallel-hashmap')
-path_to_pybind11 = os.path.join(os.path.join(os.path.join(it.base_path,'thirdparty'),'mrbind-pybind11'),'include')
 
 not_app_extentions = ['.lib','.obj','.pdb','.obj','.exp','.iobj','.ipdb']
 
@@ -51,11 +50,10 @@ def prepare_includes_list():
 	it.includes_src_dst.clear()
 	it.includes_src_dst_thirdparty.clear()
 	it.append_includes_list(os.path.join(vcpkg_directory,"include"), True)
-	it.append_includes_list(it.path_to_sources, skipped_dir_regexes = [re.compile(target_arch() + '(/.*)?'), re.compile('TempOutput(/.*)?'), re.compile('MeshLibC2(/.*)?'), re.compile('MeshLibC2Cuda(/.*)?')])
+	it.append_includes_list(it.path_to_sources, skipped_dir_regexes = [re.compile(target_arch() + '(/.*)?'), re.compile('TempOutput(/.*)?'), re.compile('MeshLibC2(/.*)?'), re.compile('MeshLibC2Cuda(/.*)?'), re.compile('MeshLibC2PythonViewer(/.*)?'), re.compile('MRPythonViewer(/.*)?')])
 	it.append_includes_list(os.path.join(it.path_to_sources, "MeshLibC2/include"))
 	it.append_includes_list(os.path.join(it.path_to_sources, "MeshLibC2Cuda/include"))
 	it.append_includes_list(path_to_phmap, True,'parallel_hashmap')
-	it.append_includes_list(path_to_pybind11, True)
 	it.append_includes_list(path_to_imgui, True)
 
 def write_config_dist():
@@ -117,12 +115,10 @@ def copy_lib():
 		os.remove(f)
 	for f in glob.glob(os.path.join(it.path_to_libs, "__init__.py")):
 		os.remove(f)
-	for f in glob.glob(os.path.join(it.path_to_app, "*/*pybind11nonlimitedapi_meshlib_*")):
-		os.remove(f)
 
 	# The mrbind-generated modules are not part of the distribution, matching the
 	# macOS .pkg and the vcpkg archive, which are built from `cmake --install` alone.
-	for pattern in ("*/meshlib/mrmeshpy.pyd", "*/meshlib/mrcudapy.pyd",
+	for pattern in ("*/meshlib/mrmeshpy.pyd", "*/meshlib/mrcudapy.pyd", "*/meshlib/mrcudapy.py",
 	                "*/meshlib/__init__.py", "*/__init__.py"):
 		for f in glob.glob(os.path.join(it.path_to_app, pattern)):
 			os.remove(f)

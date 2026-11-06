@@ -41,7 +41,7 @@ Mesh makeUVSphere(float radius, int horisontalResolution, int verticalResolution
 
     int vertexCount = horisontalResolution * verticalResolution + 2;
 
-    std::vector<Vector3f> points(vertexCount);
+    VertCoords points(vertexCount);
 
     k = 0;
     for (j = 0; j < verticalResolution; ++j) {
@@ -49,22 +49,22 @@ Mesh makeUVSphere(float radius, int horisontalResolution, int verticalResolution
         for (i = 0; i < horisontalResolution; ++i) {
             b = 2 * i * PI_F / horisontalResolution;
 
-            points[k].x = (float)(radius * cos(a) * sin(b));
-            points[k].y = (float)(radius * cos(a) * cos(b));
-            points[k].z = (float)(radius * sin(a));
+            points[VertId( k )].x = (float)(radius * cos(a) * sin(b));
+            points[VertId( k )].y = (float)(radius * cos(a) * cos(b));
+            points[VertId( k )].z = (float)(radius * sin(a));
             ++k;
         }
     }
 
-    points[k].x = 0;
-    points[k].y = 0;
-    points[k].z = -radius;
+    points[VertId( k )].x = 0;
+    points[VertId( k )].y = 0;
+    points[VertId( k )].z = -radius;
     bottom_cap = k;
     ++k;
 
-    points[k].x = 0;
-    points[k].y = 0;
-    points[k].z = radius;
+    points[VertId( k )].x = 0;
+    points[VertId( k )].y = 0;
+    points[VertId( k )].z = radius;
     top_cap = k;
 
     Triangulation t;

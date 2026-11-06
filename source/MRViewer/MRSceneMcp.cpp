@@ -13,6 +13,7 @@
 #include "MRMesh/MRConstants.h"
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRMatrix3Decompose.h"
+#include "MRMesh/MRMesh.h"
 #include "MRMesh/MROnInit.h"
 #include "MRMesh/MRObject.h"
 #include "MRMesh/MRObjectLinesHolder.h"
@@ -59,7 +60,7 @@ struct DecomposedXf { Vector3f translation, rotationDeg, scale; };
 static DecomposedXf decomposeXf( const AffineXf3f& xf )
 {
     Matrix3f rotation, scaling;
-    decomposeMatrix3( xf.A, rotation, scaling );
+    decomposeMatrix3( xf.A, rotation, scaling, true ); // Euler angles cannot express an improper rotation of a mirror
     return {
         .translation = xf.b,
         .rotationDeg = rotation.toEulerAngles() * ( 180.f / PI_F ),
@@ -125,6 +126,33 @@ static Color parseColor( const nlohmann::json& j, std::string_view field )
     return Color{ r, g, b, a }; // the float ctor clamps to [0, 1]
 }
 
+// Geometry counts and measures of mesh and point-cloud objects, in object-local units;
+// the same numbers as the `info` lines. Empty for other object types.
+static nlohmann::json statsToJson( const Object& obj )
+{
+    nlohmann::json stats = nlohmann::json::object();
+    if ( const auto* mh = dynamic_cast<const ObjectMeshHolder*>( &obj ); mh && mh->meshPtr() )
+    {
+        const auto& topology = mh->meshPtr()->topology;
+        stats["vertices"]          = topology.numValidVerts();
+        stats["triangles"]         = topology.numValidFaces();
+        stats["selectedTriangles"] = mh->numSelectedFaces();
+        stats["edges"]             = mh->numUndirectedEdges();
+        stats["components"]        = mh->numComponents();
+        stats["holes"]             = mh->numHoles();
+        stats["area"]              = mh->totalArea();
+        if ( mh->numHoles() == 0 )
+            stats["volume"] = mh->volume();
+        stats["avgEdgeLength"]     = mh->avgEdgeLen();
+    }
+    else if ( const auto* ph = dynamic_cast<const ObjectPointsHolder*>( &obj ); ph && ph->pointCloudPtr() )
+    {
+        stats["points"]         = ph->numValidPoints();
+        stats["selectedPoints"] = ph->numSelectedPoints();
+    }
+    return stats;
+}
+
 // Per-object visualization properties (colors, alpha, size, flags). Fields only present if the
 // object type supports them.
 static nlohmann::json visualizationToJson( const Object& obj )
@@ -171,7 +199,7 @@ static nlohmann::json objectRow( const Object& obj, const Object* parent )
 static nlohmann::json mcpSceneListObjectTree( const nlohmann::json& args )
 {
     nlohmann::json rows = nlohmann::json::array();
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    runOnMainThread( [&]
     {
         auto rootEx = pickRoot( args );
         if ( !rootEx )
@@ -187,7 +215,7 @@ static nlohmann::json mcpSceneListObjectTree( const nlohmann::json& args )
 static nlohmann::json mcpSceneGetObjectInfo( const nlohmann::json& args )
 {
     nlohmann::json out;
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    runOnMainThread( [&]
     {
         const uint64_t id = args.at( "id" ).get<uint64_t>();
         auto objEx = resolveId( id );
@@ -223,6 +251,7 @@ static nlohmann::json mcpSceneGetObjectInfo( const nlohmann::json& args )
         info.push_back( vec3Line( "rotation deg", tfJson["rotation"] ) );
         info.push_back( vec3Line( "scale",        tfJson["scale"] ) );
         out["info"] = std::move( info );
+        out["stats"] = statsToJson( *obj );
 
         out["visualization"] = visualizationToJson( *obj );
     } );
@@ -231,7 +260,7 @@ static nlohmann::json mcpSceneGetObjectInfo( const nlohmann::json& args )
 
 static nlohmann::json mcpSceneSetObjectState( const nlohmann::json& args )
 {
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    runOnMainThread( [&]
     {
         auto objEx = resolveId( args.at( "id" ).get<uint64_t>() );
         if ( !objEx )
@@ -335,13 +364,13 @@ static nlohmann::json mcpSceneSetObjectState( const nlohmann::json& args )
             }
         }
     } );
-    skipFramesAfterInput();
+    (void)waitFramesAfterInput();
     return nlohmann::json::object();
 }
 
 static nlohmann::json mcpSceneRemoveObject( const nlohmann::json& args )
 {
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    runOnMainThread( [&]
     {
         auto objEx = resolveId( args.at( "id" ).get<uint64_t>() );
         if ( !objEx )
@@ -351,7 +380,7 @@ static nlohmann::json mcpSceneRemoveObject( const nlohmann::json& args )
         AppendHistory<ChangeSceneAction>( _t( "MCP removeObject" ), obj, ChangeSceneAction::Type::RemoveObject );
         obj->detachFromParent();
     } );
-    skipFramesAfterInput();
+    (void)waitFramesAfterInput();
     return nlohmann::json::object();
 }
 
@@ -375,7 +404,7 @@ static std::string mimeForExt( std::string_view ext )
 static nlohmann::json mcpSceneGetObject( const nlohmann::json& args )
 {
     nlohmann::json out = nlohmann::json::object();
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    runOnMainThread( [&]
     {
         auto objEx = resolveId( args.at( "id" ).get<uint64_t>() );
         if ( !objEx )
@@ -437,7 +466,7 @@ static nlohmann::json mcpSceneGetObject( const nlohmann::json& args )
 static nlohmann::json mcpSceneAddObject( const nlohmann::json& args )
 {
     std::vector<uint64_t> addedIds;
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    runOnMainThread( [&]
     {
         std::shared_ptr<Object> parentHolder;
         Object* parent = &SceneRoot::get();
@@ -492,7 +521,7 @@ static nlohmann::json mcpSceneAddObject( const nlohmann::json& args )
             addedIds.push_back( idOf( obj.get() ) );
         }
     } );
-    skipFramesAfterInput();
+    (void)waitFramesAfterInput();
     return nlohmann::json::object( { { "ids", addedIds } } );
 }
 
@@ -510,6 +539,14 @@ MR_ON_INIT{
             .addMember( "translation", Schema::Array( Schema::Number{} ) )
             .addMember( "rotation",    Schema::Array( Schema::Number{} ) )
             .addMember( "scale",       Schema::Array( Schema::Number{} ) );
+    };
+    // `scene_setObjectState` input: every component is optional, see parseTransform().
+    static const auto transformInputSchema = []
+    {
+        return Schema::Object{}
+            .addMemberOpt( "translation", Schema::Array( Schema::Number{} ) )
+            .addMemberOpt( "rotation",    Schema::Array( Schema::Number{} ) )
+            .addMemberOpt( "scale",       Schema::AnyOf( { Schema::Number{}, Schema::Array( Schema::Number{} ) } ) );
     };
     static const auto entrySchema = []
     {
@@ -530,11 +567,13 @@ MR_ON_INIT{
                 "Flat depth-first list of every descendant of `rootId` (root itself excluded; pass `rootId = 0` or "
                 "omit to walk from the scene root). Each row carries its own `parentId`, so the tree structure is "
                 "recoverable. `transform` decomposes the object's xf into `{translation:[x,y,z], rotation:[rx,ry,rz], "
-                "scale:[sx,sy,sz]}` (rotation is XYZ-Euler in degrees) — same shape `scene_setObjectState` accepts. "
+                "scale:[sx,sy,sz]}` (rotation is XYZ-Euler in degrees; a mirror has a negative scale; a shear is not "
+                "represented) — same shape `scene_setObjectState` accepts. "
                 "`type` values include `\"Mesh\"`, `\"Point Cloud\"`, `\"Polyline\"`, `\"Voxel Volume\"`.",
         /*input_schema*/Schema::Object{}.addMemberOpt( "rootId", Schema::Number{} ),
         /*output_schema*/Schema::Array( entrySchema() ),
-        /*func*/mcpSceneListObjectTree
+        /*func*/mcpSceneListObjectTree,
+        /*readOnly*/true
     );
 
     server.addTool(
@@ -543,7 +582,11 @@ MR_ON_INIT{
         /*desc*/std::string( kSceneIdSemantics ) +
                 "Return a single object's row (same shape as `scene_listObjectTree` entries) plus `childIds` (direct "
                 "children), `worldBox` (axis-aligned world-space bounding box), `info` (human-readable property "
-                "lines - e.g. vertex/face counts, area - from the UI's info panel), and `visualization` (current "
+                "lines - e.g. vertex/face counts, area - from the UI's info panel), `stats` (the same numbers as fields: "
+                "for meshes `vertices`, `triangles`, `selectedTriangles`, `edges`, `components`, `holes`, `area`, "
+                "`volume` (only for closed meshes), `avgEdgeLength`; for point clouds `points`, `selectedPoints`; "
+                "empty for other types; lengths, area and volume are in object-local units, before `transform`), "
+                "and `visualization` (current "
                 "render-time properties — colors, alpha, size, flags; see `scene_setObjectState` for field semantics; "
                 "fields that don't apply to this object's type are omitted).",
         /*input_schema*/Schema::Object{}.addMember( "id", Schema::Number{} ),
@@ -553,8 +596,10 @@ MR_ON_INIT{
                 .addMember( "min", Schema::Array( Schema::Number{} ) )
                 .addMember( "max", Schema::Array( Schema::Number{} ) ) )
             .addMember( "info",     Schema::Array( Schema::String{} ) )
+            .addMember( "stats",    Schema::Object{} )
             .addMember( "visualization", Schema::Object{} ),
-        /*func*/mcpSceneGetObjectInfo
+        /*func*/mcpSceneGetObjectInfo,
+        /*readOnly*/true
     );
 
     server.addTool(
@@ -577,7 +622,7 @@ MR_ON_INIT{
             .addMemberOpt( "name",      Schema::String{} )
             .addMemberOpt( "visible",   Schema::Bool{} )
             .addMemberOpt( "selected",  Schema::Bool{} )
-            .addMemberOpt( "transform", transformSchema() )
+            .addMemberOpt( "transform", transformInputSchema() )
             .addMemberOpt( "visualization", Schema::Object{}
                 .addMemberOpt( "selectedColor",   Schema::Array( Schema::Number{} ) )
                 .addMemberOpt( "unselectedColor", Schema::Array( Schema::Number{} ) )
@@ -608,14 +653,16 @@ MR_ON_INIT{
                 "selected by extension) — response is `{path: <written-path>}`. Or pass `extension` (e.g. `\"stl\"`) "
                 "to receive the bytes inline as an MCP embedded-resource content block "
                 "(`content[0].resource.blob` is the base64 payload; `mimeType` is the registered model/* "
-                "media type for known mesh formats, `application/octet-stream` otherwise).",
+                "media type for known mesh formats, `application/octet-stream` otherwise). Some clients accept only "
+                "images inline (Claude chat rejects the block as an unsupported image); use `filePath` there.",
         /*input_schema*/Schema::Object{}
             .addMember(    "id",        Schema::Number{} )
             .addMemberOpt( "filePath",  Schema::String{} )
             .addMemberOpt( "extension", Schema::String{} ),
         /*output_schema*/Schema::Object{}
             .addMemberOpt( "path", Schema::String{} ),
-        /*func*/mcpSceneGetObject
+        /*func*/mcpSceneGetObject,
+        /*readOnly*/true
     );
 
     server.addTool(

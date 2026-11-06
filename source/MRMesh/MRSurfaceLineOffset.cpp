@@ -6,7 +6,7 @@ namespace MR
 
 Expected<Contours3f> offsetSurfaceLine( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine, const std::function<float( int )>& offsetAtPoint )
 {
-    auto offsetRes = convertMeshTriPointsSurfaceOffsetToMeshContours( mesh, surfaceLine, offsetAtPoint );
+    auto offsetRes = offsetSurfaceLineToMeshContours( mesh, surfaceLine, offsetAtPoint );
     if ( !offsetRes.has_value() )
         return unexpected( std::move( offsetRes.error() ) );
 

@@ -11,30 +11,11 @@
 #include <MRCMesh/MRVector.h>
 #include <MRCMisc/expected_MR_PointCloud_std_string.h>
 #include <MRCMisc/expected_void_std_string.h>
-#include <MRCMisc/std_function_bool_from_float.h>
 #include <MRCMisc/std_string.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-// print progress every 10%
-int gProgress = -1;
-bool onProgress( float v )
-{
-    int progress = (int)( 10.f * v );
-    if ( progress != gProgress )
-    {
-        gProgress = progress;
-        printf( "%d%%...\n", progress * 10 );
-    }
-    return true;
-}
-
-void resetProgress( void )
-{
-    gProgress = -1;
-}
 
 void printStats( const MR_MultiwayICP* icp )
 {
@@ -46,11 +27,11 @@ void printStats( const MR_MultiwayICP* icp )
     {
         double p2ptMetric = MR_MultiwayICP_getMeanSqDistToPoint( icp, NULL );
         double p2ptInaccuracy = MR_MultiwayICP_getMeanSqDistToPoint( icp, &p2ptMetric );
-        printf( "RMS point-to-point distance: %f ± %f\n", p2ptMetric, p2ptInaccuracy );
+        printf( "RMS point-to-point distance: %g ± %g\n", p2ptMetric, p2ptInaccuracy );
 
         double p2plMetric = MR_MultiwayICP_getMeanSqDistToPlane( icp, NULL );
         double p2plInaccuracy = MR_MultiwayICP_getMeanSqDistToPlane( icp, &p2plMetric );
-        printf( "RMS point-to-plane distance: %f ± %f\n", p2plMetric, p2plInaccuracy );
+        printf( "RMS point-to-plane distance: %g ± %g\n", p2plMetric, p2plInaccuracy );
     }
 }
 
@@ -81,7 +62,7 @@ int main( int argc, char* argv[] )
 
     for ( int i = 0; i < inputNum; ++i )
     {
-        MR_expected_MR_PointCloud_std_string* pointCloudEx = MR_PointsLoad_fromAnySupportedFormat_2( argv[1 + i], NULL, NULL );
+        MR_expected_MR_PointCloud_std_string* pointCloudEx = MR_PointsLoad_fromAnySupportedFormat( argv[1 + i], NULL, NULL );
         MR_PointCloud* pointCloud = MR_expected_MR_PointCloud_std_string_value_mut( pointCloudEx );
 
         if ( !pointCloud )
@@ -101,7 +82,7 @@ int main( int argc, char* argv[] )
         MR_Vector_MR_MeshOrPointsXf_MR_ObjId_push_back_MR_MeshOrPointsXf_rvalue_ref( inputs, mopXf );
         MR_MeshOrPointsXf_Destroy( mopXf );
 
-        MR_Box3f bbox = MR_PointCloud_computeBoundingBox_1( pointCloud, NULL );
+        MR_Box3f bbox = MR_PointCloud_computeBoundingBox( pointCloud, NULL );
         if ( !MR_Box3f_valid( &maxBBox ) || MR_Box3f_volume( &bbox ) > MR_Box3f_volume( &maxBBox ) )
             maxBBox = bbox;
     }
@@ -110,10 +91,6 @@ int main( int argc, char* argv[] )
     MR_MultiwayICPSamplingParameters* samplingParams = MR_MultiwayICPSamplingParameters_DefaultConstruct();
     // set sampling voxel size
     MR_MultiwayICPSamplingParameters_Set_samplingVoxelSize( samplingParams, MR_Box3f_diagonal( &maxBBox ) * 0.03f );
-    // set progress callback
-    MR_std_function_bool_from_float* cb = MR_std_function_bool_from_float_DefaultConstruct();
-    MR_std_function_bool_from_float_Assign( cb, onProgress );
-    MR_MultiwayICPSamplingParameters_Set_cb( samplingParams, MR_PassBy_Copy, cb );
 
     MR_MultiwayICP* icp = MR_MultiwayICP_Construct( inputs, samplingParams );
     MR_MultiwayICPSamplingParameters_Destroy( samplingParams );
@@ -127,8 +104,7 @@ int main( int argc, char* argv[] )
     printStats( icp );
 
     printf( "Calculating transformations...\n" );
-    resetProgress();
-    MR_Vector_MR_AffineXf3f_MR_ObjId* xfs = MR_MultiwayICP_calculateTransformations( icp, cb );
+    MR_Vector_MR_AffineXf3f_MR_ObjId* xfs = MR_MultiwayICP_calculateTransformations( icp, NULL );
     printStats( icp );
 
     MR_PointCloud* output = MR_PointCloud_DefaultConstruct();
@@ -141,34 +117,29 @@ int main( int argc, char* argv[] )
         size_t numPoints = MR_VertCoords_size( points );
         for ( size_t j = 0; j < numPoints; j++ )
         {
-            MR_Vector3f point = *MR_VertCoords_index( points, (MR_VertId){j} );
+            MR_Vector3f point = *MR_VertCoords_index( points, (MR_VertId){(int)j} );
             point = MR_AffineXf3f_call( xf, &point );
-            MR_PointCloud_addPoint_1( output, &point );
+            MR_PointCloud_addPoint( output, &point );
         }
     }
 
-    MR_expected_void_std_string* saveEx = MR_PointsSave_toAnySupportedFormat_3( output, argv[argc - 1], NULL, NULL );
+    MR_expected_void_std_string* saveEx = MR_PointsSave_toAnySupportedFormat( output, argv[argc - 1], NULL, NULL );
     const MR_std_string* saveError = MR_expected_void_std_string_error( saveEx );
     if ( !saveError )
-    {
         rc = EXIT_SUCCESS;
-    }
     else
-    {
         fprintf( stderr, "Failed to save point cloud: %s\n", MR_std_string_data( saveError ) );
-    }
-    MR_std_string_Destroy( saveError );
+    MR_expected_void_std_string_Destroy( saveEx );
 
     MR_PointCloud_Destroy( output );
     MR_Vector_MR_AffineXf3f_MR_ObjId_Destroy( xfs );
-    MR_std_function_bool_from_float_Destroy( cb );
     MR_MultiwayICP_Destroy( icp );
 out_inputs: ;
     // As explained earlier, since those wrappers are non-owning, we have to manually destroy the contents.
     size_t numLoadedInputs = MR_Vector_MR_MeshOrPointsXf_MR_ObjId_size( inputs );
     for ( size_t i = 0; i < numLoadedInputs; i++ )
     {
-        MR_PointCloud_Destroy( MR_PointCloudPart_Get_cloud( MR_MeshOrPoints_asPointCloudPart( MR_MeshOrPointsXf_Get_obj( MR_Vector_MR_MeshOrPointsXf_MR_ObjId_index( inputs, (MR_ObjId){i} ) ) ) ) );
+        MR_PointCloud_Destroy( MR_PointCloudPart_Get_cloud( MR_MeshOrPoints_asPointCloudPart( MR_MeshOrPointsXf_Get_obj( MR_Vector_MR_MeshOrPointsXf_MR_ObjId_index( inputs, (MR_ObjId){(int)i} ) ) ) ) );
     }
     MR_Vector_MR_MeshOrPointsXf_MR_ObjId_Destroy( inputs );
 out:

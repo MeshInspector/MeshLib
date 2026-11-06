@@ -21,7 +21,7 @@ public:
     /// Updates all data related to the referencing mesh
     virtual void updateMeshData( const Mesh* mesh ) = 0;
     /// Computes the closest point on mesh to each of given points
-    virtual void findProjections( std::vector<MeshProjectionResult>& result, const std::vector<Vector3f>& points,
+    virtual void findProjections( std::vector<MeshProjectionResult>& result, const VertCoords& points,
                                   const AffineXf3f* worldXf = nullptr, const AffineXf3f* worldRefXf = nullptr,
                                   float upDistLimitSq = FLT_MAX, float loDistLimitSq = 0.0f ) = 0;
 
@@ -49,7 +49,7 @@ struct MeshProjectionParameters
 /// Computes signed distances from given test points to the closest point on the reference mesh:
 /// positive value - outside reference mesh, negative - inside reference mesh;
 /// this method can return wrong sign if the closest point is located on self-intersecting part of the mesh
-[[nodiscard]] MRMESH_API VertScalars findSignedDistances(
+MR_BIND_OVERLOAD_SUFFIX(points) [[nodiscard]] MRMESH_API VertScalars findSignedDistances(
     const Mesh& refMesh, ///< the distances to this mesh will be returned
     const VertCoords & testPoints, const VertBitSet * validTestPoints = {}, ///< the distances from these points will be returned
     const MeshProjectionParameters & params = {},
@@ -58,7 +58,7 @@ struct MeshProjectionParameters
 /// Computes signed distances from valid vertices of test mesh to the closest point on the reference mesh:
 /// positive value - outside reference mesh, negative - inside reference mesh;
 /// this method can return wrong sign if the closest point is located on self-intersecting part of the mesh
-[[nodiscard]] MRMESH_API VertScalars findSignedDistances(
+MR_BIND_OVERLOAD_SUFFIX() [[nodiscard]] MRMESH_API VertScalars findSignedDistances(
     const Mesh& refMesh, ///< the distances to this mesh will be returned
     const Mesh& mesh,    ///< the distances from valid vertices of this mesh will be returned
     const MeshProjectionParameters & params = {},
@@ -80,7 +80,7 @@ public:
     /// <param name="refObjXf">transform applied to referencing mesh</param>
     /// <param name="upDistLimitSq">maximal squared distance from point to mesh</param>
     /// <param name="loDistLimitSq">minimal squared distance from point to mesh</param>
-    MRMESH_API virtual void findProjections( std::vector<MeshProjectionResult>& result, const std::vector<Vector3f>& points,
+    MRMESH_API virtual void findProjections( std::vector<MeshProjectionResult>& result, const VertCoords& points,
                                              const AffineXf3f* objXf, const AffineXf3f* refObjXf,
                                              float upDistLimitSq, float loDistLimitSq ) override;
 

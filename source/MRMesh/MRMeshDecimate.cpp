@@ -20,14 +20,42 @@
 #include "MRMeshDecimateCallbacks.h"
 #include "MRMapEdge.h"
 #include "MRObjectMesh.h"
+#include "MRAABBTree.h"
 
 namespace MR
 {
 
+namespace
+{
+
+enum class EdgeOp : unsigned int
+{
+    CollapseOptPos, ///< collapse the edge with target position optimization
+    CollapseEnd,    ///< collapse the edge in one of its current vertices
+    Flip            ///< flip the edge inside quadrangle
+    // one more option is available to fit in 2 bits
+};
+
+struct QueueElement
+{
+    float c = 0;
+    struct X {
+        EdgeOp edgeOp : 2 = EdgeOp::CollapseOptPos;
+        unsigned int uedgeId : 30 = 0;
+    } x;
+    UndirectedEdgeId uedgeId() const { return UndirectedEdgeId{ (int)x.uedgeId }; }
+    std::pair<float, int> asPair() const { return { -c, x.uedgeId }; }
+    bool operator < ( const QueueElement & r ) const { return asPair() < r.asPair(); }
+};
+static_assert( sizeof( QueueElement ) == 8 );
+
+} // anonymous namespace
+
 class MeshDecimator
 {
 public:
-    MeshDecimator( Mesh & mesh, const DecimateSettings & settings );
+    /// if initialEdges is given, then only these edges are put in the queue initially, and other region edges only after nearby changes
+    MeshDecimator( Mesh & mesh, const DecimateSettings & settings, const UndirectedEdgeBitSet * initialEdges = nullptr );
     DecimateResult run();
 
 private:
@@ -40,41 +68,22 @@ private:
     UndirectedEdgeBitSet regionEdges_;
     VertBitSet myBdVerts_;
     const VertBitSet * pBdVerts_ = nullptr;
+    const UndirectedEdgeBitSet * initialEdges_ = nullptr;
     std::function<void( EdgeId del, EdgeId rem )> onEdgeDel_;
 
-    enum class EdgeOp : unsigned int
-    {
-        CollapseOptPos, ///< collapse the edge with target position optimization
-        CollapseEnd,    ///< collapse the edge in one of its current vertices
-        Flip            ///< flip the edge inside quadrangle
-        // one more option is available to fit in 2 bits
-    };
-
-    struct QueueElement
-    {
-        float c = 0;
-        struct X {
-            EdgeOp edgeOp : 2 = EdgeOp::CollapseOptPos;
-            unsigned int uedgeId : 30 = 0;
-        } x;
-        UndirectedEdgeId uedgeId() const { return UndirectedEdgeId{ (int)x.uedgeId }; }
-        std::pair<float, int> asPair() const { return { -c, x.uedgeId }; }
-        bool operator < ( const QueueElement & r ) const { return asPair() < r.asPair(); }
-    };
-    static_assert( sizeof( QueueElement ) == 8 );
     PriorityQueue<QueueElement> queue_;
     UndirectedEdgeBitSet validInQueue_; // bit set if the edge is both present in queue_ and not lone
     UndirectedEdgeBitSet outdated_; // true if edge's error in the queue may be outdated (too optimistic) due to nearby collapse
     size_t numOutdated_ = 0; // total number of not lone outdated edges in the queue
     size_t maxRemainingFlips_ = 0; // the number of flip-edge operations that can be performed before stop adding them in the queue
     DecimateResult res_;
-    std::vector<VertId> originNeis_;
-    std::vector<Vector3f> triDblAreas_; // directed double areas of newly formed triangles to check that they are consistently oriented
+    Vector<VertId> originNeis_;
+    Vector<Vector3f> triDblAreas_; // directed double areas of newly formed triangles to check that they are consistently oriented
     class EdgeMetricCalc;
 
     bool initialize_();
     void initializeQueue_();
-    std::vector<QueueElement> makeQueueElements_();
+    Vector<QueueElement> makeQueueElements_();
     void updateQueue_();
     QuadraticForm3f collapseForm_( UndirectedEdgeId ue, const Vector3f & collapsePos ) const;
     std::optional<QueueElement> computeQueueElement_( UndirectedEdgeId ue, bool optimizeVertexPos,
@@ -135,7 +144,7 @@ private:
     CollapseRes collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos, const QuadraticForm3f & collapseForm );
 };
 
-MeshDecimator::MeshDecimator( Mesh & mesh, const DecimateSettings & settings )
+MeshDecimator::MeshDecimator( Mesh & mesh, const DecimateSettings & settings, const UndirectedEdgeBitSet * initialEdges )
     : mesh_( mesh )
     , settings_( settings )
     , deloneSettings_{
@@ -143,6 +152,7 @@ MeshDecimator::MeshDecimator( Mesh & mesh, const DecimateSettings & settings )
         .criticalTriAspectRatio = settings.criticalTriAspectRatio,
         .region = settings.region }
     , maxErrorSq_( sqr( settings.maxError ) )
+    , initialEdges_( initialEdges )
 {
     onEdgeDel_ =
     [
@@ -248,7 +258,7 @@ bool MeshDecimator::initialize_()
     if ( settings_.region )
     {
         // all region edges
-        regionEdges_ = getIncidentEdges( mesh_.topology, *settings_.region );
+        regionEdges_ = settings_.regionEdges ? *settings_.regionEdges : getIncidentEdges( mesh_.topology, *settings_.region );
         if ( settings_.edgesToCollapse )
             regionEdges_ &= *settings_.edgesToCollapse;
         if ( !settings_.touchNearBdEdges )
@@ -292,7 +302,7 @@ bool MeshDecimator::initialize_()
     return true;
 }
 
-auto MeshDecimator::makeQueueElements_() -> std::vector<QueueElement>
+auto MeshDecimator::makeQueueElements_() -> Vector<QueueElement>
 {
     MR_TIMER;
 
@@ -300,31 +310,50 @@ auto MeshDecimator::makeQueueElements_() -> std::vector<QueueElement>
     validInQueue_.clear();
     validInQueue_.resize( sz, false );
 
-    tbb::enumerable_thread_specific<std::vector<QueueElement>> threadData;
-    BitSetParallelForAll( validInQueue_, [&]( UndirectedEdgeId ue )
+    tbb::enumerable_thread_specific<Vector<QueueElement>> threadData;
+    if ( initialEdges_ )
     {
-        if ( regionEdges_.empty() )
+        // few initial edges in a large bit set
+        Vector<UndirectedEdgeId> edges;
+        for ( auto ue : *initialEdges_ )
+            if ( regionEdges_.empty() ? !mesh_.topology.isLoneEdge( ue ) : regionEdges_.test( ue ) )
+                edges.push_back( ue );
+        ParallelFor( edges, [&]( size_t i )
         {
-            if ( mesh_.topology.isLoneEdge( ue ) )
-                return;
-        }
-        else
+            if ( auto qe = computeQueueElement_( edges[i], settings_.optimizeVertexPos ) )
+                threadData.local().push_back( *qe );
+        } );
+        for ( const auto & v : threadData )
+            for ( const auto & qe : v )
+                validInQueue_.set( qe.uedgeId() );
+    }
+    else
+    {
+        BitSetParallelForAll( validInQueue_, [&]( UndirectedEdgeId ue )
         {
-            if ( !regionEdges_.test( ue ) )
-                return;
-        }
-        if ( auto qe = computeQueueElement_( ue, settings_.optimizeVertexPos ) )
-        {
-            threadData.local().push_back( *qe );
-            validInQueue_.set( ue );
-        }
-    } );
+            if ( regionEdges_.empty() )
+            {
+                if ( mesh_.topology.isLoneEdge( ue ) )
+                    return;
+            }
+            else
+            {
+                if ( !regionEdges_.test( ue ) )
+                    return;
+            }
+            if ( auto qe = computeQueueElement_( ue, settings_.optimizeVertexPos ) )
+            {
+                threadData.local().push_back( *qe );
+                validInQueue_.set( ue );
+            }
+        } );
+    }
 
     size_t queueSize = 0;
     for ( const auto & v : threadData )
         queueSize += v.size();
 
-    std::vector<QueueElement> elms;
+    Vector<QueueElement> elms;
     elms.reserve( queueSize );
     for ( auto & v : threadData )
     {
@@ -382,7 +411,7 @@ void MeshDecimator::updateQueue_()
 
     t.restart( "remove deleted" );
     // remove invalid and deleted edges from the queue
-    std::erase_if( vec, [&]( QueueElement & qe ) { return !validInQueue_.test( qe.uedgeId() ); } );
+    erase_if( vec, [&]( QueueElement & qe ) { return !validInQueue_.test( qe.uedgeId() ); } );
 
     t.restart( "restore heap" );
     // sort elements to restore heap property
@@ -599,6 +628,8 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
         }
     }
 
+    // triangle aspect ratios are needed for the aspect ratio check and to find not-degenerate triangles for the normal flip check
+    const bool checkAspectRatios = settings_.preventNormalFlips || settings_.maxTriangleAspectRatio < FLT_MAX;
     float maxOldAspectRatio = settings_.maxTriangleAspectRatio;
     float maxNewAspectRatio = 0;
     const float edgeLenSq = ( po - pd ).lengthSq();
@@ -629,18 +660,23 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
         if ( !settings_.collapseNearNotFlippable && collapsingFlippable && settings_.notFlippable && settings_.notFlippable->test( e ) )
             return { .status =  CollapseStatus::Flippable }; // cannot collapse a flippable edge incident to a not-flippable edge
 
+        if ( !checkAspectRatios )
+            continue;
         const auto pDest2 = mesh_.destPnt( topology.next( e ) );
         if ( eDest != vr )
         {
-            auto da = cross( pDest - collapsePos, pDest2 - collapsePos );
-            sumDblArea += Vector3d{ da };
             const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
             maxNewAspectRatio = std::max( maxNewAspectRatio, triAspect );
-            if ( triAspect < settings_.criticalTriAspectRatio ) // can trust direction of not-degenerate triangles only
+            if ( settings_.preventNormalFlips )
             {
-                const auto oldA = cross( pDest - po, pDest2 - po );
-                if ( dot( da, oldA ) <= 0 )
-                    triDblAreas_.push_back( da );
+                auto da = cross( pDest - collapsePos, pDest2 - collapsePos );
+                sumDblArea += Vector3d{ da };
+                if ( triAspect < settings_.criticalTriAspectRatio ) // can trust direction of not-degenerate triangles only
+                {
+                    const auto oldA = cross( pDest - po, pDest2 - po );
+                    if ( dot( da, oldA ) <= 0 )
+                        triDblAreas_.push_back( da );
+                }
             }
         }
         maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( po, pDest, pDest2 ) );
@@ -671,18 +707,23 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
         if ( !settings_.collapseNearNotFlippable && collapsingFlippable && settings_.notFlippable && settings_.notFlippable->test( e ) )
             return { .status =  CollapseStatus::Flippable }; // cannot collapse a flippable edge incident to a not-flippable edge
 
+        if ( !checkAspectRatios )
+            continue;
         const auto pDest2 = mesh_.destPnt( topology.next( e ) );
         if ( eDest != vl )
         {
-            auto da = cross( pDest - collapsePos, pDest2 - collapsePos );
-            sumDblArea += Vector3d{ da };
             const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
             maxNewAspectRatio = std::max( maxNewAspectRatio, triAspect );
-            if ( triAspect < settings_.criticalTriAspectRatio ) // can trust direction of not-degenerate triangles only
+            if ( settings_.preventNormalFlips )
             {
-                const auto oldA = cross( pDest - pd, pDest2 - pd );
-                if ( dot( da, oldA ) <= 0 )
-                    triDblAreas_.push_back( da );
+                auto da = cross( pDest - collapsePos, pDest2 - collapsePos );
+                sumDblArea += Vector3d{ da };
+                if ( triAspect < settings_.criticalTriAspectRatio ) // can trust direction of not-degenerate triangles only
+                {
+                    const auto oldA = cross( pDest - pd, pDest2 - pd );
+                    if ( dot( da, oldA ) <= 0 )
+                        triDblAreas_.push_back( da );
+                }
             }
         }
         maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( pd, pDest, pDest2 ) );
@@ -990,7 +1031,7 @@ DecimateResult MeshDecimator::run()
     return res_;
 }
 
-static DecimateResult decimateMeshSerial( Mesh & mesh, const DecimateSettings & settings )
+static DecimateResult decimateMeshSerial( Mesh & mesh, const DecimateSettings & settings, const UndirectedEdgeBitSet * initialEdges = nullptr )
 {
     MR_TIMER;
     if ( settings.maxDeletedFaces <= 0 || settings.maxDeletedVertices <= 0 )
@@ -999,8 +1040,18 @@ static DecimateResult decimateMeshSerial( Mesh & mesh, const DecimateSettings & 
         res.cancelled = false;
         return res;
     }
-    MeshDecimator md( mesh, settings );
+    MeshDecimator md( mesh, settings, initialEdges );
     return md.run();
+}
+
+/// all edges incident to given vertices
+static UndirectedEdgeBitSet getIncidentEdges( const MeshTopology & topology, const VertBitSet & verts )
+{
+    UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
+    for ( auto v : verts )
+        for ( auto e : orgRing( topology, v ) )
+            res.set( e.undirected() );
+    return res;
 }
 
 FaceBitSet getSubdividePart( const FaceBitSet & valids, size_t subdivideParts, size_t myPart )
@@ -1018,12 +1069,33 @@ FaceBitSet getSubdividePart( const FaceBitSet & valids, size_t subdivideParts, s
     return res;
 }
 
-static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const DecimateSettings & settings )
+/// returns the faces of the subtrees of mesh's AABB tree (or of a tree constructed for the region), at least subdivideParts of them
+static Vector<FaceBitSet> getTreeParts( const Mesh & mesh, const DecimateSettings & settings )
+{
+    MR_TIMER;
+    std::optional<AABBTree> ownTree;
+    const AABBTree * tree = mesh.getAABBTreeNotCreate();
+    if ( !tree )
+        tree = &ownTree.emplace( MeshPart{ mesh, settings.region } );
+    const auto roots = tree->getSubtrees( settings.subdivideParts );
+    Vector<FaceBitSet> res( roots.size() );
+    ParallelFor( res, [&]( size_t i )
+    {
+        res[i] = tree->getSubtreeLeaves( roots[i] );
+        res[i].resize( mesh.topology.faceSize() );
+    } );
+    return res;
+}
+
+/// \param treeParts if not null, the faces of each part, used instead of getSubdividePart
+static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const DecimateSettings & settings, Vector<FaceBitSet> * treeParts = nullptr )
 {
     MR_TIMER;
     assert( settings.subdivideParts > 1 );
-    const auto sz = settings.subdivideParts;
-    const auto numIniVerts = mesh.topology.numValidVerts();
+    assert( !treeParts || ( !settings.partFaces && treeParts->size() > 1 ) );
+    const int sz = treeParts ? int( treeParts->size() ) : settings.subdivideParts;
+    // the vertices of the region, which are distributed among the parts to determine their quotas of deletions
+    const auto numIniVerts = settings.region ? getIncidentVerts( mesh.topology, *settings.region ).count() : mesh.topology.numValidVerts();
     assert( !settings.partFaces || settings.partFaces->size() == sz );
 
     DecimateResult res;
@@ -1037,6 +1109,11 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     if ( settings.progressCallback && !settings.progressCallback( 0 ) )
         return res;
 
+    // if decimateBetweenParts, then parts are the leaves of a binary tree, and as soon as two sibling nodes are decimated,
+    // their union is decimated in parallel with other nodes; only the root (the whole mesh) is decimated at the end alone
+    const bool hierarchical = settings.decimateBetweenParts;
+
+    /// a subdivision part (first sz elements) or an internal node of the tree in hierarchical mode
     struct alignas(64) Parts
     {
         /// region faces of the subdivision part
@@ -1046,23 +1123,101 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
         VertBitSet bdVerts;
 
         /// these are inner vertices of this part that can be easily deleted during part decimation;
-        /// filled only if limitedDeletion
+        /// filled only if limitedDeletion, and only for subdivision parts
         VertBitSet removableVerts;
 
+        /// edges incident to region faces
+        UndirectedEdgeBitSet regionEdges;
+
         DecimateResult decimRes;
+
+        /// this node covers subdivision parts [beginPart, endPart)
+        int beginPart = 0, endPart = 0;
+
+        /// the links in the tree, -1 if absent
+        int parent = -1, left = -1, right = -1;
+
+        /// the number of removable vertices in this node, which become removable only after the union of its children
+        std::atomic<size_t> extraRemovableVerts{ 0 };
+
+        /// the number of removable vertices in all parts of this node, and the number of deleted vertices/faces in all nodes of this subtree
+        size_t numRemovableVerts = 0;
+        int subtreeVertsDeleted = 0, subtreeFacesDeleted = 0;
+
+        /// the node is decimated by the thread which finished the second of its children
+        std::atomic<int> finishedChildren{ 0 };
     };
-    std::vector<Parts> parts( sz );
+    Vector<Parts> parts( hierarchical ? 2 * sz - 1 : sz );
+    for ( int i = 0; i < sz; ++i )
+    {
+        parts[i].beginPart = i;
+        parts[i].endPart = i + 1;
+    }
+
+    // build the tree with internal nodes after the leaves, a child always has smaller id than its parent
+    int root = -1;
+    if ( hierarchical )
+    {
+        int nextNode = sz;
+        auto build = [&]( auto && self, int beginPart, int endPart ) -> int
+        {
+            if ( endPart - beginPart == 1 )
+                return beginPart;
+            const int midPart = beginPart + ( endPart - beginPart ) / 2;
+            const int left = self( self, beginPart, midPart );
+            const int right = self( self, midPart, endPart );
+            const int id = nextNode++;
+            auto & node = parts[id];
+            node.beginPart = beginPart;
+            node.endPart = endPart;
+            node.left = left;
+            node.right = right;
+            parts[left].parent = parts[right].parent = id;
+            return id;
+        };
+        root = build( build, 0, sz );
+        assert( root + 1 == parts.size() );
+    }
+
+    // returns the smallest node containing all parts in [loPart, hiPart]
+    auto smallestNode = [&]( int loPart, int hiPart )
+    {
+        assert( 0 <= loPart && loPart <= hiPart && hiPart < sz );
+        int id = root;
+        for ( ;; )
+        {
+            const auto & node = parts[id];
+            if ( node.left < 0 )
+                return id;
+            if ( hiPart < parts[node.left].endPart )
+                id = node.left;
+            else if ( loPart >= parts[node.right].beginPart )
+                id = node.right;
+            else
+                return id;
+        }
+    };
 
     // determine faces for each part
-    ParallelFor( parts, [&]( size_t i )
+    ParallelFor( 0, sz, [&]( size_t i )
     {
         if ( settings.partFaces )
             parts[i].region = std::move( (*settings.partFaces)[i] );
+        else if ( treeParts )
+            parts[i].region = std::move( (*treeParts)[i] );
         else
             parts[i].region = getSubdividePart( mesh.topology.getValidFaces(), settings.subdivideParts, i );
     } );
     if ( settings.progressCallback && !settings.progressCallback( 0.03f ) )
         return res;
+
+    // the part of each face (parts do not overlap), -1 for faces outside all parts
+    Vector<int, FaceId> facePart( mesh.topology.faceSize(), -1 );
+    ParallelFor( 0, sz, [&]( size_t i )
+    {
+        for ( auto f : parts[i].region )
+            facePart[f] = int( i );
+    } );
 
     // determine edges in between the parts
     UndirectedEdgeBitSet stableEdges( mesh.topology.undirectedEdgeSize() );
@@ -1070,16 +1225,8 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     {
         FaceId l = mesh.topology.left( ue );
         FaceId r = mesh.topology.right( ue );
-        if ( !l || !r )
-            return;
-        for ( size_t i = 0; i < sz; ++i )
-        {
-            if ( parts[i].region.test( l ) != parts[i].region.test( r ) )
-            {
-                stableEdges.set( ue );
-                break;
-            }
-        }
+        if ( l && r && facePart[l] != facePart[r] )
+            stableEdges.set( ue );
     } );
     if ( settings.progressCallback && !settings.progressCallback( 0.07f ) )
         return res;
@@ -1088,47 +1235,167 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
         settings.maxDeletedVertices < mesh.topology.numValidVerts() ||
         settings.maxDeletedFaces < mesh.topology.numValidFaces();
 
-    // limit each part to region, find boundary vertices
-    ParallelFor( parts, [&]( size_t i )
+    ParallelFor( 0, sz, [&]( size_t i )
     {
-        auto & faces = parts[i].region;
-        if ( settings.touchNearBdEdges )
-        {
-            /// vertices on the boundary of subdivision,
-            /// if a vertex is only on hole's boundary or region's boundary but not on subdivision boundary, it is not here
-            parts[i].bdVerts = getRegionBoundaryVerts( mesh.topology, faces );
-            if ( settings.region )
-                faces &= *settings.region;
-        }
-        else
-        {
-            if ( settings.region )
-                faces &= *settings.region;
-            /// all boundary vertices of subdivision faces, including hole boundaries
-            parts[i].bdVerts = getBoundaryVerts( mesh.topology, &faces );
-        }
+        if ( settings.region )
+            parts[i].region &= *settings.region;
+        parts[i].bdVerts.resize( mesh.topology.vertSize() );
         if ( limitedDeletion )
+            parts[i].removableVerts.resize( mesh.topology.vertSize() );
+    } );
+
+    // the range of parts of the faces around a vertex or a face:
+    // lo = -1 if it has a face outside of all parts (or a hole or a face outside of region if !touchNearBdEdges), so it is fixed till the final decimation,
+    // hi = INT_MAX if it has no region faces around, so it cannot be deleted
+    struct PartRange
+    {
+        int lo = INT_MAX, hi = -1;
+        void include( const PartRange & r ) { lo = std::min( lo, r.lo ); hi = std::max( hi, r.hi ); }
+        bool inside( const Parts & node ) const { return node.beginPart <= lo && hi < node.endPart; }
+    };
+    Vector<PartRange, VertId> vertRange( mesh.topology.vertSize() );
+    // vertices on the boundaries of parts
+    tbb::enumerable_thread_specific<Vector<VertId>> threadBdVerts;
+
+    // bdVerts: vertices with incident (region) faces from several parts, and if !touchNearBdEdges also on hole or region boundaries;
+    // one pass for all parts instead of a whole-mesh pass per part; writing different VertBitSets by v is race-free
+    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+    {
+        PartRange r;
+        bool outside = false, inRegion = false;
+        for ( auto e : orgRing( mesh.topology, v ) )
         {
-            // all inner vertices of the part
-            auto innerVerts0 = getIncidentVerts( mesh.topology, faces ) - parts[i].bdVerts;
-            // exclude the first level of inner vertices, because they cannot be all deleted without violating aspect ratio criterion
-            auto innerFaces = getInnerFaces( mesh.topology, innerVerts0 );
-            parts[i].removableVerts = getInnerVerts( mesh.topology, innerFaces );
+            const auto f = mesh.topology.left( e );
+            const bool fInRegion = f && ( !settings.region || settings.region->test( f ) );
+            if ( fInRegion )
+                inRegion = true;
+            else if ( !settings.touchNearBdEdges )
+                outside = true;
+            if ( !f )
+                continue;
+            if ( const int p = facePart[f]; p >= 0 )
+                r.include( { p, p } );
+            else
+                outside = true;
+        }
+        if ( outside )
+            r.lo = -1;
+        if ( !inRegion )
+            r.hi = INT_MAX;
+        vertRange[v] = r;
+        if ( r.lo == r.hi )
+            return; // inside one part, or no faces at all
+        for ( auto e : orgRing( mesh.topology, v ) )
+            if ( const auto f = mesh.topology.left( e ); f && facePart[f] >= 0 && ( settings.touchNearBdEdges || contains( settings.region, f ) ) )
+                parts[facePart[f]].bdVerts.set( v );
+        if ( hierarchical )
+            threadBdVerts.local().push_back( v );
+    } );
+
+    if ( limitedDeletion )
+    {
+        // removableVerts: vertices of parts excluding the first level of inner vertices, because they cannot be all deleted without violating aspect ratio criterion;
+        // extraRemovableVerts: such vertices in a node, but not in its children
+        Vector<PartRange, FaceId> faceRange( mesh.topology.faceSize() );
+        BitSetParallelFor( mesh.topology.getValidFaces(), [&]( FaceId f )
+        {
+            PartRange r;
+            for ( auto e : leftRing( mesh.topology, f ) )
+                r.include( vertRange[mesh.topology.org( e )] );
+            faceRange[f] = r;
+        } );
+        BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+        {
+            PartRange r;
+            for ( auto e : orgRing( mesh.topology, v ) )
+            {
+                const auto f = mesh.topology.left( e );
+                if ( !f )
+                    return;
+                r.include( faceRange[f] );
+            }
+            if ( r.lo < 0 || r.lo > r.hi || r.hi >= sz )
+                return;
+            if ( r.lo == r.hi )
+                parts[r.lo].removableVerts.set( v );
+            else if ( hierarchical )
+                parts[smallestNode( r.lo, r.hi )].extraRemovableVerts.fetch_add( 1, std::memory_order_relaxed );
+        } );
+    }
+
+    // edges of each part's region (facePart limited to settings.region) without edges touching part's bdVerts,
+    // in one pass over all edges instead of a getIncidentEdges pass per part;
+    // all edge bit sets have the same indexing, so threads write disjoint blocks
+    ParallelFor( 0, sz, [&]( size_t i ) { parts[i].regionEdges.resize( mesh.topology.undirectedEdgeSize() ); } );
+    BitSetParallelForAll( parts[0].regionEdges, [&]( UndirectedEdgeId ue )
+    {
+        for ( auto f : { mesh.topology.left( ue ), mesh.topology.right( ue ) } )
+        {
+            if ( !f || facePart[f] < 0 || ( settings.region && !settings.region->test( f ) ) )
+                continue;
+            auto & part = parts[size_t( facePart[f] )];
+            if ( !part.bdVerts.test( mesh.topology.org( ue ) ) && !part.bdVerts.test( mesh.topology.dest( ue ) ) )
+                part.regionEdges.set( ue );
         }
     } );
+
     if ( settings.progressCallback && !settings.progressCallback( 0.14f ) )
         return res;
 
-    /// these vertices can be deleted only after parallel parts processing
-    VertBitSet seqVerts;
-    if ( limitedDeletion )
-    {
-        seqVerts = mesh.topology.getValidVerts();
-        for ( int i = 0; i < parts.size(); ++i )
-            seqVerts -= parts[i].removableVerts;
-    }
-
     mesh.topology.preferEdges( stableEdges );
+    if ( hierarchical )
+    {
+        // the edge of a vertex can be deleted only in the node, where the vertex is not fixed anymore;
+        // otherwise the edge of a vertex could change during decimation of one node, while another node reads it
+        Vector<int> depth( parts.size(), 0 );
+        for ( int id = root - 1; id >= 0; --id )
+            depth[id] = depth[parts[id].parent] + 1;
+        // the depth of the node, where the edge or the vertex stops being fixed
+        auto edgeDepth = [&]( EdgeId e )
+        {
+            const auto l = mesh.topology.left( e );
+            const auto r = mesh.topology.right( e );
+            const int pl = facePart[l ? l : r]; // a boundary edge belongs to one part
+            const int pr = facePart[r ? r : l];
+            if ( pl < 0 || pr < 0 )
+                return 0;
+            return depth[smallestNode( std::min( pl, pr ), std::max( pl, pr ) )];
+        };
+        auto vertDepth = [&]( VertId v )
+        {
+            const auto r = vertRange[v];
+            return ( r.lo < 0 || r.hi >= sz ) ? 0 : depth[smallestNode( r.lo, r.hi )];
+        };
+        Vector<VertId> bdVerts;
+        for ( auto & tv : threadBdVerts )
+            bdVerts.insert( bdVerts.end(), tv.begin(), tv.end() );
+        Vector<EdgeId> betterEdges( bdVerts.size() );
+        ParallelFor( bdVerts, [&]( size_t i )
+        {
+            const auto v = bdVerts[i];
+            const int vd = vertDepth( v );
+            int bestDepth = edgeDepth( mesh.topology.edgeWithOrg( v ) );
+            for ( auto e : orgRing( mesh.topology, v ) )
+            {
+                if ( bestDepth <= vd )
+                    break;
+                if ( const int d = edgeDepth( e ); d < bestDepth )
+                {
+                    bestDepth = d;
+                    betterEdges[i] = e;
+                }
+            }
+        } );
+        for ( auto e : betterEdges )
+        {
+            if ( !e )
+                continue;
+            // make e the edge of its origin
+            const auto v = mesh.topology.org( e );
+            mesh.topology.setOrg( e, {} );
+            mesh.topology.setOrg( e, v );
+        }
+    }
     if ( settings.progressCallback && !settings.progressCallback( 0.16f ) )
         return res;
 
@@ -1145,65 +1412,129 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     TbbThreadMutex reporterMutex;
     std::atomic<bool> cancelled{ false };
     std::atomic<int> finishedParts{ 0 };
+    const int numToDecimate = hierarchical ? root : sz; // all nodes except the root
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, sz ), [&]( const tbb::blocked_range<size_t>& range )
     {
         const auto reporterLock = reporterMutex.tryLock();
         const bool reportProgressFromThisThread = settings.progressCallback && reporterLock;
-        for ( size_t i = range.begin(); i < range.end(); ++i )
+        auto reportThreadProgress = [&]( float p )
         {
-            auto reportThreadProgress = [&]( float p )
+            if ( cancelled.load( std::memory_order_relaxed ) )
+                return false;
+            if ( reportProgressFromThisThread && !settings.progressCallback( 0.2f + 0.65f * ( finishedParts.load( std::memory_order_relaxed ) + p ) / numToDecimate ) )
             {
-                if ( cancelled.load( std::memory_order_relaxed ) )
-                    return false;
-                if ( reportProgressFromThisThread && !settings.progressCallback( 0.2f + 0.65f * ( finishedParts.load( std::memory_order_relaxed ) + p ) / sz ) )
-                {
-                    cancelled.store( true, std::memory_order_relaxed );
-                    return false;
-                }
-                return true;
-            };
+                cancelled.store( true, std::memory_order_relaxed );
+                return false;
+            }
+            return true;
+        };
+
+        // decimates given part or internal node, whose children are already decimated; returns false if cancelled
+        auto decimateNode = [&]( int id )
+        {
             if ( !reportThreadProgress( 0 ) )
-                break;
+                return false;
+            auto & node = parts[id];
+            UndirectedEdgeBitSet seamEdges;
+            if ( node.left >= 0 )
+            {
+                // unite the children, their common boundary is not fixed anymore
+                auto & l = parts[node.left];
+                auto & r = parts[node.right];
+                node.region = std::exchange( l.region, {} );
+                node.region |= r.region;
+                r.region = {};
+                // region edges of the children (may include the ones deleted there) without edges near children's bdVerts
+                node.regionEdges = std::exchange( l.regionEdges, {} );
+                node.regionEdges |= r.regionEdges;
+                r.regionEdges = {};
+                node.bdVerts = std::exchange( l.bdVerts, {} );
+                node.bdVerts |= r.bdVerts;
+                r.bdVerts = {};
+                Vector<VertId> freedVerts;
+                for ( auto v : node.bdVerts )
+                    if ( vertRange[v].inside( node ) )
+                        freedVerts.push_back( v );
+                for ( auto v : freedVerts )
+                    node.bdVerts.reset( v );
+                // only the edges near freed vertices were not considered in the children
+                seamEdges.resize( mesh.topology.undirectedEdgeSize() );
+                for ( auto v : freedVerts )
+                {
+                    for ( auto e : orgRing( mesh.topology, v ) )
+                    {
+                        seamEdges.set( e.undirected() );
+                        if ( !node.bdVerts.test( mesh.topology.dest( e ) )
+                            && ( contains( node.region, mesh.topology.left( e ) ) || contains( node.region, mesh.topology.right( e ) ) ) )
+                            node.regionEdges.set( e.undirected() );
+                    }
+                }
+                node.numRemovableVerts = l.numRemovableVerts + r.numRemovableVerts + node.extraRemovableVerts.load( std::memory_order_relaxed );
+                node.subtreeVertsDeleted = l.subtreeVertsDeleted + r.subtreeVertsDeleted;
+                node.subtreeFacesDeleted = l.subtreeFacesDeleted + r.subtreeFacesDeleted;
+            }
+            else if ( limitedDeletion )
+                node.numRemovableVerts = node.removableVerts.count();
 
             DecimateSettings subSeqSettings = settings;
             if ( limitedDeletion )
             {
-                /// give quota of deletions proportional to the number of removable vertices in the part
-                const auto numPartRemovableVerts = parts[i].removableVerts.count();
-                const auto partFraction = float( numPartRemovableVerts ) / numIniVerts;
-                subSeqSettings.maxDeletedVertices = int( settings.maxDeletedVertices * partFraction );
-                subSeqSettings.maxDeletedFaces = int( settings.maxDeletedFaces * partFraction );
+                /// give quota of deletions proportional to the number of removable vertices in the node, minus already deleted in its children
+                const auto partFraction = float( node.numRemovableVerts ) / numIniVerts;
+                subSeqSettings.maxDeletedVertices = std::max( 0, int( settings.maxDeletedVertices * partFraction ) - node.subtreeVertsDeleted );
+                subSeqSettings.maxDeletedFaces = std::max( 0, int( settings.maxDeletedFaces * partFraction ) - node.subtreeFacesDeleted );
             }
             if ( settings.minFacesInPart > 0 )
             {
-                int startFaces = (int)parts[i].region.count();
-                if ( startFaces > settings.minFacesInPart )
-                    subSeqSettings.maxDeletedFaces = std::min( subSeqSettings.maxDeletedFaces, startFaces - settings.minFacesInPart );
+                const int startFaces = (int)node.region.count();
+                const int minFaces = settings.minFacesInPart * ( node.endPart - node.beginPart );
+                if ( startFaces > minFaces )
+                    subSeqSettings.maxDeletedFaces = std::min( subSeqSettings.maxDeletedFaces, startFaces - minFaces );
                 else
                     subSeqSettings.maxDeletedFaces = 0;
             }
             subSeqSettings.packMesh = false;
             subSeqSettings.vertForms = &mVertForms;
-            subSeqSettings.touchNearBdEdges = false;
+            // regionEdges already exclude the edges touching bdVerts
+            subSeqSettings.touchNearBdEdges = true;
             // after mesh.topology.stopUpdatingValids(), seq-subdivider cannot find bdVerts by itself
-            subSeqSettings.bdVerts = &parts[i].bdVerts;
-            subSeqSettings.region = &parts[i].region;
+            subSeqSettings.bdVerts = &node.bdVerts;
+            subSeqSettings.regionEdges = &node.regionEdges;
+            subSeqSettings.region = &node.region;
             if ( reportProgressFromThisThread )
                 subSeqSettings.progressCallback = [reportThreadProgress]( float p ) { return reportThreadProgress( p ); };
             else if ( settings.progressCallback )
                 subSeqSettings.progressCallback = [&cancelled]( float ) { return !cancelled.load( std::memory_order_relaxed ); };
-            parts[i].decimRes = decimateMeshSerial( mesh, subSeqSettings );
+            // a part puts in its initial queue all its region edges, found by visiting only the set bits (and not by testing every edge of the mesh);
+            // a united node only the edges near the former border between its children
+            node.decimRes = decimateMeshSerial( mesh, subSeqSettings, node.left >= 0 ? &seamEdges : &node.regionEdges );
+            node.subtreeVertsDeleted += node.decimRes.vertsDeleted;
+            node.subtreeFacesDeleted += node.decimRes.facesDeleted;
 
-            if ( parts[i].decimRes.cancelled || !reportThreadProgress( 1 ) )
-                break;
+            if ( node.decimRes.cancelled || !reportThreadProgress( 1 ) )
+                return false;
             finishedParts.fetch_add( 1, std::memory_order_relaxed );
+            return true;
+        };
+
+        for ( size_t i = range.begin(); i < range.end(); ++i )
+        {
+            if ( !decimateNode( int( i ) ) )
+                break;
+            // go up the tree while this thread finishes the second child of a node
+            bool ok = true;
+            for ( int id = parts[i].parent; ok && id >= 0 && id != root && parts[id].finishedChildren.fetch_add( 1 ) == 1; id = parts[id].parent )
+                ok = decimateNode( id );
+            if ( !ok )
+                break;
         }
     } );
 
     if ( settings.region )
     {
-        // not ParallelFor to allow for subdivisions not aligned to BitSet's block boundaries
-        *settings.region = tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, sz ), FaceBitSet{},
+        // not ParallelFor to allow for subdivisions not aligned to BitSet's block boundaries;
+        // united regions of decimated nodes are stored in the nodes, and the regions of their children are empty
+        *settings.region = tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, parts.size() ), FaceBitSet{},
             [&] ( const tbb::blocked_range<size_t> range, FaceBitSet cur )
             {
                 for ( size_t i = range.begin(); i < range.end(); i++ )
@@ -1239,7 +1570,37 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     }
     seqSettings.vertForms = &mVertForms;
     seqSettings.progressCallback = subprogress( settings.progressCallback, 0.9f, 1.0f );
-    if ( settings.decimateBetweenParts )
+    if ( hierarchical )
+    {
+        // all edges except for the ones near the boundary between two halves of the mesh were already considered in the tree's nodes
+        auto & rootNode = parts[root];
+        auto seamVerts = std::exchange( parts[rootNode.left].bdVerts, {} );
+        seamVerts |= parts[rootNode.right].bdVerts;
+        const auto seamEdges = getIncidentEdges( mesh.topology, seamVerts );
+        seqSettings.packMesh = false;
+        seqSettings.progressCallback = subprogress( settings.progressCallback, 0.9f, 0.95f );
+        res = decimateMeshSerial( mesh, seqSettings, &seamEdges );
+        if ( !res.cancelled && limitedDeletion && res.facesDeleted < seqSettings.maxDeletedFaces && res.vertsDeleted < seqSettings.maxDeletedVertices )
+        {
+            // some nodes did not reach their quotas, so others shall delete more
+            seqSettings.maxDeletedFaces -= res.facesDeleted;
+            seqSettings.maxDeletedVertices -= res.vertsDeleted;
+            seqSettings.packMesh = settings.packMesh;
+            seqSettings.progressCallback = subprogress( settings.progressCallback, 0.95f, 1.0f );
+            const auto seamRes = res;
+            res = decimateMeshSerial( mesh, seqSettings );
+            res.facesDeleted += seamRes.facesDeleted;
+            res.vertsDeleted += seamRes.vertsDeleted;
+        }
+        else if ( !res.cancelled )
+        {
+            if ( settings.progressCallback && !settings.progressCallback( 1.0f ) )
+                res.cancelled = true;
+            else if ( settings.packMesh )
+                packMesh( mesh, seqSettings );
+        }
+    }
+    else if ( settings.decimateBetweenParts )
     {
         res = decimateMeshSerial( mesh, seqSettings );
     }
@@ -1281,9 +1642,15 @@ DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings0 )
         return res;
 #endif
 
+    Vector<FaceBitSet> treeParts;
+    if ( settings.subdivideParts > 1 && !settings.partFaces && settings.partsMode == DecimatePartsMode::AABBTree )
+        treeParts = getTreeParts( mesh, settings ); // before invalidateCaches() to use the tree of the mesh if any
+
     mesh.invalidateCaches(); // free memory occupied by trees before running the algorithm, which makes them invalid anyway
-    res = ( settings.subdivideParts > 1 ) ?
-        decimateMeshParallelInplace( mesh, settings ) : decimateMeshSerial( mesh, settings );
+    if ( settings.subdivideParts <= 1 || ( settings.partsMode == DecimatePartsMode::AABBTree && !settings.partFaces && treeParts.size() <= 1 ) )
+        res = decimateMeshSerial( mesh, settings );
+    else
+        res = decimateMeshParallelInplace( mesh, settings, treeParts.empty() ? nullptr : &treeParts );
     assert ( !mesh.getAABBTreeNotCreate() ); // make sure that nobody created the tree by mistake
     assert ( mesh.topology.checkValidity() );
     return res;
@@ -1324,7 +1691,7 @@ DecimateResult decimateObjectMeshData( ObjectMeshData & data, const DecimateSett
     }
 
     std::shared_ptr<UndirectedEdgeBMap> emap;
-    if ( settings.subdivideParts > 1 )
+    if ( settings.subdivideParts > 1 && settings.partsMode != DecimatePartsMode::AABBTree )
     {
         auto packMapping = data.mesh->packOptimally( false );
         if ( updateUV )
@@ -1339,7 +1706,7 @@ DecimateResult decimateObjectMeshData( ObjectMeshData & data, const DecimateSett
             data.selectedFaces = data.selectedFaces.getMapping( packMapping.f );
         if ( settings.region )
             *settings.region = settings.region->getMapping( packMapping.f );
-        emap = std::make_shared<UndirectedEdgeBMap>( std::move( packMapping.e ) );
+        emap = std::allocate_shared<UndirectedEdgeBMap>( Allocator<UndirectedEdgeBMap>(), std::move( packMapping.e ) );
         if ( !reportProgress( set0.progressCallback, .2f ) )
             return res;
     }
@@ -1366,7 +1733,7 @@ DecimateResult decimateObjectMeshData( ObjectMeshData & data, const DecimateSett
         if ( emap )
             *emap = compose( packMapping.e, *emap );
         else
-            emap = std::make_shared<UndirectedEdgeBMap>( std::move( packMapping.e ) );
+            emap = std::allocate_shared<UndirectedEdgeBMap>( Allocator<UndirectedEdgeBMap>(), std::move( packMapping.e ) );
 
         packMapping = {}; //free memory
         data.mesh->shrinkToFit();
@@ -1402,7 +1769,7 @@ MRMESH_API std::optional<ObjectMeshData> makeDecimatedObjectMeshData( const Obje
         return {};
     }
     // clone mesh as well
-    data.mesh = std::make_shared<Mesh>( *data.mesh );
+    data.mesh = std::allocate_shared<Mesh>( Allocator<Mesh>(), *data.mesh );
     auto res = decimateObjectMeshData( data, settings );
     if ( outRes )
         *outRes = res;
@@ -1431,6 +1798,7 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     subs.maxEdgeLen = settings.targetEdgeLen;
     subs.maxEdgeSplits = settings.maxEdgeSplits;
     subs.maxAngleChangeAfterFlip = settings.maxAngleChangeAfterFlip;
+    subs.maxDeviationAfterFlip = 0.1f * settings.targetEdgeLen; // the default 1 cuts off sharp edges of small meshes
     subs.subdivideBorder = !settings.frozenBoundary;
     subs.maxSplittableTriAspectRatio = settings.maxSplittableTriAspectRatio;
     subs.smoothMode = settings.useCurvature;
@@ -1446,7 +1814,8 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     // compute target number of triangles to get desired average edge length
     const auto regionArea = mesh.area( settings.region );
     const auto targetTriArea = sqr( settings.targetEdgeLen ) * ( sqrt( 3.0f ) / 4 ); // for equilateral triangle
-    const auto targetNumTri = int( regionArea / targetTriArea );
+    const auto targetNumTriD = regionArea / targetTriArea;
+    const int targetNumTri = targetNumTriD < INT_MAX ? int( targetNumTriD ) : INT_MAX; // a tiny targetEdgeLen gives a ratio beyond int
     const auto currNumTri = settings.region ? (int)settings.region->count() : mesh.topology.numValidFaces();
 
     if ( currNumTri > targetNumTri )

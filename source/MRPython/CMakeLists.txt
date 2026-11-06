@@ -5,49 +5,14 @@ file(GLOB HEADERS "*.h")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
-# TODO: find Python independently
-
-find_package(pybind11nonlimitedapi REQUIRED HINTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib/cmake/pybind11nonlimitedapi")
-
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
     MRMesh
-    pybind11nonlimitedapi::pybind11nonlimitedapi_stubs
-  PRIVATE
-    ${CMAKE_DL_LIBS}
 )
-
-# Put the prebuilt shim next to the modules, where our patched pybind looks for it at runtime.
-if(NOT "${pybind11nonlimitedapi_SHIM_PYTHON_VERSION}" STREQUAL "${Python_VERSION_MAJOR}.${Python_VERSION_MINOR}")
-  message(FATAL_ERROR "The prebuilt pybind shim targets Python ${pybind11nonlimitedapi_SHIM_PYTHON_VERSION}, but this build uses ${Python_VERSION_MAJOR}.${Python_VERSION_MINOR}. Rebuild the thirdparty against this Python version.")
-endif()
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/meshlib"
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:${pybind11nonlimitedapi_SHIM_TARGET}>" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/meshlib/"
-)
-install(
-  FILES "$<TARGET_FILE:${pybind11nonlimitedapi_SHIM_TARGET}>"
-  DESTINATION "${MR_PY_LIB_DIR}"
-)
-
-IF(APPLE)
-  target_link_options(${PROJECT_NAME} PRIVATE -undefined dynamic_lookup)
-ENDIF()
-
-# Don't emit undefined references. We need this because we don't want to link to a specific Python version.
-# The flag we're removing here is something we only set on Linux, in `CompilerOptions.cmake`.
-string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
-
-target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${Python_INCLUDE_DIRS}>)
-
-# `dladdr` in our patched `PYBIND11_MODULE(...)` needs this.
-IF(NOT WIN32)
-  target_compile_definitions(${PROJECT_NAME} PUBLIC _GNU_SOURCE)
-ENDIF()
 
 IF(MSVC AND DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
   # Copy Python DLLs into the bin directory.
-  # We always copy the Release ones (pybind11 wants to use Release DLLs even in Debug mode).
+  # We always copy the Release ones: `MREmbeddedPython` uses them even in Debug mode.
   # By default only the `python311[_d].dll` gets copied, but we also need `python3.dll` and the non-debug `python311.dll` in Debug mode as said above.
   file(COPY ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/python${Python_VERSION_MAJOR}.dll DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
   file(COPY ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/python${Python_VERSION_MAJOR}${Python_VERSION_MINOR}.dll DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
@@ -55,8 +20,8 @@ IF(MSVC AND DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
   # Release Python links to the Release zlib alias. In Release builds applocal
   # finds it via the consumer chain, but Debug builds only ask for Debug zlib
   # (zd.dll / zlib-ngd2.dll), so the Release `z.dll` never lands next to the
-  # Release `python312.dll` we just copied above. Copy it manually so
-  # `python312.dll`'s load-time `z.dll` import resolves and `Py_Initialize`
+  # Release `python3XY.dll` we just copied above. Copy it manually so
+  # `python3XY.dll`'s load-time `z.dll` import resolves and `Py_Initialize`
   # doesn't fail silently inside MRTest.exe. 
   if (EXISTS "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/z.dll")
     file(COPY ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/z.dll DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})

@@ -106,7 +106,7 @@ public:
 
     /// computes the closest points on point cloud to given points
     virtual Expected<void> findProjections( std::vector<PointsProjectionResult>& results,
-        const std::vector<Vector3f>& points, const FindProjectionOnPointsSettings& settings ) const = 0;
+        const VertCoords& points, const FindProjectionOnPointsSettings& settings ) const = 0;
 
     /// Returns amount of memory needed to compute projections
     virtual size_t projectionsHeapBytes( size_t numProjections ) const = 0;
@@ -121,7 +121,7 @@ public:
 
     /// computes the closest points on point cloud to given points
     MRMESH_API Expected<void> findProjections( std::vector<PointsProjectionResult>& results,
-        const std::vector<Vector3f>& points, const FindProjectionOnPointsSettings& settings ) const override;
+        const VertCoords& points, const FindProjectionOnPointsSettings& settings ) const override;
 
     /// Returns amount of memory needed to compute projections
     MRMESH_API virtual size_t projectionsHeapBytes( size_t numProjections ) const override;

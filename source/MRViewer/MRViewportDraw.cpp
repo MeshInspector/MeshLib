@@ -136,7 +136,7 @@ void Viewport::drawLines( const std::vector<LineSegm3f>& lines, const std::vecto
     GL_EXEC( glDeleteVertexArrays( 1, &lineVAO ) );
 }
 
-void Viewport::drawPoints( const std::vector<Vector3f>& points, const std::vector<Vector4f>& colors, const LinePointImmediateRenderParams & params )
+void Viewport::drawPoints( std::span<const Vector3f> points, std::span<const Vector4f> colors, const LinePointImmediateRenderParams & params )
 {
     if ( !Viewer::constInstance()->isGLInitialized() )
         return;

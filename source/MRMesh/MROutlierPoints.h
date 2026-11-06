@@ -35,7 +35,7 @@ enum class OutlierTypeMask
 MR_MAKE_FLAG_OPERATORS( OutlierTypeMask )
 
 /// A class for searching for outliers of points
-/// @detail The class caches the prepared search results, which allows to speed up the repeat search (while use same radius)
+/// @details The class caches the prepared search results, which allows to speed up the repeat search (while use same radius)
 class MRMESH_CLASS OutliersDetector
 {
 public:

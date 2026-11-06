@@ -3,6 +3,8 @@
 #include "MRPointCloud.h"
 #include "MRBox.h"
 #include "MRGridSampling.h"
+#include "MRMeshToPointCloud.h"
+#include "MRTimer.h"
 #include "MRMeshProject.h"
 #include "MRPointsProject.h"
 #include "MRObjectMesh.h"
@@ -65,6 +67,22 @@ std::optional<VertBitSet> MeshOrPoints::pointsGridSampling( float voxelSize, siz
         [voxelSize, cb]( const MeshPart & mp ) { return verticesGridSampling( mp, voxelSize, cb ); },
         [voxelSize, cb]( const PointCloudPart & pcp ) { return pointGridSampling( pcp, voxelSize, cb ); }
     }, var_ );
+}
+
+VertBitSet MeshOrPoints::surfaceGridSampling( float voxelSize, std::shared_ptr<PointCloud> & cloud ) const
+{
+    MR_TIMER;
+    cloud.reset();
+    const auto mp = asMeshPart();
+    if ( !mp || !( voxelSize > 0 ) || isCoveredByVertices( *mp, voxelSize / 2 ) )
+        return *pointsGridSampling( voxelSize );
+
+    auto dense = meshToDensePointCloud( *mp, voxelSize / 2, VertNormalsMode::AngleWeighted );
+    if ( !dense )
+        return *pointsGridSampling( voxelSize );
+
+    cloud = std::make_shared<PointCloud>( std::move( *dense ) );
+    return *MeshOrPoints( *cloud ).pointsGridSampling( voxelSize );
 }
 
 const VertCoords & MeshOrPoints::points() const

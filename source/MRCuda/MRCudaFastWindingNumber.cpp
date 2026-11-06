@@ -59,11 +59,11 @@ Expected<void> FastWindingNumber::prepareData_( ProgressCallback cb )
     if ( !reportProgress( cb, 0.0f ) )
         return unexpectedOperationCanceled();
 
-    CUDA_LOGE_RETURN_UNEXPECTED( data->cudaMeshPoints.fromVector( mesh_.points.vec_ ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( data->cudaMeshPoints.fromVector( mesh_.points ) );
     if ( !reportProgress( cb, 0.1f ) )
         return unexpectedOperationCanceled();
 
-    CUDA_LOGE_RETURN_UNEXPECTED( data->cudaFaces.fromVector( mesh_.topology.getTriangulation().vec_ ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( data->cudaFaces.fromVector( mesh_.topology.getTriangulation() ) );
     if ( !reportProgress( cb, 0.3f ) )
         return unexpectedOperationCanceled();
 
@@ -72,11 +72,11 @@ Expected<void> FastWindingNumber::prepareData_( ProgressCallback cb )
         return unexpectedOperationCanceled();
 
     const auto& nodes = tree.nodes();
-    CUDA_LOGE_RETURN_UNEXPECTED( data->cudaNodes.fromVector( nodes.vec_ ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( data->cudaNodes.fromVector( nodes ) );
     if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
 
-    CUDA_LOGE_RETURN_UNEXPECTED( data->dipoles.fromVector( mesh_.getDipoles().vec_ ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( data->dipoles.fromVector( mesh_.getDipoles() ) );
     if ( !reportProgress( cb, 1.0f ) )
         return unexpectedOperationCanceled();
 
@@ -227,7 +227,7 @@ Expected<void> FastWindingNumber::calcFromGrid( std::vector<float>& res, const V
     return {};
 }
 
-Expected<void> FastWindingNumber::calcFromGridWithDistances( std::vector<float>& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, const DistanceToMeshOptions& options, const ProgressCallback& cb )
+Expected<void> FastWindingNumber::calcFromGridWithDistances( VoxelScalars& res, const Vector3i& dims, const AffineXf3f& gridToMeshXf, const DistanceToMeshOptions& options, const ProgressCallback& cb )
 {
     MR_TIMER;
     if ( auto maybe = prepareData_( subprogress( cb, 0.0, 0.5f ) ); !maybe )
@@ -312,8 +312,8 @@ Expected<void> FastWindingNumber::calcFromGridByParts( GridByPartsFunc resFunc, 
     size_t iterIndex = 0;
 
     const auto [begin, end] = splitByChunks( totalSize, bufferSize, layerSize * layerOverlap );
-    return cudaPipeline( std::vector<float>{}, begin, end,
-        [&] ( std::vector<float>& data, Chunk chunk ) -> Expected<void>
+    return cudaPipeline( VoxelScalars{}, begin, end,
+        [&] ( VoxelScalars& data, Chunk chunk ) -> Expected<void>
         {
             spdlog::info( "CudaFastWindingNumber: chunk [{}, {}) starting", chunk.offset, chunk.offset + chunk.size );
             fastWindingNumberFromGrid(
@@ -337,7 +337,7 @@ Expected<void> FastWindingNumber::calcFromGridByParts( GridByPartsFunc resFunc, 
 
             return {};
         },
-        [&] ( std::vector<float>& data, Chunk chunk ) -> Expected<void>
+        [&] ( VoxelScalars& data, Chunk chunk ) -> Expected<void>
         {
             const auto cb2 = subprogress( cb1, iterIndex++, iterCount );
             data.resize( chunk.size );
@@ -385,8 +385,8 @@ Expected<void> FastWindingNumber::calcFromGridWithDistancesByParts( GridByPartsF
     size_t iterIndex = 0;
 
     const auto [begin, end] = splitByChunks( totalSize, bufferSize, layerSize * layerOverlap );
-    return cudaPipeline( std::vector<float>{}, begin, end,
-        [&] ( std::vector<float>& data, Chunk chunk ) -> Expected<void>
+    return cudaPipeline( VoxelScalars{}, begin, end,
+        [&] ( VoxelScalars& data, Chunk chunk ) -> Expected<void>
         {
             spdlog::info( "CudaFastWindingNumber+dist: chunk [{}, {}) starting", chunk.offset, chunk.offset + chunk.size );
             signedDistance(
@@ -410,7 +410,7 @@ Expected<void> FastWindingNumber::calcFromGridWithDistancesByParts( GridByPartsF
 
             return {};
         },
-        [&] ( std::vector<float>& data, Chunk chunk ) -> Expected<void>
+        [&] ( VoxelScalars& data, Chunk chunk ) -> Expected<void>
         {
             const auto cb2 = subprogress( cb1, iterIndex++, iterCount );
             data.resize( chunk.size );

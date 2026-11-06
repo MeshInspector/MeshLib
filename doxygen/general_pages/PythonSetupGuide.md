@@ -24,12 +24,12 @@ Python 3.8 (end-of-life since October 2024) and 3.9 (end-of-life since October 2
 no longer receive security updates, and remain listed only because the published
 wheels still install on them.
 
- - On **Windows:** 3.8 to 3.14 on x64, and 3.11 to 3.14 on ARM64. There is no
+ - On **Windows:** 3.8 to 3.15 on x64, and 3.11 to 3.15 on ARM64. There is no
    32-bit wheel. ARM64 starts at 3.11 because python.org publishes no earlier
    win-arm64 installer; on ARM64 with an older Python, use the x64 build instead.
- - On **macOS:** 3.8 to 3.14, on macOS 12 or newer. Both arm64 (Apple Silicon)
+ - On **macOS:** 3.8 to 3.15, on macOS 12 or newer. Both arm64 (Apple Silicon)
    and x86_64 (Intel) are supported.
- - On **Linux:** 3.8 to 3.14 for distributions
+ - On **Linux:** 3.8 to 3.15 for distributions
    with glibc 2.28 or newer (manylinux_2_28) — e.g. Ubuntu 20.04+, Debian 10+,
    RHEL/Rocky/AlmaLinux 8+, Fedora 29+. Both x86_64 and aarch64 are supported.
 

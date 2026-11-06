@@ -7,6 +7,11 @@ on:
         required: false
         type: string
         default: "MeshLib"
+      version:
+        description: "MeshLib release version (v1.2.3.4) that replaces the placeholder 1.2.3.4 in the package installation instructions"
+        required: false
+        type: string
+        default: ""
 
 jobs:
   update-documentation:
@@ -37,6 +42,23 @@ jobs:
           path: 'MeshInspector.github.io/'
           token: ${{ secrets.MESHINSPECTOR_BOT_TOKEN }}
           submodules: recursive
+
+      # The Maven coordinates in the Java guide name the exact version of the release.
+      - name: Put the release version into the guides
+        if: ${{ inputs.version != '' }}
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          VERSION="${VERSION#v}"
+          VERSION="${VERSION%%-*}"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::warning::Not a release version: ${{ inputs.version }}, the guides keep 1.2.3.4"
+            exit 0
+          fi
+          FILE=MeshLib/doxygen/general_pages/JavaSetupGuide.md
+          grep -q '1\.2\.3\.4' "$FILE" || { echo "::error::No 1.2.3.4 placeholder in $FILE"; exit 1; }
+          sed -i "s/1\.2\.3\.4/$VERSION/g" "$FILE"
+          grep -n "$VERSION" "$FILE"
 
       - name: Download Python Stubs
         uses: actions/download-artifact@v8
@@ -71,6 +93,20 @@ jobs:
           name: WasmBindingsDts
           path: MeshLib/scripts/npm/meshlib
 
+      - name: Download Rust bindings
+        uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: RustBindings
+          path: MeshLib/RustBindings
+
+      - name: Download Java bindings
+        uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: JavaBindings
+          path: MeshLib/JavaBindings
+
       - name: Check for bindings
         id: check_bindings
         run: |
@@ -90,12 +126,31 @@ jobs:
             echo "Failed to get Wasm definitions, aborting"
             exit 0
           fi
+          if [ ! -f MeshLib/RustBindings/lib.rs ]; then
+            echo "Failed to get Rust bindings, aborting"
+            exit 0
+          fi
+          if [ ! -d MeshLib/JavaBindings/src ]; then
+            echo "Failed to get Java bindings, aborting"
+            exit 0
+          fi
           echo "all_bindings=true" >> $GITHUB_OUTPUT
 
       - name: Build All Documentation
         if: ${{ steps.check_bindings.outputs.all_bindings == 'true' }}
         working-directory: MeshInspector.github.io
         run: scripts/update_doc.sh ${{ inputs.output_folder }} ../MeshLib/scripts/doxygen/Modules.txt
+
+      # Documentation coverage counted by update_doc.sh; kept out of the published site.
+      - name: Upload documentation metrics
+        if: ${{ !cancelled() && steps.check_bindings.outputs.all_bindings == 'true' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: DoxygenMetrics
+          path: |
+            MeshInspector.github.io/doxystat-metrics.txt
+            MeshInspector.github.io/doxystat-xml/*/stats.txt
+          if-no-files-found: warn
 
       - name: Commit and push changes
         if: ${{ steps.check_bindings.outputs.all_bindings == 'true' }}

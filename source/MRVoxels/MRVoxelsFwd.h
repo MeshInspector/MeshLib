@@ -29,7 +29,7 @@ class ObjectVoxels;
 class FloatGrid;
 
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), MRVOXELS_CLASS VoxelsVolumeMinMax,
-    ( SimpleVolumeMinMax, VoxelsVolumeMinMax<Vector<float, VoxelId>> )
+    ( SimpleVolumeMinMax, VoxelsVolumeMinMax<VoxelScalars> )
     ( SimpleVolumeMinMaxU16, VoxelsVolumeMinMax<Vector<uint16_t, VoxelId>> )
     ( VdbVolume, VoxelsVolumeMinMax<FloatGrid> )
 )
@@ -42,7 +42,7 @@ using VoxelValueGetter = std::function<T ( const Vector3i& )>;
 MR_CANONICAL_TYPEDEFS( (template <typename T> struct), MRVOXELS_CLASS VoxelsVolume,
     ( FunctionVolume, VoxelsVolume<VoxelValueGetter<float>> )
     ( FunctionVolumeU8, VoxelsVolume<VoxelValueGetter<uint8_t>> )
-    ( SimpleVolume, VoxelsVolume<Vector<float, VoxelId>> )
+    ( SimpleVolume, VoxelsVolume<VoxelScalars> )
     ( SimpleVolumeU16, VoxelsVolume<Vector<uint16_t, VoxelId>> )
     ( SimpleBinaryVolume, VoxelsVolume<VoxelBitSet> )
 )

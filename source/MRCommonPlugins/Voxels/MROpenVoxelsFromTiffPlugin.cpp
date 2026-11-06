@@ -1,6 +1,6 @@
 #ifndef MESHLIB_NO_VOXELS
-#include <MRVoxels/MRVoxelsFwd.h>
-#ifndef MRVOXELS_NO_TIFF
+#include <MRIOExtras/config.h>
+#ifndef MRIOEXTRAS_NO_TIFF
 
 #include "MRViewer/MRRibbonRegisterItem.h"
 #include "MRViewer/MRStatePlugin.h"
@@ -61,7 +61,7 @@ void OpenVoxelsFromTiffPlugin::drawDialog( ImGuiContext* )
                                 "invert to have iso-surface oriented from smaller value to bigger to represent distances volume" ) );
     if ( UI::button( _tr( "Open Directory" ), { -1, 0 } ) )
     {
-        auto directory = openFolderDialog();
+        auto directory = openFolderDialog( {}, true );
         if ( directory.empty() )
         {
             ImGui::PopStyleVar( 2 );
@@ -73,7 +73,7 @@ void OpenVoxelsFromTiffPlugin::drawDialog( ImGuiContext* )
         {
             ProgressBar::nextTask( "Load TIFF Folder" );
             spdlog::info( "Loading TIFF Folder: {}", utf8string( directory ) );
-            auto loadRes = VoxelsLoad::loadTiffDir
+            auto loadRes = VoxelsLoad::loadRasterFolder
             ( {
                 directory,
                 voxelSize_,
@@ -132,7 +132,7 @@ MR_REGISTER_RIBBON_ITEM( OpenVoxelsFromTiffPlugin )
 #endif
 #endif
 
-#if defined( __EMSCRIPTEN__ ) && ( defined( MESHLIB_NO_VOXELS ) || defined( MRVOXELS_NO_TIFF ) )
+#if defined( __EMSCRIPTEN__ ) && ( defined( MESHLIB_NO_VOXELS ) || defined( MRIOEXTRAS_NO_TIFF ) )
 #include "MRCommonPlugins/Basic/MRWasmUnavailablePlugin.h"
 MR_REGISTER_WASM_UNAVAILABLE_ITEM( OpenVoxelsFromTiffPlugin, "Open Voxels From TIFF" )
 #endif

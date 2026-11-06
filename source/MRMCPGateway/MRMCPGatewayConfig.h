@@ -20,7 +20,7 @@ struct Config
     std::filesystem::path launchCommand;
     std::vector<std::string> launchArgs;
     std::chrono::seconds launchTimeout{ 30 };
-    std::string toolsCacheNamespace; ///< --tools-cache-namespace <name> (optional sub-folder)
+    std::string toolsCacheNamespace; ///< `--tools-cache-namespace <name>` (optional sub-folder)
 };
 
 } // namespace MR::McpGateway

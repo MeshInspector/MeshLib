@@ -1,0 +1,10 @@
+# Unit tests of the generated Rust bindings, ported from MRTestC2. Generate the bindings first with
+# `make -f scripts/mrbind/generate.mk TARGET=rust`, then run `MESHLIB_LIB_DIR=<directory with the MeshLib shared libraries> cargo test`.
+[package]
+name = "mrtest_rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+meshlib = { path = "../MeshLibRust" }

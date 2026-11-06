@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 project(cmake-c-examples C)
 
 set(EXAMPLES
+  BooleanBenchmark
   Collision
   CollisionPrecise
   CollisionSelf
@@ -55,6 +56,8 @@ else()
 endif()
 
 if(NOT MSVC)
-  # Triangulation requires the math library
-  target_link_libraries(Triangulation PRIVATE m)
+  # these examples require the math library
+  foreach(TARGET Fusion MeshOffsetWeighted Triangulation)
+    target_link_libraries(${TARGET} PRIVATE m)
+  endforeach()
 endif()

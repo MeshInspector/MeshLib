@@ -110,7 +110,7 @@ Expected<MR::Image> fromPng( std::istream& in )
     char sign[8];
     if ( !in.read( sign, 8 ) )
         return unexpected( "Cannot read png signature" );
-    in.seekg( 0 );
+    png_set_sig_bytes( png.pngPtr, 8 ); // the signature is already consumed, so non-seekable streams work too
 
     if ( png_sig_cmp( ( png_const_bytep )sign, 0, 8 ) != 0 )
         return unexpected( "Invalid png signature" );

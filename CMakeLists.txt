@@ -12,47 +12,12 @@ IF(APPLE)
     set(CMAKE_USE_WIN32_THREADS_INIT 0)
     set(CMAKE_USE_PTHREADS_INIT 1)
     set(THREADS_PREFER_PTHREAD_FLAG ON)
-
-    # Pin LC_BUILD_VERSION minos so dylibs stay loadable on older macOS
-    # releases regardless of the build host's SDK. 12.7 matches the
-    # MACOS_MIN_VER passed by scripts/mrbind/generate.mk and the
-    # macosx_12_0_* wheel filenames. Caller's -D or env wins.
-    if(NOT CMAKE_OSX_DEPLOYMENT_TARGET AND NOT DEFINED ENV{MACOSX_DEPLOYMENT_TARGET})
-        set(CMAKE_OSX_DEPLOYMENT_TARGET "12.7" CACHE STRING "Minimum macOS version to target for deployment")
-    endif()
 ENDIF()
 
 project(MeshLib CXX)
 
 set(MESHLIB_PROJECT_NAME "MeshLib" CACHE STRING "Project name")
 add_compile_definitions(MR_PROJECT_NAME=\"${MESHLIB_PROJECT_NAME}\")
-
-# Work around patchelf bug: https://github.com/NixOS/patchelf/issues/639
-# Force lld + give it room to grow PHT so patchelf doesn't trample `.init`.
-# Skip on images without lld (older ubuntu22 Clang 14 etc., which aren't
-# AppImage-packaged anyway).
-IF(UNIX AND NOT APPLE AND NOT MR_EMSCRIPTEN AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  include(CheckLinkerFlag)
-  check_linker_flag(CXX "-fuse-ld=lld" MESHLIB_HAVE_LLD)
-  IF(MESHLIB_HAVE_LLD)
-    # Prefer CMAKE_LINKER_TYPE (CMake >= 3.29); fall back to -fuse-ld= on
-    # older CMakes (our minimum is 3.18).
-    IF(NOT CMAKE_VERSION VERSION_LESS "3.29")
-      set(CMAKE_LINKER_TYPE LLD)
-    ELSE()
-      add_link_options("-fuse-ld=lld")
-    ENDIF()
-    add_link_options("LINKER:-z,separate-loadable-segments")
-    # Fold byte-identical functions. `safe` folds only the address-insignificant
-    # ones (per Clang's `.llvm_addrsig`), so function pointers stay comparable.
-    # lld-only: GNU ld has no ICF, and GCC emits no address-significance table.
-    add_link_options($<$<NOT:$<CONFIG:Debug>>:-Wl,--icf=safe>)
-    # Widen what ICF can reach: without this only COMDAT functions (templates,
-    # inlines) get their own section, so plain out-of-line ones never fold.
-    # `-fdata-sections` would add nothing -- lld folds executable sections only.
-    add_compile_options($<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<NOT:$<CONFIG:Debug>>>:-ffunction-sections>)
-  ENDIF()
-ENDIF()
 
 include(CompilerOptions)
 include(ConfigurePch)
@@ -125,7 +90,7 @@ IF(NOT APPLE)
   list(APPEND CMAKE_FIND_ROOT_PATH ${MESHLIB_THIRDPARTY_ROOT_DIR})
 ENDIF()
 IF(NOT EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/include" OR NOT EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib")
-  message("thirdparty build directory not found! You can build thirdparty with ./scripts/build_thirdparty.sh")
+  message("thirdparty build directory not found! Make sure to point CMAKE_PREFIX_PATH at an existing thirdparty install")
 ENDIF()
 IF(EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/include")
   include_directories(${MESHLIB_THIRDPARTY_ROOT_DIR}/include)
@@ -160,11 +125,11 @@ IF(MESHLIB_PYTHON_SUPPORT AND NOT MR_EMSCRIPTEN)
     ELSEIF(DEFINED MR_LINUX_DISTRO)
       IF(${MR_LINUX_DISTRO} STREQUAL "Ubuntu")
         set(MESHLIB_PYTHON_VERSION "3.8")
-        IF(${MR_PLATFORM} STREQUAL "Ubuntu_22")
+        IF(MR_PLATFORM MATCHES "^Ubuntu_22(_|$)")
           set(MESHLIB_PYTHON_VERSION "3.10")
-        ELSEIF(${MR_PLATFORM} STREQUAL "Ubuntu_24")
+        ELSEIF(MR_PLATFORM MATCHES "^Ubuntu_24(_|$)")
           set(MESHLIB_PYTHON_VERSION "3.12")
-        ELSEIF(${MR_PLATFORM} STREQUAL "Ubuntu_26")
+        ELSEIF(MR_PLATFORM MATCHES "^Ubuntu_26(_|$)")
           set(MESHLIB_PYTHON_VERSION "3.14")
         ENDIF()
       ENDIF()
@@ -260,6 +225,37 @@ else()
   endif()
 endif()
 
+if(MESHLIB_USE_VCPKG)
+  set(VCPKG_TRIPLET_DIR "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
+  # headers of private dependencies, not reachable from MeshLib's public headers
+  set(VCPKG_PRIVATE_HEADERS
+    opencascade xercesc openssl curl cpr
+    gdcm[^/]* socketxx openjph openjpeg-[^/]*
+    E57Format hpdf[^/]* tiff[^/]* tinyxml2\\.h tiny_?gltf[^/]* stb_[^/]*
+  )
+  list(JOIN VCPKG_PRIVATE_HEADERS "|" VCPKG_PRIVATE_HEADERS)
+  install(
+    DIRECTORY
+      "$<$<PLATFORM_ID:Windows>:${VCPKG_TRIPLET_DIR}/bin>"
+      "${VCPKG_TRIPLET_DIR}/include"
+      "${VCPKG_TRIPLET_DIR}/lib"
+      "${VCPKG_TRIPLET_DIR}/share"
+    DESTINATION .
+    PATTERN "pkgconfig" EXCLUDE
+    PATTERN "__pycache__" EXCLUDE
+    # OpenSSL looks for its modules only in the build-time vcpkg path
+    PATTERN "ossl-modules" EXCLUDE
+    REGEX "/${VCPKG_TARGET_TRIPLET}/include/(${VCPKG_PRIVATE_HEADERS})$" EXCLUDE
+    # vcpkg bookkeeping
+    PATTERN "vcpkg_abi_info.txt" EXCLUDE
+    PATTERN "vcpkg.spdx.json" EXCLUDE
+    PATTERN "vcpkg-spdx-resources.json" EXCLUDE
+    REGEX "/share/[^/]+/usage$" EXCLUDE
+    # the debug/ tree is not installed, so neither are the exported targets' Debug files referring to it
+    REGEX "/share/.+-debug[.]cmake$" EXCLUDE
+  )
+endif()
+
 # MRMesh library is always built
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRPch ./MRPch)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
@@ -294,6 +290,7 @@ IF(MESHLIB_BUILD_MRVIEWER)
     ENDIF()
   ENDIF()
 
+  include(ResourceHelpers)
   add_subdirectory(${PROJECT_SOURCE_DIR}/imgui ./imgui)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewer ./MRViewer)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRCommonPlugins ./MRCommonPlugins)
@@ -309,9 +306,11 @@ IF(NOT MR_EMSCRIPTEN)
     add_subdirectory(${PROJECT_SOURCE_DIR}/MREmbeddedPython ./MREmbeddedPython)
 
     IF(MESHLIB_BUILD_PYTHON_MODULES)
-      add_subdirectory(${PROJECT_SOURCE_DIR}/mrmeshnumpy ./mrmeshnumpy)
-      IF(MESHLIB_BUILD_MRVIEWER)
-        add_subdirectory(${PROJECT_SOURCE_DIR}/mrviewerpy ./mrviewerpy)
+      # pure Python over mrmeshpy, which scripts/mrbind/generate.mk builds and copies it next to
+      install(FILES ${PROJECT_SOURCE_DIR}/mrmeshnumpy/mrmeshnumpy.py ${PROJECT_SOURCE_DIR}/mrmeshnumpy/mrmeshnumpy.pyi DESTINATION "${MR_PY_LIB_DIR}")
+      # the C++ side of `mrviewerpy`, which scripts/mrbind/generate.mk generates over its C bindings
+      IF(MESHLIB_BUILD_MRVIEWER AND MESHLIB_BUILD_GENERATED_C_BINDINGS)
+        add_subdirectory(${PROJECT_SOURCE_DIR}/MeshLibC2PythonViewer ./MeshLibC2PythonViewer)
       ENDIF()
     ENDIF()
   ENDIF()

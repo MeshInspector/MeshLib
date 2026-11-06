@@ -291,7 +291,9 @@ jobs:
           fi
           # aws/tap ships untrusted in GH images and warns on every brew command
           brew untap aws/tap 2>/dev/null || true
-          xargs brew install --quiet --overwrite < "${MESHLIB_FW}/requirements/macos.txt"
+          if [ -f "${MESHLIB_FW}/requirements/macos.txt" ]; then
+            xargs brew install --quiet --overwrite < "${MESHLIB_FW}/requirements/macos.txt"
+          fi
           echo "MESHLIB_FW=${MESHLIB_FW}" >> "${GITHUB_ENV}"
           echo "${MESHLIB_FW}/bin" >> "${GITHUB_PATH}"
 
@@ -347,6 +349,10 @@ jobs:
             config: Release
             app_subdir: Release
             idl: 0
+          - dist_pattern: "MeshLibDistClangCl_${{ inputs.release_tag }}.zip"
+            config: Release
+            idl: 0
+            cmake_prefix: true
           - dist_pattern: "MeshLibDist_*-IteratorDebug.zip"
             config: Debug
             app_subdir: Debug
@@ -368,7 +374,11 @@ jobs:
         run: |
           if (Test-Path MeshLibDist*.zip) {
             Expand-Archive -Path (Get-ChildItem MeshLibDist*.zip) -DestinationPath C:\meshlib-built
-            Write-Output "C:\\meshlib-built\\install\\app\\${{ matrix.app_subdir }}" >> $env:GITHUB_PATH
+            if ("${{ matrix.cmake_prefix }}" -eq "true") {
+              Write-Output "C:\\meshlib-built\\install\\bin" >> $env:GITHUB_PATH
+            } else {
+              Write-Output "C:\\meshlib-built\\install\\app\\${{ matrix.app_subdir }}" >> $env:GITHUB_PATH
+            }
             Write-Output "dist_found=true" >> $env:GITHUB_OUTPUT
           } else {
             Write-Output "dist_found=false" >> $env:GITHUB_OUTPUT
@@ -388,9 +398,10 @@ jobs:
         env:
           DIST_DIR: C:\meshlib-built
         run: |
-          cmake -S . -B build `
-            -D MESHLIB_INCLUDE_DIRS=$env:DIST_DIR\install\include `
-            -D MESHLIB_LIB_DIRS=$env:DIST_DIR\install\lib\${{ matrix.config }} `
+          # the clang-cl archive is a CMake install prefix with the package config
+          $meshlib = if ("${{ matrix.cmake_prefix }}" -eq "true") { @("-D", "CMAKE_PREFIX_PATH=$env:DIST_DIR\install") } else {
+            @("-D", "MESHLIB_INCLUDE_DIRS=$env:DIST_DIR\install\include", "-D", "MESHLIB_LIB_DIRS=$env:DIST_DIR\install\lib\${{ matrix.config }}") }
+          cmake -S . -B build @meshlib `
             -D CMAKE_CXX_FLAGS="/D_ITERATOR_DEBUG_LEVEL=${{ matrix.idl }} /DMR_ITERATOR_DEBUG_LEVEL=${{ matrix.idl }}"
           cmake --build build --config ${{ matrix.config }} --parallel $env:NUMBER_OF_PROCESSORS
           .\build\${{ matrix.config }}\MeshModification.exe
@@ -401,8 +412,8 @@ jobs:
         env:
           DIST_DIR: C:\meshlib-built
         run: |
-          cmake -S . -B build `
-            -D MESHLIB_INCLUDE_DIRS=$env:DIST_DIR\install\include `
-            -D MESHLIB_LIB_DIRS=$env:DIST_DIR\install\lib\${{ matrix.config }}
+          $meshlib = if ("${{ matrix.cmake_prefix }}" -eq "true") { @("-D", "CMAKE_PREFIX_PATH=$env:DIST_DIR\install") } else {
+            @("-D", "MESHLIB_INCLUDE_DIRS=$env:DIST_DIR\install\include", "-D", "MESHLIB_LIB_DIRS=$env:DIST_DIR\install\lib\${{ matrix.config }}") }
+          cmake -S . -B build @meshlib
           cmake --build build --config ${{ matrix.config }} --parallel $env:NUMBER_OF_PROCESSORS
           .\build\${{ matrix.config }}\MeshModification.exe

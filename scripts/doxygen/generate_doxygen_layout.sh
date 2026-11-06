@@ -27,6 +27,8 @@ MODULE_PARAMETERS_MATRIX=(
   "C:C:C"
   "CSHARP:Csharp:C#"
   "JS:Js:JavaScript"
+  "RUST:Rust:Rust"
+  "JAVA:Java:Java"
 )
 
 for MODULES_ROW in "${MODULE_PARAMETERS_MATRIX[@]}"; do
@@ -43,11 +45,17 @@ for MODULES_ROW in "${MODULE_PARAMETERS_MATRIX[@]}"; do
 done
 
 # edit API titles
-if [ "$1" = "Py" ]; then
+if [ "$1" = "Py" ] || [ "$1" = "Rust" ]; then
     sed \
         -e "s|__NAMESPACES_TITLE__|Modules|" \
         -e "s|__NAMESPACES_LIST_TITLE__|Modules List|" \
         -e "s|__NAMESPACES_MEMBERS_TITLE__|Modules Members|" \
+        -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
+elif [ "$1" = "Java" ]; then
+    sed \
+        -e "s|__NAMESPACES_TITLE__|Packages|" \
+        -e "s|__NAMESPACES_LIST_TITLE__|Package List|" \
+        -e "s|__NAMESPACES_MEMBERS_TITLE__|Package Members|" \
         -i ${DOXYGEN_DIR}/DoxygenLayout${1}.xml
 else
     sed \

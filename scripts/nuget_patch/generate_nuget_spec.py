@@ -1,4 +1,6 @@
+import datetime
 import os
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -43,6 +45,16 @@ add_files( MACOS_X64_RUNTIME_DIR, "runtimes/osx-x64/native/" )
 add_files( MACOS_ARM_RUNTIME_DIR, "runtimes/osx-arm64/native/" )
 
 shutil.copy(WORK_DIR / "thirdparty" / "licenses" / "THIRD-PARTY-NOTICES.txt", "THIRD-PARTY-NOTICES.txt")
+
+# the citation in the readme names the version of the package
+with open(WORK_DIR / "source" / "MRDotNet2" / "readme.md", 'r', encoding='utf-8') as readme_file:
+	readme = readme_file.read()
+assert readme.count("{1.2.3.4}") == 1
+readme = readme.replace("{1.2.3.4}", "{" + VERSION + "}")
+readme = re.sub(r"(year\s*= )\{\d{4}\}", r"\g<1>{" + str(datetime.date.today().year) + "}", readme)
+os.makedirs("nuget_readme", exist_ok=True)
+with open(Path("nuget_readme") / "readme.md", 'w', encoding='utf-8', newline='\n') as f:
+	f.write(readme)
 
 with open(Path(__file__).parent / "template.nuspec", 'r') as template_file:
 	updated_nuspec = Template(template_file.read()).substitute(

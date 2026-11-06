@@ -181,30 +181,23 @@ IF(NOT glad_FOUND)
   add_subdirectory(./glad)
 ENDIF()
 
-IF(NOT MR_EMSCRIPTEN)
-  set(PYBIND11_INSTALL ON)
-  option(PYBIND11_NONLIMITEDAPI_BUILD_STUBS "" ON)
-  option(PYBIND11_NONLIMITEDAPI_INSTALL_EXPORTS "" ON)
-  set(PYBIND11_NONLIMITEDAPI_SUFFIX "meshlib" CACHE STRING "")
-  set(PYBIND11_NONLIMITEDAPI_PYTHON_MIN_VERSION_HEX "0x030800f0" CACHE STRING "") # Python 3.8
-  set(PYBIND11_NONLIMITEDAPI_INTERNALS_VERSION "5" CACHE STRING "")
-  set(PYBIND11_NONLIMITEDAPI_COMPILER_TYPE_STRING "_meshlib" CACHE STRING "")
-  set(PYBIND11_NONLIMITEDAPI_BUILD_ABI_STRING "_meshlib" CACHE STRING "")
-  IF(APPLE)
-    set(PYBIND11_NONLIMITEDAPI_PYTHON_HEADERS_VERSION "3.12" CACHE STRING "")
-    execute_process(
-      COMMAND brew --prefix
-      OUTPUT_VARIABLE HOMEBREW_PREFIX
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-    set(Python_ROOT_DIR "${HOMEBREW_PREFIX}/opt/python@${PYBIND11_NONLIMITEDAPI_PYTHON_HEADERS_VERSION}")
-  ENDIF()
-  add_subdirectory(./mrbind-pybind11)
-ENDIF()
-
 set(TINYGLTF_INSTALL ON)
 add_subdirectory(./tinygltf)
 
 set(WITH_TESTS OFF CACHE BOOL "")
 set(WITH_EMBIND OFF CACHE BOOL "")
 add_subdirectory(./laz-perf)
+
+find_package(draco)
+IF(NOT draco_FOUND)
+  set(DRACO_JS_GLUE OFF CACHE BOOL "")
+  set(DRACO_TESTS OFF CACHE BOOL "")
+  IF(EMSCRIPTEN)
+    # draco_check_emscripten_environment() fails without these even with DRACO_JS_GLUE=OFF, which needs no Python;
+    # PYTHONINTERP_FOUND is never set since Draco moved to find_package(Python) (google/draco@cff9f68)
+    set(PYTHONINTERP_FOUND ON)
+    set(ENV{EMSCRIPTEN} "${EMSCRIPTEN_ROOT_PATH}")
+    set(BUILD_SHARED_LIBS OFF)
+  ENDIF()
+  add_subdirectory(./draco)
+ENDIF()

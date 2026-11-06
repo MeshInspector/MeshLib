@@ -7,6 +7,7 @@
 #include "MRAffineXf3.h"
 #include "MRParallelFor.h"
 #include "MRphmap.h"
+#include "MRPch/MRSuppressWarning.h"
 #include <optional>
 
 namespace MR
@@ -16,7 +17,7 @@ namespace
 {
 
 // returns 4 * (contour area)^2
-float calcLoneContourAreaSq( const OneMeshContour& contour )
+float calcLoneContourAreaSq( const OneMeshContourView& contour )
 {
     Vector3f dblDirArea;
     for ( int i = 0; i + 1 < contour.intersections.size(); ++i )
@@ -24,14 +25,14 @@ float calcLoneContourAreaSq( const OneMeshContour& contour )
     return dblDirArea.lengthSq();
 }
 
-bool isClosedContourTrivial( const MeshTopology& topology, const OneMeshContour& contour )
+bool isClosedContourTrivial( const MeshTopology& topology, const OneMeshContourView& contour )
 {
     assert( contour.closed );
     FaceBitSet fbs( topology.faceSize() );
     for ( const auto& inter : contour.intersections )
     {
-        assert( std::holds_alternative<EdgeId>( inter.primitiveId ) );
-        auto eid = std::get<EdgeId>( inter.primitiveId );
+        assert( inter.isEdge() );
+        auto eid = inter.edge();
         if ( auto l = topology.left( eid ) )
             fbs.set( l );
     }
@@ -51,7 +52,7 @@ struct NeighborLinks
     int next{ -1 };
 };
 
-using NeighborLinksList = std::vector<NeighborLinks>;
+using NeighborLinksList = Vector<NeighborLinks>;
 
 struct EdgeTriHash
 {
@@ -66,7 +67,7 @@ using VariableEdgeTri2Index = std::pair<VarEdgeTri, int>;
 class EdgeTri2IndexMap
 {
 public:
-    EdgeTri2IndexMap( const std::vector<VarEdgeTri>& intersections );
+    EdgeTri2IndexMap( const Vector<VarEdgeTri>& intersections );
 
     const int* findIndex( const VarEdgeTri& item ) const;
 
@@ -83,7 +84,7 @@ private:
     HashMapType hmaps_[NumBuckets];
 };
 
-EdgeTri2IndexMap::EdgeTri2IndexMap( const std::vector<VarEdgeTri>& intersections )
+EdgeTri2IndexMap::EdgeTri2IndexMap( const Vector<VarEdgeTri>& intersections )
 {
     MR_TIMER;
     int counts[NumBuckets] = {};
@@ -114,7 +115,7 @@ const int* EdgeTri2IndexMap::findIndex( const VarEdgeTri& item ) const
 struct AccumulativeSet
 {
     AccumulativeSet( const MeshTopology& topologyA, const MeshTopology& topologyB,
-        const std::vector<VarEdgeTri>& intersections );
+        const Vector<VarEdgeTri>& intersections );
 
     const MeshTopology& topologyA;
     const MeshTopology& topologyB;
@@ -135,7 +136,7 @@ struct AccumulativeSet
 };
 
 AccumulativeSet::AccumulativeSet( const MeshTopology& topologyA, const MeshTopology& topologyB,
-    const std::vector<VarEdgeTri>& intersections )
+    const Vector<VarEdgeTri>& intersections )
     : topologyA( topologyA ), topologyB( topologyB ), edgeTri2IndexMap( intersections )
 {
 }
@@ -181,7 +182,7 @@ std::optional<VariableEdgeTri2Index> findNext( AccumulativeSet& accumulativeSet,
     return {};
 }
 
-void parallelPrepareLinkedLists( const std::vector<VarEdgeTri>& intersections, AccumulativeSet& accumulativeSet )
+void parallelPrepareLinkedLists( const Vector<VarEdgeTri>& intersections, AccumulativeSet& accumulativeSet )
 {
     MR_TIMER;
     const auto sz = (int)intersections.size();
@@ -205,11 +206,11 @@ struct ContourInfo
     size_t size;
 };
 
-std::vector<ContourInfo> calcContoursInfo( const AccumulativeSet& accumulativeSet )
+Vector<ContourInfo> calcContoursInfo( const AccumulativeSet& accumulativeSet )
 {
     MR_TIMER;
     BitSet queuedRecords( accumulativeSet.nList.size(), true );
-    std::vector<ContourInfo> contInfos; // use it to preallocate contours and fill them in parallel then
+    Vector<ContourInfo> contInfos; // use it to preallocate contours and fill them in parallel then
     for ( auto s : queuedRecords )
     {
         auto& currInfo = contInfos.emplace_back();
@@ -249,7 +250,7 @@ std::vector<ContourInfo> calcContoursInfo( const AccumulativeSet& accumulativeSe
     return contInfos;
 }
 
-ContinuousContours orderIntersectionContoursUsingAccumulativeSet( const AccumulativeSet& accumulativeSet, const std::vector<VarEdgeTri>& intersections )
+ContinuousContours orderIntersectionContoursUsingAccumulativeSet( const AccumulativeSet& accumulativeSet, const Vector<VarEdgeTri>& intersections )
 {
     MR_TIMER;
     const auto contInfos = calcContoursInfo( accumulativeSet );
@@ -278,7 +279,7 @@ ContinuousContours orderIntersectionContoursUsingAccumulativeSet( const Accumula
 ContinuousContours orderSelfIntersectionContours( const MeshTopology& topology, const std::vector<EdgeTri>& intersections )
 {
     MR_TIMER;
-    std::vector<VarEdgeTri> vars;
+    Vector<VarEdgeTri> vars;
     vars.reserve( intersections.size() * 2 );
     for ( const auto & x : intersections )
     {
@@ -340,20 +341,25 @@ std::vector<int> detectLoneContours( const ContinuousContours& contours, bool ig
 void removeLoneDegeneratedContours( const MeshTopology& edgesTopology, OneMeshContours& faceContours, OneMeshContours& edgeContours )
 {
     MR_TIMER;
-    for ( int i = int( faceContours.size() ) - 1; i >= 0; --i )
+    OneMeshContours keptFace, keptEdge;
+    for ( size_t i = 0; i < faceContours.size(); ++i )
     {
         if ( faceContours[i].closed && calcLoneContourAreaSq( faceContours[i] ) == 0.0f && isClosedContourTrivial( edgesTopology, edgeContours[i] ) )
-        {
-            faceContours.erase( faceContours.begin() + i );
-            edgeContours.erase( edgeContours.begin() + i );
-        }
+            continue;
+        keptFace.push_back( faceContours[i] );
+        keptEdge.push_back( edgeContours[i] );
     }
+    faceContours = std::move( keptFace );
+    edgeContours = std::move( keptEdge );
 }
 
 void removeLoneContours( ContinuousContours& contours, bool ignoreOpen )
 {
     MR_TIMER;
+    MR_SUPPRESS_WARNING_PUSH
+    MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 ) // deprecated together with this function
     auto loneContours = detectLoneContours( contours, ignoreOpen );
+    MR_SUPPRESS_WARNING_POP
     for ( int i = int( loneContours.size() ) - 1; i >= 0; --i )
     {
         contours.erase( contours.begin() + loneContours[i] );

@@ -1,0 +1,112 @@
+name: Create NuGet package
+
+# Packs the .NET bindings of all platforms (the DotNet* artifacts of the build jobs) into MeshLib.nupkg
+# and the C# Wasm archive, uploaded as the DistributivesNuGet and DistributivesDotNetWasm artifacts.
+on:
+  workflow_call:
+    inputs:
+      app_version:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  create-nuget-package:
+    timeout-minutes: 20
+    runs-on: windows-2025
+    steps:
+     - name: Checkout
+       uses: actions/checkout@v7
+
+     - name: Download NuGet Windows Patch Archive
+       uses: actions/download-artifact@v8
+       with:
+         pattern: DotNetPatchArchiveWindows-x64
+         path: windows_x64_runtime
+
+     - name: Download NuGet Windows Arm Patch Archive
+       uses: actions/download-artifact@v8
+       with:
+         pattern: DotNetPatchArchiveWindows-arm64
+         path: windows_arm64_runtime
+
+     - name: Download NuGet Linux x64 Patch Archive
+       uses: actions/download-artifact@v8
+       with:
+         pattern: DotNetPatchArchiveLinux-x64
+         path: linux_x64_runtime
+
+     - name: Download NuGet Linux Arm Patch Archive
+       uses: actions/download-artifact@v8
+       with:
+         pattern: DotNetPatchArchiveLinux-arm64
+         path: linux_arm64_runtime
+
+     - name: Download NuGet MacOS x64 Patch Archive
+       uses: actions/download-artifact@v8
+       with:
+         pattern: DotNetPatchArchiveMacOs-x64
+         path: macos_x64_runtime
+
+     - name: Download NuGet MacOS Arm Patch Archive
+       uses: actions/download-artifact@v8
+       with:
+         pattern: DotNetPatchArchiveMacOs-arm64
+         path: macos_arm64_runtime
+
+     - name: Download NuGet DLL and XML
+       uses: actions/download-artifact@v8
+       with:
+         pattern: DotNetDllXml
+         path: dotnet_dll
+         merge-multiple: true
+
+     - name: Download C# Wasm Archive (single thread)
+       uses: actions/download-artifact@v8
+       with:
+         pattern: DotNetPatchArchiveWasm-*
+         path: browser_wasm_runtime
+         merge-multiple: true
+
+     - name: Build C# Wasm package
+       run: |
+         mkdir meshlib_dotnet-wasm
+         mkdir meshlib_dotnet-wasm/native
+         move dotnet_dll/MRDotNet2Static.dll meshlib_dotnet-wasm
+         move browser_wasm_runtime/* meshlib_dotnet-wasm/native
+         Compress-Archive -Path meshlib_dotnet-wasm -DestinationPath meshlib_dotnet-wasm.zip
+
+     - name: Generate NuGet specification
+       run: |
+        echo ${{ inputs.app_version }}
+        py -3 scripts\nuget_patch\generate_nuget_spec.py dotnet_dll windows_x64_runtime windows_arm64_runtime linux_x64_runtime linux_arm64_runtime macos_x64_runtime macos_arm64_runtime ${{ inputs.app_version }}
+
+     - name: Download NuGet Executable
+       run:  curl https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -o nuget.exe
+
+     - name: Build NuGet package
+       run: nuget.exe pack Package.nuspec -OutputFileNamesWithoutVersion
+
+     - name: Upload NuGet Package
+       uses: actions/upload-artifact@v7
+       with:
+         name: DistributivesNuGet
+         path: MeshLib.nupkg
+         retention-days: 1
+
+     - name: Upload C# Wasm Package
+       uses: actions/upload-artifact@v7
+       with:
+         name: DistributivesDotNetWasm
+         path: meshlib_dotnet-wasm.zip
+         retention-days: 1
+
+     - name: Delete consumed NuGet input artifacts
+       uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
+       with:
+         name: |
+           DotNetPatchArchive*
+           DotNetDllXml
+         failOnError: false

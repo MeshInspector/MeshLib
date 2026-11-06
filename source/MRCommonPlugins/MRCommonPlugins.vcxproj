@@ -26,9 +26,6 @@
     <CopyFileToFolders Include="MRRibbonCommonMenuStructure.ui.json">
       <FileType>Document</FileType>
     </CopyFileToFolders>
-    <Content Include="resource\**">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Basic\MRCameraOrientationPlugin.cpp" />
@@ -407,4 +404,5 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <Import Project="$(MeshLibDir)\source\PackIcons.targets" />
 </Project>

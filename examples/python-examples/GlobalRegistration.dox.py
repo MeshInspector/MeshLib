@@ -45,7 +45,7 @@ def main(argv):
     # set sampling voxel size
     sampling_params.samplingVoxelSize = max_bbox.diagonal() * 0.03
 
-    icp = mrmeshpy.MultiwayICP(mrmeshpy.Vector_MeshOrPointsXf_ObjId(inputs), sampling_params)
+    icp = mrmeshpy.MultiwayICP(inputs, sampling_params)
     icp.setParams(mrmeshpy.ICPProperties())
 
     # gather statistics
@@ -58,7 +58,7 @@ def main(argv):
 
     output = mrmeshpy.PointCloud()
     for i in range(input_clouds_num):
-        xf = xfs.vec_[i]
+        xf = xfs[mrmeshpy.ObjId(i)]
         for point in inputs[i].obj.points():
             output.addPoint(xf(point))
 

@@ -2,6 +2,7 @@
 
 #include "MRId.h"
 #include <cassert>
+#include <cstdint>
 #include <utility>
 
 namespace MR
@@ -57,10 +58,21 @@ struct hash<MR::UnorientedTriangle>
 {
     size_t operator() ( const MR::UnorientedTriangle& triplet ) const noexcept
     {
-        return
-            2 * size_t( triplet.verts[0] ) +
-            3 * size_t( triplet.verts[1] ) +
-            5 * size_t( triplet.verts[2] );
+        // two different triangles get equal values only if some of their sorted vertex ids differ by 2^21 or more
+        // (by 2^10 or more if size_t is 32-bit), unlike a sum of ids with small multipliers, which gives equal values to many triangles with close ids
+        const auto a = std::uint32_t( triplet.verts[0] );
+        const auto b = std::uint32_t( triplet.verts[1] );
+        const auto c = std::uint32_t( triplet.verts[2] );
+        if constexpr ( sizeof( size_t ) >= 8 )
+        {
+            // ids below 2^21 occupy non-overlapping bits
+            return size_t( a ^ ( std::uint64_t( b ) << 21 ) ^ ( std::uint64_t( c ) << 42 ) );
+        }
+        else
+        {
+            // three ids do not fit in 32 bits, so they are combined with odd multipliers selected to maximize the difference above
+            return size_t( 0xea87bb09u * a + 0xd8306b31u * b + c );
+        }
     }
 };
 

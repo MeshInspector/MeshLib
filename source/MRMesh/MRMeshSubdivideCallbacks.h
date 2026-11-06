@@ -18,6 +18,7 @@ template <typename T>
 auto onEdgeSplitFaceAttribute( const Mesh& mesh, Vector<T, FaceId>& data );
 
 /**
+* \code
 * auto uvCoords = obj_->getUVCoords();
 * auto texturePerFace = obj_->getTexturePerFace();
 * MeshAttributesToUpdate meshParams;
@@ -27,6 +28,7 @@ auto onEdgeSplitFaceAttribute( const Mesh& mesh, Vector<T, FaceId>& data );
 *     meshParams.texturePerFace = &texturePerFace;
 * subs.onEdgeSplit = meshOnEdgeSplitAttribute( *obj_->varMesh(), meshParams );
 * subdivideMesh( *obj_->varMesh(), subs );
+* \endcode
 */
 MRMESH_API OnEdgeSplit meshOnEdgeSplitAttribute( const Mesh& mesh, const MeshAttributesToUpdate& params );
 

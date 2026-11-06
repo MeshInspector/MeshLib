@@ -56,6 +56,8 @@ You need to repeat this step if we update MRBind.
 
 ### Ubuntu
 
+* Run `git submodule update --init --recursive thirdparty/mrbind`
+
 * Run `scripts/mrbind/install_mrbind_ubuntu.sh`
 
 ### MacOS
@@ -64,9 +66,9 @@ You need to repeat this step if we update MRBind.
 
 ## 3.1. Generate Python bindings
 
-After building MeshLib, follow the OS-dependent steps below. After that we explain optional config flags.
+The Python modules are generated from the C bindings (by `mrbind_gen_python`, see `docs/generating_python_over_c.md` in MRBind), and call them. So first [generate the C bindings](#32-generate-c-bindings) and build them along with MeshLib (`MeshLibC2`, `MeshLibC2Cuda` and, for `mrviewerpy`, `MeshLibC2PythonViewer`; with CMake, configure with `-DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON`). Then follow the OS-dependent steps below. After that we explain optional config flags.
 
-The resulting Python modules are created next to the MeshLib shared libraries, in the `./meshlib` directory.
+The resulting Python modules are created next to the MeshLib shared libraries, in the `./meshlib` directory. They use the limited API of Python, so they work with any Python 3.8 or newer. `mrviewerpy` is generated from the C++ API in `source/MRPythonViewer`, written for it.
 
 ### Windows
 
@@ -78,8 +80,6 @@ The resulting Python modules are created next to the MeshLib shared libraries, i
     * The current directory matters, the script will look for MeshLib in `./source/x64/Release` or `./source/x64/Debug` depending on `VS_MODE=...`.
     * If you built MeshLib in a different directory (e.g. if using CMake), also pass `MESHLIB_SHLIB_DIR=...`, pointing to the directory where `MRMesh.dll` was built.<br/>
     When using CMake, `VS_MODE` has to be set to `Debug` when `CMAKE_BUILD_TYPE` is `Debug`, and to `Release` otherwise. It controls which libraries (debug vs release) we use from Vcpkg.
-
-* Windows is prone to Python version mismatches. If you see errors such as ``pybind11 non-limited-api: Failed to load library `pybind11nonlimitedapi_meshlib_3.13` with error `126`.``, proceed to [Dealing with Python version mismatches]()
 
 ### Linux
 
@@ -115,51 +115,15 @@ The resulting Python modules are created next to the MeshLib shared libraries, i
 
   You can also use entirely custom C++ compiler flags, by setting `EXTRA_CFLAGS` and `EXTRA_LDFLAGS`.
 
-* **`NUM_FRAGMENTS=?? -j??` — adjust RAM usage vs build speed tradeoff.**
-
-  If you're running out of RAM, reduce `-j...`.
-
-  `NUM_FRAGMENTS=??` is how many translation units the bindings are split into. `-j??` is the number of parallel build threads/processes. We have some heuristics to guess good values for this, those values are printed when the script starts.
-
-  Guessing the fastest combination isn't trivial. Usually you want to maximize threads (up to the number of cores), and then minimize the number of fragments as much as your RAM allows. The number of fragments should normally be a multiple of the number of threads.
-
 * **`PYTHON_PKGCONF_NAME=python-3.??-embed` — select Python version.** We try to guess this one. You can set this to `python3-embed` to use whatever your OS considers to be the default version.
 
-* **`ENABLE_CUDA=??` — enable or disable Cuda.** If you're building MeshLib without Cuda support, pass `ENABLE_CUDA=0` to skip the Cuda bindings. It defaults to `1` everywhere except MacOS, where Cuda doesn't work.
+* **`ENABLE_CUDA=??` — enable or disable Cuda.** Pass `ENABLE_CUDA=0` to skip the Cuda bindings. They are also skipped if MeshLib was built without `MRCuda`.
 
-  When this is disabled, stub Cuda bindings are still generated, with a single function that reports that Cuda is not available.
-
-* **`BUILD_SHIMS=1` — support multiple Python versions.** This enables support for all Python versions found on the system, as opposed a single default one. See the relevant section in the [troubleshooting guide](#troubleshooting-python-bindings).
-
-* **`shims` — add support for multiple Python versions.** Same effect as `BUILD_SHIMS=1`, but instead of regenerating the bindings, this just adds the missing version support to existing bindings. This is great if you forgot the flag during the initial compilation.
+  Then `mrcudapy` is a placeholder written in Python, with a single function that reports that Cuda is not available.
 
 * **`FOR_WHEEL=1` — build for wheel packaging.** This is primarily for CI, not for local use. Indicates that you want to package the resulting module into a wheel (a Python module archive for distribution), instead of using it locally. Enabling this might prevent the module from functioning until packaged into a wheel.
 
-  This automatically enables `BUILD_SHIMS=1`, among other things.
-
 ### Troubleshooting Python bindings
-
-* **Importing the wheel prints error ``pybind11 non-limited-api: Failed to load library `pybind11nonlimitedapi_meshlib_3.13` with error `126`.`` or similar.**
-
-  * This primarily happens on Windows.
-
-  * When built locally, Python bindings only support one speific Python version by default. If you try to import them from another version, you will get errors such as the one above.
-
-  * To check what version you built for, look for shared libraried named `pybind11nonlimitedapi_meshlib_3.??` next to the Python modules. On Windows, those should be in `source/x64/Release/meshlib` (or `.../Debug/...`). The number in the filename is the Python version.
-
-  * The easiest fix to use that Python version.
-
-    * On Windows, run e.g. `py -3.12` to use that specific version (`3.12` is our default for the bindings at the time of writing). You might need to install that version first, from [here](https://www.python.org/downloads/windows/).
-
-    * On Linux, just running `python3` without specifying the minor version should use the correct version by default.
-
-  * Alternatively, you can add the missing shared libraries to support your preferred Python version.
-
-    * You can build them by rerunning the generation script with the additional flag `shims`. This will build the libraries for all Python versions found on your system.
-
-      This command only builds the libraries and does nothing else. You can use `BUILD_SHIMS=1` instead of `shims` to both regenerate the bindings and build those libraries at the same time.
-
-    * You can also download the prebuilt libraries from [here](https://pypi.org/project/meshlib/#files). Download the archive for your OS and extract the `pybind11nonlimitedapi_meshlib_...` shared libraries next to yours.
 
 * **`could not open 'MRMesh.lib': No such file or directory`**
 
@@ -173,28 +137,16 @@ The resulting Python modules are created next to the MeshLib shared libraries, i
 
   * Update your VS 2022.
 
-* **Undefined references to MeshLib functions**
-
-  * This can only happen on Linux/Mac. If you look at the offending functions in the headers, they should have `requires` on them.
-
-  * You likely used a non-default compiler when compiling MeshLib. Pass this compiler to `CXX_FOR_ABI=...` when generating Python bindings to fix the issue (e.g. `CXX_FOR_ABI=clang++-22` or `g++-15`).
-
-    MeshLib is usually compiled using a different compiler than the Python bindings (for the bindings we use a specific version of Clang, the same that is used by the parser; using the same compiler for the bindings on all platforms makes writing them easier). Therefore, we must ensure that the two compilers use the same ABI. `CXX_FOR_ABI` should be set to the compiler the ABI of which we're trying to match. (Defaults to the `CXX` environment variable, or `g++` if not set.) At the moment, if `CXX_FOR_ABI` is GCC 13 or older or Clang 17 or older (note that Apple Clang uses a [different version numbering scheme](https://en.wikipedia.org/wiki/Xcode#Xcode_15.0_-_(since_visionOS_support)_2)), we pass `-fclang-abi-compat=17` to our Clang 18 or newer (which is used to compile the bindings). This flag *disables* mangling of `requires` constraints into the function names. If we guess incorrectly, you'll get undefined references to functions with `requires` constraints on them.
-
 * **Importing the wheel segfaults on MacOS**
 
   * Make sure you're not linking against Python **and** make sure you use `-Xlinker -undefined -Xlinker dynamic_lookup` linker flags. The `generate.mk` should already do it correctly, but just keep this in mind. Also transitively linking Python seems to be fine (`-lMRPython` is fine).
 
     Failure to do this will have no effect when importing the module directly, but will segfault when importing it as a wheel, **or** when using a wrong Python version even without the wheel.
 
-* **`cannot initialize type "expected_...": an object with that name is already defined`**
+* **`could not open 'MeshLibC2.lib'`, `cannot find -lMeshLibC2`, or `interop_desc.json`: No such file or directory**
 
-  Likely a conflict between `std::expected` and `tl::expected` (probably MRMesh ended up using the latter while MRBind is using the former). Try `EXTRA_CFLAGS='-DMB_PB11_ALLOW_STD_EXPECTED=0 -DMR_USE_STD_EXPECTED=0'` to make MRBind switch to `tl::expected`.
+  * The C bindings weren't generated or built, see above.
 
-* **`lld-link: error: undefined symbol: void __cdecl std::_Literal_zero_is_expected(void)`**,
-`>>> referenced by source/TempOutput/PythonBindings/x64/Release/binding.0.o:(public: __cdecl std::_Literal_zero::_Literal_zero<int>(int))`
-
-  * This seems to be a VS2022 bug that's triggered by trying to bind `operator<=>` (taking its address?). We work around this by banning all `operator<=>`s with `--ignore`, see `mrbind_flags.txt`.
 
 ## 3.2. Generate C bindings
 
@@ -232,7 +184,7 @@ Then you must build MeshLib with a special CMake flag, which will build the gene
 
      On Ubuntu, install `sudo apt install libc6-dev-i386`. On other distros, install the package providing `/usr/include/gnu/stubs-32.h` if it doesn't already exist.
 
-     Make sure the third-party libraries for MeshLib are already built, by running `scripts/build_thirdparty.sh` (reply `n` if asked whether to build for Emscripten).
+     Make sure the third-party libraries for MeshLib are already built, by running `scripts/build_cpm_thirdparty.sh` (reply `n` if asked whether to build for Emscripten).
 
   2. **With Emscripten SDK.**
 
@@ -311,6 +263,8 @@ The steps below both generate the C# code (at `MeshLib/source/MRDotNet2`) and co
 ## 4. Other information
 
 ### Less common flags for the generator script
+
+* **Selecting the third-party libraries:** on Linux and MacOS the generator looks for them in `MESHLIB_THIRDPARTY_ROOT_DIR` from the environment, then in `./installed`, then in the project root. `DEPS_BASE_DIR=path/to/libs` overrides all of those.
 
 * **Selecting MRBind installation:** if you installed MRBind to a non-default location (the default is `./thirdparty/mrbind`), you must pass this location to `MRBIND_SOURCE=path/to/mrbind`.
 

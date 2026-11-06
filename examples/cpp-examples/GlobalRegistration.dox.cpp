@@ -30,6 +30,7 @@ int main( int argc, char* argv[] )
     // the global registration can be applied to meshes and point clouds
     // to simplify the sample app, we will work with point clouds only
     std::vector<MR::PointCloud> inputs;
+    inputs.reserve( argc - 2 ); // no reallocation, `objects` refer to the elements
     // as ICP and MultiwayICP classes accept both meshes and point clouds,
     // the input data must be converted to special wrapper objects
     // NB: the wrapper objects hold *references* to the source data, NOT their copies
@@ -75,7 +76,7 @@ int main( int argc, char* argv[] )
         const auto& input = inputs[i];
         const auto& xf = xfs[i];
         for ( const auto& point : input.points )
-            output.points.emplace_back( xf( point ) );
+            output.addPoint( xf( point ) );
     }
 
     auto res = MR::PointsSave::toAnySupportedFormat( output, argv[argc - 1] );

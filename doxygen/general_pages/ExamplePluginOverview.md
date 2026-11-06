@@ -129,7 +129,7 @@ For more information have a look at [State Plugin Page](\ref StatePluginsHelp)
 
 ### Sample Viewer App
 `ViewerApp.cpp` - source file for running the viewer instance. You can set your own
-[viewer launch parameters](\ref LaunchParams) and alterate [viewer setup process](\ref ViewerSetup).
+[viewer launch parameters](\ref MR::Viewer::LaunchParams) and alterate [viewer setup process](\ref ViewerSetup).
 
 ## Usage
 

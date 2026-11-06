@@ -181,10 +181,10 @@ bool PointCloudTriangulator::makeMesh_( Triangulation && t3, Triangulation && t2
             return false;
         return l[2] < r[2];
     };
-    tbb::parallel_sort( t3.vec_.begin(), t3.vec_.end(), compare );
-    tbb::parallel_sort( t2.vec_.begin(), t2.vec_.end(), compare );
+    tbb::parallel_sort( begin( t3 ), end( t3 ), compare );
+    tbb::parallel_sort( begin( t2 ), end( t2 ), compare );
     auto t3Size = t3.size();
-    t3.vec_.insert( t3.vec_.end(), std::make_move_iterator( t2.vec_.begin() ), std::make_move_iterator( t2.vec_.end() ) );
+    t3.insert( end( t3 ), std::make_move_iterator( begin( t2 ) ), std::make_move_iterator( end( t2 ) ) );
     FaceBitSet region3( t3Size );
     region3.flip();
     FaceBitSet region2( t3.size() );

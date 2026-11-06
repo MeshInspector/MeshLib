@@ -14,11 +14,15 @@
 #include <filesystem>
 #include <fstream>
 
+#if defined( __x86_64__ ) || defined( __i386__ ) || defined( _M_X64 ) || defined( _M_IX86 )
+#define MR_X86_CPU
+#endif
+
 #ifdef _WIN32
 #include <psapi.h>
 #include <shellapi.h>
 
-#ifndef _MSC_VER
+#if !defined( _MSC_VER ) && defined( MR_X86_CPU )
 #include <cpuid.h>
 #endif
 #ifdef __MINGW32__
@@ -37,7 +41,7 @@
 #include "MRPch/MRWasm.h"
 #ifndef __EMSCRIPTEN__
   #include <sys/sysinfo.h>
-  #ifndef __ARM_CPU__
+  #ifdef MR_X86_CPU
     #include <cpuid.h>
   #endif
 #endif
@@ -395,7 +399,7 @@ std::string GetCpuId()
     if (sysctlbyname("machdep.cpu.brand_string", &CPUBrandString, &size, NULL, 0) < 0)
         spdlog::error("Apple sysctlbyname failed!");
     return CPUBrandString;
-#elif defined(__ARM_CPU__)
+#elif defined( __aarch64__ ) || defined( __arm__ ) || defined( _M_ARM64 ) || defined( _M_ARM )
     // ARM has no CPUID-like brand-string instruction (see
     // https://stackoverflow.com/questions/64864035/any-cpuid-like-instruction-in-armv8 ),
     // so the real processor name has to be obtained per platform.
@@ -493,7 +497,7 @@ std::string GetCpuId()
 
     return "ARM CPU";
 #endif
-#else
+#elif defined( MR_X86_CPU )
     // https://stackoverflow.com/questions/850774/how-to-determine-the-hardware-cpu-and-ram-on-a-machine
     char CPUBrandString[0x40] = {};
     int CPUInfo[4] = {-1};
@@ -529,6 +533,8 @@ std::string GetCpuId()
 
     auto res = std::string( CPUBrandString );
     return res.substr( res.find_first_not_of(' ') );
+#else
+    return "Unknown CPU";
 #endif
 }
 
@@ -617,22 +623,18 @@ std::string GetDetailedOSName()
 
 std::string getOSNoSpaces()
 {
-    #ifdef _WIN32
-    return "Windows";
-    #else
-    #ifdef __EMSCRIPTEN__
+#if defined( __EMSCRIPTEN__ )
     return "Wasm";
-    #else
-    // get platform from cmake variables
-    #ifdef MR_PLATFORM
+#elif defined( MR_PLATFORM )
+    // from DetectPlatform.cmake or common.props, with the CPU architecture on Arm and macOS
     std::string platform = MR_PLATFORM;
-    std::replace(platform.begin(), platform.end(), ' ', '_');
+    std::replace( platform.begin(), platform.end(), ' ', '_' );
     return platform;
-    #else
+#elif defined( _WIN32 )
+    return "Windows";
+#else
     return "UNKNOWN";
-    #endif
-    #endif
-    #endif
+#endif
 }
 
 void setNewHandlerIfNeeded()

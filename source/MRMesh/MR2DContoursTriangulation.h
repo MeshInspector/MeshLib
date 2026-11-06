@@ -8,6 +8,10 @@
 namespace MR
 {
 
+struct PreciseVertCoords;
+struct PreciseCutPoint;
+class CutTrianglePredicates;
+
 namespace PlanarTriangulation
 {
 
@@ -139,15 +143,56 @@ MR_BIND_IGNORE MRMESH_API MeshTopology* triangulateDisjointContoursTopology( con
 /**
  * @brief splits the near-planar region bounded by \p loops in monotone parts, without triangulating them
  * this is the sweep-line triangulation stopped right after monotonation
- * @param loops one closed EdgeLoop of at least 3 edges per boundary of one region, bounding holes of
- *        \p mesh as trackRightBoundaryLoop returns them; which way round a loop runs does not matter
+ * @param loops one closed EdgeLoop per boundary of one region, bounding holes of \p mesh as trackRightBoundaryLoop
+ *        returns them (a slit of one edge is a loop of 2 edges, and a loop of one edge is skipped); which way round a loop runs
+ *        does not matter; the holes can be several parts of one region split by edges between them, as all the holes of a face
+ *        cut along contours (the parts between the contours that cross its sides, and both sides of every island), since an edge
+ *        taken both ways adds zero winding
  * @param normal the orientation the region is monotone around, see \ref triangulateDisjointContours
  * @return std::nullopt if the loops intersect or a chord would land in a face instead of a hole, so that
  *         the caller can fall back on filling every loop separately; otherwise a plan with numTris == 0
  *         for \ref executeHoleFillPlan, which then only adds edges (empty if already monotone, a no-op).
- *         Validate it with \ref isFillingMultipleEdgeFree: a chord may duplicate an off-loop mesh edge
+ *         Validate it with \ref isFillingMultipleEdgeFree, since a chord may duplicate an off-loop mesh edge
  */
 MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal );
+
+/// same as above for the region of one triangle of a mesh cut by the boolean (the loops of all the holes of the triangle),
+/// on the exact predicates of \ref CutTrianglePredicates, which never contradict the boolean's ones, so the loops are disjoint
+/// whenever the boolean's contours are
+/// \param tri the triangle, counterclockwise around its normal
+/// \param pointOf the definition of every vertex on the loops, valid as \ref CutTrianglePredicates::addPoint requires
+/// \return std::nullopt also if two vertices on the loops are defined alike and their wedges do not tell them apart, or the predicates fail
+///         on the points
+MR_BIND_IGNORE MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops,
+    const std::array<PreciseVertCoords, 3>& tri, const std::function<PreciseCutPoint( VertId )>& pointOf );
+
+/// finds the crossings of the loops of one triangle cut by the boolean on the exact predicates above, in the order of the sweep and along every
+/// edge, each as two edges directed along it, the first passing from right to left of the second, with \p cutOf the triangle of the other mesh
+/// along every inner edge (invalid ids along a side); std::nullopt if a side edge crosses another edge, on a multiple edge, or if predicates fail
+MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops,
+    const std::array<PreciseVertCoords, 3>& tri, const std::function<PreciseCutPoint( VertId )>& pointOf,
+    const std::function<std::array<PreciseVertCoords, 3>( UndirectedEdgeId )>& cutOf );
+
+/// same as above on the float predicates of getMonotonePlan( mesh, loops, normal ), projected counterclockwise around \p normal (oriented as
+/// the triangle), which sets the sweep and left and right; the rounding, also of the crossings, can add or remove one near another point or edge,
+/// and a side edge crossing another edge is a usual pair; std::nullopt on a multiple edge
+MR_BIND_IGNORE MRMESH_API std::optional<Vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal );
+
+/// \ref hasCrossing tests up to this many segments in pairs, which is faster for them than the sweep, the only user of its cache with the exact predicates
+constexpr size_t cMaxSegmentsInPairs = 32;
+
+/// whether two of the segments between the points of \p preds cross, found by the sweep of \ref triangulateDisjointContours,
+/// which stops at the first crossing, or by testing every two of up to \ref cMaxSegmentsInPairs segments;
+/// segments with a common end only touch, and a repeated segment is taken once
+/// \param segments the ends of every segment, as the ids of the points in \p preds, which are all set and not failed
+/// \return true also if the predicates fail
+MR_BIND_IGNORE MRMESH_API bool hasCrossing( const Vector<TwoVertIds>& segments, const CutTrianglePredicates& preds, ISweepLineCache* cache = nullptr );
+
+/// same as above for the points that \p segments index given by their coordinates, projected along the axis most aligned with \p normal
+/// and rounded to integers as \ref triangulateDisjointContours does; distinct points rounded to the same position are told apart by their ids, not merged;
+/// if all the points are at one position, no segments cross; \p cache also keeps the projected points between calls
+MR_BIND_IGNORE MRMESH_API bool hasCrossing( const Vector<TwoVertIds>& segments, const VertCoords& points, const Vector3f& normal,
+    ISweepLineCache* cache = nullptr );
 
 }
 }

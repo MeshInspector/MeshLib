@@ -48,11 +48,11 @@ struct PointCloud
 
     /// passes through all valid points and finds the minimal bounding box containing all of them;
     /// if toWorld transformation is given then returns minimal bounding box in world space
-    [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const AffineXf3f * toWorld = nullptr ) const;
+    MR_BIND_OVERLOAD_SUFFIX() [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const AffineXf3f * toWorld = nullptr ) const;
 
     /// passes through all given vertices (or all valid vertices if region == null) and finds the minimal bounding box containing all of them
     /// if toWorld transformation is given then returns minimal bounding box in world space
-    [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const VertBitSet * region, const AffineXf3f * toWorld = nullptr ) const;
+    MR_BIND_OVERLOAD_SUFFIX(region) [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const VertBitSet * region, const AffineXf3f * toWorld = nullptr ) const;
 
     /// computes average position of all valid points
     [[nodiscard]] MRMESH_API Vector3f findCenterFromPoints() const;
@@ -74,10 +74,10 @@ struct PointCloud
         const VertNormals * extNormals = nullptr );
 
     /// appends a point and returns its VertId
-    MRMESH_API VertId addPoint( const Vector3f& point );
+    MR_BIND_OVERLOAD_SUFFIX() MRMESH_API VertId addPoint( const Vector3f& point );
 
     /// appends a point with normal and returns its VertId
-    MRMESH_API VertId addPoint( const Vector3f& point, const Vector3f& normal );
+    MR_BIND_OVERLOAD_SUFFIX(normal) MRMESH_API VertId addPoint( const Vector3f& point, const Vector3f& normal );
 
     /// reflects the points from a given plane
     MRMESH_API void mirror( const Plane3f& plane );

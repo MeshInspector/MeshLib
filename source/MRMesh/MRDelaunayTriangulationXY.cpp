@@ -38,7 +38,7 @@ public:
         else
         {
             vertOrder_.resize( pts_.size() );
-            std::iota( vertOrder_.vec_.begin(), vertOrder_.vec_.end(), VertId( 0 ) );
+            std::iota( begin( vertOrder_ ), end( vertOrder_ ), VertId( 0 ) );
         }
         if ( !reportProgress( cb, 0.1f ) )
         {
@@ -47,7 +47,7 @@ public:
         }
 
         // sort by SoS predicate
-        tbb::parallel_sort( vertOrder_.vec_.begin(), vertOrder_.vec_.end(), [&] ( VertId l, VertId r )
+        tbb::parallel_sort( begin( vertOrder_ ), end( vertOrder_ ), [&] ( VertId l, VertId r )
         {
             return smaller( { .id = l,.pt = pts_[l].x }, { .id = r,.pt = pts_[r].x } ); // use SoS based predicate
         } );        
@@ -387,9 +387,9 @@ static Expected<Mesh> delaunayTriangulationXY( VertCoords points, const VertBitS
     return resMesh;
 }
 
-Expected<Mesh> delaunayTriangulationXY( std::vector<Vector3f> points, const ProgressCallback& cb )
+Expected<Mesh> delaunayTriangulationXY( VertCoords points, const ProgressCallback& cb )
 {
-    return delaunayTriangulationXY( VertCoords( std::move( points ) ), nullptr, cb );
+    return delaunayTriangulationXY( std::move( points ), nullptr, cb );
 }
 
 Expected<Mesh> delaunayTriangulationXY( const PointCloud& cloud, const ProgressCallback& cb )

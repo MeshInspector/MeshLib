@@ -27,6 +27,7 @@
 #include <filesystem>
 #include <fstream>
 #include <future>
+#include <optional>
 #include <stdexcept>
 
 namespace MR::Mcp
@@ -93,7 +94,7 @@ static nlohmann::json mcpViewerFit( const nlohmann::json& args )
         for ( const auto& p : args["points"] )
             points.push_back( readVec3( p, "points[i]" ) );
 
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    runOnMainThread( [&]
     {
         auto& vp = getViewerInstance().viewport();
         if ( ids.empty() && points.empty() )
@@ -117,7 +118,7 @@ static nlohmann::json mcpViewerFit( const nlohmann::json& args )
             throw std::runtime_error( "viewer_fit: the given objects and points contribute no bounding volume." );
         vp.preciseFitBoxToScreenBorder( { box, factor } );
     } );
-    skipFramesAfterInput();
+    (void)waitFramesAfterInput();
     return nlohmann::json::object();
 }
 
@@ -137,15 +138,47 @@ static nlohmann::json mcpViewerSetupCamera( const nlohmann::json& args )
         throw std::runtime_error( "`upDir` is parallel to `forwardDir`; provide a non-parallel up vector." );
     up = up.normalized();
 
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    const std::string fit = args.value( "fit", std::string( "visible" ) );
+    std::optional<FitMode> fitMode;
+    if ( fit == "visible" )
+        fitMode = FitMode::Visible;
+    else if ( fit == "selected" )
+        fitMode = FitMode::SelectedObjects;
+    else if ( fit != "none" )
+        throw std::runtime_error( fmt::format( "Unknown `fit` `{}` (expected `visible`/`selected`/`none`).", fit ) );
+    const float factor = args.value( "factor", 1.0f );
+
+    runOnMainThread( [&]
     {
         auto& vp = getViewerInstance().viewport();
         vp.cameraLookAlong( fwdN, up );
-        // preciseFitDataToScreenBorder defaults to snapView=false — keeps the user's direction.
-        vp.preciseFitDataToScreenBorder();
+        // snapView=false keeps the user's direction.
+        if ( fitMode )
+            vp.preciseFitDataToScreenBorder( { factor, false, *fitMode } );
     } );
-    skipFramesAfterInput();
+    (void)waitFramesAfterInput();
     return nlohmann::json::object();
+}
+
+static nlohmann::json mcpViewerGetCamera( const nlohmann::json& )
+{
+    nlohmann::json out;
+    runOnMainThread( [&]
+    {
+        const auto& vp = getViewerInstance().viewport();
+        const auto vec = []( const Vector3f& v ) { return nlohmann::json::array( { v.x, v.y, v.z } ); };
+        const auto& params = vp.getParameters();
+        out = nlohmann::json::object( {
+            { "forwardDir",   vec( -vp.getBackwardDirection() ) },
+            { "upDir",        vec( vp.getUpDirection() ) },
+            { "position",     vec( vp.getCameraPoint() ) },
+            { "target",       vec( -params.cameraTranslation ) },
+            { "orthographic", params.orthographic },
+            { "zoom",         params.cameraZoom },
+            { "viewAngle",    params.cameraViewAngle },
+        } );
+    } );
+    return out;
 }
 
 static nlohmann::json mcpViewerCaptureScreenshot( const nlohmann::json& args )
@@ -162,14 +195,16 @@ static nlohmann::json mcpViewerCaptureScreenshot( const nlohmann::json& args )
     {
         // captureUIScreenShot is async — it queues onto the GUI thread and fires the callback after
         // the next frame. Block the MCP handler thread on a future until that happens.
-        std::promise<Image> promise;
-        auto future = promise.get_future();
-        getViewerInstance().captureUIScreenShot( [&promise]( const Image& i ) { promise.set_value( i ); } );
+        auto promise = std::make_shared<std::promise<Image>>(); // outlives this call if the main thread is busy
+        auto future = promise->get_future();
+        getViewerInstance().captureUIScreenShot( [promise]( const Image& i ) { promise->set_value( i ); } );
+        if ( future.wait_for( cMainThreadTimeout ) != std::future_status::ready )
+            throw busyError( fmt::format( "The main thread is busy: it did not capture the screenshot within {} seconds", cMainThreadTimeout.count() ) );
         img = future.get();
     }
     else
     {
-        MR::CommandLoop::runCommandFromGUIThread( [&]
+        runOnMainThread( [&]
         {
             img = getViewerInstance().captureSceneScreenShot( { width, height }, transparentBg );
         } );
@@ -221,12 +256,19 @@ static nlohmann::json mcpViewerSendMouseEvent( const nlohmann::json& args )
     // mouseMove between hover-resolve and click matters for many plugins; follow the pattern used
     // by Python UI tests in test_ui/scenarios/scenario_helpers.py.
     const bool hasXY = args.contains( "x" ) && args.contains( "y" );
+    // the events are queued in order even if the main thread gets busy, then only waiting for it stops
+    std::string busy;
+    auto waitFrames = [&busy]
+    {
+        if ( busy.empty() )
+            busy = waitFramesAfterInput();
+    };
     auto doMove = [&]
     {
         const int x = args.at( "x" ).get<int>();
         const int y = args.at( "y" ).get<int>();
         v.emplaceEvent( "mcp mouseMove", [&v, x, y]{ v.mouseMove( x, y ); } );
-        skipFramesAfterInput();
+        waitFrames();
     };
 
     if ( type == "move" )
@@ -241,7 +283,7 @@ static nlohmann::json mcpViewerSendMouseEvent( const nlohmann::json& args )
             throw std::runtime_error( "`scroll` requires `scrollDelta` (positive = scroll up)." );
         const float delta = args["scrollDelta"].get<float>();
         v.emplaceEvent( "mcp mouseScroll", [&v, delta]{ v.mouseScroll( delta ); } );
-        skipFramesAfterInput();
+        waitFrames();
     }
     else if ( type == "down" || type == "up" || type == "click" )
     {
@@ -253,19 +295,19 @@ static nlohmann::json mcpViewerSendMouseEvent( const nlohmann::json& args )
         if ( type == "down" || type == "click" )
         {
             v.emplaceEvent( "mcp mouseDown", [&v, btn, mods]{ v.mouseDown( btn, mods ); } );
-            skipFramesAfterInput();
+            waitFrames();
         }
         if ( type == "up" || type == "click" )
         {
             v.emplaceEvent( "mcp mouseUp", [&v, btn, mods]{ v.mouseUp( btn, mods ); } );
-            skipFramesAfterInput();
+            waitFrames();
         }
     }
     else
     {
         throw std::runtime_error( fmt::format( "Unknown `type` `{}` (expected `down`/`up`/`click`/`move`/`scroll`).", type ) );
     }
-    return nlohmann::json::object();
+    return inputResult( std::move( busy ) );
 }
 
 static nlohmann::json mcpViewerSendKeyboardEvent( const nlohmann::json& args )
@@ -298,15 +340,15 @@ static nlohmann::json mcpViewerSendKeyboardEvent( const nlohmann::json& args )
     {
         throw std::runtime_error( fmt::format( "Unknown `type` `{}` (expected `down`/`up`/`press`/`repeat`).", type ) );
     }
-    skipFramesAfterInput();
-    return nlohmann::json::object();
+    return inputResult( waitFramesAfterInput() );
 }
 
-static nlohmann::json mcpViewerShutdown( const nlohmann::json& )
+static nlohmann::json mcpViewerShutdown( const nlohmann::json& args )
 {
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    const bool force = args.value( "force", false );
+    runOnMainThread( [&]
     {
-        MR::getViewerInstance().stopEventLoop();
+        MR::getViewerInstance().stopEventLoop( 0, !force );
     } );
     return nlohmann::json::object();
 }
@@ -324,7 +366,7 @@ MR_ON_INIT{
                 "The camera angle is preserved (no canonical-view snapping).",
         /*input_schema*/Schema::Object{}
             .addMemberOpt( "objectIds", Schema::Array( Schema::Number{} ) )
-            .addMemberOpt( "points",    Schema::Array( Schema::Array( Schema::Number{} ) ) )
+            .addMemberOpt( "points",    Schema::Array( Schema::Base( Schema::Array( Schema::Number{} ) ) ) )
             .addMemberOpt( "factor",    Schema::Number{} ),
         /*output_schema*/Schema::Object{},
         /*func*/mcpViewerFit
@@ -335,13 +377,42 @@ MR_ON_INIT{
         /*name*/"Set camera forward and up directions",
         /*desc*/"Point the camera along `forwardDir` (a world-space direction vector pointing from the camera toward "
                 "the subject). `upDir` sets the screen-up direction; it is automatically orthogonalized against "
-                "`forwardDir`, so it does not have to be exactly perpendicular, but it must not be parallel. The "
-                "camera is always refit to the whole scene after reorientation.",
+                "`forwardDir`, so it does not have to be exactly perpendicular, but it must not be parallel. "
+                "`fit` (default `visible`) refits the camera after reorientation: `visible` fits the geometry of all "
+                "visible objects, `selected` fits the selected objects, `none` keeps the zoom and the camera's distance "
+                "to the point it looks at, `target` from `viewer_getCamera` (the camera turns around that point, so "
+                "its position still changes). "
+                "The fit uses the geometry itself, so it frames tighter than `viewer_fit` with `objectIds`, which "
+                "fits the objects' bounding boxes. `factor` (default 1.0) is the same framing margin as in `viewer_fit`.",
         /*input_schema*/Schema::Object{}
-            .addMember( "forwardDir", Schema::Array( Schema::Number{} ) )
-            .addMember( "upDir",      Schema::Array( Schema::Number{} ) ),
+            .addMember(    "forwardDir", Schema::Array( Schema::Number{} ) )
+            .addMember(    "upDir",      Schema::Array( Schema::Number{} ) )
+            .addMemberOpt( "fit",        Schema::String( std::vector<std::string>{ "visible", "selected", "none" } ) )
+            .addMemberOpt( "factor",     Schema::Number{} ),
         /*output_schema*/Schema::Object{},
         /*func*/mcpViewerSetupCamera
+    );
+
+    server.addTool(
+        /*id*/  "viewer_getCamera",
+        /*name*/"Get camera state",
+        /*desc*/"Read the active viewport's camera. `forwardDir` and `upDir` are unit world-space vectors in the same "
+                "convention as `viewer_setupCamera` accepts, so passing them back with `fit: none` restores the "
+                "orientation. `position` is the camera point in world space; `target` is the world point at the center "
+                "of the view, which the camera turns around in `viewer_setupCamera` with `fit: none` (keeping its distance "
+                "to it). `orthographic` is the projection mode, "
+                "`zoom` is the camera zoom factor and `viewAngle` the vertical field of view in degrees.",
+        /*input_schema*/Schema::Object{},
+        /*output_schema*/Schema::Object{}
+            .addMember( "forwardDir",   Schema::Array( Schema::Number{} ) )
+            .addMember( "upDir",        Schema::Array( Schema::Number{} ) )
+            .addMember( "position",     Schema::Array( Schema::Number{} ) )
+            .addMember( "target",       Schema::Array( Schema::Number{} ) )
+            .addMember( "orthographic", Schema::Bool{} )
+            .addMember( "zoom",         Schema::Number{} )
+            .addMember( "viewAngle",    Schema::Number{} ),
+        /*func*/mcpViewerGetCamera,
+        /*readOnly*/true
     );
 
     server.addTool(
@@ -365,7 +436,8 @@ MR_ON_INIT{
             .addMemberOpt( "path",   Schema::String{} )
             .addMember(    "width",  Schema::Number{} )
             .addMember(    "height", Schema::Number{} ),
-        /*func*/mcpViewerCaptureScreenshot
+        /*func*/mcpViewerCaptureScreenshot,
+        /*readOnly*/true
     );
 
     server.addTool(
@@ -376,7 +448,9 @@ MR_ON_INIT{
                 "top-left origin (required for `move`; optional for `down`/`up`/`click` — if given, a mouseMove is "
                 "sent first so hover state resolves before the button event). `scrollDelta` is required for `scroll` "
                 "(positive = scroll up). `modifiers` is an array of any of `ctrl`/`shift`/`alt`/`super`. "
-                "`click` is shorthand for `down` + `up` at the same position.",
+                "`click` is shorthand for `down` + `up` at the same position. "
+                "Waits until the UI has processed the events, at most 20 seconds; if an action they started keeps "
+                "MeshInspector busy longer, returns `busy` with an explanation, see `ui_progressStatus`.",
         /*input_schema*/Schema::Object{}
             .addMember(    "type",        Schema::String{} )
             .addMemberOpt( "button",      Schema::String{} )
@@ -384,7 +458,7 @@ MR_ON_INIT{
             .addMemberOpt( "y",           Schema::Number{} )
             .addMemberOpt( "scrollDelta", Schema::Number{} )
             .addMemberOpt( "modifiers",   Schema::Array( Schema::String{} ) ),
-        /*output_schema*/Schema::Object{},
+        /*output_schema*/Schema::Object{}.addMemberOpt( "busy", Schema::String{} ),
         /*func*/mcpViewerSendMouseEvent
     );
 
@@ -397,12 +471,14 @@ MR_ON_INIT{
                 "`ArrowUp`/`ArrowDown`/`ArrowLeft`/`ArrowRight`, `F1`…`F25`). `press` is for text input — it emits a "
                 "unicode character event and requires a single printable character. `down`/`up`/`repeat` send raw "
                 "key events (use these for shortcuts like Ctrl+S, or for keys that don't produce text). `modifiers` "
-                "is an array of any of `ctrl`/`shift`/`alt`/`super`.",
+                "is an array of any of `ctrl`/`shift`/`alt`/`super`. "
+                "Waits until the UI has processed the event, at most 20 seconds; if an action it started keeps "
+                "MeshInspector busy longer, returns `busy` with an explanation, see `ui_progressStatus`.",
         /*input_schema*/Schema::Object{}
             .addMember(    "type",      Schema::String{} )
             .addMember(    "key",       Schema::String{} )
             .addMemberOpt( "modifiers", Schema::Array( Schema::String{} ) ),
-        /*output_schema*/Schema::Object{},
+        /*output_schema*/Schema::Object{}.addMemberOpt( "busy", Schema::String{} ),
         /*func*/mcpViewerSendKeyboardEvent
     );
 
@@ -411,10 +487,12 @@ MR_ON_INIT{
         /*name*/"Close MeshInspector",
         /*desc*/"Cleanly stop MeshInspector's event loop and exit the process. Returns immediately so the MCP "
                 "response can flush before the server socket closes; the actual shutdown happens on the next frame. "
-                "After this call the gateway's `launch` tool can bring MeshInspector back up. "
+                "Until the process has exited, other tools fail and the gateway's `status` still says `running`; once it "
+                "says `not started`, the gateway's `launch` tool can bring MeshInspector back up. "
                 "If the scene has unsaved changes, an `Application Close` modal is raised instead of exiting; "
-                "check `ui_listEntries` for the modal and dismiss it with the `Cancel` / `Don't Save` / `Save` buttons.",
-        /*input_schema*/Schema::Object{},
+                "check `ui_listEntries` for the modal and dismiss it with the `Cancel` / `Don't Save` / `Save` buttons. "
+                "Pass `force: true` to discard unsaved changes and exit without the modal.",
+        /*input_schema*/Schema::Object{}.addMemberOpt( "force", Schema::Bool{} ),
         /*output_schema*/Schema::Object{},
         /*func*/mcpViewerShutdown
     );

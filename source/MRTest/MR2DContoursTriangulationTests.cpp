@@ -1,4 +1,5 @@
 #include <MRMesh/MR2DContoursTriangulation.h>
+#include <MRMesh/MRCutTrianglePredicates.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRContour.h>
@@ -8,6 +9,7 @@
 #include <MRMesh/MRExtractIsolines.h>
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRRegionBoundary.h>
+#include <MRMesh/MRRingIterator.h>
 #include <MRMesh/MRMeshFillHole.h>
 #include <MRMesh/MR2to3.h>
 #include <MRSymbolMesh/MRSymbolMesh.h>
@@ -410,6 +412,216 @@ TEST( MRMesh, PlanarTriangulationMonotonePlan )
         EXPECT_EQ( turns, 2 );
     }
     EXPECT_EQ( parts.size(), size_t( 2 ) );
+}
+
+// on the exact predicates of a cut triangle, two vertices of the loops defined alike (as where both edges of a multiple edge
+// of the other mesh cross the triangle) are told apart only by different wedges (the third vertices of the triangles of their edges),
+// and an invalid definition makes addPoint fail, so without such wedges, or with an invalid point, the plan is rejected without running the sweep
+TEST( MRMesh, PlanarTriangulationMonotonePlanSameDefinitions )
+{
+    // the hole of triangle 0_f with island 1_f inside it
+    VertCoords pts{ Vector3f( 0, 0, 0 ), Vector3f( 1000, 0, 0 ), Vector3f( 0, 1000, 0 ),
+        Vector3f( 200, 200, 0 ), Vector3f( 400, 200, 0 ), Vector3f( 200, 400, 0 ) };
+    Mesh mesh = Mesh::fromTriangles( std::move( pts ), { { 0_v, 1_v, 2_v }, { 3_v, 4_v, 5_v } } );
+    const auto outer = mesh.topology.edgeWithLeft( 0_f );
+    mesh.topology.setLeft( outer, {} );
+    auto ringOf = [&] ( EdgeId e )
+    {
+        EdgeLoop res;
+        for ( auto le : leftRing( mesh.topology, e ) )
+            res.push_back( le );
+        return res;
+    };
+    const EdgeLoops loops{ ringOf( outer ), ringOf( mesh.topology.edgeWithLeft( 1_f ).sym() ) };
+
+    // the corners of the triangle are vertex points, the island vertices are the crossings of vertical segments with the triangle,
+    // the segment of vertex v having the ends of ids 2v and 2v + 1 (larger than those of the triangle)
+    const std::array<PreciseVertCoords, 3> tri{ PreciseVertCoords{ 0_v, { 0, 0, 0 } }, { 1_v, { 1000, 0, 0 } }, { 2_v, { 0, 1000, 0 } } };
+    auto pointOf = [&] ( VertId v, VertId sameAs )
+    {
+        if ( v < 3 )
+            return PreciseCutPoint{ .seg = { tri[v] } };
+        const auto u = v == 4_v && sameAs ? sameAs : v;
+        const auto p = Vector3i( mesh.points[u] );
+        return PreciseCutPoint{ .seg = { PreciseVertCoords{ VertId( 2 * u ), p - Vector3i( 0, 0, 100 ) }, { VertId( 2 * u + 1 ), p + Vector3i( 0, 0, 100 ) } },
+            .tri = tri };
+    };
+
+    auto plan = PlanarTriangulation::getMonotonePlan( mesh, loops, tri, [&] ( VertId v ) { return pointOf( v, {} ); } );
+    ASSERT_TRUE( plan.has_value() );
+    EXPECT_EQ( plan->items.size(), size_t( 2 ) ); // where the sweep reaches the island and where it leaves it
+
+    // vertex 4 defined as vertex 3, also with the ends of the segment and the vertices of the triangle in another order
+    EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( mesh, loops, tri, [&] ( VertId v ) { return pointOf( v, 3_v ); } ).has_value() );
+    auto reordered = [&] ( VertId v )
+    {
+        auto res = pointOf( v, 3_v );
+        if ( v == 4_v )
+        {
+            std::swap( res.seg[0], res.seg[1] );
+            std::rotate( res.tri.begin(), res.tri.begin() + 1, res.tri.end() );
+        }
+        return res;
+    };
+    EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( mesh, loops, tri, reordered ).has_value() );
+
+    // with wedges, of the triangles of two edges between the ends of the segment of vertex 3 at ( 200, 200 ), one to the left and one
+    // to the right of the segment: the shifts toward them keep vertex 4 to the right of vertex 3, so the island keeps its orientation,
+    // and the plan is the same as with vertex 4 at its own place; with the same wedge, in either order, or without the wedge of one of them,
+    // the points stay defined alike
+    const Vector3i p3( mesh.points[3_v] );
+    auto wedgeVert = [&] ( int id, int dx, int dy, int dz ) { return PreciseVertCoords{ VertId( id ), p3 + Vector3i( dx, dy, dz ) }; };
+    const std::array<PreciseVertCoords, 2> left{ wedgeVert( 20, -10, 5, 50 ), wedgeVert( 21, -10, -5, -50 ) };
+    const std::array<PreciseVertCoords, 2> right{ wedgeVert( 22, 10, 5, 50 ), wedgeVert( 23, 10, -5, -50 ) };
+    auto withWedges = [&] ( const std::array<PreciseVertCoords, 2>& w3, const std::array<PreciseVertCoords, 2>& w4 )
+    {
+        return [&reordered, w3, w4] ( VertId v )
+        {
+            auto res = reordered( v );
+            if ( v == 3_v )
+                res.wedge = w3;
+            else if ( v == 4_v )
+                res.wedge = w4;
+            return res;
+        };
+    };
+    plan = PlanarTriangulation::getMonotonePlan( mesh, loops, tri, withWedges( left, right ) );
+    ASSERT_TRUE( plan.has_value() );
+    EXPECT_EQ( plan->items.size(), size_t( 2 ) );
+    EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( mesh, loops, tri, withWedges( left, left ) ).has_value() );
+    EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( mesh, loops, tri, withWedges( left, { left[1], left[0] } ) ).has_value() );
+    EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( mesh, loops, tri, withWedges( left, {} ) ).has_value() );
+
+    // vertex 4 as a vertex point off the corners of the triangle, or as a segment not reaching the plane of the triangle
+    for ( bool asVertex : { true, false } )
+    {
+        EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( mesh, loops, tri, [&] ( VertId v )
+        {
+            auto res = pointOf( v, {} );
+            if ( v == 4_v && asVertex )
+                res = PreciseCutPoint{ .seg = { res.seg[0] } };
+            else if ( v == 4_v )
+                res.seg[0].pt.z += 150;
+            return res;
+        } ).has_value() );
+    }
+}
+
+// findCrossings on the exact predicates of a cut triangle: the crossings in the order of the sweep, each two edges directed along it,
+// the first one passing from the right of the second one to its left, or std::nullopt
+TEST( MRMesh, PlanarTriangulationFindCrossings )
+{
+    // the hole of triangle 0_f, and every cut as a slit: the segment where the plane of another triangle crosses the plane z = 0,
+    // between the crossings of two edges of that triangle (from its bottom vertex to its top ones)
+    Mesh mesh = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 1000, 0, 0 ), Vector3f( 0, 1000, 0 ) }, { { 0_v, 1_v, 2_v } } );
+    const auto outer = mesh.topology.edgeWithLeft( 0_f );
+    mesh.topology.setLeft( outer, {} );
+    const std::array<PreciseVertCoords, 3> tri{ PreciseVertCoords{ 0_v, { 0, 0, 0 } }, { 1_v, { 1000, 0, 0 } }, { 2_v, { 0, 1000, 0 } } };
+    Vector<PreciseCutPoint, VertId> defs{ { .seg = { tri[0] } }, { .seg = { tri[1] } }, { .seg = { tri[2] } } };
+    Vector<std::array<PreciseVertCoords, 3>> cuts; // the triangle of every cut edge
+    Vector<UndirectedEdgeId> cutEdges;
+    auto addCut = [&] ( Vector2i bottom, Vector2i top0, Vector2i top1 )
+    {
+        const int id = 10 * int( cuts.size() + 1 );
+        const std::array<PreciseVertCoords, 3> t{ PreciseVertCoords{ VertId( id ), to3dim( bottom ) - Vector3i( 0, 0, 100 ) },
+            { VertId( id + 1 ), to3dim( top0 ) + Vector3i( 0, 0, 100 ) }, { VertId( id + 2 ), to3dim( top1 ) + Vector3i( 0, 0, 100 ) } };
+        cuts.push_back( t );
+        const auto e = mesh.topology.makeEdge();
+        cutEdges.push_back( e.undirected() );
+        for ( int i : { 1, 2 } )
+        {
+            mesh.topology.setOrg( i == 1 ? e : e.sym(), mesh.addPoint( Vector3f( to3dim( ( bottom + ( i == 1 ? top0 : top1 ) ) / 2 ) ) ) );
+            defs.push_back( { .seg = { t[0], t[i] }, .tri = tri } );
+        }
+        return EdgeLoop{ e, e.sym() };
+    };
+    // no slit is along an axis, where the sweeps could order its ends differently
+    const auto a = addCut( { 320, 300 }, { 50, 290 }, { 550, 310 } ); // from ( 185, 295 ) to ( 435, 305 )
+    const auto b = addCut( { 300, 260 }, { 310, 600 }, { 290, 100 } ); // from ( 305, 430 ) to ( 295, 180 ), against the sweep
+    const auto c = addCut( { 380, 270 }, { 370, 120 }, { 390, 620 } ); // from ( 375, 195 ) to ( 385, 445 ), parallel to B
+    // P, Q and R through one point ( 600, 200 ), met from below by Q, P and R before it
+    const auto p = addCut( { 600, 240 }, { 300, 130 }, { 900, 190 } ); // from ( 450, 185 ) to ( 750, 215 )
+    const auto q = addCut( { 560, 200 }, { 610, -100 }, { 670, 500 } ); // from ( 585, 50 ) to ( 615, 350 )
+    const auto r = addCut( { 630, 240 }, { 330, 340 }, { 810, -20 } ); // from ( 480, 290 ) to ( 720, 110 )
+    EdgeLoop outerLoop;
+    for ( auto e : leftRing( mesh.topology, outer ) )
+        outerLoop.push_back( e );
+
+    auto pointOf = [&] ( VertId v ) { return defs[v]; };
+    auto cutOf = [&] ( UndirectedEdgeId ue )
+    {
+        for ( int i = 0; i < cuts.size(); ++i )
+            if ( ue == cutEdges[i] )
+                return cuts[i];
+        return std::array<PreciseVertCoords, 3>{}; // a side
+    };
+    auto res = PlanarTriangulation::findCrossings( mesh, { outerLoop, a, b, c }, tri, pointOf, cutOf );
+    ASSERT_TRUE( res.has_value() );
+    ASSERT_EQ( res->size(), size_t( 2 ) );
+
+    CutTrianglePredicates preds;
+    preds.reset( tri );
+    for ( auto v = 0_v; v < defs.endId(); ++v )
+        preds.addPoint( v, defs[v] );
+    const auto& tp = mesh.topology;
+    // whether crossing x is of the cuts of slits s and t
+    auto isOf = [] ( EdgePair x, const EdgeLoop& s, const EdgeLoop& t )
+    {
+        const auto u = x.first.undirected(), w = x.second.undirected();
+        return ( u == s[0].undirected() && w == t[0].undirected() ) || ( w == s[0].undirected() && u == t[0].undirected() );
+    };
+    auto checkDirections = [&]
+    {
+        for ( const auto& [e0, e1] : *res )
+        {
+            EXPECT_TRUE( preds.less( tp.org( e0 ), tp.dest( e0 ) ) );
+            EXPECT_TRUE( preds.less( tp.org( e1 ), tp.dest( e1 ) ) );
+            EXPECT_FALSE( preds.ccw( tp.org( e1 ), tp.dest( e1 ), tp.org( e0 ) ) );
+            EXPECT_TRUE( preds.ccw( tp.org( e1 ), tp.dest( e1 ), tp.dest( e0 ) ) );
+        }
+    };
+    // with A, crossed by B first, near x = 300
+    EXPECT_TRUE( isOf( ( *res )[0], a, b ) );
+    EXPECT_TRUE( isOf( ( *res )[1], a, c ) );
+    checkDirections();
+    EXPECT_FALSE( preds.failed() );
+
+    // B and C are parallel
+    res = PlanarTriangulation::findCrossings( mesh, { outerLoop, b, c }, tri, pointOf, cutOf );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_TRUE( res->empty() );
+    res = PlanarTriangulation::findCrossings( mesh, {}, tri, pointOf, cutOf );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_TRUE( res->empty() );
+
+    // A as if along a side
+    res = PlanarTriangulation::findCrossings( mesh, { outerLoop, a, b }, tri, pointOf, [&] ( UndirectedEdgeId ue )
+    {
+        return ue == a[0].undirected() ? std::array<PreciseVertCoords, 3>{} : cutOf( ue );
+    } );
+    EXPECT_FALSE( res.has_value() );
+    // the predicates fail on the crossing of two cuts by one triangle
+    res = PlanarTriangulation::findCrossings( mesh, { outerLoop, a, b }, tri, pointOf, [&] ( UndirectedEdgeId ) { return cuts[0]; } );
+    EXPECT_FALSE( res.has_value() );
+
+    // the same crossings on the float predicates
+    res = PlanarTriangulation::findCrossings( mesh, { outerLoop, a, b, c }, Vector3f( 0, 0, 1 ) );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_EQ( res, PlanarTriangulation::findCrossings( mesh, { outerLoop, a, b, c }, tri, pointOf, cutOf ) );
+
+    // three cuts through one point are crossed one by one, the second time by the outer ones Q and R, so every two once and along every edge
+    // in the order of the sweep, which the points of the crossings follow
+    res = PlanarTriangulation::findCrossings( mesh, { outerLoop, p, q, r }, tri, pointOf, cutOf );
+    ASSERT_TRUE( res.has_value() );
+    ASSERT_EQ( res->size(), size_t( 3 ) );
+    EXPECT_TRUE( isOf( ( *res )[1], q, r ) );
+    EXPECT_TRUE( ( isOf( ( *res )[0], p, q ) && isOf( ( *res )[2], p, r ) ) || ( isOf( ( *res )[0], p, r ) && isOf( ( *res )[2], p, q ) ) );
+    checkDirections();
+    for ( int i = 0; i < 3; ++i )
+        preds.addPoint( defs.endId() + i, { .tri = cutOf( ( *res )[i].first.undirected() ), .tri2 = cutOf( ( *res )[i].second.undirected() ) } );
+    EXPECT_TRUE( preds.less( defs.endId(), defs.endId() + 1 ) );
+    EXPECT_TRUE( preds.less( defs.endId() + 1, defs.endId() + 2 ) );
+    EXPECT_FALSE( preds.failed() );
 }
 
 namespace

@@ -19,7 +19,7 @@ namespace MR::Cuda
 constexpr size_t cMinCudaBufferSize = 1 << 24; // 16 MiB
 
 Expected<std::vector<MR::PointsProjectionResult>> findProjectionOnPoints( const PointCloud& pointCloud,
-    const std::vector<Vector3f>& points, const FindProjectionOnPointsSettings& settings )
+    const VertCoords& points, const FindProjectionOnPointsSettings& settings )
 {
     std::vector<MR::PointsProjectionResult> results;
     PointsProjector projector;
@@ -42,7 +42,7 @@ Expected<void> PointsProjector::setPointCloud( const PointCloud& pointCloud )
 }
 
 Expected<void> PointsProjector::findProjections( std::vector<MR::PointsProjectionResult>& results,
-    const std::vector<Vector3f>& points, const FindProjectionOnPointsSettings& settings ) const
+    const VertCoords& points, const FindProjectionOnPointsSettings& settings ) const
 {
     if ( !data_ )
         return unexpected( "No reference point cloud is set" );

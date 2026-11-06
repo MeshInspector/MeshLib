@@ -288,7 +288,6 @@
     <ClInclude Include="MRStatePlugin.h" />
     <ClInclude Include="MRDemoPlugin.h" />
     <ClInclude Include="MRGLMacro.h" />
-    <ClInclude Include="MRPythonAppendCommand.h" />
     <ClInclude Include="MRRecentFilesStore.h" />
     <ClInclude Include="MRRenderGLHelpers.h" />
     <ClInclude Include="MRRenderLinesObject.h" />
@@ -370,7 +369,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />
-    <Content Include="resource\**">
+    <Content Include="resource\**" Exclude="resource\icons\**;resource\object_icons\**;resource\independent_icons\**;resource\logos\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <CopyFileToFolders Include="MRDarkTheme.json">
@@ -586,7 +585,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(PythonLibPath);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -602,4 +601,5 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <Import Project="$(MeshLibDir)\source\PackIcons.targets" />
 </Project>

@@ -13,7 +13,7 @@ class SystemPath
 {
 public:
 #ifndef MR_PARSING_FOR_ANY_BINDINGS
-    /// get the current executable's file path
+    /// get the current executable's file path, absolute (except in Emscripten, where it is the .wasm location)
     MRMESH_API static const Expected<std::filesystem::path> & getExecutablePath();
 
     /// get the MRMesh binary's file path
@@ -23,7 +23,7 @@ public:
     /// \param symbol - pointer to a function
     MRMESH_API static Expected<std::filesystem::path> getLibraryPathForSymbol( const void* symbol );
 
-    /// get the current executable's directory path
+    /// get the current executable's directory path, absolute (except in Emscripten)
     MRMESH_API static Expected<std::filesystem::path> getExecutableDirectory();
 
     /// get the MRMesh binary's directory path

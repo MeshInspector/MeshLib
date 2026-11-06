@@ -247,18 +247,18 @@ MRMESH_API void distanceMapFromContours( DistanceMap & distMap, const Polyline2&
 
 /// converts distance map to 2d iso-lines:
 /// iso-lines are created in space DistanceMap ( plane OXY with pixelSize = (1, 1) )
-[[nodiscard]] MRMESH_API Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue );
+MR_BIND_OVERLOAD_SUFFIX() [[nodiscard]] MRMESH_API Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue );
 
 /// iso-lines are created in real space ( plane OXY with parameters according ContourToDistanceMapParams )
-[[nodiscard]] MRMESH_API Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap,
+MR_BIND_OVERLOAD_SUFFIX(params) [[nodiscard]] MRMESH_API Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap,
     const ContourToDistanceMapParams& params, float isoValue );
 
 /// computes iso-lines of distance map corresponding to given iso-value;
 /// in second returns the transformation from 0XY plane to world;
 /// \param useDepth true - the isolines will be located on distance map surface, false - isolines for any iso-value will be located on the common plane xf(0XY)
-[[nodiscard]] MRMESH_API std::pair<Polyline2, AffineXf3f> distanceMapTo2DIsoPolyline( const DistanceMap& distMap,
+MR_BIND_OVERLOAD_SUFFIX(xf) [[nodiscard]] MRMESH_API std::pair<Polyline2, AffineXf3f> distanceMapTo2DIsoPolyline( const DistanceMap& distMap,
     const AffineXf3f& xf, float isoValue, bool useDepth = false );
-[[nodiscard]] MRMESH_API Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float pixelSize, float isoValue );
+MR_BIND_OVERLOAD_SUFFIX(pixelSize) [[nodiscard]] MRMESH_API Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float pixelSize, float isoValue );
 
 /// constructs an offset contour for given polyline
 [[nodiscard]] MRMESH_API Polyline2 polylineOffset( const Polyline2& polyline, float pixelSize, float offset );

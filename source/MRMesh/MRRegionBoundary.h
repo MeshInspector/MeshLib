@@ -89,11 +89,11 @@ MR_BIND_IGNORE inline std::vector<EdgeLoop> delRegionKeepBd( Mesh & mesh, const 
 [[nodiscard]] MRMESH_API FaceBitSet findRegionOuterFaces( const MeshTopology& topology, const FaceBitSet& region );
 
 /// composes the set of all vertices incident to given faces
-[[nodiscard]] MRMESH_API VertBitSet getIncidentVerts( const MeshTopology & topology, const FaceBitSet & faces );
+MR_BIND_OVERLOAD_SUFFIX() [[nodiscard]] MRMESH_API VertBitSet getIncidentVerts( const MeshTopology & topology, const FaceBitSet & faces );
 
 /// if faces-parameter is null pointer then simply returns the reference on all valid vertices;
 /// otherwise performs store = getIncidentVerts( topology, *faces ) and returns reference on store
-[[nodiscard]] MRMESH_API const VertBitSet & getIncidentVerts( const MeshTopology & topology, const FaceBitSet * faces, VertBitSet & store );
+MR_BIND_OVERLOAD_SUFFIX(facesStore) [[nodiscard]] MRMESH_API const VertBitSet & getIncidentVerts( const MeshTopology & topology, const FaceBitSet * faces, VertBitSet & store );
 
 /// composes the set of all vertices not on the boundary of a hole and with all their adjacent faces in given set
 [[nodiscard]] MRMESH_API VertBitSet getInnerVerts( const MeshTopology & topology, const FaceBitSet * region = nullptr );
@@ -130,7 +130,7 @@ MR_BIND_IGNORE inline std::vector<EdgeLoop> delRegionKeepBd( Mesh & mesh, const 
 [[nodiscard]] MRMESH_API UndirectedEdgeBitSet getIncidentEdges( const MeshTopology& topology, const UndirectedEdgeBitSet& edges );
 
 /// composes the set of all vertices incident to given edges
-[[nodiscard]] MRMESH_API VertBitSet getIncidentVerts( const MeshTopology & topology, const UndirectedEdgeBitSet & edges );
+MR_BIND_OVERLOAD_SUFFIX(edges) [[nodiscard]] MRMESH_API VertBitSet getIncidentVerts( const MeshTopology & topology, const UndirectedEdgeBitSet & edges );
 
 /// composes the set of all faces incident to given edges
 [[nodiscard]] MRMESH_API FaceBitSet getIncidentFaces( const MeshTopology & topology, const UndirectedEdgeBitSet & edges );
@@ -146,7 +146,7 @@ MR_BIND_IGNORE inline std::vector<EdgeLoop> delRegionKeepBd( Mesh & mesh, const 
 
 /// if edges-parameter is null pointer then simply returns the reference on all valid vertices;
 /// otherwise performs store = getIncidentVerts( topology, *edges ) and returns reference on store
-[[nodiscard]] MRMESH_API const VertBitSet & getIncidentVerts( const MeshTopology & topology, const UndirectedEdgeBitSet * edges, VertBitSet & store );
+MR_BIND_OVERLOAD_SUFFIX(edgesStore) [[nodiscard]] MRMESH_API const VertBitSet & getIncidentVerts( const MeshTopology & topology, const UndirectedEdgeBitSet * edges, VertBitSet & store );
 
 /// composes the set of all vertices with all their edges in given set
 [[nodiscard]] MRMESH_API VertBitSet getInnerVerts( const MeshTopology & topology, const UndirectedEdgeBitSet & edges );

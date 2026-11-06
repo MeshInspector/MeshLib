@@ -887,7 +887,7 @@ bool MultiwayICP::p2ptIter_()
             return;
         updXf[objId] = res;
     } );
-    if ( !std::all_of( updXf.vec_.begin(), updXf.vec_.end(), [] ( const auto& v ) { return v.has_value(); } ) )
+    if ( !std::all_of( begin( updXf ), end( updXf ), [] ( const auto& v ) { return v.has_value(); } ) )
         return false;
     // fix position of last object, and move all others relative to it
     const auto fixLastXf = updXf.back()->inverse();
@@ -946,6 +946,7 @@ bool MultiwayICP::p2plIter_()
             }
         }
         p2pl.prepare();
+        p2pl.setStabilizer( prop_.p2plStabilizer );
 
         AffineXf3d res = getAligningXf( p2pl, prop_.icpMode, prop_.p2plAngleLimit, prop_.p2plScaleLimit, prop_.fixedRotationAxis );
         if ( std::isnan( res.b.x ) ) //nan check
@@ -954,7 +955,7 @@ bool MultiwayICP::p2plIter_()
         const AffineXf3d addCentroid{ Matrix3d(), Vector3d(  centroidRef ) };
         updXf[objId] = addCentroid * res * subCentroid;
     } );
-    if ( !std::all_of( updXf.vec_.begin(), updXf.vec_.end(), [] ( const auto& v ) { return v.has_value(); } ) )
+    if ( !std::all_of( begin( updXf ), end( updXf ), [] ( const auto& v ) { return v.has_value(); } ) )
         return false;
     // fix position of last object, and move all others relative to it
     const auto fixLastXf = updXf.back()->inverse();

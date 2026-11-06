@@ -94,16 +94,16 @@ struct ParametersRegions : ParametersBase
 /// consider a mesh where each vertex has additive weight (taken from vertWeights and not from params), and this weight is linearly interpolated in mesh triangles,
 /// and the distance to a point is considered equal to (euclidean distance - weight),
 /// constructs iso-surface of such distance field corresponding to params.offset value using marching cubes
-[[nodiscard]] MRVOXELS_API Expected<Mesh> meshShell( const Mesh & mesh, const VertScalars& vertWeights, const ParametersMetric& params );
+MR_BIND_OVERLOAD_SUFFIX() [[nodiscard]] MRVOXELS_API Expected<Mesh> meshShell( const Mesh & mesh, const VertScalars& vertWeights, const ParametersMetric& params );
 
 /// interpolate set of regions and assign weight to each vertex of the mesh
 MRVOXELS_API VertScalars calculateShellWeightsFromRegions(
     const Mesh& mesh, const std::vector<ParametersRegions::Region>& regions, float interpolationDist );
 
 /// this overload supports linear interpolation between the regions with different weight
-[[nodiscard]] MRVOXELS_API Expected<Mesh> meshShell( const Mesh& mesh, const ParametersRegions& params );
+MR_BIND_OVERLOAD_SUFFIX(regions) [[nodiscard]] MRVOXELS_API Expected<Mesh> meshShell( const Mesh& mesh, const ParametersRegions& params );
 
 /// this overload allows to control how distance volume is build during the offset
-[[nodiscard]] MRVOXELS_API Expected<Mesh> meshShell( const Mesh& mesh, const ParametersRegions& params, meshToDistanceVolumeT volumeBuilder );
+MR_BIND_OVERLOAD_SUFFIX(regionsBuilder) [[nodiscard]] MRVOXELS_API Expected<Mesh> meshShell( const Mesh& mesh, const ParametersRegions& params, meshToDistanceVolumeT volumeBuilder );
 
 } //namespace MR::WeightedShell

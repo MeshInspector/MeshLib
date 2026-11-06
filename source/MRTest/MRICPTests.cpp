@@ -1,5 +1,6 @@
 #include <MRMesh/MRICP.h>
 #include <MRMesh/MRTorus.h>
+#include <MRMesh/MRCube.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRAffineXf3.h>
 #include <gtest/gtest.h>
@@ -77,6 +78,37 @@ TEST( MRMesh, ICPTorusWeightedSamples )
         EXPECT_EQ( pairs[i].srcVertId, samples[i].v );
         EXPECT_EQ( pairs[i].weight, samples[i].weight );
     }
+}
+
+TEST( MRMesh, ICPCubeBigTriangles )
+{
+    // the cube has 8 vertices only, so the samples must be taken inside its triangles
+    const auto cube = makeCube();
+    const auto xf = AffineXf3f( Matrix3f::rotation( Vector3f( 1, 1, 0 ).normalized(), 0.05f ), Vector3f( 0.02f, -0.03f, 0.01f ) );
+
+    ICP icp( cube, cube, xf, AffineXf3f(), 0.1f );
+    EXPECT_GT( icp.getFlt2RefPairs().vec.size(), 100 );
+    EXPECT_GT( icp.getRef2FltPairs().vec.size(), 100 );
+
+    const auto fltCloud = icp.getFltSamplesCloud();
+    EXPECT_EQ( fltCloud.points.size(), icp.getFlt2RefPairs().vec.size() );
+    EXPECT_EQ( fltCloud.normals.size(), fltCloud.points.size() );
+    EXPECT_EQ( fltCloud.validPoints.count(), fltCloud.points.size() );
+    for ( const auto & p : fltCloud.points ) // all samples are on the surface of the cube
+        EXPECT_NEAR( std::max( { std::abs( p.x ), std::abs( p.y ), std::abs( p.z ) } ), 0.5f, 1e-6f );
+    EXPECT_EQ( icp.getRefSamplesCloud().points.size(), icp.getRef2FltPairs().vec.size() );
+
+    // only the vertices if non-vertex samples are not allowed
+    ICP icpVerts( cube, cube, xf, AffineXf3f(), VertBitSet{}, VertBitSet{} );
+    icpVerts.samplePoints( 0.1f, false );
+    EXPECT_EQ( icpVerts.getFlt2RefPairs().vec.size(), 8 );
+    EXPECT_EQ( icpVerts.getRef2FltPairs().vec.size(), 8 );
+    EXPECT_EQ( icpVerts.getRefSamplesCloud().points.size(), 8 );
+
+    icp.setParams( { .method = ICPMethod::PointToPlane, .iterLimit = 20 } );
+    const auto newXf = icp.calculateTransformation();
+    EXPECT_LT( ( newXf.A - Matrix3f::identity() ).norm(), 1e-5f );
+    EXPECT_LT( newXf.b.length(), 1e-5f );
 }
 
 } //namespace MR

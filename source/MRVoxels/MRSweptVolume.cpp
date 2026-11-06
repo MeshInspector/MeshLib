@@ -349,7 +349,7 @@ Expected<Mesh> computeSweptVolumeWithDistanceVolume( const ComputeSweptVolumePar
         const auto offset = indexer.sizeXY() * begin;
         ParallelFor( indexer.toVoxelId( { 0, 0, begin } ), indexer.toVoxelId( { 0, 0, end } ), [&] ( VoxelId vox )
         {
-            volume.data.vec_[vox.get() - offset] = getter( indexer.toPos( vox ) );
+            volume.data[VoxelId( vox.get() - offset )] = getter( indexer.toPos( vox ) );
         } );
 
         timer.restart( "triangulating distance volume" );
@@ -474,7 +474,7 @@ Expected<Mesh> computeSweptVolumeWithCustomToolDistance( IComputeToolDistance& c
     };
     VolumeIndexer indexer( dims );
     volume.data.resize( indexer.sizeXY() * maxSliceCount );
-    if ( auto res = comp.computeToolDistance( volume.data.vec_, volume.dims, params.voxelSize, origin, padding ); !res )
+    if ( auto res = comp.computeToolDistance( volume.data, volume.dims, params.voxelSize, origin, padding ); !res )
         return unexpected( std::move( res.error() ) );
 
     Timer timer( "" );
@@ -493,7 +493,7 @@ Expected<Mesh> computeSweptVolumeWithCustomToolDistance( IComputeToolDistance& c
         timer.restart( "compute distance volume" );
         const auto shift = Vector3f{ 0, 0, (float)begin } * params.voxelSize;
         // TODO: async
-        MR_RETURN_IF_UNEXPECTED( comp.computeToolDistance( volume.data.vec_, volume.dims, params.voxelSize, origin + shift, padding ) )
+        MR_RETURN_IF_UNEXPECTED( comp.computeToolDistance( volume.data, volume.dims, params.voxelSize, origin + shift, padding ) )
 
         timer.restart( "triangulating distance volume" );
         MR_RETURN_IF_UNEXPECTED( mesher.addPart( volume ) )

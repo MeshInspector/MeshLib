@@ -47,15 +47,18 @@ struct CutMeshParameters
         Right
     } fillPart{ FillPart::Both };
 
-    /// This enum defines the MR::cutMesh behaviour in case of bad faces acure
-    /// basicaly MR::cutMesh removes all faces which contours pass through, adds new edges to topology and fills all removed parts
-    /// 
-    /// \note Bad faces here mean faces where contours have intersections and cannot be cut and filled in an good way
+    /// This enum defines the MR::cutMesh behaviour in case bad faces occur:
+    /// basically MR::cutMesh removes all faces which contours pass through, adds new edges to topology and fills all removed parts
+    ///
+    /// \note Bad faces here mean faces where contours have intersections and cannot be cut and filled in a good way
     enum class ForceFill
     {
-        None, //< if bad faces occur does not fill anything
-        Good, //< fills all faces except bad ones
-        All   //< fills all faces with bad ones, but on bad faces triangulation can also be bad (may have self-intersections or tunnels)
+        None, ///< if bad faces occur, nothing is filled
+        All,  ///< bad faces are filled too, but their triangulation can be bad (may have self-intersections or tunnels)
+        /// as All, but with sortData the contours are first split where they cross in bad faces (see \ref CutMeshResult::resultCut);
+        /// where the split fails, as All: e.g. in a face where an open contour ends on a side of the face, or a contour segment ends
+        /// at a mesh vertex that is not a corner of the triangle of the other mesh along the segment (unlike the fold vertices of selfBoolean)
+        SplitCrossings
     } forceFillMode{ ForceFill::None };
 
     /// Optional output map for each new edge introduced after cut maps edge from old topology or old face
@@ -68,9 +71,15 @@ struct CutMeshParameters
   */
 struct CutMeshResult
 {
-    /// Paths of new edges on mesh, they represent same contours as input, but already cut
+    /// Paths of new edges on mesh, they represent same contours as input, but already cut;
+    /// a contour going from a mesh vertex to a point and back has an edge followed by its sym there;
+    /// with \ref CutMeshParameters::ForceFill::SplitCrossings and sortData, a path also passes the vertices where its contour crosses others (or itself) in bad faces
     std::vector<EdgePath> resultCut;
-    /// Bitset of bad triangles - triangles where input contours have intersections and cannot be cut and filled in a good way
+    /// Bitset of bad triangles - triangles where input contours have intersections and cannot be cut and filled in a good way;
+    /// under force fill, also the triangles where two segments of the contours cross (segments that follow each other along a contour
+    /// or have a common mesh vertex do not), even if their cut is valid; the triangles where that cannot be told may be reported too:
+    /// where the exact predicates fail on the points of the contours that they compare (e.g. coincident contours of a double-sided sheet),
+    /// or, without sortData, where the corners of the triangle are on one line and more than three points of the contours are inside it
     /// \sa \ref MR::CutMeshParameters
     FaceBitSet fbsWithContourIntersections;
 };
@@ -78,13 +87,19 @@ struct CutMeshResult
 /** \ingroup BooleanGroup
   * \brief Cuts mesh by given contours
   * 
-  * This function cuts mesh making new edges paths on place of input contours
+  * This function cuts mesh making new edges paths on place of input contours;
+  * a contour inside one face is connected with the rest of the face by new edges
   * \param mesh Input mesh that will be cut
   * \param contours Input contours to cut mesh with, find more \ref MR::OneMeshContours
   * \param params Parameters describing some cut options, find more \ref MR::CutMeshParameters
   * \return New edges that correspond to given contours, find more \ref MR::CutMeshResult
   * \parblock
-  * \warning Input contours should have no intersections, faces where contours intersects (`bad faces`) will not be allowed for fill
+  * \warning Input contours should have no intersections, faces where contours intersects (`bad faces`) will not be allowed for fill,
+  * unless a force fill mode is set (see \ref CutMeshParameters::ForceFill)
+  * \endparblock
+  * \parblock
+  * \warning Every two consecutive intersections of a contour should lie in one face, and a contour should not fold back
+  * at a point inside an edge: a mesh vertex next to such a point is the third vertex of the face the contour goes in there
   * \endparblock
   * \parblock
   * \warning Input mesh will be changed in any case, if `bad faces` are in mesh, mesh will be spoiled, \n
@@ -92,6 +107,11 @@ struct CutMeshResult
   * \endparblock
   */
 MRMESH_API CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMeshParameters& params = {} );
+
+/// \ingroup BooleanGroup
+/// reserves the capacity in \p mesh for a mesh with the sizes of \p sizeOf (e.g. \p mesh itself, or the mesh to be copied in it)
+/// together with the elements that \ref cutMesh by \p contours adds, so the cut does not reallocate the mesh
+MRMESH_API void reserveForCut( Mesh& mesh, const Mesh& sizeOf, const OneMeshContours& contours );
 
 
 /// Cuts \p mesh by \p contour by projecting all the points
@@ -133,23 +153,44 @@ struct CutByProjectionSettings
 /** \ingroup BooleanGroup
   * \brief Makes continuous contour by iso-line from mesh tri points, if first and last meshTriPoint is the same, makes closed contour
   *
-  * Finds shortest paths between neighbor \p surfaceLine and build offset contour on surface for MR::cutMesh input
+  * Finds shortest paths between neighbor \p surfaceLine and build offset contour on surface for MR::cutMesh input.
+  * An isoline that reaches the mesh boundary is an open contour (closed = false) from a boundary edge to a boundary edge;
+  * the other isolines are closed, with the last intersection equal to the first one
   * \param offset amount of offset form given point, note that absolute value is used and isoline in both direction returned
   * \param searchSettings settings for search geodesic path
   */
+/// \sa offsetSurfaceLine to get the same contours as plain points
 [[nodiscard]]
-MRMESH_API Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
+MRMESH_API Expected<OneMeshContours> offsetSurfaceLineToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
     float offset, SearchPathSettings searchSettings = {} );
 
 /** \ingroup BooleanGroup
   * \brief Makes continuous contour by iso-line from mesh tri points, if first and last meshTriPoint is the same, makes closed contour
   *
-  * Finds shortest paths between neighbor \p surfaceLine and build offset contour on surface for MR::cutMesh input
+  * Finds shortest paths between neighbor \p surfaceLine and build offset contour on surface for MR::cutMesh input.
+  * An isoline that reaches the mesh boundary is an open contour (closed = false) from a boundary edge to a boundary edge;
+  * the other isolines are closed, with the last intersection equal to the first one
   * \param offsetAtPoint functor that returns amount of offset form arg point, note that absolute value is used and isoline in both direction returned
   * \param searchSettings settings for search geodesic path
   */
+/// \sa offsetSurfaceLine to get the same contours as plain points
 [[nodiscard]]
-MRMESH_API Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
-    const std::function<float(int)>& offsetAtPoint, SearchPathSettings searchSettings = {});
+MRMESH_API Expected<OneMeshContours> offsetSurfaceLineToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
+    const std::function<float(int)>& offsetAtPoint, SearchPathSettings searchSettings = {} );
+
+// the old names stay in the bindings, since scripts call them
+[[deprecated( "use offsetSurfaceLineToMeshContours" )]] [[nodiscard]]
+inline Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
+    float offset, SearchPathSettings searchSettings = {} )
+{
+    return offsetSurfaceLineToMeshContours( mesh, surfaceLine, offset, searchSettings );
+}
+
+[[deprecated( "use offsetSurfaceLineToMeshContours" )]] [[nodiscard]]
+inline Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
+    const std::function<float(int)>& offsetAtPoint, SearchPathSettings searchSettings = {} )
+{
+    return offsetSurfaceLineToMeshContours( mesh, surfaceLine, offsetAtPoint, searchSettings );
+}
 
 } //namespace MR

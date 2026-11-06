@@ -21,8 +21,8 @@ struct MeshRelaxParams : RelaxParams
 
 /// applies given number of relaxation iterations to the whole mesh ( or some region if it is specified )
 /// \return true if was finished successfully, false if was interrupted by progress callback
-MRMESH_API bool relax( Mesh& mesh, const MeshRelaxParams& params = {}, const ProgressCallback& cb = {} );
-MRMESH_API bool relax( const MeshTopology& topology, VertCoords& points, const MeshRelaxParams& params = {}, const ProgressCallback& cb = {} );
+MR_BIND_OVERLOAD_SUFFIX() MRMESH_API bool relax( Mesh& mesh, const MeshRelaxParams& params = {}, const ProgressCallback& cb = {} );
+MR_BIND_OVERLOAD_SUFFIX(topology) MRMESH_API bool relax( const MeshTopology& topology, VertCoords& points, const MeshRelaxParams& params = {}, const ProgressCallback& cb = {} );
 
 /// computes position of a vertex, when all neighbor triangles have almost equal areas,
 /// more precisely it minimizes sum_i (area_i)^2 by adjusting the position of this vertex only

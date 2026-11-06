@@ -16,7 +16,7 @@ int main( void )
     int rc = EXIT_FAILURE;
 
     // Load mesh.
-    MR_expected_MR_Mesh_std_string* mesh1Res = MR_MeshLoad_fromAnySupportedFormat_2( "mesh1.ctm", NULL, NULL );
+    MR_expected_MR_Mesh_std_string* mesh1Res = MR_MeshLoad_fromAnySupportedFormat( "mesh1.ctm", NULL, NULL );
     MR_Mesh* refMesh = MR_expected_MR_Mesh_std_string_value_mut( mesh1Res );
     if ( !refMesh )
     {
@@ -24,7 +24,7 @@ int main( void )
         goto fail_load_1;
     }
 
-    MR_expected_MR_Mesh_std_string* mesh2Res = MR_MeshLoad_fromAnySupportedFormat_2( "mesh2.ctm", NULL, NULL );
+    MR_expected_MR_Mesh_std_string* mesh2Res = MR_MeshLoad_fromAnySupportedFormat( "mesh2.ctm", NULL, NULL );
     MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_value_mut( mesh2Res );
     if ( !mesh )
     {
@@ -33,7 +33,7 @@ int main( void )
     }
 
     // get object of VertScalars - set of distances between points of target mesh and reference mesh
-    MR_VertScalars* vertDistances = MR_findSignedDistances_4( refMesh, mesh, NULL, NULL );
+    MR_VertScalars* vertDistances = MR_findSignedDistances( refMesh, mesh, NULL, NULL );
     float minDist = FLT_MAX;
     float maxDist = -FLT_MAX;
     for ( size_t i = 0; i < MR_VertScalars_size( vertDistances ); ++i )

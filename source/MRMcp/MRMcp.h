@@ -48,6 +48,13 @@ namespace Schema
                 { "type", "string" },
             } ) )
         {}
+
+        /// A string limited to one of `allowedValues`.
+        explicit String( std::vector<std::string> allowedValues )
+            : String()
+        {
+            json["enum"] = std::move( allowedValues );
+        }
     };
 
     /// A schema describing a boolean.
@@ -61,6 +68,8 @@ namespace Schema
     };
 
     /// A schema describing an array of whatever is passed to the constructor.
+    /// For an array of arrays write `Array( Base( Array( ... ) ) )`: `Array( Array( ... ) )` is just the inner array,
+    /// because initializing from a prvalue of the same type skips the constructors.
     struct Array : Base
     {
         Array( Base elemSchema )
@@ -69,6 +78,19 @@ namespace Schema
                 { "items", std::move( elemSchema ).asJson() },
             } ) )
         {}
+    };
+
+    /// A schema matching any of the given schemas, e.g. a number or an array of numbers.
+    struct AnyOf : Base
+    {
+        AnyOf( std::vector<Base> alternatives )
+            : Base( nlohmann::json::object( {
+                { "anyOf", nlohmann::json::array() },
+            } ) )
+        {
+            for ( auto& alt : alternatives )
+                json["anyOf"].push_back( std::move( alt ).asJson() );
+        }
     };
 
     /// A schema describing an object.
@@ -142,11 +164,14 @@ public:
     /// @param desc A human/ai-readable explanation of what the tool does.
     /// @param inputSchema Describes the arguments. Normally it should be `Schema::Object{}` with some fields added.
     /// @param outputSchema Describes the returned JSON.
+    /// @param readOnly The tool does not change the application's state; clients get it as the `readOnlyHint` annotation,
+    ///     so they may e.g. run such calls concurrently or approve them more easily.
     /// Fails if the tool with this `id` already exists.
     /// Must be called early, before `setRunning(true)` is called for the first time, otherwise fails.
     /// Returns true on success. Asserts when returning false, so you don't have to check the return value.
     /// NOTE: Consult `docs/testing_mcp.md` for how to test your tool.
-    MRMCP_API bool addTool( std::string id, std::string name, std::string desc, Schema::Base inputSchema, Schema::Base outputSchema, ToolFunc func );
+    MRMCP_API bool addTool( std::string id, std::string name, std::string desc, Schema::Base inputSchema, Schema::Base outputSchema, ToolFunc func,
+        bool readOnly = false );
 
     [[nodiscard]] MRMCP_API const Params& getParams() const;
 

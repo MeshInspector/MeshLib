@@ -527,7 +527,7 @@ MRVIEWER_API void endTabItem();
 /// The padding is control-specific
 /// Sample usage:
 ///   UI::alignTextToFramePadding( ImGui::GetStyle().FramePadding.y );
-///   // (with this value, it is equivalent to \ref ImGui::AlignTextToFramePadding() )
+///   // (with this value, it is equivalent to ImGui::AlignTextToFramePadding() )
 ///   ImGui::Text( "Button:" );
 ///   ImGui::SameLine();
 ///   UI::buttonCommonSize( "Button" ); // the control we align to

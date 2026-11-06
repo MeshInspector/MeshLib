@@ -63,18 +63,24 @@ runs:
             `(timeout ${timeoutMs / 1000}s, poll every ${intervalMs / 1000}s).`,
           );
 
+          // Match the job exactly, or by caller-job segment for reusable-
+          // workflow jobs (displayed as "caller-job / inner-job"). A plain
+          // substring would wrongly match unrelated jobs -- e.g. a prepare-
+          // image matrix job "... (emscripten-generate-c-bindings, arm64)".
+          const matches = (j) => j.name === jobName || j.name.startsWith(jobName + ' / ');
+
           for (;;) {
-            const jobs = await safe(() => github.paginate(
+            // Small pages: in re-run attempts the API spends ~0.2s per job and a
+            // 100-job page times out with 502. Stop paging once the job is found.
+            const job = await safe(() => github.paginate(
               github.rest.actions.listJobsForWorkflowRun,
-              { owner, repo, run_id: runId, per_page: 100 },
-            ));
-            // Match the job exactly, or by caller-job segment for reusable-
-            // workflow jobs (displayed as "caller-job / inner-job"). A plain
-            // substring would wrongly match unrelated jobs -- e.g. a prepare-
-            // image matrix job "... (emscripten-generate-c-bindings, arm64)".
-            const job = jobs && jobs.find(
-              (j) => j.name === jobName || j.name.startsWith(jobName + ' / '),
-            );
+              { owner, repo, run_id: runId, per_page: 20 },
+              (response, done) => {
+                const found = response.data.filter(matches);
+                if (found.length) done();
+                return found;
+              },
+            ).then((found) => found[0]));
             if (job && job.status === 'completed') {
               if (job.conclusion === 'success') {
                 core.info(`Job "${job.name}" finished successfully.`);

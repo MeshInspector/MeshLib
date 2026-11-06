@@ -24,6 +24,16 @@ enum DecimateStrategy
     ShortestEdgeFirst ///< the next edge to collapse will be the shortest one
 };
 
+/// Defines how decimation finds the parts of the mesh for parallel processing (DecimateSettings::subdivideParts > 1)
+enum class DecimatePartsMode
+{
+    /// the mesh is already packed optimally (e.g. by mesh.packOptimally()), and the parts are ranges of face ids
+    PackedMesh,
+    /// the parts are subtrees of mesh's AABB tree (taken from the mesh if present, otherwise constructed), no packing is needed;
+    /// the number of parts is rounded up to a power of two
+    AABBTree
+};
+
 /**
  * \struct MR::DecimateSettings
  * \brief Parameters structure for MR::decimateMesh
@@ -53,6 +63,10 @@ struct DecimateSettings
     /// the algorithm will ignore dihedral angle check if one of triangles had aspect ratio equal or more than this value;
     /// and the algorithm will permit temporary increase in aspect ratio after collapse, if before collapse one of the triangles had larger aspect ratio
     float criticalTriAspectRatio = FLT_MAX;
+
+    /// whether to prohibit a collapse if it inverts the normal of a remaining triangle;
+    /// turning it off (together with maxTriangleAspectRatio = FLT_MAX) makes decimation faster, but some triangles may appear inverted
+    bool preventNormalFlips = true;
 
     /// edges not longer than this value will be collapsed even if it results in appearance of a triangle with high aspect ratio
     float tinyEdgeLength = -1;
@@ -106,6 +120,10 @@ struct DecimateSettings
     /// the algorithm updates this set if it packs the mesh
     VertBitSet * bdVerts = nullptr;
 
+    /// if region is not null and this pointer is not null, then it shall contain all edges incident to region faces
+    /// (as returned by getIncidentEdges( topology, *region )), and the algorithm does not compute them itself
+    const UndirectedEdgeBitSet * regionEdges = nullptr;
+
     /// Permit edge flips (in addition to collapsing) to improve Delone quality of the mesh
     /// if it does not change dihedral angle more than on this value (negative value prohibits any edge flips)
     float maxAngleChange = -1;
@@ -146,11 +164,15 @@ struct DecimateSettings
     ProgressCallback progressCallback;
 
     /// If this value is more than 1, then virtually subdivides the mesh on given number of parts to process them in parallel (using many threads);
-    /// IMPORTANT: please call mesh.packOptimally() before calling decimating with subdivideParts > 1, otherwise performance will be bad
+    /// IMPORTANT: with default partsMode, please call mesh.packOptimally() before calling decimating with subdivideParts > 1, otherwise performance will be bad
     int subdivideParts = 1;
 
-    /// After parallel decimation of all mesh parts is done, whether to perform final decimation of whole mesh region
-    /// to eliminate small edges near the border of individual parts
+    /// how the parts are found for subdivideParts > 1; ignored if partFaces is given
+    DecimatePartsMode partsMode = DecimatePartsMode::PackedMesh;
+
+    /// Whether to decimate near the borders of individual parts to eliminate small edges there:
+    /// as soon as two sibling nodes in the binary tree of parts are decimated, their union is decimated in parallel with other nodes,
+    /// and only the border between two halves of the mesh remains for the final decimation of whole mesh region
     bool decimateBetweenParts = true;
 
     /// if not null, then it contains the faces of each subdivision part on input, which must not overlap,
@@ -168,7 +190,6 @@ struct DecimateSettings
  * \ingroup DecimateGroup
  *
  * \sa \ref decimateMesh
- * \sa \ref decimateParallelMesh
  * \sa \ref resolveMeshDegenerations
  */
 struct DecimateResult
@@ -195,7 +216,7 @@ struct DecimateResult
 MRMESH_API DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings = {} );
 
 /// Performs mesh simplification with per-element attributes according to given settings;
-/// \detail settings.region limits the simplification like in decimateMesh (whole mesh if null), and face selection is not used as a region;
+/// \details settings.region limits the simplification like in decimateMesh (whole mesh if null), and face selection is not used as a region;
 /// the attributes without values for some mesh elements are padded with default values (see resizeAttributesToMesh)
 MRMESH_API DecimateResult decimateObjectMeshData( ObjectMeshData & data, const DecimateSettings & settings );
 

@@ -78,7 +78,7 @@ def test_remesh():
     assert result == True
     
     # Assume edge splits are executed
-    assert mesh.points.vec.size() > nb_verts_before
+    assert mesh.points.size() > nb_verts_before
     assert mesh.topology.getValidVerts().size() > nb_verts_before
     
     # No holes are introduced

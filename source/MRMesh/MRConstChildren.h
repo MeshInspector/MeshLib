@@ -45,7 +45,7 @@ public:
         using difference_type = std::ptrdiff_t;
 
         Iterator() {}
-        explicit Iterator( Storage::const_iterator it ) : it_( it ) {}
+        MR_BIND_IGNORE explicit Iterator( Storage::const_iterator it ) : it_( it ) {} // the C bindings don't have `std::vector` iterators
 
         [[nodiscard]] value_type operator *() const { return *it_; }
         Iterator & operator ++() { ++it_; return *this; }

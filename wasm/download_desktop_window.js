@@ -25,7 +25,7 @@ var showDownloadWindow = function() {
     var button = document.createElement('a');
     button.setAttribute('class', "button");
     button.setAttribute('target', "_blank");
-    button.setAttribute('href', 'https://meshinspector.com/download');
+    button.setAttribute('href', 'https://meshinspector.com/download/?utm_source=app&utm_medium=unsupported_tool');
     button.innerHTML = "Download";
     button.setAttribute('style', 'text-decoration:none;font-family:SegoeUIVariable-Display;border-radius:4px;cursor:pointer;position:absolute;top:0%;left:50%;width:130px;height:28px;transform:translate( -50%, 243px);font-size:14px;font-stretch:normal;font-style:normal;line-height:normal;letter-spacing:normal;color:#fff;display:inline-flex;align-items:center;justify-content:center;');
 

@@ -634,6 +634,7 @@ void main(void)
   uniform sampler2D pixels;
   uniform sampler2D depths;
   uniform vec2 viewportSize;
+  uniform float maxDepth;
   out vec4 outColor;                 // (out to render) fragment color
 
   void main()
@@ -644,9 +645,9 @@ void main(void)
     if ( outColor.a == 0.0 )
       discard;
     float depth = texture(depths, pos ).r;
-    if ( depth > 0.999 ) // antialiased pixels might have _depth == 1.0
-      gl_FragDepth = 0.999;
-    else 
+    if ( depth > maxDepth ) // antialiased pixels might have _depth == 1.0
+      gl_FragDepth = maxDepth;
+    else
       gl_FragDepth = depth;
   }
 )";

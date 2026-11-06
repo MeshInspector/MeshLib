@@ -15,6 +15,7 @@
 #include <MRMesh/MRUniquePtr.h>
 #include <MRMesh/MRVector4.h>
 #include "MRImGui.h"
+#include <chrono>
 #include <memory>
 #include <functional>
 #include <unordered_map>
@@ -330,7 +331,8 @@ public:
     // and call transformView( xf ), then the user will see exactly the same picture
     MRVIEWER_API void transformView( const AffineXf3f & xf );
 
-    bool getRedrawFlag() const { return needRedraw_; }
+    /// returns true if the viewport has to be redrawn; it stays true while the camera is animated
+    bool getRedrawFlag() const { return needRedraw_ || cameraAnimation_; }
     void resetRedrawFlag() { needRedraw_ = false; }
 
     // Unique identifier
@@ -577,6 +579,17 @@ public:
 
     MRVIEWER_API void setParameters( const Viewport::Parameters& params );
 
+    /// smoothly changes the camera from the current parameters to the target ones during given time:
+    /// rotation, translation, zoom and view angle are interpolated, other parameters are set at once;
+    /// any other change of these camera parameters during the animation stops it;
+    /// seconds <= 0 sets all target parameters at once;
+    /// the rotation pivot moves at once to the center of the target view (-target.cameraTranslation)
+    /// or to target.staticRotationPivot, as the fit functions set it
+    MRVIEWER_API void animateCamera( const Parameters& target, float seconds );
+
+    /// returns the target parameters of the camera animation in progress, or nullptr if the camera is not animated
+    [[nodiscard]] const Parameters* getCameraAnimationTarget() const { return cameraAnimation_ ? &cameraAnimation_->target : nullptr; }
+
     // Set camera look direction and up direction (they should be perpendicular)
     // this function changes camera position and do not change camera spot (0,0,0) by default
     // to change camera position use setCameraTranslation after this function
@@ -685,6 +698,18 @@ private:
     Box3f sceneBox_;
 
     Parameters params_;
+
+    // makes the next step of the camera animation, if any
+    void updateCameraAnimation_();
+
+    struct CameraAnimation
+    {
+        Parameters start, target;
+        Parameters current; // set by the last step, to detect camera changes by somebody else
+        std::chrono::steady_clock::time_point startTime;
+        float seconds = 0;
+    };
+    std::optional<CameraAnimation> cameraAnimation_;
 
     std::optional<BackgroundTexture> backgroundTexture_;
     bool backgroundTextureChanged_{ false }; // the image has to be uploaded to GL

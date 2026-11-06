@@ -840,6 +840,70 @@ void Viewport::cameraRotateAround( const Line3f& axis, float angle )
     needRedraw_ = true;
 }
 
+// ================================================================
+// camera animation part
+
+namespace
+{
+
+// copies the camera parameters interpolated by Viewport::animateCamera
+void copyAnimatedCamera( const Viewport::Parameters& from, Viewport::Parameters& to )
+{
+    to.cameraTrackballAngle = from.cameraTrackballAngle;
+    to.cameraTranslation = from.cameraTranslation;
+    to.cameraZoom = from.cameraZoom;
+    to.cameraViewAngle = from.cameraViewAngle;
+}
+
+}
+
+void Viewport::animateCamera( const Parameters& target, float seconds )
+{
+    cameraAnimation_.reset();
+    // as after a fit: rotate around the point in the center of the target view
+    setRotationPivot_( target.staticRotationPivot ? *target.staticRotationPivot : -target.cameraTranslation );
+    if ( seconds <= 0 || !getViewerInstance().isGLInitialized() ) // without GL frames are not drawn, so the animation would never finish
+    {
+        setParameters( target );
+        return;
+    }
+    auto params = target;
+    copyAnimatedCamera( params_, params );
+    setParameters( params ); // parameters other than the animated camera are set at once
+    cameraAnimation_ = CameraAnimation{ .start = params_, .target = target, .current = params_, .startTime = std::chrono::steady_clock::now(), .seconds = seconds };
+}
+
+void Viewport::updateCameraAnimation_()
+{
+    if ( !cameraAnimation_ )
+        return;
+    auto& anim = *cameraAnimation_;
+    auto params = anim.current;
+    copyAnimatedCamera( params_, params );
+    if ( params != anim.current )
+    {
+        cameraAnimation_.reset(); // somebody else has changed the camera
+        return;
+    }
+
+    needRedraw_ = true;
+    const float t = std::chrono::duration<float>( std::chrono::steady_clock::now() - anim.startTime ).count() / anim.seconds;
+    if ( t >= 1 )
+    {
+        copyAnimatedCamera( anim.target, params_ );
+        cameraAnimation_.reset();
+        return;
+    }
+    const float s = t * t * ( 3 - 2 * t ); // smooth start and stop
+    const auto& a = anim.start;
+    const auto& b = anim.target;
+    params_.cameraTrackballAngle = Quaternionf::slerp( a.cameraTrackballAngle, b.cameraTrackballAngle, s );
+    params_.cameraTranslation = lerp( a.cameraTranslation, b.cameraTranslation, s );
+    params_.cameraZoom = a.cameraZoom * std::pow( b.cameraZoom / a.cameraZoom, s ); // the same relative change of the scale in each frame
+    params_.cameraViewAngle = lerp( a.cameraViewAngle, b.cameraViewAngle, s );
+    anim.current = params_;
+}
+
 void Viewport::draw_rotation_center() const
 {
     if ( rotationDepth_ <= 0 || !Viewer::constInstance()->rotationSphere->isVisible( id ) )

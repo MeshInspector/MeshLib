@@ -1,4 +1,5 @@
 #include "MRViewportCornerController.h"
+#include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshBuilder.h"
@@ -610,7 +611,7 @@ void updateCurrentViewByControllerRegion( CornerControllerObject::PickedIds pick
     // the same orientation as Viewport::cameraLookAlong gives: dir becomes the view direction, up - the up direction
     const auto lookAlong = [&camera] ( const Vector3f& dir, const Vector3f& up )
     {
-        camera.cameraTrackballAngle = Quaternionf( Matrix3f( cross( dir, up ).normalized(), up.normalized(), -dir.normalized() ) );
+        camera.cameraTrackballAngle = Quaternionf( lookAt( dir, Vector3f{}, up ).A );
     };
     auto rId = pickedId.rId;
     switch ( int( rId ) )

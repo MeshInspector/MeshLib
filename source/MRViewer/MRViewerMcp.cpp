@@ -1,6 +1,7 @@
 #ifndef MESHLIB_NO_MCP
 
 #include "MRMcp/MRMcp.h"
+#include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRBase64.h"
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRImage.h"
@@ -59,11 +60,17 @@ float readAnimationSeconds( const nlohmann::json& args )
     return seconds;
 }
 
-// waits until the camera animation of given duration, started by this call, has ended
-void waitCameraAnimation( float seconds )
+// waits until the camera of the viewport is not animated: the animation has ended, was stopped or was never started (no GL)
+void waitCameraAnimation( ViewportId vid )
 {
-    std::this_thread::sleep_for( std::chrono::duration<float>( seconds ) );
-    (void)waitFramesAfterInput(); // the frames after the end time set the target camera
+    for ( ;; )
+    {
+        bool animated = false;
+        runOnMainThread( [&] { animated = getViewerInstance().viewport( vid ).getCameraAnimationTarget() != nullptr; } );
+        if ( !animated )
+            return;
+        std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+    }
 }
 
 int parseModifiers( const nlohmann::json& args )
@@ -115,9 +122,11 @@ static nlohmann::json mcpViewerFit( const nlohmann::json& args )
         for ( const auto& p : args["points"] )
             points.push_back( readVec<Vector3f>( p, "points[i]" ) );
 
+    ViewportId vid;
     runOnMainThread( [&]
     {
         auto& vp = getViewerInstance().viewport();
+        vid = vp.id;
         Box3f box;
         for ( uint64_t id : ids )
         {
@@ -130,11 +139,13 @@ static nlohmann::json mcpViewerFit( const nlohmann::json& args )
             box.include( pt );
         if ( ( !ids.empty() || !points.empty() ) && !box.valid() )
             throw std::runtime_error( "viewer_fit: the given objects and points contribute no bounding volume." );
-        Box3f sceneBox; // preciseFit...ToScreenBorder, animated unless seconds = 0
-        vp.animateCamera( box.valid() ? vp.calcPreciseFitBoxParameters( vp.getParameters(), { box, factor }, &sceneBox )
-            : vp.calcPreciseFitDataParameters( vp.getParameters(), { factor }, &sceneBox ), seconds, sceneBox );
+        // preciseFit...ToScreenBorder, animated unless seconds = 0; during an animation, from its target
+        const auto camera = vp.getCameraAnimationTarget() ? *vp.getCameraAnimationTarget() : vp.getParameters();
+        Box3f sceneBox;
+        vp.animateCamera( box.valid() ? vp.calcPreciseFitBoxParameters( camera, { box, factor }, &sceneBox )
+            : vp.calcPreciseFitDataParameters( camera, { factor }, &sceneBox ), seconds, sceneBox );
     } );
-    waitCameraAnimation( seconds );
+    waitCameraAnimation( vid );
     return nlohmann::json::object();
 }
 
@@ -165,19 +176,21 @@ static nlohmann::json mcpViewerSetupCamera( const nlohmann::json& args )
     const float factor = args.value( "factor", 1.0f );
     const float seconds = readAnimationSeconds( args );
 
+    ViewportId vid;
     runOnMainThread( [&]
     {
         auto& vp = getViewerInstance().viewport();
-        // cameraLookAlong and preciseFitDataToScreenBorder, animated unless seconds = 0
-        auto camera = vp.getParameters();
-        camera.cameraTrackballAngle = Quaternionf( Matrix3f( cross( fwdN, up ), up, -fwdN ) );
+        vid = vp.id;
+        // cameraLookAlong and preciseFitDataToScreenBorder, animated unless seconds = 0; during an animation, from its target
+        auto camera = vp.getCameraAnimationTarget() ? *vp.getCameraAnimationTarget() : vp.getParameters();
+        camera.cameraTrackballAngle = Quaternionf( lookAt( fwdN, Vector3f{}, up ).A );
         Box3f sceneBox;
         // snapView=false keeps the user's direction.
         if ( fitMode )
             camera = vp.calcPreciseFitDataParameters( camera, { factor, false, *fitMode }, &sceneBox );
         vp.animateCamera( camera, seconds, sceneBox );
     } );
-    waitCameraAnimation( seconds );
+    waitCameraAnimation( vid );
     return nlohmann::json::object();
 }
 
@@ -189,38 +202,43 @@ static nlohmann::json mcpViewerSetBackground( const nlohmann::json& args )
 
     // the image is loaded outside the GUI thread; empty optional removes it
     std::optional<std::optional<Viewport::BackgroundTexture>> texture;
-    if ( args.contains( "imagePath" ) )
+    if ( const auto path = args.value( "imagePath", std::string() ); !path.empty() )
     {
-        auto& bg = texture.emplace();
-        if ( const auto path = args["imagePath"].get<std::string>(); !path.empty() )
-        {
-            auto image = ImageLoad::fromAnySupportedFormat( pathFromUtf8( path ) );
-            if ( !image )
-                throw std::runtime_error( image.error() );
-            const auto mode = args.value( "stretchMode", std::string( "fill" ) );
-            constexpr std::array<std::string_view, 4> modes{ "none", "stretch", "fit", "fill" }; // StretchMode order
-            const auto it = std::find( modes.begin(), modes.end(), mode );
-            if ( it == modes.end() )
-                throw std::runtime_error( fmt::format( "Unknown `stretchMode` `{}` (expected `none`/`stretch`/`fit`/`fill`).", mode ) );
-            bg.emplace().stretchMode = Viewport::BackgroundTexture::StretchMode( it - modes.begin() );
-            static_cast<Image&>( bg->texture ) = std::move( *image );
-            bg->texture.filter = FilterType::Linear;
-            if ( args.contains( "startPos" ) )
-                bg->startPos = readVec<Vector2f>( args["startPos"], "startPos" );
-            if ( args.contains( "scaling" ) )
-                bg->scaling = readVec<Vector2f>( args["scaling"], "scaling" );
-        }
+        auto& bg = texture.emplace().emplace();
+        const auto mode = args.value( "stretchMode", std::string( "fill" ) );
+        constexpr std::array<std::string_view, 4> modes{ "none", "stretch", "fit", "fill" }; // StretchMode order
+        const auto it = std::find( modes.begin(), modes.end(), mode );
+        if ( it == modes.end() )
+            throw std::runtime_error( fmt::format( "Unknown `stretchMode` `{}` (expected `none`/`stretch`/`fit`/`fill`).", mode ) );
+        bg.stretchMode = Viewport::BackgroundTexture::StretchMode( it - modes.begin() );
+        if ( args.contains( "startPos" ) )
+            bg.startPos = readVec<Vector2f>( args["startPos"], "startPos" );
+        if ( args.contains( "scaling" ) )
+            bg.scaling = readVec<Vector2f>( args["scaling"], "scaling" );
+        if ( !( bg.scaling.x > 0 && bg.scaling.y > 0 ) )
+            throw std::runtime_error( "`scaling` must be positive." );
+        auto image = ImageLoad::fromAnySupportedFormat( pathFromUtf8( path ) );
+        if ( !image )
+            throw std::runtime_error( image.error() );
+        static_cast<Image&>( bg.texture ) = std::move( *image );
+        bg.texture.filter = FilterType::Linear;
     }
+    else if ( args.contains( "stretchMode" ) || args.contains( "startPos" ) || args.contains( "scaling" ) )
+        throw std::runtime_error( "`stretchMode`, `startPos` and `scaling` need a non-empty `imagePath`." );
+    else if ( args.contains( "imagePath" ) )
+        texture.emplace();
 
     runOnMainThread( [&]
     {
         auto& viewer = getViewerInstance();
+        auto rest = viewer.getPresentViewports();
         for ( ViewportId vid : viewer.getPresentViewports() )
         {
+            rest.set( vid, false );
             if ( color )
                 viewer.viewport( vid ).setBackgroundColor( *color );
-            if ( texture )
-                viewer.viewport( vid ).setBackgroundTexture( *texture );
+            if ( texture ) // the image is moved into the last viewport, not copied
+                viewer.viewport( vid ).setBackgroundTexture( rest.empty() ? std::move( *texture ) : *texture );
         }
     } );
     return nlohmann::json::object();
@@ -468,14 +486,14 @@ MR_ON_INIT{
     server.addTool(
         /*id*/  "viewer_setBackground",
         /*name*/"Set viewport background",
-        /*desc*/"Change the background of all viewports; only the given fields change. `color` is `[r, g, b]` or "
-                "`[r, g, b, a]` floats in [0, 1]. `imagePath` loads an image file (e.g. PNG or JPEG) drawn over the color "
-                "and below the scene; an empty string removes the image. With the image, `stretchMode` (default `fill`) is "
-                "`fill` (covers the viewport, centered and cropped), `fit` (the whole image in the center, the color around it), "
-                "`stretch` (covers the viewport exactly, the aspect ratio is not kept) or `none`: then `startPos` `[x, y]` "
-                "(default `[0, 0]`) places the image's upper-left corner in framebuffer pixels from the viewport's upper-left "
-                "corner, Y down, and `scaling` `[sx, sy]` (default `[1, 1]`) is the size of an image pixel in framebuffer pixels. "
-                "The image is not saved anywhere.",
+        /*desc*/"Change the background of all viewports: the color, the image or both; what is not given stays. `color` is "
+                "`[r, g, b]` or `[r, g, b, a]` floats in [0, 1]. `imagePath` loads an image file (e.g. PNG or JPEG) drawn over "
+                "the color and below the scene; an empty string removes the image. Only with a non-empty `imagePath`, "
+                "`stretchMode` (default `fill`) is `fill` (covers the viewport, centered and cropped), `fit` (the whole image in "
+                "the center, the color around it), `stretch` (covers the viewport exactly, the aspect ratio is not kept) or "
+                "`none`: then `startPos` `[x, y]` (default `[0, 0]`) places the image's upper-left corner in framebuffer pixels "
+                "from the viewport's upper-left corner, Y down, and `scaling` `[sx, sy]` (default `[1, 1]`, positive) is the size "
+                "of an image pixel in framebuffer pixels. The image is not saved anywhere.",
         /*input_schema*/Schema::Object{}
             .addMemberOpt( "color",       Schema::Array( Schema::Number{} ) )
             .addMemberOpt( "imagePath",   Schema::String{} )

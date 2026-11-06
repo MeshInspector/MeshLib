@@ -340,7 +340,7 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
 VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, VertId vk,
     const AlphaShapeData & data, Vector<BallPivotCandidate> & cands )
 {
-    if ( data.intPoints.empty() )
+    if ( !data.knowsTwins() )
     {
         assert( false ); // without the known twins a twin on the ball of a candidate would block it
         return {};
@@ -592,7 +592,12 @@ std::optional<Triangulation> growPiece( const PointCloud & cloud, const ThreeVer
     {
         size_t operator()( const ThreeVertIds & t ) const noexcept
         {
-            return size_t( ( ( std::uint64_t( std::uint32_t( t[0] ) ) << 32 ) | std::uint32_t( t[1] ) ) * 0x9E3779B97F4A7C15ull ) ^ std::uint32_t( t[2] );
+            // as std::hash<UnorientedTriangle>, but keeping the orientation
+            const auto a = std::uint32_t( t[0] ), b = std::uint32_t( t[1] ), c = std::uint32_t( t[2] );
+            if constexpr ( sizeof( size_t ) >= 8 )
+                return size_t( a ^ ( std::uint64_t( b ) << 21 ) ^ ( std::uint64_t( c ) << 42 ) );
+            else
+                return size_t( 0xea87bb09u * a + 0xd8306b31u * b + c );
         }
     };
     // a found triangle rotated to start from its smallest id -> bit i is set if its edge (t[i], t[i+1]) is resolved
@@ -675,7 +680,7 @@ std::optional<Triangulation> findBallPivotingComponent( const PointCloud & cloud
     const AlphaShapeData & data, const ProgressCallback & cb )
 {
     MR_TIMER;
-    if ( data.intPoints.empty() )
+    if ( !data.knowsTwins() )
     {
         assert( false ); // without the known twins every point of a position would take part in the searches
         return std::nullopt;
@@ -691,7 +696,7 @@ std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud
     Triangulation res;
     if ( !cloud.validPoints.any() )
         return res;
-    if ( data.intPoints.empty() )
+    if ( !data.knowsTwins() )
     {
         assert( false ); // without the known twins every point of a position would take part in the searches
         return std::nullopt;

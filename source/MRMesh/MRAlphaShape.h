@@ -32,6 +32,9 @@ struct AlphaShapeData
     /// filled together with intPoints, so empty if allPoints was false, and empty if there are no such points
     VertBitSet twins;
 
+    /// whether the twins are known, i.e. the data was prepared with allPoints=true (for a cloud with valid points)
+    [[nodiscard]] bool knowsTwins() const { return !intPoints.empty(); }
+
     /// squared ball radius in the units of toInt's integer grid, not larger than the squared
     /// original radius (so that no point inside a ball can be farther than searchRadius
     /// from the ball's points), and small enough for the predicates not to overflow
@@ -56,7 +59,7 @@ struct AlphaShapeData
 /// so the statistics of several calls can be accumulated in one object
 struct AlphaShapeStats
 {
-    /// the number of neighbours found within the search radius, before any of the filters below;
+    /// the number of neighbours found within the search radius (except the known twins), before any of the filters below;
     /// the searches around all the points are quadratic in this, so it explains most of the
     /// difference in the time spent per point between one cloud and another
     std::size_t collectedNeis = 0;

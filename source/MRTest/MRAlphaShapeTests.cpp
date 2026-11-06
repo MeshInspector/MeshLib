@@ -2,6 +2,7 @@
 #include <MRMesh/MRPointCloud.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshComponents.h>
+#include <MRPch/MRTBB.h>
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <chrono>
@@ -294,6 +295,7 @@ TEST( MRMesh, BallPivotingGridSheet )
     auto data = getAlphaShapeData( cloud, 8, true );
     data.toInt = ConvertToIntVector{ Vector3d{}, 1.0 };
     data.intPoints = computeIntCoords( data.toInt, cloud.points, &cloud.validPoints );
+    EXPECT_TRUE( data.twins.none() ); // computed in the original grid, and the new one has no twins either
     data.intRadiusSq = 64;
     data.searchRadius = 2 * 8 + 2;
 
@@ -467,6 +469,57 @@ TEST( MRMesh, BallPivotingTwins )
     EXPECT_TRUE( mesh.topology.isClosed() );
     EXPECT_EQ( mesh.topology.numValidVerts(), n );
     EXPECT_EQ( MeshComponents::getNumComponents( mesh ), 1 );
+}
+
+// points differing in float but sharing their position in the integer grid are twins as well:
+// the coordinates closer to zero than about the doubled integer step have finer floats
+TEST( MRMesh, BallPivotingIntTwins )
+{
+    const int n = 2000;
+    PointCloud plain;
+    addFibonacciSphere( plain.points, n );
+    plain.validPoints.resize( n, true );
+    const auto toInt = getAlphaShapeData( plain, 0.2f, false ).toInt;
+
+    PointCloud cloud = plain;
+    size_t numTwins = 0;
+    for ( VertId v( 0 ); v < n; ++v )
+        for ( int i = 0; i < 3; ++i )
+        {
+            auto p = plain.points[v];
+            p[i] = std::nextafter( p[i], 0.0f ); // inside the box, so toInt is the same
+            if ( p != plain.points[v] && toInt( p ) == toInt( plain.points[v] ) )
+            {
+                cloud.points.push_back( p );
+                ++numTwins;
+                break;
+            }
+        }
+    cloud.validPoints.resize( cloud.points.size(), true );
+    EXPECT_GE( numTwins, size_t( 5 ) );
+
+    const auto data = getAlphaShapeData( cloud, 0.2f, true );
+    EXPECT_EQ( data.twins.count(), numTwins );
+    EXPECT_EQ( *findBallPivotingTriangles( cloud, data ), *findBallPivotingTriangles( plain, getAlphaShapeData( plain, 0.2f, true ) ) );
+}
+
+// the result does not depend on the number of threads
+TEST( MRMesh, BallPivotingOneThread )
+{
+    PointCloud cloud;
+    addFibonacciSphere( cloud.points, 2000 );
+    addFibonacciSphere( cloud.points, 500, { 4, 0, 0 }, 0.5f );
+    addInnerPoints( cloud.points, 200 );
+    cloud.validPoints.resize( cloud.points.size(), true );
+    const auto data = getAlphaShapeData( cloud, 0.2f, true );
+    for ( bool allComponents : { false, true } )
+    {
+        const auto tris = *findBallPivotingTriangles( cloud, data, allComponents );
+        Triangulation oneThread;
+        tbb::task_arena arena( 1 );
+        arena.execute( [&] { oneThread = *findBallPivotingTriangles( cloud, data, allComponents ); } );
+        EXPECT_EQ( oneThread, tris );
+    }
 }
 
 // three tetrahedra sharing edge (0_v, 1_v), 120 degrees apart around it: the empty balls rotating around the edge

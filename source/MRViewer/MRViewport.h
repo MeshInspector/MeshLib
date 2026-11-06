@@ -506,6 +506,17 @@ public:
     // snapView - to snap camera angle to closest canonical quaternion
     MRVIEWER_API void fitBox( const Box3f& newSceneBox, float fill = 1.0f, bool snapView = true );
 
+    /// returns the parameters that fitData would set if this viewport had given camera parameters, this viewport is not changed;
+    /// only the orientation (cameraTrackballAngle) and the projection settings of camera matter,
+    /// the translation, zoom, view angle and object scale are computed (the same for other calc...Parameters functions);
+    /// the fitted camera looks at the center of the fitted box, so -cameraTranslation of the result is the rotation pivot that the fit sets,
+    /// unless staticRotationPivot is set or there is nothing to fit;
+    /// if there is nothing to fit (empty scene or selection), camera is returned unchanged except the snapped orientation
+    [[nodiscard]] MRVIEWER_API Parameters calcFitDataParameters( const Parameters& camera, float fill = 1.0f, bool snapView = true ) const;
+
+    /// returns the parameters that fitBox would set if this viewport had given camera parameters, see calcFitDataParameters
+    [[nodiscard]] MRVIEWER_API Parameters calcFitBoxParameters( const Parameters& camera, const Box3f& box, float fill = 1.0f, bool snapView = true ) const;
+
     using FitMode = MR::FitMode;
     using BaseFitParams = MR::BaseFitParams;
     using FitDataParams = MR::FitDataParams;
@@ -515,6 +526,14 @@ public:
     MRVIEWER_API void preciseFitBoxToScreenBorder( const FitBoxParams& params );
     // fit view and proj matrices to match the screen size with given objects
     MRVIEWER_API void preciseFitDataToScreenBorder( const FitDataParams& params = {} );
+
+    /// returns the parameters that preciseFitBoxToScreenBorder would set if this viewport had given camera parameters, see calcFitDataParameters;
+    /// sceneBox - optional output: the box that the fit would store as the scene box (see getSceneBox)
+    [[nodiscard]] MRVIEWER_API Parameters calcPreciseFitBoxParameters( const Parameters& camera, const FitBoxParams& params, Box3f* sceneBox = nullptr ) const;
+
+    /// returns the parameters that preciseFitDataToScreenBorder would set if this viewport had given camera parameters, see calcFitDataParameters;
+    /// sceneBox - optional output: the box that the fit would store as the scene box (see getSceneBox)
+    [[nodiscard]] MRVIEWER_API Parameters calcPreciseFitDataParameters( const Parameters& camera, const FitDataParams& params = {}, Box3f* sceneBox = nullptr ) const;
 
     // returns viewport width/height ratio
     MRVIEWER_API float getRatio() const;
@@ -580,8 +599,9 @@ public:
     MRVIEWER_API void resetStaticRotationPivot( const std::optional<Vector3f>& pivot = std::nullopt );
 private:
     /// sets current rotation pivot in world space, which should appear static on a screen during rotation by the user
-    /// caller of this function should respect `params_.rotationMode` and `params_.staticRotationPivot`
-    void setRotationPivot_( const Vector3f& point ) { rotationPivot_ = point; }
+    /// caller of this function should respect `params_.rotationMode` and `params_.staticRotationPivot`;
+    /// the pivot is drawn during rotation, so its change requires redraw
+    void setRotationPivot_( const Vector3f& point ) { needRedraw_ |= rotationPivot_ != point; rotationPivot_ = point; }
     // initializes view matrix based on camera position
     void setupViewMatrix_();
     // returns world space to camera space transformation
@@ -627,7 +647,9 @@ private:
     int pixelYoffset_{ -128 };
     int axisPixSize_{ 70 };
 
-    void updateSceneBox_();
+    // returns world bounding box of scene objects visible in this viewport, see sceneBox_
+    [[nodiscard]] Box3f calcSceneBox_() const;
+    void updateSceneBox_() { sceneBox_ = calcSceneBox_(); }
     void rotateView_();
 
     enum class Space
@@ -641,21 +663,21 @@ private:
      * @brief finds the bounding box of given visible objects in given space
      * @param selectedPrimitives use only selected primitives of objects in calculation
      */
-    Box3f calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs, Space space, bool selectedPrimitives = false ) const;
+    Box3f calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs, Space space, const AffineXf3f& viewXf, bool selectedPrimitives = false ) const;
 
     /**
-     * @brief find minimum FOV angle allows to keep box given by getBoxFn visible inside the screen
-     * The box is either in CameraOrthographic or CameraPerspective, depending on viewport setting
-     * If cameraShift is not null, calculate angle assuming the camera can be moved, and fills the shift value
-     * (orthogonal only; for perspective mode, must be null)
+     * @brief find minimum FOV angle allows to keep box given by getBoxFn visible inside the screen with given camera parameters
+     * The box is either in CameraOrthographic or CameraPerspective, depending on params.orthographic
      * @returns true if all models are inside the projection volume
      */
-    std::pair<float, bool> getZoomFOVtoScreen_( std::function<Box3f()> getBoxFn, Vector3f* cameraShift = nullptr ) const;
-    // fit view and proj matrices to match the screen size with boxes returned by getBoxFn
-    // getBoxFn( true ) - always camera space (respecting projection)
-    // getBoxFn( false ) - if orthographic - camera space, otherwise - world space
+    std::pair<float, bool> getZoomFOVtoScreen_( const Parameters& params, const std::function<Box3f()>& getBoxFn ) const;
+    // returns camera parameters, which fit given ones to match the screen size with boxes returned by getBoxFn
+    // getBoxFn( space, viewXf, globalBasis ) - box in given space, viewXf - world to camera space transformation
     // getBoxFn/globalBasis - if true then getBoxFn should return box of global basis object (separately, not to interfere with actual scene size)
-    void preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV, bool globalBasis )> getBoxFn, const BaseFitParams& params );
+    Parameters preciseFitToScreenBorder_( Parameters params, const std::function<Box3f( Space space, const AffineXf3f& viewXf, bool globalBasis )>& getBoxFn,
+        const BaseFitParams& fitParams, Box3f* sceneBox ) const;
+    // sets the result of calcPreciseFit...Parameters together with the scene box and the rotation pivot
+    void applyPreciseFit_( const Parameters& params, const Box3f& sceneBox );
 
     int rotationDepth_{ 0 }; // rotation is in progress while it is positive, see setRotation
     Vector3f rotationPivot_;

@@ -529,9 +529,9 @@ void Viewport::postDraw() const
     drawAxesAndViewController();
 }
 
-void Viewport::updateSceneBox_()
+Box3f Viewport::calcSceneBox_() const
 {
-    sceneBox_ = SceneRoot::get().getWorldTreeBox( id );
+    return SceneRoot::get().getWorldTreeBox( id );
 }
 
 void Viewport::setViewportRect( const ViewportRectangle& rect )

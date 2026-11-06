@@ -34,13 +34,19 @@ constexpr Vector3f cameraUp{0.0f,1.0f,0.0f};
 constexpr Vector3f cameraCenter;
 const AffineXf3f cXf = lookAt( cameraCenter, cameraEye, cameraUp );
 
+// world space to camera space transformation for given camera parameters
+AffineXf3f calcViewXf( const Viewport::Parameters& params )
+{
+    AffineXf3f rot = AffineXf3f::linear( Matrix3f( params.cameraTrackballAngle ) * Matrix3f::scale( params.cameraZoom ) );
+    AffineXf3f tr = AffineXf3f::translation( params.cameraTranslation );
+    return cXf * rot * tr;
+}
+
 }
 
 AffineXf3f Viewport::getViewXf_() const
 {
-    AffineXf3f rot = AffineXf3f::linear( Matrix3f( params_.cameraTrackballAngle ) * Matrix3f::scale( params_.cameraZoom ) );
-    AffineXf3f tr = AffineXf3f::translation( params_.cameraTranslation );
-    return cXf * rot * tr;
+    return calcViewXf( params_ );
 }
 
 Vector3f Viewport::getCameraPoint() const
@@ -366,37 +372,45 @@ std::vector<Vector3f> Viewport::viewportSpaceToClipSpace( const std::vector<Vect
 
 void Viewport::preciseFitBoxToScreenBorder( const FitBoxParams& fitParams )
 {
-    preciseFitToScreenBorder_( [&] ( bool zoomFov, bool globalBasis )->Box3f
+    Box3f sceneBox;
+    auto params = calcPreciseFitBoxParameters( params_, fitParams, &sceneBox );
+    applyPreciseFit_( params, sceneBox );
+}
+
+Viewport::Parameters Viewport::calcPreciseFitBoxParameters( const Parameters& camera, const FitBoxParams& fitParams, Box3f* sceneBox ) const
+{
+    return preciseFitToScreenBorder_( camera, [&] ( Space space, const AffineXf3f& viewXf, bool globalBasis )->Box3f
     {
         if ( globalBasis )
             return {}; // do not take global basis into account for box fitting (only fit given box)
-        Space space = Space::CameraOrthographic;
-        if ( !params_.orthographic )
-        {
-            space = zoomFov ? Space::CameraPerspective : Space::World;
-        }
         if ( space == Space::World )
             return fitParams.worldBox;
         else if ( space == Space::CameraOrthographic )
-            return transformed( fitParams.worldBox, getViewXf_() );
+            return transformed( fitParams.worldBox, viewXf );
         else
         {
             assert( space == Space::CameraPerspective );
-            auto xf = getViewXf_();
             Box3f res;
             for ( const auto& p : getCorners( fitParams.worldBox ) )
             {
-                auto v = xf( p );
+                auto v = viewXf( p );
                 if ( v.z == 0 )
                     continue;
                 res.include( Vector3f( v.x / v.z, v.y / v.z, v.z ) );
             }
             return res;
         }
-    }, fitParams );
+    }, fitParams, sceneBox );
 }
 
 void Viewport::preciseFitDataToScreenBorder( const FitDataParams& fitParams )
+{
+    Box3f sceneBox;
+    auto params = calcPreciseFitDataParameters( params_, fitParams, &sceneBox );
+    applyPreciseFit_( params, sceneBox );
+}
+
+Viewport::Parameters Viewport::calcPreciseFitDataParameters( const Parameters& camera, const FitDataParams& fitParams, Box3f* sceneBox ) const
 {
     std::vector<std::shared_ptr<VisualObject>> allObj;
     if ( fitParams.mode == FitMode::CustomObjectsList )
@@ -418,69 +432,77 @@ void Viewport::preciseFitDataToScreenBorder( const FitDataParams& fitParams )
         allObj = getAllObjectsInTree<VisualObject>( &SceneRoot::get(), type );
     }
 
-    preciseFitToScreenBorder_( [&] ( bool zoomFov, bool globalBasis )
+    return preciseFitToScreenBorder_( camera, [&] ( Space space, const AffineXf3f& viewXf, bool globalBasis )
     {
-        Space space = Space::CameraOrthographic;
-        if ( !params_.orthographic )
-        {
-            space = zoomFov ? Space::CameraPerspective : Space::World;
-        }
         if ( !globalBasis )
-            return calcBox_( allObj, space, fitParams.mode == FitMode::SelectedPrimitives );
+            return calcBox_( allObj, space, viewXf, fitParams.mode == FitMode::SelectedPrimitives );
         else
-            return calcBox_( getViewerInstance().globalBasis->axesChildren(), space, fitParams.mode == FitMode::SelectedPrimitives );
-    }, fitParams );
+            return calcBox_( getViewerInstance().globalBasis->axesChildren(), space, viewXf, fitParams.mode == FitMode::SelectedPrimitives );
+    }, fitParams, sceneBox );
 }
 
-void Viewport::preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV, bool globalBasis )> getBoxFn, const BaseFitParams& fitParams )
+void Viewport::applyPreciseFit_( const Parameters& params, const Box3f& sceneBox )
+{
+    if ( sceneBox.valid() )
+        sceneBox_ = sceneBox;
+    // the fitted camera looks at the scene center = -params.cameraTranslation
+    setRotationPivot_( params.staticRotationPivot ? *params.staticRotationPivot : sceneBox.valid() ? -params.cameraTranslation : Vector3f() );
+    setParameters( params );
+}
+
+Viewport::Parameters Viewport::preciseFitToScreenBorder_( Parameters params, const std::function<Box3f( Space space, const AffineXf3f& viewXf, bool globalBasis )>& getBoxFn,
+    const BaseFitParams& fitParams, Box3f* sceneBox ) const
 {
     if ( fitParams.snapView )
-        params_.cameraTrackballAngle = getClosestCanonicalQuaternion( params_.cameraTrackballAngle );
+        params.cameraTrackballAngle = getClosestCanonicalQuaternion( params.cameraTrackballAngle );
 
-    const auto safeZoom = params_.cameraZoom;
-    params_.cameraZoom = 1;
+    const auto safeZoom = params.cameraZoom;
+    params.cameraZoom = 1;
 
-    Box3f sceneObjsBox = getBoxFn( false, false );
+    const bool withGlobalBasis = getViewerInstance().globalBasis && getViewerInstance().globalBasis->isVisible( id );
+    // zoomFov = true - always camera space (respecting projection)
+    // zoomFov = false - if orthographic - camera space, otherwise - world space
+    const auto getBox = [&] ( bool zoomFov, bool globalBasis )
+    {
+        Space space = Space::CameraOrthographic;
+        if ( !params.orthographic )
+            space = zoomFov ? Space::CameraPerspective : Space::World;
+        return getBoxFn( space, calcViewXf( params ), globalBasis );
+    };
+
+    Box3f sceneObjsBox = getBox( false, false );
     Box3f unitedBox;
-    if ( getViewerInstance().globalBasis && getViewerInstance().globalBasis->isVisible( id ) )
-        unitedBox = getBoxFn( false, true ); // calculate box of global basis separately, not to interfere with actual scene size
+    if ( withGlobalBasis )
+        unitedBox = getBox( false, true ); // calculate box of global basis separately, not to interfere with actual scene size
     unitedBox.include( sceneObjsBox );
 
     if ( !unitedBox.valid() )
     {
-        params_.cameraZoom = safeZoom;
-        setRotationPivot_( params_.staticRotationPivot ? *params_.staticRotationPivot : Vector3f() );
-        return;
+        params.cameraZoom = safeZoom;
+        return params;
     }
 
     if ( unitedBox.diagonal() == 0.0f )
         unitedBox = unitedBox.expanded( Vector3f::diagonal( 0.5f ) );
 
-    if ( params_.orthographic )
-    {
-        sceneBox_ = transformed( unitedBox, getViewXf_().inverse() );
-    }
-    else
-    {
-        sceneBox_ = unitedBox;
-    }
-    Vector3f sceneCenter = params_.orthographic ?
-        getViewXf_().inverse()( unitedBox.center() ) : unitedBox.center();
-    setRotationPivot_( params_.staticRotationPivot ? *params_.staticRotationPivot : sceneCenter );
+    const auto viewXfInv = calcViewXf( params ).inverse();
+    if ( sceneBox )
+        *sceneBox = params.orthographic ? transformed( unitedBox, viewXfInv ) : unitedBox;
+    Vector3f sceneCenter = params.orthographic ? viewXfInv( unitedBox.center() ) : unitedBox.center();
 
-    params_.cameraTranslation = -sceneCenter;
-    params_.cameraViewAngle = 45.0f;
-    params_.objectScale = sceneObjsBox.valid() ? sceneObjsBox.diagonal() : 1.0f; // we should not take global basis into account here
-    if ( params_.objectScale == 0.0f )
-        params_.objectScale = 1.0f;
+    params.cameraTranslation = -sceneCenter; // the camera looks at the scene center, applyPreciseFit_ takes it as the rotation pivot
+    params.cameraViewAngle = 45.0f;
+    params.objectScale = sceneObjsBox.valid() ? sceneObjsBox.diagonal() : 1.0f; // we should not take global basis into account here
+    if ( params.objectScale == 0.0f )
+        params.objectScale = 1.0f;
 
     auto unitedSceneScale = unitedBox.diagonal();
 
-    if ( params_.orthographic )
+    if ( params.orthographic )
     {
         auto factor = 1.f / ( cameraEye - cameraCenter ).length();
-        auto tanFOV = tan( 0.5f * params_.cameraViewAngle / 180.f * PI_F );
-        params_.cameraZoom = factor / ( unitedSceneScale * tanFOV );
+        auto tanFOV = tan( 0.5f * params.cameraViewAngle / 180.f * PI_F );
+        params.cameraZoom = factor / ( unitedSceneScale * tanFOV );
 
         const auto winRatio = getRatio();
         auto dX = ( unitedBox.max.x - unitedBox.min.x ) / 2.f / winRatio;
@@ -490,28 +512,27 @@ void Viewport::preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV, boo
         if ( maxD == 0.0f )
             maxD = 1.0f;
 
-        params_.cameraViewAngle = ( 2.f * atan2( maxD * params_.cameraZoom, params_.cameraDnear ) ) / PI_F * 180.f / fitParams.factor;
+        params.cameraViewAngle = ( 2.f * atan2( maxD * params.cameraZoom, params.cameraDnear ) ) / PI_F * 180.f / fitParams.factor;
     }
     else
     {
-        auto tanFOV = tan( 0.5f * params_.cameraViewAngle / 180.f * PI_F );
-        params_.cameraZoom = 1 / ( unitedSceneScale * tanFOV );
+        auto tanFOV = tan( 0.5f * params.cameraViewAngle / 180.f * PI_F );
+        params.cameraZoom = 1 / ( unitedSceneScale * tanFOV );
 
-        auto res = getZoomFOVtoScreen_( [&] ()
+        auto res = getZoomFOVtoScreen_( params, [&] ()
         {
-            auto localSceneObjBox = getBoxFn( true, false );
+            auto localSceneObjBox = getBox( true, false );
             Box3f localUnitedBox;
-            if ( getViewerInstance().globalBasis && getViewerInstance().globalBasis->isVisible( id ) )
-                localUnitedBox = getBoxFn( true, true );
+            if ( withGlobalBasis )
+                localUnitedBox = getBox( true, true );
             localUnitedBox.include( localSceneObjBox );
             return localUnitedBox;
         } );
         if ( res.first == 0.0f )
             res.first = 1.0f;
-        params_.cameraViewAngle = res.first / fitParams.factor;
+        params.cameraViewAngle = res.first / fitParams.factor;
     }
-
-    needRedraw_ = true;
+    return params;
 }
 
 using ObjectToCameraFunc = std::function<bool ( Vector3f& )>;
@@ -548,19 +569,19 @@ private:
 
 bool Viewport::allModelsInsideViewportRectangle() const
 {
-    auto res = getZoomFOVtoScreen_( [&] ()
+    auto res = getZoomFOVtoScreen_( params_, [&] ()
     {
-        return calcBox_( getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Any ), params_.orthographic ? Space::CameraOrthographic : Space::CameraPerspective );
+        return calcBox_( getAllObjectsInTree<VisualObject>( &SceneRoot::get(), ObjectSelectivityType::Any ), params_.orthographic ? Space::CameraOrthographic : Space::CameraPerspective, getViewXf_() );
     } );
     return res.second && params_.cameraViewAngle > res.first;
 }
 
-Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs, Space space, bool selectedPrimitives /*= false*/ ) const
+Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs, Space space, const AffineXf3f& viewXf, bool selectedPrimitives /*= false*/ ) const
 {
     Box3f box;
 
     // object space to camera space
-    const auto makeObj2Cam = [space, xfV = getViewXf_()] ( const AffineXf3f& xfObj ) -> ObjectToCameraFunc
+    const auto makeObj2Cam = [space, xfV = viewXf] ( const AffineXf3f& xfObj ) -> ObjectToCameraFunc
     {
         switch ( space )
         {
@@ -673,75 +694,59 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
     return box;
 }
 
-std::pair<float, bool> Viewport::getZoomFOVtoScreen_( std::function<Box3f()> getBoxFn, Vector3f* cameraShift /*= nullptr*/ ) const
+std::pair<float, bool> Viewport::getZoomFOVtoScreen_( const Parameters& params, const std::function<Box3f()>& getBoxFn ) const
 {
-    //const auto box = calcBox_( objs, params_.orthographic ? Space::CameraOrthographic : Space::CameraPerspective, selectedPrimitives );
     const auto box = getBoxFn();
     if ( !box.valid() )
-        return std::make_pair( params_.cameraViewAngle, true );
+        return std::make_pair( params.cameraViewAngle, true );
 
     // z points from scene to camera
-    bool allInside = (-box.max.z < params_.cameraDfar) && (-box.min.z > params_.cameraDnear);
+    bool allInside = (-box.max.z < params.cameraDfar) && (-box.min.z > params.cameraDnear);
 
     const auto winRatio = getRatio();
-    if( params_.orthographic && cameraShift )
-    {
-        auto dX = ( box.max.x - box.min.x ) / 2.f / winRatio;
-        auto dY = ( box.max.y - box.min.y ) / 2.f;
-        float maxD = std::max( dX, dY );
-        auto meanX = ( box.max.x + box.min.x ) / 2.f;
-        auto meanY = ( box.max.y + box.min.y ) / 2.f;
-        const AffineXf3f xfV = getViewXf_();
-        *cameraShift = -xfV.A.x.normalized() * ( meanX / params_.cameraZoom ) - xfV.A.y.normalized() * ( meanY / params_.cameraZoom );
-        return std::make_pair( ( 2.f * atan2( maxD, params_.cameraDnear ) ) / PI_F * 180.f, allInside );
-    }
-    else if ( params_.orthographic )
-    {
-        auto maxX = std::max( box.max.x, -box.min.x ) / winRatio;
-        auto maxY = std::max( box.max.y, -box.min.y );
-        return std::make_pair( ( 2.f * atan2( std::max( maxX, maxY ), params_.cameraDnear ) ) / PI_F * 180.f, allInside );
-    }
+    auto maxX = std::max( box.max.x, -box.min.x ) / winRatio;
+    auto maxY = std::max( box.max.y, -box.min.y );
+    if ( params.orthographic )
+        return std::make_pair( ( 2.f * atan2( std::max( maxX, maxY ), params.cameraDnear ) ) / PI_F * 180.f, allInside );
     else
-    {
-        assert( cameraShift == nullptr );
-        auto maxX = std::max( box.max.x, -box.min.x ) / winRatio;
-        auto maxY = std::max( box.max.y, -box.min.y );
         return std::make_pair( (2.f * atan( std::max( maxX, maxY ) ) ) / PI_F * 180.f, allInside );
-    }
 }
 
 void Viewport::fitBox( const Box3f& newSceneBox, float fill /*= 1.0f*/, bool snapView /*= true */ )
 {
     sceneBox_ = newSceneBox;
-    if ( !newSceneBox.valid() )
-    {
-        setRotationPivot_( params_.staticRotationPivot ? *params_.staticRotationPivot : Vector3f() );
-        return;
-    }
-    auto sceneCenter = sceneBox_.center();
-    setRotationPivot_( params_.staticRotationPivot ? *params_.staticRotationPivot : sceneCenter );
-    params_.cameraTranslation = -sceneCenter;
+    setRotationPivot_( params_.staticRotationPivot ? *params_.staticRotationPivot : newSceneBox.valid() ? newSceneBox.center() : Vector3f() );
+    setParameters( calcFitBoxParameters( params_, newSceneBox, fill, snapView ) );
+}
 
-    auto dif = sceneBox_.max - sceneBox_.min;
-    params_.cameraViewAngle = 45.0f;
-    params_.objectScale = dif.length();
-    if ( params_.objectScale == 0.0f )
-        params_.objectScale = 1.0f;
-
-    auto tanFOV = tan( 0.5f * params_.cameraViewAngle / 180.f * PI_F );
-    auto factor = params_.orthographic ? 1.f / ( cameraEye - cameraCenter ).length() : 1.f;
-    params_.cameraZoom = factor * fill / ( params_.objectScale * tanFOV );
-
+Viewport::Parameters Viewport::calcFitBoxParameters( const Parameters& camera, const Box3f& box, float fill, bool snapView ) const
+{
+    auto params = camera;
     if ( snapView )
-        params_.cameraTrackballAngle = getClosestCanonicalQuaternion( params_.cameraTrackballAngle );
+        params.cameraTrackballAngle = getClosestCanonicalQuaternion( params.cameraTrackballAngle );
+    if ( !box.valid() )
+        return params;
+    params.cameraTranslation = -box.center();
+    params.cameraViewAngle = 45.0f;
+    params.objectScale = box.diagonal();
+    if ( params.objectScale == 0.0f )
+        params.objectScale = 1.0f;
 
-    needRedraw_ = true;
+    auto tanFOV = tan( 0.5f * params.cameraViewAngle / 180.f * PI_F );
+    auto factor = params.orthographic ? 1.f / ( cameraEye - cameraCenter ).length() : 1.f;
+    params.cameraZoom = factor * fill / ( params.objectScale * tanFOV );
+    return params;
 }
 
 void Viewport::fitData( float fill, bool snapView )
 {
     updateSceneBox_();
     fitBox( sceneBox_, fill, snapView );
+}
+
+Viewport::Parameters Viewport::calcFitDataParameters( const Parameters& camera, float fill, bool snapView ) const
+{
+    return calcFitBoxParameters( camera, calcSceneBox_(), fill, snapView );
 }
 
 // ================================================================

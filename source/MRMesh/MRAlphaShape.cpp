@@ -34,30 +34,6 @@ PreciseVertCoords AlphaShapeData::coords( const PointCloud & cloud, VertId v ) c
     return { v, intPoints.empty() ? toInt( cloud.points[v] ) : intPoints[v] };
 }
 
-namespace
-{
-
-void computeAllIntPointsAndTwins( AlphaShapeData & res, const PointCloud & cloud )
-{
-    res.intPoints = computeIntCoords( res.toInt, cloud.points, &cloud.validPoints );
-
-    // only the smallest id of a position in the integer grid takes part in the searches
-    Vector<std::pair<Vector3i, VertId>> order;
-    order.reserve( cloud.validPoints.count() );
-    for ( auto v : cloud.validPoints )
-        order.emplace_back( res.intPoints[v], v );
-    tbb::parallel_sort( order.begin(), order.end(), []( const auto & a, const auto & b )
-    {
-        return std::tie( a.first.x, a.first.y, a.first.z, a.second ) < std::tie( b.first.x, b.first.y, b.first.z, b.second );
-    } );
-    res.twins.clear();
-    for ( size_t i = 1; i < order.size(); ++i )
-        if ( order[i].first == order[i - 1].first )
-            res.twins.autoResizeSet( order[i].second );
-}
-
-} // anonymous namespace
-
 AlphaShapeData getAlphaShapeData( const PointCloud & cloud, float radius, bool allPoints )
 {
     MR_TIMER;
@@ -76,7 +52,22 @@ AlphaShapeData getAlphaShapeData( const PointCloud & cloud, float radius, bool a
     res.toInt = getToIntConverter( box );
 
     if ( allPoints )
-        computeAllIntPointsAndTwins( res, cloud );
+    {
+        res.intPoints = computeIntCoords( res.toInt, cloud.points, &cloud.validPoints );
+
+        // only the smallest id of a position in the integer grid takes part in the searches
+        Vector<std::pair<Vector3i, VertId>> order;
+        order.reserve( cloud.validPoints.count() );
+        for ( auto v : cloud.validPoints )
+            order.emplace_back( res.intPoints[v], v );
+        tbb::parallel_sort( order.begin(), order.end(), []( const auto & a, const auto & b )
+        {
+            return std::tie( a.first.x, a.first.y, a.first.z, a.second ) < std::tie( b.first.x, b.first.y, b.first.z, b.second );
+        } );
+        for ( size_t i = 1; i < order.size(); ++i )
+            if ( order[i].first == order[i - 1].first )
+                res.twins.autoResizeSet( order[i].second );
+    }
 
     // rounding down to be sure that the integer ball is not larger than the given one
     const auto intRadius = std::int64_t( double( radius ) * res.toInt.invRange );
@@ -556,22 +547,6 @@ Mesh findAlphaShape( const PointCloud & cloud, float radius,
     return res;
 }
 
-namespace
-{
-
-// the given data if it knows the twins, otherwise its copy completed in tmp: without the known twins
-// every point of a position would take part in the searches and shred the surface
-const AlphaShapeData & withTwins( const PointCloud & cloud, const AlphaShapeData & data, AlphaShapeData & tmp )
-{
-    if ( !data.intPoints.empty() || !cloud.validPoints.any() )
-        return data;
-    tmp = data;
-    computeAllIntPointsAndTwins( tmp, cloud );
-    return tmp;
-}
-
-} // anonymous namespace
-
 std::optional<ThreeVertIds> findBallPivotingSeed( const PointCloud & cloud, VertId v, const Vector3f & dir,
     const AlphaShapeData & data, Triangulation & tris, Vector<AlphaShapeNei> & neis )
 {
@@ -598,11 +573,14 @@ std::optional<ThreeVertIds> findBallPivotingSeed( const PointCloud & cloud, Vert
 }
 
 std::optional<Triangulation> findBallPivotingComponent( const PointCloud & cloud, const ThreeVertIds & seed,
-    const AlphaShapeData & inData, const ProgressCallback & cb )
+    const AlphaShapeData & data, const ProgressCallback & cb )
 {
     MR_TIMER;
-    AlphaShapeData tmp;
-    const auto & data = withTwins( cloud, inData, tmp );
+    if ( data.intPoints.empty() )
+    {
+        assert( false ); // without the known twins every point of a position would take part in the searches
+        return std::nullopt;
+    }
     const auto numPoints = cloud.validPoints.count() - data.twins.count();
 
     Triangulation res;
@@ -693,13 +671,11 @@ std::optional<Triangulation> findBallPivotingComponent( const PointCloud & cloud
     return res;
 }
 
-std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud, const AlphaShapeData & inData,
+std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud, const AlphaShapeData & data,
     bool allComponents, const ProgressCallback & cb )
 {
     MR_TIMER;
     Triangulation res;
-    AlphaShapeData tmp;
-    const auto & data = withTwins( cloud, inData, tmp );
 
     // the points taking part in the searches: the twins do not
     Vector<VertId> searchPoints;
@@ -710,6 +686,11 @@ std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud
     const auto numPoints = searchPoints.size();
     if ( numPoints == 0 )
         return res;
+    if ( data.intPoints.empty() )
+    {
+        assert( false ); // without the known twins every point of a position would take part in the searches
+        return std::nullopt;
+    }
 
     VertBitSet used; // the points of the found pieces
     VertBitSet noTris; // the points found to have no alpha-shape triangles

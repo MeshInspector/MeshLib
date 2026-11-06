@@ -189,7 +189,7 @@ struct BallPivotCandidate
 /// all triangles have their empty balls on the positive side, the result contains the seed and is sorted;
 /// the pivoting goes in parallel waves over the edges of the triangles found by the previous wave
 [[nodiscard]] MRMESH_API std::optional<Triangulation> findBallPivotingComponent( const PointCloud & cloud, const ThreeVertIds & seed,
-    const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud, preferably with allPoints=true (otherwise a copy is completed here)
+    const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud with allPoints=true, otherwise std::nullopt is returned
     const ProgressCallback & cb = {} );
 
 /// finds the triangles of the outer shape of the cloud by the ball pivoting: the first triangle is found by
@@ -208,7 +208,7 @@ struct BallPivotCandidate
 ///                      and it can take longer than findAlphaShape, since every point left out costs a search of all alpha-shape
 ///                      triangles around it, which is as slow as in findAlphaShape but not halved by the symmetry of the pairs
 [[nodiscard]] MRMESH_API std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud,
-    const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud, preferably with allPoints=true (otherwise a copy is completed here)
+    const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud with allPoints=true, otherwise std::nullopt is returned
     bool allComponents = false, const ProgressCallback & cb = {} );
 
 /// builds the mesh of the outer shape of the cloud by the ball pivoting with the ball of given radius, see findBallPivotingTriangles;

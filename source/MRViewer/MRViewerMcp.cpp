@@ -4,6 +4,7 @@
 #include "MRMesh/MRBase64.h"
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRImage.h"
+#include "MRMesh/MRImageLoad.h"
 #include "MRMesh/MRImageSave.h"
 #include "MRMesh/MRObject.h"
 #include "MRMesh/MROnInit.h"
@@ -22,6 +23,7 @@
 
 #include <GLFW/glfw3.h>
 
+#include <array>
 #include <cctype>
 #include <cstdlib>
 #include <filesystem>
@@ -29,6 +31,7 @@
 #include <future>
 #include <optional>
 #include <stdexcept>
+#include <thread>
 
 namespace MR::Mcp
 {
@@ -36,14 +39,31 @@ namespace MR::Mcp
 namespace
 {
 
-Vector3f readVec3( const nlohmann::json& j, std::string_view field )
+template <typename V>
+V readVec( const nlohmann::json& j, std::string_view field )
 {
-    if ( !j.is_array() || j.size() != 3 )
-        throw std::runtime_error( fmt::format( "`{}` must be a 3-element array", field ) );
-    const Vector3f v{ j[0].get<float>(), j[1].get<float>(), j[2].get<float>() };
-    if ( !std::isfinite( v.x ) || !std::isfinite( v.y ) || !std::isfinite( v.z ) )
-        throw std::runtime_error( fmt::format( "`{}` contains non-finite value", field ) );
+    if ( !j.is_array() || j.size() != V::elements )
+        throw std::runtime_error( fmt::format( "`{}` must be a {}-element array", field, V::elements ) );
+    V v;
+    for ( int i = 0; i < V::elements; ++i )
+        if ( !std::isfinite( v[i] = j[i].get<float>() ) )
+            throw std::runtime_error( fmt::format( "`{}` contains non-finite value", field ) );
     return v;
+}
+
+float readAnimationSeconds( const nlohmann::json& args )
+{
+    const float seconds = args.value( "animationSeconds", 0.f );
+    if ( !( seconds >= 0 && seconds <= 10 ) )
+        throw std::runtime_error( "`animationSeconds` must be in [0, 10]." );
+    return seconds;
+}
+
+// waits until the camera animation of given duration, started by this call, has ended
+void waitCameraAnimation( float seconds )
+{
+    std::this_thread::sleep_for( std::chrono::duration<float>( seconds ) );
+    (void)waitFramesAfterInput(); // the frames after the end time set the target camera
 }
 
 int parseModifiers( const nlohmann::json& args )
@@ -82,6 +102,7 @@ int parseKey( const std::string& s )
 static nlohmann::json mcpViewerFit( const nlohmann::json& args )
 {
     const float factor = args.value( "factor", 1.0f );
+    const float seconds = readAnimationSeconds( args );
 
     // Collect ids / points outside the GUI thread so parse errors throw before the main loop blocks.
     std::vector<uint64_t> ids;
@@ -92,18 +113,11 @@ static nlohmann::json mcpViewerFit( const nlohmann::json& args )
     std::vector<Vector3f> points;
     if ( args.contains( "points" ) )
         for ( const auto& p : args["points"] )
-            points.push_back( readVec3( p, "points[i]" ) );
+            points.push_back( readVec<Vector3f>( p, "points[i]" ) );
 
     runOnMainThread( [&]
     {
         auto& vp = getViewerInstance().viewport();
-        if ( ids.empty() && points.empty() )
-        {
-            FitDataParams p;
-            p.factor = factor;
-            vp.preciseFitDataToScreenBorder( p );
-            return;
-        }
         Box3f box;
         for ( uint64_t id : ids )
         {
@@ -114,18 +128,20 @@ static nlohmann::json mcpViewerFit( const nlohmann::json& args )
         }
         for ( const Vector3f& pt : points )
             box.include( pt );
-        if ( !box.valid() )
+        if ( ( !ids.empty() || !points.empty() ) && !box.valid() )
             throw std::runtime_error( "viewer_fit: the given objects and points contribute no bounding volume." );
-        vp.preciseFitBoxToScreenBorder( { box, factor } );
+        Box3f sceneBox; // preciseFit...ToScreenBorder, animated unless seconds = 0
+        vp.animateCamera( box.valid() ? vp.calcPreciseFitBoxParameters( vp.getParameters(), { box, factor }, &sceneBox )
+            : vp.calcPreciseFitDataParameters( vp.getParameters(), { factor }, &sceneBox ), seconds, sceneBox );
     } );
-    (void)waitFramesAfterInput();
+    waitCameraAnimation( seconds );
     return nlohmann::json::object();
 }
 
 static nlohmann::json mcpViewerSetupCamera( const nlohmann::json& args )
 {
-    const Vector3f forward = readVec3( args.at( "forwardDir" ), "forwardDir" );
-    const Vector3f upRaw = readVec3( args.at( "upDir" ), "upDir" );
+    const Vector3f forward = readVec<Vector3f>( args.at( "forwardDir" ), "forwardDir" );
+    const Vector3f upRaw = readVec<Vector3f>( args.at( "upDir" ), "upDir" );
 
     if ( forward.lengthSq() < 1e-12f )
         throw std::runtime_error( "`forwardDir` must be non-zero." );
@@ -147,16 +163,66 @@ static nlohmann::json mcpViewerSetupCamera( const nlohmann::json& args )
     else if ( fit != "none" )
         throw std::runtime_error( fmt::format( "Unknown `fit` `{}` (expected `visible`/`selected`/`none`).", fit ) );
     const float factor = args.value( "factor", 1.0f );
+    const float seconds = readAnimationSeconds( args );
 
     runOnMainThread( [&]
     {
         auto& vp = getViewerInstance().viewport();
-        vp.cameraLookAlong( fwdN, up );
+        // cameraLookAlong and preciseFitDataToScreenBorder, animated unless seconds = 0
+        auto camera = vp.getParameters();
+        camera.cameraTrackballAngle = Quaternionf( Matrix3f( cross( fwdN, up ), up, -fwdN ) );
+        Box3f sceneBox;
         // snapView=false keeps the user's direction.
         if ( fitMode )
-            vp.preciseFitDataToScreenBorder( { factor, false, *fitMode } );
+            camera = vp.calcPreciseFitDataParameters( camera, { factor, false, *fitMode }, &sceneBox );
+        vp.animateCamera( camera, seconds, sceneBox );
     } );
-    (void)waitFramesAfterInput();
+    waitCameraAnimation( seconds );
+    return nlohmann::json::object();
+}
+
+static nlohmann::json mcpViewerSetBackground( const nlohmann::json& args )
+{
+    std::optional<Color> color;
+    if ( args.contains( "color" ) )
+        color = parseColor( args["color"], "color" );
+
+    // the image is loaded outside the GUI thread; empty optional removes it
+    std::optional<std::optional<Viewport::BackgroundTexture>> texture;
+    if ( args.contains( "imagePath" ) )
+    {
+        auto& bg = texture.emplace();
+        if ( const auto path = args["imagePath"].get<std::string>(); !path.empty() )
+        {
+            auto image = ImageLoad::fromAnySupportedFormat( pathFromUtf8( path ) );
+            if ( !image )
+                throw std::runtime_error( image.error() );
+            const auto mode = args.value( "stretchMode", std::string( "fill" ) );
+            constexpr std::array<std::string_view, 4> modes{ "none", "stretch", "fit", "fill" }; // StretchMode order
+            const auto it = std::find( modes.begin(), modes.end(), mode );
+            if ( it == modes.end() )
+                throw std::runtime_error( fmt::format( "Unknown `stretchMode` `{}` (expected `none`/`stretch`/`fit`/`fill`).", mode ) );
+            bg.emplace().stretchMode = Viewport::BackgroundTexture::StretchMode( it - modes.begin() );
+            static_cast<Image&>( bg->texture ) = std::move( *image );
+            bg->texture.filter = FilterType::Linear;
+            if ( args.contains( "startPos" ) )
+                bg->startPos = readVec<Vector2f>( args["startPos"], "startPos" );
+            if ( args.contains( "scaling" ) )
+                bg->scaling = readVec<Vector2f>( args["scaling"], "scaling" );
+        }
+    }
+
+    runOnMainThread( [&]
+    {
+        auto& viewer = getViewerInstance();
+        for ( ViewportId vid : viewer.getPresentViewports() )
+        {
+            if ( color )
+                viewer.viewport( vid ).setBackgroundColor( *color );
+            if ( texture )
+                viewer.viewport( vid ).setBackgroundTexture( *texture );
+        }
+    } );
     return nlohmann::json::object();
 }
 
@@ -363,11 +429,14 @@ MR_ON_INIT{
                 "ids from `scene_listObjectTree`) and/or `points` (3-element `[x,y,z]` arrays). If both are present, "
                 "their bounding volumes are unioned. If neither is given, fits the whole scene (same as the UI's "
                 "\"Fit\" action). `factor` (default 1.0) controls framing margin — higher means more screen coverage. "
-                "The camera angle is preserved (no canonical-view snapping).",
+                "The camera angle is preserved (no canonical-view snapping). "
+                "`animationSeconds` (default 0, at most 10) moves the camera smoothly to the new view during that time; "
+                "the call returns when it has arrived.",
         /*input_schema*/Schema::Object{}
             .addMemberOpt( "objectIds", Schema::Array( Schema::Number{} ) )
             .addMemberOpt( "points",    Schema::Array( Schema::Base( Schema::Array( Schema::Number{} ) ) ) )
-            .addMemberOpt( "factor",    Schema::Number{} ),
+            .addMemberOpt( "factor",    Schema::Number{} )
+            .addMemberOpt( "animationSeconds", Schema::Number{} ),
         /*output_schema*/Schema::Object{},
         /*func*/mcpViewerFit
     );
@@ -383,14 +452,38 @@ MR_ON_INIT{
                 "to the point it looks at, `target` from `viewer_getCamera` (the camera turns around that point, so "
                 "its position still changes). "
                 "The fit uses the geometry itself, so it frames tighter than `viewer_fit` with `objectIds`, which "
-                "fits the objects' bounding boxes. `factor` (default 1.0) is the same framing margin as in `viewer_fit`.",
+                "fits the objects' bounding boxes. `factor` (default 1.0) is the same framing margin as in `viewer_fit`. "
+                "`animationSeconds` (default 0, at most 10) turns and moves the camera smoothly to the new view during that time; "
+                "the call returns when it has arrived.",
         /*input_schema*/Schema::Object{}
             .addMember(    "forwardDir", Schema::Array( Schema::Number{} ) )
             .addMember(    "upDir",      Schema::Array( Schema::Number{} ) )
             .addMemberOpt( "fit",        Schema::String( std::vector<std::string>{ "visible", "selected", "none" } ) )
-            .addMemberOpt( "factor",     Schema::Number{} ),
+            .addMemberOpt( "factor",     Schema::Number{} )
+            .addMemberOpt( "animationSeconds", Schema::Number{} ),
         /*output_schema*/Schema::Object{},
         /*func*/mcpViewerSetupCamera
+    );
+
+    server.addTool(
+        /*id*/  "viewer_setBackground",
+        /*name*/"Set viewport background",
+        /*desc*/"Change the background of all viewports; only the given fields change. `color` is `[r, g, b]` or "
+                "`[r, g, b, a]` floats in [0, 1]. `imagePath` loads an image file (e.g. PNG or JPEG) drawn over the color "
+                "and below the scene; an empty string removes the image. With the image, `stretchMode` (default `fill`) is "
+                "`fill` (covers the viewport, centered and cropped), `fit` (the whole image in the center, the color around it), "
+                "`stretch` (covers the viewport exactly, the aspect ratio is not kept) or `none`: then `startPos` `[x, y]` "
+                "(default `[0, 0]`) places the image's upper-left corner in framebuffer pixels from the viewport's upper-left "
+                "corner, Y down, and `scaling` `[sx, sy]` (default `[1, 1]`) is the size of an image pixel in framebuffer pixels. "
+                "The image is not saved anywhere.",
+        /*input_schema*/Schema::Object{}
+            .addMemberOpt( "color",       Schema::Array( Schema::Number{} ) )
+            .addMemberOpt( "imagePath",   Schema::String{} )
+            .addMemberOpt( "stretchMode", Schema::String( std::vector<std::string>{ "fill", "fit", "stretch", "none" } ) )
+            .addMemberOpt( "startPos",    Schema::Array( Schema::Number{} ) )
+            .addMemberOpt( "scaling",     Schema::Array( Schema::Number{} ) ),
+        /*output_schema*/Schema::Object{},
+        /*func*/mcpViewerSetBackground
     );
 
     server.addTool(

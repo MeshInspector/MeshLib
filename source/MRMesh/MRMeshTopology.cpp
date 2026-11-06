@@ -1800,20 +1800,24 @@ bool MeshTopology::buildGridMesh( const GridSettings & settings, ProgressCallbac
     return computeValidsFromEdges( subprogress( cb, 0.5f, 1.0f ) );
 }
 
-bool MeshTopology::buildFromManifoldTriangles( const Triangulation & t, int * skippedFaceCount )
+bool MeshTopology::buildFromManifoldTriangles( const Triangulation & t, const MeshBuilder::BuildSettings & settings )
 {
     MR_TIMER;
     // corner c = 3 * face + k is at vertex t[face][k]; its half-edge goes to the next vertex of the face
     const size_t numCorners = 3 * t.size();
-    if ( t.empty() || numCorners >= size_t( INT_MAX ) / 2 )
+    if ( t.empty() || numCorners >= size_t( INT_MAX ) / 2 || settings.shiftFaceId < 0 || t.size() + settings.shiftFaceId >= size_t( INT_MAX ) )
         return false;
     const ThreeVertIds * tv = t.data();
     auto prevCorner = [] ( int c ) { return c - c % 3 + ( c + 2 ) % 3; };
     // such triangles are not added, as in MeshBuilder
-    auto skipFace = [&]( size_t f )
+    auto badFace = [&]( size_t f )
     {
         const auto & vs = tv[f];
         return !vs[0].valid() || !vs[1].valid() || !vs[2].valid() || vs[0] == vs[1] || vs[1] == vs[2] || vs[0] == vs[2];
+    };
+    auto skipFace = [&]( size_t f )
+    {
+        return ( settings.region && !settings.region->test( FaceId( f ) ) ) || badFace( f );
     };
 
     struct MaxSkip { int maxVert = -1, numSkipped = 0; };
@@ -1822,7 +1826,9 @@ bool MeshTopology::buildFromManifoldTriangles( const Triangulation & t, int * sk
         {
             for ( size_t f = range.begin(); f < range.end(); ++f )
             {
-                if ( skipFace( f ) )
+                if ( settings.region && !settings.region->test( FaceId( f ) ) )
+                    continue;
+                if ( badFace( f ) )
                 {
                     ++curr.numSkipped;
                     continue;
@@ -1923,7 +1929,7 @@ bool MeshTopology::buildFromManifoldTriangles( const Triangulation & t, int * sk
         {
             minCorner = std::min( minCorner, vc[i].c );
             const int j = findNext( vc[i].prev );
-            if ( j == -2 )
+            if ( j == -2 || ( !settings.allowNonManifoldEdge && findNext( vc[i].next ) == -2 ) )
             {
                 ok.store( false, std::memory_order_relaxed ); // three or more triangles share an edge, or two have it in the same direction
                 return;
@@ -2046,10 +2052,13 @@ bool MeshTopology::buildFromManifoldTriangles( const Triangulation & t, int * sk
 
     updateValids_ = false;
     edges_.resizeNoInit( 2 * size_t( numUndirected ) );
-    edgePerFace_.resizeNoInit( t.size() );
-    ParallelFor( edgePerFace_, [&]( FaceId f )
+    const int shift = settings.shiftFaceId;
+    edgePerFace_.resizeNoInit( t.size() + shift );
+    std::fill( edgePerFace_.data(), edgePerFace_.data() + shift, EdgeId() );
+    ParallelFor( size_t( 0 ), t.size(), [&]( size_t tf )
     {
-        const int c0 = int( 3 * size_t( f ) );
+        const FaceId f( int( tf ) + shift );
+        const int c0 = int( 3 * tf );
         if ( twin[c0] == c0 )
         {
             edgePerFace_[f] = EdgeId(); // skipped triangle
@@ -2060,7 +2069,7 @@ bool MeshTopology::buildFromManifoldTriangles( const Triangulation & t, int * sk
         for ( int k = 0; k < 3; ++k )
         {
             const EdgeId e = fe[k];
-            const VertId v = tv[size_t( f )][k];
+            const VertId v = tv[tf][k];
             edges_[e].org = v;
             edges_[e].left = f;
             // next counter-clockwise around v is the half-edge to the previous vertex of the face
@@ -2087,8 +2096,19 @@ bool MeshTopology::buildFromManifoldTriangles( const Triangulation & t, int * sk
         const int c = vertMinCorner[size_t( v )];
         edgePerVertex_[v] = c >= 0 ? edgeOf( c ) : EdgeId();
     } );
-    if ( skippedFaceCount )
-        *skippedFaceCount = ms.numSkipped;
+    if ( settings.skippedFaceCount )
+        *settings.skippedFaceCount = ms.numSkipped;
+    if ( settings.region )
+    {
+        // on output: the triangles not added
+        FaceBitSet notAdded( t.size() );
+        BitSetParallelForAll( notAdded, [&]( FaceId f )
+        {
+            if ( settings.region->test( f ) && badFace( f ) )
+                notAdded.set( f );
+        } );
+        *settings.region = std::move( notAdded );
+    }
     return computeValidsFromEdges();
 }
 

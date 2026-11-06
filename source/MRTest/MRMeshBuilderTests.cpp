@@ -543,7 +543,7 @@ TEST( MRMesh, buildFromManifoldTriangles )
     EXPECT_TRUE( region.none() );
     MeshTopology direct;
     int skipped = -1;
-    EXPECT_TRUE( direct.buildFromManifoldTriangles( t, &skipped ) );
+    EXPECT_TRUE( direct.buildFromManifoldTriangles( t, { .skippedFaceCount = &skipped } ) );
     EXPECT_EQ( skipped, 0 );
     expectSameConnectivity( seq, direct );
 
@@ -557,9 +557,35 @@ TEST( MRMesh, buildFromManifoldTriangles )
     // triangles with repeated or invalid vertices are skipped
     t.push_back( { 0_v, 0_v, 1_v } );
     t.push_back( { VertId(), VertId(), VertId() } );
-    EXPECT_TRUE( direct.buildFromManifoldTriangles( t, &skipped ) );
+    EXPECT_TRUE( direct.buildFromManifoldTriangles( t, { .skippedFaceCount = &skipped } ) );
     EXPECT_EQ( skipped, 2 );
     EXPECT_EQ( direct.numValidFaces(), int( t.size() ) - 2 );
+}
+
+TEST( MRMesh, buildFromManifoldTrianglesRegion )
+{
+    const auto sphere = makeSphere( { .numMeshVertices = 3000 } );
+    Triangulation t = sphere.topology.getTriangulation();
+    t.push_back( { 0_v, 0_v, 1_v } );
+    FaceBitSet region( t.size(), true );
+    for ( FaceId f = 0_f; f < 100; ++f )
+        region.reset( f );
+    constexpr int shift = 10;
+
+    FaceBitSet seqRegion = region, directRegion = region;
+    int seqSkipped = -1, directSkipped = -1;
+    MeshTopology seq;
+    addTriangles( seq, t, { .region = &seqRegion, .shiftFaceId = shift, .skippedFaceCount = &seqSkipped } );
+    MeshTopology direct;
+    EXPECT_TRUE( direct.buildFromManifoldTriangles( t, { .region = &directRegion, .shiftFaceId = shift, .skippedFaceCount = &directSkipped } ) );
+    EXPECT_EQ( seqSkipped, 1 );
+    EXPECT_EQ( directSkipped, 1 );
+    EXPECT_EQ( directRegion.count(), 1 );
+    EXPECT_TRUE( directRegion.test( FaceId( int( t.size() ) - 1 ) ) );
+    EXPECT_EQ( seqRegion.count(), 1 );
+    EXPECT_EQ( direct.faceSize(), t.size() + shift );
+    EXPECT_FALSE( direct.hasFace( 0_f ) );
+    expectSameConnectivity( seq, direct );
 }
 
 TEST( MRMesh, buildFromManifoldTrianglesFails )

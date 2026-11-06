@@ -180,7 +180,9 @@ struct BallPivotCandidate
 
 /// finds the first triangle for the ball pivoting among the alpha-shape triangles of point v: the one with its empty ball
 /// (on the positive side) farthest in direction \p dir, touched first by the ball coming from that direction if v is
-/// the extreme point of the cloud in it; returns std::nullopt if v has no alpha-shape triangles
+/// the extreme point of the cloud in it; returns std::nullopt if v has no alpha-shape triangles;
+/// with few points around v, the triangle can be in a region of empty balls that the incoming ball does not reach,
+/// e.g. on the inner side of a closed shell
 [[nodiscard]] MRMESH_API std::optional<ThreeVertIds> findBallPivotingSeed( const PointCloud & cloud, VertId v, const Vector3f & dir,
     const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud and the same radius
     Triangulation & tris, ///< temporary storage to avoid memory allocations, it will be filled with the alpha-shape triangles of v
@@ -196,7 +198,8 @@ struct BallPivotCandidate
 
 /// finds the outer shape of the cloud by the ball pivoting: findBallPivotingComponent from findBallPivotingSeed of the extreme point
 /// in each of -x, +x, -y, +y, -z, +z not in a piece found before, returning the largest piece (sorted); points without
-/// alpha-shape triangles (e.g. far outliers) are skipped; unlike findAlphaShape, no inner side of a closed shell is found
+/// alpha-shape triangles (e.g. far outliers) are skipped; unlike findAlphaShape, no inner side of a closed shell is found;
+/// small clusters of noise farthest in all six directions hide the shape, then take the largest of allComponents
 /// \param allComponents whether to restart the pivoting in -x order from every point not in a found piece and return all pieces;
 ///                      then a few points left out of a shell can regrow its inner side, and it can be slower than findAlphaShape
 [[nodiscard]] MRMESH_API std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud,

@@ -22,24 +22,21 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
 
     MeshMeshDistanceResult res;
     res.distSq = upDistLimitSq;
-    if ( aTree.nodes().empty() || bTree.nodes().empty() )
+    if ( aTree.empty() || bTree.empty() )
     {
         assert( false );
         return res;
     }
 
     NodeBitSet aNodes, bNodes;
-    NodeBitSet* aNodesPtr{nullptr}, *bNodesPtr{nullptr};
     if ( a.region )
-    {
         aNodes = aTree.getNodesFromLeaves( *a.region );
-        aNodesPtr = &aNodes;
-    }
     if ( b.region )
-    {
         bNodes = bTree.getNodesFromLeaves( *b.region );
-        bNodesPtr = &bNodes;
-    }
+    auto inRegion = []( const AABBTree & tree, const FaceBitSet * region, const NodeBitSet & nodes, NodeId n )
+    {
+        return !region || ( tree.isLeaf( n ) ? region->test( tree.leafId( n ) ) : nodes.test( n ) );
+    };
 
     struct SubTask
     {
@@ -56,7 +53,7 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
 
     auto getSubTask = [&]( NodeId a, NodeId b )
     {
-        float distSq = aTree.nodes()[a].box.getDistanceSq( transformed( bTree.nodes()[b].box, rigidB2A ) );
+        float distSq = aTree.box( a ).getDistanceSq( transformed( bTree.box( b ), rigidB2A ) );
         return SubTask { a, b, distSq };
     };
 
@@ -69,20 +66,20 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
     {
         const auto s = subtasks.top();
         subtasks.pop();
-        if ( aNodesPtr && !aNodes.test( s.a ) )
+        if ( !inRegion( aTree, a.region, aNodes, s.a ) )
             continue;
-        if ( bNodesPtr && !bNodes.test( s.b ) )
+        if ( !inRegion( bTree, b.region, bNodes, s.b ) )
             continue;
 
-        const auto& aNode = aTree[s.a];
-        const auto& bNode = bTree[s.b];
         if ( s.distSq >= res.distSq )
             continue;
 
-        if ( aNode.leaf() && bNode.leaf() )
+        const bool aLeaf = aTree.isLeaf( s.a );
+        const bool bLeaf = bTree.isLeaf( s.b );
+        if ( aLeaf && bLeaf )
         {
-            const auto aFace = aNode.leafId();
-            const auto bFace = bNode.leafId();
+            const auto aFace = aTree.leafId( s.a );
+            const auto bFace = bTree.leafId( s.b );
 
             Triangle3f av, bv;
             a.mesh.getTriPoints( aFace, av[0], av[1], av[2] );
@@ -108,16 +105,18 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
         }
 
         SubTask s1, s2;
-        if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
+        if ( !aLeaf && ( bLeaf || aTree.box( s.a ).volume() >= bTree.box( s.b ).volume() ) )
         {
             // split aNode
+            const auto& aNode = aTree[s.a];
             s1 = getSubTask( aNode.l, s.b );
             s2 = getSubTask( aNode.r, s.b );
         }
         else
         {
-            assert( !bNode.leaf() );
+            assert( !bLeaf );
             // split bNode
+            const auto& bNode = bTree[s.b];
             s1 = getSubTask( s.a, bNode.l );
             s2 = getSubTask( s.a, bNode.r );
         }

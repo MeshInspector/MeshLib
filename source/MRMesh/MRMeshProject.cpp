@@ -15,7 +15,7 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
 {
     MeshProjectionResult res;
     res.distSq = upDistLimitSq;
-    if ( tree.nodes().empty() )
+    if ( tree.empty() )
         return res;
 
     struct SubTask
@@ -33,7 +33,7 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
 
     auto getSubTask = [&]( NodeId n )
     {
-        const auto & box = tree.nodes()[n].box;
+        const auto & box = tree.box( n );
         float distSq = xf ? transformed( box, *xf ).getDistanceSq( pt ) : box.getDistanceSq( pt );
         return SubTask { n, distSq };
     };
@@ -44,13 +44,12 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
     {
         const auto s = subtasks.top();
         subtasks.pop();
-        const auto & node = tree[s.n];
         if ( s.distSq >= res.distSq )
             continue;
 
-        if ( node.leaf() )
+        if ( tree.isLeaf( s.n ) )
         {
-            const auto face = node.leafId();
+            const auto face = tree.leafId( s.n );
             if ( validFaces && !validFaces( face ) )
                 continue;
             if ( mp.region && !mp.region->test( face ) )
@@ -83,7 +82,8 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
             }
             continue;
         }
-        
+
+        const auto & node = tree[s.n];
         auto s1 = getSubTask( node.l );
         auto s2 = getSubTask( node.r );
         // add task with smaller distance last to descend there first
@@ -129,14 +129,14 @@ MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp, f
 void findBoxedTrisInBall( const MeshPart & mp, Ball3f ball, const FoundBoxedTriCallback& foundCallback )
 {
     const auto & tree = mp.mesh.getAABBTree();
-    if ( tree.nodes().empty() )
+    if ( tree.empty() )
         return;
 
     InplaceStack<NoInitNodeId, 32> subtasks;
 
     auto boxDistSq = [&]( NodeId n ) // squared distance from ball center to the box with interior
     {
-        return tree.nodes()[n].box.getDistanceSq( ball.center );
+        return tree.box( n ).getDistanceSq( ball.center );
     };
 
     auto addSubTask = [&]( NodeId n )
@@ -150,20 +150,20 @@ void findBoxedTrisInBall( const MeshPart & mp, Ball3f ball, const FoundBoxedTriC
     {
         const auto n = subtasks.top();
         subtasks.pop();
-        const auto & node = tree[n];
         if ( !( boxDistSq( n ) < ball.radiusSq ) )
             continue;
 
-        if ( node.leaf() )
+        if ( tree.isLeaf( n ) )
         {
-            const auto face = node.leafId();
+            const auto face = tree.leafId( n );
             if ( mp.region && !mp.region->test( face ) )
                 continue;
             if ( foundCallback( face, ball ) == Processing::Stop )
                 break;
             continue;
         }
-        
+
+        const auto & node = tree[n];
         auto lDistSq = boxDistSq( node.l );
         auto rDistSq = boxDistSq( node.r );
         /// first go in the node located closer to ball's center (in case the ball will shrink and the other node will be away)

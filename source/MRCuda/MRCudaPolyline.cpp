@@ -1,4 +1,5 @@
 #include "MRCudaPolyline.h"
+#include "MRCudaAABBTree.hpp"
 #include "MRCudaPolyline.cuh"
 
 #include "MRMesh/MRAABBTreePolyline.h"
@@ -9,7 +10,7 @@ namespace MR::Cuda
 
 Expected<Polyline2DataHolder> Polyline2DataHolder::fromLines( const Polyline2& polyline )
 {
-    const auto& nodes = polyline.getAABBTree().nodes();
+    const auto nodes = getNodesWithLeaves( polyline.getAABBTree() );
     const auto& points = polyline.points;
     const auto orgs = polyline.topology.getOrgs();
 
@@ -38,14 +39,14 @@ void Polyline2DataHolder::reset()
 
 size_t Polyline2DataHolder::heapBytes( const Polyline2& polyline )
 {
-    return sizeof( Node2 )  * polyline.getAABBTree().nodes().size()
+    return sizeof( Node2 )  * ( 2 * polyline.getAABBTree().nodes().size() + 1 )
          + sizeof( float2 ) * polyline.points.size()
          + sizeof( int )    * polyline.topology.edgeSize();
 }
 
 Expected<Polyline3DataHolder> Polyline3DataHolder::fromLines( const Polyline3& polyline )
 {
-    const auto& nodes = polyline.getAABBTree().nodes();
+    const auto nodes = getNodesWithLeaves( polyline.getAABBTree() );
     const auto& points = polyline.points;
     const auto orgs = polyline.topology.getOrgs();
 
@@ -74,7 +75,7 @@ void Polyline3DataHolder::reset()
 
 size_t Polyline3DataHolder::heapBytes( const Polyline3& polyline )
 {
-    return sizeof( Node3 )  * polyline.getAABBTree().nodes().size()
+    return sizeof( Node3 )  * ( 2 * polyline.getAABBTree().nodes().size() + 1 )
          + sizeof( float3 ) * polyline.points.size()
          + sizeof( int )    * polyline.topology.edgeSize();
 }

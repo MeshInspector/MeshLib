@@ -33,12 +33,14 @@ struct AABBTreeNode
     using BoxT = typename T::BoxT;
 
     BoxT box; ///< bounding box of whole subtree
-    NodeId l, r; ///< two children
-    /// returns true if this is a leaf node without children nodes but with a LeafId reference
-    bool leaf() const { return !r.valid(); }
-    /// returns face (for the leaf node only)
-    LeafId leafId() const { assert( leaf() ); return LeafId( int( l ) ); }
-    void setLeafId( LeafId id ) { l = NodeId( int( id ) ); r = NodeId(); }
+    NodeId l, r; ///< two children: each is either another node (non-negative id) or a leaf (encoded as negative id)
+
+    /// returns true if given child of a node is a leaf rather than another node
+    [[nodiscard]] static bool isLeaf( NodeId child ) { return int( child ) < 0; }
+    /// returns the id of the leaf encoded in given child of a node
+    [[nodiscard]] static LeafId leafId( NodeId child ) { assert( isLeaf( child ) ); return LeafId( ~int( child ) ); }
+    /// encodes given leaf as a child of a node
+    [[nodiscard]] static NodeId leafChild( LeafId id ) { assert( id.valid() ); return NodeId( ~int( id ) ); }
 
     AABBTreeNode() noexcept = default;
     explicit AABBTreeNode( NoInit ) noexcept : box( noInit ), l( noInit ), r( noInit ){}

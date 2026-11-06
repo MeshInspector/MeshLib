@@ -1,4 +1,5 @@
 #include "MRCudaMeshDistanceMap.h"
+#include "MRCudaAABBTree.hpp"
 #include "MRCudaMeshDistanceMap.cuh"
 
 #include "MRCudaBasic.cuh"
@@ -46,7 +47,6 @@ Expected<DistanceMap> computeDistanceMap( const MR::Mesh& mesh, const MR::MeshTo
         return unexpectedOperationCanceled();
 
     const AABBTree& tree = mesh.getAABBTree();
-    const auto& nodes = tree.nodes();
     const auto& meshPoints = mesh.points;
     const auto tris = mesh.topology.getTriangulation();
 
@@ -54,7 +54,7 @@ Expected<DistanceMap> computeDistanceMap( const MR::Mesh& mesh, const MR::MeshTo
     CUDA_LOGE_RETURN_UNEXPECTED( cudaMeshPoints.fromVector( meshPoints ) );
 
     DynamicArray<Node3> cudaNodes;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaNodes.fromVector( nodes ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaNodes.fromVector( getNodesWithLeaves( tree ) ) );
 
     DynamicArray<FaceToThreeVerts> cudaFaces;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaFaces.fromVector( tris ) );
@@ -127,12 +127,11 @@ Expected<DistanceMap> computeDistanceMap( const MR::Mesh& mesh, const MR::MeshTo
 size_t computeDistanceMapHeapBytes( const MR::Mesh& mesh, const MR::MeshToDistanceMapParams& params, bool needOutSamples /*= false */ )
 {
     const AABBTree& tree = mesh.getAABBTree();
-    const auto& nodes = tree.nodes();
     const auto& meshPoints = mesh.points;
     constexpr size_t cMinRowCount = 10;
     size_t size = cMinRowCount * params.resolution.y;
     return
-        nodes.size() * sizeof( Cuda::Node3 ) +
+        ( 2 * tree.nodes().size() + 1 ) * sizeof( Cuda::Node3 ) +
         meshPoints.size() * sizeof( float3 ) +
         mesh.topology.numValidFaces() * sizeof( FaceToThreeVerts ) +
         size * sizeof( float ) +

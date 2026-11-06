@@ -145,14 +145,13 @@ struct BallPivotCandidate
 /// (as seen by the viewer the line's direction points at), finds the first point x such that the ball
 /// via vi, vj and x with the center on vk's side of the half-plane of x has none of those points nor vk strictly inside;
 /// the predicates are exact with simulation-of-simplicity resolving the ties; the points sharing a position in the integer grid
-/// are merged as in findAlphaShapeNeiTriangles (by a sort of the candidates if \p data was prepared with allPoints=false):
-/// only the smallest id of a position is returned, and never a twin of vi, vj or vk;
+/// are merged as in findAlphaShapeNeiTriangles: only the smallest id of a position is returned, and never a twin of vi, vj or vk;
 /// returns vk if no such point exists: the ball rotates to the other side of triangle (vi, vj, vk) touching no other point;
 /// the ball via vi, vj and vk with the center on the positive side of that triangle must exist and be empty,
 /// otherwise the returned point is not the one touched first by the rotating ball; in particular, for a triangle
 /// (vi, vj, vk) of findAlphaShapeAllTriangles, (vj, vi, x) is one of them as well, x being the returned point
 [[nodiscard]] MRMESH_API VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, VertId vk,
-    const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud and the same radius
+    const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud with allPoints=true, otherwise an invalid id is returned
     Vector<BallPivotCandidate> & cands ); ///< temporary storage to avoid memory allocations, it will be filled with the touchable points in unspecified order
 
 /// finds all triangles of alpha-shape with negative alpha = -1/radius

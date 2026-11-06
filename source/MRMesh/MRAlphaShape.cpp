@@ -340,6 +340,11 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
 VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, VertId vk,
     const AlphaShapeData & data, Vector<BallPivotCandidate> & cands )
 {
+    if ( data.intPoints.empty() )
+    {
+        assert( false ); // without the known twins a twin on the ball of a candidate would block it
+        return {};
+    }
     const auto pi = data.coords( cloud, vi );
     const auto pj = data.coords( cloud, vj );
     const auto pk = data.coords( cloud, vk );
@@ -376,18 +381,6 @@ VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, Vert
                 cands.push_back( { c, orient3d( { pi, pj, pk, c } ) } );
             return Processing::Continue;
         } );
-    if ( data.intPoints.empty() )
-    {
-        // the twins are unknown: a twin on the ball of a candidate would block it, so only the smallest id of a position stays
-        std::sort( cands.begin(), cands.end(), []( const BallPivotCandidate & a, const BallPivotCandidate & b )
-        {
-            return std::tie( a.coords.pt.x, a.coords.pt.y, a.coords.pt.z, a.coords.id ) < std::tie( b.coords.pt.x, b.coords.pt.y, b.coords.pt.z, b.coords.id );
-        } );
-        cands.erase( std::unique( cands.begin(), cands.end(), []( const BallPivotCandidate & a, const BallPivotCandidate & b )
-        {
-            return a.coords.pt == b.coords.pt;
-        } ), cands.end() );
-    }
 
     // whether a follows b counter-clockwise from #vk, i.e. ccwAroundLine( { pi, pj, pk, b, a } ) with its first two
     // orient3d calls taken from the candidates; the reversed order puts the first candidate on top of the heap

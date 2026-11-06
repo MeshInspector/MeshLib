@@ -120,7 +120,7 @@ TEST( MRMesh, BallPivotVertex )
     cloud.points.push_back( {  0.2952f, 1.6742f, 0.5f } ); //5_v, rotation 80 degrees, far from the axis
     cloud.validPoints.resize( cloud.points.size(), true );
 
-    auto data = getAlphaShapeData( cloud, 1, false );
+    auto data = getAlphaShapeData( cloud, 1, true );
     Vector<BallPivotCandidate> cands;
     auto ids = [&cands]
     {
@@ -142,7 +142,7 @@ TEST( MRMesh, BallPivotVertex )
 
     cloud.validPoints.reset( 3_v );
     cloud.invalidateCaches();
-    data = getAlphaShapeData( cloud, 1, false );
+    data = getAlphaShapeData( cloud, 1, true );
     EXPECT_EQ( findBallPivotVertex( cloud, 0_v, 1_v, 2_v, data, cands ), 5_v );
 
     // with no other point, the ball rotates to the other side of the same triangle
@@ -150,7 +150,7 @@ TEST( MRMesh, BallPivotVertex )
     for ( VertId v : { 0_v, 1_v, 2_v } )
         tri.points.push_back( cloud.points[v] );
     tri.validPoints.resize( tri.points.size(), true );
-    data = getAlphaShapeData( tri, 1, false );
+    data = getAlphaShapeData( tri, 1, true );
     EXPECT_EQ( findBallPivotVertex( tri, 0_v, 1_v, 2_v, data, cands ), 2_v );
     EXPECT_TRUE( cands.empty() );
     EXPECT_EQ( findBallPivotVertex( tri, 1_v, 0_v, 2_v, data, cands ), 2_v );
@@ -399,16 +399,6 @@ TEST( MRMesh, BallPivotingTwins )
             EXPECT_EQ( v, smallestId[posOf[v]] );
         }
     EXPECT_EQ( posTris( tris, [&]( VertId v ) { return posOf[v]; } ), posTris( plainTris, []( VertId v ) { return int( v ); } ) );
-
-    // findBallPivotVertex gives the same results without the twins known
-    const auto dataNoTwins = getAlphaShapeData( cloud, 0.2f, false );
-    Vector<BallPivotCandidate> cands;
-    for ( const auto & t : tris )
-        for ( int i = 0; i < 3; ++i )
-        {
-            const VertId a = t[i], b = t[( i + 1 ) % 3], c = t[( i + 2 ) % 3];
-            EXPECT_EQ( findBallPivotVertex( cloud, a, b, c, dataNoTwins, cands ), findBallPivotVertex( cloud, a, b, c, data, cands ) );
-        }
 
     const auto mesh = findBallPivotingMesh( cloud, 0.2f );
     EXPECT_TRUE( mesh.topology.isClosed() );

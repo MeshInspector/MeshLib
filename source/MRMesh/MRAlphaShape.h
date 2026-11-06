@@ -145,7 +145,7 @@ struct BallPivotCandidate
 /// (as seen by the viewer the line's direction points at), finds the first point x such that the ball
 /// via vi, vj and x with the center on vk's side of the half-plane of x has none of those points nor vk strictly inside;
 /// the predicates are exact with simulation-of-simplicity resolving the ties; the points sharing a position in the integer grid
-/// are merged as in findAlphaShapeNeiTriangles if \p data was prepared with allPoints=true (otherwise it knows no twins):
+/// are merged as in findAlphaShapeNeiTriangles (by a sort of the candidates if \p data was prepared with allPoints=false):
 /// only the smallest id of a position is returned, and never a twin of vi, vj or vk;
 /// returns vk if no such point exists: the ball rotates to the other side of triangle (vi, vj, vk) touching no other point;
 /// the ball via vi, vj and vk with the center on the positive side of that triangle must exist and be empty,
@@ -177,14 +177,16 @@ struct BallPivotCandidate
     std::vector<MeshBuilder::VertDuplication> * dups = nullptr, AlphaShapeStats * stats = nullptr );
 
 /// finds the triangles of the outer shape of the cloud by the ball pivoting: the first triangle is found by
-/// findAlphaShapeNeiTriangles around the point with the smallest x-coordinate, taking the one with its ball
-/// farthest in -x direction, where nothing can block the ball; the remaining triangles are found by findBallPivotVertex
+/// findAlphaShapeNeiTriangles around the extreme point of the cloud in a direction (-x, +x, -y, +y, -z, +z), taking the one
+/// with its ball farthest in that direction, where nothing can block the ball; the remaining triangles are found by findBallPivotVertex
 /// rolling the ball over the edges of the triangles already found; all triangles have their empty balls on the positive side;
 /// only the triangles reachable by the pivoting from the first one are found: not the inner side of a closed shell,
 /// while both sides of an open sheet are reached via its boundary; the points with no alpha-shape triangles
-/// around them (e.g. far outliers) are skipped in the search of the first triangle;
+/// around them (e.g. far outliers) are skipped in the search of the first triangle; the pivoting is started in each of the
+/// six directions not reaching an already found piece, and the largest piece is returned, so that a small cluster of outliers
+/// lying farthest in some direction does not replace the shape;
 /// the pivoting goes in parallel waves over the edges of the triangles found by the previous wave, and the result is sorted
-/// \param allComponents whether to restart the pivoting from the points not in the triangles found so far, until every point
+/// \param allComponents whether to restart the pivoting (in -x direction) from the points not in the triangles found so far, until every point
 ///                      is either in a triangle or has no alpha-shape triangles: all the pieces of a fragmented scan are found then.
 ///                      WARNING: the result is not an outer shape any more, it can contain everything findAlphaShape produces:
 ///                      a few points left out of the outer side of a closed shell (e.g. by noise) regrow its whole inner side,
@@ -192,7 +194,7 @@ struct BallPivotCandidate
 ///                      and it can take longer than findAlphaShape, since every point left out costs a search of all alpha-shape
 ///                      triangles around it, which is as slow as in findAlphaShape but not halved by the symmetry of the pairs
 [[nodiscard]] MRMESH_API std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud,
-    const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud with allPoints=true, so that the twins are known
+    const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud, preferably with allPoints=true (otherwise a copy is completed here)
     bool allComponents = false, const ProgressCallback & cb = {} );
 
 /// builds the mesh of the outer shape of the cloud by the ball pivoting with the ball of given radius, see findBallPivotingTriangles;

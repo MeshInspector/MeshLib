@@ -230,7 +230,39 @@ TEST( MRMesh, BallPivotingSphere )
     EXPECT_GT( findAlphaShapeAllTriangles( cloud, 0.2f ).size(), size_t( 2 * ( 2 * n - 4 ) ) );
 }
 
-// the second sphere far away from the first one is found only with allComponents, together with the shape
+// a cluster of four outliers forming a tetrahedron is the first piece found from -x direction,
+// but the sphere is the first one from the other directions and the largest piece
+TEST( MRMesh, BallPivotingOutlierCluster )
+{
+    PointCloud cloud;
+    const int n = 2000;
+    for ( int i = 0; i < n; ++i ) // Fibonacci sphere
+    {
+        const float z = 1 - ( 2 * i + 1 ) / float( n );
+        const float rho = std::sqrt( 1 - z * z );
+        const float phi = 2.39996323f * i;
+        cloud.points.push_back( { rho * std::cos( phi ), rho * std::sin( phi ), z } );
+    }
+    cloud.points.push_back( { -5, 0, 0 } );
+    cloud.points.push_back( { -5, 0.1f, 0 } );
+    cloud.points.push_back( { -5, 0, 0.1f } );
+    cloud.points.push_back( { -4.9f, 0.03f, 0.03f } );
+    cloud.validPoints.resize( cloud.points.size(), true );
+
+    const auto data = getAlphaShapeData( cloud, 0.2f, true );
+    Triangulation clusterTris;
+    std::vector<AlphaShapeNei> neis;
+    findAlphaShapeNeiTriangles( cloud, VertId( n ), data, clusterTris, neis, false );
+    EXPECT_FALSE( clusterTris.empty() );
+
+    const auto mesh = findBallPivotingMesh( cloud, 0.2f );
+    EXPECT_TRUE( mesh.topology.isClosed() );
+    EXPECT_EQ( mesh.topology.numValidVerts(), n );
+    EXPECT_EQ( mesh.topology.lastValidVert(), VertId( n - 1 ) );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 2 * n - 4 );
+}
+
+// the second sphere far away from the first one is returned only with allComponents, together with the shape
 // of the inner points of the first sphere having alpha-shape triangles among themselves
 TEST( MRMesh, BallPivotingAllComponents )
 {
@@ -335,6 +367,17 @@ TEST( MRMesh, BallPivotingTwins )
             EXPECT_EQ( v, smallestId[posOf[v]] );
         }
     EXPECT_EQ( posTris( tris, [&]( VertId v ) { return posOf[v]; } ), posTris( plainTris, []( VertId v ) { return int( v ); } ) );
+
+    // the data without the twins known gives the same results
+    const auto dataNoTwins = getAlphaShapeData( cloud, 0.2f, false );
+    EXPECT_EQ( *findBallPivotingTriangles( cloud, dataNoTwins ), tris );
+    std::vector<BallPivotCandidate> cands;
+    for ( const auto & t : tris )
+        for ( int i = 0; i < 3; ++i )
+        {
+            const VertId a = t[i], b = t[( i + 1 ) % 3], c = t[( i + 2 ) % 3];
+            EXPECT_EQ( findBallPivotVertex( cloud, a, b, c, dataNoTwins, cands ), findBallPivotVertex( cloud, a, b, c, data, cands ) );
+        }
 
     const auto mesh = findBallPivotingMesh( cloud, 0.2f );
     EXPECT_TRUE( mesh.topology.isClosed() );

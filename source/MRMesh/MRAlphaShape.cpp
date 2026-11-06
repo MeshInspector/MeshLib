@@ -565,17 +565,25 @@ std::optional<ThreeVertIds> findBallPivotingSeed( const PointCloud & cloud, Vert
     return seed;
 }
 
-std::optional<Triangulation> findBallPivotingComponent( const PointCloud & cloud, const ThreeVertIds & seed,
-    const AlphaShapeData & data, const ProgressCallback & cb )
+namespace
 {
-    MR_TIMER;
-    if ( data.intPoints.empty() )
-    {
-        assert( false ); // without the known twins every point of a position would take part in the searches
-        return std::nullopt;
-    }
-    const auto numPoints = cloud.validPoints.count() - data.twins.count();
 
+// the state of the pivoting shared by the pieces grown one after another
+struct PivotingState
+{
+    size_t numPoints = 0; // the points taking part in the searches: all valid ones except the twins
+    size_t numDone = 0; // the points either in the found pieces or found to have no alpha-shape triangles
+    VertBitSet used; // the points of the found pieces
+    tbb::enumerable_thread_specific<Vector<BallPivotCandidate>> threadCands;
+
+    PivotingState( const PointCloud & cloud, const AlphaShapeData & data )
+        : numPoints( cloud.validPoints.count() - data.twins.count() ), used( cloud.points.size() ) {}
+};
+
+// finds all the triangles reachable by the pivoting from the seed, counting their new points in the state
+std::optional<Triangulation> growPiece( const PointCloud & cloud, const ThreeVertIds & seed, const AlphaShapeData & data,
+    PivotingState & st, const ProgressCallback & cb )
+{
     Triangulation res;
     // one directed edge can belong to several triangles if the empty balls rotating around it form several arcs,
     // each with a pair of triangles at its ends, so the pivoting is tracked per edge of a triangle:
@@ -598,8 +606,6 @@ std::optional<Triangulation> findBallPivotingComponent( const PointCloud & cloud
             return { { c, a, b }, 2 };
         return { { a, b, c }, 1 };
     };
-    VertBitSet used; // the points of the found triangles, for the progress
-    size_t numUsed = 0;
     // the pivoting goes in waves: the ball is pivoted over the unresolved edges of the triangles found by the previous wave
     // in parallel, then the found triangles are added one by one in a fixed order, so the result does not depend on the threads
     Vector<ThreeVertIds> pivots, nextPivots; // edge (0, 1) of a found triangle with its third vertex 2
@@ -617,8 +623,8 @@ std::optional<Triangulation> findBallPivotingComponent( const PointCloud & cloud
         }
         res.push_back( t ); // rotated, so that the sorted result does not depend on the seed
         for ( auto v : { a, b, c } )
-            if ( !used.autoResizeTestSet( v ) )
-                ++numUsed;
+            if ( !st.used.test_set( v ) )
+                ++st.numDone;
         if ( !abResolved )
             nextPivots.push_back( { a, b, c } );
         nextPivots.push_back( { b, c, a } );
@@ -626,7 +632,6 @@ std::optional<Triangulation> findBallPivotingComponent( const PointCloud & cloud
     };
 
     Vector<VertId> pivotRes; // the point found by each pivot of the wave
-    tbb::enumerable_thread_specific<Vector<BallPivotCandidate>> threadCands;
     addTri( seed[0], seed[1], seed[2], false );
     while ( !nextPivots.empty() )
     {
@@ -646,7 +651,7 @@ std::optional<Triangulation> findBallPivotingComponent( const PointCloud & cloud
         }
         pivots.resize( n );
         pivotRes.resize( n );
-        ParallelFor( size_t( 0 ), n, threadCands, [&]( size_t j, Vector<BallPivotCandidate> & cands )
+        ParallelFor( size_t( 0 ), n, st.threadCands, [&]( size_t j, Vector<BallPivotCandidate> & cands )
         {
             const auto & p = pivots[j];
             pivotRes[j] = findBallPivotVertex( cloud, p[0], p[1], p[2], data, cands );
@@ -654,7 +659,7 @@ std::optional<Triangulation> findBallPivotingComponent( const PointCloud & cloud
         // the ball pivoted back over the same edge stops at #vk, so that edge of the found triangle is resolved as well
         for ( size_t j = 0; j < n; ++j )
             addTri( pivots[j][1], pivots[j][0], pivotRes[j], true );
-        if ( !reportProgress( cb, float( numUsed ) / numPoints ) )
+        if ( !reportProgress( cb, float( st.numDone ) / st.numPoints ) )
             return std::nullopt;
     }
 
@@ -664,20 +669,27 @@ std::optional<Triangulation> findBallPivotingComponent( const PointCloud & cloud
     return res;
 }
 
+} // anonymous namespace
+
+std::optional<Triangulation> findBallPivotingComponent( const PointCloud & cloud, const ThreeVertIds & seed,
+    const AlphaShapeData & data, const ProgressCallback & cb )
+{
+    MR_TIMER;
+    if ( data.intPoints.empty() )
+    {
+        assert( false ); // without the known twins every point of a position would take part in the searches
+        return std::nullopt;
+    }
+    PivotingState st( cloud, data );
+    return growPiece( cloud, seed, data, st, cb );
+}
+
 std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud, const AlphaShapeData & data,
     bool allComponents, const ProgressCallback & cb )
 {
     MR_TIMER;
     Triangulation res;
-
-    // the points taking part in the searches: the twins do not
-    Vector<VertId> searchPoints;
-    searchPoints.reserve( cloud.validPoints.count() );
-    for ( auto v : cloud.validPoints )
-        if ( !data.twins.test( v ) )
-            searchPoints.push_back( v );
-    const auto numPoints = searchPoints.size();
-    if ( numPoints == 0 )
+    if ( !cloud.validPoints.any() )
         return res;
     if ( data.intPoints.empty() )
     {
@@ -685,9 +697,19 @@ std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud
         return std::nullopt;
     }
 
-    VertBitSet used; // the points of the found pieces
-    VertBitSet noTris; // the points found to have no alpha-shape triangles
-    size_t numDone = 0; // the points either used or without triangles
+    // the points taking part in the searches: the twins do not
+    Vector<VertId> searchPoints;
+    searchPoints.reserve( cloud.validPoints.count() );
+    for ( auto v : cloud.validPoints )
+        if ( !data.twins.test( v ) )
+            searchPoints.push_back( v );
+    PivotingState st( cloud, data );
+    assert( st.numPoints == searchPoints.size() );
+    VertBitSet noTris( cloud.points.size() ); // the points found to have no alpha-shape triangles
+    auto reportDone = [&]
+    {
+        return reportProgress( cb, float( st.numDone ) / st.numPoints );
+    };
 
     // the first triangle of a piece is the one of #v, the first point in the direction's order not in the pieces
     // found so far, with the ball center farthest in the direction: the extreme point is touched by the empty ball
@@ -729,7 +751,7 @@ std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud
                 heap.pop_back();
                 if ( noTris.test( v ) )
                     continue;
-                if ( used.test( v ) )
+                if ( st.used.test( v ) )
                 {
                     if ( allComponents )
                         continue;
@@ -740,16 +762,16 @@ std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud
             }
             if ( batch.empty() )
                 return true;
-            if ( !reportProgress( cb, float( numDone ) / numPoints ) )
+            if ( !reportDone() )
                 return false;
             batchSeeds.resize( batch.size() );
             ParallelFor( size_t( 0 ), batch.size(), threadSeedSearch, [&]( size_t i, SeedSearch & ss )
             {
-                batchSeeds[i] = used.test( batch[i] ) ? std::nullopt : findBallPivotingSeed( cloud, batch[i], dir, data, ss.tris, ss.neis );
+                batchSeeds[i] = st.used.test( batch[i] ) ? std::nullopt : findBallPivotingSeed( cloud, batch[i], dir, data, ss.tris, ss.neis );
             } );
             for ( size_t i = 0; i < batch.size(); ++i )
             {
-                if ( used.test( batch[i] ) )
+                if ( st.used.test( batch[i] ) )
                 {
                     if ( !allComponents )
                         return true;
@@ -757,21 +779,13 @@ std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud
                 }
                 if ( !batchSeeds[i] )
                 {
-                    if ( !noTris.autoResizeTestSet( batch[i] ) )
-                        ++numDone;
+                    if ( !noTris.test_set( batch[i] ) )
+                        ++st.numDone;
                     continue;
                 }
-                const float doneBefore = float( numDone ) / numPoints;
-                auto piece = findBallPivotingComponent( cloud, *batchSeeds[i], data, [&]( float p )
-                {
-                    return reportProgress( cb, std::min( 1.0f, doneBefore + p ) );
-                } );
+                auto piece = growPiece( cloud, *batchSeeds[i], data, st, cb );
                 if ( !piece )
                     return false;
-                for ( const auto & t : *piece )
-                    for ( auto v : t )
-                        if ( !used.autoResizeTestSet( v ) )
-                            ++numDone;
                 if ( allComponents )
                     res.insert( res.end(), piece->begin(), piece->end() );
                 else

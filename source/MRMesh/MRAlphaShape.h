@@ -185,11 +185,11 @@ struct BallPivotCandidate
 
 /// finds all the triangles reachable by the ball pivoting (see findBallPivotVertex) from the given seed triangle,
 /// whose ball on the positive side must be empty, e.g. a triangle of findAlphaShapeNeiTriangles or findBallPivotingSeed;
-/// all triangles have their empty balls on the positive side, the result contains the seed and is sorted;
-/// the pivoting goes in parallel waves over the edges of the triangles found by the previous wave
+/// all triangles have their empty balls on the positive side and are rotated to start from their smallest id (the seed too),
+/// the result is sorted; the pivoting goes in parallel waves over the edges of the triangles found by the previous wave
 [[nodiscard]] MRMESH_API std::optional<Triangulation> findBallPivotingComponent( const PointCloud & cloud, const ThreeVertIds & seed,
     const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud with allPoints=true, otherwise std::nullopt is returned
-    const ProgressCallback & cb = {} );
+    const ProgressCallback & cb = {} ); ///< reports the fraction of the cloud points in the triangles found so far, so it stays small for a small piece
 
 /// finds the outer shape of the cloud by the ball pivoting: findBallPivotingComponent from findBallPivotingSeed of the extreme point
 /// in each of -x, +x, -y, +y, -z, +z not in a piece found before, returning the largest piece (sorted); points without

@@ -6,6 +6,7 @@
 #include <cfloat>
 #include <optional>
 #include <queue>
+#include <vector>
 
 namespace MR
 {
@@ -69,10 +70,15 @@ private:
     std::optional<Vector3f> target_;
     int maxVertUpdates_ = 3;
 
+    /// for each reached vertex: the index of the start point, the distance from which is stored in the vertex
+    Vector<int, VertId> vertSource_;
+    /// for each start point: the distance assigned to it in the beginning
+    std::vector<float> sourceStartDistance_;
+
     /// compares proposed distance with the value known in c.vert
     /// \details if proposed distance is smaller then adds it in the queue and returns true; \n
     /// otherwise if the known distance to c.vert is already not greater than returns false
-    bool suggestVertDistance_( VertDistance c );
+    bool suggestVertDistance_( VertDistance c, int source );
     /// suggests new distance around a (recently updated) vertex
     void suggestDistancesAround_( VertId v );
     /// consider a path going in the left triangle from edge (e) to the opposing vertex

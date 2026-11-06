@@ -46,11 +46,39 @@ bool getFieldAtC( const Vector3f & b, const Vector3f & c, float vb, float & vc )
     return true;
 }
 
+/// consider triangle abc and a point source on the other side of line ab from c, at distances da from a and db from b;
+/// computes the distance from the source to c; returns false if the straight path from the source to c does not cross ab
+static bool getPointSourceDistAtC( const Vector3d & a, const Vector3d & b, const Vector3d & c, double da, double db, double & dc )
+{
+    const auto ab = b - a;
+    const auto ac = c - a;
+    const double e2 = ab.lengthSq();
+    // coordinates in the triangle's plane multiplied on e = |ab|: a = (0,0), b = (e2,0), c = (cx,cy), source = (sx,sy)
+    const double cx = dot( ac, ab );
+    const double cy2 = e2 * ac.lengthSq() - sqr( cx );
+    if ( !( e2 > 0 && cy2 > 0 ) )
+        return false;
+    const double sx = ( ( da - db ) * ( da + db ) + e2 ) / 2;
+    const double sy2 = sqr( da ) * e2 - sqr( sx );
+    if ( !( sy2 > 0 ) )
+        return false;
+    const double cy = std::sqrt( cy2 );
+    const double sy = -std::sqrt( sy2 );
+    // the path from the source to c crosses line ab at x = sx + ( cx - sx ) * sy / ( sy - cy ), which must be within (0, e2)
+    const double t = ( cx - sx ) * sy;
+    const double h = sy - cy; // negative
+    if ( !( sx * h + t < 0 && ( sx - e2 ) * h + t > 0 ) )
+        return false;
+    dc = std::sqrt( ( sqr( cx - sx ) + sqr( cy - sy ) ) / e2 );
+    return true;
+}
+
 SurfaceDistanceBuilder::SurfaceDistanceBuilder( const Mesh & mesh, const VertBitSet* region )
     : mesh_( mesh ), region_{region}
 {
     vertDistanceMap_.resize( mesh_.topology.lastValidVert() + 1, FLT_MAX );
     vertUpdatedTimes_.resize( mesh_.topology.lastValidVert() + 1, 0 );
+    vertSource_.resize( mesh_.topology.lastValidVert() + 1, -1 );
 }
 
 void SurfaceDistanceBuilder::addStartRegion( const VertBitSet & region, float startDistance )
@@ -60,7 +88,11 @@ void SurfaceDistanceBuilder::addStartRegion( const VertBitSet & region, float st
     {
         auto & vi = vertDistanceMap_[v];
         if ( vi > startDistance )
+        {
             vi = startDistance;
+            vertSource_[v] = int( sourceStartDistance_.size() );
+            sourceStartDistance_.push_back( startDistance );
+        }
     }
 
     for ( auto v : region )
@@ -74,7 +106,11 @@ void SurfaceDistanceBuilder::addStartVertices( const HashMap<VertId, float>& sta
     {
         auto & vi = vertDistanceMap_[v];
         if ( vi > dist )
+        {
             vi = dist;
+            vertSource_[v] = int( sourceStartDistance_.size() );
+            sourceStartDistance_.push_back( dist );
+        }
     }
 
     for ( const auto & [v, dist] : startVertices )
@@ -84,9 +120,11 @@ void SurfaceDistanceBuilder::addStartVertices( const HashMap<VertId, float>& sta
 void SurfaceDistanceBuilder::addStart( const MeshTriPoint & start )
 {
     const auto pt = mesh_.triPoint( start );
+    const int source = int( sourceStartDistance_.size() );
+    sourceStartDistance_.push_back( 0 );
     mesh_.topology.forEachVertex( start, [&]( VertId v )
     {
-        suggestVertDistance_( { v, ( mesh_.points[v] - pt ).length() } );
+        suggestVertDistance_( { v, ( mesh_.points[v] - pt ).length() }, source );
     } );
 }
 
@@ -96,12 +134,13 @@ void SurfaceDistanceBuilder::setMaxVertUpdates( int v )
     maxVertUpdates_ = std::clamp( v, 1, 255 );
 }
 
-bool SurfaceDistanceBuilder::suggestVertDistance_( VertDistance c )
+bool SurfaceDistanceBuilder::suggestVertDistance_( VertDistance c, int source )
 {
     auto & vi = vertDistanceMap_[c.vert];
     if ( vi > c.distance )
     {
         vi = c.distance;
+        vertSource_[c.vert] = source;
         if ( region_ && !region_->test( c.vert ) )
             return false;
         c.distance = metricToPenalty_( c.distance, c.vert );
@@ -122,7 +161,7 @@ void SurfaceDistanceBuilder::suggestDistancesAround_( VertId v )
         c.distance = vDist + mesh_.edgeLength( e );
         if( c.distance <= vDist )
             c.distance = std::nextafter( vDist, FLT_MAX );
-        if ( !suggestVertDistance_( c ) )
+        if ( !suggestVertDistance_( c, vertSource_[v] ) )
         {
             // a shorter distance is known for dest
             considerLeftTriPath_( e );
@@ -153,14 +192,28 @@ void SurfaceDistanceBuilder::considerLeftTriPath_( EdgeId e )
     const auto pb = mesh_.points[b];
     const auto pc = mesh_.points[c];
 
-    float dvac = 0;
-    if ( !getFieldAtC( pb - pa, pc - pa, vb - va, dvac ) )
-        return;
+    const int source = vertSource_[a];
+    float vc = 0;
+    if ( source == vertSource_[b] )
+    {
+        // both distances come from one start point: the field is circular around it, not linear
+        const double start = sourceStartDistance_[source];
+        double dc = 0;
+        if ( !getPointSourceDistAtC( Vector3d( pa ), Vector3d( pb ), Vector3d( pc ), va - start, vb - start, dc ) )
+            return;
+        vc = float( start + dc );
+    }
+    else
+    {
+        float dvac = 0;
+        if ( !getFieldAtC( pb - pa, pc - pa, vb - va, dvac ) )
+            return;
+        vc = va + dvac;
+    }
 
-    float vc = va + dvac;
     if( vc <= va )
         vc = std::nextafter( va, FLT_MAX );
-    suggestVertDistance_( { c, vc } );
+    suggestVertDistance_( { c, vc }, source );
 }
 
 VertId SurfaceDistanceBuilder::growOne()

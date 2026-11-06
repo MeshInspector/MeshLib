@@ -168,7 +168,8 @@ size_t MeshTopology::heapBytes() const
         edgePerVertex_.heapBytes() +
         validVerts_.heapBytes() +
         edgePerFace_.heapBytes() +
-        validFaces_.heapBytes();
+        validFaces_.heapBytes() +
+        triangulationOwner_.heapBytes();
 }
 
 void MeshTopology::shrinkToFit()
@@ -472,6 +473,18 @@ Triangulation MeshTopology::getTriangulation() const
     } );
 
     return res;
+}
+
+const Triangulation & MeshTopology::getCachedTriangulation() const
+{
+    const auto & res = triangulationOwner_.getOrCreate( [this]{ return getTriangulation(); } );
+    assert( res.size() == faceSize() );
+    return res;
+}
+
+void MeshTopology::invalidateCaches()
+{
+    triangulationOwner_.reset();
 }
 
 bool MeshTopology::isLeftQuad( EdgeId a ) const

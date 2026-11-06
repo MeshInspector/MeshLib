@@ -125,6 +125,7 @@ template class SharedThreadSafeOwner<AABBTreePolyline2>;
 template class SharedThreadSafeOwner<AABBTreePolyline3>;
 template class SharedThreadSafeOwner<AABBTreePoints>;
 template class SharedThreadSafeOwner<Dipoles>;
+template class SharedThreadSafeOwner<Triangulation>;
 
 } //namespace MR
 

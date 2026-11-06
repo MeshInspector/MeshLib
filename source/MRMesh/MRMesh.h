@@ -489,7 +489,7 @@ struct [[nodiscard]] Mesh
     /// returns cached dipoles of aabb-tree nodes for this mesh, but does not create it if it did not exist
     [[nodiscard]] const Dipoles * getDipolesNotCreate() const { return dipolesOwner_.get(); }
 
-    /// invalidates caches (aabb-trees) after any change in mesh geometry or topology
+    /// invalidates caches (aabb-trees, topology triangulation) after any change in mesh geometry or topology
     /// \param pointsChanged specifies whether points have changed (otherwise only topology has changed)
     MRMESH_API void invalidateCaches( bool pointsChanged = true );
 

@@ -9,6 +9,7 @@
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
 #include "MREnums.h"
+#include "MRSharedThreadSafeOwner.h"
 #include <iosfwd>
 
 namespace MR
@@ -167,6 +168,15 @@ public:
     /// returns three vertex ids for valid triangles (which can be accessed by FaceId),
     /// vertex ids for invalid triangles are undefined, and shall not be read
     [[nodiscard]] MRMESH_API Triangulation getTriangulation() const;
+
+    /// returns cached triangulation of this topology, creating it if it did not exist in a thread-safe manner
+    MRMESH_API const Triangulation & getCachedTriangulation() const;
+
+    /// returns cached triangulation of this topology, but does not create it if it did not exist
+    [[nodiscard]] const Triangulation * getCachedTriangulationNotCreate() const { return triangulationOwner_.get(); }
+
+    /// invalidates caches (triangulation) after any change in topology
+    MRMESH_API void invalidateCaches();
 
     /// gets 3 vertices of the left face ( face-id may not exist, but the shape must be triangular)
     /// the vertices are returned in counter-clockwise order if look from mesh outside: v0 = org( a ), v1 = dest( a )
@@ -628,6 +638,8 @@ private:
     int numValidFaces_ = 0; ///< the number of valid elements in edgePerFace_ or set bits in validFaces_
 
     bool updateValids_ = true; ///< if false, validVerts_, validFaces_, numValidVerts_, numValidFaces_ are not updated
+
+    mutable SharedThreadSafeOwner<Triangulation> triangulationOwner_;
 };
 
 template <typename T>

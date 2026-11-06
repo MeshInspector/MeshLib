@@ -565,6 +565,7 @@ const Dipoles & Mesh::getDipoles() const
 
 void Mesh::invalidateCaches( bool pointsChanged )
 {
+    topology.invalidateCaches();
     AABBTreeOwner_.reset();
     if ( pointsChanged )
         AABBTreePointsOwner_.reset();
@@ -597,6 +598,7 @@ void Mesh::updateCachesAfterSplits( const FaceHashMap & new2Old )
     } );
     AABBTreePointsOwner_.reset(); // new vertices appeared
     dipolesOwner_.reset();
+    topology.invalidateCaches();
 }
 
 size_t Mesh::heapBytes() const

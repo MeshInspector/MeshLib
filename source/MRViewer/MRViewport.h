@@ -564,7 +564,8 @@ public:
 
     /// smoothly changes the camera from the current parameters to the target ones during given time:
     /// rotation, translation, zoom and view angle are interpolated, other parameters are set at once;
-    /// it starts and stops smoothly, but a call during an animation continues the motion without slowing down first;
+    /// it starts and stops smoothly; a call during an animation keeps the current rotation speed toward the new target
+    /// (so a turn back starts from rest);
     /// any other change of these camera parameters during the animation stops it;
     /// seconds <= 0 sets all target parameters at once;
     /// the rotation pivot moves at once to the center of the target view (-target.cameraTranslation)
@@ -693,7 +694,7 @@ private:
         Parameters current; // animated fields as the last step set them, to detect camera changes by somebody else
         double startTime = 0; // seconds of a steady clock
         float seconds = 0;
-        bool easeIn = true; // false if it continues another animation, which was still moving
+        float startSpeed = 0; // speed at the start in units of this animation: 0 for a smooth start, > 0 to continue a rotation
     };
     std::optional<CameraAnimation> cameraAnimation_;
 

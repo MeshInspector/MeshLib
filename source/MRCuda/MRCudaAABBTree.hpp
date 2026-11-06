@@ -52,7 +52,7 @@ inline std::vector<Dipole> getDipolesWithLeaves( const AABBTreeBase<FaceTreeTrai
         return res;
     assert( dipoles.size() == tree.nodes().size() );
     res.reserve( 2 * dipoles.size() + 1 );
-    res = dipoles.vec_;
+    res.assign( dipoles.begin(), dipoles.end() );
     res.resize( 2 * dipoles.size() + 1, Dipole{ .rr = FLT_MAX } );
     return res;
 }

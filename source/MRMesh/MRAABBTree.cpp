@@ -74,33 +74,50 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
         return isLeaf( c ) && ( !changedVerts || changedFaces.test( leafId( c ) ) );
     };
 
-    // update leaf boxes
+    // update leaf boxes, and the boxes of the nodes with changed leaf children only from these children
     auto updateLeaf = [&]( NodeId c )
     {
         if ( changedLeaf( c ) )
             leafBoxes_[leafId( c )] = computeFaceBox( mesh, leafId( c ) );
     };
     updateLeaf( root_ );
-    ParallelFor( nodes_, [&]( NodeId nid )
+    NodeBitSet changedNodes( nodes_.size() );
+    BitSetParallelForAll( changedNodes, [&]( NodeId nid )
     {
-        updateLeaf( nodes_[nid].l );
-        updateLeaf( nodes_[nid].r );
+        auto & node = nodes_[nid];
+        if ( !changedLeaf( node.l ) && !changedLeaf( node.r ) )
+            return;
+        changedNodes.set( nid );
+        node.box = {};
+        for ( auto c : { node.l, node.r } )
+        {
+            if ( !isLeaf( c ) )
+                continue;
+            updateLeaf( c );
+            node.box.include( leafBoxes_[leafId( c )] );
+        }
     } );
 
-    // update not-leaf nodes
-    NodeBitSet changedNodes( nodes_.size() );
-    auto changed = [&]( NodeId c )
-    {
-        return isLeaf( c ) ? changedLeaf( c ) : changedNodes.test( c );
-    };
+    // update not-leaf nodes from not-leaf children
     for ( auto nid = NodeId( int( nodes_.size() ) - 1 ); nid >= 0; --nid )
     {
         auto & node = nodes_[nid];
-        if ( !changed( node.l ) && !changed( node.r ) )
-            continue;
-        changedNodes.set( nid );
-        node.box = box( node.l );
-        node.box.include( box( node.r ) );
+        const bool lChanged = !isLeaf( node.l ) && changedNodes.test( node.l );
+        const bool rChanged = !isLeaf( node.r ) && changedNodes.test( node.r );
+        if ( changedNodes.test( nid ) )
+        {
+            // the box already includes leaf children
+            if ( !isLeaf( node.l ) )
+                node.box.include( nodes_[node.l].box );
+            if ( !isLeaf( node.r ) )
+                node.box.include( nodes_[node.r].box );
+        }
+        else if ( lChanged || rChanged )
+        {
+            changedNodes.set( nid );
+            node.box = box( node.l );
+            node.box.include( box( node.r ) );
+        }
     }
 }
 

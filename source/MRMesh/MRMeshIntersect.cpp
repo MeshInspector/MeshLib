@@ -56,9 +56,7 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
                 auto face = node.leafId();
                 if( ( !meshPart.region || meshPart.region->test( face ) ) && ( !validFaces || validFaces( face ) ) )
                 {
-                    VertId a, b, c;
-                    m.topology.getTriVerts( face, a, b, c );
-
+                    const auto [a, b, c] = tree.triangulation()[face];
                     const Vector3<T> vA = Vector3<T>( m.points[a] ) - line.p;
                     const Vector3<T> vB = Vector3<T>( m.points[b] ) - line.p;
                     const Vector3<T> vC = Vector3<T>( m.points[c] ) - line.p;
@@ -129,7 +127,7 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
     if( res.proj.face.valid() )
     {
         res.proj.point = Vector3f( line.p + res.distanceAlongLine * line.d );
-        res.mtp = MeshTriPoint( m.topology.edgeWithLeft( res.proj.face ), triP );
+        res.mtp = tree.toMeshTriPoint( m.topology, res.proj.face, triP );
     }
     return res;
 }
@@ -348,7 +346,8 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
             auto face = node.leafId();
             if( !meshPart.region || meshPart.region->test( face ) )
             {
-                m.topology.getTriVerts( face, pvc[0].id, pvc[1].id, pvc[2].id );
+                for ( int i = 0; i < 3; ++i )
+                    pvc[i].id = tree.triangulation()[face][i];
                 if constexpr ( std::is_same_v<T, double> )
                 {
                     // double version (more precise)
@@ -364,7 +363,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
                         // the segment is already limited by [rayStart, rayEnd], so the hit is reported without checking its distance,
                         // which is computed from the rounded point and can be slightly outside of the range
                         found.distanceAlongLine = float( dot( Vector3d( found.proj.point ) - line.p, line.d ) * invDirLenSq );
-                        found.mtp = MeshTriPoint( m.topology.edgeWithLeft( face ), TriPointf( found.proj.point, m.points[pvc[0].id], m.points[pvc[1].id], m.points[pvc[2].id] ) );
+                        found.mtp = tree.toMeshTriPoint( m.topology, face, TriPointf( found.proj.point, m.points[pvc[0].id], m.points[pvc[1].id], m.points[pvc[2].id] ) );
                         // segment start pvc[3] is behind the triangle if dIsLeftFromABC
                         if ( !report( found, [&] { return !isect.dIsLeftFromABC; } ) )
                             return;
@@ -382,7 +381,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
                         MeshIntersectionResult found;
                         found.proj.face = face;
                         found.proj.point = Vector3f( line( triIsect->t ) );
-                        found.mtp = MeshTriPoint( m.topology.edgeWithLeft( face ), triIsect->bary );
+                        found.mtp = tree.toMeshTriPoint( m.topology, face, triIsect->bary );
                         found.distanceAlongLine = float( triIsect->t );
                         if ( !report( found, [&] { return dot( cross( vB - vA, vC - vA ), line.d ) < 0; } ) )
                             return;

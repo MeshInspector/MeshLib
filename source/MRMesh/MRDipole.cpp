@@ -4,6 +4,7 @@
 #include "MRMesh.h"
 #include "MRParallelFor.h"
 #include "MRTimer.h"
+#include "MRTriMath.h"
 
 namespace MR
 {
@@ -31,10 +32,10 @@ void calcDipoles( Dipoles& dipoles, const AABBTree& tree_, const Mesh& mesh )
         const auto& node = tree_[i];
         if ( !node.leaf() )
             return;
-        const FaceId f = node.leafId();
-        const auto da = 0.5f * mesh.dirDblArea( f );
+        const auto tri = tree_.getTriPoints( mesh.points, node.leafId() );
+        const auto da = 0.5f * dirDblArea( tri );
         const auto a = da.length();
-        const auto ap = a * mesh.triCenter( f );
+        const auto ap = a * ( ( 1 / 3.0f ) * ( tri[0] + tri[1] + tri[2] ) );
         dipoles[i] = Dipole
         {
             .pos = ap, // ( area * pos ) for now
@@ -121,7 +122,7 @@ float calcFastWindingNumber( const Dipoles& dipoles, const AABBTree& tree, const
             continue;
         }
         if ( node.leafId() != skipFace )
-            res += triangleSolidAngle( q, mesh.getTriPoints( node.leafId() ) );
+            res += triangleSolidAngle( q, tree.getTriPoints( mesh.points, node.leafId() ) );
     }
     constexpr float INV_4PI = 1.0f / ( 4 * PI_F );
     return INV_4PI * res;

@@ -13,6 +13,7 @@
 #include "MRPrecisePredicates3.h"
 #include "MRRingIterator.h"
 
+#include <algorithm>
 #include <atomic>
 #include <thread>
 
@@ -90,9 +91,8 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
         int knownIntersection = firstIntersection.load( std::memory_order_relaxed );
         if ( firstIntersectionOnly && knownIntersection < i )
             return;
-        Vector3f av[3], bv[3];
-        a.mesh.getTriPoints( res[i].aFace, av[0], av[1], av[2] );
-        b.mesh.getTriPoints( res[i].bFace, bv[0], bv[1], bv[2] );
+        const auto av = aTree.getTriPoints( a.mesh.points, res[i].aFace );
+        auto bv = bTree.getTriPoints( b.mesh.points, res[i].bFace );
         if ( rigidB2A )
         {
             bv[0] = (*rigidB2A)( bv[0] );
@@ -241,8 +241,8 @@ Expected<bool> findSelfCollidingTriangles(
                     }
                     else
                     {
-                        mp.mesh.topology.getTriVerts( aFace, av[0], av[1], av[2] );
-                        mp.mesh.topology.getTriVerts( bFace, bv[0], bv[1], bv[2] );
+                        std::copy_n( tree.triangulation()[aFace].begin(), 3, av );
+                        std::copy_n( tree.triangulation()[bFace].begin(), 3, bv );
                     }
                     for ( int j = 0; j < 3; ++j )
                     {

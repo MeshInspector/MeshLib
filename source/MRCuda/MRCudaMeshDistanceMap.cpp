@@ -48,7 +48,6 @@ Expected<DistanceMap> computeDistanceMap( const MR::Mesh& mesh, const MR::MeshTo
     const AABBTree& tree = mesh.getAABBTree();
     const auto& nodes = tree.nodes();
     const auto& meshPoints = mesh.points;
-    const auto tris = mesh.topology.getTriangulation();
 
     DynamicArray<float3> cudaMeshPoints;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaMeshPoints.fromVector( meshPoints ) );
@@ -57,7 +56,7 @@ Expected<DistanceMap> computeDistanceMap( const MR::Mesh& mesh, const MR::MeshTo
     CUDA_LOGE_RETURN_UNEXPECTED( cudaNodes.fromVector( nodes ) );
 
     DynamicArray<FaceToThreeVerts> cudaFaces;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaFaces.fromVector( tris ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaFaces.fromVector( tree.triangulation() ) );
 
     MeshToDistanceMapParams cudaParams {
         .xRange = { params.xRange.x, params.xRange.y, params.xRange.z },

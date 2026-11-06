@@ -113,13 +113,13 @@ VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
     if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeNotCreate() ) )
         return findDirMaxBruteForce( dir, mp );
 
-    return findDirMaxT( dir, mp.mesh.getAABBTree(), [&]( const AABBTree::Node & node, float & furthestProj, VertId & res )
+    const auto & tree = mp.mesh.getAABBTree();
+    return findDirMaxT( dir, tree, [&]( const AABBTree::Node & node, float & furthestProj, VertId & res )
     {
         FaceId face = node.leafId();
         if ( mp.region && !mp.region->test( face ) )
             return;
-        VertId vs[3];
-        mp.mesh.topology.getTriVerts( face, vs );
+        const auto & vs = tree.triangulation()[face];
         for ( int i = 0; i < 3; ++i )
         {
             auto proj = dot( mp.mesh.points[vs[i]], dir );

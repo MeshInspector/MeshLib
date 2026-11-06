@@ -40,11 +40,10 @@ void PointsToMeshProjector::updateMeshData( const MR::Mesh* mesh )
     const AABBTree& tree = mesh->getAABBTree();
     const auto& nodes = tree.nodes();
     const auto& meshPoints = mesh->points;
-    const auto tris = mesh->topology.getTriangulation();
 
     meshData_->cudaMeshPoints.fromVector( meshPoints );
     meshData_->cudaNodes.fromVector( nodes );
-    meshData_->cudaFaces.fromVector( tris );
+    meshData_->cudaFaces.fromVector( tree.triangulation() );
 
     mesh_ = mesh;
 }
@@ -115,10 +114,11 @@ void PointsToMeshProjector::findProjections(
         cudaResult.copyTo( res.data() + offset, size );
     }
 
+    const auto & tree = mesh_->getAABBTree();
     ParallelFor( res, [&] ( size_t i )
     {
         if ( res[i].proj.face )
-            res[i].mtp.e = mesh_->topology.edgeWithLeft( res[i].proj.face );
+            res[i].mtp = tree.toMeshTriPoint( mesh_->topology, res[i].proj.face, res[i].mtp.bary );
         else
             assert( !res[i].mtp.e );
     } );

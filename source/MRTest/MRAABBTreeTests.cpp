@@ -3,6 +3,8 @@
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshCollide.h>
+#include <MRMesh/MRMeshIntersect.h>
+#include <MRMesh/MRLine.h>
 #include <MRMesh/MRMeshProject.h>
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRMatrix3.h>
@@ -141,6 +143,11 @@ TEST( MRMesh, AABBTreeTriangulation )
         ASSERT_TRUE( proj.valid() );
         EXPECT_EQ( mesh.topology.left( proj.mtp.e ), proj.proj.face );
         EXPECT_LT( ( mesh.triPoint( proj.mtp ) - proj.proj.point ).length(), 1e-6f );
+
+        const auto hit = rayMeshIntersect( mesh, Line3f( pt, proj.proj.point - pt ) );
+        ASSERT_TRUE( hit );
+        EXPECT_EQ( mesh.topology.left( hit.mtp.e ), hit.proj.face );
+        EXPECT_LT( ( mesh.triPoint( hit.mtp ) - hit.proj.point ).length(), 1e-6f );
     }
 }
 

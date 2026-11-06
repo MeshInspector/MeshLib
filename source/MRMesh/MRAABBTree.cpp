@@ -2,6 +2,7 @@
 #include "MRAABBTreeBase.hpp"
 #include "MRAABBTreeMaker.hpp"
 #include "MRMesh.h"
+#include "MRMeshTriPoint.h"
 #include "MRTimer.h"
 #include "MRBuffer.h"
 #include "MRParallelFor.h"
@@ -71,6 +72,18 @@ void AABBTree::updateTriangulation( const MeshTopology & topology )
         if ( node.leaf() )
             topology.getTriVerts( node.leafId(), triangulation_[node.leafId()] );
     } );
+}
+
+MeshTriPoint AABBTree::toMeshTriPoint( const MeshTopology & topology, FaceId f, const TriPointf & bary ) const
+{
+    const auto e = topology.edgeWithLeft( f );
+    const auto & t = triangulation_[f];
+    if ( topology.org( e ) == t[0] && topology.dest( e ) == t[1] )
+        return { e, bary };
+    const auto v = topology.getLeftTriVerts( e );
+    const float w[3] = { 1 - bary.a - bary.b, bary.a, bary.b };
+    auto weight = [&]( VertId x ) { return x == t[0] ? w[0] : x == t[1] ? w[1] : w[2]; };
+    return { e, TriPointf( weight( v[1] ), weight( v[2] ) ) };
 }
 
 void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )

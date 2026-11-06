@@ -41,8 +41,16 @@ public:
     /// the elements of faces not in the tree are undefined
     [[nodiscard]] const Triangulation & triangulation() const { return triangulation_; }
 
+    /// returns the coordinates of the vertices of given face of the tree in the order of triangulation()
+    [[nodiscard]] Triangle3f getTriPoints( const VertCoords & points, FaceId f ) const
+        { const auto & t = triangulation_[f]; return { points[t[0]], points[t[1]], points[t[2]] }; }
+
     /// takes vertex ids of all tree's faces from given topology, e.g. after its vertices were renumbered
     MRMESH_API void updateTriangulation( const MeshTopology & topology );
+
+    /// converts barycentric coordinates relative to triangulation()[f] into the point relative to topology.edgeWithLeft( f ),
+    /// which can list the same vertices in another order (e.g. after topology.flipOrientation() with this tree kept)
+    [[nodiscard]] MRMESH_API MeshTriPoint toMeshTriPoint( const MeshTopology & topology, FaceId f, const TriPointf & bary ) const;
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] size_t heapBytes() const { return AABBTreeBase::heapBytes() + triangulation_.heapBytes(); }

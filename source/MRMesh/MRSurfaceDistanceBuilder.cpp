@@ -90,10 +90,12 @@ void SurfaceDistanceBuilder::addStartRegion( const VertBitSet & region, float st
         if ( vi > startDistance )
         {
             vi = startDistance;
-            vertSource_[v] = int( sourceStartDistance_.size() );
-            sourceStartDistance_.push_back( startDistance );
+            vertSource_[v] = addSource_( startDistance );
         }
     }
+    for ( auto v : region )
+        uniteTouchingSources_( v );
+    flattenSourceGroups_();
 
     for ( auto v : region )
         suggestDistancesAround_( v );
@@ -108,10 +110,12 @@ void SurfaceDistanceBuilder::addStartVertices( const HashMap<VertId, float>& sta
         if ( vi > dist )
         {
             vi = dist;
-            vertSource_[v] = int( sourceStartDistance_.size() );
-            sourceStartDistance_.push_back( dist );
+            vertSource_[v] = addSource_( dist );
         }
     }
+    for ( const auto & [v, dist] : startVertices )
+        uniteTouchingSources_( v );
+    flattenSourceGroups_();
 
     for ( const auto & [v, dist] : startVertices )
         suggestDistancesAround_( v );
@@ -120,8 +124,7 @@ void SurfaceDistanceBuilder::addStartVertices( const HashMap<VertId, float>& sta
 void SurfaceDistanceBuilder::addStart( const MeshTriPoint & start )
 {
     const auto pt = mesh_.triPoint( start );
-    const int source = int( sourceStartDistance_.size() );
-    sourceStartDistance_.push_back( 0 );
+    const int source = addSource_( 0 );
     mesh_.topology.forEachVertex( start, [&]( VertId v )
     {
         suggestVertDistance_( { v, ( mesh_.points[v] - pt ).length() }, source );
@@ -132,6 +135,37 @@ void SurfaceDistanceBuilder::setMaxVertUpdates( int v )
 {
     assert( v >= 1 && v <= 255 );
     maxVertUpdates_ = std::clamp( v, 1, 255 );
+}
+
+int SurfaceDistanceBuilder::addSource_( float startDistance )
+{
+    const int s = int( sourceStartDistance_.size() );
+    sourceStartDistance_.push_back( startDistance );
+    sourceGroup_.push_back( s );
+    return s;
+}
+
+static int groupRoot( Vector<int> & group, int s )
+{
+    while ( group[size_t( s )] != s )
+        s = group[size_t( s )] = group[size_t( group[size_t( s )] )];
+    return s;
+}
+
+void SurfaceDistanceBuilder::uniteTouchingSources_( VertId v )
+{
+    if ( vertSource_[v] < 0 )
+        return;
+    const int root = groupRoot( sourceGroup_, vertSource_[v] );
+    for ( EdgeId e : orgRing( mesh_.topology, v ) )
+        if ( const int s = vertSource_[mesh_.topology.dest( e )]; s >= 0 )
+            sourceGroup_[size_t( groupRoot( sourceGroup_, s ) )] = root;
+}
+
+void SurfaceDistanceBuilder::flattenSourceGroups_()
+{
+    for ( size_t s = 0; s < sourceGroup_.size(); ++s )
+        sourceGroup_[s] = groupRoot( sourceGroup_, int( s ) );
 }
 
 bool SurfaceDistanceBuilder::suggestVertDistance_( VertDistance c, int source )
@@ -186,7 +220,7 @@ void SurfaceDistanceBuilder::considerLeftTriPath_( EdgeId e )
     }
     assert( vb >= va );
     if ( vertDistanceMap_[c] <= va )
-        return; // the distance computed below is always larger than va
+        return; // the distance computed below is larger than va unless the angle at c is obtuse
 
     const auto pa = mesh_.points[a];
     const auto pb = mesh_.points[b];
@@ -205,14 +239,15 @@ void SurfaceDistanceBuilder::considerLeftTriPath_( EdgeId e )
     }
     else
     {
+        if ( sourceGroup_[size_t( source )] != sourceGroup_[size_t( vertSource_[b] )] )
+            return; // the fronts from separate start points meet here, the paths along the edges are more accurate
         float dvac = 0;
         if ( !getFieldAtC( pb - pa, pc - pa, vb - va, dvac ) )
             return;
         vc = va + dvac;
+        if( vc <= va )
+            vc = std::nextafter( va, FLT_MAX );
     }
-
-    if( vc <= va )
-        vc = std::nextafter( va, FLT_MAX );
     suggestVertDistance_( { c, vc }, source );
 }
 

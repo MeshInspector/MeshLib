@@ -86,4 +86,20 @@ TEST( MRMesh, SurfaceDistanceLineSource )
     EXPECT_LT( maxErr, 1e-4f );
 }
 
+TEST( MRMesh, SurfaceDistanceTwoSources )
+{
+    const int n = 41;
+    const auto mesh = makePlanarGrid( n, true );
+    const VertId s0( n / 2 * n + 10 ), s1( n / 2 * n + 30 );
+    VertBitSet seeds( mesh.topology.vertSize() );
+    seeds.set( s0 );
+    seeds.set( s1 );
+    const auto dist = computeSurfaceDistances( mesh, seeds );
+    // where the fronts meet, the distances come along the edges, so check the mean error
+    float sumErr = 0;
+    for ( auto v : mesh.topology.getValidVerts() )
+        sumErr += std::abs( dist[v] - std::min( ( mesh.points[v] - mesh.points[s0] ).length(), ( mesh.points[v] - mesh.points[s1] ).length() ) );
+    EXPECT_LT( sumErr / ( n * n ), 2e-3f );
+}
+
 } //namespace MR

@@ -73,11 +73,20 @@ private:
     Vector<int, VertId> vertSource_;
     /// for each start point: the distance assigned to it in the beginning
     Vector<float> sourceStartDistance_;
+    /// for each start point: the representative of its group, where the groups unite start points connected by mesh edges;
+    /// the field is assumed linear only between start points of one group (along a line or in a region)
+    Vector<int> sourceGroup_;
 
     /// compares proposed distance with the value known in c.vert
     /// \details if proposed distance is smaller then adds it in the queue and returns true; \n
     /// otherwise if the known distance to c.vert is already not greater than returns false
     bool suggestVertDistance_( VertDistance c, int source );
+    /// creates new start point with given initial distance, returns its index
+    int addSource_( float startDistance );
+    /// unites the group of the start point in v with the groups of start points in its neighbor vertices
+    void uniteTouchingSources_( VertId v );
+    /// makes sourceGroup_ the representative of the group for each start point
+    void flattenSourceGroups_();
     /// suggests new distance around a (recently updated) vertex
     void suggestDistancesAround_( VertId v );
     /// consider a path going in the left triangle from edge (e) to the opposing vertex

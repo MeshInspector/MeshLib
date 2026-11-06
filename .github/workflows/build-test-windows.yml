@@ -163,11 +163,12 @@ jobs:
           # too small an address space for our PCH when targeting ARM64 (C3859, C1076).
           msbuild-architecture: ${{ matrix.arch == 'arm64' && 'arm64' || 'x86' }}
 
-      - name: Install MSYS2 for MRBind
+      - name: Install MSYS2 clang and make
         if: ${{ inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true' }}
         uses: ./.github/actions/install-msys2-mrbind
         with:
           packages-suffix: ${{ env.MSYS2_PKGS }}
+          compile-only: true
 
       - name: Add clang-cl to MSYS2 clang
         # MSYS2 ships no clang-cl.exe; clang.exe called by that name runs in cl mode

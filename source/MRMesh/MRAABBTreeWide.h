@@ -50,6 +50,9 @@ public:
     /// the root is the first node, if any
     [[nodiscard]] const Vector<Node, NodeId> & nodes() const { return nodes_; }
 
+    /// returns the bounding box of the whole tree (empty for an empty tree)
+    [[nodiscard]] Box3f getBoundingBox() const { return nodes_.empty() ? Box3f{} : nodes_.front().box; }
+
     /// triangles of all leaves, the triangles of each leaf are contiguous
     [[nodiscard]] const Vector<LeafTri> & leafTris() const { return leafTris_; }
 

@@ -334,7 +334,7 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] MRMESH_API QuadraticForm3f quadraticForm( VertId v, bool angleWeigted,
         const FaceBitSet * region = nullptr, const UndirectedEdgeBitSet * creases = nullptr ) const;
 
-    /// returns the bounding box containing all valid vertices (implemented via getAABBTree())
+    /// returns the bounding box containing all valid vertices (the root box of AABBTree if it exists, otherwise of AABBTreeWide)
     /// this bounding box is insignificantly bigger that minimal box due to AABB algorithms precision
     [[nodiscard]] MRMESH_API Box3f getBoundingBox() const;
 

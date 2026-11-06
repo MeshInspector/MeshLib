@@ -218,7 +218,10 @@ Box3f Mesh::computeBoundingBox( const AffineXf3f * toWorld ) const
 
 Box3f Mesh::getBoundingBox() const
 {
-    return getAABBTree().getBoundingBox();
+    // both trees have the same root box; the wide tree is smaller to build if none exists yet
+    if ( auto tree = getAABBTreeNotCreate() )
+        return tree->getBoundingBox();
+    return getAABBTreeWide().getBoundingBox();
 }
 
 Box3f Mesh::computeBoundingBox( const FaceBitSet * region, const AffineXf3f* toWorld ) const

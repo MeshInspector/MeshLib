@@ -6,7 +6,6 @@
 #include <cfloat>
 #include <optional>
 #include <queue>
-#include <vector>
 
 namespace MR
 {
@@ -73,7 +72,7 @@ private:
     /// for each reached vertex: the index of the start point, the distance from which is stored in the vertex
     Vector<int, VertId> vertSource_;
     /// for each start point: the distance assigned to it in the beginning
-    std::vector<float> sourceStartDistance_;
+    Vector<float> sourceStartDistance_;
 
     /// compares proposed distance with the value known in c.vert
     /// \details if proposed distance is smaller then adds it in the queue and returns true; \n

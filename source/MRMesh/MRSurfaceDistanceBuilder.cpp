@@ -197,7 +197,7 @@ void SurfaceDistanceBuilder::considerLeftTriPath_( EdgeId e )
     if ( source == vertSource_[b] )
     {
         // both distances come from one start point: the field is circular around it, not linear
-        const double start = sourceStartDistance_[source];
+        const double start = sourceStartDistance_[size_t( source )];
         double dc = 0;
         if ( !getPointSourceDistAtC( Vector3d( pa ), Vector3d( pb ), Vector3d( pc ), va - start, vb - start, dc ) )
             return;

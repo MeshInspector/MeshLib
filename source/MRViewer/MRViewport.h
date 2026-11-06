@@ -508,7 +508,9 @@ public:
 
     /// returns the parameters that fitData would set if this viewport had given camera parameters, this viewport is not changed;
     /// only the orientation (cameraTrackballAngle) and the projection settings of camera matter,
-    /// the translation, zoom, view angle and object scale are computed (the same for other calc...Parameters functions)
+    /// the translation, zoom, view angle and object scale are computed (the same for other calc...Parameters functions);
+    /// the fitted camera looks at the center of the fitted box, so -cameraTranslation of the result is the rotation pivot that the fit sets;
+    /// if there is nothing to fit (empty scene or selection), camera is returned unchanged except the snapped orientation
     [[nodiscard]] MRVIEWER_API Parameters calcFitDataParameters( const Parameters& camera, float fill = 1.0f, bool snapView = true ) const;
 
     /// returns the parameters that fitBox would set if this viewport had given camera parameters, see calcFitDataParameters
@@ -596,8 +598,9 @@ public:
     MRVIEWER_API void resetStaticRotationPivot( const std::optional<Vector3f>& pivot = std::nullopt );
 private:
     /// sets current rotation pivot in world space, which should appear static on a screen during rotation by the user
-    /// caller of this function should respect `params_.rotationMode` and `params_.staticRotationPivot`
-    void setRotationPivot_( const Vector3f& point ) { rotationPivot_ = point; }
+    /// caller of this function should respect `params_.rotationMode` and `params_.staticRotationPivot`;
+    /// the pivot is drawn during rotation, so its change requires redraw
+    void setRotationPivot_( const Vector3f& point ) { needRedraw_ |= rotationPivot_ != point; rotationPivot_ = point; }
     // initializes view matrix based on camera position
     void setupViewMatrix_();
     // returns world space to camera space transformation
@@ -643,7 +646,9 @@ private:
     int pixelYoffset_{ -128 };
     int axisPixSize_{ 70 };
 
-    void updateSceneBox_();
+    // returns world bounding box of scene objects visible in this viewport, see sceneBox_
+    [[nodiscard]] Box3f calcSceneBox_() const;
+    void updateSceneBox_() { sceneBox_ = calcSceneBox_(); }
     void rotateView_();
 
     enum class Space
@@ -664,7 +669,7 @@ private:
      * The box is either in CameraOrthographic or CameraPerspective, depending on params.orthographic
      * @returns true if all models are inside the projection volume
      */
-    std::pair<float, bool> getZoomFOVtoScreen_( const Parameters& params, std::function<Box3f()> getBoxFn ) const;
+    std::pair<float, bool> getZoomFOVtoScreen_( const Parameters& params, const std::function<Box3f()>& getBoxFn ) const;
     // returns camera parameters, which fit given ones to match the screen size with boxes returned by getBoxFn
     // getBoxFn( space, viewXf, globalBasis ) - box in given space, viewXf - world to camera space transformation
     // getBoxFn/globalBasis - if true then getBoxFn should return box of global basis object (separately, not to interfere with actual scene size)

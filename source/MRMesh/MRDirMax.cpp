@@ -16,11 +16,42 @@ namespace MR
 namespace
 {
 
+// AABBTreePoints has leaf nodes, and in other trees the leaves are only referenced from nodes
+template<class Tree>
+constexpr bool hasLeafNodes = std::is_same_v<Tree, AABBTreePoints>;
+
+template<class Tree>
+bool emptyTree( const Tree & tree )
+{
+    if constexpr ( hasLeafNodes<Tree> )
+        return tree.nodes().empty();
+    else
+        return tree.empty();
+}
+
+template<class Tree>
+bool isLeaf( const Tree & tree, NodeId n )
+{
+    if constexpr ( hasLeafNodes<Tree> )
+        return tree[n].leaf();
+    else
+        return tree.isLeaf( n );
+}
+
+template<class Tree>
+const auto & nodeBox( const Tree & tree, NodeId n )
+{
+    if constexpr ( hasLeafNodes<Tree> )
+        return tree[n].box;
+    else
+        return tree.box( n );
+}
+
 template<class V, class Tree, class LeafProcessor>
 VertId findDirMaxT( const V & dir, const Tree & tree, LeafProcessor && lp )
 {
     VertId res;
-    if ( tree.nodes().empty() )
+    if ( emptyTree( tree ) )
         return res;
 
     struct SubTask
@@ -42,7 +73,7 @@ VertId findDirMaxT( const V & dir, const Tree & tree, LeafProcessor && lp )
 
     auto getSubTask = [&]( NodeId n )
     {
-        return SubTask { n, dot( dir, tree.nodes()[n].box.corner( maxCorner ) ) };
+        return SubTask { n, dot( dir, nodeBox( tree, n ).corner( maxCorner ) ) };
     };
 
     addSubTask( getSubTask( tree.rootNodeId() ) );
@@ -51,15 +82,15 @@ VertId findDirMaxT( const V & dir, const Tree & tree, LeafProcessor && lp )
     {
         const auto s = subtasks.top();
         subtasks.pop();
-        const auto & node = tree[s.n];
         if ( s.furthestBoxProj < furthestProj )
             continue;
 
-        if ( node.leaf() )
+        if ( isLeaf( tree, s.n ) )
         {
-            lp( node, furthestProj, res );
+            lp( s.n, furthestProj, res );
             continue;
         }
+        const auto & node = tree[s.n];
 
         auto s1 = getSubTask( node.l );
         auto s2 = getSubTask( node.r );
@@ -85,9 +116,9 @@ VertId findDirMaxT( const V & dir, const Polyline<V> & polyline, UseAABBTree u )
     if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !polyline.getAABBTreeNotCreate() ) )
         return findDirMaxBruteForce( dir, polyline );
 
-    return findDirMaxT( dir, polyline.getAABBTree(), [&]( const typename AABBTreePolyline<V>::Node & node, float & furthestProj, VertId & res )
+    return findDirMaxT( dir, polyline.getAABBTree(), [&]( NodeId n, float & furthestProj, VertId & res )
     {
-        EdgeId e = node.leafId();
+        EdgeId e = AABBTreePolyline<V>::leafId( n );
         VertId vs[2] = { polyline.topology.org( e ), polyline.topology.dest( e ) };
         for ( int i = 0; i < 2; ++i )
         {
@@ -113,9 +144,9 @@ VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
     if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeNotCreate() ) )
         return findDirMaxBruteForce( dir, mp );
 
-    return findDirMaxT( dir, mp.mesh.getAABBTree(), [&]( const AABBTree::Node & node, float & furthestProj, VertId & res )
+    return findDirMaxT( dir, mp.mesh.getAABBTree(), [&]( NodeId n, float & furthestProj, VertId & res )
     {
-        FaceId face = node.leafId();
+        FaceId face = AABBTree::leafId( n );
         if ( mp.region && !mp.region->test( face ) )
             return;
         VertId vs[3];
@@ -162,9 +193,9 @@ VertId findDirMax( const Vector3f & dir, const AABBTreePoints & tree, const Vert
 {
     const auto& orderedPoints = tree.orderedPoints();
 
-    return findDirMaxT( dir, tree, [&]( const AABBTreePoints::Node & node, float & furthestProj, VertId & res )
+    return findDirMaxT( dir, tree, [&]( NodeId n, float & furthestProj, VertId & res )
     {
-        auto [first, last] = node.getLeafPointRange();
+        auto [first, last] = tree[n].getLeafPointRange();
         for ( int i = first; i < last; ++i )
         {
             if ( region )

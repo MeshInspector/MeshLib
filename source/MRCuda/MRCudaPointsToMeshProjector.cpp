@@ -1,4 +1,5 @@
 #include "MRCudaPointsToMeshProjector.h"
+#include "MRCudaAABBTree.hpp"
 #include "MRCudaPointsToMeshProjector.cuh"
 
 #include "MRCudaBasic.h"
@@ -38,12 +39,11 @@ void PointsToMeshProjector::updateMeshData( const MR::Mesh* mesh )
     MR_TIMER;
 
     const AABBTree& tree = mesh->getAABBTree();
-    const auto& nodes = tree.nodes();
     const auto& meshPoints = mesh->points;
     const auto tris = mesh->topology.getTriangulation();
 
     meshData_->cudaMeshPoints.fromVector( meshPoints );
-    meshData_->cudaNodes.fromVector( nodes );
+    meshData_->cudaNodes.fromVector( getNodesWithLeaves( tree ) );
     meshData_->cudaFaces.fromVector( tris );
 
     mesh_ = mesh;

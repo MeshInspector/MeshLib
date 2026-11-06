@@ -25,12 +25,12 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
     const auto& m = meshPart.mesh;
     const auto& tree = m.getAABBTree();
     MeshIntersectionResult res;
-    if( tree.nodes().empty() )
+    if( tree.empty() )
         return res;
 
     RayOrigin<T> rayOrigin{ line.p };
     T s = rayStart, e = rayEnd;
-    if( !rayBoxIntersect( Box3<T>{ tree[tree.rootNodeId()].box }, rayOrigin, s, e, prec ) )
+    if( !rayBoxIntersect( Box3<T>{ tree.box( tree.rootNodeId() ) }, rayOrigin, s, e, prec ) )
         return res;
 
     constexpr int maxTreeDepth = 32;
@@ -48,12 +48,12 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
             break;
         }
 
-        const auto& node = tree[nodesStack[currentNode].first];
+        const auto nid = nodesStack[currentNode].first;
         if( nodesStack[currentNode--].second < rayEnd )
         {
-            if( node.leaf() )
+            if( tree.isLeaf( nid ) )
             {
-                auto face = node.leafId();
+                auto face = tree.leafId( nid );
                 if( ( !meshPart.region || meshPart.region->test( face ) ) && ( !validFaces || validFaces( face ) ) )
                 {
                     VertId a, b, c;
@@ -93,11 +93,12 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
             }
             else
             {
+                const auto& node = tree[nid];
                 T lStart = rayStart, lEnd = rayEnd;
                 T rStart = rayStart, rEnd = rayEnd;
-                if( rayBoxIntersect( Box3<T>{ tree[node.l].box }, rayOrigin, lStart, lEnd, prec ) )
+                if( rayBoxIntersect( Box3<T>{ tree.box( node.l ) }, rayOrigin, lStart, lEnd, prec ) )
                 {
-                    if( rayBoxIntersect( Box3<T>{ tree[node.r].box }, rayOrigin, rStart, rEnd, prec ) )
+                    if( rayBoxIntersect( Box3<T>{ tree.box( node.r ) }, rayOrigin, rStart, rEnd, prec ) )
                     {
                         if( lStart > rStart )
                         {
@@ -117,7 +118,7 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
                 }
                 else
                 {
-                    if( rayBoxIntersect( Box3<T>{ tree[node.r].box }, rayOrigin, rStart, rEnd, prec ) )
+                    if( rayBoxIntersect( Box3<T>{ tree.box( node.r ) }, rayOrigin, rStart, rEnd, prec ) )
                     {
                         nodesStack[++currentNode] = { node.r,rStart };
                     }
@@ -279,7 +280,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
 
     const auto& m = meshPart.mesh;
     const auto& tree = m.getAABBTree();
-    if( tree.nodes().empty() )
+    if( tree.empty() )
         return;
 
     // the double version decides every intersection precisely in integer coordinates of the segment's ends and triangle's vertices;
@@ -293,7 +294,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
     [[maybe_unused]] T boxExpansion = 0;
     if constexpr ( std::is_same_v<T, double> )
     {
-        const Box3d rootBox( tree[tree.rootNodeId()].box );
+        const Box3d rootBox( tree.box( tree.rootNodeId() ) );
         convToInt = getToIntConverter( rootBox );
         convToFloat = getToFloatConverter( rootBox );
         boxExpansion = 2 * convToFloat.range;
@@ -301,9 +302,9 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
     auto nodeBox = [&] ( NodeId n ) -> Box3<T>
     {
         if constexpr ( std::is_same_v<T, double> )
-            return Box3d( tree[n].box ).expanded( Vector3d::diagonal( boxExpansion ) );
+            return Box3d( tree.box( n ) ).expanded( Vector3d::diagonal( boxExpansion ) );
         else
-            return tree[n].box;
+            return tree.box( n );
     };
 
     RayOrigin<T> rayOrigin{ line.p };
@@ -342,10 +343,10 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
             break;
         }
 
-        const auto& node = tree[nodesStack[currentNode--]];
-        if( node.leaf() )
+        const auto nid = nodesStack[currentNode--];
+        if( tree.isLeaf( nid ) )
         {
-            auto face = node.leafId();
+            auto face = tree.leafId( nid );
             if( !meshPart.region || meshPart.region->test( face ) )
             {
                 m.topology.getTriVerts( face, pvc[0].id, pvc[1].id, pvc[2].id );
@@ -392,6 +393,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
         }
         else
         {
+            const auto& node = tree[nid];
             s = rayStart, e = rayEnd;
             if( rayBoxIntersect( nodeBox( node.l ), rayOrigin, s, e, prec ) )
             {
@@ -465,7 +467,7 @@ void planeMeshIntersect( const MeshPart& meshPart, const Plane3f & plane,
 
     const auto& m = meshPart.mesh;
     const auto& tree = m.getAABBTree();
-    if( tree.nodes().empty() )
+    if( tree.empty() )
         return;
 
     assert( !fs  || fs->size()  >= m.topology.faceSize() );
@@ -483,7 +485,7 @@ void planeMeshIntersect( const MeshPart& meshPart, const Plane3f & plane,
 
     auto addNode = [&]( NodeId nid )
     {
-        const auto & box = tree[nid].box;
+        const auto & box = tree.box( nid );
         if ( dot( plane.n, box.corner( minCorner ) ) > plane.d )
             return;
         if ( dot( plane.n, box.corner( maxCorner ) ) < plane.d )
@@ -501,10 +503,10 @@ void planeMeshIntersect( const MeshPart& meshPart, const Plane3f & plane,
             break;
         }
 
-        const auto& node = tree[nodesStack[currentNode--]];
-        if( node.leaf() )
+        const auto nid = nodesStack[currentNode--];
+        if( tree.isLeaf( nid ) )
         {
-            auto face = node.leafId();
+            auto face = tree.leafId( nid );
             if( !meshPart.region || meshPart.region->test( face ) )
             {
                 if ( fs )
@@ -531,6 +533,7 @@ void planeMeshIntersect( const MeshPart& meshPart, const Plane3f & plane,
             }
             continue;
         }
+        const auto& node = tree[nid];
         addNode( node.r ); // push first to go there later
         addNode( node.l );
     }
@@ -544,7 +547,7 @@ void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
 
     const auto& m = meshPart.mesh;
     const auto& tree = m.getAABBTree();
-    if( tree.nodes().empty() )
+    if( tree.empty() )
         return;
 
     assert( !fs  || fs->size()  >= m.topology.faceSize() );
@@ -557,7 +560,7 @@ void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
 
     auto addNode = [&]( NodeId nid )
     {
-        const auto & box = tree[nid].box;
+        const auto & box = tree.box( nid );
         if ( box.min.z <= zLevel && box.max.z >= zLevel )
             nodesStack[++currentNode] = nid;
     };
@@ -572,10 +575,10 @@ void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
             break;
         }
 
-        const auto& node = tree[nodesStack[currentNode--]];
-        if( node.leaf() )
+        const auto nid = nodesStack[currentNode--];
+        if( tree.isLeaf( nid ) )
         {
-            auto face = node.leafId();
+            auto face = tree.leafId( nid );
             if( !meshPart.region || meshPart.region->test( face ) )
             {
                 if ( fs )
@@ -602,6 +605,7 @@ void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
             }
             continue;
         }
+        const auto& node = tree[nid];
         addNode( node.r ); // push first to go there later
         addNode( node.l );
     }

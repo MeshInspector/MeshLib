@@ -1,4 +1,5 @@
 #include "MRCudaFastWindingNumber.h"
+#include "MRCudaAABBTree.hpp"
 #include "MRCudaFastWindingNumber.cuh"
 
 #include "MRCudaBasic.h"
@@ -71,12 +72,11 @@ Expected<void> FastWindingNumber::prepareData_( ProgressCallback cb )
     if ( !reportProgress( cb, 0.5f ) )
         return unexpectedOperationCanceled();
 
-    const auto& nodes = tree.nodes();
-    CUDA_LOGE_RETURN_UNEXPECTED( data->cudaNodes.fromVector( nodes ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( data->cudaNodes.fromVector( getNodesWithLeaves( tree ) ) );
     if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
 
-    CUDA_LOGE_RETURN_UNEXPECTED( data->dipoles.fromVector( mesh_.getDipoles() ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( data->dipoles.fromVector( getDipolesWithLeaves( tree, mesh_.getDipoles() ) ) );
     if ( !reportProgress( cb, 1.0f ) )
         return unexpectedOperationCanceled();
 

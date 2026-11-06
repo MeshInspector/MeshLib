@@ -1,5 +1,7 @@
 #include "MRAABBTreeMaker.h"
 #include "MRAABBTreeNode.h"
+#include "MRAABBTreeBase.h"
+#include "MRParallelFor.h"
 #include "MRBuffer.h"
 #include "MRTimer.h"
 #include "MRPch/MRTBB.h"
@@ -16,10 +18,9 @@ template<typename T>
 struct Subtree
 {
     Subtree( NodeId root, int f, int n ) : root( root ), firstLeaf( f ), numLeaves( n ) { }
-    NodeId root; // of subtree
+    NodeId root; // of subtree, only for subtrees with at least two leaves
     int firstLeaf = 0;
     int numLeaves = 0;
-    NodeId lastNode() const { return root + getNumNodes( numLeaves ); }
     bool leaf() const { assert( numLeaves >= 1 );  return numLeaves == 1; }
 };
 
@@ -85,18 +86,22 @@ auto AABBTreeMaker<T>::makeNode_( const Subtree & s ) -> std::pair<Subtree, Subt
     const int midLeaf = partitionLeaves_( node.box, s.firstLeaf, s.firstLeaf + s.numLeaves );
     const int leftNumLeaves = midLeaf - s.firstLeaf;
     const int rightNumLeaves = s.numLeaves - leftNumLeaves;
-    node.l = s.root + 1;
-    node.r = s.root + 1 + getNumNodes( leftNumLeaves );
+    const auto lRoot = s.root + 1;
+    const auto rRoot = lRoot + getNumNodes( leftNumLeaves );
+    node.l = leftNumLeaves == 1 ? Node::leafChild( boxedLeaves_[s.firstLeaf].leafId ) : lRoot;
+    node.r = rightNumLeaves == 1 ? Node::leafChild( boxedLeaves_[midLeaf].leafId ) : rRoot;
     return
     {
-        Subtree( node.l, s.firstLeaf, leftNumLeaves ),
-        Subtree( node.r, midLeaf,     rightNumLeaves )
+        Subtree( lRoot, s.firstLeaf, leftNumLeaves ),
+        Subtree( rRoot, midLeaf,     rightNumLeaves )
     };
 }
 
 template<typename T>
 void AABBTreeMaker<T>::makeSubtree_( const Subtree & s, int numThreads )
 {
+    if ( s.leaf() )
+        return;
     assert( s.root + getNumNodes( s.numLeaves ) <= nodes_.size() );
 
     if ( numThreads >= 2 && s.numLeaves >= 32 )
@@ -121,18 +126,11 @@ void AABBTreeMaker<T>::makeSubtree_( const Subtree & s, int numThreads )
     {
         const Subtree x = stack.top();
         stack.pop();
-        if ( x.leaf() )
-        {
-            auto & node = nodes_[x.root];
-            node.setLeafId( boxedLeaves_[x.firstLeaf].leafId );
-            node.box = boxedLeaves_[x.firstLeaf].box;
-            continue;
-        }
-
         const auto & [ls, rs] = makeNode_( x );
-        assert( ls.root < rs.root );
-        stack.push( rs );
-        stack.push( ls ); // to process it first
+        if ( !rs.leaf() )
+            stack.push( rs );
+        if ( !ls.leaf() )
+            stack.push( ls ); // to process it first
     }
 }
 
@@ -146,6 +144,7 @@ auto AABBTreeMaker<T>::construct( Buffer<BoxedLeaf<T>> boxedLeaves ) -> NodeVec
     boxedLeaves_ = std::move( boxedLeaves );
 
     const auto numLeaves = (int)boxedLeaves_.size();
+    assert( numLeaves > 0 );
     nodes_.resizeNoInit( getNumNodes( numLeaves ) );
 
     // to equally balance the load on threads, subdivide the task on
@@ -168,6 +167,28 @@ template<typename T>
 AABBTreeNodeVec<T> makeAABBTreeNodeVec( Buffer<BoxedLeaf<T>> boxedLeaves )
 {
     return AABBTreeMaker<T>().construct( std::move( boxedLeaves ) );
+}
+
+template<typename T>
+void AABBTreeBase<T>::build_( Buffer<BoxedLeaf<T>> boxedLeaves, size_t leafIdSize )
+{
+    MR_TIMER;
+    nodes_.clear();
+    leafBoxes_.clear();
+    if ( boxedLeaves.empty() )
+        return;
+
+    if ( boxedLeaves.size() == leafIdSize )
+        leafBoxes_.resizeNoInit( leafIdSize );
+    else
+        leafBoxes_.resize( leafIdSize );
+    ParallelFor( size_t( 0 ), boxedLeaves.size(), [&]( size_t i )
+    {
+        leafBoxes_[boxedLeaves[i].leafId] = boxedLeaves[i].box;
+    } );
+
+    root_ = boxedLeaves.size() == 1 ? Node::leafChild( boxedLeaves[0].leafId ) : NodeId( 0 );
+    nodes_ = makeAABBTreeNodeVec( std::move( boxedLeaves ) );
 }
 
 } //namespace MR

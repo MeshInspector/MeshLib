@@ -26,7 +26,7 @@ AABBTreeObjects::AABBTreeObjects( Vector<MeshOrPointsXf, ObjId> objs ) : objs_( 
         boxedObjs[oi].box = transformed( objs_[oi].obj.getObjBoundingBox(), objs_[oi].xf );
         toLocal_[oi] = objs_[oi].xf.inverse();
     }
-    nodes_ = makeAABBTreeNodeVec( std::move( boxedObjs ) );
+    build_( std::move( boxedObjs ), objs_.size() );
 }
 
 } //namespace MR

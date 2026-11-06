@@ -39,7 +39,7 @@ AABBTreePolyline<V>::AABBTreePolyline( const typename PolylineTraits<V>::Polylin
         boxedLines[i].box = box;
     } );
 
-    nodes_ = makeAABBTreeNodeVec( std::move( boxedLines ) );
+    this->build_( std::move( boxedLines ), polyline.topology.undirectedEdgeSize() );
 }
 
 template<typename V>
@@ -67,7 +67,7 @@ AABBTreePolyline<V>::AABBTreePolyline( const Mesh& mesh, const UndirectedEdgeBit
         boxedLines[i].box = box;
     } );
 
-    nodes_ = makeAABBTreeNodeVec( std::move( boxedLines ) );
+    this->build_( std::move( boxedLines ), edgeSet.size() );
 }
 
 template AABBTreePolyline<Vector2f>::AABBTreePolyline( const Polyline2 & );

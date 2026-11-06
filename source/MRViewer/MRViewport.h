@@ -544,10 +544,6 @@ public:
 
     MRVIEWER_API const Box3f& getSceneBox() const;
 
-    /// sets the scene box, whose center is the scene center e.g. for rotation compensation and turns around the scene;
-    /// the fit functions set it, so set the box from calcPreciseFit...Parameters when applying their result with animateCamera
-    void setSceneBox( const Box3f& box ) { sceneBox_ = box; }
-
     const Parameters& getParameters() const { return params_; }
 
     // returns camera world location for the current view
@@ -592,8 +588,10 @@ public:
     /// any other change of these camera parameters during the animation stops it;
     /// seconds <= 0 sets all target parameters at once;
     /// the rotation pivot moves at once to the center of the target view (-target.cameraTranslation)
-    /// or to target.staticRotationPivot, as the fit functions set it, unless a rotation is in progress
-    MRVIEWER_API void animateCamera( const Parameters& target, float seconds );
+    /// or to target.staticRotationPivot, as the fit functions set it, unless a rotation is in progress;
+    /// sceneBox - if valid (e.g. from calcPreciseFit...Parameters), it becomes the scene box at once (see getSceneBox),
+    /// as after the fit, so with the parameters and the box of a calc...Parameters function this applies that fit smoothly
+    MRVIEWER_API void animateCamera( const Parameters& target, float seconds, const Box3f& sceneBox = {} );
 
     /// returns the target parameters of the camera animation in progress, or nullptr if the camera is not animated;
     /// the pointer is valid only until the next setupView (next frame) or animateCamera call, do not keep it

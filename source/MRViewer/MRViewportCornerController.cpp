@@ -710,18 +710,9 @@ void updateCurrentViewByControllerRegion( CornerControllerObject::PickedIds pick
         return;
     }
 
-    if ( animationSec <= 0 )
-    {
-        // the fit sets the camera, the scene box and the rotation pivot at once
-        vp.setCameraTrackballAngle( camera.cameraTrackballAngle );
-        vp.preciseFitDataToScreenBorder( { 0.9f } );
-        return;
-    }
     Box3f sceneBox;
     const auto target = vp.calcPreciseFitDataParameters( camera, { 0.9f }, &sceneBox );
-    if ( sceneBox.valid() )
-        vp.setSceneBox( sceneBox ); // as the fit sets it
-    vp.animateCamera( target, animationSec ); // also moves the rotation pivot to the scene center
+    vp.animateCamera( target, animationSec, sceneBox ); // with animationSec = 0 the same as preciseFitDataToScreenBorder
 }
 
 void CornerControllerObject::initDefault()

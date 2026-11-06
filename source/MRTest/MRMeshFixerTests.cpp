@@ -12,6 +12,12 @@
 #include <MRMesh/MRLineSegm.h>
 #include <MRMesh/MRRingIterator.h>
 #include <MRMesh/MRphmap.h>
+#include <MRMesh/MRRegularGridMesh.h>
+#include <MRMesh/MRMeshFillHole.h>
+#include <MRMesh/MRMeshMetrics.h>
+#include <MRMesh/MRMeshMeshDistance.h>
+#include <MRMesh/MRClosestPointInTriangle.h>
+#include <MRMesh/MRPlane3.h>
 #include <gtest/gtest.h>
 
 namespace MR
@@ -342,6 +348,66 @@ TEST( MRMesh, EliminateDoubleTrisPillow )
             EXPECT_FALSE( eliminateDoubleTris( lone, x, nullptr, true ) );
     EXPECT_EQ( lone.numValidFaces(), 1 );
     EXPECT_EQ( lone.numValidVerts(), 3 );
+}
+
+// a flat square of 3x3 cells in the plane z = 0
+static Mesh makeGrid3x3()
+{
+    return *makeRegularGridMesh( 4, 4, [] ( size_t, size_t ) { return true; },
+        [] ( size_t x, size_t y ) { return Vector3f( float( x ), float( y ), 0 ); } );
+}
+
+static void moveVert( Mesh & mesh, const Vector3f & from, const Vector3f & to )
+{
+    for ( auto & p : mesh.points )
+        if ( p == from )
+            p = to;
+}
+
+// a vertex moved over its neighbour folds its triangles over the next ones, away from its own star
+TEST( MRMesh, FixMeshCreasesFlatFold )
+{
+    auto folded = makeGrid3x3();
+    moveVert( folded, { 2, 2, 0 }, { 2, 0.4f, 0 } );
+    auto mesh = folded;
+    FaceHashMap new2Old;
+    fixMeshCreases( mesh, { .new2Old = &new2Old } );
+
+    // all triangles face up and cover the square once
+    for ( auto f : mesh.topology.getValidFaces() )
+        EXPECT_GT( mesh.dirDblArea( f ).z, 0 );
+    EXPECT_NEAR( mesh.area(), 9.0, 1e-5 );
+
+    // a new face takes an original face facing up under its center, the others keep their ids
+    EXPECT_FALSE( new2Old.empty() );
+    for ( auto f : mesh.topology.getValidFaces() )
+    {
+        const auto it = new2Old.find( f );
+        if ( it == new2Old.end() )
+        {
+            EXPECT_TRUE( folded.topology.hasFace( f ) && mesh.topology.getTriVerts( f ) == folded.topology.getTriVerts( f ) );
+            continue;
+        }
+        EXPECT_GT( folded.dirDblArea( it->second ).z, 0 );
+        const auto c = mesh.triCenter( f );
+        const auto [a, b, d] = folded.getTriPoints( it->second );
+        EXPECT_LT( ( closestPointInTriangle( c, a, b, d ).first - c ).length(), 1e-5f );
+    }
+}
+
+// the top of a box folded by a vertex moved over its neighbour: fixing the fold keeps the box
+TEST( MRMesh, FixMeshCreasesKeepsShape )
+{
+    auto box = makeGrid3x3();
+    const auto e = extendHole( box, box.topology.findHoleRepresentiveEdges().front(), Plane3f( Vector3f::plusZ(), -1 ) );
+    fillHole( box, e, { .metric = getPlaneFillMetric( box, e ) } );
+
+    auto mesh = box;
+    moveVert( mesh, { 2, 1, 0 }, { 0.5f, 1.4f, 0 } );
+    fixMeshCreases( mesh );
+    EXPECT_NEAR( mesh.area(), box.area(), 1e-4 );
+    EXPECT_NEAR( mesh.volume(), box.volume(), 1e-4 );
+    EXPECT_LT( findMaxDistanceSqOneWay( mesh, box ), 1e-10f );
 }
 
 } //namespace MR

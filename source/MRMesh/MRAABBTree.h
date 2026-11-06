@@ -37,7 +37,19 @@ public:
     /// would add the earlier faces to the tree once more
     MRMESH_API void addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old );
 
+    /// vertex ids of every face in the tree, faster to access in queries than through mesh topology;
+    /// the elements of faces not in the tree are undefined
+    [[nodiscard]] const Triangulation & triangulation() const { return triangulation_; }
+
+    /// takes vertex ids of all tree's faces from given topology, e.g. after its vertices were renumbered
+    MRMESH_API void updateTriangulation( const MeshTopology & topology );
+
+    /// returns the amount of memory this object occupies on heap
+    [[nodiscard]] size_t heapBytes() const { return AABBTreeBase::heapBytes() + triangulation_.heapBytes(); }
+
 private:
+    Triangulation triangulation_;
+
     AABBTree( const AABBTree & ) = default;
     AABBTree & operator =( const AABBTree & ) = default;
     friend class UniqueThreadSafeOwner<AABBTree>;

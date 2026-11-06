@@ -10,6 +10,24 @@
 namespace MR
 {
 
+namespace
+{
+
+/// given barycentric coordinates relative to vertices t of face f, returns the point relative to edgeWithLeft( f ),
+/// which may list the same vertices in another order (e.g. after topology.flipOrientation() with AABB tree kept)
+MeshTriPoint toMeshTriPoint( const MeshTopology & topology, FaceId f, const ThreeVertIds & t, const TriPointd & bary )
+{
+    const auto e = topology.edgeWithLeft( f );
+    const auto v = topology.getLeftTriVerts( e );
+    if ( v == t )
+        return { e, TriPointf( bary ) };
+    const double w[3] = { 1 - bary.a - bary.b, bary.a, bary.b };
+    auto weight = [&]( VertId x ) { return x == t[0] ? w[0] : x == t[1] ? w[1] : w[2]; };
+    return { e, TriPointf( TriPointd( weight( v[1] ), weight( v[2] ) ) ) };
+}
+
+} // anonymous namespace
+
 MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart & mp, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
     const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections )
 {
@@ -17,6 +35,9 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
     res.distSq = upDistLimitSq;
     if ( tree.nodes().empty() )
         return res;
+    const auto & tris = tree.triangulation();
+    const auto & points = mp.mesh.points;
+    TriPointd resBary; // relative to tris[res.proj.face], res.mtp is computed only in the end
 
     struct SubTask
     {
@@ -55,32 +76,29 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
                 continue;
             if ( mp.region && !mp.region->test( face ) )
                 continue;
-            Vector3f a, b, c;
-            mp.mesh.getTriPoints( face, a, b, c );
+            const auto & t = tris[face];
+            Vector3f a = points[t[0]], b = points[t[1]], c = points[t[2]];
             if ( xf )
             {
                 a = (*xf)( a );
                 b = (*xf)( b );
                 c = (*xf)( c );
             }
-            
+
             // compute the closest point in double-precision, because float might be not enough
             const auto [projD, baryD] = closestPointInTriangle( Vector3d( pt ), Vector3d( a ), Vector3d( b ), Vector3d( c ) );
             const Vector3f proj( projD );
-            const MeshProjectionResult candidate
-            {
-                .proj = PointOnFace{ face, proj },
-                .mtp = MeshTriPoint{ mp.mesh.topology.edgeWithLeft( face ), TriPointf( baryD ) },
-                .distSq = ( proj - pt ).lengthSq()
-            };
-            if ( validProjections && !validProjections( candidate ) )
+            const auto distSq = ( proj - pt ).lengthSq();
+            if ( !( distSq < res.distSq ) )
                 continue;
-            if ( candidate.distSq < res.distSq )
-            {
-                res = candidate;
-                if ( res.distSq <= loDistLimitSq )
-                    break;
-            }
+            if ( validProjections && !validProjections( { .proj = { face, proj },
+                .mtp = toMeshTriPoint( mp.mesh.topology, face, t, baryD ), .distSq = distSq } ) )
+                continue;
+            res.proj = { face, proj };
+            res.distSq = distSq;
+            resBary = baryD;
+            if ( res.distSq <= loDistLimitSq )
+                break;
             continue;
         }
         
@@ -99,6 +117,8 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
         }
     }
 
+    if ( res.proj.face )
+        res.mtp = toMeshTriPoint( mp.mesh.topology, res.proj.face, tris[res.proj.face], resBary );
     return res;
 }
 

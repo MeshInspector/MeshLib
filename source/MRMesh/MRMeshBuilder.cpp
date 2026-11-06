@@ -129,6 +129,8 @@ AddFaceResult FaceAdder::add( MeshTopology & m, FaceId face, const VertId * firs
     std::sort( dupVertices_.begin(), dupVertices_.end() );
     if ( adjacent_find( dupVertices_.begin(), dupVertices_.end() ) != dupVertices_.end() )
         return AddFaceResult::FailDegenerateFace; // prohibit creating face with repeating vertices
+    if ( !dupVertices_.empty() && !dupVertices_.front().valid() )
+        return AddFaceResult::FailDegenerateFace; // prohibit creating face with invalid vertices
 
     simpleVert_.clear();
     simpleVert_.resize( sz, false );
@@ -454,6 +456,12 @@ static MeshTopology fromTrianglesPar( const Triangulation & t, const BuildSettin
         if ( settings.region && !settings.region->test( f ) )
             return;
         const auto & vs = t[f];
+        if ( !vs[0].valid() || !vs[1].valid() || !vs[2].valid() )
+        {
+            // not in any part, it will be rejected and counted with border triangles
+            borderTris.set( f );
+            return;
+        }
         auto v0p = int( vs[0] / vertsInPart );
         auto v1p = int( vs[1] / vertsInPart );
         auto v2p = int( vs[2] / vertsInPart );

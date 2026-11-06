@@ -191,21 +191,11 @@ struct BallPivotCandidate
     const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud with allPoints=true, otherwise std::nullopt is returned
     const ProgressCallback & cb = {} );
 
-/// finds the triangles of the outer shape of the cloud by the ball pivoting: the first triangle is found by
-/// findBallPivotingSeed around the extreme point of the cloud in a direction (-x, +x, -y, +y, -z, +z),
-/// where nothing can block the ball; the remaining triangles are found by findBallPivotingComponent from it;
-/// only the triangles reachable by the pivoting from the first one are found: not the inner side of a closed shell,
-/// while both sides of an open sheet are reached via its boundary; the points with no alpha-shape triangles
-/// around them (e.g. far outliers) are skipped in the search of the first triangle; the pivoting is started in each of the
-/// six directions not reaching an already found piece, and the largest piece is returned, so that a small cluster of outliers
-/// lying farthest in some direction does not replace the shape; the result is sorted
-/// \param allComponents whether to restart the pivoting (in -x direction) from the points not in the triangles found so far, until every point
-///                      is either in a triangle or has no alpha-shape triangles: all the pieces of a fragmented scan are found then.
-///                      WARNING: the result is not an outer shape any more, it can contain everything findAlphaShape produces:
-///                      a few points left out of the outer side of a closed shell (e.g. by noise) regrow its whole inner side,
-///                      and the inner points having alpha-shape triangles among themselves get their own shapes;
-///                      and it can take longer than findAlphaShape, since every point left out costs a search of all alpha-shape
-///                      triangles around it, which is as slow as in findAlphaShape but not halved by the symmetry of the pairs
+/// finds the outer shape of the cloud by the ball pivoting: findBallPivotingComponent from findBallPivotingSeed of the extreme point
+/// in each of -x, +x, -y, +y, -z, +z not in a piece found before, returning the largest piece (sorted); points without
+/// alpha-shape triangles (e.g. far outliers) are skipped; unlike findAlphaShape, no inner side of a closed shell is found
+/// \param allComponents whether to restart the pivoting in -x order from every point not in a found piece and return all pieces;
+///                      then a few points left out of a shell can regrow its inner side, and it can be slower than findAlphaShape
 [[nodiscard]] MRMESH_API std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud,
     const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud with allPoints=true, otherwise std::nullopt is returned
     bool allComponents = false, const ProgressCallback & cb = {} );

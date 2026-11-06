@@ -124,7 +124,7 @@ struct AlphaShapeNei
 MRMESH_API void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v,
     const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud and the same radius
     Triangulation & appendTris,  ///< found triangles will be appended here
-    std::vector<AlphaShapeNei> & neis, ///< temporary storage to avoid memory allocations, it will be filled with the neighbours of point v within data.searchRadius sorted by distance, except the duplicates and the ones redundant for the search; cleared if v duplicates a point with a smaller id
+    Vector<AlphaShapeNei> & neis, ///< temporary storage to avoid memory allocations, it will be filled with the neighbours of point v within data.searchRadius sorted by distance, except the duplicates and the ones redundant for the search; cleared if v duplicates a point with a smaller id
     bool onlyLargerVids,         ///< if true then two other points must have larger ids (to avoid finding same triangles several times)
     AlphaShapeStats * stats = nullptr ); ///< optional statistics of the work done, which is increased here
 
@@ -153,7 +153,7 @@ struct BallPivotCandidate
 /// (vi, vj, vk) of findAlphaShapeAllTriangles, (vj, vi, x) is one of them as well, x being the returned point
 [[nodiscard]] MRMESH_API VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, VertId vk,
     const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud and the same radius
-    std::vector<BallPivotCandidate> & cands ); ///< temporary storage to avoid memory allocations, it will be filled with the touchable points in unspecified order
+    Vector<BallPivotCandidate> & cands ); ///< temporary storage to avoid memory allocations, it will be filled with the touchable points in unspecified order
 
 /// finds all triangles of alpha-shape with negative alpha = -1/radius
 [[nodiscard]] MRMESH_API std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & cloud, float radius,

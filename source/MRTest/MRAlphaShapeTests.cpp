@@ -45,7 +45,7 @@ TEST( MRMesh, AlphaShapeDuplicates )
 
     // the duplicate point with the larger id gets no triangles of its own
     Triangulation vTris;
-    std::vector<AlphaShapeNei> neis;
+    Vector<AlphaShapeNei> neis;
     auto data = getAlphaShapeData( cloud, 1, false );
     findAlphaShapeNeiTriangles( cloud, 4_v, data, vTris, neis, false );
     EXPECT_TRUE( vTris.empty() );
@@ -66,7 +66,7 @@ TEST( MRMesh, AlphaShape )
     cloud.validPoints.autoResizeSet( 2_v, 3, true );
 
     Triangulation tris;
-    std::vector<AlphaShapeNei> neis;
+    Vector<AlphaShapeNei> neis;
     AlphaShapeStats stats;
 
     auto data = getAlphaShapeData( cloud, 3, false );
@@ -121,7 +121,7 @@ TEST( MRMesh, BallPivotVertex )
     cloud.validPoints.resize( cloud.points.size(), true );
 
     auto data = getAlphaShapeData( cloud, 1, false );
-    std::vector<BallPivotCandidate> cands;
+    Vector<BallPivotCandidate> cands;
     auto ids = [&cands]
     {
         std::vector<VertId> res;
@@ -186,7 +186,7 @@ TEST( MRMesh, BallPivotAlphaShapeTriangles )
     for ( const auto & t : tris )
         triSet.insert( cyclic( t[0], t[1], t[2] ) );
 
-    std::vector<BallPivotCandidate> cands;
+    Vector<BallPivotCandidate> cands;
     for ( const auto & t : tris )
         for ( int e = 0; e < 3; ++e )
         {
@@ -251,7 +251,7 @@ TEST( MRMesh, BallPivotingOutlierCluster )
 
     const auto data = getAlphaShapeData( cloud, 0.2f, true );
     Triangulation clusterTris;
-    std::vector<AlphaShapeNei> neis;
+    Vector<AlphaShapeNei> neis;
     findAlphaShapeNeiTriangles( cloud, VertId( n ), data, clusterTris, neis, false );
     EXPECT_FALSE( clusterTris.empty() );
 
@@ -371,7 +371,7 @@ TEST( MRMesh, BallPivotingTwins )
     // the data without the twins known gives the same results
     const auto dataNoTwins = getAlphaShapeData( cloud, 0.2f, false );
     EXPECT_EQ( *findBallPivotingTriangles( cloud, dataNoTwins ), tris );
-    std::vector<BallPivotCandidate> cands;
+    Vector<BallPivotCandidate> cands;
     for ( const auto & t : tris )
         for ( int i = 0; i < 3; ++i )
         {

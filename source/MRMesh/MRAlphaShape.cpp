@@ -108,7 +108,7 @@ bool insideWedge( const FastInt256 & b, const FastInt<320> & c, const FastInt128
 // one of the pair and one of the two centers, is redundant exactly like the ones the distance filter
 // in findAlphaShapeNeiTriangles drops: every ball of the given radius via #v containing it has one
 // of the pair strictly inside; see the PR for the derivation
-void dropShadowed( std::vector<AlphaShapeNei> & neis, size_t i, size_t j, const Vector3i & p0,
+void dropShadowed( Vector<AlphaShapeNei> & neis, size_t i, size_t j, const Vector3i & p0,
     const FastInSphereTesterSoS & tester, AlphaShapeStats & stats )
 {
     const size_t from = j + 1;
@@ -198,7 +198,7 @@ void dropShadowed( std::vector<AlphaShapeNei> & neis, size_t i, size_t j, const 
 } // anonymous namespace
 
 void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const AlphaShapeData & data,
-    Triangulation & appendTris, std::vector<AlphaShapeNei> & neis, bool onlyLargerVids, AlphaShapeStats * stats )
+    Triangulation & appendTris, Vector<AlphaShapeNei> & neis, bool onlyLargerVids, AlphaShapeStats * stats )
 {
     const auto p0 = data.coords( cloud, v );
     AlphaShapeStats myStats; // local to keep the counters out of the caller's memory in the loops below
@@ -347,7 +347,7 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
 }
 
 VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, VertId vk,
-    const AlphaShapeData & data, std::vector<BallPivotCandidate> & cands )
+    const AlphaShapeData & data, Vector<BallPivotCandidate> & cands )
 {
     const auto pi = data.coords( cloud, vi );
     const auto pj = data.coords( cloud, vj );
@@ -446,7 +446,7 @@ std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & clou
     struct ThreadData
     {
         Triangulation tris;
-        std::vector<AlphaShapeNei> neis;
+        Vector<AlphaShapeNei> neis;
         AlphaShapeStats stats;
     };
 
@@ -634,7 +634,7 @@ std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud
     };
 
     Vector<VertId> pivotRes; // the point found by each pivot of the wave
-    tbb::enumerable_thread_specific<std::vector<BallPivotCandidate>> threadCands;
+    tbb::enumerable_thread_specific<Vector<BallPivotCandidate>> threadCands;
     // finds all the triangles reachable from the seed by the pivoting; returns false if canceled
     auto growComponent = [&]( const ThreeVertIds & seed )
     {
@@ -657,7 +657,7 @@ std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud
             }
             pivots.resize( n );
             pivotRes.resize( n );
-            ParallelFor( size_t( 0 ), n, threadCands, [&]( size_t j, std::vector<BallPivotCandidate> & cands )
+            ParallelFor( size_t( 0 ), n, threadCands, [&]( size_t j, Vector<BallPivotCandidate> & cands )
             {
                 const auto & p = pivots[j];
                 pivotRes[j] = findBallPivotVertex( cloud, p[0], p[1], p[2], data, cands );
@@ -680,7 +680,7 @@ std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud
     struct SeedSearch
     {
         Triangulation tris;
-        std::vector<AlphaShapeNei> neis;
+        Vector<AlphaShapeNei> neis;
     };
     tbb::enumerable_thread_specific<SeedSearch> threadSeedSearch;
     // the direction is -axis for sign = 1 and +axis for sign = -1

@@ -11,6 +11,23 @@ namespace MR
 /// \addtogroup AABBTreeGroup
 /// \{
 
+/// node of AABBTreeWide (outside of the class to be default-constructible in its members)
+struct AABBTreeWideNode
+{
+    Box3f box; ///< bounding box of whole subtree
+    int first = 0; ///< the first child node, or for a leaf, the first of its triangles in leafTris()
+    int count = 0; ///< the number of children, or for a leaf, minus the number of its triangles
+    [[nodiscard]] bool leaf() const { return count < 0; }
+    [[nodiscard]] int numLeafTris() const { return -count; }
+};
+
+/// triangle in a leaf of AABBTreeWide
+struct AABBTreeWideLeafTri
+{
+    FaceId face;
+    ThreeVertIds verts; ///< in the order of mesh.topology.getTriVerts( face )
+};
+
 /// bounding volume hierarchy of mesh triangles with up to 4 children per node and up to 4 triangles per leaf;
 /// the children of a node are stored contiguously, and every leaf keeps the vertices of its triangles,
 /// which makes closest-point queries about 2x faster than with AABBTree and takes half of its memory
@@ -20,20 +37,8 @@ public:
     static constexpr int MaxChildren = 4;
     static constexpr int MaxLeafTris = 4;
 
-    struct Node
-    {
-        Box3f box; ///< bounding box of whole subtree
-        int first = 0; ///< the first child node, or for a leaf, the first of its triangles in leafTris()
-        int count = 0; ///< the number of children, or for a leaf, minus the number of its triangles
-        [[nodiscard]] bool leaf() const { return count < 0; }
-        [[nodiscard]] int numLeafTris() const { return -count; }
-    };
-
-    struct LeafTri
-    {
-        FaceId face;
-        ThreeVertIds verts; ///< in the order of mesh.topology.getTriVerts( face )
-    };
+    using Node = AABBTreeWideNode;
+    using LeafTri = AABBTreeWideLeafTri;
 
     /// creates tree for given mesh or its part
     [[nodiscard]] MRMESH_API explicit AABBTreeWide( const MeshPart & mp );

@@ -715,6 +715,7 @@ private:
         Parameters start, target;
         Parameters current; // animated fields as the last step set them, to detect camera changes by somebody else
         double startTime = 0; // seconds of a steady clock
+        double stepTime = 0; // when the last step set the camera
         float seconds = 0;
         float startSpeed = 0; // speed at the start in units of this animation: 0 for a smooth start, > 0 to continue a rotation
     };

@@ -176,16 +176,30 @@ struct BallPivotCandidate
 [[nodiscard]] MRMESH_API Mesh findAlphaShape( const PointCloud & cloud, float radius,
     std::vector<MeshBuilder::VertDuplication> * dups = nullptr, AlphaShapeStats * stats = nullptr );
 
+/// finds the first triangle for the ball pivoting among the alpha-shape triangles of point v: the one with its empty ball
+/// (on the positive side) farthest in direction \p dir, touched first by the ball coming from that direction if v is
+/// the extreme point of the cloud in it; returns std::nullopt if v has no alpha-shape triangles
+[[nodiscard]] MRMESH_API std::optional<ThreeVertIds> findBallPivotingSeed( const PointCloud & cloud, VertId v, const Vector3f & dir,
+    const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud and the same radius
+    Triangulation & tris, ///< temporary storage to avoid memory allocations, it will be filled with the alpha-shape triangles of v
+    Vector<AlphaShapeNei> & neis ); ///< temporary storage to avoid memory allocations, see findAlphaShapeNeiTriangles
+
+/// finds all the triangles reachable by the ball pivoting (see findBallPivotVertex) from the given seed triangle,
+/// whose ball on the positive side must be empty, e.g. a triangle of findAlphaShapeNeiTriangles or findBallPivotingSeed;
+/// all triangles have their empty balls on the positive side, the result contains the seed and is sorted;
+/// the pivoting goes in parallel waves over the edges of the triangles found by the previous wave
+[[nodiscard]] MRMESH_API std::optional<Triangulation> findBallPivotingComponent( const PointCloud & cloud, const ThreeVertIds & seed,
+    const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud, preferably with allPoints=true (otherwise a copy is completed here)
+    const ProgressCallback & cb = {} );
+
 /// finds the triangles of the outer shape of the cloud by the ball pivoting: the first triangle is found by
-/// findAlphaShapeNeiTriangles around the extreme point of the cloud in a direction (-x, +x, -y, +y, -z, +z), taking the one
-/// with its ball farthest in that direction, where nothing can block the ball; the remaining triangles are found by findBallPivotVertex
-/// rolling the ball over the edges of the triangles already found; all triangles have their empty balls on the positive side;
+/// findBallPivotingSeed around the extreme point of the cloud in a direction (-x, +x, -y, +y, -z, +z),
+/// where nothing can block the ball; the remaining triangles are found by findBallPivotingComponent from it;
 /// only the triangles reachable by the pivoting from the first one are found: not the inner side of a closed shell,
 /// while both sides of an open sheet are reached via its boundary; the points with no alpha-shape triangles
 /// around them (e.g. far outliers) are skipped in the search of the first triangle; the pivoting is started in each of the
 /// six directions not reaching an already found piece, and the largest piece is returned, so that a small cluster of outliers
-/// lying farthest in some direction does not replace the shape;
-/// the pivoting goes in parallel waves over the edges of the triangles found by the previous wave, and the result is sorted
+/// lying farthest in some direction does not replace the shape; the result is sorted
 /// \param allComponents whether to restart the pivoting (in -x direction) from the points not in the triangles found so far, until every point
 ///                      is either in a triangle or has no alpha-shape triangles: all the pieces of a fragmented scan are found then.
 ///                      WARNING: the result is not an outer shape any more, it can contain everything findAlphaShape produces:

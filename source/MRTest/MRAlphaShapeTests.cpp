@@ -230,6 +230,38 @@ TEST( MRMesh, BallPivotingSphere )
     EXPECT_GT( findAlphaShapeAllTriangles( cloud, 0.2f ).size(), size_t( 2 * ( 2 * n - 4 ) ) );
 }
 
+// the pivoting from the seed of any point of the sphere looking outside finds the same outer side
+TEST( MRMesh, BallPivotingFromSeed )
+{
+    PointCloud cloud;
+    const int n = 2000;
+    for ( int i = 0; i < n; ++i ) // Fibonacci sphere
+    {
+        const float z = 1 - ( 2 * i + 1 ) / float( n );
+        const float rho = std::sqrt( 1 - z * z );
+        const float phi = 2.39996323f * i;
+        cloud.points.push_back( { rho * std::cos( phi ), rho * std::sin( phi ), z } );
+    }
+    std::mt19937 gen( 0 );
+    std::uniform_real_distribution<float> coord( -0.28f, 0.28f );
+    for ( int i = 0; i < 200; ++i )
+        cloud.points.push_back( { coord( gen ), coord( gen ), coord( gen ) } );
+    cloud.validPoints.resize( cloud.points.size(), true );
+
+    const auto data = getAlphaShapeData( cloud, 0.2f, true );
+    const auto all = *findBallPivotingTriangles( cloud, data );
+    EXPECT_EQ( all.size(), 2 * n - 4 );
+    Triangulation tris;
+    Vector<AlphaShapeNei> neis;
+    for ( VertId v : { 0_v, 777_v, 1234_v } )
+    {
+        const auto seed = findBallPivotingSeed( cloud, v, cloud.points[v], data, tris, neis );
+        ASSERT_TRUE( seed.has_value() );
+        EXPECT_TRUE( std::find( ( *seed ).begin(), ( *seed ).end(), v ) != ( *seed ).end() );
+        EXPECT_EQ( *findBallPivotingComponent( cloud, *seed, data ), all );
+    }
+}
+
 // a cluster of four outliers forming a tetrahedron is the first piece found from -x direction,
 // but the sphere is the first one from the other directions and the largest piece
 TEST( MRMesh, BallPivotingOutlierCluster )

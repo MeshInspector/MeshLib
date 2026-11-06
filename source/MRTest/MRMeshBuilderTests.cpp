@@ -588,6 +588,36 @@ TEST( MRMesh, buildFromManifoldTrianglesRegion )
     expectSameConnectivity( seq, direct );
 }
 
+TEST( MRMesh, duplicateNonManifoldVerticesBigMesh )
+{
+    // two closed spheres sharing one vertex, with more triangles than fromTriangles builds in one part
+    const auto sphere = makeSphere( { .numMeshVertices = 10000 } );
+    const Triangulation one = sphere.topology.getTriangulation();
+    const int nv = int( sphere.topology.vertSize() );
+    Triangulation t = one;
+    for ( auto tri : one )
+    {
+        for ( auto & v : tri )
+            v = v == 0_v ? v : VertId( v + nv );
+        t.push_back( tri );
+    }
+    ASSERT_GT( t.size(), 32768 );
+
+    MeshTopology topology;
+    bool nonManifoldVertsOnly = false;
+    EXPECT_FALSE( topology.buildFromManifoldTriangles( t, {}, &nonManifoldVertsOnly ) );
+    EXPECT_TRUE( nonManifoldVertsOnly );
+
+    std::vector<VertDuplication> dups;
+    topology = fromTrianglesDuplicatingNonManifoldVertices( t, &dups );
+    ASSERT_EQ( dups.size(), 1 );
+    EXPECT_EQ( dups[0].srcVert, 0_v );
+    EXPECT_EQ( topology.numValidFaces(), int( t.size() ) );
+    EXPECT_EQ( topology.numValidVerts(), 2 * nv );
+    EXPECT_TRUE( topology.checkValidity() );
+    EXPECT_EQ( topology.findNumHoles(), 0 );
+}
+
 TEST( MRMesh, buildFromManifoldTrianglesFails )
 {
     // two triangles with one vertex in common: two open fans there
@@ -601,11 +631,15 @@ TEST( MRMesh, buildFromManifoldTrianglesFails )
     EXPECT_FALSE( topology.buildFromManifoldTriangles( { { 0_v, 1_v, 2_v }, { 1_v, 0_v, 3_v }, { 1_v, 0_v, 4_v } } ) );
     // two triangles with edge 0-1 in the same direction
     EXPECT_FALSE( topology.buildFromManifoldTriangles( { { 0_v, 1_v, 2_v }, { 1_v, 0_v, 3_v }, { 0_v, 1_v, 4_v } } ) );
+    bool nonManifoldVertsOnly = true;
+    EXPECT_FALSE( topology.buildFromManifoldTriangles( { { 0_v, 1_v, 2_v }, { 1_v, 0_v, 3_v }, { 0_v, 1_v, 4_v } }, {}, &nonManifoldVertsOnly ) );
+    EXPECT_FALSE( nonManifoldVertsOnly );
     // two closed fans around vertex 0
     const Triangulation twoTetrahedra = {
         { 0_v, 1_v, 2_v }, { 0_v, 2_v, 3_v }, { 0_v, 3_v, 1_v }, { 1_v, 3_v, 2_v },
         { 0_v, 4_v, 5_v }, { 0_v, 5_v, 6_v }, { 0_v, 6_v, 4_v }, { 4_v, 6_v, 5_v } };
-    EXPECT_FALSE( topology.buildFromManifoldTriangles( twoTetrahedra ) );
+    EXPECT_FALSE( topology.buildFromManifoldTriangles( twoTetrahedra, {}, &nonManifoldVertsOnly ) );
+    EXPECT_TRUE( nonManifoldVertsOnly );
     // still valid after the failures
     EXPECT_TRUE( topology.checkValidity() );
     EXPECT_EQ( topology.numValidFaces(), 2 );

@@ -515,12 +515,11 @@ static MeshTopology fromTrianglesPar( const Triangulation & t, const BuildSettin
     return res;
 }
 
-MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & settings, ProgressCallback progressCb )
+// fromTriangles without MeshTopology::buildFromManifoldTriangles
+static MeshTopology fromTrianglesFaceByFace( const Triangulation & t, const BuildSettings & settings, ProgressCallback progressCb )
 {
     if ( t.empty() )
         return {};
-    MR_TIMER;
-
     // numParts shall not depend on hardware (e.g. on std::thread::hardware_concurrency()) to be repeatable on all hardware
     const size_t numParts = std::min( ( t.size() + minTrisInPart - 1 ) / minTrisInPart, (size_t)64 );
     assert( numParts >= 1 );
@@ -529,10 +528,6 @@ MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & setti
     {
         try
         {
-            // fromTrianglesPar adds all triangles with vertices in several parts sequentially, and they are many if vertex ids have no locality
-            MeshTopology res;
-            if ( res.buildFromManifoldTriangles( t, settings ) )
-                return res;
             return fromTrianglesPar( t, settings, progressCb );
         }
         catch ( const std::bad_alloc & )
@@ -544,6 +539,34 @@ MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & setti
     return fromTrianglesSeq( t, settings );
 }
 
+// fromTrianglesPar adds all triangles with vertices in several parts sequentially, and they are many if vertex ids have no locality
+static bool tryBuildFromManifoldTriangles( MeshTopology & res, const Triangulation & t, const BuildSettings & settings, bool * nonManifoldVertsOnly = nullptr )
+{
+    if ( nonManifoldVertsOnly )
+        *nonManifoldVertsOnly = false;
+    if ( t.size() <= minTrisInPart )
+        return false;
+    try
+    {
+        return res.buildFromManifoldTriangles( t, settings, nonManifoldVertsOnly );
+    }
+    catch ( const std::bad_alloc & )
+    {
+        return false;
+    }
+}
+
+MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & settings, ProgressCallback progressCb )
+{
+    if ( t.empty() )
+        return {};
+    MR_TIMER;
+    MeshTopology res;
+    if ( tryBuildFromManifoldTriangles( res, t, settings ) )
+        return res;
+    return fromTrianglesFaceByFace( t, settings, progressCb );
+}
+
 MeshTopology fromTrianglesDuplicatingNonManifoldVertices( Triangulation & t,
     std::vector<VertDuplication> * dups, const BuildSettings & settings, const BetterDupContinuation & betterCont )
 {
@@ -552,15 +575,23 @@ MeshTopology fromTrianglesDuplicatingNonManifoldVertices( Triangulation & t,
     BuildSettings localSettings = settings;
     localSettings.region = &localRegion;
     // try happy path first
-    MeshTopology res = fromTriangles( t, localSettings );
-    if ( !localRegion.any() )
+    MeshTopology res;
+    bool nonManifoldVertsOnly = false;
+    const bool built = tryBuildFromManifoldTriangles( res, t, localSettings, &nonManifoldVertsOnly );
+    // otherwise fromTriangles cannot add all triangles, so take the full path at once
+    if ( !nonManifoldVertsOnly )
     {
-        // all triangles added successfully, which means no non-manifold vertices
-        if ( dups )
-            dups->clear();
-        if ( settings.region )
-            settings.region->clear();
-        return res;
+        if ( !built )
+            res = fromTrianglesFaceByFace( t, localSettings, {} );
+        if ( !localRegion.any() )
+        {
+            // all triangles added successfully, which means no non-manifold vertices
+            if ( dups )
+                dups->clear();
+            if ( settings.region )
+                settings.region->clear();
+            return res;
+        }
     }
     // full path
     std::vector<VertDuplication> localDups;
@@ -570,7 +601,9 @@ MeshTopology fromTrianglesDuplicatingNonManifoldVertices( Triangulation & t,
         *dups = std::move( localDups );
     if ( noDuplicates )
     {
-        // no duplicates created, so res is ok
+        // no duplicates created, so the happy path result is ok
+        if ( nonManifoldVertsOnly )
+            res = fromTrianglesFaceByFace( t, localSettings, {} );
         if ( settings.region )
             settings.region->clear();
         return res;

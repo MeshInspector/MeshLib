@@ -1800,9 +1800,11 @@ bool MeshTopology::buildGridMesh( const GridSettings & settings, ProgressCallbac
     return computeValidsFromEdges( subprogress( cb, 0.5f, 1.0f ) );
 }
 
-bool MeshTopology::buildFromManifoldTriangles( const Triangulation & t, const MeshBuilder::BuildSettings & settings )
+bool MeshTopology::buildFromManifoldTriangles( const Triangulation & t, const MeshBuilder::BuildSettings & settings, bool * nonManifoldVertsOnly )
 {
     MR_TIMER;
+    if ( nonManifoldVertsOnly )
+        *nonManifoldVertsOnly = false;
     // corner c = 3 * face + k is at vertex t[face][k]; its half-edge goes to the next vertex of the face
     const size_t numCorners = 3 * t.size();
     if ( t.empty() || numCorners >= size_t( INT_MAX ) / 2 || settings.shiftFaceId < 0 || t.size() + settings.shiftFaceId >= size_t( INT_MAX ) )
@@ -1886,7 +1888,7 @@ bool MeshTopology::buildFromManifoldTriangles( const Triangulation & t, const Me
     Buffer<int> twin( numCorners );
     Buffer<int> nextFanStart( numCorners );
     Buffer<int> vertMinCorner( numVerts );
-    std::atomic<bool> ok{ true };
+    std::atomic<bool> edgesOk{ true }, vertsOk{ true };
     ParallelFor( size_t( 0 ), t.size(), [&]( size_t f )
     {
         if ( skipFace( f ) )
@@ -1931,7 +1933,7 @@ bool MeshTopology::buildFromManifoldTriangles( const Triangulation & t, const Me
             const int j = findNext( vc[i].prev );
             if ( j == -2 || ( !settings.allowNonManifoldEdge && findNext( vc[i].next ) == -2 ) )
             {
-                ok.store( false, std::memory_order_relaxed ); // three or more triangles share an edge, or two have it in the same direction
+                edgesOk.store( false, std::memory_order_relaxed ); // three or more triangles share an edge, or two have it in the same direction
                 return;
             }
             twin[prevCorner( vc[i].c )] = j >= 0 ? vc[j].c : -1;
@@ -2007,7 +2009,7 @@ bool MeshTopology::buildFromManifoldTriangles( const Triangulation & t, const Me
         {
             nextFanStart[vc[prevLast].c] = vc[firstStartIdx].c;
             if ( count != d )
-                ok.store( false, std::memory_order_relaxed ); // a closed fan besides open ones
+                vertsOk.store( false, std::memory_order_relaxed ); // a closed fan besides open ones
             return;
         }
         // one closed fan must contain all corners
@@ -2018,10 +2020,14 @@ bool MeshTopology::buildFromManifoldTriangles( const Triangulation & t, const Me
             i = findNext( vc[i].prev );
         } while ( i > 0 && count <= d );
         if ( i != 0 || count != d )
-            ok.store( false, std::memory_order_relaxed ); // several closed fans
+            vertsOk.store( false, std::memory_order_relaxed ); // several closed fans
     } );
-    if ( !ok )
+    if ( !edgesOk || !vertsOk )
+    {
+        if ( nonManifoldVertsOnly )
+            *nonManifoldVertsOnly = edgesOk;
         return false;
+    }
 
     // an edge belongs to the corner with the smaller id; edge ids follow faces, then corners
     auto owns = [&]( int c ) { return twin[c] < 0 || c < twin[c]; };

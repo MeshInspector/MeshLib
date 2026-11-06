@@ -568,8 +568,9 @@ public:
 
     /// constructs topology from given triangles in parallel, if every edge has at most two triangles with opposite directions on it,
     /// and the triangles around every vertex form either one closed fan or open fans only; returns false and leaves this and settings.region unchanged otherwise;
-    /// triangles with invalid or repeated vertices are not added, as in MeshBuilder::fromTriangles with the same settings
-    MRMESH_API bool buildFromManifoldTriangles( const Triangulation & t, const MeshBuilder::BuildSettings & settings = {} );
+    /// triangles with invalid or repeated vertices are not added, as in MeshBuilder::fromTriangles with the same settings;
+    /// \param nonManifoldVertsOnly if given, set to whether it failed only on vertices having a closed fan and other triangles around
+    MRMESH_API bool buildFromManifoldTriangles( const Triangulation & t, const MeshBuilder::BuildSettings & settings = {}, bool * nonManifoldVertsOnly = nullptr );
 
     /// verifies that all internal data structures are valid;
     /// if allVerts=true then checks in addition that all not-lone edges have valid vertices on both ends

@@ -15,7 +15,6 @@
 #include <MRMesh/MRUniquePtr.h>
 #include <MRMesh/MRVector4.h>
 #include "MRImGui.h"
-#include <chrono>
 #include <memory>
 #include <functional>
 #include <unordered_map>
@@ -584,13 +583,15 @@ public:
 
     /// smoothly changes the camera from the current parameters to the target ones during given time:
     /// rotation, translation, zoom and view angle are interpolated, other parameters are set at once;
+    /// it starts and stops smoothly, but a call during an animation continues the motion without slowing down first;
     /// any other change of these camera parameters during the animation stops it;
     /// seconds <= 0 sets all target parameters at once;
     /// the rotation pivot moves at once to the center of the target view (-target.cameraTranslation)
-    /// or to target.staticRotationPivot, as the fit functions set it
+    /// or to target.staticRotationPivot, as the fit functions set it, unless a rotation is in progress
     MRVIEWER_API void animateCamera( const Parameters& target, float seconds );
 
-    /// returns the target parameters of the camera animation in progress, or nullptr if the camera is not animated
+    /// returns the target parameters of the camera animation in progress, or nullptr if the camera is not animated;
+    /// the pointer is valid only until the next setupView (next frame) or animateCamera call, do not keep it
     [[nodiscard]] const Parameters* getCameraAnimationTarget() const { return cameraAnimation_ ? &cameraAnimation_->target : nullptr; }
 
     // Set camera look direction and up direction (they should be perpendicular)
@@ -711,9 +712,10 @@ private:
     struct CameraAnimation
     {
         Parameters start, target;
-        Parameters current; // set by the last step, to detect camera changes by somebody else
-        std::chrono::steady_clock::time_point startTime;
+        Parameters current; // animated fields as the last step set them, to detect camera changes by somebody else
+        double startTime = 0; // seconds of a steady clock
         float seconds = 0;
+        bool easeIn = true; // false if it continues another animation, which was still moving
     };
     std::optional<CameraAnimation> cameraAnimation_;
 

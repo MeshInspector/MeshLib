@@ -18,6 +18,7 @@
 #include "MRMesh/MRPolyline.h"
 #include "MRPch/MRTBB.h"
 #include "MRViewportGlobalBasis.h"
+#include <chrono>
 
 #ifndef MRVIEWER_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
@@ -854,13 +855,32 @@ void copyAnimatedCamera( const Viewport::Parameters& from, Viewport::Parameters&
     to.cameraViewAngle = from.cameraViewAngle;
 }
 
+bool sameAnimatedCamera( const Viewport::Parameters& a, const Viewport::Parameters& b )
+{
+    return a.cameraTrackballAngle == b.cameraTrackballAngle && a.cameraTranslation == b.cameraTranslation
+        && a.cameraZoom == b.cameraZoom && a.cameraViewAngle == b.cameraViewAngle;
+}
+
+double steadyClockSeconds()
+{
+    return std::chrono::duration<double>( std::chrono::steady_clock::now().time_since_epoch() ).count();
+}
+
+// interpolates positive values with the same relative change for the same change of t
+float geomLerp( float a, float b, float t )
+{
+    return a * std::pow( b / a, t );
+}
+
 }
 
 void Viewport::animateCamera( const Parameters& target, float seconds )
 {
+    const bool moving = cameraAnimation_.has_value();
     cameraAnimation_.reset();
-    // as after a fit: rotate around the point in the center of the target view
-    setRotationPivot_( target.staticRotationPivot ? *target.staticRotationPivot : -target.cameraTranslation );
+    // as after a fit: rotate around the point in the center of the target view, but not move the pivot of a rotation in progress
+    if ( rotationDepth_ <= 0 )
+        setRotationPivot_( target.staticRotationPivot ? *target.staticRotationPivot : -target.cameraTranslation );
     if ( seconds <= 0 || !getViewerInstance().isGLInitialized() ) // without GL frames are not drawn, so the animation would never finish
     {
         setParameters( target );
@@ -869,7 +889,7 @@ void Viewport::animateCamera( const Parameters& target, float seconds )
     auto params = target;
     copyAnimatedCamera( params_, params );
     setParameters( params ); // parameters other than the animated camera are set at once
-    cameraAnimation_ = CameraAnimation{ .start = params_, .target = target, .current = params_, .startTime = std::chrono::steady_clock::now(), .seconds = seconds };
+    cameraAnimation_ = CameraAnimation{ .start = params_, .target = target, .current = params_, .startTime = steadyClockSeconds(), .seconds = seconds, .easeIn = !moving };
 }
 
 void Viewport::updateCameraAnimation_()
@@ -877,30 +897,31 @@ void Viewport::updateCameraAnimation_()
     if ( !cameraAnimation_ )
         return;
     auto& anim = *cameraAnimation_;
-    auto params = anim.current;
-    copyAnimatedCamera( params_, params );
-    if ( params != anim.current )
+    if ( !sameAnimatedCamera( params_, anim.current ) )
     {
         cameraAnimation_.reset(); // somebody else has changed the camera
         return;
     }
 
     needRedraw_ = true;
-    const float t = std::chrono::duration<float>( std::chrono::steady_clock::now() - anim.startTime ).count() / anim.seconds;
+    const float t = float( ( steadyClockSeconds() - anim.startTime ) / anim.seconds );
     if ( t >= 1 )
     {
         copyAnimatedCamera( anim.target, params_ );
         cameraAnimation_.reset();
         return;
     }
-    const float s = t * t * ( 3 - 2 * t ); // smooth start and stop
+    // smooth start and stop; an animation continuing another one starts at its average speed, close to the speed before
+    const float s = anim.easeIn ? t * t * ( 3 - 2 * t ) : t * ( 1 + t - t * t );
     const auto& a = anim.start;
     const auto& b = anim.target;
     params_.cameraTrackballAngle = Quaternionf::slerp( a.cameraTrackballAngle, b.cameraTrackballAngle, s );
     params_.cameraTranslation = lerp( a.cameraTranslation, b.cameraTranslation, s );
-    params_.cameraZoom = a.cameraZoom * std::pow( b.cameraZoom / a.cameraZoom, s ); // the same relative change of the scale in each frame
-    params_.cameraViewAngle = lerp( a.cameraViewAngle, b.cameraViewAngle, s );
-    anim.current = params_;
+    // the scale on screen is proportional to zoom / tan( viewAngle / 2 ), so both factors change geometrically to keep it monotonic
+    params_.cameraZoom = geomLerp( a.cameraZoom, b.cameraZoom, s );
+    const float degToHalfRad = PI_F / 360;
+    params_.cameraViewAngle = std::atan( geomLerp( std::tan( a.cameraViewAngle * degToHalfRad ), std::tan( b.cameraViewAngle * degToHalfRad ), s ) ) / degToHalfRad;
+    copyAnimatedCamera( params_, anim.current );
 }
 
 void Viewport::draw_rotation_center() const

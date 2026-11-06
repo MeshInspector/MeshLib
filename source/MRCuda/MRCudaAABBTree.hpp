@@ -21,10 +21,10 @@ std::vector<AABBTreeNode<T>> getNodesWithLeaves( const AABBTreeBase<T> & tree )
     res.resize( nodes.size() );
     auto addLeaf = [&]( NodeId c )
     {
-        const auto leafId = tree.leafId( c );
+        const auto & l = tree.leaf( c );
         auto & leaf = res.emplace_back();
-        leaf.box = tree.leafBoxes()[leafId];
-        leaf.l = NodeId( int( leafId ) );
+        leaf.box = l.box;
+        leaf.l = NodeId( int( l.leafId ) );
         leaf.r = NodeId();
         return NodeId( int( res.size() ) - 1 );
     };

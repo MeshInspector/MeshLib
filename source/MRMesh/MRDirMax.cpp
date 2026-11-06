@@ -116,9 +116,10 @@ VertId findDirMaxT( const V & dir, const Polyline<V> & polyline, UseAABBTree u )
     if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !polyline.getAABBTreeNotCreate() ) )
         return findDirMaxBruteForce( dir, polyline );
 
-    return findDirMaxT( dir, polyline.getAABBTree(), [&]( NodeId n, float & furthestProj, VertId & res )
+    const auto & tree = polyline.getAABBTree();
+    return findDirMaxT( dir, tree, [&]( NodeId n, float & furthestProj, VertId & res )
     {
-        EdgeId e = AABBTreePolyline<V>::leafId( n );
+        EdgeId e = tree.leafId( n );
         VertId vs[2] = { polyline.topology.org( e ), polyline.topology.dest( e ) };
         for ( int i = 0; i < 2; ++i )
         {
@@ -144,9 +145,10 @@ VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
     if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeNotCreate() ) )
         return findDirMaxBruteForce( dir, mp );
 
-    return findDirMaxT( dir, mp.mesh.getAABBTree(), [&]( NodeId n, float & furthestProj, VertId & res )
+    const auto & tree = mp.mesh.getAABBTree();
+    return findDirMaxT( dir, tree, [&]( NodeId n, float & furthestProj, VertId & res )
     {
-        FaceId face = AABBTree::leafId( n );
+        FaceId face = tree.leafId( n );
         if ( mp.region && !mp.region->test( face ) )
             return;
         VertId vs[3];

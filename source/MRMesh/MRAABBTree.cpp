@@ -3,7 +3,7 @@
 #include "MRAABBTreeMaker.hpp"
 #include "MRMesh.h"
 #include "MRTimer.h"
-#include "MRBuffer.h"
+#include "MRResizeNoInit.h"
 #include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
 #include <algorithm>
@@ -37,7 +37,8 @@ AABBTree::AABBTree( const MeshPart & mp )
     if ( numFaces <= 0 )
         return;
 
-    Buffer<BoxedFace> boxedFaces( numFaces );
+    Leaves boxedFaces;
+    resizeNoInit( boxedFaces, numFaces );
     const bool packed = numFaces == mp.mesh.topology.faceSize();
     if ( !packed )
     {
@@ -57,14 +58,12 @@ AABBTree::AABBTree( const MeshPart & mp )
         boxedFaces[i].box = computeFaceBox( mp.mesh, f );
     } );
 
-    build_( std::move( boxedFaces ), mp.mesh.topology.faceSize() );
+    build_( std::move( boxedFaces ) );
 }
 
 void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
 {
     MR_TIMER;
-    if ( empty() )
-        return;
 
     FaceBitSet changedFaces;
     if ( changedVerts )
@@ -74,50 +73,28 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
         return isLeaf( c ) && ( !changedVerts || changedFaces.test( leafId( c ) ) );
     };
 
-    // update leaf boxes, and the boxes of the nodes with changed leaf children only from these children
-    auto updateLeaf = [&]( NodeId c )
+    // update leaf boxes
+    ParallelFor( leaves_, [&]( size_t i )
     {
-        if ( changedLeaf( c ) )
-            leafBoxes_[leafId( c )] = computeFaceBox( mesh, leafId( c ) );
-    };
-    updateLeaf( root_ );
-    NodeBitSet changedNodes( nodes_.size() );
-    BitSetParallelForAll( changedNodes, [&]( NodeId nid )
-    {
-        auto & node = nodes_[nid];
-        if ( !changedLeaf( node.l ) && !changedLeaf( node.r ) )
-            return;
-        changedNodes.set( nid );
-        node.box = {};
-        for ( auto c : { node.l, node.r } )
-        {
-            if ( !isLeaf( c ) )
-                continue;
-            updateLeaf( c );
-            node.box.include( leafBoxes_[leafId( c )] );
-        }
+        auto & l = leaves_[i];
+        if ( !changedVerts || changedFaces.test( l.leafId ) )
+            l.box = computeFaceBox( mesh, l.leafId );
     } );
 
-    // update not-leaf nodes from not-leaf children
+    // update not-leaf nodes
+    NodeBitSet changedNodes( nodes_.size() );
+    auto changed = [&]( NodeId c )
+    {
+        return isLeaf( c ) ? changedLeaf( c ) : changedNodes.test( c );
+    };
     for ( auto nid = NodeId( int( nodes_.size() ) - 1 ); nid >= 0; --nid )
     {
         auto & node = nodes_[nid];
-        const bool lChanged = !isLeaf( node.l ) && changedNodes.test( node.l );
-        const bool rChanged = !isLeaf( node.r ) && changedNodes.test( node.r );
-        if ( changedNodes.test( nid ) )
-        {
-            // the box already includes leaf children
-            if ( !isLeaf( node.l ) )
-                node.box.include( nodes_[node.l].box );
-            if ( !isLeaf( node.r ) )
-                node.box.include( nodes_[node.r].box );
-        }
-        else if ( lChanged || rChanged )
-        {
-            changedNodes.set( nid );
-            node.box = box( node.l );
-            node.box.include( box( node.r ) );
-        }
+        if ( !changed( node.l ) && !changed( node.r ) )
+            continue;
+        changedNodes.set( nid );
+        node.box = box( node.l );
+        node.box.include( box( node.r ) );
     }
 }
 
@@ -128,7 +105,7 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
         return;
     assert( !empty() );
 
-    // find the place referencing the leaf of every split face
+    // the index of the leaf of every split face
     FaceBitSet splitFaces( mesh.topology.faceSize() );
     for ( const auto & [newFace, oldFace] : new2Old )
         splitFaces.set( oldFace );
@@ -142,68 +119,69 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
         assert( it != oldFaces.end() && *it == f );
         return it - oldFaces.begin();
     };
+    constexpr size_t cNotFound = ~size_t( 0 );
+    std::vector<size_t> leafIndices( oldFaces.size(), cNotFound );
+    ParallelFor( leaves_, [&]( size_t i )
+    {
+        if ( splitFaces.test( leaves_[i].leafId ) )
+            leafIndices[oldFaceIndex( leaves_[i].leafId )] = i;
+    } );
 
-    // the place of a leaf: in the node (as its left or right child) or in root_ if node is invalid
+    // the place referencing the leaf: in the node (as its left or right child) or the root if node is invalid
     struct Place
     {
         NodeId node;
         bool right = false;
     };
     std::vector<Place> places( oldFaces.size() );
-    std::vector<char> found( oldFaces.size(), false );
-    auto findLeaf = [&]( NodeId c, Place p )
-    {
-        if ( !isLeaf( c ) || !splitFaces.test( leafId( c ) ) )
-            return;
-        const auto i = oldFaceIndex( leafId( c ) );
-        places[i] = p;
-        found[i] = true;
-    };
-    findLeaf( root_, {} );
     ParallelFor( nodes_, [&]( NodeId nid )
     {
-        findLeaf( nodes_[nid].l, { nid, false } );
-        findLeaf( nodes_[nid].r, { nid, true } );
+        for ( bool right : { false, true } )
+        {
+            const auto c = right ? nodes_[nid].r : nodes_[nid].l;
+            if ( isLeaf( c ) && splitFaces.test( leafId( c ) ) )
+                places[oldFaceIndex( leafId( c ) )] = { nid, right };
+        }
     } );
+    NodeId root; // only for a single-leaf tree, which is split
     auto ref = [&]( Place p ) -> NodeId &
     {
-        return !p.node ? root_ : p.right ? nodes_[p.node].r : nodes_[p.node].l;
+        return !p.node ? root : p.right ? nodes_[p.node].r : nodes_[p.node].l;
     };
 
     // every new face turns the current leaf of its split face into a node with the leaves of both faces;
-    // the new nodes are appended, so children have larger ids than their parents as in a constructed tree
+    // the new nodes and leaves are appended, so children have larger ids than their parents as in a constructed tree
+    std::vector<BoxT> oldBoxes( oldFaces.size() );
+    for ( size_t i = 0; i < oldFaces.size(); ++i )
+    {
+        if ( leafIndices[i] == cNotFound )
+            continue;
+        auto & l = leaves_[leafIndices[i]];
+        oldBoxes[i] = l.box;
+        l.box = computeFaceBox( mesh, l.leafId );
+    }
     const auto firstNewNode = nodes_.endId();
-    nodes_.resize( nodes_.size() + new2Old.size() );
-    auto nid = firstNewNode;
-    auto leaves = places; // current places of the leaves of split faces
+    nodes_.reserve( nodes_.size() + new2Old.size() );
+    leaves_.reserve( leaves_.size() + new2Old.size() );
+    auto places1 = places; // current places of the leaves of split faces
     for ( const auto & [newFace, oldFace] : new2Old )
     {
         const auto i = oldFaceIndex( oldFace );
-        if ( !found[i] )
+        if ( leafIndices[i] == cNotFound )
         {
             assert( false ); // the split face is not in this tree
-            nodes_.pop_back();
             continue;
         }
-        auto & node = nodes_[nid];
-        node.l = Node::leafChild( oldFace );
-        node.r = Node::leafChild( newFace );
-        ref( leaves[i] ) = nid;
-        leaves[i] = { nid, false };
-        ++nid;
+        const auto nid = nodes_.endId();
+        auto & node = nodes_.emplace_back();
+        node.l = Node::leafChild( leafIndices[i] );
+        node.r = Node::leafChild( leaves_.size() );
+        auto & leaf = leaves_.emplace_back();
+        leaf.leafId = newFace;
+        leaf.box = computeFaceBox( mesh, newFace );
+        ref( places1[i] ) = nid;
+        places1[i] = { nid, false };
     }
-
-    // the boxes of all leaves of split faces, then of the new nodes from the leaves
-    std::vector<BoxT> oldBoxes( oldFaces.size() );
-    for ( size_t i = 0; i < oldFaces.size(); ++i )
-        if ( found[i] )
-            oldBoxes[i] = leafBoxes_[oldFaces[i]];
-    leafBoxes_.resize( mesh.topology.faceSize() );
-    for ( const auto & [newFace, oldFace] : new2Old )
-        leafBoxes_[newFace] = computeFaceBox( mesh, newFace );
-    for ( size_t i = 0; i < oldFaces.size(); ++i )
-        if ( found[i] )
-            leafBoxes_[oldFaces[i]] = computeFaceBox( mesh, oldFaces[i] );
     for ( auto n = nodes_.backId(); n >= firstNewNode; --n )
     {
         auto & node = nodes_[n];
@@ -215,7 +193,7 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
     // then update all old not-leaf nodes from the last to the root as in refit()
     bool grown = false;
     for ( size_t i = 0; i < oldFaces.size() && !grown; ++i )
-        if ( found[i] )
+        if ( leafIndices[i] != cNotFound )
             grown = !oldBoxes[i].contains( box( ref( places[i] ) ) );
     if ( grown )
     {

@@ -1,7 +1,6 @@
 #include "MRAABBTreeMaker.h"
 #include "MRAABBTreeNode.h"
 #include "MRAABBTreeBase.h"
-#include "MRParallelFor.h"
 #include "MRBuffer.h"
 #include "MRTimer.h"
 #include "MRPch/MRTBB.h"
@@ -33,10 +32,10 @@ public:
     using Subtree = MR::Subtree<T>;
     using BoxT = typename T::BoxT;
 
-    NodeVec construct( Buffer<BoxedLeaf<T>> boxedLeaves );
+    NodeVec construct( std::vector<BoxedLeaf<T>> & boxedLeaves );
 
 private:
-    Buffer<BoxedLeaf<T>> boxedLeaves_;
+    BoxedLeaf<T> * boxedLeaves_ = nullptr;
     NodeVec nodes_;
 
 private:
@@ -70,7 +69,7 @@ int AABBTreeMaker<T>::partitionLeaves_( const BoxT & box, int firstLeaf, int las
     };
 
     const int midLeaf = firstLeaf + ( lastLeaf - firstLeaf ) / 2;
-    std::nth_element( boxedLeaves_.data() + firstLeaf, boxedLeaves_.data() + midLeaf, boxedLeaves_.data() + lastLeaf, less );
+    std::nth_element( boxedLeaves_ + firstLeaf, boxedLeaves_ + midLeaf, boxedLeaves_ + lastLeaf, less );
     return midLeaf;
 }
 
@@ -88,8 +87,8 @@ auto AABBTreeMaker<T>::makeNode_( const Subtree & s ) -> std::pair<Subtree, Subt
     const int rightNumLeaves = s.numLeaves - leftNumLeaves;
     const auto lRoot = s.root + 1;
     const auto rRoot = lRoot + getNumNodes( leftNumLeaves );
-    node.l = leftNumLeaves == 1 ? Node::leafChild( boxedLeaves_[s.firstLeaf].leafId ) : lRoot;
-    node.r = rightNumLeaves == 1 ? Node::leafChild( boxedLeaves_[midLeaf].leafId ) : rRoot;
+    node.l = leftNumLeaves == 1 ? Node::leafChild( s.firstLeaf ) : lRoot;
+    node.r = rightNumLeaves == 1 ? Node::leafChild( midLeaf ) : rRoot;
     return
     {
         Subtree( lRoot, s.firstLeaf, leftNumLeaves ),
@@ -137,13 +136,13 @@ void AABBTreeMaker<T>::makeSubtree_( const Subtree & s, int numThreads )
 } // anonymous namespace
 
 template<typename T>
-auto AABBTreeMaker<T>::construct( Buffer<BoxedLeaf<T>> boxedLeaves ) -> NodeVec
+auto AABBTreeMaker<T>::construct( std::vector<BoxedLeaf<T>> & boxedLeaves ) -> NodeVec
 {
     MR_TIMER;
 
-    boxedLeaves_ = std::move( boxedLeaves );
+    boxedLeaves_ = boxedLeaves.data();
 
-    const auto numLeaves = (int)boxedLeaves_.size();
+    const auto numLeaves = (int)boxedLeaves.size();
     assert( numLeaves > 0 );
     nodes_.resizeNoInit( getNumNodes( numLeaves ) );
 
@@ -164,31 +163,18 @@ auto AABBTreeMaker<T>::construct( Buffer<BoxedLeaf<T>> boxedLeaves ) -> NodeVec
 }
 
 template<typename T>
-AABBTreeNodeVec<T> makeAABBTreeNodeVec( Buffer<BoxedLeaf<T>> boxedLeaves )
+AABBTreeNodeVec<T> makeAABBTreeNodeVec( std::vector<BoxedLeaf<T>> & boxedLeaves )
 {
-    return AABBTreeMaker<T>().construct( std::move( boxedLeaves ) );
+    return AABBTreeMaker<T>().construct( boxedLeaves );
 }
 
 template<typename T>
-void AABBTreeBase<T>::build_( Buffer<BoxedLeaf<T>> boxedLeaves, size_t leafIdSize )
+void AABBTreeBase<T>::build_( Leaves leaves )
 {
-    MR_TIMER;
     nodes_.clear();
-    leafBoxes_.clear();
-    if ( boxedLeaves.empty() )
-        return;
-
-    if ( boxedLeaves.size() == leafIdSize )
-        leafBoxes_.resizeNoInit( leafIdSize );
-    else
-        leafBoxes_.resize( leafIdSize );
-    ParallelFor( size_t( 0 ), boxedLeaves.size(), [&]( size_t i )
-    {
-        leafBoxes_[boxedLeaves[i].leafId] = boxedLeaves[i].box;
-    } );
-
-    root_ = boxedLeaves.size() == 1 ? Node::leafChild( boxedLeaves[0].leafId ) : NodeId( 0 );
-    nodes_ = makeAABBTreeNodeVec( std::move( boxedLeaves ) );
+    leaves_ = std::move( leaves );
+    if ( !leaves_.empty() )
+        nodes_ = makeAABBTreeNodeVec( leaves_ );
 }
 
 } //namespace MR

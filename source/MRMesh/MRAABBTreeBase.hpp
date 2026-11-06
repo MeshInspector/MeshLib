@@ -16,7 +16,7 @@ auto AABBTreeBase<T>::getSubtrees( int minNum ) const -> std::vector<NodeId>
     std::vector<NodeId> res;
     if ( empty() )
         return res;
-    res.push_back( root_ );
+    res.push_back( rootNodeId() );
     std::vector<NodeId> tmp;
     while ( res.size() < minNum )
     {
@@ -98,7 +98,7 @@ void AABBTreeBase<T>::getLeafOrder( LeafBMap & leafMap ) const
     {
         // depth-first traversal visits the leaves from left to right
         std::vector<NodeId> subtasks; // not InplaceStack: the tree after AABBTree::addSplitFaces can be deep
-        subtasks.push_back( root_ );
+        subtasks.push_back( rootNodeId() );
         while ( !subtasks.empty() )
         {
             NodeId n = subtasks.back();
@@ -123,24 +123,8 @@ void AABBTreeBase<T>::getLeafOrderAndReset( LeafBMap & leafMap )
     if ( empty() )
         return;
 
-    LeafBoxes newLeafBoxes;
-    newLeafBoxes.resizeNoInit( leafMap.tsize );
-    auto reset = [&]( NodeId & c )
-    {
-        if ( !isLeaf( c ) )
-            return;
-        const auto oldId = leafId( c );
-        const auto newId = leafMap.b[oldId];
-        newLeafBoxes[newId] = leafBoxes_[oldId];
-        c = Node::leafChild( newId );
-    };
-    reset( root_ );
-    for ( auto & node : nodes_ )
-    {
-        reset( node.l );
-        reset( node.r );
-    }
-    leafBoxes_ = std::move( newLeafBoxes );
+    for ( auto & l : leaves_ )
+        l.leafId = leafMap.b[l.leafId];
 }
 
 } //namespace MR

@@ -872,11 +872,45 @@ float geomLerp( float a, float b, float t )
     return a * std::pow( b / a, t );
 }
 
+// cubic with s(0) = 0, s'(0) = v0, s(1) = 1, s'(1) = 0, monotonic for v0 in [0, 3]; the smoothstep for v0 = 0
+float easeCubic( float t, float v0 )
+{
+    return t * ( v0 + t * ( 3 - 2 * v0 + t * ( v0 - 2 ) ) );
+}
+
+// derivative of easeCubic by t
+float easeCubicSpeed( float t, float v0 )
+{
+    return v0 + t * ( 2 * ( 3 - 2 * v0 ) + t * 3 * ( v0 - 2 ) );
+}
+
+// rotation vector (axis times angle) of the shortest turn from orientation a to b in the frame of a: Quaternionf::slerp( a, b, s )
+// turns around it, and so does any later slerp starting on that path, so the vectors of two such turns can be compared
+Vector3f turnVector( const Quaternionf& a, const Quaternionf& b )
+{
+    auto d = a.inverse() * b;
+    if ( d.a < 0 )
+        d = -d;
+    const auto im = d.im();
+    const float sinHalf = im.length();
+    return sinHalf > 0 ? ( 2 * std::atan2( sinHalf, d.a ) / sinHalf ) * im : Vector3f{};
+}
+
 }
 
 void Viewport::animateCamera( const Parameters& target, float seconds )
 {
-    const bool moving = cameraAnimation_.has_value();
+    // a call during another animation keeps its rotation speed toward the new target
+    float startSpeed = 0;
+    if ( cameraAnimation_ && seconds > 0 )
+    {
+        const auto& old = *cameraAnimation_;
+        const float oldT = std::clamp( float( ( steadyClockSeconds() - old.startTime ) / old.seconds ), 0.f, 1.f );
+        const auto turn = turnVector( params_.cameraTrackballAngle, target.cameraTrackballAngle );
+        if ( const float turnSq = turn.lengthSq(); turnSq > 1e-6f )
+            startSpeed = std::clamp( easeCubicSpeed( oldT, old.startSpeed ) * ( seconds / old.seconds )
+                * dot( turnVector( old.start.cameraTrackballAngle, old.target.cameraTrackballAngle ), turn ) / turnSq, 0.f, 3.f );
+    }
     cameraAnimation_.reset();
     // as after a fit: rotate around the point in the center of the target view, but not move the pivot of a rotation in progress
     if ( rotationDepth_ <= 0 )
@@ -889,7 +923,7 @@ void Viewport::animateCamera( const Parameters& target, float seconds )
     auto params = target;
     copyAnimatedCamera( params_, params );
     setParameters( params ); // parameters other than the animated camera are set at once
-    cameraAnimation_ = CameraAnimation{ .start = params_, .target = target, .current = params_, .startTime = steadyClockSeconds(), .seconds = seconds, .easeIn = !moving };
+    cameraAnimation_ = CameraAnimation{ .start = params_, .target = target, .current = params_, .startTime = steadyClockSeconds(), .seconds = seconds, .startSpeed = startSpeed };
 }
 
 void Viewport::updateCameraAnimation_()
@@ -911,8 +945,7 @@ void Viewport::updateCameraAnimation_()
         cameraAnimation_.reset();
         return;
     }
-    // smooth start and stop; an animation continuing another one starts at its average speed, close to the speed before
-    const float s = anim.easeIn ? t * t * ( 3 - 2 * t ) : t * ( 1 + t - t * t );
+    const float s = easeCubic( t, anim.startSpeed );
     const auto& a = anim.start;
     const auto& b = anim.target;
     params_.cameraTrackballAngle = Quaternionf::slerp( a.cameraTrackballAngle, b.cameraTrackballAngle, s );

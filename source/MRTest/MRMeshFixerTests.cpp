@@ -13,6 +13,7 @@
 #include <MRMesh/MRRingIterator.h>
 #include <MRMesh/MRphmap.h>
 #include <gtest/gtest.h>
+#include <algorithm>
 
 namespace MR
 {
@@ -171,13 +172,27 @@ void checkAttributes( const ObjectMeshData & data, FixMeshDegeneraciesParams::Mo
     }
 }
 
-// total area of the faces with another color than the original surface at their centers
+// total area of the faces with another color than the original surface at their centers;
+// a center equally close to original triangles of several colors (findProjection returns any of them) matches each of these colors
 float wrongColorArea( const ObjectMeshData & data, const ObjectMeshData & original )
 {
+    std::vector<std::pair<Color, FaceBitSet>> byColor;
+    for ( auto f : original.mesh->topology.getValidFaces() )
+    {
+        const auto c = original.faceColors[f];
+        auto it = std::find_if( byColor.begin(), byColor.end(), [c]( const auto & x ) { return x.first == c; } );
+        if ( it == byColor.end() )
+            it = byColor.insert( byColor.end(), { c, FaceBitSet( original.mesh->topology.faceSize() ) } );
+        it->second.set( f );
+    }
     float res = 0;
     for ( auto f : data.mesh->topology.getValidFaces() )
-        if ( data.faceColors[f] != original.faceColors[findProjection( data.mesh->triCenter( f ), *original.mesh ).proj.face] )
+    {
+        const auto p = data.mesh->triCenter( f );
+        const auto it = std::find_if( byColor.begin(), byColor.end(), [&]( const auto & x ) { return x.first == data.faceColors[f]; } );
+        if ( it == byColor.end() || findProjection( p, { *original.mesh, &it->second } ).distSq > findProjection( p, *original.mesh ).distSq )
             res += data.mesh->area( f );
+    }
     return res;
 }
 

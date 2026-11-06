@@ -590,7 +590,7 @@ TEST( MRMesh, buildFromManifoldTrianglesRegion )
 
 TEST( MRMesh, duplicateNonManifoldVerticesBigMesh )
 {
-    // two closed spheres sharing one vertex, with more triangles than fromTriangles builds in one part
+    // two closed spheres sharing one vertex, with enough triangles for fromTriangles to try buildFromManifoldTriangles
     const auto sphere = makeSphere( { .numMeshVertices = 10000 } );
     const Triangulation one = sphere.topology.getTriangulation();
     const int nv = int( sphere.topology.vertSize() );
@@ -601,7 +601,7 @@ TEST( MRMesh, duplicateNonManifoldVerticesBigMesh )
             v = v == 0_v ? v : VertId( v + nv );
         t.push_back( tri );
     }
-    ASSERT_GT( t.size(), 32768 );
+    ASSERT_GE( t.size(), 8192 );
 
     MeshTopology topology;
     bool nonManifoldVertsOnly = false;

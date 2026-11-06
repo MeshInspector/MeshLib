@@ -539,12 +539,15 @@ static MeshTopology fromTrianglesFaceByFace( const Triangulation & t, const Buil
     return fromTrianglesSeq( t, settings );
 }
 
+// below it, adding triangles one by one is faster on 1 thread
+constexpr size_t minTrisForManifoldBuild = 8192;
+
 // fromTrianglesPar adds all triangles with vertices in several parts sequentially, and they are many if vertex ids have no locality
 static bool tryBuildFromManifoldTriangles( MeshTopology & res, const Triangulation & t, const BuildSettings & settings, bool * nonManifoldVertsOnly = nullptr )
 {
     if ( nonManifoldVertsOnly )
         *nonManifoldVertsOnly = false;
-    if ( t.size() <= minTrisInPart )
+    if ( t.size() < minTrisForManifoldBuild )
         return false;
     try
     {

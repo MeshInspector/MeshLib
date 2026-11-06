@@ -234,6 +234,8 @@ public:
     // gets texture id for binding in other shaders
     unsigned getColorTexture() const { return resColorTexture_.getId(); }
     unsigned getDepthTexture() const { return resDepthTexture_.getId(); }
+    // gets the framebuffer the textures above are attached to (e.g. to blit from them)
+    unsigned getCopyFramebuffer() const { return copyFramebuffer_; }
 
     const Vector2i& getSize() const { return size_; }
     // return true if texture is bound

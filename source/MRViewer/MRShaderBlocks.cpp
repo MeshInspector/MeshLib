@@ -142,7 +142,7 @@ std::string getFragmentShaderEndBlock( ShaderTransparencyMode transparencyMode )
 
     // the background depth keeps one sample of an antialiased edge: while all peeled layers are behind it,
     // peel against the farthest depth around the pixel, the layers can be visible on the other samples
-    if ( dpFGDepth == 0.0 || dpFGDepth > dpBGDepth )
+    if ( gl_FragCoord.z > dpBGDepth && ( dpFGDepth == 0.0 || dpFGDepth > dpBGDepth ) )
         for ( int y = -1; y <= 1; ++y )
             for ( int x = -1; x <= 1; ++x )
                 dpBGDepth = max( dpBGDepth, texelFetch( dp_bg_depths, clamp( dpTexCoord + ivec2( x, y ), ivec2( 0 ), dpTexSize - ivec2( 1 ) ), 0 ).r );

@@ -29,7 +29,7 @@ private:
     FramebufferData accumFB_;
     QuadTextureVertexObject qt_;
     GlTexture2 nearestDepth_; // depth of the nearest layer, `draw` is depth-tested with it
-    unsigned copyFBOs_[2] = {}; // to copy the depth of accumFB_ after the first pass into nearestDepth_
+    unsigned nearestDepthFB_ = 0; // to copy the depth of accumFB_ after the first pass into nearestDepth_
     int numPasses_{ 5 };
 };
 

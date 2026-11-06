@@ -14,7 +14,7 @@ void DepthPeelingGL::reset( const Vector2i& size )
         accumFB_.del();
         qt_.del();
         nearestDepth_.del();
-        GL_EXEC( glDeleteFramebuffers( 2, copyFBOs_ ) );
+        GL_EXEC( glDeleteFramebuffers( 1, &nearestDepthFB_ ) );
     }
     accumFB_.gen( size, true, 0, true );
     qt_.gen();
@@ -22,17 +22,13 @@ void DepthPeelingGL::reset( const Vector2i& size )
     nearestDepth_.gen();
     nearestDepth_.loadData( { .resolution = GlTexture2::ToResolution( size ), .internalFormat = GL_DEPTH_COMPONENT32F,
         .format = GL_DEPTH_COMPONENT, .type = GL_FLOAT, .wrap = WrapType::Clamp, .filter = FilterType::Discrete }, ( const char* )nullptr );
-    GL_EXEC( glGenFramebuffers( 2, copyFBOs_ ) );
-    const unsigned depthTextures[2] = { accumFB_.getDepthTexture(), nearestDepth_.getId() };
+    GL_EXEC( glGenFramebuffers( 1, &nearestDepthFB_ ) );
+    GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, nearestDepthFB_ ) );
+    GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, nearestDepth_.getId(), 0 ) );
     const GLenum noColor = GL_NONE;
-    for ( int i = 0; i < 2; ++i )
-    {
-        GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, copyFBOs_[i] ) );
-        GL_EXEC( glFramebufferTexture2D( GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTextures[i], 0 ) );
-        GL_EXEC( glDrawBuffers( 1, &noColor ) );
-        GL_EXEC( glReadBuffer( GL_NONE ) );
-        assert( glCheckFramebufferStatus( GL_FRAMEBUFFER ) == GL_FRAMEBUFFER_COMPLETE );
-    }
+    GL_EXEC( glDrawBuffers( 1, &noColor ) );
+    GL_EXEC( glReadBuffer( GL_NONE ) );
+    assert( glCheckFramebufferStatus( GL_FRAMEBUFFER ) == GL_FRAMEBUFFER_COMPLETE );
     GL_EXEC( glBindFramebuffer( GL_FRAMEBUFFER, 0 ) );
 }
 
@@ -46,6 +42,7 @@ void DepthPeelingGL::draw()
     accumFB_.draw( qt_, { .size = accumFB_.getSize(),.wrap = WrapType::Clamp,.filter = FilterType::Discrete,
         .depthTexture = numPasses_ > 1 ? nearestDepth_.getId() : 0, .maxDepth = 1.0f } );
     GL_EXEC( glDepthMask( GL_TRUE ) );
+    GL_EXEC( glDepthFunc( GL_LESS ) );
 }
 
 bool DepthPeelingGL::doPasses( FramebufferData* bgFramebuffer )
@@ -68,8 +65,8 @@ bool DepthPeelingGL::doPasses( FramebufferData* bgFramebuffer )
         {
             // keep the depth of the nearest layer for `draw`
             const auto& size = accumFB_.getSize();
-            GL_EXEC( glBindFramebuffer( GL_READ_FRAMEBUFFER, copyFBOs_[0] ) );
-            GL_EXEC( glBindFramebuffer( GL_DRAW_FRAMEBUFFER, copyFBOs_[1] ) );
+            GL_EXEC( glBindFramebuffer( GL_READ_FRAMEBUFFER, accumFB_.getCopyFramebuffer() ) );
+            GL_EXEC( glBindFramebuffer( GL_DRAW_FRAMEBUFFER, nearestDepthFB_ ) );
             GL_EXEC( glBlitFramebuffer( 0, 0, size.x, size.y, 0, 0, size.x, size.y, GL_DEPTH_BUFFER_BIT, GL_NEAREST ) );
         }
         accumFB_.bind( false );

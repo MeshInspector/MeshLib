@@ -481,7 +481,8 @@ TEST( MRMesh, BallPivotingIntTwins )
     plain.validPoints.resize( n, true );
     const auto toInt = getAlphaShapeData( plain, 0.2f, false ).toInt;
 
-    PointCloud cloud = plain;
+    PointCloud cloud; // not a copy of plain, whose AABB tree is already built
+    cloud.points = plain.points;
     size_t numTwins = 0;
     for ( VertId v( 0 ); v < n; ++v )
         for ( int i = 0; i < 3; ++i )

@@ -12,6 +12,33 @@ namespace MR
 namespace
 {
 
+// [firstLeaf, result) will go to left child and [result, lastLeaf) - to the right child
+template<typename T>
+int partitionBoxedLeaves( BoxedLeaf<T> * boxedLeaves, const typename T::BoxT & box, int firstLeaf, int lastLeaf )
+{
+    assert( firstLeaf + 1 < lastLeaf );
+
+    // define total order of BoxedLeaves: no two distinct leaves are equivalent
+    auto less = [sortedDims = findSortedBoxDims( box )]( const BoxedLeaf<T> & a, const BoxedLeaf<T> & b )
+    {
+        // first compare (and split later) by the largest box dimension
+        for ( int i = decltype( sortedDims )::elements - 1; i >= 0; --i )
+        {
+            const int splitDim = sortedDims[i];
+            const auto aDim = a.box.min[splitDim] + a.box.max[splitDim];
+            const auto bDim = b.box.min[splitDim] + b.box.max[splitDim];
+            if ( aDim != bDim )
+                return aDim < bDim;
+        }
+        // if two boxes have equal centers then compare by id to distinguish them
+        return a.leafId < b.leafId;
+    };
+
+    const int midLeaf = firstLeaf + ( lastLeaf - firstLeaf ) / 2;
+    std::nth_element( boxedLeaves + firstLeaf, boxedLeaves + midLeaf, boxedLeaves + lastLeaf, less );
+    return midLeaf;
+}
+
 template<typename T>
 struct Subtree
 {
@@ -50,27 +77,7 @@ private:
 template<typename T>
 int AABBTreeMaker<T>::partitionLeaves_( const BoxT & box, int firstLeaf, int lastLeaf )
 {
-    assert( firstLeaf + 1 < lastLeaf );
-
-    // define total order of BoxedLeaves: no two distinct leaves are equivalent
-    auto less = [sortedDims = findSortedBoxDims( box )]( const BoxedLeaf<T> & a, const BoxedLeaf<T> & b )
-    {
-        // first compare (and split later) by the largest box dimension
-        for ( int i = decltype( sortedDims )::elements - 1; i >= 0; --i )
-        {
-            const int splitDim = sortedDims[i];
-            const auto aDim = a.box.min[splitDim] + a.box.max[splitDim];
-            const auto bDim = b.box.min[splitDim] + b.box.max[splitDim];
-            if ( aDim != bDim )
-                return aDim < bDim;
-        }
-        // if two boxes have equal centers then compare by id to distinguish them
-        return a.leafId < b.leafId;
-    };
-
-    const int midLeaf = firstLeaf + ( lastLeaf - firstLeaf ) / 2;
-    std::nth_element( boxedLeaves_.data() + firstLeaf, boxedLeaves_.data() + midLeaf, boxedLeaves_.data() + lastLeaf, less );
-    return midLeaf;
+    return partitionBoxedLeaves<T>( boxedLeaves_.data(), box, firstLeaf, lastLeaf );
 }
 
 template<typename T>

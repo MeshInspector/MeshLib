@@ -1,6 +1,7 @@
 #include "MRMesh.h"
 #include "MRAABBTree.h"
 #include "MRAABBTreePoints.h"
+#include "MRAABBTreeWide.h"
 #include "MRAffineXf3.h"
 #include "MRBitSet.h"
 #include "MRBitSetParallelFor.h"
@@ -465,6 +466,7 @@ Expected<PackMapping> Mesh::packOptimally( bool preserveAABBTree, ProgressCallba
 
     PackMapping map;
     AABBTreePointsOwner_.reset(); // points-tree will be invalidated anyway
+    AABBTreeWideOwner_.reset();
     // an already constructed tree gives the face order much faster than getOptimalFaceOrdering
     if ( preserveAABBTree || AABBTreeOwner_.get() )
     {
@@ -543,6 +545,13 @@ const AABBTree & Mesh::getAABBTree() const
     return res;
 }
 
+const AABBTreeWide & Mesh::getAABBTreeWide() const
+{
+    const auto & res = AABBTreeWideOwner_.getOrCreate( [this]{ return AABBTreeWide( *this ); } );
+    assert( res.leafTris().size() == topology.numValidFaces() );
+    return res;
+}
+
 const AABBTreePoints & Mesh::getAABBTreePoints() const
 {
     const auto & res = AABBTreePointsOwner_.getOrCreate( [this]{ return AABBTreePoints( *this ); } );
@@ -566,6 +575,7 @@ const Dipoles & Mesh::getDipoles() const
 void Mesh::invalidateCaches( bool pointsChanged )
 {
     AABBTreeOwner_.reset();
+    AABBTreeWideOwner_.reset();
     if ( pointsChanged )
         AABBTreePointsOwner_.reset();
     dipolesOwner_.reset();
@@ -578,6 +588,7 @@ void Mesh::updateCaches( const VertBitSet * changedVerts )
         assert( tree.numLeaves() == topology.numValidFaces() );
         tree.refit( *this, changedVerts );
     } );
+    AABBTreeWideOwner_.reset();
     AABBTreePointsOwner_.update( [&]( AABBTreePoints & tree )
     {
         assert( tree.orderedPoints().size() == topology.numValidVerts() );
@@ -595,6 +606,7 @@ void Mesh::updateCachesAfterSplits( const FaceHashMap & new2Old )
         tree.addSplitFaces( *this, new2Old );
         assert( tree.numLeaves() == topology.numValidFaces() );
     } );
+    AABBTreeWideOwner_.reset();
     AABBTreePointsOwner_.reset(); // new vertices appeared
     dipolesOwner_.reset();
 }
@@ -604,6 +616,7 @@ size_t Mesh::heapBytes() const
     return topology.heapBytes()
         + points.heapBytes()
         + AABBTreeOwner_.heapBytes()
+        + AABBTreeWideOwner_.heapBytes()
         + AABBTreePointsOwner_.heapBytes()
         + dipolesOwner_.heapBytes();
 }

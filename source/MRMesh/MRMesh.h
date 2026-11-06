@@ -477,6 +477,12 @@ struct [[nodiscard]] Mesh
     /// returns cached aabb-tree for this mesh, but does not create it if it did not exist
     [[nodiscard]] const AABBTree * getAABBTreeNotCreate() const { return AABBTreeOwner_.get(); }
 
+    /// returns cached 4-wide aabb-tree of this mesh's triangles used by findProjection, creating it if it did not exist in a thread-safe manner
+    MRMESH_API const AABBTreeWide & getAABBTreeWide() const;
+
+    /// returns cached 4-wide aabb-tree of this mesh's triangles, but does not create it if it did not exist
+    [[nodiscard]] const AABBTreeWide * getAABBTreeWideNotCreate() const { return AABBTreeWideOwner_.get(); }
+
     /// returns cached aabb-tree for points of this mesh, creating it if it did not exist in a thread-safe manner
     MRMESH_API const AABBTreePoints & getAABBTreePoints() const;
 
@@ -517,6 +523,7 @@ struct [[nodiscard]] Mesh
 
 private:
     mutable SharedThreadSafeOwner<AABBTree> AABBTreeOwner_;
+    mutable SharedThreadSafeOwner<AABBTreeWide> AABBTreeWideOwner_;
     mutable SharedThreadSafeOwner<AABBTreePoints> AABBTreePointsOwner_;
     mutable SharedThreadSafeOwner<Dipoles> dipolesOwner_;
 };

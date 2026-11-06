@@ -1,4 +1,5 @@
 #include "MRAABBTree.h"
+#include "MRAABBTreeWide.h"
 #include "MRAABBTreeBase.hpp"
 #include "MRAABBTreeMaker.hpp"
 #include "MRMesh.h"
@@ -29,13 +30,11 @@ inline Box3f computeFaceBox( const Mesh & mesh, FaceId f )
     return box;
 }
 
-AABBTree::AABBTree( const MeshPart & mp )
+static Buffer<BoxedFace> makeBoxedFaces( const MeshPart & mp )
 {
-    MR_TIMER;
-
     const auto numFaces = mp.region ? (int)mp.region->count() : mp.mesh.topology.numValidFaces();
     if ( numFaces <= 0 )
-        return;
+        return {};
 
     Buffer<BoxedFace> boxedFaces( numFaces );
     const bool packed = numFaces == mp.mesh.topology.faceSize();
@@ -56,7 +55,15 @@ AABBTree::AABBTree( const MeshPart & mp )
             f = boxedFaces[i].leafId;
         boxedFaces[i].box = computeFaceBox( mp.mesh, f );
     } );
+    return boxedFaces;
+}
 
+AABBTree::AABBTree( const MeshPart & mp )
+{
+    MR_TIMER;
+    auto boxedFaces = makeBoxedFaces( mp );
+    if ( boxedFaces.size() == 0 )
+        return;
     nodes_ = makeAABBTreeNodeVec( std::move( boxedFaces ) );
 }
 
@@ -175,6 +182,137 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
         for ( auto nid = nodes_.backId(); nid; --nid )
             if ( !nodes_[nid].leaf() )
                 updateBox( nid );
+}
+
+namespace
+{
+
+/// splits AABBTreeWide nodes by the medians of their triangles as AABBTree does, two binary levels per node;
+/// so the nodes at binary depth d have ( numTris >> d ) or ( numTris >> d ) + 1 triangles
+class AABBTreeWideMaker
+{
+public:
+    using Node = AABBTreeWide::Node;
+    AABBTreeWideMaker( Buffer<BoxedFace> & boxedFaces, Vector<Node, NodeId> & nodes ) : boxedFaces_( boxedFaces ), nodes_( nodes )
+    {
+        numTris_ = (int)boxedFaces_.size();
+        for ( auto & c : cnt_ )
+            c = { -1, -1 };
+        nodes_.resize( countNodes_( 0, numTris_ ) );
+        make_( NodeId( 0 ), NodeId( 1 ), 0, 0, numTris_ );
+    }
+
+private:
+    struct Child
+    {
+        int depth, first, num;
+    };
+
+    // children of a node with numTris > MaxLeafTris: the halves, and the halves of the halves with more than MaxLeafTris
+    int children_( int depth, int first, int num, const Box3f & box, Child (&res)[AABBTreeWide::MaxChildren] ) const
+    {
+        const int mid = partitionBoxedLeaves<FaceTreeTraits3>( boxedFaces_.data(), box, first, first + num );
+        const Child halves[2] = { { depth + 1, first, mid - first }, { depth + 1, mid, first + num - mid } };
+        int k = 0;
+        for ( const auto & h : halves )
+        {
+            if ( h.num <= AABBTreeWide::MaxLeafTris )
+            {
+                res[k++] = h;
+                continue;
+            }
+            const int hmid = partitionBoxedLeaves<FaceTreeTraits3>( boxedFaces_.data(), box_( h.first, h.num ), h.first, h.first + h.num );
+            res[k++] = { depth + 2, h.first, hmid - h.first };
+            res[k++] = { depth + 2, hmid, h.first + h.num - hmid };
+        }
+        return k;
+    }
+
+    // the number of nodes in the subtree of a node at binary depth d with num triangles
+    int countNodes_( int d, int num )
+    {
+        int & res = cnt_[d][num - ( numTris_ >> d )];
+        if ( res >= 0 )
+            return res;
+        if ( num <= AABBTreeWide::MaxLeafTris )
+            return res = 1;
+        res = 1;
+        const int halves[2] = { num / 2, num - num / 2 };
+        for ( int h : halves )
+        {
+            if ( h <= AABBTreeWide::MaxLeafTris )
+                res += countNodes_( d + 1, h );
+            else
+                res += countNodes_( d + 2, h / 2 ) + countNodes_( d + 2, h - h / 2 );
+        }
+        return res;
+    }
+    int numNodes_( int d, int num ) const { return cnt_[d][num - ( numTris_ >> d )]; }
+
+    Box3f box_( int first, int num ) const
+    {
+        Box3f box;
+        for ( int i = 0; i < num; ++i )
+            box.include( boxedFaces_[first + i].box );
+        return box;
+    }
+
+    // fills node n with its subtree, whose nodes below the children of n start from desc
+    void make_( NodeId n, NodeId desc, int depth, int first, int num )
+    {
+        auto & node = nodes_[n];
+        node.box = box_( first, num );
+        if ( num <= AABBTreeWide::MaxLeafTris )
+        {
+            node.first = first;
+            node.count = -num;
+            return;
+        }
+        Child ch[AABBTreeWide::MaxChildren];
+        const int k = children_( depth, first, num, node.box, ch );
+        node.first = int( desc );
+        node.count = k;
+        NodeId childDesc[AABBTreeWide::MaxChildren];
+        NodeId next = desc + k;
+        for ( int j = 0; j < k; ++j )
+        {
+            childDesc[j] = next;
+            next = next + ( numNodes_( ch[j].depth, ch[j].num ) - 1 );
+        }
+        if ( num < 4096 )
+        {
+            for ( int j = 0; j < k; ++j )
+                make_( desc + j, childDesc[j], ch[j].depth, ch[j].first, ch[j].num );
+            return;
+        }
+        tbb::task_group group;
+        for ( int j = 1; j < k; ++j )
+            group.run( [&, j] { make_( desc + j, childDesc[j], ch[j].depth, ch[j].first, ch[j].num ); } );
+        make_( desc, childDesc[0], ch[0].depth, ch[0].first, ch[0].num );
+        group.wait();
+    }
+
+    Buffer<BoxedFace> & boxedFaces_;
+    Vector<Node, NodeId> & nodes_;
+    int numTris_ = 0;
+    std::array<int, 2> cnt_[64]; // by binary depth and the number of triangles minus ( numTris_ >> depth )
+};
+
+} // anonymous namespace
+
+AABBTreeWide::AABBTreeWide( const MeshPart & mp )
+{
+    MR_TIMER;
+    auto boxedFaces = makeBoxedFaces( mp );
+    if ( boxedFaces.size() == 0 )
+        return;
+    AABBTreeWideMaker maker( boxedFaces, nodes_ );
+    leafTris_.resize( boxedFaces.size() );
+    ParallelFor( size_t( 0 ), leafTris_.size(), [&]( size_t i )
+    {
+        const auto f = boxedFaces[i].leafId;
+        leafTris_[i] = { f, mp.mesh.topology.getTriVerts( f ) };
+    } );
 }
 
 template auto AABBTreeBase<FaceTreeTraits3>::getSubtrees( int minNum ) const -> std::vector<NodeId>;

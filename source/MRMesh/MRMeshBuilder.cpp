@@ -564,6 +564,8 @@ MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & setti
     MeshTopology res;
     if ( tryBuildFromManifoldTriangles( res, t, settings ) )
         return res;
+    // small triangulations; for rejected big ones, it adds all triangles if the only problem is edges with 3+ triangles and allowNonManifoldEdge,
+    // otherwise adds as many as it can and returns the others in settings.region
     return fromTrianglesFaceByFace( t, settings, progressCb );
 }
 

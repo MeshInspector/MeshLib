@@ -509,7 +509,8 @@ public:
     /// returns the parameters that fitData would set if this viewport had given camera parameters, this viewport is not changed;
     /// only the orientation (cameraTrackballAngle) and the projection settings of camera matter,
     /// the translation, zoom, view angle and object scale are computed (the same for other calc...Parameters functions);
-    /// the fitted camera looks at the center of the fitted box, so -cameraTranslation of the result is the rotation pivot that the fit sets;
+    /// the fitted camera looks at the center of the fitted box, so -cameraTranslation of the result is the rotation pivot that the fit sets,
+    /// unless staticRotationPivot is set or there is nothing to fit;
     /// if there is nothing to fit (empty scene or selection), camera is returned unchanged except the snapped orientation
     [[nodiscard]] MRVIEWER_API Parameters calcFitDataParameters( const Parameters& camera, float fill = 1.0f, bool snapView = true ) const;
 

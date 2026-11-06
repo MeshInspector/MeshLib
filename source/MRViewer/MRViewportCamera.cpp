@@ -895,12 +895,15 @@ Vector3f turnVector( const Quaternionf& a, const Quaternionf& b )
 
 void Viewport::animateCamera( const Parameters& target, float seconds )
 {
-    // a call during another animation keeps its rotation speed toward the new target
+    // a call during another animation continues from the moment of its last step, which set the current camera,
+    // and keeps its rotation speed toward the new target
+    double startTime = steadyClockSeconds();
     float startSpeed = 0;
     if ( cameraAnimation_ && seconds > 0 )
     {
         const auto& old = *cameraAnimation_;
-        const float oldT = std::clamp( float( ( steadyClockSeconds() - old.startTime ) / old.seconds ), 0.f, 1.f );
+        startTime = old.stepTime;
+        const float oldT = std::clamp( float( ( startTime - old.startTime ) / old.seconds ), 0.f, 1.f );
         const auto turn = turnVector( params_.cameraTrackballAngle, target.cameraTrackballAngle );
         if ( const float turnSq = turn.lengthSq(); turnSq > 1e-6f )
             startSpeed = std::clamp( easeCubicSpeed( oldT, old.startSpeed ) * ( seconds / old.seconds )
@@ -918,7 +921,7 @@ void Viewport::animateCamera( const Parameters& target, float seconds )
     auto params = target;
     copyAnimatedCamera( params_, params );
     setParameters( params ); // parameters other than the animated camera are set at once
-    cameraAnimation_ = CameraAnimation{ .start = params_, .target = target, .current = params_, .startTime = steadyClockSeconds(), .seconds = seconds, .startSpeed = startSpeed };
+    cameraAnimation_ = CameraAnimation{ .start = params_, .target = target, .current = params_, .startTime = startTime, .stepTime = startTime, .seconds = seconds, .startSpeed = startSpeed };
 }
 
 void Viewport::updateCameraAnimation_()
@@ -933,7 +936,8 @@ void Viewport::updateCameraAnimation_()
     }
 
     needRedraw_ = true;
-    const float t = float( ( steadyClockSeconds() - anim.startTime ) / anim.seconds );
+    anim.stepTime = steadyClockSeconds();
+    const float t = float( ( anim.stepTime - anim.startTime ) / anim.seconds );
     if ( t >= 1 )
     {
         copyAnimatedCamera( anim.target, params_ );

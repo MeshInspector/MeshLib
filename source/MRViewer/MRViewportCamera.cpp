@@ -490,7 +490,7 @@ Viewport::Parameters Viewport::preciseFitToScreenBorder_( Parameters params, con
         *sceneBox = params.orthographic ? transformed( unitedBox, viewXfInv ) : unitedBox;
     Vector3f sceneCenter = params.orthographic ? viewXfInv( unitedBox.center() ) : unitedBox.center();
 
-    params.cameraTranslation = -sceneCenter;
+    params.cameraTranslation = -sceneCenter; // the camera looks at the scene center, applyPreciseFit_ takes it as the rotation pivot
     params.cameraViewAngle = 45.0f;
     params.objectScale = sceneObjsBox.valid() ? sceneObjsBox.diagonal() : 1.0f; // we should not take global basis into account here
     if ( params.objectScale == 0.0f )
@@ -694,7 +694,7 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
     return box;
 }
 
-std::pair<float, bool> Viewport::getZoomFOVtoScreen_( const Parameters& params, std::function<Box3f()> getBoxFn ) const
+std::pair<float, bool> Viewport::getZoomFOVtoScreen_( const Parameters& params, const std::function<Box3f()>& getBoxFn ) const
 {
     const auto box = getBoxFn();
     if ( !box.valid() )
@@ -722,6 +722,8 @@ void Viewport::fitBox( const Box3f& newSceneBox, float fill /*= 1.0f*/, bool sna
 Viewport::Parameters Viewport::calcFitBoxParameters( const Parameters& camera, const Box3f& box, float fill, bool snapView ) const
 {
     auto params = camera;
+    if ( snapView )
+        params.cameraTrackballAngle = getClosestCanonicalQuaternion( params.cameraTrackballAngle );
     if ( !box.valid() )
         return params;
     params.cameraTranslation = -box.center();
@@ -733,9 +735,6 @@ Viewport::Parameters Viewport::calcFitBoxParameters( const Parameters& camera, c
     auto tanFOV = tan( 0.5f * params.cameraViewAngle / 180.f * PI_F );
     auto factor = params.orthographic ? 1.f / ( cameraEye - cameraCenter ).length() : 1.f;
     params.cameraZoom = factor * fill / ( params.objectScale * tanFOV );
-
-    if ( snapView )
-        params.cameraTrackballAngle = getClosestCanonicalQuaternion( params.cameraTrackballAngle );
     return params;
 }
 
@@ -747,7 +746,7 @@ void Viewport::fitData( float fill, bool snapView )
 
 Viewport::Parameters Viewport::calcFitDataParameters( const Parameters& camera, float fill, bool snapView ) const
 {
-    return calcFitBoxParameters( camera, SceneRoot::get().getWorldTreeBox( id ), fill, snapView );
+    return calcFitBoxParameters( camera, calcSceneBox_(), fill, snapView );
 }
 
 // ================================================================

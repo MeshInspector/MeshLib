@@ -600,110 +600,119 @@ TexturePerFace getCornerControllerHoveredTextureMap( RegionId rId )
     return textures;
 }
 
-void updateCurrentViewByControllerRegion( CornerControllerObject::PickedIds pickedId )
+void updateCurrentViewByControllerRegion( CornerControllerObject::PickedIds pickedId, float animationSec )
 {
     if ( !pickedId.rId || !pickedId.vId )
         return;
     Viewport& vp = getViewerInstance().viewport( pickedId.vId );
+    // a click during the animation turns the view from the animation target
+    auto camera = vp.getCameraAnimationTarget() ? *vp.getCameraAnimationTarget() : vp.getParameters();
+    // the same orientation as Viewport::cameraLookAlong gives: dir becomes the view direction, up - the up direction
+    const auto lookAlong = [&camera] ( const Vector3f& dir, const Vector3f& up )
+    {
+        camera.cameraTrackballAngle = Quaternionf( Matrix3f( cross( dir, up ).normalized(), up.normalized(), -dir.normalized() ) );
+    };
     auto rId = pickedId.rId;
     switch ( int( rId ) )
     {
     // sides
     case 0: //from  -x
-        vp.cameraLookAlong( { 1,0,0 }, { 0,0,1 } );
+        lookAlong( { 1,0,0 }, { 0,0,1 } );
         break;
     case 1: //from  x
-        vp.cameraLookAlong( { -1,0,0 }, { 0,0,1 } );
+        lookAlong( { -1,0,0 }, { 0,0,1 } );
         break;
     case 2: //from  -y
-        vp.cameraLookAlong( { 0,1,0 }, { 0,0,1 } );
+        lookAlong( { 0,1,0 }, { 0,0,1 } );
         break;
     case 3: //from  y
-        vp.cameraLookAlong( { 0,-1,0 }, { 0,0,1 } );
+        lookAlong( { 0,-1,0 }, { 0,0,1 } );
         break;
     case 4: //from  -z
-        vp.cameraLookAlong( { 0,0,1 }, { 0,1,0 } );
+        lookAlong( { 0,0,1 }, { 0,1,0 } );
         break;
     case 5: //from  z
-        vp.cameraLookAlong( { 0,0,-1 }, { 0,1,0 } );
+        lookAlong( { 0,0,-1 }, { 0,1,0 } );
         break;
 
     // 2 rank corners
     case 6 + 0: //from  -x -y
-        vp.cameraLookAlong( { 1,1,0 }, { 0,0,1 } );
+        lookAlong( { 1,1,0 }, { 0,0,1 } );
         break;
     case 6 + 1: //from  -x y
-        vp.cameraLookAlong( { 1,-1,0 }, { 0,0,1 } );
+        lookAlong( { 1,-1,0 }, { 0,0,1 } );
         break;
     case 6 + 2: //from  x -y
-        vp.cameraLookAlong( { -1,1,0 }, { 0,0,1 } );
+        lookAlong( { -1,1,0 }, { 0,0,1 } );
         break;
     case 6 + 3: //from  x y
-        vp.cameraLookAlong( { -1,-1,0 }, { 0,0,1 } );
+        lookAlong( { -1,-1,0 }, { 0,0,1 } );
         break;
     case 6 + 4: //from  -y -z
-        vp.cameraLookAlong( { 0,1,1 }, { 0,-1,1 } );
+        lookAlong( { 0,1,1 }, { 0,-1,1 } );
         break;
     case 6 + 5: //from  -y z
-        vp.cameraLookAlong( { 0,1,-1 }, { 0,1,1 } );
+        lookAlong( { 0,1,-1 }, { 0,1,1 } );
         break;
     case 6 + 6: //from  y -z
-        vp.cameraLookAlong( { 0,-1,1 }, { 0,1,1 } );
+        lookAlong( { 0,-1,1 }, { 0,1,1 } );
         break;
     case 6 + 7: //from  y z
-        vp.cameraLookAlong( { 0,-1,-1 }, { 0,-1,1 } );
+        lookAlong( { 0,-1,-1 }, { 0,-1,1 } );
         break;
     case 6 + 8: //from  -z -x
-        vp.cameraLookAlong( { 1,0,1 }, { -1,0,1 } );
+        lookAlong( { 1,0,1 }, { -1,0,1 } );
         break;
     case 6 + 9: //from  -z x
-        vp.cameraLookAlong( { -1,0,1 }, { 1,0,1 } );
+        lookAlong( { -1,0,1 }, { 1,0,1 } );
         break;
     case 6 + 10: //from  z -x
-        vp.cameraLookAlong( { 1,0,-1 }, { 1,0,1 } );
+        lookAlong( { 1,0,-1 }, { 1,0,1 } );
         break;
     case 6 + 11: //from  z x
-        vp.cameraLookAlong( { -1,0,-1 }, { -1,0,1 } );
+        lookAlong( { -1,0,-1 }, { -1,0,1 } );
         break;
 
     // 3 rank corners
     case 6 + 12 + 0: //from -x -y -z
-        vp.cameraLookAlong( { 1,1,1 }, { -1,-1,2 } );
+        lookAlong( { 1,1,1 }, { -1,-1,2 } );
         break;
     case 6 + 12 + 1: //from x -y -z
-        vp.cameraLookAlong( { -1,1,1 }, { 1,-1,2 } );
+        lookAlong( { -1,1,1 }, { 1,-1,2 } );
         break;
     case 6 + 12 + 2: //from -x y -z
-        vp.cameraLookAlong( { 1,-1,1 }, { -1,1,2 } );
+        lookAlong( { 1,-1,1 }, { -1,1,2 } );
         break;
     case 6 + 12 + 3: //from x y -z
-        vp.cameraLookAlong( { -1,-1,1 }, { 1,1,2 } );
+        lookAlong( { -1,-1,1 }, { 1,1,2 } );
         break;
     case 6 + 12 + 4: //from -x -y z
-        vp.cameraLookAlong( { 1,1,-1 }, { 1,1,2 } );
+        lookAlong( { 1,1,-1 }, { 1,1,2 } );
         break;
     case 6 + 12 + 5: //from x -y z
-        vp.cameraLookAlong( { -1,1,-1 }, { -1,1,2 } );
+        lookAlong( { -1,1,-1 }, { -1,1,2 } );
         break;
     case 6 + 12 + 6: //from -x y z
-        vp.cameraLookAlong( { 1,-1,-1 }, { 1,-1,2 } );
+        lookAlong( { 1,-1,-1 }, { 1,-1,2 } );
         break;
     case 6 + 12 + 7: //from x y z
-        vp.cameraLookAlong( { -1,-1,-1 }, { -1,-1,2 } );
+        lookAlong( { -1,-1,-1 }, { -1,-1,2 } );
         break;
 
     // side axes rotation
     case int( SideRegions::CCWArrow ): // rotation
-        vp.transformView( AffineXf3f::xfAround( Matrix3f::rotation( vp.getBackwardDirection(), PI2_F ), vp.getCameraPoint() ) );
+        camera.cameraTrackballAngle = Quaternionf( Vector3f::plusZ(), PI2_F ) * camera.cameraTrackballAngle; // around the view direction
         break;
     case int( SideRegions::CWArrow ) : // rotation other way
-        vp.transformView( AffineXf3f::xfAround( Matrix3f::rotation( vp.getBackwardDirection(), -PI2_F ), vp.getCameraPoint() ) );
+        camera.cameraTrackballAngle = Quaternionf( Vector3f::plusZ(), -PI2_F ) * camera.cameraTrackballAngle;
         break;
     default:
         return;
     }
 
-    vp.preciseFitDataToScreenBorder( { 0.9f } );
+    Box3f sceneBox;
+    const auto target = vp.calcPreciseFitDataParameters( camera, { 0.9f }, &sceneBox );
+    vp.animateCamera( target, animationSec, sceneBox ); // with animationSec = 0 the same as preciseFitDataToScreenBorder
 }
 
 void CornerControllerObject::initDefault()
@@ -976,14 +985,13 @@ void CornerControllerObject::hover_( const Vector2f& mousePos )
 
 bool CornerControllerObject::press_( const Vector2f& mousePos )
 {
-    if ( !pickedId_.rId )
-        return false;
-
+    // no check of hovered pickedId_ here: during camera animation it can be stale,
+    // because hover_ picks before the controller is drawn with the new camera
     auto curPick = pick_( mousePos );
     if ( !curPick.rId )
         return false;
 
-    updateCurrentViewByControllerRegion( curPick );
+    updateCurrentViewByControllerRegion( curPick, cameraAnimation_ ? 0.3f : 0.f );
     return true;
 }
 

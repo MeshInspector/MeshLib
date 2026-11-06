@@ -898,7 +898,7 @@ Vector3f turnVector( const Quaternionf& a, const Quaternionf& b )
 
 }
 
-void Viewport::animateCamera( const Parameters& target, float seconds )
+void Viewport::animateCamera( const Parameters& target, float seconds, const Box3f& sceneBox )
 {
     // a call during another animation continues from the moment of its last step, which set the current camera,
     // and keeps its rotation speed toward the new target
@@ -915,6 +915,8 @@ void Viewport::animateCamera( const Parameters& target, float seconds )
                 * dot( turnVector( old.start.cameraTrackballAngle, old.target.cameraTrackballAngle ), turn ) / turnSq, 0.f, 3.f );
     }
     cameraAnimation_.reset();
+    if ( sceneBox.valid() )
+        sceneBox_ = sceneBox;
     // as after a fit: rotate around the point in the center of the target view, but not move the pivot of a rotation in progress
     if ( rotationDepth_ <= 0 )
         setRotationPivot_( target.staticRotationPivot ? *target.staticRotationPivot : -target.cameraTranslation );

@@ -24,7 +24,7 @@ TEST(MRMesh, AABBTree)
     EXPECT_EQ( tree.getBoundingBox(), sphere.computeBoundingBox().insignificantlyExpanded() );
     EXPECT_FALSE( tree.isLeaf( tree[tree.rootNodeId()].l ) );
     EXPECT_FALSE( tree.isLeaf( tree[tree.rootNodeId()].r ) );
-    EXPECT_EQ( tree.leafBoxes().size(), sphere.topology.faceSize() );
+    EXPECT_EQ( tree.leaves().size(), sphere.topology.numValidFaces() );
 
     assert( !tree.empty() );
     auto m = std::move( tree );
@@ -37,7 +37,7 @@ TEST(MRMesh, AABBTree)
     EXPECT_EQ( smallerTree.numLeaves(), 1 );
     ASSERT_TRUE( smallerTree.isLeaf( smallerTree.rootNodeId() ) );
     EXPECT_EQ( smallerTree.leafId( smallerTree.rootNodeId() ), 1_f );
-    EXPECT_EQ( smallerTree.getBoundingBox(), smallerTree.leafBoxes()[1_f] );
+    EXPECT_EQ( smallerTree.getBoundingBox(), smallerTree.leaves()[0].box );
     EXPECT_EQ( smallerTree.getSubtreeLeaves( smallerTree.rootNodeId() ), fs );
     EXPECT_EQ( smallerTree.getSubtrees( 4 ), std::vector<NodeId>{ smallerTree.rootNodeId() } );
 }
@@ -109,7 +109,7 @@ TEST( MRMesh, AABBTreeRefitAndPack )
     mesh.packOptimally( true );
     const auto & tree = mesh.getAABBTree();
     expectValidTree( tree, mesh );
-    EXPECT_EQ( tree.leafBoxes().size(), mesh.topology.faceSize() );
+    EXPECT_EQ( tree.numLeaves(), mesh.topology.faceSize() );
 
     // the faces are in the order of the leaves now
     AABBTree::LeafBMap map;

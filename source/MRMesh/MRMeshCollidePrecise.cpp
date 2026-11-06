@@ -42,7 +42,7 @@ public:
     {
         if ( xf )
         {
-            const auto sz = bTree.nodes().size() + bTree.leafBoxes().size();
+            const auto sz = bTree.nodes().size() + bTree.numLeaves();
             bBoxes_.resize( sz );
             bState_ = std::vector<std::atomic<std::uint8_t>>( sz );
         }
@@ -57,7 +57,7 @@ private:
     /// the box of node or leaf b after the transformation, computed on the first request (from any thread) and kept for the next ones
     Box3f transformedB_( NodeId b ) const
     {
-        const size_t i = AABBTree::isLeaf( b ) ? bTree_.nodes().size() + AABBTree::leafId( b ) : size_t( b );
+        const size_t i = AABBTree::isLeaf( b ) ? bTree_.nodes().size() + AABBTree::Node::leafIndex( b ) : size_t( b );
         auto & state = bState_[i];
         if ( state.load( std::memory_order_acquire ) == cReady )
             return bBoxes_[i];
@@ -509,19 +509,19 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
 
     // the traversal visits every node, and each many times, so the boxes after the transformation are computed once in advance
     Vector<Box3f, NodeId> xfBoxes;
-    AABBTree::LeafBoxes xfLeafBoxes;
+    std::vector<Box3f> xfLeafBoxes;
     if ( rigidB2A )
     {
         xfBoxes.resizeNoInit( tree.nodes().size() );
         ParallelFor( xfBoxes, [&]( NodeId i ) { xfBoxes[i] = transformed( tree[i].box, *rigidB2A ); } );
-        xfLeafBoxes.resizeNoInit( tree.leafBoxes().size() );
-        ParallelFor( xfLeafBoxes, [&]( FaceId f ) { xfLeafBoxes[f] = transformed( tree.leafBoxes()[f], *rigidB2A ); } );
+        xfLeafBoxes.resize( tree.numLeaves() );
+        ParallelFor( xfLeafBoxes, [&]( size_t i ) { xfLeafBoxes[i] = transformed( tree.leaves()[i].box, *rigidB2A ); } );
     }
     auto xfBox = [&]( NodeId n ) -> const Box3f &
     {
         if ( !rigidB2A )
             return tree.box( n );
-        return AABBTree::isLeaf( n ) ? xfLeafBoxes[AABBTree::leafId( n )] : xfBoxes[n];
+        return AABBTree::isLeaf( n ) ? xfLeafBoxes[AABBTree::Node::leafIndex( n )] : xfBoxes[n];
     };
     const double minGap = 2 / conv.invRange;
     auto processBoxes = [&] ( const NodeNode & s )

@@ -1,7 +1,6 @@
 #include "MRAABBTreeObjects.h"
 #include "MRAABBTreeBase.hpp"
 #include "MRAABBTreeMaker.hpp"
-#include "MRBuffer.h"
 #include "MRMeshOrPoints.h"
 
 namespace MR
@@ -17,7 +16,7 @@ AABBTreeObjects::AABBTreeObjects( Vector<MeshOrPointsXf, ObjId> objs ) : objs_( 
 {
     MR_TIMER;
     using BoxedObj = BoxedLeaf<Traits>;
-    Buffer<BoxedObj> boxedObjs( objs_.size() );
+    std::vector<BoxedObj> boxedObjs( objs_.size() );
     toLocal_.resize( objs_.size() );
 
     for ( ObjId oi(0); oi < objs_.size(); ++oi )
@@ -26,7 +25,7 @@ AABBTreeObjects::AABBTreeObjects( Vector<MeshOrPointsXf, ObjId> objs ) : objs_( 
         boxedObjs[oi].box = transformed( objs_[oi].obj.getObjBoundingBox(), objs_[oi].xf );
         toLocal_[oi] = objs_[oi].xf.inverse();
     }
-    build_( std::move( boxedObjs ), objs_.size() );
+    build_( std::move( boxedObjs ) );
 }
 
 } //namespace MR

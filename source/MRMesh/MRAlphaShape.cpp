@@ -42,7 +42,7 @@ void computeAllIntPointsAndTwins( AlphaShapeData & res, const PointCloud & cloud
     res.intPoints = computeIntCoords( res.toInt, cloud.points, &cloud.validPoints );
 
     // only the smallest id of a position in the integer grid takes part in the searches
-    std::vector<std::pair<Vector3i, VertId>> order;
+    Vector<std::pair<Vector3i, VertId>> order;
     order.reserve( cloud.validPoints.count() );
     for ( auto v : cloud.validPoints )
         order.emplace_back( res.intPoints[v], v );
@@ -571,7 +571,7 @@ std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud
     const auto & data = fullData.intPoints.empty() ? inData : fullData;
 
     // the points taking part in the searches: the twins do not
-    std::vector<VertId> searchPoints;
+    Vector<VertId> searchPoints;
     searchPoints.reserve( cloud.validPoints.count() );
     for ( auto v : cloud.validPoints )
         if ( !data.twins.test( v ) )
@@ -610,7 +610,7 @@ std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud
     };
     // the pivoting goes in waves: the ball is pivoted over the unresolved edges of the triangles found by the previous wave
     // in parallel, then the found triangles are added one by one in a fixed order, so the result does not depend on the threads
-    std::vector<ThreeVertIds> pivots, nextPivots; // edge (0, 1) of a found triangle with its third vertex 2
+    Vector<ThreeVertIds> pivots, nextPivots; // edge (0, 1) of a found triangle with its third vertex 2
     // marks edge (a, b) of triangle (a, b, c) resolved if abResolved, and adds the triangle with its unresolved edges to pivot over if it is new
     auto addTri = [&]( VertId a, VertId b, VertId c, bool abResolved )
     {
@@ -633,7 +633,7 @@ std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud
         nextPivots.push_back( { c, a, b } );
     };
 
-    std::vector<VertId> pivotRes; // the point found by each pivot of the wave
+    Vector<VertId> pivotRes; // the point found by each pivot of the wave
     tbb::enumerable_thread_specific<std::vector<BallPivotCandidate>> threadCands;
     // finds all the triangles reachable from the seed by the pivoting; returns false if canceled
     auto growComponent = [&]( const ThreeVertIds & seed )
@@ -642,7 +642,7 @@ std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud
         while ( !nextPivots.empty() )
         {
             pivots.clear();
-            std::swap( pivots, nextPivots );
+            pivots.swap( nextPivots );
             // the pivots over the edges resolved by the previous wave are dropped, the other edges become resolved
             size_t n = 0;
             for ( const auto & p : pivots )
@@ -709,9 +709,9 @@ std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud
     // the search of a first triangle costs as much as the search of all triangles around the point,
     // so it is made in parallel for a batch of points; one component needs only a few of them
     const size_t batchSize = allComponents ? 256 : 16;
-    std::vector<VertId> heap, batch;
-    std::vector<std::optional<ThreeVertIds>> batchSeeds;
-    std::vector<std::pair<size_t, size_t>> components; // the ranges of the triangles in res
+    Vector<VertId> heap, batch;
+    Vector<std::optional<ThreeVertIds>> batchSeeds;
+    Vector<std::pair<size_t, size_t>> components; // the ranges of the triangles in res
     // grows the components from the points in the direction's order: all of them, or only the first one;
     // returns false if canceled
     auto searchFrom = [&]( int axis, int sign )

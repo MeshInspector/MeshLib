@@ -544,6 +544,10 @@ public:
 
     MRVIEWER_API const Box3f& getSceneBox() const;
 
+    /// sets the scene box, whose center is the scene center e.g. for rotation compensation and turns around the scene;
+    /// the fit functions set it, so set the box from calcPreciseFit...Parameters when applying their result with animateCamera
+    void setSceneBox( const Box3f& box ) { sceneBox_ = box; }
+
     const Parameters& getParameters() const { return params_; }
 
     // returns camera world location for the current view

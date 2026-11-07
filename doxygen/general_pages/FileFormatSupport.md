@@ -30,6 +30,9 @@ The tables below categorize MeshLib's supported file formats based on their type
 > [!NOTE]
 > STEP (.STP) files are converted into mesh representations within MeshLib.
 
+> [!NOTE]
+> OFF files are read both in textual and in binary (`OFF BINARY`) variants; they are always saved as text.
+
 ### Point Cloud Formats
 
 | **Format** | **Import** | **Color Support** | **Export** |

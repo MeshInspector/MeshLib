@@ -1,12 +1,27 @@
 #pragma once
 
 #include "MRMacros.h"
+#include "MRParallelFor.h"
 #include "MRVector.h"
 #include "MRphmap.h"
+#include "MRPch/MRBindingMacros.h"
 #include <variant>
 
 namespace MR
 {
+
+namespace detail
+{
+
+/// phmap has no public access to a slot of a hash table by its index: take its protected iterator_at() via a member pointer
+template <typename K, typename V>
+struct MR_BIND_IGNORE HashMapSlots : HashMap<K, V>
+{
+    using IteratorAt = typename HashMap<K, V>::const_iterator ( HashMap<K, V>::* )( size_t ) const;
+    static constexpr IteratorAt iteratorAt = &HashMapSlots::iterator_at;
+};
+
+} // namespace detail
 
 /// stores a mapping from keys K to values V in one of two forms:
 /// 1) as dense map (vector) preferable when there are few missing keys in a range [0, endKey)
@@ -36,6 +51,11 @@ struct MapOrHashMap
     /// executes given function for all pairs (key, value) with valid value for dense map
     template<typename F>
     void forEach( F && f ) const;
+
+    /// executes given function for all pairs (key, value) with valid value for dense map
+    /// in parallel threads, so f must be safe to call concurrently for different keys
+    template<typename F>
+    void forEachParallel( F && f ) const;
 
     [[nodiscard]]       Dense* getMap()       MR_LIFETIMEBOUND { return get_if<Dense>( &var ); }
     [[nodiscard]] const Dense* getMap() const MR_LIFETIMEBOUND { return get_if<Dense>( &var ); }
@@ -98,6 +118,35 @@ void MapOrHashMap<K,V>::forEach( F && f ) const
         {
             for ( const auto & [ key, val ] : hashMap )
                 f( key, val );
+        }
+    }, var );
+}
+
+template <typename K, typename V>
+template <typename F>
+void MapOrHashMap<K,V>::forEachParallel( F && f ) const
+{
+    std::visit( overloaded{
+        [&f]( const Dense& map )
+        {
+            ParallelFor( map, [&] ( K key )
+            {
+                if ( auto val = map[key] )
+                    f( key, val );
+            } );
+        },
+        [&f]( const Hash& hashMap )
+        {
+            // each range of slots is visited from its first full slot till the first full slot of the next range
+            auto firstFullFrom = [&hashMap] ( size_t slot )
+            {
+                return slot == 0 ? hashMap.begin() : ++( hashMap.*detail::HashMapSlots<K, V>::iteratorAt )( slot - 1 );
+            };
+            tbb::parallel_for( tbb::blocked_range<size_t>( 0, hashMap.capacity() ), [&] ( const tbb::blocked_range<size_t>& range )
+            {
+                for ( auto it = firstFullFrom( range.begin() ), last = firstFullFrom( range.end() ); it != last; ++it )
+                    f( it->first, it->second );
+            } );
         }
     }, var );
 }

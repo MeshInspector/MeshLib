@@ -163,20 +163,12 @@ jobs:
           # too small an address space for our PCH when targeting ARM64 (C3859, C1076).
           msbuild-architecture: ${{ matrix.arch == 'arm64' && 'arm64' || 'x86' }}
 
-      - name: Install MSYS2 for MRBind
+      - name: Install MSYS2 clang and make
         if: ${{ inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true' }}
         uses: ./.github/actions/install-msys2-mrbind
         with:
           packages-suffix: ${{ env.MSYS2_PKGS }}
-
-      - name: Build MRBind
-        if: ${{ inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true' }}
-        uses: ./.github/actions/build-mrbind
-        with:
-          cache-key-prefix: ${{ matrix.arch == 'arm64' && 'windows-clangarm64' || 'windows-clang22' }}
-          build-script: scripts/mrbind/install_mrbind_windows_msys2.bat
-          extra-cache-key: ${{ hashFiles(format('scripts/mrbind/msys2_package_hashes{0}.txt', env.MSYS2_PKGS)) }}
-          msys2-env: ${{ env.MSYS2_ENV }}
+          compile-only: true
 
       - name: Add clang-cl to MSYS2 clang
         # MSYS2 ships no clang-cl.exe; clang.exe called by that name runs in cl mode
@@ -222,34 +214,11 @@ jobs:
       # Both build systems wait here rather than before the Build step, so the main build
       # overlaps with generate-c-bindings: MeshLib.sln carries neither the C nor the C#
       # bindings projects, and the CMake build configures its C bindings out until now.
-      - name: Wait for C bindings
+      - name: Get C bindings
         if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
-        uses: ./.github/actions/wait-for-job
+        uses: ./.github/actions/get-c-bindings
         with:
-          job-name: generate-c-bindings
-
-      - name: Download C bindings
-        if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
-        uses: actions/download-artifact@v8
-        with:
-          name: CBindings
-          path: MeshLib/CbindingsTmp
-
-      - name: Prepare C bindings folders
-        if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
-        run: |
-          rm -r -force source/MeshLibC2
-          move MeshLib/CbindingsTmp/MeshLibC2 source
-          if ( $env:CUDA_VERSION ) {
-            rm -r -force source/MeshLibC2Cuda
-            move MeshLib/CbindingsTmp/MeshLibC2Cuda source
-          } else {
-            # No Cuda toolkit, so MRCuda is not built and the generated Cuda bindings cannot
-            # link. Keep this project's CMakeLists and stub its sources, as macOS does; see
-            # scripts/mrbind/cuda_placeholder_generated_c/README.md
-            cp -R scripts/mrbind/cuda_placeholder_generated_c/include source/MeshLibC2Cuda
-            cp -R scripts/mrbind/cuda_placeholder_generated_c/src source/MeshLibC2Cuda
-          }
+          cuda: ${{ env.CUDA_VERSION != '' }}
 
         # This consumes the JSON created by generating the C bindings.
       - name: Generate C# bindings
@@ -264,8 +233,8 @@ jobs:
         # `CSHARP_STATIC_DLLIMPORT=1` is used to build the version of the bindings that's suitable for use in Wasm in Unity.
         run: |
           call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
-          call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}} || exit /b 1
-          call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}} CSHARP_STATIC_DLLIMPORT=1 CSHARP_INPUT_JSON=MeshLib/CbindingsTmp/MeshLibC2Wasm/temp/interop_desc.json || exit /b 1
+          call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp PREGENERATED=1 CSHARP_MODE=${{matrix.config}} || exit /b 1
+          call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp PREGENERATED=1 CSHARP_MODE=${{matrix.config}} CSHARP_STATIC_DLLIMPORT=1 CSHARP_INPUT_JSON=MeshLib/CbindingsTmp/MeshLibC2Wasm/temp/interop_desc.json || exit /b 1
           dotnet build examples/c-sharp-examples -c ${{matrix.config}} -p:Platform=%MSBUILD_PLATFORM% -p:MeshLibArch=%MR_ARCH% || exit /b 1
 
       - name: Build C bindings
@@ -286,6 +255,8 @@ jobs:
             call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
             cmake -S . -B source\TempOutput %CMAKE_COMPILER_ARGS% -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON || exit /b 1
             cmake --build source\TempOutput -j %NUMBER_OF_PROCESSORS% --target MeshLibC2 MeshLibC2Cuda MRTestC2 || exit /b 1
+            rem Only with the viewer and the Python modules.
+            if exist source\TempOutput\MeshLibC2PythonViewer cmake --build source\TempOutput -j %NUMBER_OF_PROCESSORS% --target MeshLibC2PythonViewer || exit 1
             rem Only the new binaries need deploying; see the Build step's note on the serial pass.
             for %%b in (source\TempOutput\bin\MeshLibC2*.dll source\TempOutput\bin\MRTestC2.exe) do (
               %VCPKG_ROOT%\vcpkg.exe z-applocal --target-binary="%%b" --installed-bin-dir="%VCPKG_ROOT%\installed\%VCPKG_TARGET_TRIPLET%${{ matrix.config == 'Debug' && '\debug' || '' }}\bin" >nul || exit 1
@@ -300,6 +271,7 @@ jobs:
             if ${{ fromJSON('["1==0", "1==1"]')[env.CUDA_VERSION != '' || matrix.arch == 'arm64'] }} (
               msbuild -m source\MeshLibC2Cuda\MeshLibC2Cuda.vcxproj -p:Configuration=${{ matrix.config }} -p:Platform=%MSBUILD_PLATFORM% -p:SolutionDir=%CD%\source\ -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }};MR_PCH_USE_EXTRA_HEADERS=ON || exit 1
             )
+            msbuild -m source\MeshLibC2PythonViewer\MeshLibC2PythonViewer.vcxproj -p:Configuration=${{ matrix.config }} -p:Platform=%MSBUILD_PLATFORM% -p:SolutionDir=%CD%\source\ -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MR_PCH_USE_EXTRA_HEADERS=ON || exit /b 1
           )
 
       - name: Generate and build Python bindings
@@ -312,7 +284,7 @@ jobs:
         # one to fail the step on a generation error instead of swallowing it.
         run: |
           call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
-          call ./scripts/mrbind/generate_win.bat -B --trace MODE=none VS_MODE=${{matrix.config}} || exit /b 1
+          call ./scripts/mrbind/generate_win.bat -B --trace MODE=none PYTHON_SOURCES_DIR=source/MeshLibC2/temp/python VS_MODE=${{matrix.config}} || exit /b 1
 
       - name: Diagnostic — output bin DLL inventory + MRMesh imports
         if: ${{ always() }}
@@ -395,13 +367,6 @@ jobs:
         run: |
           py -3 scripts/junit_to_csv.py unit_tests_report.csv (get-item unit_tests_report_*.xml)
           cat unit_tests_report.csv
-
-      - name: Delete unwanted files
-        # Those files should not exist when using CMake.
-        shell: cmd
-        run: |
-          if exist source\%MR_ARCH%\Debug\pybind11nonlimitedapi_meshlib_3*.dll del /Q source\%MR_ARCH%\Debug\pybind11nonlimitedapi_meshlib_3*.dll
-          if exist source\%MR_ARCH%\Release\pybind11nonlimitedapi_meshlib_3*.dll del /Q source\%MR_ARCH%\Release\pybind11nonlimitedapi_meshlib_3*.dll
 
       # clang-cl ships the `cmake --install` prefix (with the vcpkg dependencies) as its distributive,
       # so it carries the CMake package config; the MeshLib .pdb files go next to their binaries.

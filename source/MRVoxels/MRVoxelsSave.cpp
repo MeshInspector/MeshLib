@@ -277,6 +277,7 @@ Expected<void> gridToVdb( const FloatGrid& grid, const std::filesystem::path& fi
 
 Expected<void> gridToVdb( const FloatGrid& vdbVolume, std::ostream& out, ProgressCallback /*callback*/ /*= {} */ )
 {
+    openvdb::initialize(); // registers the grid I/O codecs, without which OpenVDB 14 refuses to write
     openvdb::io::Stream stream( out );
     stream.write( openvdb::GridCPtrVec{ vdbVolume.toVdb() } );
     if ( !out )

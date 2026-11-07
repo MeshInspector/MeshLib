@@ -80,8 +80,7 @@ if ($dumpbin) {
     # current Start-and-Exit smoke test).
     foreach ($target in 'MeshViewer.exe','MRMesh.dll','MRTest.exe',
                         'python312.dll','python314.dll','python3.dll',
-                        'MREmbeddedPython.dll','MRPython.dll',
-                        'pybind11nonlimitedapi_stubs.dll') {
+                        'MREmbeddedPython.dll','MRPython.dll') {
         if (Test-Path $target) {
             Write-Host ""
             Write-Host "=== Import table of $target (dumpbin /dependents) ==="

@@ -60,7 +60,7 @@ struct DecomposedXf { Vector3f translation, rotationDeg, scale; };
 static DecomposedXf decomposeXf( const AffineXf3f& xf )
 {
     Matrix3f rotation, scaling;
-    decomposeMatrix3( xf.A, rotation, scaling );
+    decomposeMatrix3( xf.A, rotation, scaling, true ); // Euler angles cannot express an improper rotation of a mirror
     return {
         .translation = xf.b,
         .rotationDeg = rotation.toEulerAngles() * ( 180.f / PI_F ),
@@ -109,21 +109,10 @@ static nlohmann::json transformToJson( const AffineXf3f& xf )
     } );
 }
 
-// Color in/out as `[r, g, b]` or `[r, g, b, a]` floats in [0, 1].
+// Color out as `[r, g, b, a]` floats in [0, 1], as `parseColor` reads it.
 static nlohmann::json colorToJson( const Color& c )
 {
     return nlohmann::json::array( { c.r / 255.f, c.g / 255.f, c.b / 255.f, c.a / 255.f } );
-}
-
-static Color parseColor( const nlohmann::json& j, std::string_view field )
-{
-    if ( !j.is_array() || ( j.size() != 3 && j.size() != 4 ) )
-        throw std::runtime_error( fmt::format( "`{}` must be a 3- or 4-element array of floats in [0,1]", field ) );
-    const float r = j[0].get<float>();
-    const float g = j[1].get<float>();
-    const float b = j[2].get<float>();
-    const float a = j.size() == 4 ? j[3].get<float>() : 1.0f;
-    return Color{ r, g, b, a }; // the float ctor clamps to [0, 1]
 }
 
 // Geometry counts and measures of mesh and point-cloud objects, in object-local units;
@@ -199,7 +188,7 @@ static nlohmann::json objectRow( const Object& obj, const Object* parent )
 static nlohmann::json mcpSceneListObjectTree( const nlohmann::json& args )
 {
     nlohmann::json rows = nlohmann::json::array();
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    runOnMainThread( [&]
     {
         auto rootEx = pickRoot( args );
         if ( !rootEx )
@@ -215,7 +204,7 @@ static nlohmann::json mcpSceneListObjectTree( const nlohmann::json& args )
 static nlohmann::json mcpSceneGetObjectInfo( const nlohmann::json& args )
 {
     nlohmann::json out;
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    runOnMainThread( [&]
     {
         const uint64_t id = args.at( "id" ).get<uint64_t>();
         auto objEx = resolveId( id );
@@ -260,7 +249,7 @@ static nlohmann::json mcpSceneGetObjectInfo( const nlohmann::json& args )
 
 static nlohmann::json mcpSceneSetObjectState( const nlohmann::json& args )
 {
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    runOnMainThread( [&]
     {
         auto objEx = resolveId( args.at( "id" ).get<uint64_t>() );
         if ( !objEx )
@@ -364,13 +353,13 @@ static nlohmann::json mcpSceneSetObjectState( const nlohmann::json& args )
             }
         }
     } );
-    skipFramesAfterInput();
+    (void)waitFramesAfterInput();
     return nlohmann::json::object();
 }
 
 static nlohmann::json mcpSceneRemoveObject( const nlohmann::json& args )
 {
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    runOnMainThread( [&]
     {
         auto objEx = resolveId( args.at( "id" ).get<uint64_t>() );
         if ( !objEx )
@@ -380,7 +369,7 @@ static nlohmann::json mcpSceneRemoveObject( const nlohmann::json& args )
         AppendHistory<ChangeSceneAction>( _t( "MCP removeObject" ), obj, ChangeSceneAction::Type::RemoveObject );
         obj->detachFromParent();
     } );
-    skipFramesAfterInput();
+    (void)waitFramesAfterInput();
     return nlohmann::json::object();
 }
 
@@ -404,7 +393,7 @@ static std::string mimeForExt( std::string_view ext )
 static nlohmann::json mcpSceneGetObject( const nlohmann::json& args )
 {
     nlohmann::json out = nlohmann::json::object();
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    runOnMainThread( [&]
     {
         auto objEx = resolveId( args.at( "id" ).get<uint64_t>() );
         if ( !objEx )
@@ -466,7 +455,7 @@ static nlohmann::json mcpSceneGetObject( const nlohmann::json& args )
 static nlohmann::json mcpSceneAddObject( const nlohmann::json& args )
 {
     std::vector<uint64_t> addedIds;
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    runOnMainThread( [&]
     {
         std::shared_ptr<Object> parentHolder;
         Object* parent = &SceneRoot::get();
@@ -521,7 +510,7 @@ static nlohmann::json mcpSceneAddObject( const nlohmann::json& args )
             addedIds.push_back( idOf( obj.get() ) );
         }
     } );
-    skipFramesAfterInput();
+    (void)waitFramesAfterInput();
     return nlohmann::json::object( { { "ids", addedIds } } );
 }
 
@@ -567,11 +556,13 @@ MR_ON_INIT{
                 "Flat depth-first list of every descendant of `rootId` (root itself excluded; pass `rootId = 0` or "
                 "omit to walk from the scene root). Each row carries its own `parentId`, so the tree structure is "
                 "recoverable. `transform` decomposes the object's xf into `{translation:[x,y,z], rotation:[rx,ry,rz], "
-                "scale:[sx,sy,sz]}` (rotation is XYZ-Euler in degrees) — same shape `scene_setObjectState` accepts. "
+                "scale:[sx,sy,sz]}` (rotation is XYZ-Euler in degrees; a mirror has a negative scale; a shear is not "
+                "represented) — same shape `scene_setObjectState` accepts. "
                 "`type` values include `\"Mesh\"`, `\"Point Cloud\"`, `\"Polyline\"`, `\"Voxel Volume\"`.",
         /*input_schema*/Schema::Object{}.addMemberOpt( "rootId", Schema::Number{} ),
         /*output_schema*/Schema::Array( entrySchema() ),
-        /*func*/mcpSceneListObjectTree
+        /*func*/mcpSceneListObjectTree,
+        /*readOnly*/true
     );
 
     server.addTool(
@@ -596,7 +587,8 @@ MR_ON_INIT{
             .addMember( "info",     Schema::Array( Schema::String{} ) )
             .addMember( "stats",    Schema::Object{} )
             .addMember( "visualization", Schema::Object{} ),
-        /*func*/mcpSceneGetObjectInfo
+        /*func*/mcpSceneGetObjectInfo,
+        /*readOnly*/true
     );
 
     server.addTool(
@@ -650,14 +642,16 @@ MR_ON_INIT{
                 "selected by extension) — response is `{path: <written-path>}`. Or pass `extension` (e.g. `\"stl\"`) "
                 "to receive the bytes inline as an MCP embedded-resource content block "
                 "(`content[0].resource.blob` is the base64 payload; `mimeType` is the registered model/* "
-                "media type for known mesh formats, `application/octet-stream` otherwise).",
+                "media type for known mesh formats, `application/octet-stream` otherwise). Some clients accept only "
+                "images inline (Claude chat rejects the block as an unsupported image); use `filePath` there.",
         /*input_schema*/Schema::Object{}
             .addMember(    "id",        Schema::Number{} )
             .addMemberOpt( "filePath",  Schema::String{} )
             .addMemberOpt( "extension", Schema::String{} ),
         /*output_schema*/Schema::Object{}
             .addMemberOpt( "path", Schema::String{} ),
-        /*func*/mcpSceneGetObject
+        /*func*/mcpSceneGetObject,
+        /*readOnly*/true
     );
 
     server.addTool(

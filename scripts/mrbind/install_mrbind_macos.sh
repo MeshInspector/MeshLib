@@ -32,5 +32,16 @@ fi
 # Guess the number of build threads.
 [[ ${JOBS:=} ]] || JOBS=$(sysctl -n hw.ncpu)
 
-CC=clang CXX=clang++ cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_LINKER_TYPE=LLD
-cmake --build build -j$JOBS
+# With `MRBIND_GENERATORS_ONLY=1`, only the generators working from the C bindings description: no parser (so no libclang) and no `mrbind_gen_c`.
+CONFIGURE_ARGS=() BUILD_ARGS=()
+if [[ ${MRBIND_GENERATORS_ONLY:-} == 1 ]]; then
+    CONFIGURE_ARGS=( -DMRBIND_BUILD_PARSER=OFF )
+    BUILD_ARGS=( --target mrbind_gen_csharp mrbind_gen_rust mrbind_gen_java mrbind_gen_python )
+    # Ninja builds those targets in parallel, `make` one after another.
+    if command -v ninja >/dev/null 2>&1 ; then
+        CONFIGURE_ARGS+=( -G Ninja )
+    fi
+fi
+
+CC=clang CXX=clang++ cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_LINKER_TYPE=LLD ${CONFIGURE_ARGS[@]+"${CONFIGURE_ARGS[@]}"}
+cmake --build build -j$JOBS ${BUILD_ARGS[@]+"${BUILD_ARGS[@]}"}

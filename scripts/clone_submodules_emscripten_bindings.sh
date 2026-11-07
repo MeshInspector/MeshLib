@@ -12,7 +12,6 @@ SCRIPT_DIR="$(dirname "$BASH_SOURCE")"
     thirdparty/imgui \
     thirdparty/jsoncpp \
     thirdparty/mrbind \
-    thirdparty/mrbind-pybind11 \
     thirdparty/onetbb \
     thirdparty/openvdb/v10/openvdb \
     thirdparty/parallel-hashmap \

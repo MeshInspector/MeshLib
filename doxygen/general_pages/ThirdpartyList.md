@@ -72,7 +72,6 @@ Below is a summary of all modules and their dependencies, so you can see what ea
 |Name                                                                     |Description                                                                  |License                                    |
 |-------------------------------------------------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|
 |<a rel="nofollow" href="https://www.python.org">python3</a>              |is a high-level, general-purpose programming language.                       |PSF                                        |
-|<a rel="nofollow" href="https://github.com/pybind/pybind11">pybind11</a> |a library that exposes C++ types in Python and vice versa                    |BSD-3-Clause                               |
 
 
 ### MRVoxels

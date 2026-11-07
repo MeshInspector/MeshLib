@@ -5,6 +5,7 @@
 #include <MRMesh/MRMeshSave.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRTriMesh.h>
+#include <MRMesh/MRBitCast.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRColor.h>
 #include <MRMesh/MRImage.h>
@@ -13,6 +14,9 @@
 #include <MRMesh/MRIOFormatsRegistry.h>
 #include <MRMesh/MRObjectGcode.h>
 #include <MRMesh/MRObjectMesh.h>
+#include <MRMesh/MRObjectPoints.h>
+#include <MRMesh/MRPointCloud.h>
+#include <MRMesh/MRPointsLoad.h>
 #include <MRMesh/MRObjectSave.h>
 #include <MRMesh/MRStringConvert.h>
 #include <MRMesh/MRUniqueTemporaryFolder.h>
@@ -24,6 +28,45 @@
 
 namespace MR
 {
+
+TEST( MRMesh, LoadBinaryOff )
+{
+    std::string file = "OFF BINARY\n";
+    auto put = [&] ( auto x )
+    {
+        const auto u = bit_cast<std::uint32_t>( x );
+        for ( int shift = 24; shift >= 0; shift -= 8 )
+            file.push_back( char( ( u >> shift ) & 0xFF ) );
+    };
+    put( 5 ); put( 6 ); put( 0 );
+    for ( float c : { 0.f, 0.f, 1.f,   1.f, 0.f, 0.f,   0.f, 1.f, 0.f,   -1.f, 0.f, 0.f,   0.f, -1.f, 0.f } )
+        put( c );
+    const int tris[6][3] = { { 0, 1, 2 }, { 0, 2, 3 }, { 0, 3, 4 }, { 0, 4, 1 }, { 1, 3, 2 }, { 1, 4, 3 } };
+    for ( int f = 0; f < 6; ++f )
+    {
+        put( 3 );
+        for ( int v : tris[f] )
+            put( v );
+        // the first face has a color to be skipped
+        if ( f == 0 )
+        {
+            put( 3 ); put( 1.f ); put( 0.5f ); put( 0.f );
+        }
+        else
+            put( 0 );
+    }
+
+    std::istringstream in( file );
+    auto loadRes = MeshLoad::fromOff( in );
+    ASSERT_TRUE( loadRes.has_value() ) << loadRes.error();
+    EXPECT_EQ( loadRes->points.size(), 5 );
+    EXPECT_EQ( loadRes->topology.numValidVerts(), 5 );
+    EXPECT_EQ( loadRes->topology.numValidFaces(), 6 );
+    EXPECT_EQ( loadRes->computeBoundingBox(), Box3f( Vector3f( -1, -1, 0 ), Vector3f( 1, 1, 1 ) ) );
+
+    std::istringstream truncated( file.substr( 0, file.size() - 4 ) );
+    EXPECT_FALSE( MeshLoad::fromOff( truncated ).has_value() );
+}
 
 TEST(MRMesh, LoadSave) 
 {
@@ -190,6 +233,32 @@ TEST(MRMesh, LoadPlyPointCloud)
     ASSERT_TRUE( loadRes.has_value() );
     EXPECT_EQ( loadRes->points.size(), 2 );
     EXPECT_EQ( loadRes->topology.numValidFaces(), 0 );
+}
+
+TEST(MRMesh, SaveObjectTreeAsPoints)
+{
+    // the points of every point cloud object in the tree are saved, in world coordinates
+    Object root;
+    for ( int i = 0; i < 2; ++i )
+    {
+        auto pointCloud = std::make_shared<PointCloud>();
+        pointCloud->addPoint( Vector3f( float( i ), 0, 0 ) );
+        pointCloud->addPoint( Vector3f( float( i ), 1, 0 ) );
+        auto objPoints = std::make_shared<ObjectPoints>();
+        objPoints->setPointCloud( pointCloud );
+        objPoints->setXf( AffineXf3f::translation( Vector3f( 0, 0, float( i + 1 ) ) ) );
+        root.addChild( objPoints );
+    }
+
+    UniqueTemporaryFolder dir;
+    ASSERT_TRUE( ObjectSave::toAnySupportedFormat( root, dir / "points.xyz" ).has_value() );
+    auto loaded = PointsLoad::fromAnySupportedFormat( dir / "points.xyz" );
+    ASSERT_TRUE( loaded.has_value() );
+    ASSERT_EQ( loaded->points.size(), 4 );
+    EXPECT_EQ( loaded->points[0_v], Vector3f( 0, 0, 1 ) );
+    EXPECT_EQ( loaded->points[1_v], Vector3f( 0, 1, 1 ) );
+    EXPECT_EQ( loaded->points[2_v], Vector3f( 1, 0, 2 ) );
+    EXPECT_EQ( loaded->points[3_v], Vector3f( 1, 1, 2 ) );
 }
 
 TEST(MRMesh, StlLoadAsTriMesh)

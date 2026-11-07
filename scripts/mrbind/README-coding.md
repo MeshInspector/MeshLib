@@ -53,7 +53,7 @@ Other options are:
 
 * Base classes can't be marked with `MR_BIND_IGNORE`, but you can add `--skip-mentions-of` to [`scripts/mrbind/mrbind_flags.txt`](./mrbind_flags.txt) to skip them. This is useful when you inherit from library classes that can't be parsed for some reason.
 
-* If you wish to ignore e.g. all fields with of certain type, or all functions with a certain parameter type, you can write complex rules using templates in [`scripts/mrbind/mrbind_target_pybind11.h`](./mrbind_target_pybind11.h).
+* To skip something only in Python, add `--ignore-for-python <regex>` to [`scripts/mrbind/generate_python.sh`](./generate_python.sh). The Python bindings are generated from the C bindings, which don't see `MR_BIND_IGNORE_PY`.
 
 Solutions that are **not** recommended:
 
@@ -67,11 +67,11 @@ Solutions that are **not** recommended:
 
 You can add Python aliases for functions, classes, and even non-static class members.
 
-Add them to [`scripts/mrbind/aliases.cpp`](./aliases.cpp).
+Add them to [`scripts/mrbind/python_aliases.txt`](./python_aliases.txt).
 
 ### Python helper functions
 
-You can add extra C++ functions to the bindings by adding them to [`scripts/mrbind/helpers.cpp`](./helpers.cpp).
+You can add extra Python functions to `mrmeshpy` by adding them to [`scripts/mrbind/python_helpers.py`](./python_helpers.py). They run in the namespace of the module. Extra C++ functions go to the C bindings, the Python bindings are generated from those.
 
 ## Customizing the type names
 

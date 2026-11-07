@@ -138,6 +138,8 @@ nlohmann::json Server::State::buildToolEntryJson( const std::string& name ) cons
         entry["description"] = *tool.description();
     else if ( auto it = toolDescs.find( name ); it != toolDescs.end() )
         entry["description"] = it->second;
+    if ( tool.annotations() )
+        entry["annotations"] = *tool.annotations();
     const auto& outSchema = tool.output_schema();
     if ( !outSchema.is_null() && !( outSchema.is_object() && outSchema.empty() ) )
     {
@@ -345,7 +347,8 @@ Server::Server( Server&& ) = default;
 Server& Server::operator=( Server&& ) = default;
 Server::~Server() = default;
 
-bool Server::addTool( std::string id, std::string name, std::string desc, Schema::Base inputSchema, Schema::Base outputSchema, ToolFunc func )
+bool Server::addTool( std::string id, std::string name, std::string desc, Schema::Base inputSchema, Schema::Base outputSchema, ToolFunc func,
+    bool readOnly )
 {
     if ( !state_ )
     {
@@ -391,7 +394,10 @@ bool Server::addTool( std::string id, std::string name, std::string desc, Schema
             return toolErrorResult( e.what() );
         }
     };
-    state_->toolManager.register_tool( fastmcpp::tools::Tool( id, std::move( schemaJson ), std::move( outputSchema ).asJson(), std::move( wrapped ), name, desc, {} ) );
+    fastmcpp::tools::Tool tool( id, std::move( schemaJson ), std::move( outputSchema ).asJson(), std::move( wrapped ), name, desc, {} );
+    if ( readOnly )
+        tool.set_annotations( { { "readOnlyHint", true } } );
+    state_->toolManager.register_tool( std::move( tool ) );
     return true;
 }
 

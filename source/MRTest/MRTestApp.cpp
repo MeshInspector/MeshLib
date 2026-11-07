@@ -5,6 +5,7 @@
 #include "MRMesh/MRMeshBoolean.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRSystemPath.h"
+#include "MRMesh/MRStringConvert.h"
 #include "MRViewer/MRGetSystemInfoJson.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRPch/MRJson.h"
@@ -13,10 +14,6 @@
 #ifndef MESHLIB_NO_PYTHON
 #include "MRPython/MRPython.h"
 #include "MREmbeddedPython/MREmbeddedPython.h"
-#endif
-
-#if !defined(__EMSCRIPTEN__) && !defined(_WIN32)
-#include <dlfcn.h>
 #endif
 
 namespace MR
@@ -77,29 +74,12 @@ int main( int argc, char** argv )
 #ifndef MESHLIB_NO_PYTHON
     if ( consumeFlag( "--with-python-tests" ) )
     {
-        // Load mrmeshpy. We do it here instead of linking against it for two reasons:
-        // 1. To allow not building the Python modules.
-        // 2. To allow building them separately, after this executable.
-        #ifdef _WIN32
-        auto lib = LoadLibraryA( "mrmeshpy.pyd" );
-        if ( !lib )
-        {
-            spdlog::error( "Unable to load the Python module mrmeshpy.pyd error: {}", GetLastError() );
-            std::exit(1);
-        }
-        #else // if not on Windows:
-        auto mrmeshpyPath = MR::SystemPath::getExecutablePath().value().parent_path() / "meshlib/mrmeshpy.so";
-        auto lib = dlopen( mrmeshpyPath.c_str(), RTLD_NOW | RTLD_GLOBAL );
-        if ( !lib )
-        {
-            spdlog::error( "Unable to load the Python module {} error: {}", mrmeshpyPath.c_str(), dlerror() );
-            std::exit(1);
-        }
-        #endif
-
         //Test python mrmeshpy
         {
-            auto str = "import mrmeshpy\n"
+            // Directly from the package directory: the `__init__.py` of a wheel build would redirect the resources of this process.
+            auto str = "import sys\n"
+                "sys.path.insert( 0, r'" + MR::utf8string( MR::SystemPath::getPythonModulesDirectory() / "meshlib" ) + "' )\n"
+                "import mrmeshpy\n"
                 "print( \"List of python module functions available in mrmeshpy:\\n\" )\n"
                 "funcs = dir( mrmeshpy )\n"
                 "for f in funcs :\n"

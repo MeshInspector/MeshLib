@@ -15,6 +15,7 @@
 #include <MRMesh/MRMeshBoolean.h>
 #include <MRMesh/MRCylinder.h>
 #include <MRMesh/MR2DContoursTriangulation.h>
+#include <MRMesh/MRMakeSphereMesh.h>
 #include <cmath>
 #include <random>
 
@@ -564,6 +565,52 @@ TEST( MRMesh, CutMeshOpenContourTouchesPoint )
                 continue;
             EXPECT_EQ( cut.topology.findNumHoles(), 1 );
             EXPECT_NEAR( cut.area(), mesh.area(), 1e-5f );
+        }
+    }
+}
+
+// open contours from the border of the squares to two sides of triangle (5, 6, 10), one ending on each from outside the triangle:
+// the triangle is filled again once, and the maps take its new faces and edges to it
+TEST( MRMesh, CutMeshOpenContoursEndOnTwoSidesOfFace )
+{
+    const Mesh mesh = makeSquares3x3();
+    auto onEdge = [&] ( int a, int b, float x, float y )
+    {
+        return OneMeshIntersection{ mesh.topology.findEdge( VertId( a ), VertId( b ) ), Vector3f( x, y, 0 ) };
+    };
+    OneMeshContour below, right;
+    below.intersections = { onEdge( 1, 2, 1.5f, 0 ), onEdge( 1, 6, 1.5f, 0.5f ), onEdge( 5, 6, 1.5f, 1 ) };
+    right.intersections = { onEdge( 7, 11, 3, 1.5f ), onEdge( 6, 11, 2.5f, 1.5f ), onEdge( 6, 10, 2, 1.5f ) };
+    // the face of makeSquares3x3 that point p is in
+    auto oldFaceOf = [] ( const Vector3f& p )
+    {
+        const float x = std::floor( p.x ), y = std::floor( p.y );
+        return FaceId( 2 * ( 3 * int( y ) + int( x ) ) + ( p.y - y < p.x - x ? 0 : 1 ) );
+    };
+    for ( bool belowFirst : { true, false } )
+    {
+        SCOPED_TRACE( belowFirst ? "below first" : "right first" );
+        Mesh cut = mesh;
+        FaceMap new2Old;
+        NewEdgesMap new2OldEdges;
+        const auto res = cutMesh( cut, belowFirst ? OneMeshContours{ below, right } : OneMeshContours{ right, below },
+            { .new2OldMap = &new2Old, .new2oldEdgesMap = &new2OldEdges } );
+        EXPECT_TRUE( cut.topology.checkValidity() );
+        EXPECT_TRUE( res.fbsWithContourIntersections.none() );
+        EXPECT_EQ( cut.topology.findNumHoles(), 1 );
+        EXPECT_NEAR( cut.area(), mesh.area(), 1e-5f );
+        for ( auto f : cut.topology.getValidFaces() )
+        {
+            EXPECT_EQ( f < new2Old.size() ? new2Old[f] : FaceId(), oldFaceOf( cut.triCenter( f ) ) ) << "face " << f;
+        }
+        for ( const auto& [ue, old] : new2OldEdges.map )
+        {
+            const EdgeId e = ue;
+            const auto mid = 0.5f * ( cut.orgPnt( e ) + cut.destPnt( e ) );
+            const float dx = mid.x - std::floor( mid.x ), dy = mid.y - std::floor( mid.y );
+            if ( new2OldEdges.splitEdges.test( ue ) || dx == 0 || dy == 0 || dx == dy )
+                continue; // a part of an old edge, or on one
+            EXPECT_EQ( FaceId( old ), oldFaceOf( mid ) ) << "edge " << e;
         }
     }
 }
@@ -1585,8 +1632,8 @@ std::vector<ThreeVertIds> trianglesFrom( const Mesh& mesh, const FaceMap& new2Ol
 // through the fold next to 0_v crosses the double curve twice where 0_f and 5_f, the faces of 0_v on both sheets, cross: in each of them,
 // the contour of the box enters and leaves on one side, crossing the contour of the fold from 0_v twice, which leaves valid hole loops,
 // so that only the search reports them, while the two faces of the box there have one crossing each, which the plain cut reports already;
-// under SplitCrossings, these two crossings are split, while 0_f and 5_f, where the contour of the fold that the box crosses ends at 0_v
-// (with no triangle of the other sheet known along it), fall back to All: the same bad faces, and the same triangles in 0_f and 5_f
+// under SplitCrossings, all these crossings are split, also in 0_f and 5_f, where the contour of the fold that the box crosses ends at 0_v:
+// the triangle of the other sheet along it is the one at its other end with 0_v; the bad faces stay the same
 TEST( MRMesh, ForceFillCrossingsFoldVertex )
 {
     const auto spindle = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 16, 0, 0 ), Vector3f( 8, 2, 2 ), Vector3f( 8, -2, -2 ),
@@ -1611,11 +1658,18 @@ TEST( MRMesh, ForceFillCrossingsFoldVertex )
             .forceFillMode = CutMeshParameters::ForceFill::SplitCrossings } ).fbsWithContourIntersections;
         EXPECT_TRUE( split.topology.checkValidity() );
         EXPECT_TRUE( splitBad == allBad );
-        // the vertices of the crossings in the faces of the box follow those of the cut
-        ASSERT_EQ( split.points.size(), all.points.size() + 2 );
+        // the vertices of the crossings, one in each face of the box and two in each of 0_f and 5_f, follow those of the cut
+        ASSERT_EQ( split.points.size(), all.points.size() + 6 );
         EXPECT_TRUE( std::equal( all.points.begin(), all.points.end(), split.points.begin() ) );
         for ( auto f : { 0_f, 5_f } )
-            EXPECT_TRUE( trianglesFrom( split, splitMap, f ) == trianglesFrom( all, allMap, f ) ) << "face " << f;
+        {
+            VertBitSet crossings;
+            for ( const auto& t : trianglesFrom( split, splitMap, f ) )
+                for ( auto v : t )
+                    if ( v >= int( all.points.size() ) )
+                        crossings.autoResizeSet( v );
+            EXPECT_EQ( crossings.count(), 2 ) << "face " << f;
+        }
     } ) );
     const auto& [plain, forced] = bad;
     EXPECT_EQ( plain.count(), 2 );
@@ -1624,6 +1678,41 @@ TEST( MRMesh, ForceFillCrossingsFoldVertex )
     EXPECT_TRUE( added.test( 0_f ) );
     EXPECT_TRUE( added.test( 5_f ) );
     EXPECT_TRUE( ( plain - forced ).none() );
+
+    // selfBoolean closes the contours the same way, and splits all their crossings
+    const auto res = selfBoolean( mesh );
+    ASSERT_TRUE( res.has_value() ) << res.error();
+    EXPECT_TRUE( res->topology.checkValidity() );
+    EXPECT_EQ( res->topology.findNumHoles(), 0 );
+}
+
+// two crossing spheres with their vertices rounded to a coarse grid, cut along their intersections as selfBoolean cuts them, with sortData
+// under SplitCrossings: where the sheets meet at grid points, many points of a hole coincide in floats, and a hole passing a crossing
+// twice (around a loop of a contour crossing itself) got triangles across both its corners there from the planar fill; such holes are
+// split in monotone parts on the exact predicates before, so every face is a triangle; the cut under All in selfCutBadFaces regenerates
+// a fill plan that makes another number of triangles, which the face count expected in Debug follows
+TEST( MRMesh, ForceFillCrossingsQuantizedSpheres )
+{
+    Mesh mesh;
+    for ( const auto& [n, c] : { std::pair{ 22, Vector3f( -0.14f, 0.09f, -0.14f ) }, std::pair{ 68, Vector3f( 0.2f, 0.34f, -0.14f ) } } )
+    {
+        auto sphere = makeSphere( { .radius = 0.5f, .numMeshVertices = n } );
+        sphere.transform( AffineXf3f::translation( c ) );
+        mesh.addMesh( sphere );
+    }
+    for ( auto& p : mesh.points )
+        for ( int i = 0; i < 3; ++i )
+            p[i] = std::round( 4 * p[i] ) / 4;
+    std::array<FaceBitSet, 2> bad;
+    ASSERT_NO_FATAL_FAILURE( selfCutBadFaces( mesh, bad, [&] ( const OneMeshContours& inters, const SortIntersectionsData& sortData )
+    {
+        Mesh cut = mesh;
+        cutMesh( cut, inters, { .sortData = &sortData, .forceFillMode = CutMeshParameters::ForceFill::SplitCrossings } );
+        EXPECT_TRUE( cut.topology.checkValidity() );
+        EXPECT_EQ( cut.topology.findNumHoles(), 0 );
+        for ( auto f : cut.topology.getValidFaces() )
+            EXPECT_TRUE( cut.topology.isLeftTri( cut.topology.edgeWithLeft( f ) ) ) << "face " << f;
+    } ) );
 }
 
 } //namespace MR

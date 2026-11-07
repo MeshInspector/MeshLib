@@ -13,7 +13,9 @@ namespace
 constexpr auto kSseConnectTimeout   = std::chrono::seconds( 10 );
 constexpr auto kSseReadTimeout      = std::chrono::seconds( 300 );
 constexpr auto kPostConnectTimeout  = std::chrono::seconds( 5 );
-constexpr auto kPostReadTimeout     = std::chrono::seconds( 30 );
+// well above the ~20 s MeshInspector waits for a busy main thread; longer calls (e.g. a long script run)
+// are bounded by the MCP client's own timeout instead
+constexpr auto kPostReadTimeout     = std::chrono::seconds( 600 );
 constexpr int  kReconnectIntervalMs = 1000;
 // Briefly wait for the SSE listener to capture (or recapture) a session_id
 // before failing a request. Covers the gap between gateway startup / `launch`
@@ -158,8 +160,7 @@ fastmcpp::Json MLClientTransport::request( const std::string& route, const fastm
         rpc.dump(),
         "application/json" );
     if ( !res )
-        throw fastmcpp::TransportError(
-            "POST failed: " + std::to_string( static_cast<int>( res.error() ) ) );
+        throw fastmcpp::TransportError( "No reply from the backend: " + httplib::to_string( res.error() ) );
 
     if ( res->status == 404 )
     {

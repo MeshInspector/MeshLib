@@ -675,6 +675,40 @@ TEST( MRMesh, threeOpenFansBigMesh )
     EXPECT_TRUE( dupTopology.checkValidity() );
 }
 
+// two open fans at vertices 22 and 23 in the end, but adding triangles one by one in this order gets stuck on (23,18,22) and (22,2,23)
+TEST( MRMesh, twoOpenFansBigMesh )
+{
+    Triangulation t = { { 3_v, 23_v, 2_v }, { 21_v, 1_v, 22_v }, { 24_v, 19_v, 23_v }, { 23_v, 18_v, 22_v }, { 17_v, 22_v, 18_v }, { 22_v, 2_v, 23_v } };
+    constexpr int n = 70, o = 100;
+    for ( int y = 0; y + 1 < n; ++y )
+        for ( int x = 0; x + 1 < n; ++x )
+        {
+            const int v = o + y * n + x;
+            t.push_back( { VertId( v ), VertId( v + 1 ), VertId( v + n ) } );
+            t.push_back( { VertId( v + 1 ), VertId( v + n + 1 ), VertId( v + n ) } );
+        }
+    ASSERT_GE( t.size(), 8192 );
+
+    int skipped = -1;
+    const auto topology = fromTriangles( t, { .skippedFaceCount = &skipped } );
+    EXPECT_EQ( skipped, 0 );
+    EXPECT_EQ( topology.numValidFaces(), int( t.size() ) );
+    EXPECT_TRUE( topology.checkValidity() );
+    for ( VertId v : { 22_v, 23_v } )
+    {
+        int holes = 0;
+        for ( EdgeId e : orgRing( topology, v ) )
+            if ( !topology.left( e ) )
+                ++holes;
+        EXPECT_EQ( holes, 2 );
+    }
+
+    std::vector<VertDuplication> dups;
+    const auto dupTopology = fromTrianglesDuplicatingNonManifoldVertices( t, &dups );
+    EXPECT_EQ( dupTopology.numValidFaces(), int( t.size() ) );
+    EXPECT_TRUE( dups.empty() );
+}
+
 TEST( MRMesh, buildFromManifoldTrianglesFails )
 {
     // two triangles with one vertex in common: two open fans there

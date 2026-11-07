@@ -79,7 +79,7 @@ SurfaceDistanceBuilder::SurfaceDistanceBuilder( const Mesh & mesh, const VertBit
     vertDistanceMap_.resize( mesh_.topology.lastValidVert() + 1, FLT_MAX );
     vertUpdatedTimes_.resize( mesh_.topology.lastValidVert() + 1, 0 );
     vertSource_.resize( mesh_.topology.lastValidVert() + 1 );
-    vertLinear_.resize( mesh_.topology.lastValidVert() + 1 );
+    vertLineEnd_.resize( mesh_.topology.lastValidVert() + 1 );
 }
 
 void SurfaceDistanceBuilder::addStartRegion( const VertBitSet & region, float startDistance )
@@ -91,12 +91,12 @@ void SurfaceDistanceBuilder::addStartRegion( const VertBitSet & region, float st
         if ( vi > startDistance )
         {
             vi = startDistance;
-            vertSource_[v] = addSource_( startDistance );
+            vertSource_[v] = addSource_( startDistance, v );
         }
     }
     for ( auto v : region )
         uniteTouchingSources_( v );
-    sourceGroup_.roots();
+    finishSourceGroups_();
 
     for ( auto v : region )
         suggestDistancesAround_( v );
@@ -111,12 +111,12 @@ void SurfaceDistanceBuilder::addStartVertices( const HashMap<VertId, float>& sta
         if ( vi > dist )
         {
             vi = dist;
-            vertSource_[v] = addSource_( dist );
+            vertSource_[v] = addSource_( dist, v );
         }
     }
     for ( const auto & [v, dist] : startVertices )
         uniteTouchingSources_( v );
-    sourceGroup_.roots();
+    finishSourceGroups_();
 
     for ( const auto & [v, dist] : startVertices )
         suggestDistancesAround_( v );
@@ -125,10 +125,10 @@ void SurfaceDistanceBuilder::addStartVertices( const HashMap<VertId, float>& sta
 void SurfaceDistanceBuilder::addStart( const MeshTriPoint & start )
 {
     const auto pt = mesh_.triPoint( start );
-    const auto source = addSource_( 0 );
+    const auto source = addSource_( 0, {} );
     mesh_.topology.forEachVertex( start, [&]( VertId v )
     {
-        suggestVertDistance_( { v, ( mesh_.points[v] - pt ).length() }, source, false );
+        suggestVertDistance_( { v, ( mesh_.points[v] - pt ).length() }, source, {} );
     } );
 }
 
@@ -138,10 +138,111 @@ void SurfaceDistanceBuilder::setMaxVertUpdates( int v )
     maxVertUpdates_ = std::clamp( v, 1, 255 );
 }
 
-SurfaceDistanceStartId SurfaceDistanceBuilder::addSource_( float startDistance )
+SurfaceDistanceStartId SurfaceDistanceBuilder::addSource_( float startDistance, VertId v )
 {
     sourceStartDistance_.push_back( startDistance );
+    sourceVert_.push_back( v );
     return sourceGroup_.add();
+}
+
+bool SurfaceDistanceBuilder::distToStart_( VertId v, SurfaceDistanceStartId s0, SurfaceDistanceStartId s1, double & d ) const
+{
+    const auto vs = vertSource_[v];
+    const auto ve = vertLineEnd_[v];
+    const double dv = vertDistanceMap_[v] - sourceStartDistance_[s0];
+    if ( ve.valid() == s1.valid() )
+    {
+        // v has the distance to the same kind of start: equal if it is the same start
+        d = dv;
+        return ( vs == s0 && ve == s1 ) || ( vs == s1 && ve == s0 );
+    }
+    // a start edge and its end point: v is in the plane of the distance to the line of the edge and the offset along it
+    const auto s = s1 ? vs : s0; // the common start point
+    const auto r = s1 ? ( vs == s0 ? s1 : s0 ) : ( vs == s0 ? ve : vs ); // the other end of the edge
+    if ( s1 ? ( vs != s0 && vs != s1 ) : ( vs != s0 && ve != s0 ) )
+        return false;
+    const auto vsv = sourceVert_[s];
+    const auto vrv = sourceVert_[r];
+    if ( !vsv || !vrv )
+        return false;
+    const auto ps = mesh_.points[vsv];
+    const double t = dot( mesh_.points[v] - ps, ( mesh_.points[vrv] - ps ).normalized() );
+    d = s1 ? std::sqrt( std::max( 0.0, sqr( dv ) - sqr( t ) ) ) : std::hypot( dv, t );
+    return true;
+}
+
+void SurfaceDistanceBuilder::nearestStartEdge_( const Vector3f & p, SurfaceDistanceStartId & s0, SurfaceDistanceStartId & s1 ) const
+{
+    const auto v0 = sourceVert_[s0];
+    const auto v1 = sourceVert_[s1];
+    if ( !v0 || !v1 )
+        return;
+    const auto p0 = mesh_.points[v0];
+    const auto d = mesh_.points[v1] - p0;
+    const float t = dot( p - p0, d );
+    if ( t >= 0 && t <= d.lengthSq() )
+        return;
+
+    // p is beyond the end s of edge s0-s1: it is near another start edge from s (or further along the start edges) or near point s itself
+    auto s = t < 0 ? s0 : s1;
+    auto other = t < 0 ? s1 : s0;
+    for ( int step = 0; step < 4; ++step )
+    {
+        const auto vs = sourceVert_[s];
+        const auto ps = mesh_.points[vs];
+        SurfaceDistanceStartId next;
+        for ( EdgeId e : orgRing( mesh_.topology, vs ) )
+        {
+            const auto w = mesh_.topology.dest( e );
+            const auto r = vertSource_[w];
+            if ( !r || r == other || sourceVert_[r] != w )
+                continue; // w is not a start vertex
+            const auto dr = mesh_.points[w] - ps;
+            const float tr = dot( p - ps, dr );
+            if ( tr < 0 )
+                continue;
+            if ( tr <= dr.lengthSq() )
+            {
+                s0 = s;
+                s1 = r;
+                return;
+            }
+            next = r; // p is beyond r too
+        }
+        if ( !next )
+            break;
+        other = s;
+        s = next;
+    }
+    s0 = s;
+    s1 = {};
+}
+
+void SurfaceDistanceBuilder::finishSourceGroups_()
+{
+    sourceGroup_.roots();
+    const auto n = sourceStartDistance_.size();
+    TypedBitSet<SurfaceDistanceStartId> regionRoots( n );
+    for ( SurfaceDistanceStartId s( 0 ); s < n; ++s )
+    {
+        const auto v = sourceVert_[s];
+        if ( !v )
+            continue;
+        int numStartNeis = 0;
+        for ( EdgeId e : orgRing( mesh_.topology, v ) )
+        {
+            const auto w = mesh_.topology.dest( e );
+            if ( const auto r = vertSource_[w]; r && sourceVert_[r] == w )
+                ++numStartNeis;
+        }
+        if ( numStartNeis > 3 )
+            regionRoots.set( sourceGroup_.parent( s ) );
+    }
+    regionSources_.clear();
+    regionSources_.resize( n );
+    for ( SurfaceDistanceStartId s( 0 ); s < n; ++s )
+        if ( regionRoots.test( sourceGroup_.parent( s ) ) )
+            regionSources_.set( s );
 }
 
 void SurfaceDistanceBuilder::uniteTouchingSources_( VertId v )
@@ -154,14 +255,14 @@ void SurfaceDistanceBuilder::uniteTouchingSources_( VertId v )
             sourceGroup_.uniteUnbalanced( s, source );
 }
 
-bool SurfaceDistanceBuilder::suggestVertDistance_( VertDistance c, SurfaceDistanceStartId source, bool linear )
+bool SurfaceDistanceBuilder::suggestVertDistance_( VertDistance c, SurfaceDistanceStartId source, SurfaceDistanceStartId lineEnd )
 {
     auto & vi = vertDistanceMap_[c.vert];
     if ( vi > c.distance )
     {
         vi = c.distance;
         vertSource_[c.vert] = source;
-        vertLinear_.set( c.vert, linear );
+        vertLineEnd_[c.vert] = lineEnd;
         if ( region_ && !region_->test( c.vert ) )
             return false;
         c.distance = metricToPenalty_( c.distance, c.vert );
@@ -182,7 +283,7 @@ void SurfaceDistanceBuilder::suggestDistancesAround_( VertId v )
         c.distance = vDist + mesh_.edgeLength( e );
         if( c.distance <= vDist )
             c.distance = std::nextafter( vDist, FLT_MAX );
-        if ( !suggestVertDistance_( c, vertSource_[v], vertLinear_.test( v ) ) )
+        if ( !suggestVertDistance_( c, vertSource_[v], vertLineEnd_[v] ) )
         {
             // a shorter distance is known for dest
             considerLeftTriPath_( e );
@@ -216,30 +317,107 @@ void SurfaceDistanceBuilder::considerLeftTriPath_( EdgeId e )
     const auto pc = mesh_.points[c];
 
     const auto source = vertSource_[a];
+    const auto sourceB = vertSource_[b];
     // both distances come directly from one start point, not from the linear field near a line or a region of start points
-    const bool fromPoint = source == vertSource_[b] && !vertLinear_.test( a ) && !vertLinear_.test( b );
-    float vc = 0;
+    const bool fromPoint = source == sourceB && !vertLineEnd_[a] && !vertLineEnd_[b];
     if ( fromPoint )
     {
         // the field is circular around the start point
         const double start = sourceStartDistance_[source];
         double dc = 0;
-        if ( !getPointSourceDistAtC( Vector3d( pa ), Vector3d( pb ), Vector3d( pc ), va - start, vb - start, dc ) )
-            return;
-        vc = float( start + dc );
+        if ( getPointSourceDistAtC( Vector3d( pa ), Vector3d( pb ), Vector3d( pc ), va - start, vb - start, dc ) )
+            suggestVertDistance_( { c, float( start + dc ) }, source, {} );
+        return;
     }
-    else
+
+    if ( sourceGroup_.parent( source ) != sourceGroup_.parent( sourceB ) )
+        return; // the fronts from separate start points meet here, the paths along the edges are more accurate
+    considerTriNearStarts_( a, b, c, va, vb );
+}
+
+void SurfaceDistanceBuilder::considerTriNearStarts_( VertId a, VertId b, VertId c, float va, float vb )
+{
+    const auto pa = mesh_.points[a];
+    const auto pb = mesh_.points[b];
+    const auto pc = mesh_.points[c];
+    const auto source = vertSource_[a];
+    const auto sourceB = vertSource_[b];
+    const auto lineEndA = vertLineEnd_[a];
+    const auto lineEndB = vertLineEnd_[b];
+    auto planeWave = [&]
     {
-        if ( sourceGroup_.parent( source ) != sourceGroup_.parent( vertSource_[b] ) )
-            return; // the fronts from separate start points meet here, the paths along the edges are more accurate
         float dvac = 0;
         if ( !getFieldAtC( pb - pa, pc - pa, vb - va, dvac ) )
-            return;
-        vc = va + dvac;
-        if( vc <= va )
-            vc = std::nextafter( va, FLT_MAX );
+            return FLT_MAX;
+        return std::max( va + dvac, std::nextafter( va, FLT_MAX ) );
+    };
+
+    if ( regionSources_.test( source ) )
+    {
+        if ( const auto vc = planeWave(); vc < FLT_MAX )
+            suggestVertDistance_( { c, vc }, source, lineEndA ? lineEndA : lineEndB ? lineEndB : sourceB );
+        return;
     }
-    suggestVertDistance_( { c, vc }, source, !fromPoint );
+
+    // a and b are near a line of start points: each of them is labeled with its nearest start point or start edge;
+    // the distances of a and b to the start of each label give c the circular field around a point or the linear field near an edge
+    float best = FLT_MAX;
+    SurfaceDistanceStartId best0, best1;
+    auto tryStart = [&]( SurfaceDistanceStartId s0, SurfaceDistanceStartId s1 )
+    {
+        double da = 0, db = 0;
+        if ( !distToStart_( a, s0, s1, da ) || !distToStart_( b, s0, s1, db ) )
+            return;
+        const double start = sourceStartDistance_[s0];
+        float vc = 0;
+        if ( !s1 )
+        {
+            double dc = 0;
+            if ( !getPointSourceDistAtC( Vector3d( pa ), Vector3d( pb ), Vector3d( pc ), da, db, dc ) )
+                return;
+            vc = float( start + dc );
+        }
+        else
+        {
+            const bool swap = db < da;
+            float dvac = 0;
+            if ( !getFieldAtC( swap ? pa - pb : pb - pa, pc - ( swap ? pb : pa ), float( std::abs( db - da ) ), dvac ) )
+                return;
+            vc = std::max( float( start + std::min( da, db ) + dvac ), std::nextafter( va, FLT_MAX ) );
+            auto e0 = s0, e1 = s1;
+            nearestStartEdge_( pc, e0, e1 );
+            if ( e0 != s0 || e1 != s1 )
+                return; // c is not beside this edge
+        }
+        if ( vc < best )
+        {
+            best = vc;
+            best0 = s0;
+            best1 = s1;
+        }
+    };
+    tryStart( source, lineEndA );
+    if ( sourceB != source || lineEndB != lineEndA )
+        tryStart( sourceB, lineEndB );
+    if ( !lineEndA && !lineEndB && sourceVert_[source] && sourceVert_[sourceB]
+        && mesh_.topology.findEdge( sourceVert_[source], sourceVert_[sourceB] ) )
+        tryStart( source, sourceB );
+    if ( best < FLT_MAX )
+    {
+        suggestVertDistance_( { c, best }, best0, best1 );
+        return;
+    }
+
+    // otherwise find the start nearest to c, and the distances of a and b to it;
+    // if they are unknown, then the plane wave through a and b
+    auto s0 = lineEndA ? source : lineEndB ? sourceB : source;
+    auto s1 = lineEndA ? lineEndA : lineEndB ? lineEndB : sourceB;
+    nearestStartEdge_( pc, s0, s1 );
+    tryStart( s0, s1 );
+    if ( best < FLT_MAX )
+        suggestVertDistance_( { c, best }, best0, best1 );
+    else if ( const auto vc = planeWave(); vc < FLT_MAX )
+        suggestVertDistance_( { c, vc }, s0, s1 );
 }
 
 VertId SurfaceDistanceBuilder::growOne()

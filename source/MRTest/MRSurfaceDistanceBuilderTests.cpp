@@ -102,4 +102,32 @@ TEST( MRMesh, SurfaceDistanceTwoSources )
     EXPECT_LT( sumErr / ( n * n ), 2e-3f );
 }
 
+TEST( MRMesh, SurfaceDistanceTwoSegments )
+{
+    const int n = 41;
+    const int row = n / 2;
+    const int ends[2][2] = { { 5, 15 }, { 25, 35 } };
+    const auto mesh = makePlanarGrid( n, true, row );
+    VertBitSet seeds( mesh.topology.vertSize() );
+    for ( const auto & e : ends )
+        for ( int x = e[0]; x <= e[1]; ++x )
+            seeds.set( VertId( row * n + x ) );
+    const auto dist = computeSurfaceDistances( mesh, seeds );
+    float sumErr = 0, maxErr = 0;
+    for ( auto v : mesh.topology.getValidVerts() )
+    {
+        const auto & p = mesh.points[v];
+        float segDist[2];
+        for ( int i = 0; i < 2; ++i )
+            segDist[i] = std::hypot( std::max( { float( ends[i][0] ) - p.x, p.x - float( ends[i][1] ), 0.f } ), p.y - float( row ) );
+        const float err = std::abs( dist[v] - std::min( segDist[0], segDist[1] ) );
+        sumErr += err;
+        // where the fronts of the segments meet, the distances come along the edges
+        if ( std::abs( segDist[0] - segDist[1] ) > 2 )
+            maxErr = std::max( maxErr, err );
+    }
+    EXPECT_LT( sumErr / ( n * n ), 1e-2f );
+    EXPECT_LT( maxErr, 5e-2f );
+}
+
 } //namespace MR

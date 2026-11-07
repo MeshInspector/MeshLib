@@ -80,26 +80,43 @@ private:
 
     /// for each reached vertex: the start point, the distance from which is stored in the vertex
     Vector<SurfaceDistanceStartId, VertId> vertSource_;
-    /// reached vertices whose distance came from the linear field near a line or a region of start points
-    VertBitSet vertLinear_;
+    /// for each reached vertex: invalid if its distance is from the point vertSource_,
+    /// otherwise its distance is from the line through vertSource_ and this start point (a start edge of a line, or any start point near a region)
+    Vector<SurfaceDistanceStartId, VertId> vertLineEnd_;
     /// for each start point: the distance assigned to it in the beginning
     Vector<float, SurfaceDistanceStartId> sourceStartDistance_;
+    /// for each start point: its vertex, invalid for a start inside a triangle or on an edge
+    Vector<VertId, SurfaceDistanceStartId> sourceVert_;
     /// groups of start points connected by mesh edges, the parent of each start point is the root of its group;
     /// the field is assumed linear only between start points of one group (along a line or in a region)
     BaseUnionFind<SurfaceDistanceStartId> sourceGroup_;
+    /// start points of the groups making regions (some start point has more than three start neighbors), not lines;
+    /// near a region the distances are not split between start points and start edges, but taken from the linear field
+    TypedBitSet<SurfaceDistanceStartId> regionSources_;
 
     /// compares proposed distance with the value known in c.vert
     /// \details if proposed distance is smaller then adds it in the queue and returns true; \n
     /// otherwise if the known distance to c.vert is already not greater than returns false
-    bool suggestVertDistance_( VertDistance c, SurfaceDistanceStartId source, bool linear );
-    /// creates new start point with given initial distance
-    SurfaceDistanceStartId addSource_( float startDistance );
+    bool suggestVertDistance_( VertDistance c, SurfaceDistanceStartId source, SurfaceDistanceStartId lineEnd );
+    /// creates new start point with given initial distance and its vertex (if any)
+    SurfaceDistanceStartId addSource_( float startDistance, VertId v );
+    /// given point p near the line through start points s0 and s1 of one group, replaces them with the nearest start edge
+    /// or with the nearest start point (and invalid s1) if p is beyond the ends of the start edges
+    void nearestStartEdge_( const Vector3f & p, SurfaceDistanceStartId & s0, SurfaceDistanceStartId & s1 ) const;
+    /// estimates the distance from reached vertex v to start point s0 (if s1 is invalid) or to the line through start edge s0-s1,
+    /// using the distance stored in v and the geometry near the start points; returns false if v is not near them
+    bool distToStart_( VertId v, SurfaceDistanceStartId s0, SurfaceDistanceStartId s1, double & d ) const;
     /// unites the group of the start point in v with the groups of start points in its neighbor vertices
     void uniteTouchingSources_( VertId v );
+    /// finds the groups of start points, then fills regionSources_
+    void finishSourceGroups_();
     /// suggests new distance around a (recently updated) vertex
     void suggestDistancesAround_( VertId v );
     /// consider a path going in the left triangle from edge (e) to the opposing vertex
     void considerLeftTriPath_( EdgeId e );
+    /// computes the distance to c in triangle abc, where a and b have distances (va <= vb) from different start points of one group,
+    /// or from one start point and from the linear field near it
+    void considerTriNearStarts_( VertId a, VertId b, VertId c, float va, float vb );
     /// if target is provided then adds distance to it to the metric
     float metricToPenalty_( float metric, VertId v ) const;
 };

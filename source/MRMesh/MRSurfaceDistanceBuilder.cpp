@@ -219,8 +219,10 @@ void SurfaceDistanceBuilder::considerLeftTriPath_( EdgeId e )
         std::swap( va, vb );
     }
     assert( vb >= va );
+    // c is already not farther than a: only an obtuse angle at c can give less here,
+    // and then c gets that value from its triangles nearer to the start
     if ( vertDistanceMap_[c] <= va )
-        return; // the distance computed below is larger than va unless the angle at c is obtuse
+        return;
 
     const auto pa = mesh_.points[a];
     const auto pb = mesh_.points[b];

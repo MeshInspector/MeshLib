@@ -43,7 +43,7 @@ public:
     {
         const auto sz = firstLeaf_ + tree.numLeaves();
         boxes_.resize( sz );
-        state_ = std::vector<std::atomic<std::uint8_t>>( sz );
+        state_ = Vector<std::atomic<std::uint8_t>>( sz );
     }
 
     Box3f operator()( NodeId n ) const
@@ -75,7 +75,7 @@ private:
     const AffineXf3f * xf_ = nullptr;
     size_t firstLeaf_ = 0;
     mutable Buffer<Box3f> boxes_; ///< nodes first if xf, then leaves
-    mutable std::vector<std::atomic<std::uint8_t>> state_;
+    mutable Vector<std::atomic<std::uint8_t>> state_;
 };
 
 /// decides by preciseBoxesIntersect whether a node of tree A and a node of tree B after the transformation xf (if given) intersect

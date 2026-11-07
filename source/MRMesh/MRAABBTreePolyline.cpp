@@ -23,8 +23,8 @@ AABBTreePolyline<V>::AABBTreePolyline( const typename PolylineTraits<V>::Polylin
     if ( numLines <= 0 )
         return;
 
-    std::vector<BoxedLine> boxedLines;
-    resizeNoInit( boxedLines, numLines );
+    Vector<BoxedLine> boxedLines;
+    boxedLines.resizeNoInit( numLines );
     numLines = 0;
     for ( UndirectedEdgeId ue{ 0 }; ue < polyline.topology.undirectedEdgeSize(); ++ue )
         if ( !polyline.topology.isLoneEdge( ue ) )
@@ -49,8 +49,8 @@ AABBTreePolyline<V>::AABBTreePolyline( const Mesh& mesh, const UndirectedEdgeBit
     MR_TIMER;
 
     using BoxedLine = BoxedLeaf<Traits>;
-    std::vector<BoxedLine> boxedLines;
-    resizeNoInit( boxedLines, edgeSet.count() );
+    Vector<BoxedLine> boxedLines;
+    boxedLines.resizeNoInit( edgeSet.count() );
     if ( boxedLines.size() <= 0 )
         return;
 

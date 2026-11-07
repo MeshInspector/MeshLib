@@ -97,7 +97,7 @@ void AABBTreeBase<T>::getLeafOrder( LeafBMap & leafMap ) const
     if ( !empty() )
     {
         // depth-first traversal visits the leaves from left to right
-        std::vector<NodeId> subtasks; // not InplaceStack: the tree after AABBTree::addSplitFaces can be deep
+        Vector<NodeId> subtasks; // not InplaceStack: the tree after AABBTree::addSplitFaces can be deep
         subtasks.push_back( rootNodeId() );
         while ( !subtasks.empty() )
         {

@@ -80,7 +80,7 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
     };
     LeafBoxCache aBoxOf( aTree, a.mesh.points, nullptr );
     LeafBoxCache bBoxOf( bTree, b.mesh.points, rigidB2A );
-    std::vector<SubTask> subtasks{ { aTree.rootNodeId(), bTree.rootNodeId(), aBoxOf( aTree.rootNodeId() ), bBoxOf( bTree.rootNodeId() ) } };
+    Vector<SubTask> subtasks{ { aTree.rootNodeId(), bTree.rootNodeId(), aBoxOf( aTree.rootNodeId() ), bBoxOf( bTree.rootNodeId() ) } };
 
     while( !subtasks.empty() )
     {

@@ -19,7 +19,7 @@ inline int getNumNodes( int numLeaves )
 /// constructs the nodes of the tree with given leaves, and reorders the leaves in the order of the tree;
 /// the children of the nodes reference the leaves by their indices after reordering
 template<typename T>
-AABBTreeNodeVec<T> makeAABBTreeNodeVec( std::vector<BoxedLeaf<T>> & boxedLeaves );
+AABBTreeNodeVec<T> makeAABBTreeNodeVec( Vector<BoxedLeaf<T>> & boxedLeaves );
 
 /// \}
 

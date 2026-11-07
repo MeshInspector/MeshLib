@@ -20,7 +20,7 @@ public:
     using LeafBMap = BMap<LeafId, LeafId>;
     using BoxT = typename T::BoxT;
     using Leaf = typename AABBTreeLeaf<T>::type;
-    using Leaves = std::vector<Leaf>;
+    using Leaves = Vector<Leaf>;
     /// whether the boxes of leaves are stored in the tree (all trees except AABBTree of a mesh)
     static constexpr bool leavesHaveBoxes = !std::is_same_v<Leaf, FaceLeaf>;
 
@@ -81,7 +81,7 @@ public:
 
 protected:
     /// builds the tree from given leaves with their boxes
-    void build_( std::vector<BoxedLeaf<T>> leaves ) requires leavesHaveBoxes;
+    void build_( Vector<BoxedLeaf<T>> leaves ) requires leavesHaveBoxes;
 
     NodeVec nodes_;
     Leaves leaves_;

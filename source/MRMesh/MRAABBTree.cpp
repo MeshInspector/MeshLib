@@ -35,8 +35,8 @@ AABBTree::AABBTree( const MeshPart & mp )
     if ( numFaces <= 0 )
         return;
 
-    std::vector<BoxedFace> boxedFaces;
-    resizeNoInit( boxedFaces, numFaces );
+    Vector<BoxedFace> boxedFaces;
+    boxedFaces.resizeNoInit( numFaces );
     const bool packed = numFaces == mp.mesh.topology.faceSize();
     if ( !packed )
     {
@@ -64,7 +64,7 @@ AABBTree::AABBTree( const MeshPart & mp )
     if ( nodes_.empty() )
         singleLeafBox_ = boxedFaces[0].box;
 
-    resizeNoInit( leaves_, numFaces );
+    leaves_.resizeNoInit( numFaces );
     ParallelFor( leaves_, [&]( size_t i )
     {
         const auto f = boxedFaces[i].leafId;
@@ -146,7 +146,7 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
         return it - oldFaces.begin();
     };
     constexpr size_t cNotFound = ~size_t( 0 );
-    std::vector<size_t> leafIndices( oldFaces.size(), cNotFound );
+    Vector<size_t> leafIndices( oldFaces.size(), cNotFound );
     ParallelFor( leaves_, [&]( size_t i )
     {
         if ( splitFaces.test( leaves_[i].leafId ) )
@@ -159,7 +159,7 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
         NodeId node;
         bool right = false;
     };
-    std::vector<Place> places( oldFaces.size() );
+    Vector<Place> places( oldFaces.size() );
     ParallelFor( nodes_, [&]( NodeId nid )
     {
         for ( bool right : { false, true } )
@@ -177,7 +177,7 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
 
     // every new face turns the current leaf of its split face into a node with the leaves of both faces;
     // the new nodes and leaves are appended, so children have larger ids than their parents as in a constructed tree
-    std::vector<BoxT> oldBoxes( oldFaces.size() );
+    Vector<BoxT> oldBoxes( oldFaces.size() );
     for ( size_t i = 0; i < oldFaces.size(); ++i )
     {
         if ( leafIndices[i] == cNotFound )
@@ -232,11 +232,11 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
     }
 }
 
-std::vector<Box3f> AABBTree::computeLeafBoxes( const VertCoords & points, const AffineXf3f * xf ) const
+Vector<Box3f> AABBTree::computeLeafBoxes( const VertCoords & points, const AffineXf3f * xf ) const
 {
     MR_TIMER;
-    std::vector<Box3f> res;
-    resizeNoInit( res, leaves_.size() );
+    Vector<Box3f> res;
+    res.resizeNoInit( leaves_.size() );
     ParallelFor( res, [&]( size_t i )
     {
         const auto box = leafBox( Node::leafChild( i ), points );

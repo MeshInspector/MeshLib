@@ -46,7 +46,7 @@ public:
     [[nodiscard]] MRMESH_API MeshTriPoint toTriPoint( const MeshTopology & topology, NodeId n, const TriPointf & bary ) const;
 
     /// computes the boxes of all leaves in parallel (optionally transformed), indexed as leaves()
-    [[nodiscard]] MRMESH_API std::vector<Box3f> computeLeafBoxes( const VertCoords & points, const AffineXf3f * xf = nullptr ) const;
+    [[nodiscard]] MRMESH_API Vector<Box3f> computeLeafBoxes( const VertCoords & points, const AffineXf3f * xf = nullptr ) const;
 
     /// returns the bounding box of the whole tree
     [[nodiscard]] Box3f getBoundingBox() const { return nodes_.empty() ? singleLeafBox_ : nodes_[NodeId( 0 )].box; }

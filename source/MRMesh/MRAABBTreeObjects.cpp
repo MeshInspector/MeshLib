@@ -16,7 +16,7 @@ AABBTreeObjects::AABBTreeObjects( Vector<MeshOrPointsXf, ObjId> objs ) : objs_( 
 {
     MR_TIMER;
     using BoxedObj = BoxedLeaf<Traits>;
-    std::vector<BoxedObj> boxedObjs( objs_.size() );
+    Vector<BoxedObj> boxedObjs( objs_.size() );
     toLocal_.resize( objs_.size() );
 
     for ( ObjId oi(0); oi < objs_.size(); ++oi )

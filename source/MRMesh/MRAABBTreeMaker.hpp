@@ -32,7 +32,7 @@ public:
     using Subtree = MR::Subtree<T>;
     using BoxT = typename T::BoxT;
 
-    NodeVec construct( std::vector<BoxedLeaf<T>> & boxedLeaves );
+    NodeVec construct( Vector<BoxedLeaf<T>> & boxedLeaves );
 
 private:
     BoxedLeaf<T> * boxedLeaves_ = nullptr;
@@ -136,7 +136,7 @@ void AABBTreeMaker<T>::makeSubtree_( const Subtree & s, int numThreads )
 } // anonymous namespace
 
 template<typename T>
-auto AABBTreeMaker<T>::construct( std::vector<BoxedLeaf<T>> & boxedLeaves ) -> NodeVec
+auto AABBTreeMaker<T>::construct( Vector<BoxedLeaf<T>> & boxedLeaves ) -> NodeVec
 {
     MR_TIMER;
 
@@ -163,13 +163,13 @@ auto AABBTreeMaker<T>::construct( std::vector<BoxedLeaf<T>> & boxedLeaves ) -> N
 }
 
 template<typename T>
-AABBTreeNodeVec<T> makeAABBTreeNodeVec( std::vector<BoxedLeaf<T>> & boxedLeaves )
+AABBTreeNodeVec<T> makeAABBTreeNodeVec( Vector<BoxedLeaf<T>> & boxedLeaves )
 {
     return AABBTreeMaker<T>().construct( boxedLeaves );
 }
 
 template<typename T>
-void AABBTreeBase<T>::build_( std::vector<BoxedLeaf<T>> leaves ) requires leavesHaveBoxes
+void AABBTreeBase<T>::build_( Vector<BoxedLeaf<T>> leaves ) requires leavesHaveBoxes
 {
     nodes_.clear();
     leaves_ = std::move( leaves );

@@ -529,7 +529,7 @@ static void expectSameConnectivity( const MeshTopology & a, const MeshTopology &
         std::rotate( vb.begin(), std::find( vb.begin(), vb.end(), va[0] ), vb.end() );
         EXPECT_EQ( va, vb );
     }
-    std::vector<VertId> ra, rb;
+    Vector<VertId> ra, rb;
     for ( VertId v : a.getValidVerts() )
     {
         ra.clear();
@@ -556,7 +556,7 @@ TEST( MRMesh, buildFromManifoldTriangles )
         for ( size_t i = v.size(); i > 1; --i )
             std::swap( v[decltype( id )( i - 1 )], v[decltype( id )( rng() % i )] );
     };
-    std::vector<int> perm( sphere.topology.vertSize() );
+    Vector<int> perm( sphere.topology.vertSize() );
     std::iota( perm.begin(), perm.end(), 0 );
     shuffle( perm, size_t{} );
     for ( auto & tri : t )

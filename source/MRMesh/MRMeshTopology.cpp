@@ -1847,7 +1847,7 @@ bool MeshTopology::buildFromManifoldTriangles( const Triangulation & t, const Me
     const size_t numVerts = size_t( ms.maxVert ) + 1;
 
     // corners around each vertex (in no particular order) with the next and previous vertices of their triangles
-    std::vector<std::atomic<int>> fill( numVerts );
+    Vector<std::atomic<int>, VertId> fill( numVerts );
     ParallelFor( size_t( 0 ), t.size(), [&]( size_t f )
     {
         if ( skipFace( f ) )
@@ -1860,8 +1860,8 @@ bool MeshTopology::buildFromManifoldTriangles( const Triangulation & t, const Me
     for ( size_t v = 0; v < numVerts; ++v )
     {
         firstCorner[v] = sum;
-        sum += fill[v].load( std::memory_order_relaxed );
-        fill[v].store( firstCorner[v], std::memory_order_relaxed );
+        sum += fill[VertId( v )].load( std::memory_order_relaxed );
+        fill[VertId( v )].store( firstCorner[v], std::memory_order_relaxed );
     }
     firstCorner[numVerts] = sum;
 
@@ -1965,11 +1965,11 @@ bool MeshTopology::buildFromManifoldTriangles( const Triangulation & t, const Me
         if ( many )
         {
             // many corners: find the starts by sorting the previous vertices
-            std::vector<VertId> prevs( d );
+            Vector<VertId> prevs( d );
             for ( int j = 0; j < d; ++j )
                 prevs[j] = vc[j].prev;
             std::sort( prevs.begin(), prevs.end() );
-            std::vector<int> starts;
+            Vector<int> starts;
             for ( int i = 0; i < d; ++i )
                 if ( !std::binary_search( prevs.begin(), prevs.end(), vc[i].next ) )
                     starts.push_back( i );

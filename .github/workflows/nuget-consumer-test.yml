@@ -62,10 +62,13 @@ jobs:
         with:
           dotnet-version: '10.x'
 
-      # NuGet never evicts the global packages folder, and every build is a new MeshLib version
+      # NuGet never evicts the global packages folder, and every build is a new MeshLib version;
+      # also drop the versions that earlier runs left there on self-hosted runners
       - name: Extract packages into the job's temp folder
         shell: bash
-        run: echo "NUGET_PACKAGES=$RUNNER_TEMP/nuget-packages" >> "$GITHUB_ENV"
+        run: |
+          echo "NUGET_PACKAGES=$RUNNER_TEMP/nuget-packages" >> "$GITHUB_ENV"
+          rm -rf ~/.nuget/packages/meshlib
 
       - name: Download nuget package
         shell: bash

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "MRAABBTreeBase.h"
-#include "MRHeapBytes.h"
 
 namespace MR
 {
@@ -39,7 +38,7 @@ public:
     MRMESH_API void addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old );
 
     /// vertex ids of the faces of all leaves in the order of Node::leafPos(), which is the order of leaf nodes after construction
-    [[nodiscard]] const std::vector<ThreeVertIds> & leafTriangulation() const { return leafTris_; }
+    [[nodiscard]] const std::vector<ThreeVertIds, Allocator<ThreeVertIds>> & leafTriangulation() const { return leafTris_; }
 
     /// returns vertex ids of the face of given leaf node
     [[nodiscard]] const ThreeVertIds & leafTriVerts( const Node & leaf ) const { return leafTris_[leaf.leafPos()]; }
@@ -56,10 +55,10 @@ public:
     [[nodiscard]] MRMESH_API static MeshTriPoint toMeshTriPoint( const MeshTopology & topology, FaceId f, const ThreeVertIds & t, const TriPointf & bary );
 
     /// returns the amount of memory this object occupies on heap
-    [[nodiscard]] size_t heapBytes() const { return AABBTreeBase::heapBytes() + MR::heapBytes( leafTris_ ); }
+    [[nodiscard]] size_t heapBytes() const { return AABBTreeBase::heapBytes() + leafTris_.capacity() * sizeof( ThreeVertIds ); }
 
 private:
-    std::vector<ThreeVertIds> leafTris_;
+    std::vector<ThreeVertIds, Allocator<ThreeVertIds>> leafTris_;
 
     AABBTree( const AABBTree & ) = default;
     AABBTree & operator =( const AABBTree & ) = default;

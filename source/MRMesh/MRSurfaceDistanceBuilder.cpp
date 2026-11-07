@@ -146,6 +146,8 @@ void SurfaceDistanceBuilder::considerLeftTriPath_( EdgeId e )
         std::swap( va, vb );
     }
     assert( vb >= va );
+    if ( vertDistanceMap_[c] <= va )
+        return; // the distance computed below is always larger than va
 
     const auto pa = mesh_.points[a];
     const auto pb = mesh_.points[b];

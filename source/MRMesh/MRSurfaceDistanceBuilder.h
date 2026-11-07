@@ -71,6 +71,8 @@ private:
 
     /// for each reached vertex: the index of the start point, the distance from which is stored in the vertex
     Vector<int, VertId> vertSource_;
+    /// for each reached vertex: 1 if its distance came from the linear field near a line or a region of start points
+    Vector<char, VertId> vertLinear_;
     /// for each start point: the distance assigned to it in the beginning
     Vector<float> sourceStartDistance_;
     /// for each start point: the representative of its group, where the groups unite start points connected by mesh edges;
@@ -80,7 +82,7 @@ private:
     /// compares proposed distance with the value known in c.vert
     /// \details if proposed distance is smaller then adds it in the queue and returns true; \n
     /// otherwise if the known distance to c.vert is already not greater than returns false
-    bool suggestVertDistance_( VertDistance c, int source );
+    bool suggestVertDistance_( VertDistance c, int source, bool linear );
     /// creates new start point with given initial distance, returns its index
     int addSource_( float startDistance );
     /// unites the group of the start point in v with the groups of start points in its neighbor vertices

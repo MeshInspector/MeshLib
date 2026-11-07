@@ -35,15 +35,15 @@ TEST(MRMesh, SurfaceDistance)
     vc = 0;
 }
 
-// planar n x n grid with unit step; inner vertices shifted by up to 0.3 if jitter is set
-static Mesh makePlanarGrid( int n, bool jitter )
+// planar n x n grid with unit step; inner vertices shifted by up to 0.3 if jitter is set, except for the row straightRow
+static Mesh makePlanarGrid( int n, bool jitter, int straightRow = -1 )
 {
     VertCoords points;
     for ( int y = 0; y < n; ++y )
         for ( int x = 0; x < n; ++x )
         {
             Vector3f p( float( x ), float( y ), 0 );
-            if ( jitter && x > 0 && y > 0 && x + 1 < n && y + 1 < n )
+            if ( jitter && x > 0 && y > 0 && x + 1 < n && y + 1 < n && y != straightRow )
                 p += 0.3f * Vector3f( std::sin( 12.9898f * x + 78.233f * y ), std::cos( 39.3468f * x + 11.135f * y ), 0 );
             points.push_back( p );
         }
@@ -75,7 +75,7 @@ TEST( MRMesh, SurfaceDistancePointSource )
 TEST( MRMesh, SurfaceDistanceLineSource )
 {
     const int n = 41;
-    const auto mesh = makePlanarGrid( n, false );
+    const auto mesh = makePlanarGrid( n, true, n / 2 );
     VertBitSet seeds( mesh.topology.vertSize() );
     for ( int x = 0; x < n; ++x )
         seeds.set( VertId( n / 2 * n + x ) );
@@ -83,7 +83,7 @@ TEST( MRMesh, SurfaceDistanceLineSource )
     float maxErr = 0;
     for ( auto v : mesh.topology.getValidVerts() )
         maxErr = std::max( maxErr, std::abs( dist[v] - std::abs( mesh.points[v].y - float( n / 2 ) ) ) );
-    EXPECT_LT( maxErr, 1e-4f );
+    EXPECT_LT( maxErr, 2e-3f );
 }
 
 TEST( MRMesh, SurfaceDistanceTwoSources )

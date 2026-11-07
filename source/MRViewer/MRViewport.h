@@ -330,7 +330,8 @@ public:
     // and call transformView( xf ), then the user will see exactly the same picture
     MRVIEWER_API void transformView( const AffineXf3f & xf );
 
-    bool getRedrawFlag() const { return needRedraw_; }
+    /// returns true if the viewport has to be redrawn; it stays true while the camera is animated
+    bool getRedrawFlag() const { return needRedraw_ || cameraAnimation_; }
     void resetRedrawFlag() { needRedraw_ = false; }
 
     // Unique identifier
@@ -580,6 +581,22 @@ public:
 
     MRVIEWER_API void setParameters( const Viewport::Parameters& params );
 
+    /// smoothly changes the camera from the current parameters to the target ones during given time:
+    /// rotation, translation, zoom and view angle are interpolated, other parameters are set at once;
+    /// it starts and stops smoothly; a call during an animation keeps the current rotation speed toward the new target
+    /// (so a turn back starts from rest);
+    /// any other change of these camera parameters during the animation stops it;
+    /// seconds <= 0 sets all target parameters at once;
+    /// the rotation pivot moves at once to the center of the target view (-target.cameraTranslation)
+    /// or to target.staticRotationPivot, as the fit functions set it, unless a rotation is in progress;
+    /// sceneBox - if valid (e.g. from calcPreciseFit...Parameters), it becomes the scene box at once (see getSceneBox),
+    /// as after the fit, so with the parameters and the box of a calc...Parameters function this applies that fit smoothly
+    MRVIEWER_API void animateCamera( const Parameters& target, float seconds, const Box3f& sceneBox = {} );
+
+    /// returns the target parameters of the camera animation in progress, or nullptr if the camera is not animated;
+    /// the pointer is valid only until the next setupView (next frame) or animateCamera call, do not keep it
+    [[nodiscard]] const Parameters* getCameraAnimationTarget() const { return cameraAnimation_ ? &cameraAnimation_->target : nullptr; }
+
     // Set camera look direction and up direction (they should be perpendicular)
     // this function changes camera position and do not change camera spot (0,0,0) by default
     // to change camera position use setCameraTranslation after this function
@@ -691,6 +708,20 @@ private:
     Box3f sceneBox_;
 
     Parameters params_;
+
+    // makes the next step of the camera animation, if any
+    void updateCameraAnimation_();
+
+    struct CameraAnimation
+    {
+        Parameters start, target;
+        Parameters current; // animated fields as the last step set them, to detect camera changes by somebody else
+        double startTime = 0; // seconds of a steady clock
+        double stepTime = 0; // when the last step set the camera
+        float seconds = 0;
+        float startSpeed = 0; // speed at the start in units of this animation: 0 for a smooth start, > 0 to continue a rotation
+    };
+    std::optional<CameraAnimation> cameraAnimation_;
 
     std::optional<BackgroundTexture> backgroundTexture_;
     bool backgroundTextureChanged_{ false }; // the image has to be uploaded to GL

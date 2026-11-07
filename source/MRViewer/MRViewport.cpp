@@ -507,6 +507,7 @@ std::vector<ConstObjAndPick> Viewport::constMultiPickObjects( const std::vector<
 
 void Viewport::setupView()
 {
+    updateCameraAnimation_();
     setupViewMatrix_();
     setupProjMatrix_();
     setupAxesViewProjMatrix_();

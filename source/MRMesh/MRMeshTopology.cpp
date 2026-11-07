@@ -1883,7 +1883,8 @@ bool MeshTopology::buildFromManifoldTriangles( const Triangulation & t, const Me
     } );
 
     // twin[c]: the corner whose half-edge goes back along c's edge, -1 on boundary, c itself in a skipped triangle;
-    // around each vertex: either one closed fan of triangles, or open fans joined through the holes in the order of their first corners,
+    // around each vertex: either one closed fan of triangles, or one or two open fans joined through the holes in the order of their first corners
+    // (the order of three or more open fans around a vertex is arbitrary, and MeshBuilder does not create them),
     // nextFanStart[last corner of a fan] = first corner of the next fan
     Buffer<int> twin( numCorners );
     Buffer<int> nextFanStart( numCorners );
@@ -1959,7 +1960,7 @@ bool MeshTopology::buildFromManifoldTriangles( const Triangulation & t, const Me
                 ++count;
             }
         };
-        int count = 0, prevLast = -1, firstStartIdx = -1;
+        int count = 0, prevLast = -1, firstStartIdx = -1, numFans = 0;
         if ( many )
         {
             // many corners: find the starts by sorting the previous vertices
@@ -1976,6 +1977,7 @@ bool MeshTopology::buildFromManifoldTriangles( const Triangulation & t, const Me
             {
                 auto [last, n] = walk( i );
                 count += n;
+                ++numFans;
                 if ( prevLast >= 0 )
                     nextFanStart[vc[prevLast].c] = vc[i].c;
                 else
@@ -1998,6 +2000,7 @@ bool MeshTopology::buildFromManifoldTriangles( const Triangulation & t, const Me
                 lastStartCorner = vc[next].c;
                 auto [last, n] = walk( next );
                 count += n;
+                ++numFans;
                 if ( prevLast >= 0 )
                     nextFanStart[vc[prevLast].c] = vc[next].c;
                 else
@@ -2008,8 +2011,8 @@ bool MeshTopology::buildFromManifoldTriangles( const Triangulation & t, const Me
         if ( prevLast >= 0 )
         {
             nextFanStart[vc[prevLast].c] = vc[firstStartIdx].c;
-            if ( count != d )
-                vertsOk.store( false, std::memory_order_relaxed ); // a closed fan besides open ones
+            if ( count != d || numFans > 2 )
+                vertsOk.store( false, std::memory_order_relaxed ); // a closed fan besides open ones, or more than two open fans
             return;
         }
         // one closed fan must contain all corners

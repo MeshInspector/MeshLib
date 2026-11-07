@@ -567,9 +567,9 @@ public:
     MRMESH_API bool buildGridMesh( const GridSettings& settings, ProgressCallback cb = {} );
 
     /// constructs topology from given triangles in parallel, if every edge has at most two triangles with opposite directions on it,
-    /// and the triangles around every vertex form either one closed fan or open fans only; returns false and leaves this and settings.region unchanged otherwise;
+    /// and the triangles around every vertex form either one closed fan or at most two open fans; returns false and leaves this and settings.region unchanged otherwise;
     /// triangles with invalid or repeated vertices are not added, as in MeshBuilder::fromTriangles with the same settings;
-    /// \param nonManifoldVertsOnly if given, set to whether it failed only on vertices having a closed fan and other triangles around
+    /// \param nonManifoldVertsOnly if given, set to whether it failed only on vertices having several fans of triangles around, but not just one or two open fans
     MRMESH_API bool buildFromManifoldTriangles( const Triangulation & t, const MeshBuilder::BuildSettings & settings = {}, bool * nonManifoldVertsOnly = nullptr );
 
     /// verifies that all internal data structures are valid;

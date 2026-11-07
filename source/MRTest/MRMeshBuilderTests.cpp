@@ -618,6 +618,34 @@ TEST( MRMesh, duplicateNonManifoldVerticesBigMesh )
     EXPECT_EQ( topology.findNumHoles(), 0 );
 }
 
+// three triangles sharing only one vertex next to a big grid: as many are added as by adding triangles one by one
+TEST( MRMesh, threeOpenFansBigMesh )
+{
+    constexpr int n = 70;
+    Triangulation t;
+    for ( int y = 0; y + 1 < n; ++y )
+        for ( int x = 0; x + 1 < n; ++x )
+        {
+            const int v = y * n + x;
+            t.push_back( { VertId( v ), VertId( v + 1 ), VertId( v + n ) } );
+            t.push_back( { VertId( v + 1 ), VertId( v + n + 1 ), VertId( v + n ) } );
+        }
+    ASSERT_GE( t.size(), 8192 );
+    for ( int k = 0; k < 3; ++k )
+        t.push_back( { VertId( n * n ), VertId( n * n + 1 + 2 * k ), VertId( n * n + 2 + 2 * k ) } );
+
+    int skipped = 0;
+    const auto topology = fromTriangles( t, { .skippedFaceCount = &skipped } );
+    EXPECT_EQ( skipped, 1 );
+    EXPECT_EQ( topology.numValidFaces(), int( t.size() ) - 1 );
+
+    std::vector<VertDuplication> dups;
+    const auto dupTopology = fromTrianglesDuplicatingNonManifoldVertices( t, &dups );
+    EXPECT_EQ( dupTopology.numValidFaces(), int( t.size() ) );
+    EXPECT_FALSE( dups.empty() );
+    EXPECT_TRUE( dupTopology.checkValidity() );
+}
+
 TEST( MRMesh, buildFromManifoldTrianglesFails )
 {
     // two triangles with one vertex in common: two open fans there
@@ -640,6 +668,20 @@ TEST( MRMesh, buildFromManifoldTrianglesFails )
         { 0_v, 4_v, 5_v }, { 0_v, 5_v, 6_v }, { 0_v, 6_v, 4_v }, { 4_v, 6_v, 5_v } };
     EXPECT_FALSE( topology.buildFromManifoldTriangles( twoTetrahedra, {}, &nonManifoldVertsOnly ) );
     EXPECT_TRUE( nonManifoldVertsOnly );
+    // three open fans around vertex 0, in arbitrary order there
+    nonManifoldVertsOnly = false;
+    EXPECT_FALSE( topology.buildFromManifoldTriangles( { { 0_v, 1_v, 2_v }, { 0_v, 3_v, 4_v }, { 0_v, 5_v, 6_v } }, {}, &nonManifoldVertsOnly ) );
+    EXPECT_TRUE( nonManifoldVertsOnly );
+    // two and three open fans of 6 triangles each around vertex 0
+    for ( int numFans : { 2, 3 } )
+    {
+        Triangulation fans;
+        for ( int k = 0; k < numFans; ++k )
+            for ( int j = 0; j < 6; ++j )
+                fans.push_back( { 0_v, VertId( 1 + 10 * k + j ), VertId( 2 + 10 * k + j ) } );
+        MeshTopology fansTopology;
+        EXPECT_EQ( fansTopology.buildFromManifoldTriangles( fans ), numFans == 2 );
+    }
     // still valid after the failures
     EXPECT_TRUE( topology.checkValidity() );
     EXPECT_EQ( topology.numValidFaces(), 2 );

@@ -543,8 +543,9 @@ public:
     /// copies topology (from) into this;
     /// \param from edges must be tightly packes without any lone edges, and they are mapped [0, from.edges.size()) -> [toEdgeId, toEdgeId + from.edges.size());
     /// \param fmap,vmap mapping of vertices and faces if it is given ( from.id -> this.id )
+    /// \param shiftFaceId is added to all face ids from fmap
     MRMESH_API void addPackedPart( const MeshTopology & from, EdgeId toEdgeId,
-        const FaceMap & fmap, const VertMap & vmap );
+        const FaceMap & fmap, const VertMap & vmap, int shiftFaceId = 0 );
 
     /// compute
     /// 1) numValidVerts_ and validVerts_ from edgePerVertex_

@@ -1576,7 +1576,7 @@ void MeshTopology::resizeBeforeParallelAdd( size_t edgeSize, size_t vertSize, si
     validFaces_.resize( faceSize );
 }
 
-void MeshTopology::addPackedPart( const MeshTopology & from, EdgeId toEdgeId, const FaceMap & fmap, const VertMap & vmap )
+void MeshTopology::addPackedPart( const MeshTopology & from, EdgeId toEdgeId, const FaceMap & fmap, const VertMap & vmap, int shiftFaceId )
 {
     MR_TIMER;
 
@@ -1604,7 +1604,7 @@ void MeshTopology::addPackedPart( const MeshTopology & from, EdgeId toEdgeId, co
         auto efrom = from.edgePerFace_[i];
         if ( !efrom.valid() )
             continue;
-        auto & ev = edgePerFace_[fmap[i]];
+        auto & ev = edgePerFace_[fmap[i] + shiftFaceId];
         assert( !ev.valid() );
         ev = emap( efrom );
     }
@@ -1619,7 +1619,7 @@ void MeshTopology::addPackedPart( const MeshTopology & from, EdgeId toEdgeId, co
         to.next = emap( fromEdge.next );
         to.prev = emap( fromEdge.prev );
         to.org = fromEdge.org.valid() ? vmap[fromEdge.org] : VertId{};
-        to.left = fromEdge.left.valid() ? fmap[fromEdge.left] : FaceId{};
+        to.left = fromEdge.left.valid() ? fmap[fromEdge.left] + shiftFaceId : FaceId{};
     }
 }
 

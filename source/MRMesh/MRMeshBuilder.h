@@ -54,7 +54,7 @@ MRMESH_API Mesh fromPointTriples( const std::vector<Triangle3f> & posTriples );
 /// a part of a whole mesh to be constructed
 struct MeshPiece
 {
-    FaceMap fmap; ///< face of part -> face of whole mesh
+    FaceMap fmap; ///< face of part -> face of whole mesh (before settings.shiftFaceId is added)
     VertMap vmap; ///< vert of part -> vert of whole mesh
     MeshTopology topology;
     FaceBitSet rem; ///< remaining triangles of part, not in topology

@@ -403,7 +403,8 @@ MeshTopology fromDisjointMeshPieces( const Triangulation & t, VertId maxVertId,
     MeshTopology res;
     const auto borderTriCount = region.count();
     res.edgeReserve( numEdgesInParts + 6 * borderTriCount ); // should be enough even if all border triangles are disconnected
-    res.resizeBeforeParallelAdd( numEdgesInParts, maxVertId + 1, t.size() );
+    const int shift = settings0.shiftFaceId;
+    res.resizeBeforeParallelAdd( numEdgesInParts, maxVertId + 1, t.size() + shift );
 
     // add pieces in res in parallel
     tbb::parallel_for( tbb::blocked_range<size_t>( 0, numParts, 1 ), [&]( const tbb::blocked_range<size_t> & range )
@@ -412,7 +413,7 @@ MeshTopology fromDisjointMeshPieces( const Triangulation & t, VertId maxVertId,
         for ( size_t myPartId = range.begin(); myPartId < range.end(); ++myPartId )
         {
             const auto & part = pieces[myPartId];
-            res.addPackedPart( part.topology, firstPartEdge[myPartId], part.fmap, part.vmap );
+            res.addPackedPart( part.topology, firstPartEdge[myPartId], part.fmap, part.vmap, shift );
         }
     } );
     res.computeValidsFromEdges();

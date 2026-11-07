@@ -60,14 +60,16 @@ float readAnimationSeconds( const nlohmann::json& args )
     return seconds;
 }
 
-// waits until the camera of the viewport is not animated: the animation has ended, was stopped or was never started (no GL)
-void waitCameraAnimation( ViewportId vid )
+// waits until the camera of the viewport is not animated: the animation has ended, was stopped or was never started (no GL);
+// at most seconds + 1 s, in case others keep starting new animations
+void waitCameraAnimation( ViewportId vid, float seconds )
 {
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds( int( ( seconds + 1 ) * 1000 ) );
     for ( ;; )
     {
         bool animated = false;
         runOnMainThread( [&] { animated = getViewerInstance().viewport( vid ).getCameraAnimationTarget() != nullptr; } );
-        if ( !animated )
+        if ( !animated || std::chrono::steady_clock::now() > deadline )
             return;
         std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
     }
@@ -145,7 +147,7 @@ static nlohmann::json mcpViewerFit( const nlohmann::json& args )
         vp.animateCamera( box.valid() ? vp.calcPreciseFitBoxParameters( camera, { box, factor }, &sceneBox )
             : vp.calcPreciseFitDataParameters( camera, { factor }, &sceneBox ), seconds, sceneBox );
     } );
-    waitCameraAnimation( vid );
+    waitCameraAnimation( vid, seconds );
     return nlohmann::json::object();
 }
 
@@ -190,7 +192,7 @@ static nlohmann::json mcpViewerSetupCamera( const nlohmann::json& args )
             camera = vp.calcPreciseFitDataParameters( camera, { factor, false, *fitMode }, &sceneBox );
         vp.animateCamera( camera, seconds, sceneBox );
     } );
-    waitCameraAnimation( vid );
+    waitCameraAnimation( vid, seconds );
     return nlohmann::json::object();
 }
 

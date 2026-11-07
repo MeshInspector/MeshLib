@@ -579,7 +579,7 @@ TEST( MRMesh, buildFromManifoldTriangles )
     MeshTopology oneThread;
     {
         tbb::global_control singleThread( tbb::global_control::max_allowed_parallelism, 1 );
-        EXPECT_TRUE( oneThread.buildFromManifoldTriangles( t ) );
+        EXPECT_TRUE( oneThread.buildFromManifoldTriangles( t, {} ) );
     }
     EXPECT_EQ( oneThread, direct );
 
@@ -714,14 +714,14 @@ TEST( MRMesh, buildFromManifoldTrianglesFails )
     // two triangles with one vertex in common: two open fans there
     const Triangulation bowtie = { { 0_v, 1_v, 2_v }, { 0_v, 3_v, 4_v } };
     MeshTopology topology;
-    EXPECT_TRUE( topology.buildFromManifoldTriangles( bowtie ) );
+    EXPECT_TRUE( topology.buildFromManifoldTriangles( bowtie, {} ) );
     EXPECT_TRUE( topology.checkValidity() );
     EXPECT_EQ( topology.findNumHoles(), fromTriangles( bowtie ).findNumHoles() );
 
     // three triangles on edge 0-1
-    EXPECT_FALSE( topology.buildFromManifoldTriangles( { { 0_v, 1_v, 2_v }, { 1_v, 0_v, 3_v }, { 1_v, 0_v, 4_v } } ) );
+    EXPECT_FALSE( topology.buildFromManifoldTriangles( { { 0_v, 1_v, 2_v }, { 1_v, 0_v, 3_v }, { 1_v, 0_v, 4_v } }, {} ) );
     // two triangles with edge 0-1 in the same direction
-    EXPECT_FALSE( topology.buildFromManifoldTriangles( { { 0_v, 1_v, 2_v }, { 1_v, 0_v, 3_v }, { 0_v, 1_v, 4_v } } ) );
+    EXPECT_FALSE( topology.buildFromManifoldTriangles( { { 0_v, 1_v, 2_v }, { 1_v, 0_v, 3_v }, { 0_v, 1_v, 4_v } }, {} ) );
     bool nonManifoldVertsOnly = true;
     EXPECT_FALSE( topology.buildFromManifoldTriangles( { { 0_v, 1_v, 2_v }, { 1_v, 0_v, 3_v }, { 0_v, 1_v, 4_v } }, {}, &nonManifoldVertsOnly ) );
     EXPECT_FALSE( nonManifoldVertsOnly );
@@ -743,7 +743,7 @@ TEST( MRMesh, buildFromManifoldTrianglesFails )
             for ( int j = 0; j < 6; ++j )
                 fans.push_back( { 0_v, VertId( 1 + 10 * k + j ), VertId( 2 + 10 * k + j ) } );
         MeshTopology fansTopology;
-        EXPECT_EQ( fansTopology.buildFromManifoldTriangles( fans ), numFans == 2 );
+        EXPECT_EQ( fansTopology.buildFromManifoldTriangles( fans, {} ), numFans == 2 );
     }
     // still valid after the failures
     EXPECT_TRUE( topology.checkValidity() );

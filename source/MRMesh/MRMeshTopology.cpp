@@ -1,4 +1,5 @@
 #include "MRMeshTopology.h"
+#include "MRMeshBuilderTypes.h"
 #include "MRRingIterator.h"
 #include "MRRegionBoundary.h"
 #include "MREdgeIterator.h"

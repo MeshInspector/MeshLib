@@ -38,7 +38,9 @@ struct AABBTreeNode
     bool leaf() const { return !r.valid(); }
     /// returns face (for the leaf node only)
     LeafId leafId() const { assert( leaf() ); return LeafId( int( l ) ); }
-    void setLeafId( LeafId id ) { l = NodeId( int( id ) ); r = NodeId(); }
+    /// returns the index of this leaf in the tree's per-leaf data (for the leaf node only), stored in r as ~pos to keep it invalid
+    int leafPos() const { assert( leaf() ); return ~int( r ); }
+    void setLeafId( LeafId id, int pos = 0 ) { l = NodeId( int( id ) ); r = NodeId( ~pos ); }
 
     AABBTreeNode() noexcept = default;
     explicit AABBTreeNode( NoInit ) noexcept : box( noInit ), l( noInit ), r( noInit ){}

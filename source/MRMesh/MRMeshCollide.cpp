@@ -13,6 +13,7 @@
 #include "MRPrecisePredicates3.h"
 #include "MRRingIterator.h"
 
+#include <algorithm>
 #include <atomic>
 #include <thread>
 
@@ -43,6 +44,7 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
     }
 
     std::vector<NodeNode> subtasks{ { NodeId{ 0 }, NodeId{ 0 } } };
+    std::vector<NodeNode> leafPairs;
 
     while( !subtasks.empty() )
     {
@@ -63,9 +65,7 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
 
         if ( aNode.leaf() && bNode.leaf() )
         {
-            const auto aFace = aNode.leafId();
-            const auto bFace = bNode.leafId();
-            res.emplace_back( aFace, bFace );
+            leafPairs.push_back( s );
             continue;
         }
 
@@ -84,15 +84,14 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
         }
     }
 
-    std::atomic<int> firstIntersection{ (int)res.size() };
-    ParallelFor( res, [&] ( size_t i )
+    std::atomic<int> firstIntersection{ (int)leafPairs.size() };
+    ParallelFor( leafPairs, [&] ( size_t i )
     {
         int knownIntersection = firstIntersection.load( std::memory_order_relaxed );
         if ( firstIntersectionOnly && knownIntersection < i )
             return;
-        Vector3f av[3], bv[3];
-        a.mesh.getTriPoints( res[i].aFace, av[0], av[1], av[2] );
-        b.mesh.getTriPoints( res[i].bFace, bv[0], bv[1], bv[2] );
+        const auto av = aTree.leafTriPoints( a.mesh.points, aTree[leafPairs[i].aNode] );
+        auto bv = bTree.leafTriPoints( b.mesh.points, bTree[leafPairs[i].bNode] );
         if ( rigidB2A )
         {
             bv[0] = (*rigidB2A)( bv[0] );
@@ -109,24 +108,22 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
         }
         else
         {
-            res[i].aFace = FaceId{}; //invalidate
+            leafPairs[i].aNode = NodeId{}; //invalidate
         }
     } );
 
+    auto toFaceFace = [&]( const NodeNode & nn ) { return FaceFace( aTree[nn.aNode].leafId(), bTree[nn.bNode].leafId() ); };
     if ( firstIntersectionOnly )
     {
         int knownIntersection = firstIntersection.load( std::memory_order_relaxed );
-        if ( knownIntersection < res.size() )
-        {
-            res[0] = res[knownIntersection];
-            res.erase( res.begin() + 1, res.end() );
-        }
-        else
-            res.clear();
+        if ( knownIntersection < leafPairs.size() )
+            res.push_back( toFaceFace( leafPairs[knownIntersection] ) );
     }
     else
     {
-        res.erase( std::remove_if( res.begin(), res.end(), []( const FaceFace & ff ) { return !ff.aFace.valid(); } ), res.end() );
+        for ( const auto & nn : leafPairs )
+            if ( nn.aNode )
+                res.push_back( toFaceFace( nn ) );
     }
 
     return res;
@@ -241,8 +238,8 @@ Expected<bool> findSelfCollidingTriangles(
                     }
                     else
                     {
-                        mp.mesh.topology.getTriVerts( aFace, av[0], av[1], av[2] );
-                        mp.mesh.topology.getTriVerts( bFace, bv[0], bv[1], bv[2] );
+                        std::copy_n( tree.leafTriVerts( aNode ).begin(), 3, av );
+                        std::copy_n( tree.leafTriVerts( bNode ).begin(), 3, bv );
                     }
                     for ( int j = 0; j < 3; ++j )
                     {

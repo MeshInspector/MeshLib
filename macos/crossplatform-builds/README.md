@@ -26,6 +26,18 @@ binaries run on Intel Macs — and on the build host under Rosetta, which is how
 > being retired). Until then both run, and both `.pkg`s are published (the cross one suffixed
 > `-x64-cross`).
 
+## The vcpkg leg
+
+`x64-cross` runs twice, with `lib-source` Homebrew and vcpkg; as for the hosted legs, the
+package comes from the vcpkg one. Its triplet,
+[`x64-cross-osx-meshlib.cmake`](../../thirdparty/vcpkg/triplets/x64-cross-osx-meshlib.cmake), is
+`x64-osx-meshlib` under a separate name so the vcpkg caches (S3, GitHub) of the two legs stay
+apart. `VCPKG_DEFAULT_HOST_TRIPLET=arm64-osx-meshlib` builds the host tools natively. The
+Homebrew-only environment (the `/usr/local` prefix, the python shim, the pkg-config paths) is
+not set on this leg; its x86_64 `python3` comes from vcpkg and runs under Rosetta like the other
+Intel outputs. The first run builds every port from source on the runner; later runs restore
+`vcpkg_installed` from the GitHub cache or the ports from the S3 binary cache.
+
 ## How it works
 
 - **cmake / ninja / clang run natively as arm64.** `CMAKE_OSX_ARCHITECTURES=x86_64` makes AppleClang

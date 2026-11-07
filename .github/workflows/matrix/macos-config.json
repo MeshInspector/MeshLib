@@ -8,8 +8,7 @@
       "llvm-keg-version": "22.1.8_2",
       "runner": "macos-15-intel",
       "instance": "macos-15-intel",
-      "xcode-version": "16.4",
-      "upload-package": true
+      "xcode-version": "16.4"
     },
     {
       "arch": "arm64",
@@ -19,8 +18,7 @@
       "llvm-keg-version": "22.1.8_2",
       "runner": "macos-15",
       "instance": "macos-15",
-      "xcode-version": "16.4",
-      "upload-package": true
+      "xcode-version": "16.4"
     },
     {
       "arch": "x64-cross",
@@ -35,8 +33,42 @@
         "crossplatform-build"
       ],
       "instance": "self-hosted-arm-x64-native",
-      "cross-osx-arch": "x86_64",
-      "upload-package": true
+      "cross-osx-arch": "x86_64"
+    },
+    {
+      "arch": "x64",
+      "config": "Release",
+      "lib-source": "vcpkg",
+      "compiler": "AppleClang",
+      "llvm-keg-version": "22.1.8_2",
+      "runner": "macos-15-intel",
+      "instance": "macos-15-intel",
+      "xcode-version": "16.4"
+    },
+    {
+      "arch": "arm64",
+      "config": "Release",
+      "lib-source": "vcpkg",
+      "compiler": "AppleClang",
+      "llvm-keg-version": "22.1.8_2",
+      "runner": "macos-15",
+      "instance": "macos-15",
+      "xcode-version": "16.4"
+    },
+    {
+      "arch": "x64-cross",
+      "config": "Release",
+      "lib-source": "vcpkg",
+      "compiler": "AppleClang",
+      "llvm-keg-version": "22.1.8_2",
+      "runner": [
+        "self-hosted",
+        "macos",
+        "arm64",
+        "crossplatform-build"
+      ],
+      "instance": "self-hosted-arm-x64-native",
+      "cross-osx-arch": "x86_64"
     }
   ]
 }

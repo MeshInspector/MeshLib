@@ -4,8 +4,15 @@
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMeshComponents.h>
 #include <MRMesh/MRUnorientedTriangle.h>
+#include <MRMesh/MRMakeSphereMesh.h>
+#include <MRMesh/MRMesh.h>
+#include <MRMesh/MRRingIterator.h>
+#include <MRMesh/MRBitSet.h>
 #include <gtest/gtest.h>
+#include <tbb/global_control.h>
 #include <algorithm>
+#include <numeric>
+#include <random>
 
 namespace MR
 {
@@ -545,6 +552,241 @@ TEST( MRMesh, computeTrianglesRepetitions )
     EXPECT_EQ( reps[0], 1 ); // {3,4,5}
     EXPECT_EQ( reps[1], 1 ); // {0,2,3}
     EXPECT_EQ( reps[2], 1 ); // {0,1,2}
+}
+
+// the same faces and the same counter-clockwise ring of neighbours around every vertex
+static void expectSameConnectivity( const MeshTopology & a, const MeshTopology & b )
+{
+    EXPECT_TRUE( b.checkValidity() );
+    EXPECT_EQ( a.edgeSize(), b.edgeSize() );
+    EXPECT_EQ( a.getValidVerts(), b.getValidVerts() );
+    ASSERT_EQ( a.getValidFaces(), b.getValidFaces() );
+    for ( FaceId f : a.getValidFaces() )
+    {
+        auto va = a.getTriVerts( f );
+        auto vb = b.getTriVerts( f );
+        std::rotate( vb.begin(), std::find( vb.begin(), vb.end(), va[0] ), vb.end() );
+        EXPECT_EQ( va, vb );
+    }
+    Vector<VertId> ra, rb;
+    for ( VertId v : a.getValidVerts() )
+    {
+        ra.clear();
+        rb.clear();
+        for ( EdgeId e : orgRing( a, v ) )
+            ra.push_back( a.dest( e ) );
+        for ( EdgeId e : orgRing( b, v ) )
+            rb.push_back( b.dest( e ) );
+        ASSERT_EQ( ra.size(), rb.size() );
+        std::rotate( rb.begin(), std::find( rb.begin(), rb.end(), ra[0] ), rb.end() );
+        EXPECT_EQ( ra, rb );
+    }
+}
+
+TEST( MRMesh, buildFromManifoldTriangles )
+{
+    // closed mesh with shuffled vertices and triangles, as built sequentially triangle by triangle
+    const auto sphere = makeSphere( { .numMeshVertices = 3000 } );
+    Triangulation t = sphere.topology.getTriangulation();
+    std::mt19937 rng( 1 );
+    // the same on all platforms, unlike std::shuffle
+    auto shuffle = [&]( auto & v, auto id )
+    {
+        for ( size_t i = v.size(); i > 1; --i )
+            std::swap( v[decltype( id )( i - 1 )], v[decltype( id )( rng() % i )] );
+    };
+    Vector<int> perm( sphere.topology.vertSize() );
+    std::iota( perm.begin(), perm.end(), 0 );
+    shuffle( perm, size_t{} );
+    for ( auto & tri : t )
+        for ( auto & v : tri )
+            v = VertId( perm[v] );
+    shuffle( t, FaceId{} );
+    // remove some triangles to get holes
+    for ( int i = 0; i < 30; ++i )
+        t.erase( t.begin() + int( rng() % t.size() ) );
+
+    FaceBitSet region( t.size(), true );
+    const auto seq = fromTriangles( t, { .region = &region } );
+    EXPECT_TRUE( region.none() );
+    MeshTopology direct;
+    int skipped = -1;
+    EXPECT_TRUE( direct.buildFromManifoldTriangles( t, { .skippedFaceCount = &skipped } ) );
+    EXPECT_EQ( skipped, 0 );
+    expectSameConnectivity( seq, direct );
+
+    MeshTopology oneThread;
+    {
+        tbb::global_control singleThread( tbb::global_control::max_allowed_parallelism, 1 );
+        EXPECT_TRUE( oneThread.buildFromManifoldTriangles( t, {} ) );
+    }
+    EXPECT_EQ( oneThread, direct );
+
+    // triangles with repeated or invalid vertices are skipped
+    t.push_back( { 0_v, 0_v, 1_v } );
+    t.push_back( { VertId(), VertId(), VertId() } );
+    EXPECT_TRUE( direct.buildFromManifoldTriangles( t, { .skippedFaceCount = &skipped } ) );
+    EXPECT_EQ( skipped, 2 );
+    EXPECT_EQ( direct.numValidFaces(), int( t.size() ) - 2 );
+}
+
+TEST( MRMesh, buildFromManifoldTrianglesRegion )
+{
+    const auto sphere = makeSphere( { .numMeshVertices = 3000 } );
+    Triangulation t = sphere.topology.getTriangulation();
+    t.push_back( { 0_v, 0_v, 1_v } );
+    FaceBitSet region( t.size(), true );
+    for ( FaceId f = 0_f; f < 100; ++f )
+        region.reset( f );
+    constexpr int shift = 10;
+
+    FaceBitSet seqRegion = region, directRegion = region;
+    int seqSkipped = -1, directSkipped = -1;
+    MeshTopology seq;
+    addTriangles( seq, t, { .region = &seqRegion, .shiftFaceId = shift, .skippedFaceCount = &seqSkipped } );
+    MeshTopology direct;
+    EXPECT_TRUE( direct.buildFromManifoldTriangles( t, { .region = &directRegion, .shiftFaceId = shift, .skippedFaceCount = &directSkipped } ) );
+    EXPECT_EQ( seqSkipped, 1 );
+    EXPECT_EQ( directSkipped, 1 );
+    EXPECT_EQ( directRegion.count(), 1 );
+    EXPECT_TRUE( directRegion.test( FaceId( int( t.size() ) - 1 ) ) );
+    EXPECT_EQ( seqRegion.count(), 1 );
+    EXPECT_EQ( direct.faceSize(), t.size() + shift );
+    EXPECT_FALSE( direct.hasFace( 0_f ) );
+    expectSameConnectivity( seq, direct );
+}
+
+TEST( MRMesh, duplicateNonManifoldVerticesBigMesh )
+{
+    // two closed spheres sharing one vertex, with enough triangles for fromTriangles to try buildFromManifoldTriangles
+    const auto sphere = makeSphere( { .numMeshVertices = 10000 } );
+    const Triangulation one = sphere.topology.getTriangulation();
+    const int nv = int( sphere.topology.vertSize() );
+    Triangulation t = one;
+    for ( auto tri : one )
+    {
+        for ( auto & v : tri )
+            v = v == 0_v ? v : VertId( v + nv );
+        t.push_back( tri );
+    }
+    ASSERT_GE( t.size(), 8192 );
+
+    MeshTopology topology;
+    bool nonManifoldVertsOnly = false;
+    EXPECT_FALSE( topology.buildFromManifoldTriangles( t, {}, &nonManifoldVertsOnly ) );
+    EXPECT_TRUE( nonManifoldVertsOnly );
+
+    std::vector<VertDuplication> dups;
+    topology = fromTrianglesDuplicatingNonManifoldVertices( t, &dups );
+    ASSERT_EQ( dups.size(), 1 );
+    EXPECT_EQ( dups[0].srcVert, 0_v );
+    EXPECT_EQ( topology.numValidFaces(), int( t.size() ) );
+    EXPECT_EQ( topology.numValidVerts(), 2 * nv );
+    EXPECT_TRUE( topology.checkValidity() );
+    EXPECT_EQ( topology.findNumHoles(), 0 );
+}
+
+// three triangles sharing only one vertex next to a big grid: as many are added as by adding triangles one by one
+TEST( MRMesh, threeOpenFansBigMesh )
+{
+    constexpr int n = 70;
+    Triangulation t;
+    for ( int y = 0; y + 1 < n; ++y )
+        for ( int x = 0; x + 1 < n; ++x )
+        {
+            const int v = y * n + x;
+            t.push_back( { VertId( v ), VertId( v + 1 ), VertId( v + n ) } );
+            t.push_back( { VertId( v + 1 ), VertId( v + n + 1 ), VertId( v + n ) } );
+        }
+    ASSERT_GE( t.size(), 8192 );
+    for ( int k = 0; k < 3; ++k )
+        t.push_back( { VertId( n * n ), VertId( n * n + 1 + 2 * k ), VertId( n * n + 2 + 2 * k ) } );
+
+    int skipped = 0;
+    const auto topology = fromTriangles( t, { .skippedFaceCount = &skipped } );
+    EXPECT_EQ( skipped, 1 );
+    EXPECT_EQ( topology.numValidFaces(), int( t.size() ) - 1 );
+
+    std::vector<VertDuplication> dups;
+    const auto dupTopology = fromTrianglesDuplicatingNonManifoldVertices( t, &dups );
+    EXPECT_EQ( dupTopology.numValidFaces(), int( t.size() ) );
+    EXPECT_FALSE( dups.empty() );
+    EXPECT_TRUE( dupTopology.checkValidity() );
+}
+
+// two open fans at vertices 22 and 23 in the end, but adding triangles one by one in this order gets stuck on (23,18,22) and (22,2,23)
+TEST( MRMesh, twoOpenFansBigMesh )
+{
+    Triangulation t = { { 3_v, 23_v, 2_v }, { 21_v, 1_v, 22_v }, { 24_v, 19_v, 23_v }, { 23_v, 18_v, 22_v }, { 17_v, 22_v, 18_v }, { 22_v, 2_v, 23_v } };
+    constexpr int n = 70, o = 100;
+    for ( int y = 0; y + 1 < n; ++y )
+        for ( int x = 0; x + 1 < n; ++x )
+        {
+            const int v = o + y * n + x;
+            t.push_back( { VertId( v ), VertId( v + 1 ), VertId( v + n ) } );
+            t.push_back( { VertId( v + 1 ), VertId( v + n + 1 ), VertId( v + n ) } );
+        }
+    ASSERT_GE( t.size(), 8192 );
+
+    int skipped = -1;
+    const auto topology = fromTriangles( t, { .skippedFaceCount = &skipped } );
+    EXPECT_EQ( skipped, 0 );
+    EXPECT_EQ( topology.numValidFaces(), int( t.size() ) );
+    EXPECT_TRUE( topology.checkValidity() );
+    for ( VertId v : { 22_v, 23_v } )
+    {
+        int holes = 0;
+        for ( EdgeId e : orgRing( topology, v ) )
+            if ( !topology.left( e ) )
+                ++holes;
+        EXPECT_EQ( holes, 2 );
+    }
+
+    std::vector<VertDuplication> dups;
+    const auto dupTopology = fromTrianglesDuplicatingNonManifoldVertices( t, &dups );
+    EXPECT_EQ( dupTopology.numValidFaces(), int( t.size() ) );
+    EXPECT_TRUE( dups.empty() );
+}
+
+TEST( MRMesh, buildFromManifoldTrianglesFails )
+{
+    // two triangles with one vertex in common: two open fans there
+    const Triangulation bowtie = { { 0_v, 1_v, 2_v }, { 0_v, 3_v, 4_v } };
+    MeshTopology topology;
+    EXPECT_TRUE( topology.buildFromManifoldTriangles( bowtie, {} ) );
+    EXPECT_TRUE( topology.checkValidity() );
+    EXPECT_EQ( topology.findNumHoles(), fromTriangles( bowtie ).findNumHoles() );
+
+    // three triangles on edge 0-1
+    EXPECT_FALSE( topology.buildFromManifoldTriangles( { { 0_v, 1_v, 2_v }, { 1_v, 0_v, 3_v }, { 1_v, 0_v, 4_v } }, {} ) );
+    // two triangles with edge 0-1 in the same direction
+    EXPECT_FALSE( topology.buildFromManifoldTriangles( { { 0_v, 1_v, 2_v }, { 1_v, 0_v, 3_v }, { 0_v, 1_v, 4_v } }, {} ) );
+    bool nonManifoldVertsOnly = true;
+    EXPECT_FALSE( topology.buildFromManifoldTriangles( { { 0_v, 1_v, 2_v }, { 1_v, 0_v, 3_v }, { 0_v, 1_v, 4_v } }, {}, &nonManifoldVertsOnly ) );
+    EXPECT_FALSE( nonManifoldVertsOnly );
+    // two closed fans around vertex 0
+    const Triangulation twoTetrahedra = {
+        { 0_v, 1_v, 2_v }, { 0_v, 2_v, 3_v }, { 0_v, 3_v, 1_v }, { 1_v, 3_v, 2_v },
+        { 0_v, 4_v, 5_v }, { 0_v, 5_v, 6_v }, { 0_v, 6_v, 4_v }, { 4_v, 6_v, 5_v } };
+    EXPECT_FALSE( topology.buildFromManifoldTriangles( twoTetrahedra, {}, &nonManifoldVertsOnly ) );
+    EXPECT_TRUE( nonManifoldVertsOnly );
+    // three open fans around vertex 0, in arbitrary order there
+    nonManifoldVertsOnly = false;
+    EXPECT_FALSE( topology.buildFromManifoldTriangles( { { 0_v, 1_v, 2_v }, { 0_v, 3_v, 4_v }, { 0_v, 5_v, 6_v } }, {}, &nonManifoldVertsOnly ) );
+    EXPECT_TRUE( nonManifoldVertsOnly );
+    // two and three open fans of 6 triangles each around vertex 0
+    for ( int numFans : { 2, 3 } )
+    {
+        Triangulation fans;
+        for ( int k = 0; k < numFans; ++k )
+            for ( int j = 0; j < 6; ++j )
+                fans.push_back( { 0_v, VertId( 1 + 10 * k + j ), VertId( 2 + 10 * k + j ) } );
+        MeshTopology fansTopology;
+        EXPECT_EQ( fansTopology.buildFromManifoldTriangles( fans, {} ), numFans == 2 );
+    }
+    // still valid after the failures
+    EXPECT_TRUE( topology.checkValidity() );
+    EXPECT_EQ( topology.numValidFaces(), 2 );
 }
 
 } //namespace MeshBuilder

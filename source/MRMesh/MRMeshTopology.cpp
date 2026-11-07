@@ -1,4 +1,5 @@
 #include "MRMeshTopology.h"
+#include "MRMeshBuilderTypes.h"
 #include "MRRingIterator.h"
 #include "MRRegionBoundary.h"
 #include "MREdgeIterator.h"
@@ -1798,6 +1799,327 @@ bool MeshTopology::buildGridMesh( const GridSettings & settings, ProgressCallbac
         return result;
 
     return computeValidsFromEdges( subprogress( cb, 0.5f, 1.0f ) );
+}
+
+bool MeshTopology::buildFromManifoldTriangles( const Triangulation & t, const MeshBuilder::BuildSettings & settings, bool * nonManifoldVertsOnly )
+{
+    MR_TIMER;
+    if ( nonManifoldVertsOnly )
+        *nonManifoldVertsOnly = false;
+    // corner c = 3 * face + k is at vertex t[face][k]; its half-edge goes to the next vertex of the face
+    const size_t numCorners = 3 * t.size();
+    if ( t.empty() || numCorners >= size_t( INT_MAX ) / 2 || settings.shiftFaceId < 0 || t.size() + settings.shiftFaceId >= size_t( INT_MAX ) )
+        return false;
+    const ThreeVertIds * tv = t.data();
+    auto prevCorner = [] ( int c ) { return c - c % 3 + ( c + 2 ) % 3; };
+    // such triangles are not added, as in MeshBuilder
+    auto badFace = [&]( size_t f )
+    {
+        const auto & vs = tv[f];
+        return !vs[0].valid() || !vs[1].valid() || !vs[2].valid() || vs[0] == vs[1] || vs[1] == vs[2] || vs[0] == vs[2];
+    };
+    auto skipFace = [&]( size_t f )
+    {
+        return ( settings.region && !settings.region->test( FaceId( f ) ) ) || badFace( f );
+    };
+
+    struct MaxSkip { int maxVert = -1, numSkipped = 0; };
+    const auto ms = parallel_reduce( tbb::blocked_range( size_t( 0 ), t.size() ), MaxSkip{},
+        [&] ( const auto & range, MaxSkip curr )
+        {
+            for ( size_t f = range.begin(); f < range.end(); ++f )
+            {
+                if ( settings.region && !settings.region->test( FaceId( f ) ) )
+                    continue;
+                if ( badFace( f ) )
+                {
+                    ++curr.numSkipped;
+                    continue;
+                }
+                const auto & vs = tv[f];
+                curr.maxVert = std::max( { curr.maxVert, int( vs[0] ), int( vs[1] ), int( vs[2] ) } );
+            }
+            return curr;
+        },
+        [] ( MaxSkip a, MaxSkip b ) { return MaxSkip{ std::max( a.maxVert, b.maxVert ), a.numSkipped + b.numSkipped }; } );
+    if ( ms.maxVert < 0 )
+        return false;
+    const size_t numVerts = size_t( ms.maxVert ) + 1;
+
+    // corners around each vertex (in no particular order) with the next and previous vertices of their triangles
+    Vector<std::atomic<int>, VertId> fill( numVerts );
+    ParallelFor( size_t( 0 ), t.size(), [&]( size_t f )
+    {
+        if ( skipFace( f ) )
+            return;
+        for ( int k = 0; k < 3; ++k )
+            fill[tv[f][k]].fetch_add( 1, std::memory_order_relaxed );
+    } );
+    Buffer<int> firstCorner( numVerts + 1 );
+    int sum = 0;
+    for ( size_t v = 0; v < numVerts; ++v )
+    {
+        firstCorner[v] = sum;
+        sum += fill[VertId( v )].load( std::memory_order_relaxed );
+        fill[VertId( v )].store( firstCorner[v], std::memory_order_relaxed );
+    }
+    firstCorner[numVerts] = sum;
+
+    struct VertCorner
+    {
+        int c = -1;
+        VertId next, prev;
+        VertCorner() = default;
+        VertCorner( int corner, VertId n, VertId p ) : c( corner ), next( n ), prev( p ) {}
+        explicit VertCorner( NoInit ) noexcept : next( noInit ), prev( noInit ) {}
+    };
+    Buffer<VertCorner> vertCorners( sum );
+    ParallelFor( size_t( 0 ), t.size(), [&]( size_t f )
+    {
+        if ( skipFace( f ) )
+            return;
+        const auto & vs = tv[f];
+        for ( int k = 0; k < 3; ++k )
+            vertCorners[fill[vs[k]].fetch_add( 1, std::memory_order_relaxed )] = { int( 3 * f + k ), vs[( k + 1 ) % 3], vs[( k + 2 ) % 3] };
+    } );
+
+    // twin[c]: the corner whose half-edge goes back along c's edge, -1 on boundary, c itself in a skipped triangle;
+    // around each vertex: either one closed fan of triangles, or one or two open fans joined through the holes in the order of their first corners
+    // (the order of three or more open fans around a vertex is arbitrary, and MeshBuilder does not create them),
+    // nextFanStart[last corner of a fan] = first corner of the next fan
+    Buffer<int> twin( numCorners );
+    Buffer<int> nextFanStart( numCorners );
+    Buffer<int> vertMinCorner( numVerts );
+    std::atomic<bool> edgesOk{ true }, vertsOk{ true };
+    ParallelFor( size_t( 0 ), t.size(), [&]( size_t f )
+    {
+        if ( skipFace( f ) )
+            for ( int c = int( 3 * f ); c < int( 3 * f + 3 ); ++c )
+                twin[c] = c;
+    } );
+    ParallelFor( size_t( 0 ), numVerts, [&]( size_t v )
+    {
+        VertCorner * const vc = vertCorners.data() + firstCorner[v];
+        const int d = firstCorner[v + 1] - firstCorner[v];
+        vertMinCorner[v] = -1;
+        if ( d == 0 )
+            return;
+        const bool many = d > 16;
+        if ( many )
+            std::sort( vc, vc + d, []( const VertCorner & a, const VertCorner & b ) { return a.next < b.next; } );
+        // index of the only corner at v with given next vertex, -1 if none, -2 if several
+        auto findNext = [&]( VertId n )
+        {
+            int i = -1;
+            if ( many )
+            {
+                auto it = std::lower_bound( vc, vc + d, n, []( const VertCorner & a, VertId b ) { return a.next < b; } );
+                if ( it == vc + d || it->next != n )
+                    return -1;
+                i = int( it - vc );
+                return i + 1 < d && vc[i + 1].next == n ? -2 : i;
+            }
+            for ( int j = 0; j < d; ++j )
+                if ( vc[j].next == n )
+                {
+                    if ( i >= 0 )
+                        return -2;
+                    i = j;
+                }
+            return i;
+        };
+        int minCorner = INT_MAX;
+        for ( int i = 0; i < d; ++i )
+        {
+            minCorner = std::min( minCorner, vc[i].c );
+            const int j = findNext( vc[i].prev );
+            if ( j == -2 || ( !settings.allowNonManifoldEdge && findNext( vc[i].next ) == -2 ) )
+            {
+                edgesOk.store( false, std::memory_order_relaxed ); // three or more triangles share an edge, or two have it in the same direction
+                return;
+            }
+            twin[prevCorner( vc[i].c )] = j >= 0 ? vc[j].c : -1;
+        }
+        vertMinCorner[v] = minCorner;
+        // a corner starts an open fan if no corner at v has its next vertex as previous
+        auto isStart = [&]( int i )
+        {
+            for ( int j = 0; j < d; ++j )
+                if ( vc[j].prev == vc[i].next )
+                    return false;
+            return true;
+        };
+        auto walk = [&]( int i ) // returns the index of the last corner of the fan from i and the number of its corners
+        {
+            int count = 1;
+            for ( ;; )
+            {
+                const int j = findNext( vc[i].prev );
+                if ( j < 0 || count > d )
+                    return std::pair{ i, count };
+                i = j;
+                ++count;
+            }
+        };
+        int count = 0, prevLast = -1, firstStartIdx = -1, numFans = 0;
+        if ( many )
+        {
+            // many corners: find the starts by sorting the previous vertices
+            Vector<VertId> prevs( d );
+            for ( int j = 0; j < d; ++j )
+                prevs[j] = vc[j].prev;
+            std::sort( prevs.begin(), prevs.end() );
+            Vector<int> starts;
+            for ( int i = 0; i < d; ++i )
+                if ( !std::binary_search( prevs.begin(), prevs.end(), vc[i].next ) )
+                    starts.push_back( i );
+            std::sort( starts.begin(), starts.end(), [&]( int a, int b ) { return vc[a].c < vc[b].c; } );
+            for ( int i : starts )
+            {
+                auto [last, n] = walk( i );
+                count += n;
+                ++numFans;
+                if ( prevLast >= 0 )
+                    nextFanStart[vc[prevLast].c] = vc[i].c;
+                else
+                    firstStartIdx = i;
+                prevLast = last;
+            }
+        }
+        else
+        {
+            // few corners: visit the starts in the order of their corners
+            int lastStartCorner = -1;
+            for ( ;; )
+            {
+                int next = -1;
+                for ( int i = 0; i < d; ++i )
+                    if ( vc[i].c > lastStartCorner && ( next < 0 || vc[i].c < vc[next].c ) && isStart( i ) )
+                        next = i;
+                if ( next < 0 )
+                    break;
+                lastStartCorner = vc[next].c;
+                auto [last, n] = walk( next );
+                count += n;
+                ++numFans;
+                if ( prevLast >= 0 )
+                    nextFanStart[vc[prevLast].c] = vc[next].c;
+                else
+                    firstStartIdx = next;
+                prevLast = last;
+            }
+        }
+        if ( prevLast >= 0 )
+        {
+            nextFanStart[vc[prevLast].c] = vc[firstStartIdx].c;
+            if ( count != d || numFans > 2 )
+                vertsOk.store( false, std::memory_order_relaxed ); // a closed fan besides open ones, or more than two open fans
+            return;
+        }
+        // one closed fan must contain all corners
+        int i = 0;
+        do
+        {
+            ++count;
+            i = findNext( vc[i].prev );
+        } while ( i > 0 && count <= d );
+        if ( i != 0 || count != d )
+            vertsOk.store( false, std::memory_order_relaxed ); // several closed fans
+    } );
+    if ( !edgesOk || !vertsOk )
+    {
+        if ( nonManifoldVertsOnly )
+            *nonManifoldVertsOnly = edgesOk;
+        return false;
+    }
+
+    // an edge belongs to the corner with the smaller id; edge ids follow faces, then corners
+    auto owns = [&]( int c ) { return twin[c] < 0 || c < twin[c]; };
+    constexpr size_t facesInBlock = 4096;
+    const size_t numBlocks = ( t.size() + facesInBlock - 1 ) / facesInBlock;
+    Buffer<int> blockFirstEdge( numBlocks + 1 );
+    ParallelFor( size_t( 0 ), numBlocks, [&]( size_t b )
+    {
+        int n = 0;
+        for ( int c = int( 3 * b * facesInBlock ), cEnd = int( 3 * std::min( t.size(), ( b + 1 ) * facesInBlock ) ); c < cEnd; ++c )
+            n += owns( c );
+        blockFirstEdge[b + 1] = n;
+    } );
+    blockFirstEdge[0] = 0;
+    for ( size_t b = 0; b < numBlocks; ++b )
+        blockFirstEdge[b + 1] += blockFirstEdge[b];
+    const int numUndirected = blockFirstEdge[numBlocks];
+    Buffer<EdgeId> cornerEdge( numCorners );
+    ParallelFor( size_t( 0 ), numBlocks, [&]( size_t b )
+    {
+        int ue = blockFirstEdge[b];
+        for ( int c = int( 3 * b * facesInBlock ), cEnd = int( 3 * std::min( t.size(), ( b + 1 ) * facesInBlock ) ); c < cEnd; ++c )
+            if ( owns( c ) )
+                cornerEdge[c] = EdgeId( 2 * ue++ );
+    } );
+    // only owned corners have cornerEdge; the other corner of the edge has its sym
+    auto edgeOf = [&]( int c ) { return owns( c ) ? cornerEdge[c] : cornerEdge[twin[c]].sym(); };
+
+    updateValids_ = false;
+    edges_.resizeNoInit( 2 * size_t( numUndirected ) );
+    const int shift = settings.shiftFaceId;
+    edgePerFace_.resizeNoInit( t.size() + shift );
+    std::fill( edgePerFace_.data(), edgePerFace_.data() + shift, EdgeId() );
+    ParallelFor( size_t( 0 ), t.size(), [&]( size_t tf )
+    {
+        const FaceId f( int( tf ) + shift );
+        const int c0 = int( 3 * tf );
+        if ( twin[c0] == c0 )
+        {
+            edgePerFace_[f] = EdgeId(); // skipped triangle
+            return;
+        }
+        const EdgeId fe[3] = { edgeOf( c0 ), edgeOf( c0 + 1 ), edgeOf( c0 + 2 ) };
+        edgePerFace_[f] = fe[0];
+        for ( int k = 0; k < 3; ++k )
+        {
+            const EdgeId e = fe[k];
+            const VertId v = tv[tf][k];
+            edges_[e].org = v;
+            edges_[e].left = f;
+            // next counter-clockwise around v is the half-edge to the previous vertex of the face
+            const int pk = ( k + 2 ) % 3;
+            const int tp = twin[c0 + pk];
+            const EdgeId h = tp >= 0 && owns( tp ) ? cornerEdge[tp] : fe[pk].sym();
+            edges_[e].next = h;
+            edges_[h].prev = e;
+            if ( tp < 0 )
+            {
+                // h is on the boundary: no left face, followed by the first half-edge of the next fan around v
+                edges_[h].org = v;
+                edges_[h].left = FaceId();
+                const EdgeId s = cornerEdge[nextFanStart[c0 + k]];
+                edges_[h].next = s;
+                edges_[s].prev = h;
+            }
+        }
+    } );
+
+    edgePerVertex_.resizeNoInit( numVerts );
+    ParallelFor( edgePerVertex_, [&]( VertId v )
+    {
+        const int c = vertMinCorner[size_t( v )];
+        edgePerVertex_[v] = c >= 0 ? edgeOf( c ) : EdgeId();
+    } );
+    if ( settings.skippedFaceCount )
+        *settings.skippedFaceCount = ms.numSkipped;
+    if ( settings.region )
+    {
+        // on output: the triangles not added
+        FaceBitSet notAdded( t.size() );
+        BitSetParallelForAll( notAdded, [&]( FaceId f )
+        {
+            if ( settings.region->test( f ) && badFace( f ) )
+                notAdded.set( f );
+        } );
+        *settings.region = std::move( notAdded );
+    }
+    return computeValidsFromEdges();
 }
 
 bool MeshTopology::computeValidsFromEdges( ProgressCallback cb )

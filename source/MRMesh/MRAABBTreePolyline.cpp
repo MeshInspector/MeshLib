@@ -3,7 +3,7 @@
 #include "MRAABBTreeMaker.hpp"
 #include "MRPolyline.h"
 #include "MRMesh.h"
-#include "MRBuffer.h"
+#include "MRResizeNoInit.h"
 #include "MRTimer.h"
 #include "MRParallelFor.h"
 
@@ -16,18 +16,19 @@ AABBTreePolyline<V>::AABBTreePolyline( const typename PolylineTraits<V>::Polylin
     MR_TIMER;
 
     using BoxedLine = BoxedLeaf<Traits>;
-    Buffer<BoxedLine> boxedLines;
-    boxedLines.resize( polyline.topology.undirectedEdgeSize() );
-
     int numLines = 0;
     for ( UndirectedEdgeId ue{ 0 }; ue < polyline.topology.undirectedEdgeSize(); ++ue )
-    {
         if ( !polyline.topology.isLoneEdge( ue ) )
-            boxedLines[numLines++].leafId = ue;
-    }
-    boxedLines.resize( numLines );
+            ++numLines;
     if ( numLines <= 0 )
         return;
+
+    std::vector<BoxedLine> boxedLines;
+    resizeNoInit( boxedLines, numLines );
+    numLines = 0;
+    for ( UndirectedEdgeId ue{ 0 }; ue < polyline.topology.undirectedEdgeSize(); ++ue )
+        if ( !polyline.topology.isLoneEdge( ue ) )
+            boxedLines[numLines++].leafId = ue;
 
     // compute aabb's of each line
     ParallelFor( 0, numLines, [&] ( int i )
@@ -39,7 +40,7 @@ AABBTreePolyline<V>::AABBTreePolyline( const typename PolylineTraits<V>::Polylin
         boxedLines[i].box = box;
     } );
 
-    nodes_ = makeAABBTreeNodeVec( std::move( boxedLines ) );
+    this->build_( std::move( boxedLines ) );
 }
 
 template<typename V>
@@ -48,8 +49,8 @@ AABBTreePolyline<V>::AABBTreePolyline( const Mesh& mesh, const UndirectedEdgeBit
     MR_TIMER;
 
     using BoxedLine = BoxedLeaf<Traits>;
-    Buffer<BoxedLine> boxedLines;
-    boxedLines.resize( edgeSet.count() );
+    std::vector<BoxedLine> boxedLines;
+    resizeNoInit( boxedLines, edgeSet.count() );
     if ( boxedLines.size() <= 0 )
         return;
 
@@ -67,7 +68,7 @@ AABBTreePolyline<V>::AABBTreePolyline( const Mesh& mesh, const UndirectedEdgeBit
         boxedLines[i].box = box;
     } );
 
-    nodes_ = makeAABBTreeNodeVec( std::move( boxedLines ) );
+    this->build_( std::move( boxedLines ) );
 }
 
 template AABBTreePolyline<Vector2f>::AABBTreePolyline( const Polyline2 & );

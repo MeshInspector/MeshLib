@@ -33,51 +33,70 @@ bool preciseBoxesIntersect( const Box3f & a, const Box3f & b, const ConvertToInt
     return Box3i{ conv( a.min ), conv( a.max ) }.intersects( Box3i{ conv( b.min ), conv( b.max ) } );
 }
 
-/// decides by preciseBoxesIntersect whether a node of tree A and a node of tree B after the transformation xf (if given) intersect
-class PreciseBoxesIntersection
+/// the boxes of the leaves of a tree, and of its nodes if the transformation xf is given, after the transformation;
+/// each box is computed on the first request (from any thread) and kept for the next ones
+class CachedBoxes
 {
 public:
-    PreciseBoxesIntersection( const AABBTree & aTree, const AABBTree & bTree, const ConvertToIntVector & conv, const AffineXf3f * xf )
-        : aTree_( aTree ), bTree_( bTree ), conv_( conv ), xf_( xf ), minGap_( 2 / conv.invRange )
+    CachedBoxes( const AABBTree & tree, const VertCoords & points, const AffineXf3f * xf )
+        : tree_( tree ), points_( points ), xf_( xf ), firstLeaf_( xf ? tree.nodes().size() : 0 )
     {
-        if ( xf )
-        {
-            bBoxes_.resize( bTree.nodes().size() );
-            bState_ = Vector<std::atomic<std::uint8_t>>( bTree.nodes().size() );
-        }
+        const auto sz = firstLeaf_ + tree.numLeaves();
+        boxes_.resize( sz );
+        state_ = std::vector<std::atomic<std::uint8_t>>( sz );
     }
 
-    bool operator()( NodeId a, NodeId b ) const
+    Box3f operator()( NodeId n ) const
     {
-        return preciseBoxesIntersect( aTree_[a].box, xf_ ? transformedB_( b ) : bTree_[b].box, conv_, minGap_ );
-    }
-
-private:
-    /// the box of node b after the transformation, computed on the first request (from any thread) and kept for the next ones
-    Box3f transformedB_( NodeId b ) const
-    {
-        auto & state = bState_[b];
+        const bool leaf = AABBTree::isLeaf( n );
+        if ( !leaf && !xf_ )
+            return tree_[n].box;
+        const size_t i = leaf ? firstLeaf_ + AABBTree::Node::leafIndex( n ) : size_t( n );
+        auto & state = state_[i];
         if ( state.load( std::memory_order_acquire ) == cReady )
-            return bBoxes_[b];
-        const auto res = transformed( bTree_[b].box, *xf_ );
-        // only the thread marking the node first stores the box; the others meanwhile use their own copies
+            return boxes_[i];
+        auto res = tree_.box( n, points_ );
+        if ( xf_ )
+            res = transformed( res, *xf_ );
+        // only the thread marking the box first stores it; the others meanwhile use their own copies
         std::uint8_t expected = cEmpty;
         if ( state.compare_exchange_strong( expected, cWriting, std::memory_order_relaxed ) )
         {
-            bBoxes_[b] = res;
+            boxes_[i] = res;
             state.store( cReady, std::memory_order_release );
         }
         return res;
     }
 
+private:
     static constexpr std::uint8_t cEmpty = 0, cWriting = 1, cReady = 2;
-    const AABBTree & aTree_;
-    const AABBTree & bTree_;
-    const ConvertToIntVector & conv_;
+    const AABBTree & tree_;
+    const VertCoords & points_;
     const AffineXf3f * xf_ = nullptr;
+    size_t firstLeaf_ = 0;
+    mutable Buffer<Box3f> boxes_; ///< nodes first if xf, then leaves
+    mutable std::vector<std::atomic<std::uint8_t>> state_;
+};
+
+/// decides by preciseBoxesIntersect whether a node of tree A and a node of tree B after the transformation xf (if given) intersect
+class PreciseBoxesIntersection
+{
+public:
+    PreciseBoxesIntersection( const AABBTree & aTree, const VertCoords & aPoints, const AABBTree & bTree, const VertCoords & bPoints,
+        const ConvertToIntVector & conv, const AffineXf3f * xf )
+        : aBoxes_( aTree, aPoints, nullptr ), bBoxes_( bTree, bPoints, xf ), conv_( conv ), minGap_( 2 / conv.invRange )
+    {
+    }
+
+    bool operator()( NodeId a, NodeId b ) const
+    {
+        return preciseBoxesIntersect( aBoxes_( a ), bBoxes_( b ), conv_, minGap_ );
+    }
+
+private:
+    CachedBoxes aBoxes_, bBoxes_;
+    const ConvertToIntVector & conv_;
     double minGap_ = 0;
-    mutable Buffer<Box3f, NodeId> bBoxes_;
-    mutable Vector<std::atomic<std::uint8_t>> bState_;
 };
 
 /// finds all pairs of colliding edges and triangles of two mesh parts, given the AABB trees with (at least) all triangles of the parts
@@ -86,7 +105,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const A
     ConvertToIntVector conv, const AffineXf3f * rigidB2A, bool anyIntersection )
 {
     PreciseCollisionResult res;
-    if ( aTree.nodes().empty() || bTree.nodes().empty() )
+    if ( aTree.empty() || bTree.empty() )
         return res;
 
     // sequentially subdivide full task on smaller subtasks;
@@ -94,7 +113,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const A
     // and they shall be not too few for enough parallelism later
     Timer t( "2 top subtasks" );
 
-    Vector<NodeNode> subtasks{ { NodeId{ 0 }, NodeId{ 0 } } }, nextSubtasks, leafTasks;
+    Vector<NodeNode> subtasks{ { aTree.rootNodeId(), bTree.rootNodeId() } }, nextSubtasks, leafTasks;
     // tested on two Spheres each with 3366 vertices (these numbers are outdated after preparation of precise boxes):
     // 16 -> init=0.886 (13%), main=5.948, total=6.834
     // 14 -> init=0.429 ( 7%), main=5.990, total=6.419
@@ -110,24 +129,26 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const A
             if ( !boxesIntersect( s.aNode, s.bNode ) )
                 continue;
 
-            const auto & aNode = aTree[s.aNode];
-            const auto & bNode = bTree[s.bNode];
-            if ( aNode.leaf() && bNode.leaf() )
+            const bool aLeaf = aTree.isLeaf( s.aNode );
+            const bool bLeaf = bTree.isLeaf( s.bNode );
+            if ( aLeaf && bLeaf )
             {
                 leafTasks.push_back( s );
                 continue;
             }
-        
-            if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
+
+            if ( !aLeaf && ( bLeaf || aTree[s.aNode].box.volume() >= bTree[s.bNode].box.volume() ) )
             {
                 // split aNode
+                const auto & aNode = aTree[s.aNode];
                 nextSubtasks.push_back( { aNode.l, s.bNode } );
                 nextSubtasks.push_back( { aNode.r, s.bNode } );
             }
             else
             {
-                assert( !bNode.leaf() );
+                assert( !bLeaf );
                 // split bNode
+                const auto & bNode = bTree[s.bNode];
                 nextSubtasks.push_back( { s.aNode, bNode.l } );
                 nextSubtasks.push_back( { s.aNode, bNode.r } );
             }
@@ -263,14 +284,14 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const A
             if ( !boxesIntersect( s.aNode, s.bNode ) )
                 continue;
 
-            const auto & aNode = aTree[s.aNode];
-            const auto & bNode = bTree[s.bNode];
-            if ( aNode.leaf() && bNode.leaf() )
+            const bool aLeaf = aTree.isLeaf( s.aNode );
+            const bool bLeaf = bTree.isLeaf( s.bNode );
+            if ( aLeaf && bLeaf )
             {
-                const auto aFace = aNode.leafId();
+                const auto aFace = aTree.leafId( s.aNode );
                 if ( a.region && !a.region->test( aFace ) )
                     continue;
-                const auto bFace = bNode.leafId();
+                const auto bFace = bTree.leafId( s.bNode );
                 if ( b.region && !b.region->test( bFace ) )
                     continue;
                 checkTwoTris( aFace, bFace, *myRes.vec );
@@ -281,17 +302,19 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const A
                 }
                 continue;
             }
-        
-            if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
+
+            if ( !aLeaf && ( bLeaf || aTree[s.aNode].box.volume() >= bTree[s.bNode].box.volume() ) )
             {
                 // split aNode
+                const auto & aNode = aTree[s.aNode];
                 mySubtasks.push_back( { aNode.l, s.bNode } );
                 mySubtasks.push_back( { aNode.r, s.bNode } );
             }
             else
             {
-                assert( !bNode.leaf() );
+                assert( !bLeaf );
                 // split bNode
+                const auto & bNode = bTree[s.bNode];
                 mySubtasks.push_back( { s.aNode, bNode.l } );
                 mySubtasks.push_back( { s.aNode, bNode.r } );
             }
@@ -321,7 +344,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
     MR_TIMER;
     const AABBTree & aTree = a.mesh.getAABBTree();
     const AABBTree & bTree = b.mesh.getAABBTree();
-    const PreciseBoxesIntersection boxesIntersect( aTree, bTree, conv, rigidB2A );
+    const PreciseBoxesIntersection boxesIntersect( aTree, a.mesh.points, bTree, b.mesh.points, conv, rigidB2A );
     return findCollidingEdgeTrisPrecise( a, aTree, b, bTree, boxesIntersect, conv, rigidB2A, anyIntersection );
 }
 
@@ -483,7 +506,7 @@ void updateCollidingEdgeTrisPrecise( PreciseCollisionResult & res,
         const MeshPart part{ mesh, &tris };
         const AABBTree trisTree( part );
         const auto & otherTree = ( inA ? b : a ).getAABBTree();
-        const PreciseBoxesIntersection boxesIntersect( inA ? trisTree : otherTree, inA ? otherTree : trisTree, conv, rigidB2A );
+        const PreciseBoxesIntersection boxesIntersect( inA ? trisTree : otherTree, a.points, inA ? otherTree : trisTree, b.points, conv, rigidB2A );
         const auto found = inA ? findCollidingEdgeTrisPrecise( part, trisTree, b, otherTree, boxesIntersect, conv, rigidB2A, false )
             : findCollidingEdgeTrisPrecise( a, otherTree, part, trisTree, boxesIntersect, conv, rigidB2A, false );
         res.insert( res.end(), found.begin(), found.end() );
@@ -498,7 +521,7 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
 
     std::vector<EdgeTri> res;
     const AABBTree& tree = mp.mesh.getAABBTree();
-    if ( tree.nodes().empty() )
+    if ( tree.empty() )
         return res;
 
     // the traversal visits every node, and each many times, so the boxes after the transformation are computed once in advance
@@ -508,18 +531,25 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
         xfBoxes.resizeNoInit( tree.nodes().size() );
         ParallelFor( xfBoxes, [&]( NodeId i ) { xfBoxes[i] = transformed( tree[i].box, *rigidB2A ); } );
     }
+    const auto xfLeafBoxes = tree.computeLeafBoxes( mp.mesh.points, rigidB2A );
+    auto xfBox = [&]( NodeId n ) -> const Box3f &
+    {
+        if ( AABBTree::isLeaf( n ) )
+            return xfLeafBoxes[AABBTree::Node::leafIndex( n )];
+        return rigidB2A ? xfBoxes[n] : tree[n].box;
+    };
     const double minGap = 2 / conv.invRange;
     auto processBoxes = [&] ( const NodeNode & s )
     {
-        const Box3f & aBox = rigidB2A ? xfBoxes[s.aNode] : tree[s.aNode].box;
-        const Box3f & bBox = rigidB2A ? xfBoxes[s.bNode] : tree[s.bNode].box;
+        const Box3f & aBox = xfBox( s.aNode );
+        const Box3f & bBox = xfBox( s.bNode );
         return preciseBoxesIntersect( aBox, bBox, conv, minGap ) ? Processing::Continue : Processing::Stop;
     };
 
     // sequentially subdivide full task on smaller subtasks;
     // they shall be not too many for this subdivision not to take too long;
     // and they shall be not too few for enough parallelism later
-    std::vector<NodeNode> subtasks{ { NodeId{ 0 }, NodeId{ 0 } } }, nextSubtasks, leafTasks;
+    std::vector<NodeNode> subtasks{ { tree.rootNodeId(), tree.rootNodeId() } }, nextSubtasks, leafTasks;
     for ( int i = 0; i < 16 && !subtasks.empty(); ++i ) // 16 -> will produce at most 2^16 subtasks
     {
         processSelfSubtasks( tree, subtasks, nextSubtasks,
@@ -651,12 +681,10 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
             processSelfSubtasks( tree, mySubtasks, mySubtasks, 
                 [&tree, &mp, &myRes, &checkTwoTris, anyIntersection, &keepGoing] ( const NodeNode& s )
             {
-                const auto& lNode = tree[s.aNode];
-                const auto& rNode = tree[s.bNode];
-                const auto lFace = lNode.leafId();
+                const auto lFace = tree.leafId( s.aNode );
                 if ( mp.region && !mp.region->test( lFace ) )
                     return Processing::Continue;
-                const auto rFace = rNode.leafId();
+                const auto rFace = tree.leafId( s.bNode );
                 if ( mp.region && !mp.region->test( rFace ) )
                     return Processing::Continue;
                 checkTwoTris( lFace, rFace, myRes );

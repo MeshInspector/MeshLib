@@ -26,6 +26,33 @@ using LineTreeTraits = AABBTreeTraits<UndirectedEdgeTag, Box<V>>;
 using LineTreeTraits2 = LineTreeTraits<Vector2f>;
 using LineTreeTraits3 = LineTreeTraits<Vector3f>;
 
+/// a leaf of AABB-tree: the id of an object (e.g. face) with its bounding box
+template<typename T>
+struct BoxedLeaf
+{
+    typename T::LeafId leafId;
+    typename T::BoxT box;
+
+    BoxedLeaf() noexcept = default;
+    explicit BoxedLeaf( NoInit ) noexcept : leafId( noInit ), box( noInit ) { }
+};
+
+/// a leaf of the AABB-tree of a mesh: the face with the vertices of its triangle, the box of the triangle is not stored
+struct FaceLeaf
+{
+    FaceId leafId;
+    ThreeVertIds verts; ///< as returned by MeshTopology::getTriVerts when the tree was built
+
+    FaceLeaf() noexcept = default;
+    explicit FaceLeaf( NoInit ) noexcept : leafId( noInit ), verts{ VertId( noInit ), VertId( noInit ), VertId( noInit ) } { }
+};
+
+/// the type of the leaves stored in the AABB-tree with given traits
+template<typename T>
+struct AABBTreeLeaf { using type = BoxedLeaf<T>; };
+template<>
+struct AABBTreeLeaf<FaceTreeTraits3> { using type = FaceLeaf; };
+
 template<typename T>
 struct AABBTreeNode
 {
@@ -33,12 +60,14 @@ struct AABBTreeNode
     using BoxT = typename T::BoxT;
 
     BoxT box; ///< bounding box of whole subtree
-    NodeId l, r; ///< two children
-    /// returns true if this is a leaf node without children nodes but with a LeafId reference
-    bool leaf() const { return !r.valid(); }
-    /// returns face (for the leaf node only)
-    LeafId leafId() const { assert( leaf() ); return LeafId( int( l ) ); }
-    void setLeafId( LeafId id ) { l = NodeId( int( id ) ); r = NodeId(); }
+    NodeId l, r; ///< two children: each is either another node (non-negative id) or a leaf (encoded as negative number ~leafIndex)
+
+    /// returns true if given child of a node is a leaf rather than another node
+    [[nodiscard]] static bool isLeaf( NodeId child ) { return int( child ) < 0; }
+    /// returns the index in the vector of leaves of the leaf encoded in given child of a node
+    [[nodiscard]] static size_t leafIndex( NodeId child ) { assert( isLeaf( child ) ); return size_t( ~int( child ) ); }
+    /// encodes given index in the vector of leaves as a child of a node
+    [[nodiscard]] static NodeId leafChild( size_t leafIndex ) { return NodeId( ~int( leafIndex ) ); }
 
     AABBTreeNode() noexcept = default;
     explicit AABBTreeNode( NoInit ) noexcept : box( noInit ), l( noInit ), r( noInit ){}

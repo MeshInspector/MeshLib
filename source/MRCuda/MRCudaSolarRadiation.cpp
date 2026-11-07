@@ -1,4 +1,5 @@
 #include "MRCudaSolarRadiation.h"
+#include "MRCudaAABBTree.hpp"
 #include "MRMesh/MRAABBTree.h"
 #include "MRCudaSolarRadiation.cuh"
 #include "MRMesh/MRTimer.h"
@@ -46,12 +47,11 @@ BitSet findSkyRays( const Mesh& terrain, const VertCoords& samples, const VertBi
     MR_TIMER;
 
     const auto& tree = terrain.getAABBTree();
-    const auto& nodes = tree.nodes();
 
     CUDA_EXEC( cudaSetDevice( 0 ) );
 
     DynamicArray<Node3> cudaNodes;
-    cudaNodes.fromVector( nodes );
+    cudaNodes.fromVector( getNodesWithLeaves( tree, terrain.points ) );
 
     DynamicArray<float3> cudaMeshPoints( terrain.points );
     DynamicArray<FaceToThreeVerts> cudaFaces( terrain.topology.getTriangulation() );
@@ -88,12 +88,11 @@ VertScalars  computeSkyViewFactor( const Mesh& terrain,
     MR_TIMER;
 
     const auto& tree = terrain.getAABBTree();
-    const auto& nodes = tree.nodes();
 
     CUDA_EXEC( cudaSetDevice( 0 ) );
 
     DynamicArray<Node3> cudaNodes;
-    cudaNodes.fromVector( nodes );
+    cudaNodes.fromVector( getNodesWithLeaves( tree, terrain.points ) );
 
     DynamicArray<float3> cudaMeshPoints( terrain.points );
     DynamicArray<FaceToThreeVerts> cudaFaces( terrain.topology.getTriangulation() );

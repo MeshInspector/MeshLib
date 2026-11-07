@@ -2,6 +2,7 @@
 
 #include "MRBitSet.h"
 #include "MRId.h"
+#include "MRUnionFind.h"
 #include "MRVector.h"
 #include "MRVector3.h"
 #include <cfloat>
@@ -73,26 +74,27 @@ private:
     std::optional<Vector3f> target_;
     int maxVertUpdates_ = 3;
 
-    /// for each reached vertex: the index of the start point, the distance from which is stored in the vertex
-    Vector<int, VertId> vertSource_;
+    struct StartPointTag;
+    using StartPointId = Id<StartPointTag>;
+
+    /// for each reached vertex: the start point, the distance from which is stored in the vertex
+    Vector<StartPointId, VertId> vertSource_;
     /// reached vertices whose distance came from the linear field near a line or a region of start points
     VertBitSet vertLinear_;
     /// for each start point: the distance assigned to it in the beginning
-    Vector<float> sourceStartDistance_;
-    /// for each start point: the representative of its group, where the groups unite start points connected by mesh edges;
+    Vector<float, StartPointId> sourceStartDistance_;
+    /// groups of start points connected by mesh edges, the parent of each start point is the root of its group;
     /// the field is assumed linear only between start points of one group (along a line or in a region)
-    Vector<int> sourceGroup_;
+    BaseUnionFind<StartPointId> sourceGroup_;
 
     /// compares proposed distance with the value known in c.vert
     /// \details if proposed distance is smaller then adds it in the queue and returns true; \n
     /// otherwise if the known distance to c.vert is already not greater than returns false
-    bool suggestVertDistance_( VertDistance c, int source, bool linear );
-    /// creates new start point with given initial distance, returns its index
-    int addSource_( float startDistance );
+    bool suggestVertDistance_( VertDistance c, StartPointId source, bool linear );
+    /// creates new start point with given initial distance
+    StartPointId addSource_( float startDistance );
     /// unites the group of the start point in v with the groups of start points in its neighbor vertices
     void uniteTouchingSources_( VertId v );
-    /// makes sourceGroup_ the representative of the group for each start point
-    void flattenSourceGroups_();
     /// suggests new distance around a (recently updated) vertex
     void suggestDistancesAround_( VertId v );
     /// consider a path going in the left triangle from edge (e) to the opposing vertex

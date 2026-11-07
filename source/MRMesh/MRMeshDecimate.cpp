@@ -108,7 +108,7 @@ private:
         TouchBd,     ///< prohibit collapse of an inner edge if it brings two boundaries in touch
         TriAspect,   ///< new triangle aspect ratio would be larger than all of old triangle aspect ratios and larger than allowed in settings
         LongEdge,    ///< new edge would be longer than all of old edges and longer than allowed in settings
-        NormalFlip,  ///< if at least one triangle normal flips, checks that all new normals are consistent (do not check for degenerate edges)
+        NormalFlip,  ///< if at least one triangle normal flips, checks that all new normals are consistent (do not check for degenerate edges); or two triangles would fold onto each other
         User         ///< user callback prohibits the collapse
     };
 
@@ -752,6 +752,34 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
         for ( const auto da : triDblAreas_ )
             if ( dot( da, n ) < 0 )
                 return { .status =  CollapseStatus::NormalFlip };
+    }
+
+    // the two faces on the sides of a deleted triangle become neighbours; each of them can turn by almost 90 degrees without a flip,
+    // so together they can fold onto each other: prohibit their new dihedral angle sharper than 60 degrees, unless it was before
+    if ( settings_.preventNormalFlips )
+    {
+        auto newTri = [&]( FaceId f )
+        {
+            const auto vs = topology.getTriVerts( f );
+            Triangle3f t;
+            for ( int i = 0; i < 3; ++i )
+                t[i] = ( vs[i] == vo || vs[i] == vd ) ? collapsePos : mesh_.points[vs[i]];
+            return t;
+        };
+        auto sharp = []( const Vector3f & a, const Vector3f & b ) { return dot( a, b ) < -0.5f * std::sqrt( a.lengthSq() * b.lengthSq() ); };
+        auto fold = [&]( FaceId f0, FaceId f1 )
+        {
+            if ( !f0 || !f1 )
+                return false;
+            const auto t0 = newTri( f0 ), t1 = newTri( f1 );
+            return sharp( dirDblArea( t0 ), dirDblArea( t1 ) ) && !sharp( mesh_.dirDblArea( f0 ), mesh_.dirDblArea( f1 ) )
+                // can trust direction of not-degenerate triangles only
+                && triangleAspectRatio( t0[0], t0[1], t0[2] ) < settings_.criticalTriAspectRatio
+                && triangleAspectRatio( t1[0], t1[1], t1[2] ) < settings_.criticalTriAspectRatio;
+        };
+        if ( ( vl && fold( topology.left( topology.next( edgeToCollapse ) ), topology.right( topology.prev( edgeToCollapse.sym() ) ) ) )
+          || ( vr && fold( topology.right( topology.prev( edgeToCollapse ) ), topology.left( topology.next( edgeToCollapse.sym() ) ) ) ) )
+            return { .status =  CollapseStatus::NormalFlip };
     }
 
     if ( settings_.preCollapse && !settings_.preCollapse( edgeToCollapse, collapsePos ) )

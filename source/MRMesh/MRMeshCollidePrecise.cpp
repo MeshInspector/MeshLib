@@ -33,56 +33,70 @@ bool preciseBoxesIntersect( const Box3f & a, const Box3f & b, const ConvertToInt
     return Box3i{ conv( a.min ), conv( a.max ) }.intersects( Box3i{ conv( b.min ), conv( b.max ) } );
 }
 
+/// the boxes of the leaves of a tree, and of its nodes if the transformation xf is given, after the transformation;
+/// each box is computed on the first request (from any thread) and kept for the next ones
+class CachedBoxes
+{
+public:
+    CachedBoxes( const AABBTree & tree, const VertCoords & points, const AffineXf3f * xf )
+        : tree_( tree ), points_( points ), xf_( xf ), firstLeaf_( xf ? tree.nodes().size() : 0 )
+    {
+        const auto sz = firstLeaf_ + tree.numLeaves();
+        boxes_.resize( sz );
+        state_ = std::vector<std::atomic<std::uint8_t>>( sz );
+    }
+
+    Box3f operator()( NodeId n ) const
+    {
+        const bool leaf = AABBTree::isLeaf( n );
+        if ( !leaf && !xf_ )
+            return tree_[n].box;
+        const size_t i = leaf ? firstLeaf_ + AABBTree::Node::leafIndex( n ) : size_t( n );
+        auto & state = state_[i];
+        if ( state.load( std::memory_order_acquire ) == cReady )
+            return boxes_[i];
+        auto res = tree_.box( n, points_ );
+        if ( xf_ )
+            res = transformed( res, *xf_ );
+        // only the thread marking the box first stores it; the others meanwhile use their own copies
+        std::uint8_t expected = cEmpty;
+        if ( state.compare_exchange_strong( expected, cWriting, std::memory_order_relaxed ) )
+        {
+            boxes_[i] = res;
+            state.store( cReady, std::memory_order_release );
+        }
+        return res;
+    }
+
+private:
+    static constexpr std::uint8_t cEmpty = 0, cWriting = 1, cReady = 2;
+    const AABBTree & tree_;
+    const VertCoords & points_;
+    const AffineXf3f * xf_ = nullptr;
+    size_t firstLeaf_ = 0;
+    mutable Buffer<Box3f> boxes_; ///< nodes first if xf, then leaves
+    mutable std::vector<std::atomic<std::uint8_t>> state_;
+};
+
 /// decides by preciseBoxesIntersect whether a node of tree A and a node of tree B after the transformation xf (if given) intersect
 class PreciseBoxesIntersection
 {
 public:
     PreciseBoxesIntersection( const AABBTree & aTree, const VertCoords & aPoints, const AABBTree & bTree, const VertCoords & bPoints,
         const ConvertToIntVector & conv, const AffineXf3f * xf )
-        : aTree_( aTree ), aPoints_( aPoints ), bTree_( bTree ), bPoints_( bPoints ), conv_( conv ), xf_( xf ), minGap_( 2 / conv.invRange )
+        : aBoxes_( aTree, aPoints, nullptr ), bBoxes_( bTree, bPoints, xf ), conv_( conv ), minGap_( 2 / conv.invRange )
     {
-        if ( xf )
-        {
-            const auto sz = bTree.nodes().size() + bTree.numLeaves();
-            bBoxes_.resize( sz );
-            bState_ = std::vector<std::atomic<std::uint8_t>>( sz );
-        }
     }
 
     bool operator()( NodeId a, NodeId b ) const
     {
-        return preciseBoxesIntersect( aTree_.box( a, aPoints_ ), xf_ ? transformedB_( b ) : bTree_.box( b, bPoints_ ), conv_, minGap_ );
+        return preciseBoxesIntersect( aBoxes_( a ), bBoxes_( b ), conv_, minGap_ );
     }
 
 private:
-    /// the box of node or leaf b after the transformation, computed on the first request (from any thread) and kept for the next ones
-    Box3f transformedB_( NodeId b ) const
-    {
-        const size_t i = AABBTree::isLeaf( b ) ? bTree_.nodes().size() + AABBTree::Node::leafIndex( b ) : size_t( b );
-        auto & state = bState_[i];
-        if ( state.load( std::memory_order_acquire ) == cReady )
-            return bBoxes_[i];
-        const auto res = transformed( bTree_.box( b, bPoints_ ), *xf_ );
-        // only the thread marking the node first stores the box; the others meanwhile use their own copies
-        std::uint8_t expected = cEmpty;
-        if ( state.compare_exchange_strong( expected, cWriting, std::memory_order_relaxed ) )
-        {
-            bBoxes_[i] = res;
-            state.store( cReady, std::memory_order_release );
-        }
-        return res;
-    }
-
-    static constexpr std::uint8_t cEmpty = 0, cWriting = 1, cReady = 2;
-    const AABBTree & aTree_;
-    const VertCoords & aPoints_;
-    const AABBTree & bTree_;
-    const VertCoords & bPoints_;
+    CachedBoxes aBoxes_, bBoxes_;
     const ConvertToIntVector & conv_;
-    const AffineXf3f * xf_ = nullptr;
     double minGap_ = 0;
-    mutable Buffer<Box3f> bBoxes_; ///< nodes first, then leaves
-    mutable std::vector<std::atomic<std::uint8_t>> bState_;
 };
 
 /// finds all pairs of colliding edges and triangles of two mesh parts, given the AABB trees with (at least) all triangles of the parts
@@ -512,25 +526,23 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
 
     // the traversal visits every node, and each many times, so the boxes after the transformation are computed once in advance
     Vector<Box3f, NodeId> xfBoxes;
-    std::vector<Box3f> xfLeafBoxes;
     if ( rigidB2A )
     {
         xfBoxes.resizeNoInit( tree.nodes().size() );
         ParallelFor( xfBoxes, [&]( NodeId i ) { xfBoxes[i] = transformed( tree[i].box, *rigidB2A ); } );
-        xfLeafBoxes.resize( tree.numLeaves() );
-        ParallelFor( xfLeafBoxes, [&]( size_t i ) { xfLeafBoxes[i] = transformed( tree.leafBox( AABBTree::Node::leafChild( i ), mp.mesh.points ), *rigidB2A ); } );
     }
-    auto xfBox = [&]( NodeId n ) -> Box3f
+    const auto xfLeafBoxes = tree.computeLeafBoxes( mp.mesh.points, rigidB2A );
+    auto xfBox = [&]( NodeId n ) -> const Box3f &
     {
-        if ( !rigidB2A )
-            return tree.box( n, mp.mesh.points );
-        return AABBTree::isLeaf( n ) ? xfLeafBoxes[AABBTree::Node::leafIndex( n )] : xfBoxes[n];
+        if ( AABBTree::isLeaf( n ) )
+            return xfLeafBoxes[AABBTree::Node::leafIndex( n )];
+        return rigidB2A ? xfBoxes[n] : tree[n].box;
     };
     const double minGap = 2 / conv.invRange;
     auto processBoxes = [&] ( const NodeNode & s )
     {
-        const Box3f aBox = xfBox( s.aNode );
-        const Box3f bBox = xfBox( s.bNode );
+        const Box3f & aBox = xfBox( s.aNode );
+        const Box3f & bBox = xfBox( s.bNode );
         return preciseBoxesIntersect( aBox, bBox, conv, minGap ) ? Processing::Continue : Processing::Stop;
     };
 

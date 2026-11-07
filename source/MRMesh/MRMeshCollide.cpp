@@ -12,12 +12,45 @@
 #include "MRMeshProject.h"
 #include "MRPrecisePredicates3.h"
 #include "MRRingIterator.h"
+#include "MRBuffer.h"
+#include "MRBitSet.h"
 
 #include <atomic>
 #include <thread>
 
 namespace MR
 {
+
+namespace
+{
+
+/// the boxes of the nodes and leaves of a tree, optionally transformed;
+/// the box of a leaf is computed from the coordinates of its vertices on the first request and kept for the next ones
+class LeafBoxCache
+{
+public:
+    LeafBoxCache( const AABBTree & tree, const VertCoords & points, const AffineXf3f * xf )
+        : tree_( tree ), points_( points ), xf_( xf ), boxes_( tree.numLeaves() ), ready_( tree.numLeaves() ) { }
+
+    Box3f operator()( NodeId n )
+    {
+        if ( !AABBTree::isLeaf( n ) )
+            return transformed( tree_[n].box, xf_ );
+        const auto i = AABBTree::Node::leafIndex( n );
+        if ( !ready_.test_set( i ) )
+            boxes_[i] = transformed( tree_.leafBox( n, points_ ), xf_ );
+        return boxes_[i];
+    }
+
+private:
+    const AABBTree & tree_;
+    const VertCoords & points_;
+    const AffineXf3f * xf_ = nullptr;
+    Buffer<Box3f> boxes_;
+    BitSet ready_;
+};
+
+} // anonymous namespace
 
 std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart & b, const AffineXf3f * rigidB2A, bool firstIntersectionOnly )
 {
@@ -39,7 +72,15 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
         return !region || ( tree.isLeaf( n ) ? region->test( tree.leafId( n ) ) : nodes.test( n ) );
     };
 
-    std::vector<NodeNode> subtasks{ { aTree.rootNodeId(), bTree.rootNodeId() } };
+    // the boxes are passed in subtasks not to compute them many times, the box of B is transformed
+    struct SubTask
+    {
+        NodeId aNode, bNode;
+        Box3f aBox, bBox;
+    };
+    LeafBoxCache aBoxOf( aTree, a.mesh.points, nullptr );
+    LeafBoxCache bBoxOf( bTree, b.mesh.points, rigidB2A );
+    std::vector<SubTask> subtasks{ { aTree.rootNodeId(), bTree.rootNodeId(), aBoxOf( aTree.rootNodeId() ), bBoxOf( bTree.rootNodeId() ) } };
 
     while( !subtasks.empty() )
     {
@@ -51,10 +92,7 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
         if ( !inRegion( bTree, b.region, bNodes, s.bNode ) )
             continue;
 
-        const auto aBox = aTree.box( s.aNode, a.mesh.points );
-        const auto bBox = bTree.box( s.bNode, b.mesh.points );
-
-        const auto overlap = aBox.intersection( transformed( bBox, rigidB2A ) );
+        const auto overlap = s.aBox.intersection( s.bBox );
         if ( !overlap.valid() )
             continue;
 
@@ -68,20 +106,20 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
             continue;
         }
 
-        if ( !aLeaf && ( bLeaf || aBox.volume() >= bBox.volume() ) )
+        if ( !aLeaf && ( bLeaf || aTree[s.aNode].box.volume() >= bTree[s.bNode].box.volume() ) )
         {
             // split aNode
             const auto & aNode = aTree[s.aNode];
-            subtasks.push_back( { aNode.l, s.bNode } );
-            subtasks.push_back( { aNode.r, s.bNode } );
+            subtasks.push_back( { aNode.l, s.bNode, aBoxOf( aNode.l ), s.bBox } );
+            subtasks.push_back( { aNode.r, s.bNode, aBoxOf( aNode.r ), s.bBox } );
         }
         else
         {
             assert( !bLeaf );
             // split bNode
             const auto & bNode = bTree[s.bNode];
-            subtasks.push_back( { s.aNode, bNode.l } );
-            subtasks.push_back( { s.aNode, bNode.r } );
+            subtasks.push_back( { s.aNode, bNode.l, s.aBox, bBoxOf( bNode.l ) } );
+            subtasks.push_back( { s.aNode, bNode.r, s.aBox, bBoxOf( bNode.r ) } );
         }
     }
 
@@ -182,6 +220,10 @@ Expected<bool> findSelfCollidingTriangles(
 
     auto sb = subprogress( cb, 0, 0.08f );
 
+    // all leaves are visited, so their boxes are computed once in advance
+    const auto leafBoxes = tree.computeLeafBoxes( mp.mesh.points );
+    auto boxOf = [&]( NodeId n ) -> const Box3f & { return AABBTree::isLeaf( n ) ? leafBoxes[AABBTree::Node::leafIndex( n )] : tree[n].box; };
+
     // sequentially subdivide full task on smaller subtasks;
     // they shall be not too many for this subdivision not to take too long;
     // and they shall be not too few for enough parallelism later
@@ -190,7 +232,7 @@ Expected<bool> findSelfCollidingTriangles(
     {
         processSelfSubtasks( tree, subtasks, nextSubtasks,
             [&leafTasks]( const NodeNode & s ) { leafTasks.push_back( s ); return Processing::Continue; },
-            [&tree, &mp]( const NodeNode & s ){ return tree.box( s.aNode, mp.mesh.points ).intersects( tree.box( s.bNode, mp.mesh.points ) ) ? Processing::Continue : Processing::Stop; });
+            [&boxOf]( const NodeNode & s ){ return boxOf( s.aNode ).intersects( boxOf( s.bNode ) ) ? Processing::Continue : Processing::Stop; });
         subtasks.swap( nextSubtasks );
 
         if ( !reportProgress( sb, i / 16.0f ) )
@@ -295,7 +337,7 @@ Expected<bool> findSelfCollidingTriangles(
                     }
                     return Processing::Continue;
                 },
-                [&tree, &mp]( const NodeNode & s ){ return tree.box( s.aNode, mp.mesh.points ).intersects( tree.box( s.bNode, mp.mesh.points ) ) ? Processing::Continue : Processing::Stop; }
+                [&boxOf]( const NodeNode & s ){ return boxOf( s.aNode ).intersects( boxOf( s.bNode ) ) ? Processing::Continue : Processing::Stop; }
             );
 
             subtaskRes[is] = std::move( myRes );

@@ -320,7 +320,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
         if constexpr ( std::is_same_v<T, double> )
             return Box3d( tree.box( n, m.points ) ).expanded( Vector3d::diagonal( boxExpansion ) );
         else
-            return tree[n].box;
+            return tree.box( n, m.points );
     };
 
     RayOrigin<T> rayOrigin{ line.p };
@@ -350,16 +350,12 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
         invDirLenSq = 1 / line.d.lengthSq();
     }
 
-    // the float version tests the triangles of leaves without their boxes
     auto pushChild = [&]( NodeId n )
     {
-        if constexpr ( std::is_same_v<T, float> )
+        if ( tree.isLeaf( n ) )
         {
-            if ( tree.isLeaf( n ) )
-            {
-                nodesStack[++currentNode] = n;
-                return;
-            }
+            nodesStack[++currentNode] = n;
+            return;
         }
         T cs = rayStart, ce = rayEnd;
         if( rayBoxIntersect( nodeBox( n ), rayOrigin, cs, ce, prec ) )

@@ -7,6 +7,7 @@
 #include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
 #include "MRMeshTriPoint.h"
+#include "MRBuffer.h"
 #include <algorithm>
 
 namespace MR
@@ -14,20 +15,16 @@ namespace MR
 
 using BoxedFace = BoxedLeaf<FaceTreeTraits3>;
 
-inline Box3f computeFaceBox( const Mesh & mesh, FaceId f )
+inline Box3f computeTriBox( const VertCoords & points, const ThreeVertIds & v )
 {
-    Box3f box;
-    Vector3f a, b, c;
-    mesh.getTriPoints( f, a, b, c );
-    box.include( a );
-    box.include( b );
-    box.include( c );
+    Box3f box( points[v[0]], points[v[0]] );
+    box.include( points[v[1]] );
+    box.include( points[v[2]] );
 
     // micro expand boxes to have better precision in AABB algorithms
     // insignificantlyExpanded - needed to avoid leaks due to float errors
     // (small intersection of neighbor boxes guarantee that both of them will be considered as candidates of connection area)
-    box = box.insignificantlyExpanded();
-    return box;
+    return box.insignificantlyExpanded();
 }
 
 AABBTree::AABBTree( const MeshPart & mp )
@@ -48,7 +45,8 @@ AABBTree::AABBTree( const MeshPart & mp )
             boxedFaces[n++].leafId = f;
     }
 
-    // compute aabb's of each face
+    // compute aabb's of each face, and keep its vertices to put in the leaf after the leaves are ordered
+    Buffer<VertId> faceVerts( 3 * size_t( mp.mesh.topology.faceSize() ) );
     ParallelFor( 0, numFaces, [&] ( int i )
     {
         FaceId f;
@@ -56,7 +54,10 @@ AABBTree::AABBTree( const MeshPart & mp )
             boxedFaces[i].leafId = f = FaceId( i );
         else
             f = boxedFaces[i].leafId;
-        boxedFaces[i].box = computeFaceBox( mp.mesh, f );
+        const auto v = mp.mesh.topology.getTriVerts( f );
+        for ( int j = 0; j < 3; ++j )
+            faceVerts[3 * size_t( f ) + j] = v[j];
+        boxedFaces[i].box = computeTriBox( mp.mesh.points, v );
     } );
 
     nodes_ = makeAABBTreeNodeVec( boxedFaces );
@@ -68,7 +69,8 @@ AABBTree::AABBTree( const MeshPart & mp )
     {
         const auto f = boxedFaces[i].leafId;
         leaves_[i].leafId = f;
-        leaves_[i].verts = mp.mesh.topology.getTriVerts( f );
+        for ( int j = 0; j < 3; ++j )
+            leaves_[i].verts[j] = faceVerts[3 * size_t( f ) + j];
     } );
 }
 
@@ -228,6 +230,19 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
             node.box.include( box( node.r, mesh.points ) );
         }
     }
+}
+
+std::vector<Box3f> AABBTree::computeLeafBoxes( const VertCoords & points, const AffineXf3f * xf ) const
+{
+    MR_TIMER;
+    std::vector<Box3f> res;
+    resizeNoInit( res, leaves_.size() );
+    ParallelFor( res, [&]( size_t i )
+    {
+        const auto box = leafBox( Node::leafChild( i ), points );
+        res[i] = xf ? transformed( box, *xf ) : box;
+    } );
+    return res;
 }
 
 MeshTriPoint AABBTree::toTriPoint( const MeshTopology & topology, NodeId n, const TriPointf & bary ) const

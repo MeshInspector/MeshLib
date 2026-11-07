@@ -460,6 +460,35 @@ TEST( MRMesh, MeshBuildWithDups )
     );
 }
 
+// triangles with invalid vertex ids are neither added nor lost
+TEST( MRMesh, fromTrianglesInvalidVerts )
+{
+    for ( int n : { 20, 150 } ) // 2*(n-1)^2 triangles: sequential and parallel builds
+    {
+        Triangulation t;
+        for ( int y = 0; y + 1 < n; ++y )
+            for ( int x = 0; x + 1 < n; ++x )
+            {
+                const int v = y * n + x;
+                t.push_back( { VertId( v ), VertId( v + 1 ), VertId( v + n ) } );
+                t.push_back( { VertId( v + 1 ), VertId( v + n + 1 ), VertId( v + n ) } );
+            }
+        const int numGood = (int)t.size();
+        t.push_back( { VertId(), VertId(), VertId() } );
+        t.push_back( { VertId( -2 ), VertId( -3 ), VertId( -4 ) } );
+        t.push_back( { VertId(), 0_v, 1_v } );
+        t.push_back( { VertId(), VertId( n * n ), VertId( n * n + 1 ) } );
+
+        FaceBitSet region( t.size(), true );
+        int skipped = 0;
+        const auto topology = fromTriangles( t, { .region = &region, .skippedFaceCount = &skipped } );
+        EXPECT_EQ( topology.numValidFaces(), numGood );
+        EXPECT_EQ( skipped, 4 );
+        EXPECT_EQ( region.count(), 4 );
+        EXPECT_EQ( region.find_first(), FaceId( numGood ) );
+    }
+}
+
 TEST( MRMesh, computeTrianglesRepetitions )
 {
     Triangulation t;

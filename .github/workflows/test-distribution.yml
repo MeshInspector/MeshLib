@@ -296,14 +296,14 @@ jobs:
           echo "MESHLIB_FW=${MESHLIB_FW}" >> "${GITHUB_ENV}"
           echo "${MESHLIB_FW}/bin" >> "${GITHUB_PATH}"
 
-      # Every Mach-O in the framework must be x86_64 and may not require a newer
-      # macOS than the Intel package's floor. MeshLib's own binaries target 12.0; the
-      # bundled Homebrew dylibs carry the target of the sonoma bottles the hosted x64
-      # leg pours (14.0), which the macOS 12.7 Mac Pro loads anyway. The same floor
-      # for the hosted and the cross package keeps the cross one no worse.
+      # Every Mach-O in the framework must be x86_64 and may not require a macOS
+      # newer than 12.0: the packages come from the vcpkg legs, whose triplets build
+      # every dependency with VCPKG_OSX_DEPLOYMENT_TARGET 12.0, and MeshLib's own
+      # binaries target 12.0 too. (A Homebrew-built package would sit at 15.0, the
+      # bundled bottles carry the target of the macOS they were built on.)
       - name: Check package binary compatibility
         if: ${{ matrix.arch != 'arm64' }}
-        run: python3 scripts/check_macos_binary_compatibility.py "$MESHLIB_FW" --arch x86_64 --floor 14.0
+        run: python3 scripts/check_macos_binary_compatibility.py "$MESHLIB_FW" --arch x86_64 --floor 12.0
 
       # [error] NSGL: Failed to find a suitable pixel format
       - name: Run MeshViewer

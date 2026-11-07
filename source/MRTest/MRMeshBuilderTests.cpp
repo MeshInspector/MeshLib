@@ -489,6 +489,45 @@ TEST( MRMesh, fromTrianglesInvalidVerts )
     }
 }
 
+// faces are numbered from shiftFaceId in sequential and parallel builds
+TEST( MRMesh, fromTrianglesShiftFaceId )
+{
+    for ( int n : { 20, 150 } ) // 2*(n-1)^2 triangles: sequential and parallel builds
+    {
+        Triangulation t;
+        for ( int y = 0; y + 1 < n; ++y )
+            for ( int x = 0; x + 1 < n; ++x )
+            {
+                const int v = y * n + x;
+                t.push_back( { VertId( v ), VertId( v + 1 ), VertId( v + n ) } );
+                t.push_back( { VertId( v + 1 ), VertId( v + n + 1 ), VertId( v + n ) } );
+            }
+        // three triangles sharing only one vertex: the third one cannot be added
+        for ( int k = 0; k < 3; ++k )
+            t.push_back( { VertId( n * n ), VertId( n * n + 1 + 2 * k ), VertId( n * n + 2 + 2 * k ) } );
+
+        constexpr int shift = 10;
+        int skipped = 0;
+        const auto topology = fromTriangles( t, { .shiftFaceId = shift, .skippedFaceCount = &skipped } );
+        EXPECT_EQ( skipped, 1 );
+        EXPECT_EQ( topology.numValidFaces(), int( t.size() ) - 1 );
+        EXPECT_EQ( topology.faceSize(), t.size() + shift );
+        EXPECT_EQ( topology.getValidFaces().find_first(), FaceId( shift ) );
+        size_t wrong = 0;
+        for ( FaceId f : topology.getValidFaces() )
+        {
+            VertId v[3];
+            topology.getTriVerts( f, v );
+            const auto & tr = t[FaceId( int( f ) - shift )];
+            if ( !( v[0] == tr[0] && v[1] == tr[1] && v[2] == tr[2] ) && !( v[0] == tr[1] && v[1] == tr[2] && v[2] == tr[0] )
+                && !( v[0] == tr[2] && v[1] == tr[0] && v[2] == tr[1] ) )
+                ++wrong;
+        }
+        EXPECT_EQ( wrong, 0 );
+        EXPECT_TRUE( topology.checkValidity() );
+    }
+}
+
 TEST( MRMesh, computeTrianglesRepetitions )
 {
     Triangulation t;

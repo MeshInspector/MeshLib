@@ -13,7 +13,8 @@ namespace MR
 
 /// bounding volume hierarchy of mesh triangles;
 /// the leaves store the vertices of their triangles, and the boxes of the triangles are kept separately in leafBoxes(),
-/// so a change of mesh topology requires either Mesh::invalidateCaches() or updateLeafVerts()
+/// so a change of mesh topology requires either Mesh::invalidateCaches() or updateLeafVerts(),
+/// and MeshTopology::flipOrientation() requires flipOrientation() here (as Mesh::flipOrientation() does)
 /// \ingroup AABBTreeGroup
 class AABBTree : public AABBTreeBase<FaceTreeTraits3>
 {
@@ -38,8 +39,8 @@ public:
     /// returns the bounding box of given node or leaf
     [[nodiscard]] const Box3f & box( NodeId n ) const { return isLeaf( n ) ? leafBox( n ) : nodes_[n].box; }
 
-    /// converts barycentric coordinates relative to leafVerts( n ) into the point on the mesh with given topology,
-    /// correct even if the orientation of the triangle was changed after the tree was built
+    /// converts barycentric coordinates relative to leafVerts( n ) into the point on the mesh with given topology;
+    /// leafVerts( n ) must be in the order of MeshTopology::getTriVerts
     [[nodiscard]] MRMESH_API MeshTriPoint toTriPoint( const MeshTopology & topology, NodeId n, const TriPointf & bary ) const;
 
     /// returns the bounding box of the whole tree
@@ -63,8 +64,12 @@ public:
     /// would add the earlier faces to the tree once more
     MRMESH_API void addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old );
 
-    /// takes the vertices of all leaves from given topology, e.g. after it was packed or its orientation was flipped
+    /// takes the vertices of all leaves from given topology, e.g. after it was packed
     MRMESH_API void updateLeafVerts( const MeshTopology & topology );
+
+    /// changes the order of the vertices of the triangles of given faces (all if nullptr) as MeshTopology::flipOrientation() does;
+    /// shall be called after MeshTopology::flipOrientation() if this tree is kept
+    MRMESH_API void flipOrientation( const FaceBitSet * region = nullptr );
 
 private:
     LeafBoxes leafBoxes_;

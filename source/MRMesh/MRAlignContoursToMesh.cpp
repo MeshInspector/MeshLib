@@ -28,7 +28,7 @@ void addBaseToPlanarMesh( Mesh& mesh, float zOffset )
     for ( auto& p : mesh2.points )
         p.z += zOffset;
 
-    mesh2.topology.flipOrientation();
+    mesh2.flipOrientation();
 
     mesh.addMesh( mesh2 );
 

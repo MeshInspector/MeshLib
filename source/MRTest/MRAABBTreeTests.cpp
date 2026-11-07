@@ -175,15 +175,31 @@ TEST( MRMesh, AABBTreeAddSplitFaces )
 TEST( MRMesh, AABBTreeFlippedOrientation )
 {
     Mesh mesh = makeSphere( { .radius = 1.0f, .numMeshVertices = 200 } );
+    const auto firstSphereEdges = mesh.topology.undirectedEdgeSize();
+    Mesh other = mesh;
+    other.transform( AffineXf3f::translation( Vector3f( 3.0f, 0.0f, 0.0f ) ) );
+    mesh.addMesh( other );
     (void)mesh.getAABBTree();
-    mesh.topology.flipOrientation(); // the tree keeps the vertices of triangles in the old order
-    const Vector3f pt( 0.3f, 0.4f, 2.0f );
-    const auto proj = findProjection( pt, mesh );
-    ASSERT_TRUE( proj.proj.face );
-    EXPECT_LT( ( mesh.triPoint( proj.mtp ) - proj.proj.point ).length(), 1e-5f );
-    const auto hit = rayMeshIntersect( mesh, Line3f( pt, -pt ) );
-    ASSERT_TRUE( hit.proj.face );
-    EXPECT_LT( ( mesh.triPoint( hit.mtp ) - hit.proj.point ).length(), 1e-5f );
+    auto expectRightTriPoints = [&]
+    {
+        expectValidTree( mesh.getAABBTree(), mesh );
+        for ( const Vector3f pt : { Vector3f( 0.3f, 0.4f, 2.0f ), Vector3f( 3.3f, 0.4f, 2.0f ) } )
+        {
+            const auto proj = findProjection( pt, mesh );
+            ASSERT_TRUE( proj.proj.face );
+            EXPECT_LT( ( mesh.triPoint( proj.mtp ) - proj.proj.point ).length(), 1e-5f );
+            const auto hit = rayMeshIntersect( mesh, Line3f( pt, Vector3f( 0.0f, 0.0f, -1.0f ) ) );
+            ASSERT_TRUE( hit.proj.face );
+            EXPECT_LT( ( mesh.triPoint( hit.mtp ) - hit.proj.point ).length(), 1e-5f );
+        }
+    };
+    mesh.flipOrientation(); // the tree is updated, not rebuilt
+    expectRightTriPoints();
+    UndirectedEdgeBitSet firstSphere( mesh.topology.undirectedEdgeSize() );
+    for ( UndirectedEdgeId ue( 0 ); ue < firstSphereEdges; ++ue )
+        firstSphere.set( ue );
+    mesh.flipOrientation( &firstSphere );
+    expectRightTriPoints();
 }
 
 TEST(MRMesh, AABBTreeCopyDuringConstruction)

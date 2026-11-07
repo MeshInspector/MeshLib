@@ -601,6 +601,23 @@ void Mesh::updateCachesAfterSplits( const FaceHashMap & new2Old )
     dipolesOwner_.reset();
 }
 
+void Mesh::flipOrientation( const UndirectedEdgeBitSet * fullComponents )
+{
+    MR_TIMER;
+    topology.flipOrientation( fullComponents );
+    AABBTreeOwner_.update( [&]( AABBTree & tree )
+    {
+        if ( !fullComponents )
+            return tree.flipOrientation();
+        FaceBitSet flipped( topology.faceSize() );
+        for ( auto f : topology.getValidFaces() )
+            if ( fullComponents->test( topology.edgeWithLeft( f ).undirected() ) )
+                flipped.set( f );
+        tree.flipOrientation( &flipped );
+    } );
+    dipolesOwner_.reset();
+}
+
 size_t Mesh::heapBytes() const
 {
     return topology.heapBytes()

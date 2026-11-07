@@ -246,14 +246,20 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
 
 MeshTriPoint AABBTree::toTriPoint( const MeshTopology & topology, NodeId n, const TriPointf & bary ) const
 {
-    const auto & v = leafVerts( n );
     const auto e = topology.edgeWithLeft( leafId( n ) );
-    const auto t = topology.getLeftTriVerts( e );
-    if ( t == v )
-        return { e, bary };
-    const float w[3] = { 1 - bary.a - bary.b, bary.a, bary.b };
-    auto weight = [&]( VertId x ) { return x == v[0] ? w[0] : x == v[1] ? w[1] : w[2]; };
-    return { e, TriPointf( weight( t[1] ), weight( t[2] ) ) };
+    assert( topology.getLeftTriVerts( e ) == leafVerts( n ) ); // otherwise flipOrientation() or updateLeafVerts() was not called
+    return { e, bary };
+}
+
+void AABBTree::flipOrientation( const FaceBitSet * region )
+{
+    MR_TIMER;
+    ParallelFor( leaves_, [&]( size_t i )
+    {
+        auto & leaf = leaves_[i];
+        if ( !region || region->test( leaf.leafId ) )
+            std::swap( leaf.verts[0], leaf.verts[1] );
+    } );
 }
 
 void AABBTree::updateLeafVerts( const MeshTopology & topology )

@@ -72,7 +72,7 @@ Expected<void> FastWindingNumber::prepareData_( ProgressCallback cb )
     if ( !reportProgress( cb, 0.5f ) )
         return unexpectedOperationCanceled();
 
-    CUDA_LOGE_RETURN_UNEXPECTED( data->cudaNodes.fromVector( getNodesWithLeaves( tree ) ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( data->cudaNodes.fromVector( getNodesWithLeaves( tree, mesh_.points ) ) );
     if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
 

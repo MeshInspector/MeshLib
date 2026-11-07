@@ -43,7 +43,7 @@ void PointsToMeshProjector::updateMeshData( const MR::Mesh* mesh )
     const auto tris = mesh->topology.getTriangulation();
 
     meshData_->cudaMeshPoints.fromVector( meshPoints );
-    meshData_->cudaNodes.fromVector( getNodesWithLeaves( tree ) );
+    meshData_->cudaNodes.fromVector( getNodesWithLeaves( tree, mesh->points ) );
     meshData_->cudaFaces.fromVector( tris );
 
     mesh_ = mesh;

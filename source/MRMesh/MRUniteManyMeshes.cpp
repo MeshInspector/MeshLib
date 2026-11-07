@@ -440,7 +440,10 @@ bool normalizeUniteMesh( Mesh& mesh, bool needClosed, const UniteMeshNormalizati
         }
     }
     if ( params.flipInverted && mesh.volume() < 0.0f )
+    {
         mesh.topology.flipOrientation();
+        mesh.invalidateCaches( false );
+    }
 
     if ( params.expansionRatio != 0.0f )
     {

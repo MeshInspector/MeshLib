@@ -7,6 +7,9 @@
 #include <MRMesh/MRMatrix3.h>
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRBuffer.h>
+#include <MRMesh/MRMeshProject.h>
+#include <MRMesh/MRMeshIntersect.h>
+#include <MRMesh/MRLine3.h>
 #include <gtest/gtest.h>
 #include <MRPch/MRTBB.h>
 #include <algorithm>
@@ -37,7 +40,8 @@ TEST(MRMesh, AABBTree)
     EXPECT_EQ( smallerTree.numLeaves(), 1 );
     ASSERT_TRUE( smallerTree.isLeaf( smallerTree.rootNodeId() ) );
     EXPECT_EQ( smallerTree.leafId( smallerTree.rootNodeId() ), 1_f );
-    EXPECT_EQ( smallerTree.getBoundingBox(), smallerTree.leaves()[0].box );
+    EXPECT_EQ( smallerTree.getBoundingBox(), smallerTree.leafBox( smallerTree.rootNodeId(), sphere.points ) );
+    EXPECT_EQ( smallerTree.leafVerts( smallerTree.rootNodeId() ), sphere.topology.getTriVerts( 1_f ) );
     EXPECT_EQ( smallerTree.getSubtreeLeaves( smallerTree.rootNodeId() ), fs );
     EXPECT_EQ( smallerTree.getSubtrees( 4 ), std::vector<NodeId>{ smallerTree.rootNodeId() } );
 }
@@ -49,7 +53,7 @@ TEST(MRMesh, ProjectionToEmptyMesh)
     EXPECT_FALSE( hasProjection );
 }
 
-// checks that every valid face of the mesh is in exactly one leaf, which box contains the face,
+// checks that every valid face of the mesh is in exactly one leaf with the vertices of the face,
 // and the box of every node contains the boxes of its children having larger ids
 static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
 {
@@ -61,10 +65,7 @@ static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
         const auto f = tree.leafId( c );
         ASSERT_TRUE( mesh.topology.hasFace( f ) );
         EXPECT_FALSE( leaves.test_set( f ) );
-        Vector3f a, b, c3;
-        mesh.getTriPoints( f, a, b, c3 );
-        const auto & box = tree.box( c );
-        EXPECT_TRUE( box.contains( a ) && box.contains( b ) && box.contains( c3 ) );
+        EXPECT_EQ( tree.leafVerts( c ), mesh.topology.getTriVerts( f ) );
     };
     if ( nodes.empty() && !tree.empty() )
         checkLeaf( tree.rootNodeId() );
@@ -77,7 +78,7 @@ static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
                 checkLeaf( c );
             else
                 ASSERT_TRUE( c > n && c < nodes.size() );
-            EXPECT_TRUE( node.box.contains( tree.box( c ) ) );
+            EXPECT_TRUE( node.box.contains( tree.box( c, mesh.points ) ) );
         }
     }
     EXPECT_EQ( leaves.count(), size_t( mesh.topology.numValidFaces() ) );
@@ -165,6 +166,20 @@ TEST( MRMesh, AABBTreeAddSplitFaces )
     const auto numWithNewFaces = std::count_if( updatedRes.begin(), updatedRes.end(),
         [sz = orgMesh.topology.faceSize()]( const FaceFace & ff ) { return ff.aFace >= sz; } );
     EXPECT_GT( numWithNewFaces, 0 );
+}
+
+TEST( MRMesh, AABBTreeFlippedOrientation )
+{
+    Mesh mesh = makeSphere( { .radius = 1.0f, .numMeshVertices = 200 } );
+    (void)mesh.getAABBTree();
+    mesh.topology.flipOrientation(); // the tree keeps the vertices of triangles in the old order
+    const Vector3f pt( 0.3f, 0.4f, 2.0f );
+    const auto proj = findProjection( pt, mesh );
+    ASSERT_TRUE( proj.proj.face );
+    EXPECT_LT( ( mesh.triPoint( proj.mtp ) - proj.proj.point ).length(), 1e-5f );
+    const auto hit = rayMeshIntersect( mesh, Line3f( pt, -pt ) );
+    ASSERT_TRUE( hit.proj.face );
+    EXPECT_LT( ( mesh.triPoint( hit.mtp ) - hit.proj.point ).length(), 1e-5f );
 }
 
 TEST(MRMesh, AABBTreeCopyDuringConstruction)

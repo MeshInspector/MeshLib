@@ -41,10 +41,13 @@ void calcDipoles( Dipoles& dipoles, const AABBTree& tree_, const Mesh& mesh )
         {
             if ( !AABBTree::isLeaf( c ) )
                 continue;
-            const FaceId f = tree_.leafId( c );
-            const auto da = 0.5f * mesh.dirDblArea( f );
+            const auto & v = tree_.leafVerts( c );
+            const auto & p0 = mesh.points[v[0]];
+            const auto & p1 = mesh.points[v[1]];
+            const auto & p2 = mesh.points[v[2]];
+            const auto da = 0.5f * cross( p1 - p0, p2 - p0 );
             const auto a = da.length();
-            add( d, Dipole{ .pos = a * mesh.triCenter( f ), .area = a, .dirArea = da } );
+            add( d, Dipole{ .pos = a * ( p0 + p1 + p2 ) / 3.0f, .area = a, .dirArea = da } );
         }
         dipoles[i] = d;
     } );
@@ -108,8 +111,11 @@ float calcFastWindingNumber( const Dipoles& dipoles, const AABBTree& tree, const
         subtasks.pop();
         if ( AABBTree::isLeaf( i ) )
         {
-            if ( const auto f = tree.leafId( i ); f != skipFace )
-                res += triangleSolidAngle( q, mesh.getTriPoints( f ) );
+            if ( tree.leafId( i ) != skipFace )
+            {
+                const auto & v = tree.leafVerts( i );
+                res += triangleSolidAngle( q, { mesh.points[v[0]], mesh.points[v[1]], mesh.points[v[2]] } );
+            }
             continue;
         }
         if ( dipoles[i].addIfGoodApprox( q, betaSq, res ) )

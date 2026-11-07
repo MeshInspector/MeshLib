@@ -51,10 +51,10 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
             subtasks.push( s );
     };
 
-    auto getSubTask = [&]( NodeId a, NodeId b )
+    auto getSubTask = [&]( NodeId an, NodeId bn )
     {
-        float distSq = aTree.box( a ).getDistanceSq( transformed( bTree.box( b ), rigidB2A ) );
-        return SubTask { a, b, distSq };
+        float distSq = aTree.box( an, a.mesh.points ).getDistanceSq( transformed( bTree.box( bn, b.mesh.points ), rigidB2A ) );
+        return SubTask { an, bn, distSq };
     };
 
     addSubTask( getSubTask( aTree.rootNodeId(), bTree.rootNodeId() ) );
@@ -105,7 +105,7 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
         }
 
         SubTask s1, s2;
-        if ( !aLeaf && ( bLeaf || aTree.box( s.a ).volume() >= bTree.box( s.b ).volume() ) )
+        if ( !aLeaf && ( bLeaf || aTree[s.a].box.volume() >= bTree[s.b].box.volume() ) )
         {
             // split aNode
             const auto& aNode = aTree[s.a];

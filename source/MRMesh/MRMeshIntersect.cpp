@@ -29,17 +29,81 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
         return res;
 
     RayOrigin<T> rayOrigin{ line.p };
-    T s = rayStart, e = rayEnd;
-    if( !rayBoxIntersect( Box3<T>{ tree.box( tree.rootNodeId() ) }, rayOrigin, s, e, prec ) )
-        return res;
+    // no copy of float box: it costs a lot
+    auto nodeBox = [&]( NodeId n ) -> decltype( auto )
+    {
+        if constexpr ( std::is_same_v<T, float> )
+            return ( tree[n].box );
+        else
+            return Box3<T>( tree[n].box );
+    };
+
+    NodeId hitLeaf;
+    TriPointf triP;
+    bool stop = false;
+    auto testLeaf = [&]( NodeId n )
+    {
+        const auto face = tree.leafId( n );
+        if ( meshPart.region && !meshPart.region->test( face ) )
+            return;
+        if ( validFaces && !validFaces( face ) )
+            return;
+        const auto & v = tree.leafVerts( n );
+        const Vector3<T> vA = Vector3<T>( m.points[v[0]] ) - line.p;
+        const Vector3<T> vB = Vector3<T>( m.points[v[1]] ) - line.p;
+        const Vector3<T> vC = Vector3<T>( m.points[v[2]] ) - line.p;
+        const auto triIsect = rayTriangleIntersect( vA, vB, vC, prec );
+        if ( !triIsect )
+            return;
+        const T t( triIsect->t );
+        if ( !( t < rayEnd && t > rayStart ) )
+            return;
+        res.distanceAlongLine = triIsect->t;
+        res.proj.face = face;
+        triP = triIsect->bary;
+        hitLeaf = n;
+        if ( !closestIntersect )
+            stop = true;
+        if ( t == 0 )
+        {
+            rayStart = rayEnd = 0;
+            stop = true; // intersection exactly at ray origin
+        }
+        else if ( t < 0 )
+        {
+            assert( rayStart < 0 );
+            rayStart = t;
+            rayEnd = std::min( rayEnd, -t );
+        }
+        else
+        {
+            assert( rayEnd > 0 );
+            rayEnd = t;
+            rayStart = std::max( rayStart, -t );
+        }
+    };
+    constexpr T cMiss = std::numeric_limits<T>::max();
+    // the triangles of leaves are tested as soon as their parent is reached, without the boxes of leaves;
+    // returns the parameter where the ray enters the box of a node, or cMiss
+    auto processChild = [&]( NodeId n ) -> T
+    {
+        if ( tree.isLeaf( n ) )
+        {
+            testLeaf( n );
+            return cMiss;
+        }
+        T s = rayStart, e = rayEnd;
+        return rayBoxIntersect( nodeBox( n ), rayOrigin, s, e, prec ) ? s : cMiss;
+    };
 
     constexpr int maxTreeDepth = 32;
     std::pair< NodeId,T> nodesStack[maxTreeDepth];
-    int currentNode = 0;
-    nodesStack[0] = { tree.rootNodeId(), rayStart };
+    int currentNode = -1;
+    const auto root = tree.rootNodeId();
+    if ( const auto rootStart = processChild( root ); rootStart < rayEnd )
+        nodesStack[++currentNode] = { root, rootStart };
 
-    TriPointf triP;
-    while( currentNode >= 0 && ( closestIntersect || !res.proj.face ) )
+    while( !stop && currentNode >= 0 )
     {
         if( currentNode >= maxTreeDepth ) // max depth exceeded
         {
@@ -48,89 +112,41 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
             break;
         }
 
-        const auto nid = nodesStack[currentNode].first;
-        if( nodesStack[currentNode--].second < rayEnd )
-        {
-            if( tree.isLeaf( nid ) )
-            {
-                auto face = tree.leafId( nid );
-                if( ( !meshPart.region || meshPart.region->test( face ) ) && ( !validFaces || validFaces( face ) ) )
-                {
-                    VertId a, b, c;
-                    m.topology.getTriVerts( face, a, b, c );
+        const auto [nid, nStart] = nodesStack[currentNode--];
+        if( !( nStart < rayEnd ) )
+            continue;
 
-                    const Vector3<T> vA = Vector3<T>( m.points[a] ) - line.p;
-                    const Vector3<T> vB = Vector3<T>( m.points[b] ) - line.p;
-                    const Vector3<T> vC = Vector3<T>( m.points[c] ) - line.p;
-                    if ( auto triIsect = rayTriangleIntersect( vA, vB, vC, prec ) )
-                    {
-                        const T t( triIsect->t );
-                        if ( t < rayEnd && t > rayStart )
-                        {
-                            res.distanceAlongLine = triIsect->t;
-                            res.proj.face = face;
-                            triP = triIsect->bary;
-                            if ( t == 0 )
-                            {
-                                rayStart = rayEnd = 0;
-                                break; // intersection exactly at ray origin
-                            }
-                            if ( t < 0 )
-                            {
-                                assert( rayStart < 0 );
-                                rayStart = t;
-                                rayEnd = std::min( rayEnd, -t );
-                            }
-                            else
-                            {
-                                assert( rayEnd > 0 );
-                                rayEnd = t;
-                                rayStart = std::max( rayStart, -t );
-                            }
-                        }
-                    }
-                }
+        const auto& node = tree[nid];
+        const T lStart = processChild( node.l );
+        if ( stop )
+            break;
+        const T rStart = processChild( node.r );
+        if ( stop )
+            break;
+        const bool lHit = lStart < rayEnd, rHit = rStart < rayEnd;
+        if ( lHit && rHit )
+        {
+            if( lStart > rStart )
+            {
+                nodesStack[++currentNode] = { node.l,lStart };
+                nodesStack[++currentNode] = { node.r,rStart };
             }
             else
             {
-                const auto& node = tree[nid];
-                T lStart = rayStart, lEnd = rayEnd;
-                T rStart = rayStart, rEnd = rayEnd;
-                if( rayBoxIntersect( Box3<T>{ tree.box( node.l ) }, rayOrigin, lStart, lEnd, prec ) )
-                {
-                    if( rayBoxIntersect( Box3<T>{ tree.box( node.r ) }, rayOrigin, rStart, rEnd, prec ) )
-                    {
-                        if( lStart > rStart )
-                        {
-                            nodesStack[++currentNode] = { node.l,lStart };
-                            nodesStack[++currentNode] = { node.r,rStart };
-                        }
-                        else
-                        {
-                            nodesStack[++currentNode] = { node.r,rStart };
-                            nodesStack[++currentNode] = { node.l,lStart };
-                        }
-                    }
-                    else
-                    {
-                        nodesStack[++currentNode] = { node.l,lStart };
-                    }
-                }
-                else
-                {
-                    if( rayBoxIntersect( Box3<T>{ tree.box( node.r ) }, rayOrigin, rStart, rEnd, prec ) )
-                    {
-                        nodesStack[++currentNode] = { node.r,rStart };
-                    }
-                }
+                nodesStack[++currentNode] = { node.r,rStart };
+                nodesStack[++currentNode] = { node.l,lStart };
             }
         }
+        else if ( lHit )
+            nodesStack[++currentNode] = { node.l,lStart };
+        else if ( rHit )
+            nodesStack[++currentNode] = { node.r,rStart };
     }
 
     if( res.proj.face.valid() )
     {
         res.proj.point = Vector3f( line.p + res.distanceAlongLine * line.d );
-        res.mtp = MeshTriPoint( m.topology.edgeWithLeft( res.proj.face ), triP );
+        res.mtp = tree.toTriPoint( m.topology, hitLeaf, triP );
     }
     return res;
 }
@@ -294,7 +310,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
     [[maybe_unused]] T boxExpansion = 0;
     if constexpr ( std::is_same_v<T, double> )
     {
-        const Box3d rootBox( tree.box( tree.rootNodeId() ) );
+        const Box3d rootBox( tree.getBoundingBox() );
         convToInt = getToIntConverter( rootBox );
         convToFloat = getToFloatConverter( rootBox );
         boxExpansion = 2 * convToFloat.range;
@@ -302,14 +318,14 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
     auto nodeBox = [&] ( NodeId n ) -> Box3<T>
     {
         if constexpr ( std::is_same_v<T, double> )
-            return Box3d( tree.box( n ) ).expanded( Vector3d::diagonal( boxExpansion ) );
+            return Box3d( tree.box( n, m.points ) ).expanded( Vector3d::diagonal( boxExpansion ) );
         else
-            return tree.box( n );
+            return tree[n].box;
     };
 
     RayOrigin<T> rayOrigin{ line.p };
     T s = rayStart, e = rayEnd;
-    if( !rayBoxIntersect( nodeBox( tree.rootNodeId() ), rayOrigin, s, e, prec ) )
+    if( !rayBoxIntersect( Box3<T>( tree.getBoundingBox() ).expanded( Vector3<T>::diagonal( boxExpansion ) ), rayOrigin, s, e, prec ) )
     {
         return;
     }
@@ -334,6 +350,22 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
         invDirLenSq = 1 / line.d.lengthSq();
     }
 
+    // the float version tests the triangles of leaves without their boxes
+    auto pushChild = [&]( NodeId n )
+    {
+        if constexpr ( std::is_same_v<T, float> )
+        {
+            if ( tree.isLeaf( n ) )
+            {
+                nodesStack[++currentNode] = n;
+                return;
+            }
+        }
+        T cs = rayStart, ce = rayEnd;
+        if( rayBoxIntersect( nodeBox( n ), rayOrigin, cs, ce, prec ) )
+            nodesStack[++currentNode] = n;
+    };
+
     while( currentNode >= 0 )
     {
         if( currentNode >= maxTreeDepth ) // max depth exceeded
@@ -349,7 +381,10 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
             auto face = tree.leafId( nid );
             if( !meshPart.region || meshPart.region->test( face ) )
             {
-                m.topology.getTriVerts( face, pvc[0].id, pvc[1].id, pvc[2].id );
+                const auto & v = tree.leafVerts( nid );
+                pvc[0].id = v[0];
+                pvc[1].id = v[1];
+                pvc[2].id = v[2];
                 if constexpr ( std::is_same_v<T, double> )
                 {
                     // double version (more precise)
@@ -365,7 +400,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
                         // the segment is already limited by [rayStart, rayEnd], so the hit is reported without checking its distance,
                         // which is computed from the rounded point and can be slightly outside of the range
                         found.distanceAlongLine = float( dot( Vector3d( found.proj.point ) - line.p, line.d ) * invDirLenSq );
-                        found.mtp = MeshTriPoint( m.topology.edgeWithLeft( face ), TriPointf( found.proj.point, m.points[pvc[0].id], m.points[pvc[1].id], m.points[pvc[2].id] ) );
+                        found.mtp = tree.toTriPoint( m.topology, nid, TriPointf( found.proj.point, m.points[pvc[0].id], m.points[pvc[1].id], m.points[pvc[2].id] ) );
                         // segment start pvc[3] is behind the triangle if dIsLeftFromABC
                         if ( !report( found, [&] { return !isect.dIsLeftFromABC; } ) )
                             return;
@@ -383,7 +418,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
                         MeshIntersectionResult found;
                         found.proj.face = face;
                         found.proj.point = Vector3f( line( triIsect->t ) );
-                        found.mtp = MeshTriPoint( m.topology.edgeWithLeft( face ), triIsect->bary );
+                        found.mtp = tree.toTriPoint( m.topology, nid, triIsect->bary );
                         found.distanceAlongLine = float( triIsect->t );
                         if ( !report( found, [&] { return dot( cross( vB - vA, vC - vA ), line.d ) < 0; } ) )
                             return;
@@ -394,16 +429,8 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
         else
         {
             const auto& node = tree[nid];
-            s = rayStart, e = rayEnd;
-            if( rayBoxIntersect( nodeBox( node.l ), rayOrigin, s, e, prec ) )
-            {
-                nodesStack[++currentNode] = node.l;
-            }
-            s = rayStart, e = rayEnd;
-            if( rayBoxIntersect( nodeBox( node.r ), rayOrigin, s, e, prec ) )
-            {
-                nodesStack[++currentNode] = node.r;
-            }
+            pushChild( node.l );
+            pushChild( node.r );
         }
     }
 }
@@ -485,7 +512,7 @@ void planeMeshIntersect( const MeshPart& meshPart, const Plane3f & plane,
 
     auto addNode = [&]( NodeId nid )
     {
-        const auto & box = tree.box( nid );
+        const auto box = tree.box( nid, m.points );
         if ( dot( plane.n, box.corner( minCorner ) ) > plane.d )
             return;
         if ( dot( plane.n, box.corner( maxCorner ) ) < plane.d )
@@ -560,7 +587,7 @@ void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
 
     auto addNode = [&]( NodeId nid )
     {
-        const auto & box = tree.box( nid );
+        const auto box = tree.box( nid, m.points );
         if ( box.min.z <= zLevel && box.max.z >= zLevel )
             nodesStack[++currentNode] = nid;
     };

@@ -51,8 +51,8 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
         if ( !inRegion( bTree, b.region, bNodes, s.bNode ) )
             continue;
 
-        const auto & aBox = aTree.box( s.aNode );
-        const auto & bBox = bTree.box( s.bNode );
+        const auto aBox = aTree.box( s.aNode, a.mesh.points );
+        const auto bBox = bTree.box( s.bNode, b.mesh.points );
 
         const auto overlap = aBox.intersection( transformed( bBox, rigidB2A ) );
         if ( !overlap.valid() )
@@ -190,7 +190,7 @@ Expected<bool> findSelfCollidingTriangles(
     {
         processSelfSubtasks( tree, subtasks, nextSubtasks,
             [&leafTasks]( const NodeNode & s ) { leafTasks.push_back( s ); return Processing::Continue; },
-            [&tree]( const NodeNode & s ){ return tree.box( s.aNode ).intersects( tree.box( s.bNode ) ) ? Processing::Continue : Processing::Stop; });
+            [&tree, &mp]( const NodeNode & s ){ return tree.box( s.aNode, mp.mesh.points ).intersects( tree.box( s.bNode, mp.mesh.points ) ) ? Processing::Continue : Processing::Stop; });
         subtasks.swap( nextSubtasks );
 
         if ( !reportProgress( sb, i / 16.0f ) )
@@ -295,7 +295,7 @@ Expected<bool> findSelfCollidingTriangles(
                     }
                     return Processing::Continue;
                 },
-                [&tree]( const NodeNode & s ){ return tree.box( s.aNode ).intersects( tree.box( s.bNode ) ) ? Processing::Continue : Processing::Stop; }
+                [&tree, &mp]( const NodeNode & s ){ return tree.box( s.aNode, mp.mesh.points ).intersects( tree.box( s.bNode, mp.mesh.points ) ) ? Processing::Continue : Processing::Stop; }
             );
 
             subtaskRes[is] = std::move( myRes );

@@ -169,7 +169,7 @@ AABBTreeNodeVec<T> makeAABBTreeNodeVec( std::vector<BoxedLeaf<T>> & boxedLeaves 
 }
 
 template<typename T>
-void AABBTreeBase<T>::build_( Leaves leaves )
+void AABBTreeBase<T>::build_( std::vector<BoxedLeaf<T>> leaves ) requires leavesHaveBoxes
 {
     nodes_.clear();
     leaves_ = std::move( leaves );

@@ -87,7 +87,7 @@ void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rang
 
     auto getSubTask = [&]( NodeId n )
     {
-        float distSq = tree.box( n ).getDistanceSq( tbox );
+        float distSq = tree.box( n, mp.mesh.points ).getDistanceSq( tbox );
         return SubTask { n, distSq };
     };
 
@@ -103,7 +103,8 @@ void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rang
             const auto face = tree.leafId( s.n );
             if ( mp.region && !mp.region->test( face ) )
                 continue;
-            const auto leafTriangle = mp.mesh.getTriPoints( face );
+            const auto & v = tree.leafVerts( s.n );
+            const Triangle3f leafTriangle{ mp.mesh.points[v[0]], mp.mesh.points[v[1]], mp.mesh.points[v[2]] };
             const auto td = findTriTriDistance( t, leafTriangle, { .upDistLimitSq = rangeSq } );
             if ( td.distSq > rangeSq )
                 continue;

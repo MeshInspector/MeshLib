@@ -20,6 +20,10 @@ namespace
 template<class Tree>
 constexpr bool hasLeafNodes = std::is_same_v<Tree, AABBTreePoints>;
 
+// AABBTree of a mesh stores the vertices of triangles instead of the boxes of leaves
+template<class Tree>
+constexpr bool leavesWithoutBoxes = std::is_same_v<Tree, AABBTree>;
+
 template<class Tree>
 bool emptyTree( const Tree & tree )
 {
@@ -41,7 +45,7 @@ bool isLeaf( const Tree & tree, NodeId n )
 template<class Tree>
 const auto & nodeBox( const Tree & tree, NodeId n )
 {
-    if constexpr ( hasLeafNodes<Tree> )
+    if constexpr ( hasLeafNodes<Tree> || leavesWithoutBoxes<Tree> )
         return tree[n].box;
     else
         return tree.box( n );
@@ -67,12 +71,24 @@ VertId findDirMaxT( const V & dir, const Tree & tree, LeafProcessor && lp )
 
     auto addSubTask = [&]( const SubTask & s )
     {
+        if constexpr ( leavesWithoutBoxes<Tree> )
+            if ( tree.isLeaf( s.n ) )
+                return;
         if ( s.furthestBoxProj > furthestProj )
             subtasks.push( s );
     };
 
     auto getSubTask = [&]( NodeId n )
     {
+        if constexpr ( leavesWithoutBoxes<Tree> )
+        {
+            if ( tree.isLeaf( n ) )
+            {
+                // the leaf is processed immediately without its box
+                lp( n, furthestProj, res );
+                return SubTask { n, -FLT_MAX };
+            }
+        }
         return SubTask { n, dot( dir, nodeBox( tree, n ).corner( maxCorner ) ) };
     };
 
@@ -151,8 +167,7 @@ VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
         FaceId face = tree.leafId( n );
         if ( mp.region && !mp.region->test( face ) )
             return;
-        VertId vs[3];
-        mp.mesh.topology.getTriVerts( face, vs );
+        const auto & vs = tree.leafVerts( n );
         for ( int i = 0; i < 3; ++i )
         {
             auto proj = dot( mp.mesh.points[vs[i]], dir );

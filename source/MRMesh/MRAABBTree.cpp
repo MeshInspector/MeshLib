@@ -6,6 +6,7 @@
 #include "MRResizeNoInit.h"
 #include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
+#include "MRMeshTriPoint.h"
 #include <algorithm>
 
 namespace MR
@@ -37,7 +38,7 @@ AABBTree::AABBTree( const MeshPart & mp )
     if ( numFaces <= 0 )
         return;
 
-    Leaves boxedFaces;
+    std::vector<BoxedFace> boxedFaces;
     resizeNoInit( boxedFaces, numFaces );
     const bool packed = numFaces == mp.mesh.topology.faceSize();
     if ( !packed )
@@ -58,43 +59,66 @@ AABBTree::AABBTree( const MeshPart & mp )
         boxedFaces[i].box = computeFaceBox( mp.mesh, f );
     } );
 
-    build_( std::move( boxedFaces ) );
+    nodes_ = makeAABBTreeNodeVec( boxedFaces );
+    if ( nodes_.empty() )
+        singleLeafBox_ = boxedFaces[0].box;
+
+    resizeNoInit( leaves_, numFaces );
+    ParallelFor( leaves_, [&]( size_t i )
+    {
+        const auto f = boxedFaces[i].leafId;
+        leaves_[i].leafId = f;
+        leaves_[i].verts = mp.mesh.topology.getTriVerts( f );
+    } );
 }
 
 void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
 {
     MR_TIMER;
-
-    FaceBitSet changedFaces;
-    if ( changedVerts )
-        changedFaces = getIncidentFaces( mesh.topology, *changedVerts );
-    auto changedLeaf = [&]( NodeId c )
+    if ( nodes_.empty() )
     {
-        return isLeaf( c ) && ( !changedVerts || changedFaces.test( leafId( c ) ) );
-    };
+        if ( !leaves_.empty() )
+            singleLeafBox_ = leafBox( Node::leafChild( 0 ), mesh.points );
+        return;
+    }
 
-    // update leaf boxes
-    ParallelFor( leaves_, [&]( size_t i )
+    if ( !changedVerts )
     {
-        auto & l = leaves_[i];
-        if ( !changedVerts || changedFaces.test( l.leafId ) )
-            l.box = computeFaceBox( mesh, l.leafId );
-    } );
+        // the boxes of leaf children in parallel, then the boxes of not-leaf children from the last node to the root
+        ParallelFor( nodes_, [&]( NodeId nid )
+        {
+            auto & node = nodes_[nid];
+            node.box = {};
+            if ( isLeaf( node.l ) )
+                node.box.include( leafBox( node.l, mesh.points ) );
+            if ( isLeaf( node.r ) )
+                node.box.include( leafBox( node.r, mesh.points ) );
+        } );
+        for ( auto nid = nodes_.backId(); nid >= 0; --nid )
+        {
+            auto & node = nodes_[nid];
+            if ( !isLeaf( node.l ) )
+                node.box.include( nodes_[node.l].box );
+            if ( !isLeaf( node.r ) )
+                node.box.include( nodes_[node.r].box );
+        }
+        return;
+    }
 
-    // update not-leaf nodes
+    const auto changedFaces = getIncidentFaces( mesh.topology, *changedVerts );
     NodeBitSet changedNodes( nodes_.size() );
     auto changed = [&]( NodeId c )
     {
-        return isLeaf( c ) ? changedLeaf( c ) : changedNodes.test( c );
+        return isLeaf( c ) ? changedFaces.test( leafId( c ) ) : changedNodes.test( c );
     };
-    for ( auto nid = NodeId( int( nodes_.size() ) - 1 ); nid >= 0; --nid )
+    for ( auto nid = nodes_.backId(); nid >= 0; --nid )
     {
         auto & node = nodes_[nid];
         if ( !changed( node.l ) && !changed( node.r ) )
             continue;
         changedNodes.set( nid );
-        node.box = box( node.l );
-        node.box.include( box( node.r ) );
+        node.box = box( node.l, mesh.points );
+        node.box.include( box( node.r, mesh.points ) );
     }
 }
 
@@ -156,9 +180,9 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
     {
         if ( leafIndices[i] == cNotFound )
             continue;
-        auto & l = leaves_[leafIndices[i]];
-        oldBoxes[i] = l.box;
-        l.box = computeFaceBox( mesh, l.leafId );
+        const auto c = Node::leafChild( leafIndices[i] );
+        oldBoxes[i] = leafBox( c, mesh.points );
+        leaves_[leafIndices[i]].verts = mesh.topology.getTriVerts( oldFaces[i] );
     }
     const auto firstNewNode = nodes_.endId();
     nodes_.reserve( nodes_.size() + new2Old.size() );
@@ -178,15 +202,15 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
         node.r = Node::leafChild( leaves_.size() );
         auto & leaf = leaves_.emplace_back();
         leaf.leafId = newFace;
-        leaf.box = computeFaceBox( mesh, newFace );
+        leaf.verts = mesh.topology.getTriVerts( newFace );
         ref( places1[i] ) = nid;
         places1[i] = { nid, false };
     }
     for ( auto n = nodes_.backId(); n >= firstNewNode; --n )
     {
         auto & node = nodes_[n];
-        node.box = box( node.l );
-        node.box.include( box( node.r ) );
+        node.box = box( node.l, mesh.points );
+        node.box.include( box( node.r, mesh.points ) );
     }
 
     // only a new vertex outside the box of its split face (e.g. due to rounding) makes the boxes of the ancestors to grow,
@@ -194,16 +218,37 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
     bool grown = false;
     for ( size_t i = 0; i < oldFaces.size() && !grown; ++i )
         if ( leafIndices[i] != cNotFound )
-            grown = !oldBoxes[i].contains( box( ref( places[i] ) ) );
+            grown = !oldBoxes[i].contains( box( ref( places[i] ), mesh.points ) );
     if ( grown )
     {
         for ( auto n = firstNewNode - 1; n >= 0; --n )
         {
             auto & node = nodes_[n];
-            node.box = box( node.l );
-            node.box.include( box( node.r ) );
+            node.box = box( node.l, mesh.points );
+            node.box.include( box( node.r, mesh.points ) );
         }
     }
+}
+
+MeshTriPoint AABBTree::toTriPoint( const MeshTopology & topology, NodeId n, const TriPointf & bary ) const
+{
+    const auto & v = leafVerts( n );
+    const auto e = topology.edgeWithLeft( leafId( n ) );
+    const auto t = topology.getLeftTriVerts( e );
+    if ( t == v )
+        return { e, bary };
+    const float w[3] = { 1 - bary.a - bary.b, bary.a, bary.b };
+    auto weight = [&]( VertId x ) { return x == v[0] ? w[0] : x == v[1] ? w[1] : w[2]; };
+    return { e, TriPointf( weight( t[1] ), weight( t[2] ) ) };
+}
+
+void AABBTree::updateLeafVerts( const MeshTopology & topology )
+{
+    MR_TIMER;
+    ParallelFor( leaves_, [&]( size_t i )
+    {
+        leaves_[i].verts = topology.getTriVerts( leaves_[i].leafId );
+    } );
 }
 
 template auto AABBTreeBase<FaceTreeTraits3>::getSubtrees( int minNum ) const -> std::vector<NodeId>;

@@ -37,7 +37,7 @@ void processSelfSubtasks(
                 return;
             continue;
         }
-        if ( !aLeaf && ( bLeaf || tree.box( s.aNode ).volume() >= tree.box( s.bNode ).volume() ) )
+        if ( !aLeaf && ( bLeaf || tree[s.aNode].box.volume() >= tree[s.bNode].box.volume() ) )
         {
             // split aNode
             const auto& aNode = tree[s.aNode];

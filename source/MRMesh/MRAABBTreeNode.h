@@ -37,6 +37,22 @@ struct BoxedLeaf
     explicit BoxedLeaf( NoInit ) noexcept : leafId( noInit ), box( noInit ) { }
 };
 
+/// a leaf of the AABB-tree of a mesh: the face with the vertices of its triangle, the box of the triangle is not stored
+struct FaceLeaf
+{
+    FaceId leafId;
+    ThreeVertIds verts; ///< as returned by MeshTopology::getTriVerts when the tree was built
+
+    FaceLeaf() noexcept = default;
+    explicit FaceLeaf( NoInit ) noexcept : leafId( noInit ), verts{ VertId( noInit ), VertId( noInit ), VertId( noInit ) } { }
+};
+
+/// the type of the leaves stored in the AABB-tree with given traits
+template<typename T>
+struct AABBTreeLeaf { using type = BoxedLeaf<T>; };
+template<>
+struct AABBTreeLeaf<FaceTreeTraits3> { using type = FaceLeaf; };
+
 template<typename T>
 struct AABBTreeNode
 {

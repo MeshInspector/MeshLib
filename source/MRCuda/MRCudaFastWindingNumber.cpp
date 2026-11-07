@@ -63,11 +63,11 @@ Expected<void> FastWindingNumber::prepareData_( ProgressCallback cb )
     if ( !reportProgress( cb, 0.1f ) )
         return unexpectedOperationCanceled();
 
-    const AABBTree& tree = mesh_.getAABBTree();
+    CUDA_LOGE_RETURN_UNEXPECTED( data->cudaFaces.fromVector( mesh_.topology.getTriangulation() ) );
     if ( !reportProgress( cb, 0.3f ) )
         return unexpectedOperationCanceled();
 
-    CUDA_LOGE_RETURN_UNEXPECTED( data->cudaFaces.fromVector( tree.triangulation() ) );
+    const AABBTree& tree = mesh_.getAABBTree();
     if ( !reportProgress( cb, 0.5f ) )
         return unexpectedOperationCanceled();
 

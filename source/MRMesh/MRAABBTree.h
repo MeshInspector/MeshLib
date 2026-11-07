@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRAABBTreeBase.h"
+#include "MRHeapBytes.h"
 
 namespace MR
 {
@@ -37,26 +38,28 @@ public:
     /// would add the earlier faces to the tree once more
     MRMESH_API void addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old );
 
-    /// vertex ids of every face in the tree, faster to access in queries than through mesh topology;
-    /// the elements of faces not in the tree are undefined
-    [[nodiscard]] const Triangulation & triangulation() const { return triangulation_; }
+    /// vertex ids of the faces of all leaves in the order of Node::leafPos(), which is the order of leaf nodes after construction
+    [[nodiscard]] const std::vector<ThreeVertIds> & leafTriangulation() const { return leafTris_; }
 
-    /// returns the coordinates of the vertices of given face of the tree in the order of triangulation()
-    [[nodiscard]] Triangle3f getTriPoints( const VertCoords & points, FaceId f ) const
-        { const auto & t = triangulation_[f]; return { points[t[0]], points[t[1]], points[t[2]] }; }
+    /// returns vertex ids of the face of given leaf node
+    [[nodiscard]] const ThreeVertIds & leafTriVerts( const Node & leaf ) const { return leafTris_[leaf.leafPos()]; }
+
+    /// returns the coordinates of the vertices of the face of given leaf node in the order of leafTriVerts()
+    [[nodiscard]] Triangle3f leafTriPoints( const VertCoords & points, const Node & leaf ) const
+        { const auto & t = leafTriVerts( leaf ); return { points[t[0]], points[t[1]], points[t[2]] }; }
 
     /// takes vertex ids of all tree's faces from given topology, e.g. after its vertices were renumbered
     MRMESH_API void updateTriangulation( const MeshTopology & topology );
 
-    /// converts barycentric coordinates relative to triangulation()[f] into the point relative to topology.edgeWithLeft( f ),
+    /// converts barycentric coordinates relative to vertices (t) of face (f) into the point relative to topology.edgeWithLeft( f ),
     /// which can list the same vertices in another order (e.g. after topology.flipOrientation() with this tree kept)
-    [[nodiscard]] MRMESH_API MeshTriPoint toMeshTriPoint( const MeshTopology & topology, FaceId f, const TriPointf & bary ) const;
+    [[nodiscard]] MRMESH_API static MeshTriPoint toMeshTriPoint( const MeshTopology & topology, FaceId f, const ThreeVertIds & t, const TriPointf & bary );
 
     /// returns the amount of memory this object occupies on heap
-    [[nodiscard]] size_t heapBytes() const { return AABBTreeBase::heapBytes() + triangulation_.heapBytes(); }
+    [[nodiscard]] size_t heapBytes() const { return AABBTreeBase::heapBytes() + MR::heapBytes( leafTris_ ); }
 
 private:
-    Triangulation triangulation_;
+    std::vector<ThreeVertIds> leafTris_;
 
     AABBTree( const AABBTree & ) = default;
     AABBTree & operator =( const AABBTree & ) = default;

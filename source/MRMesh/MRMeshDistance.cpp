@@ -104,7 +104,7 @@ void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rang
             const auto face = node.leafId();
             if ( mp.region && !mp.region->test( face ) )
                 continue;
-            const auto leafTriangle = tree.getTriPoints( mp.mesh.points, face );
+            const auto leafTriangle = tree.leafTriPoints( mp.mesh.points, node );
             const auto td = findTriTriDistance( t, leafTriangle, { .upDistLimitSq = rangeSq } );
             if ( td.distSq > rangeSq )
                 continue;

@@ -36,48 +36,55 @@ AABBTree::AABBTree( const MeshPart & mp )
     if ( numFaces <= 0 )
         return;
 
+    // the tree is built with the leaf ids [0, numFaces) to address the vertices of i-th face in tris
     Buffer<BoxedFace> boxedFaces( numFaces );
-    triangulation_.resize( mp.mesh.topology.faceSize() );
+    Buffer<VertId> tris( 3 * size_t( numFaces ) );
     const bool packed = numFaces == mp.mesh.topology.faceSize();
+    Buffer<FaceId> faces;
     if ( !packed )
     {
+        faces = Buffer<FaceId>( numFaces );
         int n = 0;
         for ( auto f : mp.mesh.topology.getFaceIds( mp.region ) )
-            boxedFaces[n++].leafId = f;
+            faces[n++] = f;
     }
 
     // compute aabb's of each face
     ParallelFor( 0, numFaces, [&] ( int i )
     {
-        FaceId f;
-        if ( packed )
-            boxedFaces[i].leafId = f = FaceId( i );
-        else
-            f = boxedFaces[i].leafId;
-        auto & t = triangulation_[f];
-        mp.mesh.topology.getTriVerts( f, t );
+        boxedFaces[i].leafId = FaceId( i );
+        ThreeVertIds t;
+        mp.mesh.topology.getTriVerts( packed ? FaceId( i ) : faces[i], t );
+        for ( int j = 0; j < 3; ++j )
+            tris[3 * size_t( i ) + j] = t[j];
         boxedFaces[i].box = computeFaceBox( mp.mesh.points, t );
     } );
 
-    nodes_ = makeAABBTreeNodeVec( std::move( boxedFaces ) );
+    leafTris_.resize( numFaces );
+    auto fillLeaf = [&]( FaceId i, int pos )
+    {
+        for ( int j = 0; j < 3; ++j )
+            leafTris_[pos][j] = tris[3 * size_t( i ) + j];
+        return packed ? i : faces[i];
+    };
+    const OnLeafCallback<FaceTreeTraits3> onLeaf( fillLeaf );
+    nodes_ = makeAABBTreeNodeVec( std::move( boxedFaces ), &onLeaf );
 }
 
 void AABBTree::updateTriangulation( const MeshTopology & topology )
 {
     MR_TIMER;
-    triangulation_.resize( topology.faceSize() );
     ParallelFor( nodes_, [&]( NodeId nid )
     {
         const auto & node = nodes_[nid];
         if ( node.leaf() )
-            topology.getTriVerts( node.leafId(), triangulation_[node.leafId()] );
+            topology.getTriVerts( node.leafId(), leafTris_[node.leafPos()] );
     } );
 }
 
-MeshTriPoint AABBTree::toMeshTriPoint( const MeshTopology & topology, FaceId f, const TriPointf & bary ) const
+MeshTriPoint AABBTree::toMeshTriPoint( const MeshTopology & topology, FaceId f, const ThreeVertIds & t, const TriPointf & bary )
 {
     const auto e = topology.edgeWithLeft( f );
-    const auto & t = triangulation_[f];
     if ( topology.org( e ) == t[0] && topology.dest( e ) == t[1] )
         return { e, bary };
     const auto v = topology.getLeftTriVerts( e );
@@ -105,7 +112,7 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
         if ( changedVerts && !changedFaces.test( f ) )
             return;
         changedNodes.set( nid );
-        node.box = computeFaceBox( mesh.points, triangulation_[f] );
+        node.box = computeFaceBox( mesh.points, leafTris_[node.leafPos()] );
     } );
 
     //update not-leaf nodes
@@ -152,6 +159,7 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
     // the new nodes are appended, so children have larger ids than their parents as in a constructed tree
     const auto firstNewNode = nodes_.endId();
     nodes_.reserve( nodes_.size() + 2 * new2Old.size() );
+    leafTris_.reserve( leafTris_.size() + new2Old.size() );
     auto leaves = roots; // current leaves of split faces
     for ( const auto & [newFace, oldFace] : new2Old )
     {
@@ -164,25 +172,24 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
         const auto l = nodes_.endId();
         const auto r = l + 1;
         nodes_.resize( nodes_.size() + 2 );
-        nodes_[l].setLeafId( oldFace );
-        nodes_[r].setLeafId( newFace );
+        nodes_[l].setLeafId( oldFace, nodes_[leaf].leafPos() );
+        nodes_[r].setLeafId( newFace, int( leafTris_.size() ) );
+        leafTris_.emplace_back();
         nodes_[leaf].l = l;
         nodes_[leaf].r = r;
         leaf = l;
     }
-
-    triangulation_.resize( mesh.topology.faceSize() );
-    for ( auto f : oldFaces )
-        mesh.topology.getTriVerts( f, triangulation_[f] );
-    for ( const auto & [newFace, oldFace] : new2Old )
-        mesh.topology.getTriVerts( newFace, triangulation_[newFace] );
 
     // the boxes of the new nodes from the leaves, and then of the roots
     auto updateBox = [&]( NodeId nid )
     {
         auto & node = nodes_[nid];
         if ( node.leaf() )
-            node.box = computeFaceBox( mesh.points, triangulation_[node.leafId()] );
+        {
+            auto & t = leafTris_[node.leafPos()];
+            mesh.topology.getTriVerts( node.leafId(), t );
+            node.box = computeFaceBox( mesh.points, t );
+        }
         else
         {
             node.box = nodes_[node.l].box;

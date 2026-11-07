@@ -32,7 +32,7 @@ void calcDipoles( Dipoles& dipoles, const AABBTree& tree_, const Mesh& mesh )
         const auto& node = tree_[i];
         if ( !node.leaf() )
             return;
-        const auto tri = tree_.getTriPoints( mesh.points, node.leafId() );
+        const auto tri = tree_.leafTriPoints( mesh.points, node );
         const auto da = 0.5f * dirDblArea( tri );
         const auto a = da.length();
         const auto ap = a * ( ( 1 / 3.0f ) * ( tri[0] + tri[1] + tri[2] ) );
@@ -122,7 +122,7 @@ float calcFastWindingNumber( const Dipoles& dipoles, const AABBTree& tree, const
             continue;
         }
         if ( node.leafId() != skipFace )
-            res += triangleSolidAngle( q, tree.getTriPoints( mesh.points, node.leafId() ) );
+            res += triangleSolidAngle( q, tree.leafTriPoints( mesh.points, node ) );
     }
     constexpr float INV_4PI = 1.0f / ( 4 * PI_F );
     return INV_4PI * res;

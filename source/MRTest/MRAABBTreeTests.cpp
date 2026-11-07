@@ -50,6 +50,7 @@ static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
     const auto & nodes = tree.nodes();
     EXPECT_EQ( tree.numLeaves(), size_t( mesh.topology.numValidFaces() ) );
     FaceBitSet leaves( mesh.topology.faceSize() );
+    std::vector<bool> leafPoses( tree.leafTriangulation().size() );
     for ( NodeId n( 0 ); n < nodes.size(); ++n )
     {
         const auto & node = nodes[n];
@@ -58,7 +59,10 @@ static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
             const auto f = node.leafId();
             ASSERT_TRUE( mesh.topology.hasFace( f ) );
             EXPECT_FALSE( leaves.test_set( f ) );
-            EXPECT_EQ( tree.triangulation()[f], mesh.topology.getTriVerts( f ) );
+            ASSERT_TRUE( node.leafPos() >= 0 && node.leafPos() < leafPoses.size() );
+            EXPECT_FALSE( leafPoses[node.leafPos()] );
+            leafPoses[node.leafPos()] = true;
+            EXPECT_EQ( tree.leafTriVerts( node ), mesh.topology.getTriVerts( f ) );
             Vector3f a, b, c;
             mesh.getTriPoints( f, a, b, c );
             EXPECT_TRUE( node.box.contains( a ) && node.box.contains( b ) && node.box.contains( c ) );
@@ -71,6 +75,7 @@ static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
         }
     }
     EXPECT_EQ( leaves.count(), size_t( mesh.topology.numValidFaces() ) );
+    EXPECT_EQ( leafPoses.size(), leaves.count() );
 }
 
 TEST( MRMesh, AABBTreeAddSplitFaces )

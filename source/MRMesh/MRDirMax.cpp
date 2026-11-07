@@ -119,7 +119,7 @@ VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
         FaceId face = node.leafId();
         if ( mp.region && !mp.region->test( face ) )
             return;
-        const auto & vs = tree.triangulation()[face];
+        const auto & vs = tree.leafTriVerts( node );
         for ( int i = 0; i < 3; ++i )
         {
             auto proj = dot( mp.mesh.points[vs[i]], dir );

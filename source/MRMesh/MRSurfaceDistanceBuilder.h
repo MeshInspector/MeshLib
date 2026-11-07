@@ -38,11 +38,14 @@ public:
     MRMESH_API SurfaceDistanceBuilder( const Mesh & mesh, const VertBitSet* region );
     SurfaceDistanceBuilder( const Mesh & mesh, const Vector3f & target, const VertBitSet* region ) :
         SurfaceDistanceBuilder( mesh, region) { target_ = target; }
-    /// initiates distance construction from given vertices with known start distance in all of them (region vertices will NOT be returned by growOne)
+    /// initiates distance construction from given vertices with known start distance in all of them (region vertices will NOT be returned by growOne);
+    /// the vertices connected by mesh edges make lines or regions, each isolated vertex is a point
     MRMESH_API void addStartRegion( const VertBitSet & region, float startDistance );
-    /// initiates distance construction from given start vertices with values in them (these vertices will NOT be returned by growOne if values in them are not decreased)
+    /// initiates distance construction from given start vertices with values in them (these vertices will NOT be returned by growOne if values in them are not decreased);
+    /// the vertices connected by mesh edges make lines or regions, each isolated vertex is a point
     MRMESH_API void addStartVertices( const HashMap<VertId, float>& startVertices );
-    /// initiates distance construction from triangle vertices surrounding given start point (they all will be returned by growOne)
+    /// initiates distance construction from triangle vertices surrounding given start point (they all will be returned by growOne);
+    /// the distances are from this point, each call adds a separate point
     MRMESH_API void addStart( const MeshTriPoint & start );
 
     /// the maximum amount of times vertex distance can be updated in [1,255], 3 by default;

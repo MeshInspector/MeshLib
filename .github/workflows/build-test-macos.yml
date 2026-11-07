@@ -105,6 +105,10 @@ jobs:
             echo "MESHLIB_HOMEBREW_PREFIX=/usr/local"
             echo "HOMEBREW_DIR=/usr/local"
             echo "PKG_CONFIG_PATH=/usr/local/opt/python@$PYVER/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+            # The arm64 brew's pkg-config is first on PATH; without this its own .pc
+            # directory is searched too and generate.mk picks the native Python headers
+            # (python-3.10-embed from ~/.homebrew) for the x86_64 bindings.
+            echo "PKG_CONFIG_LIBDIR=/usr/local/lib/pkgconfig:/usr/local/share/pkgconfig:/usr/local/opt/python@$PYVER/lib/pkgconfig"
           } >> "$GITHUB_ENV"
 
       - name: Set up compilers
@@ -278,6 +282,7 @@ jobs:
         uses: ./.github/actions/verify-meshlib-python-import
         with:
           build-bin-dir: ./build/${{ matrix.config }}/bin
+          arch: ${{ matrix.cross-osx-arch }}
 
       - name: Unit Tests
         env:

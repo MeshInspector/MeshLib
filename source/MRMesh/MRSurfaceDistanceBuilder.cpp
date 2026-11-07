@@ -138,7 +138,7 @@ void SurfaceDistanceBuilder::setMaxVertUpdates( int v )
     maxVertUpdates_ = std::clamp( v, 1, 255 );
 }
 
-auto SurfaceDistanceBuilder::addSource_( float startDistance ) -> StartPointId
+SurfaceDistanceStartId SurfaceDistanceBuilder::addSource_( float startDistance )
 {
     sourceStartDistance_.push_back( startDistance );
     return sourceGroup_.add();
@@ -154,7 +154,7 @@ void SurfaceDistanceBuilder::uniteTouchingSources_( VertId v )
             sourceGroup_.uniteUnbalanced( s, source );
 }
 
-bool SurfaceDistanceBuilder::suggestVertDistance_( VertDistance c, StartPointId source, bool linear )
+bool SurfaceDistanceBuilder::suggestVertDistance_( VertDistance c, SurfaceDistanceStartId source, bool linear )
 {
     auto & vi = vertDistanceMap_[c.vert];
     if ( vi > c.distance )

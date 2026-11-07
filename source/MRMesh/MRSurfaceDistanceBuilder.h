@@ -12,6 +12,10 @@
 namespace MR
 {
 
+class SurfaceDistanceStartTag;
+/// identifier of a start point in SurfaceDistanceBuilder
+using SurfaceDistanceStartId = Id<SurfaceDistanceStartTag>;
+
 /// \defgroup SurfaceDistanceBuilder Group Surface Distance Builder
 /// \ingroup SurfacePathGroup
 /// \{
@@ -74,25 +78,22 @@ private:
     std::optional<Vector3f> target_;
     int maxVertUpdates_ = 3;
 
-    struct StartPointTag;
-    using StartPointId = Id<StartPointTag>;
-
     /// for each reached vertex: the start point, the distance from which is stored in the vertex
-    Vector<StartPointId, VertId> vertSource_;
+    Vector<SurfaceDistanceStartId, VertId> vertSource_;
     /// reached vertices whose distance came from the linear field near a line or a region of start points
     VertBitSet vertLinear_;
     /// for each start point: the distance assigned to it in the beginning
-    Vector<float, StartPointId> sourceStartDistance_;
+    Vector<float, SurfaceDistanceStartId> sourceStartDistance_;
     /// groups of start points connected by mesh edges, the parent of each start point is the root of its group;
     /// the field is assumed linear only between start points of one group (along a line or in a region)
-    BaseUnionFind<StartPointId> sourceGroup_;
+    BaseUnionFind<SurfaceDistanceStartId> sourceGroup_;
 
     /// compares proposed distance with the value known in c.vert
     /// \details if proposed distance is smaller then adds it in the queue and returns true; \n
     /// otherwise if the known distance to c.vert is already not greater than returns false
-    bool suggestVertDistance_( VertDistance c, StartPointId source, bool linear );
+    bool suggestVertDistance_( VertDistance c, SurfaceDistanceStartId source, bool linear );
     /// creates new start point with given initial distance
-    StartPointId addSource_( float startDistance );
+    SurfaceDistanceStartId addSource_( float startDistance );
     /// unites the group of the start point in v with the groups of start points in its neighbor vertices
     void uniteTouchingSources_( VertId v );
     /// suggests new distance around a (recently updated) vertex

@@ -35,8 +35,8 @@ namespace MRTest
             Assert.That(contours.size(), Is.EqualTo((nuint)4));
             // the order of the contours follows the order of the intersections found in the trees
             var sizes = new nuint[4];
-            for (int i = 0; i < 4; i++)
-                sizes[i] = contours[i].size();
+            for (nuint i = 0; i < 4; i++)
+                sizes[(int)i] = contours[i].size();
             Array.Sort(sizes);
             Assert.That(sizes[0], Is.EqualTo((nuint)7).Or.EqualTo((nuint)9));
             Assert.That(sizes[1], Is.EqualTo((nuint)7).Or.EqualTo((nuint)9));

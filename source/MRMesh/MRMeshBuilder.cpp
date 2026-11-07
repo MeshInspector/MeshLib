@@ -413,15 +413,7 @@ MeshTopology fromDisjointMeshPieces( const Triangulation & t, VertId maxVertId,
         for ( size_t myPartId = range.begin(); myPartId < range.end(); ++myPartId )
         {
             const auto & part = pieces[myPartId];
-            if ( shift == 0 )
-            {
-                res.addPackedPart( part.topology, firstPartEdge[myPartId], part.fmap, part.vmap );
-                continue;
-            }
-            FaceMap shiftedFmap = part.fmap;
-            for ( auto & f : shiftedFmap )
-                f = FaceId( int( f ) + shift );
-            res.addPackedPart( part.topology, firstPartEdge[myPartId], shiftedFmap, part.vmap );
+            res.addPackedPart( part.topology, firstPartEdge[myPartId], part.fmap, part.vmap, shift );
         }
     } );
     res.computeValidsFromEdges();

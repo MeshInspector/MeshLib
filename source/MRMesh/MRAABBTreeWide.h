@@ -1,0 +1,74 @@
+#pragma once
+
+#include "MRBox.h"
+#include "MRId.h"
+#include "MRVector.h"
+#include "MRMeshPart.h"
+
+namespace MR
+{
+
+/// \addtogroup AABBTreeGroup
+/// \{
+
+/// node of AABBTreeWide (outside of the class to be default-constructible in its members)
+struct AABBTreeWideNode
+{
+    Box3f box; ///< bounding box of whole subtree
+    int first = 0; ///< the first child node, or for a leaf, the first of its triangles in leafTris()
+    int count = 0; ///< the number of children, or for a leaf, minus the number of its triangles
+    [[nodiscard]] bool leaf() const { return count < 0; }
+    [[nodiscard]] int numLeafTris() const { return -count; }
+};
+
+/// triangle in a leaf of AABBTreeWide
+struct AABBTreeWideLeafTri
+{
+    FaceId face;
+    ThreeVertIds verts; ///< in the order of mesh.topology.getTriVerts( face )
+};
+
+/// bounding volume hierarchy of mesh triangles with up to 4 children per node and up to 4 triangles per leaf;
+/// the children of a node are stored contiguously, and every leaf keeps the vertices of its triangles,
+/// which makes closest-point queries about 2x faster than with AABBTree and takes half of its memory
+class AABBTreeWide
+{
+public:
+    static constexpr int MaxChildren = 4;
+    static constexpr int MaxLeafTris = 4;
+
+    using Node = AABBTreeWideNode;
+    using LeafTri = AABBTreeWideLeafTri;
+
+    /// creates tree for given mesh or its part
+    [[nodiscard]] MRMESH_API explicit AABBTreeWide( const MeshPart & mp );
+
+    AABBTreeWide() = default;
+    AABBTreeWide( AABBTreeWide && ) noexcept = default;
+    AABBTreeWide & operator =( AABBTreeWide && ) noexcept = default;
+
+    /// the root is the first node, if any
+    [[nodiscard]] const Vector<Node, NodeId> & nodes() const { return nodes_; }
+
+    /// returns the bounding box of the whole tree (empty for an empty tree)
+    [[nodiscard]] Box3f getBoundingBox() const { return nodes_.empty() ? Box3f{} : nodes_.front().box; }
+
+    /// triangles of all leaves, the triangles of each leaf are contiguous
+    [[nodiscard]] const Vector<LeafTri> & leafTris() const { return leafTris_; }
+
+    /// returns the amount of memory this object occupies on heap
+    [[nodiscard]] size_t heapBytes() const { return nodes_.heapBytes() + leafTris_.heapBytes(); }
+
+private:
+    AABBTreeWide( const AABBTreeWide & ) = default;
+    AABBTreeWide & operator =( const AABBTreeWide & ) = default;
+    friend class UniqueThreadSafeOwner<AABBTreeWide>;
+    friend class SharedThreadSafeOwner<AABBTreeWide>;
+
+    Vector<Node, NodeId> nodes_;
+    Vector<LeafTri> leafTris_;
+};
+
+/// \}
+
+} // namespace MR

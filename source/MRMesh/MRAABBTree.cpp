@@ -1,4 +1,5 @@
 #include "MRAABBTree.h"
+#include "MRAABBTreeWide.h"
 #include "MRAABBTreeBase.hpp"
 #include "MRAABBTreeMaker.hpp"
 #include "MRMesh.h"
@@ -29,13 +30,11 @@ inline Box3f computeFaceBox( const Mesh & mesh, FaceId f )
     return box;
 }
 
-AABBTree::AABBTree( const MeshPart & mp )
+static Buffer<BoxedFace> makeBoxedFaces( const MeshPart & mp )
 {
-    MR_TIMER;
-
     const auto numFaces = mp.region ? (int)mp.region->count() : mp.mesh.topology.numValidFaces();
     if ( numFaces <= 0 )
-        return;
+        return {};
 
     Buffer<BoxedFace> boxedFaces( numFaces );
     const bool packed = numFaces == mp.mesh.topology.faceSize();
@@ -56,7 +55,15 @@ AABBTree::AABBTree( const MeshPart & mp )
             f = boxedFaces[i].leafId;
         boxedFaces[i].box = computeFaceBox( mp.mesh, f );
     } );
+    return boxedFaces;
+}
 
+AABBTree::AABBTree( const MeshPart & mp )
+{
+    MR_TIMER;
+    auto boxedFaces = makeBoxedFaces( mp );
+    if ( boxedFaces.size() == 0 )
+        return;
     nodes_ = makeAABBTreeNodeVec( std::move( boxedFaces ) );
 }
 
@@ -175,6 +182,170 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
         for ( auto nid = nodes_.backId(); nid; --nid )
             if ( !nodes_[nid].leaf() )
                 updateBox( nid );
+}
+
+namespace
+{
+
+/// splits each AABBTreeWide node in two binary levels, each at the median of the triangle box centers
+/// along the largest extent of these centers; so the nodes at binary depth d have ( numTris >> d ) or ( numTris >> d ) + 1 triangles
+class AABBTreeWideMaker
+{
+public:
+    using Node = AABBTreeWide::Node;
+
+    /// sorted instead of BoxedFace: smaller and compared by one coordinate
+    struct Center
+    {
+        int i; ///< in boxedFaces
+        Vector3f c; ///< doubled center of the box
+
+        Center( int i, const Vector3f & c ) noexcept : i( i ), c( c ) { }
+        explicit Center( NoInit ) noexcept : c( noInit ) { }
+    };
+
+    AABBTreeWideMaker( const Buffer<BoxedFace> & boxedFaces, Buffer<Center> & centers, Vector<Node, NodeId> & nodes )
+        : boxedFaces_( boxedFaces ), centers_( centers ), nodes_( nodes )
+    {
+        numTris_ = (int)boxedFaces_.size();
+        for ( auto & c : cnt_ )
+            c = { -1, -1 };
+        nodes_.resize( countNodes_( 0, numTris_ ) );
+        make_( NodeId( 0 ), NodeId( 1 ), 0, 0, numTris_ );
+    }
+
+private:
+    struct Child
+    {
+        int depth, first, num;
+    };
+
+    // the number of nodes in the subtree of a node at binary depth d with num triangles
+    int countNodes_( int d, int num )
+    {
+        int & res = cnt_[d][num - ( numTris_ >> d )];
+        if ( res >= 0 )
+            return res;
+        if ( num <= AABBTreeWide::MaxLeafTris )
+            return res = 1;
+        res = 1;
+        const int halves[2] = { num / 2, num - num / 2 };
+        for ( int h : halves )
+        {
+            if ( h <= AABBTreeWide::MaxLeafTris )
+                res += countNodes_( d + 1, h );
+            else
+                res += countNodes_( d + 2, h / 2 ) + countNodes_( d + 2, h - h / 2 );
+        }
+        return res;
+    }
+    int numNodes_( int d, int num ) const { return cnt_[d][num - ( numTris_ >> d )]; }
+
+    int largestCentersAxis_( int first, int num ) const
+    {
+        Box3f box;
+        for ( int i = 0; i < num; ++i )
+            box.include( centers_[first + i].c );
+        const auto sz = box.size();
+        return sz.x >= sz.y ? ( sz.x >= sz.z ? 0 : 2 ) : ( sz.y >= sz.z ? 1 : 2 );
+    }
+
+    // [first, first + num / 2) get the smaller centers along axis; ties are ordered by index to make the tree independent of std::nth_element
+    void split_( int first, int num, int axis )
+    {
+        std::nth_element( centers_.data() + first, centers_.data() + first + num / 2, centers_.data() + first + num,
+            [axis]( const Center & a, const Center & b ) { return a.c[axis] < b.c[axis] || ( a.c[axis] == b.c[axis] && a.i < b.i ); } );
+    }
+
+    // fills node n with its subtree, whose nodes below the children of n start from desc
+    void make_( NodeId n, NodeId desc, int depth, int first, int num )
+    {
+        auto & node = nodes_[n];
+        if ( num <= AABBTreeWide::MaxLeafTris )
+        {
+            Box3f box;
+            for ( int i = 0; i < num; ++i )
+                box.include( boxedFaces_[centers_[first + i].i].box );
+            node.box = box;
+            node.first = first;
+            node.count = -num;
+            return;
+        }
+
+        const int axis = largestCentersAxis_( first, num );
+        split_( first, num, axis );
+        const Child halves[2] = { { depth + 1, first, num / 2 }, { depth + 1, first + num / 2, num - num / 2 } };
+        Child ch[AABBTreeWide::MaxChildren];
+        int k = 0;
+        for ( const auto & h : halves )
+        {
+            if ( h.num <= AABBTreeWide::MaxLeafTris )
+            {
+                ch[k++] = h;
+                continue;
+            }
+            split_( h.first, h.num, largestCentersAxis_( h.first, h.num ) );
+            ch[k++] = { depth + 2, h.first, h.num / 2 };
+            ch[k++] = { depth + 2, h.first + h.num / 2, h.num - h.num / 2 };
+        }
+        node.first = int( desc );
+        node.count = k;
+
+        NodeId childDesc[AABBTreeWide::MaxChildren];
+        NodeId next = desc + k;
+        for ( int j = 0; j < k; ++j )
+        {
+            childDesc[j] = next;
+            next = next + ( numNodes_( ch[j].depth, ch[j].num ) - 1 );
+        }
+        if ( num < 4096 )
+        {
+            for ( int j = 0; j < k; ++j )
+                make_( desc + j, childDesc[j], ch[j].depth, ch[j].first, ch[j].num );
+        }
+        else
+        {
+            tbb::task_group group;
+            for ( int j = 1; j < k; ++j )
+                group.run( [&, j] { make_( desc + j, childDesc[j], ch[j].depth, ch[j].first, ch[j].num ); } );
+            make_( desc, childDesc[0], ch[0].depth, ch[0].first, ch[0].num );
+            group.wait();
+        }
+
+        Box3f box;
+        for ( int j = 0; j < k; ++j )
+            box.include( nodes_[desc + j].box );
+        node.box = box;
+    }
+
+    const Buffer<BoxedFace> & boxedFaces_;
+    Buffer<Center> & centers_;
+    Vector<Node, NodeId> & nodes_;
+    int numTris_ = 0;
+    std::array<int, 2> cnt_[64]; // by binary depth and the number of triangles minus ( numTris_ >> depth )
+};
+
+} // anonymous namespace
+
+AABBTreeWide::AABBTreeWide( const MeshPart & mp )
+{
+    MR_TIMER;
+    auto boxedFaces = makeBoxedFaces( mp );
+    if ( boxedFaces.size() == 0 )
+        return;
+    Buffer<AABBTreeWideMaker::Center> centers( boxedFaces.size() );
+    ParallelFor( size_t( 0 ), centers.size(), [&]( size_t i )
+    {
+        const auto & box = boxedFaces[i].box;
+        centers[i] = AABBTreeWideMaker::Center( int( i ), box.min + box.max );
+    } );
+    AABBTreeWideMaker maker( boxedFaces, centers, nodes_ );
+    leafTris_.resize( boxedFaces.size() );
+    ParallelFor( size_t( 0 ), leafTris_.size(), [&]( size_t i )
+    {
+        const auto f = boxedFaces[centers[i].i].leafId;
+        leafTris_[i] = { f, mp.mesh.topology.getTriVerts( f ) };
+    } );
 }
 
 template auto AABBTreeBase<FaceTreeTraits3>::getSubtrees( int minNum ) const -> std::vector<NodeId>;

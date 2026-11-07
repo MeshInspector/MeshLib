@@ -36,7 +36,7 @@ bool findVoxelsInside( const MeshPart& mp, const DistanceVolumeParams& params, I
         return true;
     res.resize( VolumeIndexer( dims ).size(), false );
 
-    mp.mesh.getAABBTree();
+    mp.mesh.getAABBTreeWide();
     struct Hit
     {
         float t;
@@ -148,7 +148,7 @@ FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDis
     assert( params.dist.signMode != SignDetectionMode::OpenVDB );
 
     // prepare all trees before returned function will be called from parallel threads
-    mp.mesh.getAABBTree();
+    mp.mesh.getAABBTreeWide();
     if ( params.dist.signMode == SignDetectionMode::HoleWindingRule )
         mp.mesh.getDipoles();
 
@@ -196,7 +196,7 @@ Expected<SimpleBinaryVolume> makeCloseToMeshVolume( const MeshPart& mp, const Cl
     VolumeIndexer indexer( res.dims );
     res.data.resize( indexer.size(), false );
 
-    mp.mesh.getAABBTree();
+    mp.mesh.getAABBTreeWide();
     if ( !BitSetParallelForAll( res.data, [&, closeDistSq = sqr( params.closeDist )] ( VoxelId i )
     {
         const auto pos = indexer.toPos( i );

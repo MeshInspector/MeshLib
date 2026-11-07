@@ -40,7 +40,7 @@ TEST(MRMesh, AABBTree)
     EXPECT_EQ( smallerTree.numLeaves(), 1 );
     ASSERT_TRUE( smallerTree.isLeaf( smallerTree.rootNodeId() ) );
     EXPECT_EQ( smallerTree.leafId( smallerTree.rootNodeId() ), 1_f );
-    EXPECT_EQ( smallerTree.getBoundingBox(), smallerTree.leafBox( smallerTree.rootNodeId(), sphere.points ) );
+    EXPECT_EQ( smallerTree.getBoundingBox(), sphere.computeBoundingBox( &fs ).insignificantlyExpanded() );
     EXPECT_EQ( smallerTree.leafVerts( smallerTree.rootNodeId() ), sphere.topology.getTriVerts( 1_f ) );
     EXPECT_EQ( smallerTree.getSubtreeLeaves( smallerTree.rootNodeId() ), fs );
     EXPECT_EQ( smallerTree.getSubtrees( 4 ), std::vector<NodeId>{ smallerTree.rootNodeId() } );
@@ -66,6 +66,10 @@ static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
         ASSERT_TRUE( mesh.topology.hasFace( f ) );
         EXPECT_FALSE( leaves.test_set( f ) );
         EXPECT_EQ( tree.leafVerts( c ), mesh.topology.getTriVerts( f ) );
+        Box3f box;
+        for ( auto v : mesh.topology.getTriVerts( f ) )
+            box.include( mesh.points[v] );
+        EXPECT_EQ( tree.leafBox( c ), box.insignificantlyExpanded() );
     };
     if ( nodes.empty() && !tree.empty() )
         checkLeaf( tree.rootNodeId() );
@@ -78,7 +82,7 @@ static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
                 checkLeaf( c );
             else
                 ASSERT_TRUE( c > n && c < nodes.size() );
-            EXPECT_TRUE( node.box.contains( tree.box( c, mesh.points ) ) );
+            EXPECT_TRUE( node.box.contains( tree.box( c ) ) );
         }
     }
     EXPECT_EQ( leaves.count(), size_t( mesh.topology.numValidFaces() ) );

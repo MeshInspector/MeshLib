@@ -24,32 +24,6 @@ namespace MR
 namespace
 {
 
-/// the boxes of the nodes and leaves of a tree, optionally transformed;
-/// the box of a leaf is computed from the coordinates of its vertices on the first request and kept for the next ones
-class LeafBoxCache
-{
-public:
-    LeafBoxCache( const AABBTree & tree, const VertCoords & points, const AffineXf3f * xf )
-        : tree_( tree ), points_( points ), xf_( xf ), boxes_( tree.numLeaves() ), ready_( tree.numLeaves() ) { }
-
-    Box3f operator()( NodeId n )
-    {
-        if ( !AABBTree::isLeaf( n ) )
-            return transformed( tree_[n].box, xf_ );
-        const auto i = AABBTree::Node::leafIndex( n );
-        if ( !ready_.test_set( i ) )
-            boxes_[i] = transformed( tree_.leafBox( n, points_ ), xf_ );
-        return boxes_[i];
-    }
-
-private:
-    const AABBTree & tree_;
-    const VertCoords & points_;
-    const AffineXf3f * xf_ = nullptr;
-    Buffer<Box3f> boxes_;
-    BitSet ready_;
-};
-
 } // anonymous namespace
 
 std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart & b, const AffineXf3f * rigidB2A, bool firstIntersectionOnly )
@@ -78,8 +52,8 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
         NodeId aNode, bNode;
         Box3f aBox, bBox;
     };
-    LeafBoxCache aBoxOf( aTree, a.mesh.points, nullptr );
-    LeafBoxCache bBoxOf( bTree, b.mesh.points, rigidB2A );
+    auto aBoxOf = [&]( NodeId n ) { return aTree.box( n ); };
+    auto bBoxOf = [&]( NodeId n ) { return transformed( bTree.box( n ), rigidB2A ); };
     Vector<SubTask> subtasks{ { aTree.rootNodeId(), bTree.rootNodeId(), aBoxOf( aTree.rootNodeId() ), bBoxOf( bTree.rootNodeId() ) } };
 
     while( !subtasks.empty() )
@@ -220,9 +194,7 @@ Expected<bool> findSelfCollidingTriangles(
 
     auto sb = subprogress( cb, 0, 0.08f );
 
-    // all leaves are visited, so their boxes are computed once in advance
-    const auto leafBoxes = tree.computeLeafBoxes( mp.mesh.points );
-    auto boxOf = [&]( NodeId n ) -> const Box3f & { return AABBTree::isLeaf( n ) ? leafBoxes[AABBTree::Node::leafIndex( n )] : tree[n].box; };
+    auto boxOf = [&]( NodeId n ) -> const Box3f & { return tree.box( n ); };
 
     // sequentially subdivide full task on smaller subtasks;
     // they shall be not too many for this subdivision not to take too long;

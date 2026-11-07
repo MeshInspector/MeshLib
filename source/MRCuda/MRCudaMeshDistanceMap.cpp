@@ -54,7 +54,7 @@ Expected<DistanceMap> computeDistanceMap( const MR::Mesh& mesh, const MR::MeshTo
     CUDA_LOGE_RETURN_UNEXPECTED( cudaMeshPoints.fromVector( meshPoints ) );
 
     DynamicArray<Node3> cudaNodes;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaNodes.fromVector( getNodesWithLeaves( tree, mesh.points ) ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaNodes.fromVector( getNodesWithLeaves( tree ) ) );
 
     DynamicArray<FaceToThreeVerts> cudaFaces;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaFaces.fromVector( tris ) );

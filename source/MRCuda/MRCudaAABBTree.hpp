@@ -49,10 +49,10 @@ AABBTreeNodeVec<T> getNodesWithLeaves( const AABBTreeBase<T> & tree ) requires A
     return getNodesWithLeaves( tree, [&]( NodeId c ) { return tree.leaf( c ).box; } );
 }
 
-/// the same for the tree of a mesh with given coordinates of vertices
-inline AABBTreeNodeVec<FaceTreeTraits3> getNodesWithLeaves( const AABBTree & tree, const VertCoords & points )
+/// the same for the tree of a mesh
+inline AABBTreeNodeVec<FaceTreeTraits3> getNodesWithLeaves( const AABBTree & tree )
 {
-    return getNodesWithLeaves( tree, [&]( NodeId c ) { return tree.leafBox( c, points ); } );
+    return getNodesWithLeaves( tree, [&]( NodeId c ) { return tree.leafBox( c ); } );
 }
 
 /// returns the dipoles of given tree in the layout of getNodesWithLeaves:

@@ -51,7 +51,7 @@ BitSet findSkyRays( const Mesh& terrain, const VertCoords& samples, const VertBi
     CUDA_EXEC( cudaSetDevice( 0 ) );
 
     DynamicArray<Node3> cudaNodes;
-    cudaNodes.fromVector( getNodesWithLeaves( tree, terrain.points ) );
+    cudaNodes.fromVector( getNodesWithLeaves( tree ) );
 
     DynamicArray<float3> cudaMeshPoints( terrain.points );
     DynamicArray<FaceToThreeVerts> cudaFaces( terrain.topology.getTriangulation() );
@@ -92,7 +92,7 @@ VertScalars  computeSkyViewFactor( const Mesh& terrain,
     CUDA_EXEC( cudaSetDevice( 0 ) );
 
     DynamicArray<Node3> cudaNodes;
-    cudaNodes.fromVector( getNodesWithLeaves( tree, terrain.points ) );
+    cudaNodes.fromVector( getNodesWithLeaves( tree ) );
 
     DynamicArray<float3> cudaMeshPoints( terrain.points );
     DynamicArray<FaceToThreeVerts> cudaFaces( terrain.topology.getTriangulation() );

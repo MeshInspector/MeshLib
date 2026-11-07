@@ -53,7 +53,7 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
 
     auto getSubTask = [&]( NodeId an, NodeId bn )
     {
-        float distSq = aTree.box( an, a.mesh.points ).getDistanceSq( transformed( bTree.box( bn, b.mesh.points ), rigidB2A ) );
+        float distSq = aTree.box( an ).getDistanceSq( transformed( bTree.box( bn ), rigidB2A ) );
         return SubTask { an, bn, distSq };
     };
 

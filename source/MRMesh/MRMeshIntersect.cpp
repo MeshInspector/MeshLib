@@ -318,9 +318,9 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
     auto nodeBox = [&] ( NodeId n ) -> Box3<T>
     {
         if constexpr ( std::is_same_v<T, double> )
-            return Box3d( tree.box( n, m.points ) ).expanded( Vector3d::diagonal( boxExpansion ) );
+            return Box3d( tree.box( n ) ).expanded( Vector3d::diagonal( boxExpansion ) );
         else
-            return tree.box( n, m.points );
+            return tree.box( n );
     };
 
     RayOrigin<T> rayOrigin{ line.p };
@@ -352,11 +352,6 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
 
     auto pushChild = [&]( NodeId n )
     {
-        if ( tree.isLeaf( n ) )
-        {
-            nodesStack[++currentNode] = n;
-            return;
-        }
         T cs = rayStart, ce = rayEnd;
         if( rayBoxIntersect( nodeBox( n ), rayOrigin, cs, ce, prec ) )
             nodesStack[++currentNode] = n;
@@ -508,7 +503,7 @@ void planeMeshIntersect( const MeshPart& meshPart, const Plane3f & plane,
 
     auto addNode = [&]( NodeId nid )
     {
-        const auto box = tree.box( nid, m.points );
+        const auto box = tree.box( nid );
         if ( dot( plane.n, box.corner( minCorner ) ) > plane.d )
             return;
         if ( dot( plane.n, box.corner( maxCorner ) ) < plane.d )
@@ -583,7 +578,7 @@ void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
 
     auto addNode = [&]( NodeId nid )
     {
-        const auto box = tree.box( nid, m.points );
+        const auto box = tree.box( nid );
         if ( box.min.z <= zLevel && box.max.z >= zLevel )
             nodesStack[++currentNode] = nid;
     };

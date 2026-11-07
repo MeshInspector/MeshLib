@@ -33,14 +33,16 @@ bool preciseBoxesIntersect( const Box3f & a, const Box3f & b, const ConvertToInt
     return Box3i{ conv( a.min ), conv( a.max ) }.intersects( Box3i{ conv( b.min ), conv( b.max ) } );
 }
 
-/// the boxes of the leaves of a tree, and of its nodes if the transformation xf is given, after the transformation;
-/// each box is computed on the first request (from any thread) and kept for the next ones
+/// the boxes of the nodes and leaves of a tree after the transformation xf (if given);
+/// each transformed box is computed on the first request (from any thread) and kept for the next ones
 class CachedBoxes
 {
 public:
-    CachedBoxes( const AABBTree & tree, const VertCoords & points, const AffineXf3f * xf )
-        : tree_( tree ), points_( points ), xf_( xf ), firstLeaf_( xf ? tree.nodes().size() : 0 )
+    CachedBoxes( const AABBTree & tree, const AffineXf3f * xf )
+        : tree_( tree ), xf_( xf ), firstLeaf_( tree.nodes().size() )
     {
+        if ( !xf )
+            return;
         const auto sz = firstLeaf_ + tree.numLeaves();
         boxes_.resize( sz );
         state_ = Vector<std::atomic<std::uint8_t>>( sz );
@@ -48,16 +50,13 @@ public:
 
     Box3f operator()( NodeId n ) const
     {
-        const bool leaf = AABBTree::isLeaf( n );
-        if ( !leaf && !xf_ )
-            return tree_[n].box;
-        const size_t i = leaf ? firstLeaf_ + AABBTree::Node::leafIndex( n ) : size_t( n );
+        if ( !xf_ )
+            return tree_.box( n );
+        const size_t i = AABBTree::isLeaf( n ) ? firstLeaf_ + AABBTree::Node::leafIndex( n ) : size_t( n );
         auto & state = state_[i];
         if ( state.load( std::memory_order_acquire ) == cReady )
             return boxes_[i];
-        auto res = tree_.box( n, points_ );
-        if ( xf_ )
-            res = transformed( res, *xf_ );
+        const auto res = transformed( tree_.box( n ), *xf_ );
         // only the thread marking the box first stores it; the others meanwhile use their own copies
         std::uint8_t expected = cEmpty;
         if ( state.compare_exchange_strong( expected, cWriting, std::memory_order_relaxed ) )
@@ -71,10 +70,9 @@ public:
 private:
     static constexpr std::uint8_t cEmpty = 0, cWriting = 1, cReady = 2;
     const AABBTree & tree_;
-    const VertCoords & points_;
     const AffineXf3f * xf_ = nullptr;
     size_t firstLeaf_ = 0;
-    mutable Buffer<Box3f> boxes_; ///< nodes first if xf, then leaves
+    mutable Buffer<Box3f> boxes_; ///< nodes first, then leaves
     mutable Vector<std::atomic<std::uint8_t>> state_;
 };
 
@@ -82,9 +80,8 @@ private:
 class PreciseBoxesIntersection
 {
 public:
-    PreciseBoxesIntersection( const AABBTree & aTree, const VertCoords & aPoints, const AABBTree & bTree, const VertCoords & bPoints,
-        const ConvertToIntVector & conv, const AffineXf3f * xf )
-        : aBoxes_( aTree, aPoints, nullptr ), bBoxes_( bTree, bPoints, xf ), conv_( conv ), minGap_( 2 / conv.invRange )
+    PreciseBoxesIntersection( const AABBTree & aTree, const AABBTree & bTree, const ConvertToIntVector & conv, const AffineXf3f * xf )
+        : aBoxes_( aTree, nullptr ), bBoxes_( bTree, xf ), conv_( conv ), minGap_( 2 / conv.invRange )
     {
     }
 
@@ -344,7 +341,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
     MR_TIMER;
     const AABBTree & aTree = a.mesh.getAABBTree();
     const AABBTree & bTree = b.mesh.getAABBTree();
-    const PreciseBoxesIntersection boxesIntersect( aTree, a.mesh.points, bTree, b.mesh.points, conv, rigidB2A );
+    const PreciseBoxesIntersection boxesIntersect( aTree, bTree, conv, rigidB2A );
     return findCollidingEdgeTrisPrecise( a, aTree, b, bTree, boxesIntersect, conv, rigidB2A, anyIntersection );
 }
 
@@ -506,7 +503,7 @@ void updateCollidingEdgeTrisPrecise( PreciseCollisionResult & res,
         const MeshPart part{ mesh, &tris };
         const AABBTree trisTree( part );
         const auto & otherTree = ( inA ? b : a ).getAABBTree();
-        const PreciseBoxesIntersection boxesIntersect( inA ? trisTree : otherTree, a.points, inA ? otherTree : trisTree, b.points, conv, rigidB2A );
+        const PreciseBoxesIntersection boxesIntersect( inA ? trisTree : otherTree, inA ? otherTree : trisTree, conv, rigidB2A );
         const auto found = inA ? findCollidingEdgeTrisPrecise( part, trisTree, b, otherTree, boxesIntersect, conv, rigidB2A, false )
             : findCollidingEdgeTrisPrecise( a, otherTree, part, trisTree, boxesIntersect, conv, rigidB2A, false );
         res.insert( res.end(), found.begin(), found.end() );
@@ -531,12 +528,17 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
         xfBoxes.resizeNoInit( tree.nodes().size() );
         ParallelFor( xfBoxes, [&]( NodeId i ) { xfBoxes[i] = transformed( tree[i].box, *rigidB2A ); } );
     }
-    const auto xfLeafBoxes = tree.computeLeafBoxes( mp.mesh.points, rigidB2A );
+    AABBTree::LeafBoxes xfLeafBoxes;
+    if ( rigidB2A )
+    {
+        xfLeafBoxes.resizeNoInit( tree.numLeaves() );
+        ParallelFor( xfLeafBoxes, [&]( size_t i ) { xfLeafBoxes[i] = transformed( tree.leafBoxes()[i], *rigidB2A ); } );
+    }
     auto xfBox = [&]( NodeId n ) -> const Box3f &
     {
-        if ( AABBTree::isLeaf( n ) )
-            return xfLeafBoxes[AABBTree::Node::leafIndex( n )];
-        return rigidB2A ? xfBoxes[n] : tree[n].box;
+        if ( !rigidB2A )
+            return tree.box( n );
+        return AABBTree::isLeaf( n ) ? xfLeafBoxes[AABBTree::Node::leafIndex( n )] : xfBoxes[n];
     };
     const double minGap = 2 / conv.invRange;
     auto processBoxes = [&] ( const NodeNode & s )

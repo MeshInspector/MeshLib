@@ -12,7 +12,7 @@ namespace MR
  */
 
 /// bounding volume hierarchy of mesh triangles;
-/// the leaves store the vertices of their triangles instead of the boxes,
+/// the leaves store the vertices of their triangles, and the boxes of the triangles are kept separately in leafBoxes(),
 /// so a change of mesh topology requires either Mesh::invalidateCaches() or updateLeafVerts()
 /// \ingroup AABBTreeGroup
 class AABBTree : public AABBTreeBase<FaceTreeTraits3>
@@ -28,28 +28,25 @@ public:
     /// returns the vertices of the triangle of given leaf
     [[nodiscard]] const ThreeVertIds & leafVerts( NodeId n ) const { return leaf( n ).verts; }
 
-    /// computes the bounding box of the triangle of given leaf, insignificantly expanded as all boxes in the tree
-    [[nodiscard]] Box3f leafBox( NodeId n, const VertCoords & points ) const
-    {
-        const auto & v = leafVerts( n );
-        Box3f res( points[v[0]], points[v[0]] );
-        res.include( points[v[1]] );
-        res.include( points[v[2]] );
-        return res.insignificantlyExpanded();
-    }
+    /// the bounding boxes of the triangles of all leaves, in the order of leaves()
+    using LeafBoxes = Vector<Box3f>;
+    [[nodiscard]] const LeafBoxes & leafBoxes() const { return leafBoxes_; }
 
-    /// returns the bounding box of given node, or computes it for a leaf
-    [[nodiscard]] Box3f box( NodeId n, const VertCoords & points ) const { return isLeaf( n ) ? leafBox( n, points ) : nodes_[n].box; }
+    /// returns the bounding box of the triangle of given leaf
+    [[nodiscard]] const Box3f & leafBox( NodeId n ) const { return leafBoxes_[Node::leafIndex( n )]; }
+
+    /// returns the bounding box of given node or leaf
+    [[nodiscard]] const Box3f & box( NodeId n ) const { return isLeaf( n ) ? leafBox( n ) : nodes_[n].box; }
 
     /// converts barycentric coordinates relative to leafVerts( n ) into the point on the mesh with given topology,
     /// correct even if the orientation of the triangle was changed after the tree was built
     [[nodiscard]] MRMESH_API MeshTriPoint toTriPoint( const MeshTopology & topology, NodeId n, const TriPointf & bary ) const;
 
-    /// computes the boxes of all leaves in parallel (optionally transformed), indexed as leaves()
-    [[nodiscard]] MRMESH_API Vector<Box3f> computeLeafBoxes( const VertCoords & points, const AffineXf3f * xf = nullptr ) const;
-
     /// returns the bounding box of the whole tree
-    [[nodiscard]] Box3f getBoundingBox() const { return nodes_.empty() ? singleLeafBox_ : nodes_[NodeId( 0 )].box; }
+    [[nodiscard]] Box3f getBoundingBox() const { return empty() ? Box3f{} : box( rootNodeId() ); }
+
+    /// returns the amount of memory this object occupies on heap
+    [[nodiscard]] size_t heapBytes() const { return AABBTreeBase::heapBytes() + leafBoxes_.heapBytes(); }
 
     /// updates bounding boxes of the nodes containing changed vertices;
     /// this is a faster alternative to full tree rebuild (but the tree after refit might be less efficient)
@@ -70,7 +67,7 @@ public:
     MRMESH_API void updateLeafVerts( const MeshTopology & topology );
 
 private:
-    Box3f singleLeafBox_; ///< the box of the only leaf if the tree has no nodes
+    LeafBoxes leafBoxes_;
 
     AABBTree( const AABBTree & ) = default;
     AABBTree & operator =( const AABBTree & ) = default;

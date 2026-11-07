@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRBitSet.h"
 #include "MRId.h"
 #include "MRVector.h"
 #include "MRVector3.h"
@@ -74,8 +75,8 @@ private:
 
     /// for each reached vertex: the index of the start point, the distance from which is stored in the vertex
     Vector<int, VertId> vertSource_;
-    /// for each reached vertex: 1 if its distance came from the linear field near a line or a region of start points
-    Vector<char, VertId> vertLinear_;
+    /// reached vertices whose distance came from the linear field near a line or a region of start points
+    VertBitSet vertLinear_;
     /// for each start point: the distance assigned to it in the beginning
     Vector<float> sourceStartDistance_;
     /// for each start point: the representative of its group, where the groups unite start points connected by mesh edges;

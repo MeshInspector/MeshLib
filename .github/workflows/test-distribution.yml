@@ -251,7 +251,7 @@ jobs:
         {"arch":"x64","runner":"macos-12-intel","pkg_pattern":"*x64.pkg"},
         {"arch":"x64","runner":"macos-15-intel","pkg_pattern":"*x64.pkg"},
         {"arch":"x64","runner":"macos-26-intel","pkg_pattern":"*x64.pkg"}',
-        inputs.test_macos_crossplatform && ',{"arch":"x64-cross","runner":"macos-15-intel","pkg_pattern":"*x64-cross.pkg"},{"arch":"x64-cross","runner":["self-hosted","X64","macOS","macos-x64-build","macos-12-intel"],"pkg_pattern":"*x64-cross.pkg"}' || '')) }}
+        inputs.test_macos_crossplatform && ',{"arch":"x64-cross","runner":"macos-15-intel","pkg_pattern":"*x64-cross.pkg"},{"arch":"x64-cross","runner":["self-hosted","X64","macOS","macos-x64-build","macos-12-intel"],"pkg_pattern":"*x64-cross.pkg"},{"arch":"x64-cross","runner":"macos-26-intel","pkg_pattern":"*x64-cross.pkg"}' || '')) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -296,9 +296,14 @@ jobs:
           echo "MESHLIB_FW=${MESHLIB_FW}" >> "${GITHUB_ENV}"
           echo "${MESHLIB_FW}/bin" >> "${GITHUB_PATH}"
 
-      - name: Check cross-package binary compatibility
-        if: ${{ matrix.arch == 'x64-cross' }}
-        run: python3 scripts/check_macos_binary_compatibility.py "$MESHLIB_FW" --arch x86_64
+      # Every Mach-O in the framework must be x86_64 and may not require a newer
+      # macOS than the Intel package's floor. MeshLib's own binaries target 12.0; the
+      # bundled Homebrew dylibs carry the target of the sonoma bottles the hosted x64
+      # leg pours (14.0), which the macOS 12.7 Mac Pro loads anyway. The same floor
+      # for the hosted and the cross package keeps the cross one no worse.
+      - name: Check package binary compatibility
+        if: ${{ matrix.arch != 'arm64' }}
+        run: python3 scripts/check_macos_binary_compatibility.py "$MESHLIB_FW" --arch x86_64 --floor 14.0
 
       # [error] NSGL: Failed to find a suitable pixel format
       - name: Run MeshViewer

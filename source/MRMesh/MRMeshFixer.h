@@ -157,9 +157,14 @@ struct FixCreasesParams
 
     /// maximum number of algorithm iterations
     int maxIters = 10;
+
+    /// optional output: mapping from each newly appeared triangle to the original triangle it covers (to copy per-face attributes)
+    FaceHashMap* new2Old = nullptr;
 };
 
-/// Finds creases edges and re-triangulates planar areas around them, useful to fix double faces
+/// Finds creases edges and fixes the folds of the surface around them, useful to fix double faces:
+/// first the folded parts of flat areas are re-triangulated in their plane within their unchanged boundaries, so the shape stays,
+/// then planar areas around the remaining creases are re-triangulated
 MRMESH_API void fixMeshCreases( Mesh& mesh, const FixCreasesParams& params = {} );
 
 /// Parameters for `findDisorientedFaces` function

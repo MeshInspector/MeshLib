@@ -33,10 +33,15 @@ namespace MRTest
             var contours = orderIntersectionContours(meshA.topology, meshB.topology, intersections);
 
             Assert.That(contours.size(), Is.EqualTo((nuint)4));
-            Assert.That(contours[0].size(), Is.EqualTo((nuint)71).Or.EqualTo((nuint)69));
-            Assert.That(contours[1].size(), Is.EqualTo((nuint)7).Or.EqualTo((nuint)9));
-            Assert.That(contours[2].size(), Is.EqualTo((nuint)69).Or.EqualTo((nuint)71));
-            Assert.That(contours[3].size(), Is.EqualTo((nuint)9).Or.EqualTo((nuint)7));
+            // the order of the contours follows the order of the intersections found in the trees
+            var sizes = new nuint[4];
+            for (int i = 0; i < 4; i++)
+                sizes[i] = contours[i].size();
+            Array.Sort(sizes);
+            Assert.That(sizes[0], Is.EqualTo((nuint)7).Or.EqualTo((nuint)9));
+            Assert.That(sizes[1], Is.EqualTo((nuint)7).Or.EqualTo((nuint)9));
+            Assert.That(sizes[2], Is.EqualTo((nuint)69).Or.EqualTo((nuint)71));
+            Assert.That(sizes[3], Is.EqualTo((nuint)69).Or.EqualTo((nuint)71));
             var aConts = new OneMeshContours();
             getOneMeshIntersectionContours(meshA, meshB, contours, aConts, null, conv);
             Assert.That(aConts.size(), Is.EqualTo((nuint)4));

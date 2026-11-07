@@ -8,7 +8,8 @@
       "llvm-keg-version": "22.1.8_2",
       "runner": "macos-15-intel",
       "instance": "macos-15-intel",
-      "xcode-version": "16.4"
+      "xcode-version": "16.4",
+      "upload-package": true
     },
     {
       "arch": "arm64",
@@ -18,7 +19,8 @@
       "llvm-keg-version": "22.1.8_2",
       "runner": "macos-15",
       "instance": "macos-15",
-      "xcode-version": "16.4"
+      "xcode-version": "16.4",
+      "upload-package": true
     },
     {
       "arch": "x64-cross",
@@ -33,7 +35,24 @@
         "crossplatform-build"
       ],
       "instance": "self-hosted-arm-x64-native",
-      "cross-osx-arch": "x86_64"
+      "cross-osx-arch": "x86_64",
+      "upload-package": true
+    },
+    {
+      "arch": "x64-macpro2013",
+      "config": "Release",
+      "lib-source": "Homebrew",
+      "compiler": "AppleClang",
+      "llvm-keg-version": "22.1.8_2",
+      "runner": [
+        "self-hosted",
+        "X64",
+        "macOS",
+        "macos-x64-build",
+        "macos-12-intel"
+      ],
+      "instance": "macpro2013",
+      "upload-package": true
     }
   ]
 }

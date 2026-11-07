@@ -251,7 +251,7 @@ jobs:
         {"arch":"x64","runner":"macos-12-intel","pkg_pattern":"*x64.pkg"},
         {"arch":"x64","runner":"macos-15-intel","pkg_pattern":"*x64.pkg"},
         {"arch":"x64","runner":"macos-26-intel","pkg_pattern":"*x64.pkg"}',
-        inputs.test_macos_crossplatform && ',{"arch":"x64-cross","runner":"macos-15-intel","pkg_pattern":"*x64-cross.pkg"}' || '')) }}
+        inputs.test_macos_crossplatform && ',{"arch":"x64-cross","runner":"macos-15-intel","pkg_pattern":"*x64-cross.pkg"},{"arch":"x64-cross","runner":["self-hosted","X64","macOS","macos-x64-build","macos-12-intel"],"pkg_pattern":"*x64-cross.pkg"}' || '')) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -296,6 +296,10 @@ jobs:
           echo "MESHLIB_FW=${MESHLIB_FW}" >> "${GITHUB_ENV}"
           echo "${MESHLIB_FW}/bin" >> "${GITHUB_PATH}"
 
+      - name: Check cross-package binary compatibility
+        if: ${{ matrix.arch == 'x64-cross' }}
+        run: python3 scripts/check_macos_binary_compatibility.py "$MESHLIB_FW" --arch x86_64
+
       # [error] NSGL: Failed to find a suitable pixel format
       - name: Run MeshViewer
         run: MeshViewer -tryHidden -noEventLoop -unloadPluginsAtEnd
@@ -314,7 +318,7 @@ jobs:
           fi
           mkdir build && \
           cd build && \
-          cmake .. -DCMAKE_CXX_COMPILER=/usr/bin/clang++ && \
+          cmake .. -DCMAKE_CXX_COMPILER=/usr/bin/clang++ -DCMAKE_FRAMEWORK_PATH="$(dirname "$(dirname "$(dirname "$MESHLIB_FW")")")" && \
           cmake --build . && \
           ./MeshModification
 
@@ -324,7 +328,7 @@ jobs:
           if [ "$(sw_vers -productVersion | cut -d. -f1)" -lt 13 ]; then
             export MACOSX_DEPLOYMENT_TARGET=12.7
           fi
-          cmake -S . -B build -DCMAKE_C_COMPILER=/usr/bin/clang && \
+          cmake -S . -B build -DCMAKE_C_COMPILER=/usr/bin/clang -DCMAKE_FRAMEWORK_PATH="$(dirname "$(dirname "$(dirname "$MESHLIB_FW")")")" && \
           cmake --build build
           ./build/MeshModification
 

@@ -37,22 +37,6 @@
       "instance": "self-hosted-arm-x64-native",
       "cross-osx-arch": "x86_64",
       "upload-package": true
-    },
-    {
-      "arch": "x64-macpro2013",
-      "config": "Release",
-      "lib-source": "Homebrew",
-      "compiler": "AppleClang",
-      "llvm-keg-version": "22.1.8_2",
-      "runner": [
-        "self-hosted",
-        "X64",
-        "macOS",
-        "macos-x64-build",
-        "macos-12-intel"
-      ],
-      "instance": "macpro2013",
-      "upload-package": true
     }
   ]
 }

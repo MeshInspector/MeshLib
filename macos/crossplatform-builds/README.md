@@ -32,7 +32,10 @@ binaries run on Intel Macs — and on the build host under Rosetta, which is how
 package comes from the vcpkg one. Its triplet,
 [`x64-cross-osx-meshlib.cmake`](../../thirdparty/vcpkg/triplets/x64-cross-osx-meshlib.cmake), is
 `x64-osx-meshlib` under a separate name so the vcpkg caches (S3, GitHub) of the two legs stay
-apart. `VCPKG_DEFAULT_HOST_TRIPLET=arm64-osx-meshlib` builds the host tools natively. The
+apart. The host triplet is left equal to the target one, as on the Intel runners: vcpkg's
+cmake-driven compiles still use the native arm64 clang, while the x86_64 host tools it builds
+(boost's b2, CPython's own build steps) run under Rosetta. With `arm64-osx-meshlib` as the host
+triplet, CPython is configured in cross mode and fails on an undeclared `sendfile`. The
 Homebrew-only environment (the `/usr/local` prefix, the python shim, the pkg-config paths) is
 not set on this leg; its x86_64 `python3` comes from vcpkg and runs under Rosetta like the other
 Intel outputs. The first run builds every port from source on the runner; later runs restore

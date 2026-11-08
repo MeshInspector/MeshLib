@@ -113,11 +113,14 @@ jobs:
               # directory is searched too and generate.mk picks the native Python headers
               # (python-3.10-embed from ~/.homebrew) for the x86_64 bindings.
               echo "PKG_CONFIG_LIBDIR=/usr/local/lib/pkgconfig:/usr/local/share/pkgconfig:/usr/local/opt/python@$PYVER/lib/pkgconfig"
-            else
-              # vcpkg: the x64-cross-osx-meshlib triplet targets x86_64; the host tools
-              # (vcpkg-cmake, boost-build, ...) are built natively for arm64.
-              echo "VCPKG_DEFAULT_HOST_TRIPLET=arm64-osx-meshlib"
             fi
+            # vcpkg: no VCPKG_DEFAULT_HOST_TRIPLET override; the host triplet stays equal
+            # to the target (x64-cross-osx-meshlib) as on the Intel runners. vcpkg then
+            # treats every port as a native build: its cmake-driven compiles still run
+            # the arm64 clang, and the x86_64 host tools it builds (boost's b2, CPython's
+            # own build steps) run under Rosetta. With arm64-osx-meshlib as the host,
+            # python3 is configured in cross mode, cannot run its test programs and
+            # fails on an undeclared sendfile.
           } >> "$GITHUB_ENV"
 
       - name: Set up compilers

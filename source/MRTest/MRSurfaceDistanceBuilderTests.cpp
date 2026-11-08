@@ -96,11 +96,15 @@ TEST( MRMesh, SurfaceDistanceTwoSources )
     seeds.set( s0 );
     seeds.set( s1 );
     const auto dist = computeSurfaceDistances( mesh, seeds );
-    // where the fronts meet, the distances come along the edges, so check the mean error
-    float sumErr = 0;
+    float sumErr = 0, maxErr = 0;
     for ( auto v : mesh.topology.getValidVerts() )
-        sumErr += std::abs( dist[v] - std::min( ( mesh.points[v] - mesh.points[s0] ).length(), ( mesh.points[v] - mesh.points[s1] ).length() ) );
-    EXPECT_LT( sumErr / ( n * n ), 2e-3f );
+    {
+        const float err = std::abs( dist[v] - std::min( ( mesh.points[v] - mesh.points[s0] ).length(), ( mesh.points[v] - mesh.points[s1] ).length() ) );
+        sumErr += err;
+        maxErr = std::max( maxErr, err );
+    }
+    EXPECT_LT( sumErr / ( n * n ), 2e-4f );
+    EXPECT_LT( maxErr, 2e-2f );
 }
 
 TEST( MRMesh, SurfaceDistanceTwoSegments )
@@ -123,11 +127,9 @@ TEST( MRMesh, SurfaceDistanceTwoSegments )
             segDist[i] = std::hypot( std::max( { float( ends[i][0] ) - p.x, p.x - float( ends[i][1] ), 0.f } ), p.y - float( row ) );
         const float err = std::abs( dist[v] - std::min( segDist[0], segDist[1] ) );
         sumErr += err;
-        // where the fronts of the segments meet, the distances come along the edges
-        if ( std::abs( segDist[0] - segDist[1] ) > 2 )
-            maxErr = std::max( maxErr, err );
+        maxErr = std::max( maxErr, err );
     }
-    EXPECT_LT( sumErr / ( n * n ), 1e-2f );
+    EXPECT_LT( sumErr / ( n * n ), 5e-3f );
     EXPECT_LT( maxErr, 5e-2f );
 }
 
@@ -164,8 +166,8 @@ TEST( MRMesh, SurfaceDistanceEdgesAndPoints )
         if ( d[1] - d[0] > 2 )
             maxErr = std::max( maxErr, err );
     }
-    // the fronts meet right from the start points, so the errors there spread along the seams
-    EXPECT_LT( sumErr / ( n * n ), 5e-2f );
+    // the fronts meet right from the start points, and the errors near the seams there spread along them
+    EXPECT_LT( sumErr / ( n * n ), 3e-2f );
     EXPECT_LT( maxErr, 5e-2f );
 }
 

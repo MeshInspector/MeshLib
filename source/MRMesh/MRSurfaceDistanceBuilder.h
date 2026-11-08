@@ -118,6 +118,14 @@ private:
     /// estimates the distance from reached vertex v to start point s0 (if s1 is invalid) or to the line through start edge s0-s1,
     /// using the distance stored in v and the geometry near the start points; returns false if v is not near them
     bool distToStart_( VertId v, SurfaceDistanceStartId s0, SurfaceDistanceStartId s1, double & d ) const;
+    /// given the distances da and db (relative to the start distance) from a and b to start point s0 (if s1 is invalid) or to the line of start edge s0-s1,
+    /// computes the distance to c in triangle abc (with the start distance); returns false if c is not beside the start edge,
+    /// or (if checkCross) the straight path from the start point to c does not cross ab
+    bool distAtC_( const Vector3f & pa, const Vector3f & pb, const Vector3f & pc, SurfaceDistanceStartId s0, SurfaceDistanceStartId s1,
+        double da, double db, double & vc, bool checkCross = true ) const;
+    /// returns the straight-line distance (relative to the start distance) from p to start point s0 or to start edge s0-s1 (both with vertices),
+    /// which is not larger than the distance along the surface
+    double straightDistToStart_( const Vector3f & p, SurfaceDistanceStartId s0, SurfaceDistanceStartId s1 ) const;
     /// makes start edges from v to its neighbor start vertices
     void uniteTouchingSources_( VertId v );
     /// finds the groups of start points, then fills regionSources_
@@ -129,6 +137,9 @@ private:
     /// computes the distance to c in triangle abc, where a and b have distances (va <= vb) from different start points of one group,
     /// or from one start point and from the linear field near it
     void considerTriNearStarts_( VertId a, VertId b, VertId c, float va, float vb );
+    /// computes the distance to c in left triangle abc of edge e, where a and b have distances from starts of different groups:
+    /// the field of each start is extended to the other vertex through the triangle on the other side of e
+    void considerTriBetweenGroups_( EdgeId e, VertId a, VertId b, VertId c, float va );
     /// if target is provided then adds distance to it to the metric
     float metricToPenalty_( float metric, VertId v ) const;
 };

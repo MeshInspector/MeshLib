@@ -5,6 +5,12 @@
 #include "MRphmap.h"
 #include <algorithm>
 
+#ifdef _MSC_VER
+#define MR_SD_NOINLINE __declspec( noinline )
+#else
+#define MR_SD_NOINLINE __attribute__( ( noinline ) )
+#endif
+
 namespace MR
 {
 
@@ -47,8 +53,8 @@ bool getFieldAtC( const Vector3f & b, const Vector3f & c, float vb, float & vc )
 }
 
 /// consider triangle abc and a point source on the other side of line ab from c, at distances da from a and db from b;
-/// computes the distance from the source to c; returns false if the straight path from the source to c does not cross ab
-static bool getPointSourceDistAtC( const Vector3d & a, const Vector3d & b, const Vector3d & c, double da, double db, double & dc )
+/// computes the distance from the source to c; if checkCross, returns false if the straight path from the source to c does not cross ab
+static bool getPointSourceDistAtC( const Vector3d & a, const Vector3d & b, const Vector3d & c, double da, double db, double & dc, bool checkCross = true )
 {
     const auto ab = b - a;
     const auto ac = c - a;
@@ -67,7 +73,7 @@ static bool getPointSourceDistAtC( const Vector3d & a, const Vector3d & b, const
     // the path from the source to c crosses line ab at x = sx + ( cx - sx ) * sy / ( sy - cy ), which must be within (0, e2)
     const double t = ( cx - sx ) * sy;
     const double h = sy - cy; // negative
-    if ( !( sx * h + t < 0 && ( sx - e2 ) * h + t > 0 ) )
+    if ( checkCross && !( sx * h + t < 0 && ( sx - e2 ) * h + t > 0 ) )
         return false;
     dc = std::sqrt( ( sqr( cx - sx ) + sqr( cy - sy ) ) / e2 );
     return true;
@@ -360,8 +366,91 @@ void SurfaceDistanceBuilder::considerLeftTriPath_( EdgeId e )
     }
 
     if ( sourceGroup_.parent( source ) != sourceGroup_.parent( sourceB ) )
-        return; // the fronts from separate start points meet here, the paths along the edges are more accurate
-    considerTriNearStarts_( a, b, c, va, vb );
+        considerTriBetweenGroups_( e, a, b, c, va );
+    else
+        considerTriNearStarts_( a, b, c, va, vb );
+}
+
+bool SurfaceDistanceBuilder::distAtC_( const Vector3f & pa, const Vector3f & pb, const Vector3f & pc, SurfaceDistanceStartId s0, SurfaceDistanceStartId s1,
+    double da, double db, double & vc, bool checkCross ) const
+{
+    const double start = sourceStartDistance_[s0];
+    if ( !s1 )
+    {
+        double dc = 0;
+        if ( !getPointSourceDistAtC( Vector3d( pa ), Vector3d( pb ), Vector3d( pc ), da, db, dc, checkCross ) )
+            return false;
+        vc = start + dc;
+        return true;
+    }
+    const bool swap = db < da;
+    float dvac = 0;
+    if ( !getFieldAtC( swap ? pa - pb : pb - pa, pc - ( swap ? pb : pa ), float( std::abs( db - da ) ), dvac ) )
+        return false;
+    auto e0 = s0, e1 = s1;
+    nearestStartEdge_( pc, e0, e1 );
+    if ( e0 != s0 || e1 != s1 )
+        return false; // c is not beside this edge
+    vc = start + std::min( da, db ) + dvac;
+    return true;
+}
+
+double SurfaceDistanceBuilder::straightDistToStart_( const Vector3f & p, SurfaceDistanceStartId s0, SurfaceDistanceStartId s1 ) const
+{
+    const auto p0 = mesh_.points[sourceVert_[s0]];
+    if ( !s1 )
+        return ( p - p0 ).length();
+    const auto d = mesh_.points[sourceVert_[s1]] - p0;
+    const float t = std::clamp( dot( p - p0, d ) / std::max( d.lengthSq(), FLT_MIN ), 0.f, 1.f );
+    return ( p - p0 - t * d ).length();
+}
+
+// not inlined: inlining it in considerLeftTriPath_ costs 1.5-2% even with no fronts meeting
+MR_SD_NOINLINE void SurfaceDistanceBuilder::considerTriBetweenGroups_( EdgeId e, VertId a, VertId b, VertId c, float va )
+{
+    // the straight path from a start to c can cross ab near the seam, where b already has smaller distance from another group;
+    // the distance from the start of a to b is estimated in triangle abw on the other side of ab, and vice versa
+    VertId w;
+    if ( mesh_.topology.right( e ) )
+    {
+        VertId q0, q1;
+        mesh_.topology.getLeftTriVerts( e.sym(), q0, q1, w );
+    }
+    if ( !w || !( vertDistanceMap_[w] < FLT_MAX ) )
+        return;
+    float best = FLT_MAX;
+    SurfaceDistanceStartId best0, best1;
+    auto tryFrom = [&]( VertId x, VertId y )
+    {
+        const auto s0 = vertSource_[x];
+        const auto s1 = vertLineEnd_[x];
+        if ( !sourceVert_[s0] || regionSources_.test( s0 ) )
+            return; // no straight-line bound for a start inside a triangle, and the linear field near a region
+        // the field extended over the seam can be less accurate, but never less than the straight-line distance
+        const double minVc = sourceStartDistance_[s0] + straightDistToStart_( mesh_.points[c], s0, s1 );
+        if ( minVc >= std::min( best, vertDistanceMap_[c] ) )
+            return;
+        const double dx = vertDistanceMap_[x] - sourceStartDistance_[s0];
+        double dw = 0, vy = 0, vc = 0;
+        if ( !distToStart_( w, s0, s1, dw ) || !distAtC_( mesh_.points[x], mesh_.points[w], mesh_.points[y], s0, s1, dx, dw, vy, false ) )
+            return;
+        const double dy = std::max( vy - sourceStartDistance_[s0], straightDistToStart_( mesh_.points[y], s0, s1 ) );
+        if ( !distAtC_( mesh_.points[x], mesh_.points[y], mesh_.points[c], s0, s1, dx, dy, vc ) )
+            return;
+        float v = float( std::max( vc, minVc ) );
+        if ( s1 )
+            v = std::max( v, std::nextafter( va, FLT_MAX ) );
+        if ( v < best )
+        {
+            best = v;
+            best0 = s0;
+            best1 = s1;
+        }
+    };
+    tryFrom( a, b );
+    tryFrom( b, a );
+    if ( best < FLT_MAX )
+        suggestVertDistance_( { c, best }, best0, best1 );
 }
 
 void SurfaceDistanceBuilder::considerTriNearStarts_( VertId a, VertId b, VertId c, float va, float vb )
@@ -397,27 +486,12 @@ void SurfaceDistanceBuilder::considerTriNearStarts_( VertId a, VertId b, VertId 
         double da = 0, db = 0;
         if ( !distToStart_( a, s0, s1, da ) || !distToStart_( b, s0, s1, db ) )
             return;
-        const double start = sourceStartDistance_[s0];
-        float vc = 0;
-        if ( !s1 )
-        {
-            double dc = 0;
-            if ( !getPointSourceDistAtC( Vector3d( pa ), Vector3d( pb ), Vector3d( pc ), da, db, dc ) )
-                return;
-            vc = float( start + dc );
-        }
-        else
-        {
-            const bool swap = db < da;
-            float dvac = 0;
-            if ( !getFieldAtC( swap ? pa - pb : pb - pa, pc - ( swap ? pb : pa ), float( std::abs( db - da ) ), dvac ) )
-                return;
-            vc = std::max( float( start + std::min( da, db ) + dvac ), std::nextafter( va, FLT_MAX ) );
-            auto e0 = s0, e1 = s1;
-            nearestStartEdge_( pc, e0, e1 );
-            if ( e0 != s0 || e1 != s1 )
-                return; // c is not beside this edge
-        }
+        double dc = 0;
+        if ( !distAtC_( pa, pb, pc, s0, s1, da, db, dc ) )
+            return;
+        float vc = float( dc );
+        if ( s1 )
+            vc = std::max( vc, std::nextafter( va, FLT_MAX ) );
         if ( vc < best )
         {
             best = vc;

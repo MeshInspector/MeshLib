@@ -2,6 +2,7 @@
 #include <MRMesh/MRSurfaceDistance.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBitSet.h>
+#include <MRMesh/MRRegionBoundary.h>
 #include <MRMesh/MRVector3.h>
 #include <gtest/gtest.h>
 
@@ -127,6 +128,44 @@ TEST( MRMesh, SurfaceDistanceTwoSegments )
             maxErr = std::max( maxErr, err );
     }
     EXPECT_LT( sumErr / ( n * n ), 1e-2f );
+    EXPECT_LT( maxErr, 5e-2f );
+}
+
+TEST( MRMesh, SurfaceDistanceEdgesAndPoints )
+{
+    const int n = 41;
+    const int row = n / 2;
+    const auto mesh = makePlanarGrid( n, true, row );
+    VertBitSet lineVerts( mesh.topology.vertSize() );
+    for ( int x = 5; x <= 15; ++x )
+        lineVerts.set( VertId( row * n + x ) );
+    const auto lineEdges = getInnerEdges( mesh.topology, lineVerts );
+    // start edges between all start vertices give the same distances as these start vertices
+    EXPECT_TRUE( computeSurfaceDistances( mesh, lineEdges, VertBitSet{} ) == computeSurfaceDistances( mesh, lineVerts ) );
+
+    // start points one edge away from the segment: beyond its end and beside its middle
+    const VertId pts[2] = { VertId( row * n + 16 ), VertId( ( row + 1 ) * n + 10 ) };
+    VertBitSet startPoints( mesh.topology.vertSize() );
+    for ( auto v : pts )
+        startPoints.set( v );
+    const auto dist = computeSurfaceDistances( mesh, lineEdges, startPoints );
+    float sumErr = 0, maxErr = 0;
+    for ( auto v : mesh.topology.getValidVerts() )
+    {
+        const auto & p = mesh.points[v];
+        float d[3] = {
+            std::hypot( std::max( { 5.f - p.x, p.x - 15.f, 0.f } ), p.y - float( row ) ),
+            ( p - mesh.points[pts[0]] ).length(),
+            ( p - mesh.points[pts[1]] ).length() };
+        std::sort( d, d + 3 );
+        const float err = std::abs( dist[v] - d[0] );
+        sumErr += err;
+        // where the fronts of different starts meet, the distances come along the edges
+        if ( d[1] - d[0] > 2 )
+            maxErr = std::max( maxErr, err );
+    }
+    // the fronts meet right from the start points, so the errors there spread along the seams
+    EXPECT_LT( sumErr / ( n * n ), 5e-2f );
     EXPECT_LT( maxErr, 5e-2f );
 }
 

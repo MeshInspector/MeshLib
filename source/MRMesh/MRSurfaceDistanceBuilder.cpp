@@ -86,14 +86,7 @@ void SurfaceDistanceBuilder::addStartRegion( const VertBitSet & region, float st
 {
     MR_TIMER;
     for ( auto v : region )
-    {
-        auto & vi = vertDistanceMap_[v];
-        if ( vi > startDistance )
-        {
-            vi = startDistance;
-            vertSource_[v] = addSource_( startDistance, v );
-        }
-    }
+        addStartVert_( v, startDistance );
     for ( auto v : region )
         uniteTouchingSources_( v );
     finishSourceGroups_();
@@ -106,19 +99,32 @@ void SurfaceDistanceBuilder::addStartVertices( const HashMap<VertId, float>& sta
 {
     MR_TIMER;
     for ( const auto & [v, dist] : startVertices )
-    {
-        auto & vi = vertDistanceMap_[v];
-        if ( vi > dist )
-        {
-            vi = dist;
-            vertSource_[v] = addSource_( dist, v );
-        }
-    }
+        addStartVert_( v, dist );
     for ( const auto & [v, dist] : startVertices )
         uniteTouchingSources_( v );
     finishSourceGroups_();
 
     for ( const auto & [v, dist] : startVertices )
+        suggestDistancesAround_( v );
+}
+
+void SurfaceDistanceBuilder::addStartEdgesAndPoints( const UndirectedEdgeBitSet & startEdges, const VertBitSet & startPoints, float startDistance )
+{
+    MR_TIMER;
+    VertBitSet verts = startPoints;
+    verts.resize( vertDistanceMap_.size() );
+    for ( auto ue : startEdges )
+    {
+        verts.set( mesh_.topology.org( ue ) );
+        verts.set( mesh_.topology.dest( ue ) );
+    }
+    for ( auto v : verts )
+        addStartVert_( v, startDistance );
+    for ( auto ue : startEdges )
+        addStartEdge_( ue );
+    finishSourceGroups_();
+
+    for ( auto v : verts )
         suggestDistancesAround_( v );
 }
 
@@ -143,6 +149,32 @@ SurfaceDistanceStartId SurfaceDistanceBuilder::addSource_( float startDistance, 
     sourceStartDistance_.push_back( startDistance );
     sourceVert_.push_back( v );
     return sourceGroup_.add();
+}
+
+void SurfaceDistanceBuilder::addStartVert_( VertId v, float startDistance )
+{
+    auto & vi = vertDistanceMap_[v];
+    if ( vi > startDistance )
+    {
+        vi = startDistance;
+        vertSource_[v] = addSource_( startDistance, v );
+    }
+}
+
+SurfaceDistanceStartId SurfaceDistanceBuilder::startInVert_( VertId v ) const
+{
+    const auto s = vertSource_[v];
+    return s && sourceVert_[s] == v ? s : SurfaceDistanceStartId{};
+}
+
+void SurfaceDistanceBuilder::addStartEdge_( EdgeId e )
+{
+    const auto s0 = startInVert_( mesh_.topology.org( e ) );
+    const auto s1 = startInVert_( mesh_.topology.dest( e ) );
+    if ( !s0 || !s1 )
+        return;
+    startEdges_.autoResizeSet( e.undirected() );
+    sourceGroup_.uniteUnbalanced( s1, s0 );
 }
 
 bool SurfaceDistanceBuilder::distToStart_( VertId v, SurfaceDistanceStartId s0, SurfaceDistanceStartId s1, double & d ) const
@@ -193,10 +225,12 @@ void SurfaceDistanceBuilder::nearestStartEdge_( const Vector3f & p, SurfaceDista
         SurfaceDistanceStartId next;
         for ( EdgeId e : orgRing( mesh_.topology, vs ) )
         {
+            if ( !startEdges_.test( e.undirected() ) )
+                continue;
             const auto w = mesh_.topology.dest( e );
-            const auto r = vertSource_[w];
-            if ( !r || r == other || sourceVert_[r] != w )
-                continue; // w is not a start vertex
+            const auto r = startInVert_( w );
+            if ( !r || r == other )
+                continue;
             const auto dr = mesh_.points[w] - ps;
             const float tr = dot( p - ps, dr );
             if ( tr < 0 )
@@ -230,11 +264,8 @@ void SurfaceDistanceBuilder::finishSourceGroups_()
             continue;
         int numStartNeis = 0;
         for ( EdgeId e : orgRing( mesh_.topology, v ) )
-        {
-            const auto w = mesh_.topology.dest( e );
-            if ( const auto r = vertSource_[w]; r && sourceVert_[r] == w )
+            if ( startEdges_.test( e.undirected() ) && startInVert_( mesh_.topology.dest( e ) ) )
                 ++numStartNeis;
-        }
         if ( numStartNeis > 3 )
             regionRoots.set( sourceGroup_.parent( s ) );
     }
@@ -247,12 +278,10 @@ void SurfaceDistanceBuilder::finishSourceGroups_()
 
 void SurfaceDistanceBuilder::uniteTouchingSources_( VertId v )
 {
-    const auto source = vertSource_[v];
-    if ( !source )
+    if ( !startInVert_( v ) )
         return;
     for ( EdgeId e : orgRing( mesh_.topology, v ) )
-        if ( const auto s = vertSource_[mesh_.topology.dest( e )] )
-            sourceGroup_.uniteUnbalanced( s, source );
+        addStartEdge_( e );
 }
 
 bool SurfaceDistanceBuilder::suggestVertDistance_( VertDistance c, SurfaceDistanceStartId source, SurfaceDistanceStartId lineEnd )
@@ -399,9 +428,9 @@ void SurfaceDistanceBuilder::considerTriNearStarts_( VertId a, VertId b, VertId 
     tryStart( source, lineEndA );
     if ( sourceB != source || lineEndB != lineEndA )
         tryStart( sourceB, lineEndB );
-    if ( !lineEndA && !lineEndB && sourceVert_[source] && sourceVert_[sourceB]
-        && mesh_.topology.findEdge( sourceVert_[source], sourceVert_[sourceB] ) )
-        tryStart( source, sourceB );
+    if ( !lineEndA && !lineEndB && sourceVert_[source] && sourceVert_[sourceB] )
+        if ( const auto e = mesh_.topology.findEdge( sourceVert_[source], sourceVert_[sourceB] ); e && startEdges_.test( e.undirected() ) )
+            tryStart( source, sourceB );
     if ( best < FLT_MAX )
     {
         suggestVertDistance_( { c, best }, best0, best1 );

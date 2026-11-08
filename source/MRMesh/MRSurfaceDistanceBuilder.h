@@ -50,6 +50,10 @@ public:
     /// initiates distance construction from given start vertices with values in them (these vertices will NOT be returned by growOne if values in them are not decreased);
     /// the vertices connected by mesh edges make lines or regions, each isolated vertex is a point
     MRMESH_API void addStartVertices( const HashMap<VertId, float>& startVertices );
+    /// initiates distance construction from given start edges and start points with known start distance in all of them;
+    /// the start edges connected by vertices make lines or regions; each start point is a point never united with other starts,
+    /// even if it is one edge away from them, unless it is an end of a start edge
+    MRMESH_API void addStartEdgesAndPoints( const UndirectedEdgeBitSet & startEdges, const VertBitSet & startPoints, float startDistance );
     /// initiates distance construction from triangle vertices surrounding given start point (they all will be returned by growOne);
     /// the distances are from this point, each call adds a separate point
     MRMESH_API void addStart( const MeshTriPoint & start );
@@ -87,7 +91,9 @@ private:
     Vector<float, SurfaceDistanceStartId> sourceStartDistance_;
     /// for each start point: its vertex, invalid for a start inside a triangle or on an edge
     Vector<VertId, SurfaceDistanceStartId> sourceVert_;
-    /// groups of start points connected by mesh edges, the parent of each start point is the root of its group;
+    /// the mesh edges between start points of one group
+    UndirectedEdgeBitSet startEdges_;
+    /// groups of start points connected by start edges, the parent of each start point is the root of its group;
     /// the field is assumed linear only between start points of one group (along a line or in a region)
     BaseUnionFind<SurfaceDistanceStartId> sourceGroup_;
     /// start points of the groups making regions (some start point has more than three start neighbors), not lines;
@@ -100,13 +106,19 @@ private:
     bool suggestVertDistance_( VertDistance c, SurfaceDistanceStartId source, SurfaceDistanceStartId lineEnd );
     /// creates new start point with given initial distance and its vertex (if any)
     SurfaceDistanceStartId addSource_( float startDistance, VertId v );
+    /// makes v a start point if its distance is larger than given one
+    void addStartVert_( VertId v, float startDistance );
+    /// returns the start point in v if v is a start vertex, otherwise invalid id
+    SurfaceDistanceStartId startInVert_( VertId v ) const;
+    /// if both ends of e are start vertices, then marks e as a start edge and unites the groups of its ends
+    void addStartEdge_( EdgeId e );
     /// given point p near the line through start points s0 and s1 of one group, replaces them with the nearest start edge
     /// or with the nearest start point (and invalid s1) if p is beyond the ends of the start edges
     void nearestStartEdge_( const Vector3f & p, SurfaceDistanceStartId & s0, SurfaceDistanceStartId & s1 ) const;
     /// estimates the distance from reached vertex v to start point s0 (if s1 is invalid) or to the line through start edge s0-s1,
     /// using the distance stored in v and the geometry near the start points; returns false if v is not near them
     bool distToStart_( VertId v, SurfaceDistanceStartId s0, SurfaceDistanceStartId s1, double & d ) const;
-    /// unites the group of the start point in v with the groups of start points in its neighbor vertices
+    /// makes start edges from v to its neighbor start vertices
     void uniteTouchingSources_( VertId v );
     /// finds the groups of start points, then fills regionSources_
     void finishSourceGroups_();

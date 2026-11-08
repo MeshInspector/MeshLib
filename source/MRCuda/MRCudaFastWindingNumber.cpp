@@ -6,7 +6,7 @@
 #include "MRCudaMath.cuh"
 #include "MRCudaPipeline.h"
 
-#include "MRMesh/MRAABBTreeBinary.h"
+#include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRChunkIterator.h"
 #include "MRMesh/MRDipole.h"
@@ -21,11 +21,16 @@ namespace MR
 namespace Cuda
 {
 
+static_assert( sizeof( WideNode3 ) == sizeof( AABBTree::Node ) );
+static_assert( sizeof( LeafTri3 ) == sizeof( AABBTree::LeafTri ) );
+
+
 struct FastWindingNumberDataBuffers
 {
     DynamicArray<Dipole> dipoles;
     DynamicArray<float3> cudaMeshPoints;
-    DynamicArray<Node3> cudaNodes;
+    DynamicArray<WideNode3> cudaNodes;
+    DynamicArray<LeafTri3> cudaLeafTris;
     DynamicArray<FaceToThreeVerts> cudaFaces;
 
     [[nodiscard]] FastWindingNumberData toData() const
@@ -33,6 +38,7 @@ struct FastWindingNumberDataBuffers
         return {
             .dipoles = dipoles.data(),
             .nodes = cudaNodes.data(),
+        .leafTris = cudaLeafTris.data(),
             .meshPoints = cudaMeshPoints.data(),
             .faces = cudaFaces.data(),
         };
@@ -67,16 +73,17 @@ Expected<void> FastWindingNumber::prepareData_( ProgressCallback cb )
     if ( !reportProgress( cb, 0.3f ) )
         return unexpectedOperationCanceled();
 
-    const AABBTreeBinary tree( mesh_ );
+    const AABBTree& tree = mesh_.getAABBTree();
     if ( !reportProgress( cb, 0.5f ) )
         return unexpectedOperationCanceled();
 
     const auto& nodes = tree.nodes();
     CUDA_LOGE_RETURN_UNEXPECTED( data->cudaNodes.fromVector( nodes ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( data->cudaLeafTris.fromVector( tree.leafTris() ) );
     if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
 
-    CUDA_LOGE_RETURN_UNEXPECTED( data->dipoles.fromVector( calcDipoles( tree, mesh_ ) ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( data->dipoles.fromVector( mesh_.getDipoles() ) );
     if ( !reportProgress( cb, 1.0f ) )
         return unexpectedOperationCanceled();
 

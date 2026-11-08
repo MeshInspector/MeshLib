@@ -1,6 +1,5 @@
 #include "MRDipole.h"
 #include "MRAABBTree.h"
-#include "MRAABBTreeBinary.h"
 #include "MRInplaceStack.h"
 #include "MRMesh.h"
 #include "MRParallelFor.h"
@@ -19,63 +18,6 @@ static float distToFarthestCornerSq( const Box3f & box, const Vector3f & pos )
         res += std::max( toMinSq, toMaxSq );
     }
     return res;
-}
-
-void calcDipoles( Dipoles& dipoles, const AABBTreeBinary& tree_, const Mesh& mesh )
-{
-    MR_TIMER;
-    dipoles.resize( tree_.nodes().size() );
-
-    // compute dipole data for tree leaves
-    ParallelFor( dipoles, [&]( NodeId i )
-    {
-        const auto& node = tree_[i];
-        if ( !node.leaf() )
-            return;
-        const FaceId f = node.leafId();
-        const auto da = 0.5f * mesh.dirDblArea( f );
-        const auto a = da.length();
-        const auto ap = a * mesh.triCenter( f );
-        dipoles[i] = Dipole
-        {
-            .pos = ap, // ( area * pos ) for now
-            .area = a,
-            .dirArea = da
-        };
-    } );
-
-    // compute dipole data for not-leaf tree nodes
-    for ( auto i = dipoles.backId(); i; --i )
-    {
-        const auto& node = tree_[i];
-        if ( node.leaf() )
-            continue;
-        const auto& dl = dipoles[node.l];
-        const auto& dr = dipoles[node.r];
-        dipoles[i] = Dipole
-        {
-            .pos = dl.pos + dr.pos, // ( area * pos ) for now
-            .area = dl.area + dr.area,
-            .dirArea = dl.dirArea + dr.dirArea
-        };
-    }
-
-    // compute 1) center mass 2) distance to farthest corner for all nodes
-    ParallelFor( dipoles, [&]( NodeId i )
-    {
-        const auto& node = tree_[i];
-        auto& d = dipoles[i];
-        if ( d.area > 0 )
-            d.pos /= d.area;
-        d.rr = distToFarthestCornerSq( node.box, d.pos );
-    } );
-}
-
-Dipoles calcDipoles( const AABBTreeBinary& tree, const Mesh& mesh )
-{
-    Dipoles dipoles;
-    calcDipoles( dipoles, tree, mesh );
-    return dipoles;
 }
 
 void calcDipoles( Dipoles& dipoles, const AABBTree& tree, const Mesh& mesh )

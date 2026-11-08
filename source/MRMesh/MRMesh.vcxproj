@@ -264,7 +264,6 @@
     <ClInclude Include="MRPrimitiveMapsComposition.h" />
     <ClInclude Include="MRPriorityQueue.h" />
     <ClInclude Include="MRPrism.h" />
-    <ClInclude Include="MRAABBTreeBinary.h" />
     <ClInclude Include="MRProgressReadWrite.h" />
     <ClInclude Include="MRProtectedRun.h" />
     <ClInclude Include="MRRadiusCompensation.h" />
@@ -695,7 +694,6 @@
     <ClCompile Include="MRMathInstatiate.cpp" />
     <ClCompile Include="MRMeshCollide.cpp" />
     <ClCompile Include="MRPrism.cpp" />
-    <ClCompile Include="MRAABBTreeBinary.cpp" />
     <ClCompile Include="MRProgressReadWrite.cpp" />
     <ClCompile Include="MRProjectionMeshAttribute.cpp" />
     <ClCompile Include="MRProtectedRun.cpp" />

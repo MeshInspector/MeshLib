@@ -39,7 +39,11 @@ triplet, CPython is configured in cross mode and fails on an undeclared `sendfil
 Homebrew-only environment (the `/usr/local` prefix, the python shim, the pkg-config paths) is
 not set on this leg; its x86_64 `python3` comes from vcpkg and runs under Rosetta like the other
 Intel outputs. The first run builds every port from source on the runner; later runs restore
-`vcpkg_installed` from the GitHub cache or the ports from the S3 binary cache.
+`vcpkg_installed` from the GitHub cache or the ports from the S3 binary cache. The Rust bindings
+are built with `CARGO_BUILD_TARGET=x86_64-apple-darwin` (the `target` input of
+`build-rust-bindings`, which also adds that target's standard library with rustup), so cargo
+links the x86_64 libraries; its examples and tests run under Rosetta. The Java bindings stay off
+this leg: the host's arm64 JVM cannot load x86_64 libraries.
 
 ## How it works
 
@@ -62,8 +66,9 @@ Compilation is native; Rosetta is used for four things, only the last of which i
    x86_64 `mrmeshpy.so` because the x86_64 GNU `make` from `/usr/local` is first on `PATH` and its
    children (`clang++`, `mrbind`) inherit the translated execution. It works, but it is not native —
    a candidate follow-up is a native `make` plus an explicit `-arch x86_64`.
-4. **Running the Intel output** for `MRTest`, `MRTestC2`, the MeshViewer smoke test and the Python
-   tests. Intel code cannot run on Apple Silicon hardware any other way.
+4. **Running the Intel output** for `MRTest`, `MRTestC2`, the MeshViewer smoke test, the Python
+   tests and the Rust examples and tests. Intel code cannot run on Apple Silicon hardware any other
+   way.
 
 A fully Rosetta-free runner would therefore be build-only (different x86_64 dependency source, a
 toolchain file with pre-seeded `try_run` results) with all testing on real Intel hardware.

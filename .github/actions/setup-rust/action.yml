@@ -3,7 +3,16 @@ description: >
   Makes `cargo` available for the following steps. If the runner already has
   it, nothing is installed. Otherwise a minimal stable toolchain is installed
   with rustup into the runner's temp directory, so self-hosted runners don't
-  accumulate state.
+  accumulate state. With `target`, the standard library of that target is
+  added as well (needs rustup, which the toolchains installed here have).
+
+inputs:
+  target:
+    required: false
+    default: ''
+    description: >
+      Rust target triple to cross-compile for, such as `x86_64-apple-darwin`
+      on an arm64 macOS host. Empty: the host only.
 
 runs:
   using: composite
@@ -35,3 +44,10 @@ runs:
         fi
         echo "CARGO_HOME=$CARGO_HOME" >> "$GITHUB_ENV"
         echo "RUSTUP_HOME=$RUSTUP_HOME" >> "$GITHUB_ENV"
+
+    - name: Add Rust target
+      if: ${{ inputs.target != '' }}
+      shell: bash
+      env:
+        TARGET: ${{ inputs.target }}
+      run: rustup target add "$TARGET"

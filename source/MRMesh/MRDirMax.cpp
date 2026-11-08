@@ -1,7 +1,6 @@
 #include "MRDirMax.h"
 #include "MRDirMaxBruteForce.h"
 #include "MRAABBTree.h"
-#include "MRAABBTreeWide.h"
 #include "MRAABBTreePolyline.h"
 #include "MRAABBTreePoints.h"
 #include "MRMesh.h"
@@ -112,7 +111,7 @@ VertId findDirMax( const Vector3f & dir, const Mesh & m, UseAABBTree u )
 namespace
 {
 
-VertId findDirMaxWide( const Vector3f & dir, const MeshPart & mp, const AABBTreeWide & tree )
+VertId findDirMaxWide( const Vector3f & dir, const MeshPart & mp, const AABBTree & tree )
 {
     VertId res;
     const auto & nodes = tree.nodes();
@@ -156,7 +155,7 @@ VertId findDirMaxWide( const Vector3f & dir, const MeshPart & mp, const AABBTree
             continue;
         }
         // add the child with larger projection on line last to descend there first
-        SubTask ch[AABBTreeWide::MaxChildren];
+        SubTask ch[AABBTree::MaxChildren];
         int numCh = 0;
         for ( int i = 0; i < node.count; ++i )
         {
@@ -179,9 +178,9 @@ VertId findDirMaxWide( const Vector3f & dir, const MeshPart & mp, const AABBTree
 
 VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
 {
-    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeWideNotCreate() ) )
+    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeNotCreate() ) )
         return findDirMaxBruteForce( dir, mp );
-    return findDirMaxWide( dir, mp, mp.mesh.getAABBTreeWide() );
+    return findDirMaxWide( dir, mp, mp.mesh.getAABBTree() );
 }
 
 VertId findDirMax( const Vector3f & dir, const MeshVertPart & mp, UseAABBTree u )

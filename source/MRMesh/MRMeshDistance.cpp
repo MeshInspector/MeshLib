@@ -1,5 +1,5 @@
 #include "MRMeshDistance.h"
-#include "MRAABBTreeWideTraversal.hpp"
+#include "MRAABBTreeTraversal.hpp"
 #include "MRMesh.h"
 #include "MRTriDist.h"
 #include "MRLine3.h"
@@ -63,7 +63,7 @@ void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rang
     if ( !call )
         return;
 
-    const auto & tree = mp.mesh.getAABBTreeWide();
+    const auto & tree = mp.mesh.getAABBTree();
     Box3f tbox;
     for ( const auto & p : t )
         tbox.include( p );

@@ -49,7 +49,7 @@ std::vector<MeshTriPoint> projectSplineAsMTP( const Mesh& mesh, const MarkedCont
     assert( markSeqToPos.size() == spline.marks.count() );
 
     std::vector<MeshTriPoint> res( sz );
-    mesh.getAABBTreeWide(); // prepare before its usage in parallel region
+    mesh.getAABBTree(); // prepare before its usage in parallel region
     ParallelFor( size_t( 0 ), numMarks, [&]( size_t seq )
     {
         const auto i0 = markSeqToPos[seq];

@@ -4,7 +4,7 @@
 #include "MRCudaBasic.cuh"
 #include "MRCudaBasic.h"
 
-#include "MRMesh/MRAABBTree.h"
+#include "MRMesh/MRAABBTreeBinary.h"
 #include "MRMesh/MRChunkIterator.h"
 #include "MRMesh/MRIntersectionPrecomputes.h"
 #include "MRMesh/MRTimer.h"
@@ -45,7 +45,7 @@ Expected<DistanceMap> computeDistanceMap( const MR::Mesh& mesh, const MR::MeshTo
     if ( !reportProgress( cb, 0.1f ) )
         return unexpectedOperationCanceled();
 
-    const AABBTree& tree = mesh.getAABBTree();
+    const AABBTreeBinary tree( mesh );
     const auto& nodes = tree.nodes();
     const auto& meshPoints = mesh.points;
     const auto tris = mesh.topology.getTriangulation();
@@ -126,7 +126,7 @@ Expected<DistanceMap> computeDistanceMap( const MR::Mesh& mesh, const MR::MeshTo
 
 size_t computeDistanceMapHeapBytes( const MR::Mesh& mesh, const MR::MeshToDistanceMapParams& params, bool needOutSamples /*= false */ )
 {
-    const AABBTree& tree = mesh.getAABBTree();
+    const AABBTreeBinary tree( mesh );
     const auto& nodes = tree.nodes();
     const auto& meshPoints = mesh.points;
     constexpr size_t cMinRowCount = 10;

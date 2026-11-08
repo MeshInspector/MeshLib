@@ -8,7 +8,7 @@
 #include "MRMesh/MRFastWindingNumber.h"
 #include "MRMesh/MRParallelMinMax.h"
 #include "MRMesh/MRBitSetParallelFor.h"
-#include "MRMesh/MRAABBTreeWide.h"
+#include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRPointsToMeshProjector.h"
 #include "MRMesh/MRMeshIntersect.h"
 #include "MRMesh/MRParallelFor.h"
@@ -36,7 +36,7 @@ bool findVoxelsInside( const MeshPart& mp, const DistanceVolumeParams& params, I
         return true;
     res.resize( VolumeIndexer( dims ).size(), false );
 
-    mp.mesh.getAABBTreeWide();
+    mp.mesh.getAABBTree();
     struct Hit
     {
         float t;
@@ -148,7 +148,7 @@ FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDis
     assert( params.dist.signMode != SignDetectionMode::OpenVDB );
 
     // prepare all trees before returned function will be called from parallel threads
-    mp.mesh.getAABBTreeWide();
+    mp.mesh.getAABBTree();
     if ( params.dist.signMode == SignDetectionMode::HoleWindingRule )
         mp.mesh.getDipoles();
 
@@ -196,7 +196,7 @@ Expected<SimpleBinaryVolume> makeCloseToMeshVolume( const MeshPart& mp, const Cl
     VolumeIndexer indexer( res.dims );
     res.data.resize( indexer.size(), false );
 
-    mp.mesh.getAABBTreeWide();
+    mp.mesh.getAABBTree();
     if ( !BitSetParallelForAll( res.data, [&, closeDistSq = sqr( params.closeDist )] ( VoxelId i )
     {
         const auto pos = indexer.toPos( i );
@@ -272,10 +272,10 @@ Expected<SimpleVolumeMinMax> meshRegionToIndicatorVolume( const Mesh& mesh, cons
     VolumeIndexer indexer( res.dims );
     res.data.resize( indexer.size() );
 
-    AABBTreeWide regionTree( { mesh, &region } );
+    AABBTree regionTree( { mesh, &region } );
     const FaceBitSet notRegion = mesh.topology.getValidFaces() - region;
     //TODO: check that notRegion is not empty
-    AABBTreeWide notRegionTree( { mesh, &notRegion } );
+    AABBTree notRegionTree( { mesh, &notRegion } );
 
     const auto voxelSize = std::max( { params.voxelSize.x, params.voxelSize.y, params.voxelSize.z } );
 

@@ -1,8 +1,7 @@
 #include "MRAABBTree.h"
-#include "MRAABBTreeWide.h"
 #include "MRInplaceStack.h"
-#include "MRAABBTreeBase.hpp"
 #include "MRAABBTreeMaker.hpp"
+#include "MRBitSetParallelFor.h"
 #include "MRMesh.h"
 #include "MRTimer.h"
 #include "MRBuffer.h"
@@ -59,141 +58,15 @@ static Buffer<BoxedFace> makeBoxedFaces( const MeshPart & mp )
     return boxedFaces;
 }
 
-AABBTree::AABBTree( const MeshPart & mp )
-{
-    MR_TIMER;
-    auto boxedFaces = makeBoxedFaces( mp );
-    if ( boxedFaces.size() == 0 )
-        return;
-    nodes_ = makeAABBTreeNodeVec( std::move( boxedFaces ) );
-}
-
-void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
-{
-    MR_TIMER;
-
-    FaceBitSet changedFaces;
-    if ( changedVerts )
-        changedFaces = getIncidentFaces( mesh.topology, *changedVerts );
-
-    // update leaf nodes
-    NodeBitSet changedNodes( nodes_.size() );
-    BitSetParallelForAll( changedNodes, [&]( NodeId nid )
-    {
-        auto & node = nodes_[nid];
-        if ( !node.leaf() )
-            return;
-        const auto f = node.leafId();
-        if ( changedVerts && !changedFaces.test( f ) )
-            return;
-        changedNodes.set( nid );
-        node.box = computeFaceBox( mesh, f );
-    } );
-
-    //update not-leaf nodes
-    for ( auto nid = nodes_.backId(); nid; --nid )
-    {
-        auto & node = nodes_[nid];
-        if ( node.leaf() )
-            continue;
-        if ( !changedNodes.test( node.l ) && !changedNodes.test( node.r ) )
-            continue;
-        changedNodes.set( nid );
-        node.box = nodes_[node.l].box;
-        node.box.include( nodes_[node.r].box );
-    }
-}
-
-void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
-{
-    MR_TIMER;
-    if ( new2Old.empty() )
-        return;
-    assert( !nodes_.empty() );
-
-    // find the leaf of every split face
-    FaceBitSet splitFaces( mesh.topology.faceSize() );
-    for ( const auto & [newFace, oldFace] : new2Old )
-        splitFaces.set( oldFace );
-    std::vector<FaceId> oldFaces; // in increasing order
-    oldFaces.reserve( splitFaces.count() );
-    for ( auto f : splitFaces )
-        oldFaces.push_back( f );
-    std::vector<NodeId> roots( oldFaces.size() ); // the leaves of split faces become the roots of the subtrees of their parts
-    ParallelFor( nodes_, [&]( NodeId nid )
-    {
-        const auto & node = nodes_[nid];
-        if ( !node.leaf() || !splitFaces.test( node.leafId() ) )
-            return;
-        const auto it = std::lower_bound( oldFaces.begin(), oldFaces.end(), node.leafId() );
-        assert( it != oldFaces.end() && *it == node.leafId() );
-        roots[it - oldFaces.begin()] = nid;
-    } );
-
-    // every new face turns the current leaf of its split face into a node with the leaves of both faces;
-    // the new nodes are appended, so children have larger ids than their parents as in a constructed tree
-    const auto firstNewNode = nodes_.endId();
-    nodes_.reserve( nodes_.size() + 2 * new2Old.size() );
-    auto leaves = roots; // current leaves of split faces
-    for ( const auto & [newFace, oldFace] : new2Old )
-    {
-        auto & leaf = leaves[std::lower_bound( oldFaces.begin(), oldFaces.end(), oldFace ) - oldFaces.begin()];
-        if ( !leaf )
-        {
-            assert( false ); // the split face is not in this tree
-            continue;
-        }
-        const auto l = nodes_.endId();
-        const auto r = l + 1;
-        nodes_.resize( nodes_.size() + 2 );
-        nodes_[l].setLeafId( oldFace );
-        nodes_[r].setLeafId( newFace );
-        nodes_[leaf].l = l;
-        nodes_[leaf].r = r;
-        leaf = l;
-    }
-
-    // the boxes of the new nodes from the leaves, and then of the roots
-    auto updateBox = [&]( NodeId nid )
-    {
-        auto & node = nodes_[nid];
-        if ( node.leaf() )
-            node.box = computeFaceBox( mesh, node.leafId() );
-        else
-        {
-            node.box = nodes_[node.l].box;
-            node.box.include( nodes_[node.r].box );
-        }
-    };
-    for ( auto nid = nodes_.backId(); nid >= firstNewNode; --nid )
-        updateBox( nid );
-    bool grown = false; // whether the subtree of some split face is not inside the box of its old leaf
-    for ( auto root : roots )
-    {
-        if ( !root )
-            continue;
-        const auto oldBox = nodes_[root].box; // still the box of the old leaf
-        updateBox( root );
-        grown = grown || !oldBox.contains( nodes_[root].box );
-    }
-
-    // only a new vertex outside the box of its split face (e.g. due to rounding) makes the boxes of the ancestors to grow,
-    // then update all not-leaf nodes from the last to the root as in refit()
-    if ( grown )
-        for ( auto nid = nodes_.backId(); nid; --nid )
-            if ( !nodes_[nid].leaf() )
-                updateBox( nid );
-}
-
 namespace
 {
 
-/// splits each AABBTreeWide node in two binary levels, each at the median of the triangle box centers
+/// splits each AABBTree node in two binary levels, each at the median of the triangle box centers
 /// along the largest extent of these centers; so the nodes at binary depth d have ( numTris >> d ) or ( numTris >> d ) + 1 triangles
 class AABBTreeWideMaker
 {
 public:
-    using Node = AABBTreeWide::Node;
+    using Node = AABBTree::Node;
 
     /// sorted instead of BoxedFace: smaller and compared by one coordinate
     struct Center
@@ -227,13 +100,13 @@ private:
         int & res = cnt_[d][num - ( numTris_ >> d )];
         if ( res >= 0 )
             return res;
-        if ( num <= AABBTreeWide::MaxLeafTris )
+        if ( num <= AABBTree::MaxLeafTris )
             return res = 1;
         res = 1;
         const int halves[2] = { num / 2, num - num / 2 };
         for ( int h : halves )
         {
-            if ( h <= AABBTreeWide::MaxLeafTris )
+            if ( h <= AABBTree::MaxLeafTris )
                 res += countNodes_( d + 1, h );
             else
                 res += countNodes_( d + 2, h / 2 ) + countNodes_( d + 2, h - h / 2 );
@@ -262,7 +135,7 @@ private:
     void make_( NodeId n, NodeId desc, int depth, int first, int num )
     {
         auto & node = nodes_[n];
-        if ( num <= AABBTreeWide::MaxLeafTris )
+        if ( num <= AABBTree::MaxLeafTris )
         {
             Box3f box;
             for ( int i = 0; i < num; ++i )
@@ -276,11 +149,11 @@ private:
         const int axis = largestCentersAxis_( first, num );
         split_( first, num, axis );
         const Child halves[2] = { { depth + 1, first, num / 2 }, { depth + 1, first + num / 2, num - num / 2 } };
-        Child ch[AABBTreeWide::MaxChildren];
+        Child ch[AABBTree::MaxChildren];
         int k = 0;
         for ( const auto & h : halves )
         {
-            if ( h.num <= AABBTreeWide::MaxLeafTris )
+            if ( h.num <= AABBTree::MaxLeafTris )
             {
                 ch[k++] = h;
                 continue;
@@ -292,7 +165,7 @@ private:
         node.first = int( desc );
         node.count = k;
 
-        NodeId childDesc[AABBTreeWide::MaxChildren];
+        NodeId childDesc[AABBTree::MaxChildren];
         NodeId next = desc + k;
         for ( int j = 0; j < k; ++j )
         {
@@ -328,7 +201,7 @@ private:
 
 } // anonymous namespace
 
-AABBTreeWide::AABBTreeWide( const MeshPart & mp )
+AABBTree::AABBTree( const MeshPart & mp )
 {
     MR_TIMER;
     auto boxedFaces = makeBoxedFaces( mp );
@@ -354,8 +227,8 @@ AABBTreeWide::AABBTreeWide( const MeshPart & mp )
 namespace
 {
 
-/// the box of a triangle of AABBTreeWide, the same as computeFaceBox gives
-Box3f wideTriBox( const Mesh & mesh, const AABBTreeWide::LeafTri & lt )
+/// the box of a triangle of AABBTree, the same as computeFaceBox gives
+Box3f wideTriBox( const Mesh & mesh, const AABBTree::LeafTri & lt )
 {
     Box3f box;
     for ( auto v : lt.verts )
@@ -365,7 +238,7 @@ Box3f wideTriBox( const Mesh & mesh, const AABBTreeWide::LeafTri & lt )
 
 } // anonymous namespace
 
-std::vector<NodeId> AABBTreeWide::getSubtrees( int minNum ) const
+std::vector<NodeId> AABBTree::getSubtrees( int minNum ) const
 {
     MR_TIMER;
     assert( minNum > 0 );
@@ -397,7 +270,7 @@ std::vector<NodeId> AABBTreeWide::getSubtrees( int minNum ) const
     return res;
 }
 
-FaceBitSet AABBTreeWide::getSubtreeFaces( NodeId subtreeRoot ) const
+FaceBitSet AABBTree::getSubtreeFaces( NodeId subtreeRoot ) const
 {
     MR_TIMER;
     FaceBitSet res;
@@ -420,7 +293,7 @@ FaceBitSet AABBTreeWide::getSubtreeFaces( NodeId subtreeRoot ) const
     return res;
 }
 
-NodeBitSet AABBTreeWide::getNodesFromFaces( const FaceBitSet & faces ) const
+NodeBitSet AABBTree::getNodesFromFaces( const FaceBitSet & faces ) const
 {
     MR_TIMER;
     NodeBitSet res( nodes_.size() );
@@ -456,7 +329,7 @@ NodeBitSet AABBTreeWide::getNodesFromFaces( const FaceBitSet & faces ) const
     return res;
 }
 
-void AABBTreeWide::getLeafOrder( FaceBMap & faceMap ) const
+void AABBTree::getLeafOrder( FaceBMap & faceMap ) const
 {
     MR_TIMER;
     for ( size_t i = 0; i < leafTris_.size(); ++i )
@@ -464,7 +337,7 @@ void AABBTreeWide::getLeafOrder( FaceBMap & faceMap ) const
     faceMap.tsize = decltype( faceMap.tsize )( leafTris_.size() );
 }
 
-void AABBTreeWide::renumber( const FaceBMap & faceMap, const VertBMap & vertMap )
+void AABBTree::renumber( const FaceBMap & faceMap, const VertBMap & vertMap )
 {
     MR_TIMER;
     ParallelFor( leafTris_, [&]( size_t i )
@@ -476,7 +349,7 @@ void AABBTreeWide::renumber( const FaceBMap & faceMap, const VertBMap & vertMap 
     } );
 }
 
-void AABBTreeWide::refit( const Mesh & mesh, const VertBitSet * changedVerts )
+void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
 {
     MR_TIMER;
     FaceBitSet changedFaces;
@@ -526,7 +399,7 @@ void AABBTreeWide::refit( const Mesh & mesh, const VertBitSet * changedVerts )
     }
 }
 
-void AABBTreeWide::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
+void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
 {
     MR_TIMER;
     if ( new2Old.empty() )
@@ -660,11 +533,5 @@ void AABBTreeWide::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old
             if ( !nodes_[n].leaf() )
                 updateBox( n );
 }
-
-template auto AABBTreeBase<FaceTreeTraits3>::getSubtrees( int minNum ) const -> std::vector<NodeId>;
-template auto AABBTreeBase<FaceTreeTraits3>::getSubtreeLeaves( NodeId subtreeRoot ) const -> LeafBitSet;
-template NodeBitSet AABBTreeBase<FaceTreeTraits3>::getNodesFromLeaves( const LeafBitSet & leaves ) const;
-template void AABBTreeBase<FaceTreeTraits3>::getLeafOrder( LeafBMap & leafMap ) const;
-template void AABBTreeBase<FaceTreeTraits3>::getLeafOrderAndReset( LeafBMap & leafMap );
 
 } //namespace MR

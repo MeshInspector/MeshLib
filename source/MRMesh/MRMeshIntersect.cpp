@@ -1,6 +1,6 @@
 #include "MRMeshIntersect.h"
-#include "MRAABBTreeWideTraversal.hpp"
-#include "MRAABBTreeWide.h"
+#include "MRAABBTreeTraversal.hpp"
+#include "MRAABBTree.h"
 #include "MRInplaceStack.h"
 #include "MRMesh.h"
 #include "MRMeshPart.h"
@@ -26,7 +26,7 @@ MeshIntersectionResult meshRayIntersectT_( const MeshPart& meshPart, const Line3
     T rayStart, T rayEnd, const IntersectionPrecomputes<T>& prec, bool closestIntersect, const FacePredicate & validFaces )
 {
     const auto& m = meshPart.mesh;
-    const auto& tree = m.getAABBTreeWide();
+    const auto& tree = m.getAABBTree();
     const auto& nodes = tree.nodes();
     MeshIntersectionResult res;
     if( nodes.empty() )
@@ -115,7 +115,7 @@ MeshIntersectionResult meshRayIntersectT_( const MeshPart& meshPart, const Line3
         }
 
         // push the children crossed by the ray, the one entered first last to descend there first
-        SubTask ch[AABBTreeWide::MaxChildren];
+        SubTask ch[AABBTree::MaxChildren];
         int numCh = 0;
         for ( int i = 0; i < node.count; ++i )
         {
@@ -220,7 +220,7 @@ void multiRayMeshIntersect(
         result.isectPts->resize( sz, Vector3f( cQuietNan, cQuietNan, cQuietNan ) );
     }
 
-    meshPart.mesh.getAABBTreeWide(); // prepare tree before parallel region
+    meshPart.mesh.getAABBTree(); // prepare tree before parallel region
 
     auto processRay = [&]( size_t i )
     {
@@ -295,7 +295,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
     };
 
     const auto& m = meshPart.mesh;
-    const auto& tree = m.getAABBTreeWide();
+    const auto& tree = m.getAABBTree();
     const auto& nodes = tree.nodes();
     if( nodes.empty() )
         return;
@@ -480,7 +480,7 @@ void boxedMeshIntersect( const MeshPart& meshPart, BoxOk && boxOk,
 {
     assert( fs || ues || vs || fsVec );
     const auto& m = meshPart.mesh;
-    const auto& tree = m.getAABBTreeWide();
+    const auto& tree = m.getAABBTree();
 
     assert( !fs  || fs->size()  >= m.topology.faceSize() );
     assert( !ues || ues->size() >= m.topology.undirectedEdgeSize() );

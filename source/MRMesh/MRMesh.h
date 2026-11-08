@@ -334,7 +334,7 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] MRMESH_API QuadraticForm3f quadraticForm( VertId v, bool angleWeigted,
         const FaceBitSet * region = nullptr, const UndirectedEdgeBitSet * creases = nullptr ) const;
 
-    /// returns the bounding box containing all valid vertices (the root box of AABBTree if it exists, otherwise of AABBTreeWide)
+    /// returns the bounding box containing all valid vertices (the root box of AABBTree)
     /// this bounding box is insignificantly bigger that minimal box due to AABB algorithms precision
     [[nodiscard]] MRMESH_API Box3f getBoundingBox() const;
 
@@ -471,17 +471,11 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] MRMESH_API MeshProjectionResult projectPoint( const Vector3f& point, float maxDistSq = FLT_MAX, const FaceBitSet * region = nullptr, const AffineXf3f * xf = nullptr ) const;
     [[nodiscard]] MeshProjectionResult findClosestPoint( const Vector3f& point, float maxDistSq = FLT_MAX, const FaceBitSet * region = nullptr, const AffineXf3f * xf = nullptr ) const { return projectPoint( point, maxDistSq, region, xf ); }
 
-    /// returns cached aabb-tree for this mesh, creating it if it did not exist in a thread-safe manner
+    /// returns cached aabb-tree of this mesh's triangles, creating it if it did not exist in a thread-safe manner
     MRMESH_API const AABBTree & getAABBTree() const;
 
-    /// returns cached aabb-tree for this mesh, but does not create it if it did not exist
+    /// returns cached aabb-tree of this mesh's triangles, but does not create it if it did not exist
     [[nodiscard]] const AABBTree * getAABBTreeNotCreate() const { return AABBTreeOwner_.get(); }
-
-    /// returns cached 4-wide aabb-tree of this mesh's triangles used by findProjection, creating it if it did not exist in a thread-safe manner
-    MRMESH_API const AABBTreeWide & getAABBTreeWide() const;
-
-    /// returns cached 4-wide aabb-tree of this mesh's triangles, but does not create it if it did not exist
-    [[nodiscard]] const AABBTreeWide * getAABBTreeWideNotCreate() const { return AABBTreeWideOwner_.get(); }
 
     /// returns cached aabb-tree for points of this mesh, creating it if it did not exist in a thread-safe manner
     MRMESH_API const AABBTreePoints & getAABBTreePoints() const;
@@ -523,7 +517,6 @@ struct [[nodiscard]] Mesh
 
 private:
     mutable SharedThreadSafeOwner<AABBTree> AABBTreeOwner_;
-    mutable SharedThreadSafeOwner<AABBTreeWide> AABBTreeWideOwner_;
     mutable SharedThreadSafeOwner<AABBTreePoints> AABBTreePointsOwner_;
     mutable SharedThreadSafeOwner<Dipoles> dipolesOwner_;
 };

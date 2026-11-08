@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRAABBTreeWide.h"
+#include "MRAABBTree.h"
 #include "MRAffineXf.h"
 #include "MRBitSet.h"
 #include "MRBuffer.h"
@@ -13,7 +13,7 @@
 namespace MR
 {
 
-/// a pair of nodes of two AABBTreeWide (or of one tree) in their simultaneous traversal
+/// a pair of nodes of two AABBTree (or of one tree) in their simultaneous traversal
 struct WideNodePair
 {
     NodeId a, b;
@@ -22,7 +22,7 @@ struct WideNodePair
 /// pushes the pairs of each child of the bigger non-leaf node with the other node, if intersect( aNode, bNode ) of their boxes;
 /// returns false and pushes nothing if both nodes are leaves
 template<typename Intersect, typename Push>
-bool splitWidePair( const AABBTreeWide & aTree, const AABBTreeWide & bTree, const WideNodePair & s, Intersect && intersect, Push && push )
+bool splitWidePair( const AABBTree & aTree, const AABBTree & bTree, const WideNodePair & s, Intersect && intersect, Push && push )
 {
     const auto & an = aTree.nodes()[s.a];
     const auto & bn = bTree.nodes()[s.b];
@@ -45,7 +45,7 @@ bool splitWidePair( const AABBTreeWide & aTree, const AABBTreeWide & bTree, cons
 
 /// the same for the traversal of one tree with itself: a node paired with itself gives each child paired with itself and the pairs of different children
 template<typename Intersect, typename Push>
-bool splitSelfWidePair( const AABBTreeWide & tree, const WideNodePair & s, Intersect && intersect, Push && push )
+bool splitSelfWidePair( const AABBTree & tree, const WideNodePair & s, Intersect && intersect, Push && push )
 {
     if ( s.a != s.b )
         return splitWidePair( tree, tree, s, intersect, push );
@@ -68,7 +68,7 @@ bool splitSelfWidePair( const AABBTreeWide & tree, const WideNodePair & s, Inter
 /// in the traversal of one tree with itself (Self), a leaf paired with itself gives each pair of its triangles once, i < j;
 /// stops and returns false as soon as onTris returns false
 template<bool Self = false, typename TriNode, typename Tris, typename OnTris>
-bool forWideLeafTris( const AABBTreeWide & aTree, const AABBTreeWide & bTree, const WideNodePair & s, TriNode && triNode, Tris && tris, OnTris && onTris )
+bool forWideLeafTris( const AABBTree & aTree, const AABBTree & bTree, const WideNodePair & s, TriNode && triNode, Tris && tris, OnTris && onTris )
 {
     const auto & an = aTree.nodes()[s.a];
     const auto & bn = bTree.nodes()[s.b];
@@ -141,7 +141,7 @@ private:
 /// for the triangles (indices in leafTris()) of the visited leaves with boxes passing triOk( box );
 /// stops as soon as onTri returns Processing::Stop
 template<typename NodeOk, typename TriOk, typename OnTri>
-void forWideTris( const AABBTreeWide & tree, NodeOk && nodeOk, TriOk && triOk, OnTri && onTri )
+void forWideTris( const AABBTree & tree, NodeOk && nodeOk, TriOk && triOk, OnTri && onTri )
 {
     const auto & nodes = tree.nodes();
     if ( nodes.empty() || !nodeOk( nodes.front().box ) )

@@ -6,7 +6,7 @@
 #include "MRCudaMath.cuh"
 #include "MRCudaPipeline.h"
 
-#include "MRMesh/MRAABBTree.h"
+#include "MRMesh/MRAABBTreeBinary.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRChunkIterator.h"
 #include "MRMesh/MRDipole.h"
@@ -67,7 +67,7 @@ Expected<void> FastWindingNumber::prepareData_( ProgressCallback cb )
     if ( !reportProgress( cb, 0.3f ) )
         return unexpectedOperationCanceled();
 
-    const AABBTree& tree = mesh_.getAABBTree();
+    const AABBTreeBinary tree( mesh_ );
     if ( !reportProgress( cb, 0.5f ) )
         return unexpectedOperationCanceled();
 

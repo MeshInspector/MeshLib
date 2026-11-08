@@ -1,5 +1,5 @@
 #include "MRMeshCollide.h"
-#include "MRAABBTreeWideTraversal.hpp"
+#include "MRAABBTreeTraversal.hpp"
 #include "MRMesh.h"
 #include "MRParallelFor.h"
 #include "MRTriangleIntersection.h"
@@ -24,8 +24,8 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
     MR_TIMER;
 
     std::vector<FaceFace> res;
-    const AABBTreeWide & aTree = a.mesh.getAABBTreeWide();
-    const AABBTreeWide & bTree = b.mesh.getAABBTreeWide();
+    const AABBTree & aTree = a.mesh.getAABBTree();
+    const AABBTree & bTree = b.mesh.getAABBTree();
     if ( aTree.nodes().empty() || bTree.nodes().empty() )
         return res;
 
@@ -165,7 +165,7 @@ Expected<bool> findSelfCollidingTriangles(
     bool touchIsIntersection )
 {
     MR_TIMER;
-    const AABBTreeWide & tree = mp.mesh.getAABBTreeWide();
+    const AABBTree & tree = mp.mesh.getAABBTree();
     if ( tree.nodes().empty() )
         return false;
 

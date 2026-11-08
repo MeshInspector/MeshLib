@@ -1,5 +1,5 @@
 #include "MRCudaSolarRadiation.h"
-#include "MRMesh/MRAABBTree.h"
+#include "MRMesh/MRAABBTreeBinary.h"
 #include "MRCudaSolarRadiation.cuh"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRMeshIntersect.h"
@@ -45,7 +45,7 @@ BitSet findSkyRays( const Mesh& terrain, const VertCoords& samples, const VertBi
 {
     MR_TIMER;
 
-    const auto& tree = terrain.getAABBTree();
+    const AABBTreeBinary tree( terrain );
     const auto& nodes = tree.nodes();
 
     CUDA_EXEC( cudaSetDevice( 0 ) );
@@ -87,7 +87,7 @@ VertScalars  computeSkyViewFactor( const Mesh& terrain,
 {
     MR_TIMER;
 
-    const auto& tree = terrain.getAABBTree();
+    const AABBTreeBinary tree( terrain );
     const auto& nodes = tree.nodes();
 
     CUDA_EXEC( cudaSetDevice( 0 ) );

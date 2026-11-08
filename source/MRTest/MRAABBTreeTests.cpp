@@ -1,6 +1,6 @@
 #include <MRMesh/MRAABBTree.h>
+#include <MRMesh/MRAABBTreeBinary.h>
 #include <MRMesh/MRAABBTreeMaker.h>
-#include <MRMesh/MRAABBTreeWide.h>
 #include <MRMesh/MRMeshProject.h>
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRMesh.h>
@@ -20,10 +20,9 @@ TEST(MRMesh, AABBTree)
 {
     Mesh sphere = makeUVSphere( 1, 8, 8 );
     AABBTree tree( sphere );
-    EXPECT_EQ( tree.nodes().size(), getNumNodes( sphere.topology.numValidFaces() ) );
-    EXPECT_EQ( tree[AABBTree::rootNodeId()].box, sphere.computeBoundingBox().insignificantlyExpanded() );
-    EXPECT_TRUE( tree[AABBTree::rootNodeId()].l.valid() );
-    EXPECT_TRUE( tree[AABBTree::rootNodeId()].r.valid() );
+    EXPECT_EQ( tree.leafTris().size(), sphere.topology.numValidFaces() );
+    EXPECT_EQ( tree.getBoundingBox(), sphere.computeBoundingBox().insignificantlyExpanded() );
+    EXPECT_FALSE( tree.nodes().front().leaf() );
 
     assert( !tree.nodes().empty() );
     auto m = std::move( tree );
@@ -32,6 +31,22 @@ TEST(MRMesh, AABBTree)
     FaceBitSet fs;
     fs.autoResizeSet( 1_f );
     AABBTree smallerTree( { sphere, &fs } );
+    EXPECT_EQ( smallerTree.nodes().size(), 1 );
+    EXPECT_EQ( smallerTree.leafTris().size(), 1 );
+}
+
+TEST(MRMesh, AABBTreeBinary)
+{
+    Mesh sphere = makeUVSphere( 1, 8, 8 );
+    AABBTreeBinary tree( sphere );
+    EXPECT_EQ( tree.nodes().size(), getNumNodes( sphere.topology.numValidFaces() ) );
+    EXPECT_EQ( tree[AABBTreeBinary::rootNodeId()].box, sphere.computeBoundingBox().insignificantlyExpanded() );
+    EXPECT_TRUE( tree[AABBTreeBinary::rootNodeId()].l.valid() );
+    EXPECT_TRUE( tree[AABBTreeBinary::rootNodeId()].r.valid() );
+
+    FaceBitSet fs;
+    fs.autoResizeSet( 1_f );
+    AABBTreeBinary smallerTree( { sphere, &fs } );
     EXPECT_EQ( smallerTree.nodes().size(), 1 );
 }
 
@@ -44,7 +59,7 @@ TEST(MRMesh, ProjectionToEmptyMesh)
 
 // checks that every valid face of the mesh is in exactly one leaf, which box contains the face,
 // and the box of every other node contains the boxes of its children having larger ids
-static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
+static void expectValidTree( const AABBTreeBinary & tree, const Mesh & mesh )
 {
     const auto & nodes = tree.nodes();
     EXPECT_EQ( tree.numLeaves(), size_t( mesh.topology.numValidFaces() ) );
@@ -73,7 +88,7 @@ static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
 
 // checks that every valid face of the mesh is in exactly one leaf with its vertices and a box containing it,
 // and the box of every node contains the boxes of its triangles or of its children having larger ids
-static void expectValidTree( const AABBTreeWide & tree, const Mesh & mesh )
+static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
 {
     const auto & nodes = tree.nodes();
     EXPECT_EQ( tree.leafTris().size(), size_t( mesh.topology.numValidFaces() ) );
@@ -123,7 +138,7 @@ static void expectSameProjections( const Mesh & a, const Mesh & b )
 TEST( MRMesh, AABBTreeWideRefit )
 {
     Mesh mesh = makeSphere( { .radius = 1.0f, .numMeshVertices = 3366 } );
-    (void)mesh.getAABBTreeWide();
+    (void)mesh.getAABBTree();
 
     // move some vertices
     VertBitSet changed( mesh.topology.vertSize() );
@@ -136,7 +151,7 @@ TEST( MRMesh, AABBTreeWideRefit )
         }
     }
     mesh.updateCaches( &changed );
-    const auto * tree = mesh.getAABBTreeWideNotCreate();
+    const auto * tree = mesh.getAABBTreeNotCreate();
     ASSERT_TRUE( tree );
     expectValidTree( *tree, mesh );
     Mesh rebuilt = mesh;
@@ -147,7 +162,7 @@ TEST( MRMesh, AABBTreeWideRefit )
     for ( auto & p : mesh.points )
         p.z *= 0.5f;
     mesh.updateCaches( nullptr );
-    tree = mesh.getAABBTreeWideNotCreate();
+    tree = mesh.getAABBTreeNotCreate();
     ASSERT_TRUE( tree );
     expectValidTree( *tree, mesh );
     rebuilt = mesh;
@@ -163,10 +178,10 @@ TEST( MRMesh, AABBTreeWidePackOptimally )
         if ( mesh.triCenter( f ).y > 0.5f )
             del.set( f );
     mesh.deleteFaces( del );
-    (void)mesh.getAABBTreeWide();
+    (void)mesh.getAABBTree();
     mesh.packOptimally( true );
     ASSERT_EQ( mesh.topology.faceSize(), mesh.topology.numValidFaces() );
-    const auto * tree = mesh.getAABBTreeWideNotCreate();
+    const auto * tree = mesh.getAABBTreeNotCreate();
     ASSERT_TRUE( tree );
     expectValidTree( *tree, mesh );
     // the faces are numbered in the order of the leaves
@@ -186,6 +201,7 @@ TEST( MRMesh, AABBTreeAddSplitFaces )
 
     (void)mesh.getAABBTree();
     const Mesh orgMesh = mesh; // shares the tree with mesh
+    AABBTreeBinary binaryTree( mesh );
 
     // nothing is split, so the tree is still shared
     mesh.updateCachesAfterSplits( {} );
@@ -211,10 +227,8 @@ TEST( MRMesh, AABBTreeAddSplitFaces )
     ASSERT_TRUE( tree );
     expectValidTree( *tree, mesh );
     expectValidTree( orgMesh.getAABBTree(), orgMesh );
-    // the wide tree built by findCollidingTriangleBitsets above was updated too
-    const auto * wideTree = mesh.getAABBTreeWideNotCreate();
-    ASSERT_TRUE( wideTree );
-    expectValidTree( *wideTree, mesh );
+    binaryTree.addSplitFaces( mesh, new2Old );
+    expectValidTree( binaryTree, mesh );
 
     // the updated tree finds the same collisions as a new one
     Mesh rebuilt = mesh;

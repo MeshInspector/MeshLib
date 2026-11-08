@@ -153,7 +153,7 @@ std::optional<VertScalars> findZcompensationShifts( const Mesh& mesh, const ZCom
     assert( !params.reduceSelfIntersections || params.minThickness >= 0 );
 
     VertScalars zShifts( mesh.topology.vertSize() );
-    (void)mesh.getAABBTreeWide(); //prepare for findTrisInBall
+    (void)mesh.getAABBTree(); //prepare for findTrisInBall
     if ( !BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
     {
         const auto n = mesh.pseudonormal( v );

@@ -1,6 +1,6 @@
 #include "MRDipole.h"
 #include "MRAABBTree.h"
-#include "MRAABBTreeWide.h"
+#include "MRAABBTreeBinary.h"
 #include "MRInplaceStack.h"
 #include "MRMesh.h"
 #include "MRParallelFor.h"
@@ -21,7 +21,7 @@ static float distToFarthestCornerSq( const Box3f & box, const Vector3f & pos )
     return res;
 }
 
-void calcDipoles( Dipoles& dipoles, const AABBTree& tree_, const Mesh& mesh )
+void calcDipoles( Dipoles& dipoles, const AABBTreeBinary& tree_, const Mesh& mesh )
 {
     MR_TIMER;
     dipoles.resize( tree_.nodes().size() );
@@ -71,14 +71,14 @@ void calcDipoles( Dipoles& dipoles, const AABBTree& tree_, const Mesh& mesh )
     } );
 }
 
-Dipoles calcDipoles( const AABBTree& tree, const Mesh& mesh )
+Dipoles calcDipoles( const AABBTreeBinary& tree, const Mesh& mesh )
 {
     Dipoles dipoles;
     calcDipoles( dipoles, tree, mesh );
     return dipoles;
 }
 
-void calcDipoles( Dipoles& dipoles, const AABBTreeWide& tree, const Mesh& mesh )
+void calcDipoles( Dipoles& dipoles, const AABBTree& tree, const Mesh& mesh )
 {
     MR_TIMER;
     const auto & nodes = tree.nodes();
@@ -133,7 +133,7 @@ void calcDipoles( Dipoles& dipoles, const AABBTreeWide& tree, const Mesh& mesh )
     } );
 }
 
-Dipoles calcDipoles( const AABBTreeWide& tree, const Mesh& mesh )
+Dipoles calcDipoles( const AABBTree& tree, const Mesh& mesh )
 {
     Dipoles dipoles;
     calcDipoles( dipoles, tree, mesh );
@@ -155,42 +155,6 @@ static float triangleSolidAngle( const Vector3f & p, const Triangle3f & tri )
 }
 
 float calcFastWindingNumber( const Dipoles& dipoles, const AABBTree& tree, const Mesh& mesh,
-    const Vector3f & q, float beta, FaceId skipFace )
-{
-    if ( dipoles.empty() )
-    {
-        assert( false );
-        return 0;
-    }
-
-    const float betaSq = sqr( beta );
-    InplaceStack<NoInitNodeId, 32> subtasks;
-    subtasks.push( AABBTree::rootNodeId() );
-
-    float res = 0;
-    while ( !subtasks.empty() )
-    {
-        NodeId i = subtasks.top();
-        subtasks.pop();
-        const auto & node = tree[i];
-        const auto & d = dipoles[i];
-        if ( d.addIfGoodApprox( q, betaSq, res ) )
-            continue;
-        if ( !node.leaf() )
-        {
-            // recurse deeper
-            subtasks.push( node.r ); // to look later
-            subtasks.push( node.l ); // to look first
-            continue;
-        }
-        if ( node.leafId() != skipFace )
-            res += triangleSolidAngle( q, mesh.getTriPoints( node.leafId() ) );
-    }
-    constexpr float INV_4PI = 1.0f / ( 4 * PI_F );
-    return INV_4PI * res;
-}
-
-float calcFastWindingNumber( const Dipoles& dipoles, const AABBTreeWide& tree, const Mesh& mesh,
     const Vector3f & q, float beta, FaceId skipFace )
 {
     if ( dipoles.empty() )

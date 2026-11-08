@@ -79,8 +79,11 @@ static bool getPointSourceDistAtC( const Vector3d & a, const Vector3d & b, const
     // the path from the source to c crosses line ab at x = sx + ( cx - sx ) * sy / ( sy - cy ), which must be within (0, e2)
     const double t = ( cx - sx ) * sy;
     const double h = sy - cy; // negative
-    if ( checkCross && !( sx * h + t < 0 && ( sx - e2 ) * h + t > 0 ) )
-        return false;
+    if constexpr ( checkCross )
+    {
+        if ( !( sx * h + t < 0 && ( sx - e2 ) * h + t > 0 ) )
+            return false;
+    }
     dc = std::sqrt( ( sqr( cx - sx ) + sqr( cy - sy ) ) / e2 );
     return true;
 }

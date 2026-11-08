@@ -31,9 +31,9 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
 
     NodeBitSet aNodes, bNodes;
     if ( a.region )
-        aNodes = getWideNodesWithFaces( aTree, *a.region );
+        aNodes = aTree.getNodesFromFaces( *a.region );
     if ( b.region )
-        bNodes = getWideNodesWithFaces( bTree, *b.region );
+        bNodes = bTree.getNodesFromFaces( *b.region );
 
     std::optional<LazyTransformedBoxes<NodeId>> bNodeBoxes;
     std::optional<LazyTransformedBoxes<size_t>> bLeafBoxes;

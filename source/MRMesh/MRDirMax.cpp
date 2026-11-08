@@ -179,30 +179,9 @@ VertId findDirMaxWide( const Vector3f & dir, const MeshPart & mp, const AABBTree
 
 VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
 {
-    if ( u == UseAABBTree::No )
+    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeWideNotCreate() ) )
         return findDirMaxBruteForce( dir, mp );
-    if ( u == UseAABBTree::Yes || mp.mesh.getAABBTreeWideNotCreate() )
-        return findDirMaxWide( dir, mp, mp.mesh.getAABBTreeWide() );
-    if ( !mp.mesh.getAABBTreeNotCreate() )
-        return findDirMaxBruteForce( dir, mp );
-
-    return findDirMaxT( dir, mp.mesh.getAABBTree(), [&]( const AABBTree::Node & node, float & furthestProj, VertId & res )
-    {
-        FaceId face = node.leafId();
-        if ( mp.region && !mp.region->test( face ) )
-            return;
-        VertId vs[3];
-        mp.mesh.topology.getTriVerts( face, vs );
-        for ( int i = 0; i < 3; ++i )
-        {
-            auto proj = dot( mp.mesh.points[vs[i]], dir );
-            if ( proj > furthestProj )
-            {
-                furthestProj = proj;
-                res = vs[i];
-            }
-        }
-    } );
+    return findDirMaxWide( dir, mp, mp.mesh.getAABBTreeWide() );
 }
 
 VertId findDirMax( const Vector3f & dir, const MeshVertPart & mp, UseAABBTree u )

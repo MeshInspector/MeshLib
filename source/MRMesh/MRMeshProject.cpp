@@ -1,6 +1,7 @@
 #include "MRMeshProject.h"
 #include "MRAABBTree.h"
 #include "MRAABBTreeWide.h"
+#include "MRAABBTreeWideTraversal.hpp"
 #include "MRMesh.h"
 #include "MRClosestPointInTriangle.h"
 #include "MRBall.h"
@@ -126,12 +127,11 @@ namespace
 
 // Plain: no transformation, region, validFaces or validProjections, so the hot loops skip their checks
 template <bool Plain>
-MeshProjectionResult findProjectionWide( const Vector3f & pt, const MeshPart & mp, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
+MeshProjectionResult findProjectionWide( const Vector3f & pt, const MeshPart & mp, const AABBTreeWide & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
     const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections )
 {
     MeshProjectionResult res;
     res.distSq = upDistLimitSq;
-    const auto & tree = mp.mesh.getAABBTreeWide();
     const auto & nodes = tree.nodes();
     if ( nodes.empty() )
         return res;
@@ -255,15 +255,22 @@ MeshProjectionResult findProjectionWide( const Vector3f & pt, const MeshPart & m
 MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
     const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections )
 {
+    const auto & tree = mp.mesh.getAABBTreeWide();
     if ( !xf && !mp.region && !validFaces && !validProjections )
-        return findProjectionWide<true>( pt, mp, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
-    return findProjectionWide<false>( pt, mp, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
+        return findProjectionWide<true>( pt, mp, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
+    return findProjectionWide<false>( pt, mp, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
+}
+
+MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart & mp, const AABBTreeWide & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
+    const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections )
+{
+    return findProjectionWide<false>( pt, mp, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
 }
 
 namespace
 {
 
-// calls onTri( leafTri, ball ) for the triangles of mp in the leaves with boxes in the ball, closer subtrees first;
+// calls onTri( i, ball ) for the triangles (indices in leafTris()) of mp in the leaves with boxes in the ball, closer subtrees first;
 // onTri can shrink the ball or stop the search
 template <typename F>
 void forLeafTrisInBall( const MeshPart & mp, Ball3f & ball, F && onTri )
@@ -287,10 +294,9 @@ void forLeafTrisInBall( const MeshPart & mp, Ball3f & ball, F && onTri )
         {
             for ( int i = node.first, end = node.first + node.numLeafTris(); i < end; ++i )
             {
-                const auto & lt = tree.leafTris()[i];
-                if ( mp.region && !mp.region->test( lt.face ) )
+                if ( mp.region && !mp.region->test( tree.leafTris()[i].face ) )
                     continue;
-                if ( onTri( lt, ball ) == Processing::Stop )
+                if ( onTri( i, ball ) == Processing::Stop )
                     return;
             }
             continue;
@@ -324,63 +330,22 @@ void forLeafTrisInBall( const MeshPart & mp, Ball3f & ball, F && onTri )
 
 void findBoxedTrisInBall( const MeshPart & mp, Ball3f ball, const FoundBoxedTriCallback& foundCallback )
 {
-    const auto & tree = mp.mesh.getAABBTree();
-    if ( tree.nodes().empty() )
-        return;
-
-    InplaceStack<NoInitNodeId, 32> subtasks;
-
-    auto boxDistSq = [&]( NodeId n ) // squared distance from ball center to the box with interior
+    const auto & tree = mp.mesh.getAABBTreeWide();
+    forLeafTrisInBall( mp, ball, [&]( int i, Ball3f & b )
     {
-        return tree.nodes()[n].box.getDistanceSq( ball.center );
-    };
-
-    auto addSubTask = [&]( NodeId n )
-    {
-        subtasks.push( n );
-    };
-
-    addSubTask( tree.rootNodeId() );
-
-    while ( !subtasks.empty() )
-    {
-        const auto n = subtasks.top();
-        subtasks.pop();
-        const auto & node = tree[n];
-        if ( !( boxDistSq( n ) < ball.radiusSq ) )
-            continue;
-
-        if ( node.leaf() )
-        {
-            const auto face = node.leafId();
-            if ( mp.region && !mp.region->test( face ) )
-                continue;
-            if ( foundCallback( face, ball ) == Processing::Stop )
-                break;
-            continue;
-        }
-        
-        auto lDistSq = boxDistSq( node.l );
-        auto rDistSq = boxDistSq( node.r );
-        /// first go in the node located closer to ball's center (in case the ball will shrink and the other node will be away)
-        if ( lDistSq <= rDistSq )
-        {
-            addSubTask( node.r );
-            addSubTask( node.l );
-        }
-        else
-        {
-            addSubTask( node.l );
-            addSubTask( node.r );
-        }
-    }
+        if ( !( tree.leafBoxes()[i].getDistanceSq( b.center ) < b.radiusSq ) )
+            return Processing::Continue;
+        return foundCallback( tree.leafTris()[i].face, b );
+    } );
 }
 
 void findTrisInBall( const MeshPart & mp, const Ball3f& ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces )
 {
     Ball3f myBall = ball;
-    forLeafTrisInBall( mp, myBall, [&]( const AABBTreeWide::LeafTri & lt, Ball3f & b )
+    const auto & tree = mp.mesh.getAABBTreeWide();
+    forLeafTrisInBall( mp, myBall, [&]( int i, Ball3f & b )
     {
+        const auto & lt = tree.leafTris()[i];
         if ( validFaces && !validFaces( lt.face ) )
             return Processing::Continue;
 

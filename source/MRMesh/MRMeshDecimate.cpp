@@ -20,7 +20,7 @@
 #include "MRMeshDecimateCallbacks.h"
 #include "MRMapEdge.h"
 #include "MRObjectMesh.h"
-#include "MRAABBTree.h"
+#include "MRAABBTreeWide.h"
 
 namespace MR
 {
@@ -1073,15 +1073,15 @@ FaceBitSet getSubdividePart( const FaceBitSet & valids, size_t subdivideParts, s
 static Vector<FaceBitSet> getTreeParts( const Mesh & mesh, const DecimateSettings & settings )
 {
     MR_TIMER;
-    std::optional<AABBTree> ownTree;
-    const AABBTree * tree = mesh.getAABBTreeNotCreate();
+    std::optional<AABBTreeWide> ownTree;
+    const AABBTreeWide * tree = mesh.getAABBTreeWideNotCreate();
     if ( !tree )
         tree = &ownTree.emplace( MeshPart{ mesh, settings.region } );
     const auto roots = tree->getSubtrees( settings.subdivideParts );
     Vector<FaceBitSet> res( roots.size() );
     ParallelFor( res, [&]( size_t i )
     {
-        res[i] = tree->getSubtreeLeaves( roots[i] );
+        res[i] = tree->getSubtreeFaces( roots[i] );
         res[i].resize( mesh.topology.faceSize() );
     } );
     return res;
@@ -1651,7 +1651,7 @@ DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings0 )
         res = decimateMeshSerial( mesh, settings );
     else
         res = decimateMeshParallelInplace( mesh, settings, treeParts.empty() ? nullptr : &treeParts );
-    assert ( !mesh.getAABBTreeNotCreate() ); // make sure that nobody created the tree by mistake
+    assert ( !mesh.getAABBTreeNotCreate() && !mesh.getAABBTreeWideNotCreate() ); // make sure that nobody created the tree by mistake
     assert ( mesh.topology.checkValidity() );
     return res;
 }

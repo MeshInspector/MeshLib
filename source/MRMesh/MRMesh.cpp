@@ -218,7 +218,9 @@ Box3f Mesh::computeBoundingBox( const AffineXf3f * toWorld ) const
 
 Box3f Mesh::getBoundingBox() const
 {
-    // both trees have the same root box; the wide tree is smaller to build if none exists yet
+    // both trees have the same root box; the wide tree is used by all queries except winding numbers
+    if ( auto tree = getAABBTreeWideNotCreate() )
+        return tree->getBoundingBox();
     if ( auto tree = getAABBTreeNotCreate() )
         return tree->getBoundingBox();
     return getAABBTreeWide().getBoundingBox();
@@ -469,11 +471,12 @@ Expected<PackMapping> Mesh::packOptimally( bool preserveAABBTree, ProgressCallba
 
     PackMapping map;
     AABBTreePointsOwner_.reset(); // points-tree will be invalidated anyway
-    AABBTreeWideOwner_.reset();
+    AABBTreeOwner_.reset(); // the tree of winding numbers is built again when needed
+    dipolesOwner_.reset();
     // an already constructed tree gives the face order much faster than getOptimalFaceOrdering
-    if ( preserveAABBTree || AABBTreeOwner_.get() )
+    if ( preserveAABBTree || AABBTreeWideOwner_.get() )
     {
-        getAABBTree(); // ensure that tree is constructed
+        const auto & tree = getAABBTreeWide(); // ensure that tree is constructed
         map.f.b.resize( topology.faceSize() );
         const bool packed = topology.numValidFaces() == topology.faceSize();
         if ( !packed )
@@ -482,13 +485,9 @@ Expected<PackMapping> Mesh::packOptimally( bool preserveAABBTree, ProgressCallba
                 if ( !topology.hasFace( f ) )
                     map.f.b[f] = FaceId{};
         }
-        if ( preserveAABBTree )
-            AABBTreeOwner_.update( [&map]( AABBTree& t ) { t.getLeafOrderAndReset( map.f ); } );
-        else
-        {
-            AABBTreeOwner_.get()->getLeafOrder( map.f );
-            AABBTreeOwner_.reset();
-        }
+        tree.getLeafOrder( map.f );
+        if ( !preserveAABBTree )
+            AABBTreeWideOwner_.reset();
     }
     else
         map.f = getOptimalFaceOrdering( *this );
@@ -505,6 +504,7 @@ Expected<PackMapping> Mesh::packOptimally( bool preserveAABBTree, ProgressCallba
 
     if ( auto r = pack( map, subprogress( cb, 0.7f, 1.0f ) ); !r )
         return unexpected( std::move( r.error() ) );
+    AABBTreeWideOwner_.update( [&map]( AABBTreeWide & t ) { t.renumber( map.f, map.v ); } );
 
     return map;
 }
@@ -591,7 +591,11 @@ void Mesh::updateCaches( const VertBitSet * changedVerts )
         assert( tree.numLeaves() == topology.numValidFaces() );
         tree.refit( *this, changedVerts );
     } );
-    AABBTreeWideOwner_.reset();
+    AABBTreeWideOwner_.update( [&]( AABBTreeWide & tree )
+    {
+        assert( tree.leafTris().size() == topology.numValidFaces() );
+        tree.refit( *this, changedVerts );
+    } );
     AABBTreePointsOwner_.update( [&]( AABBTreePoints & tree )
     {
         assert( tree.orderedPoints().size() == topology.numValidVerts() );
@@ -609,7 +613,11 @@ void Mesh::updateCachesAfterSplits( const FaceHashMap & new2Old )
         tree.addSplitFaces( *this, new2Old );
         assert( tree.numLeaves() == topology.numValidFaces() );
     } );
-    AABBTreeWideOwner_.reset();
+    AABBTreeWideOwner_.update( [&]( AABBTreeWide & tree )
+    {
+        tree.addSplitFaces( *this, new2Old );
+        assert( tree.leafTris().size() == topology.numValidFaces() );
+    } );
     AABBTreePointsOwner_.reset(); // new vertices appeared
     dipolesOwner_.reset();
 }

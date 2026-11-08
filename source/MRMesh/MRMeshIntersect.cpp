@@ -1,5 +1,5 @@
 #include "MRMeshIntersect.h"
-#include "MRAABBTree.h"
+#include "MRAABBTreeWideTraversal.hpp"
 #include "MRAABBTreeWide.h"
 #include "MRInplaceStack.h"
 #include "MRMesh.h"
@@ -470,154 +470,71 @@ void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& line, MeshInte
     }
 }
 
-void planeMeshIntersect( const MeshPart& meshPart, const Plane3f & plane,
+namespace
+{
+
+// adds to the outputs the triangles of the mesh part, which boxes pass boxOk
+template <typename BoxOk>
+void boxedMeshIntersect( const MeshPart& meshPart, BoxOk && boxOk,
     FaceBitSet * fs, UndirectedEdgeBitSet * ues, VertBitSet * vs, std::vector<FaceId> * fsVec )
 {
-    MR_TIMER;
     assert( fs || ues || vs || fsVec );
-
     const auto& m = meshPart.mesh;
-    const auto& tree = m.getAABBTree();
-    if( tree.nodes().empty() )
-        return;
+    const auto& tree = m.getAABBTreeWide();
 
     assert( !fs  || fs->size()  >= m.topology.faceSize() );
     assert( !ues || ues->size() >= m.topology.undirectedEdgeSize() );
     assert( !vs  || vs->size()  >= m.topology.vertSize() );
 
-    constexpr int maxTreeDepth = 32;
-    NodeId nodesStack[maxTreeDepth];
-    int currentNode = -1;
+    forWideTris( tree, boxOk, boxOk, [&]( int i )
+    {
+        const auto & lt = tree.leafTris()[i];
+        const auto face = lt.face;
+        if ( meshPart.region && !meshPart.region->test( face ) )
+            return Processing::Continue;
+        if ( fs )
+            fs->set( face );
+        if ( fsVec )
+            fsVec->push_back( face );
+        if ( vs )
+            for ( auto v : lt.verts )
+                vs->set( v );
+        if ( ues )
+        {
+            EdgeId e0, e1, e2;
+            m.topology.getTriEdges( face, e0, e1, e2 );
+            ues->set( e0 );
+            ues->set( e1 );
+            ues->set( e2 );
+        }
+        return Processing::Continue;
+    } );
+}
 
+} // anonymous namespace
+
+void planeMeshIntersect( const MeshPart& meshPart, const Plane3f & plane,
+    FaceBitSet * fs, UndirectedEdgeBitSet * ues, VertBitSet * vs, std::vector<FaceId> * fsVec )
+{
+    MR_TIMER;
     auto minCorner = Box3f::getMinBoxCorner( plane.n );
     auto maxCorner = minCorner;
     for ( auto & v : maxCorner )
         v = !v;
-
-    auto addNode = [&]( NodeId nid )
+    boxedMeshIntersect( meshPart, [&]( const Box3f & box )
     {
-        const auto & box = tree[nid].box;
-        if ( dot( plane.n, box.corner( minCorner ) ) > plane.d )
-            return;
-        if ( dot( plane.n, box.corner( maxCorner ) ) < plane.d )
-            return;
-        nodesStack[++currentNode] = nid;
-    };
-    addNode( tree.rootNodeId() );
-
-    while( currentNode >= 0 )
-    {
-        if( currentNode >= maxTreeDepth ) // max depth exceeded
-        {
-            spdlog::critical( "Maximal AABBTree depth reached!" );
-            assert( false );
-            break;
-        }
-
-        const auto& node = tree[nodesStack[currentNode--]];
-        if( node.leaf() )
-        {
-            auto face = node.leafId();
-            if( !meshPart.region || meshPart.region->test( face ) )
-            {
-                if ( fs )
-                    fs->set( face );
-                if ( fsVec )
-                    fsVec->push_back( face );
-                if ( ues || vs )
-                {
-                    EdgeId e0, e1, e2;
-                    m.topology.getTriEdges( face, e0, e1, e2 );
-                    if ( ues )
-                    {
-                        ues->set( e0 );
-                        ues->set( e1 );
-                        ues->set( e2 );
-                    }
-                    if ( vs )
-                    {
-                        vs->set( m.topology.org( e0 ) );
-                        vs->set( m.topology.org( e1 ) );
-                        vs->set( m.topology.org( e2 ) );
-                    }
-                }
-            }
-            continue;
-        }
-        addNode( node.r ); // push first to go there later
-        addNode( node.l );
-    }
+        return dot( plane.n, box.corner( minCorner ) ) <= plane.d && dot( plane.n, box.corner( maxCorner ) ) >= plane.d;
+    }, fs, ues, vs, fsVec );
 }
 
 void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
     FaceBitSet * fs, UndirectedEdgeBitSet * ues, VertBitSet * vs, std::vector<FaceId> * fsVec )
 {
     MR_TIMER;
-    assert( fs || ues || vs || fsVec );
-
-    const auto& m = meshPart.mesh;
-    const auto& tree = m.getAABBTree();
-    if( tree.nodes().empty() )
-        return;
-
-    assert( !fs  || fs->size()  >= m.topology.faceSize() );
-    assert( !ues || ues->size() >= m.topology.undirectedEdgeSize() );
-    assert( !vs  || vs->size()  >= m.topology.vertSize() );
-
-    constexpr int maxTreeDepth = 32;
-    NodeId nodesStack[maxTreeDepth];
-    int currentNode = -1;
-
-    auto addNode = [&]( NodeId nid )
+    boxedMeshIntersect( meshPart, [zLevel]( const Box3f & box )
     {
-        const auto & box = tree[nid].box;
-        if ( box.min.z <= zLevel && box.max.z >= zLevel )
-            nodesStack[++currentNode] = nid;
-    };
-    addNode( tree.rootNodeId() );
-
-    while( currentNode >= 0 )
-    {
-        if( currentNode >= maxTreeDepth ) // max depth exceeded
-        {
-            spdlog::critical( "Maximal AABBTree depth reached!" );
-            assert( false );
-            break;
-        }
-
-        const auto& node = tree[nodesStack[currentNode--]];
-        if( node.leaf() )
-        {
-            auto face = node.leafId();
-            if( !meshPart.region || meshPart.region->test( face ) )
-            {
-                if ( fs )
-                    fs->set( face );
-                if ( fsVec )
-                    fsVec->push_back( face );
-                if ( ues || vs )
-                {
-                    EdgeId e0, e1, e2;
-                    m.topology.getTriEdges( face, e0, e1, e2 );
-                    if ( ues )
-                    {
-                        ues->set( e0 );
-                        ues->set( e1 );
-                        ues->set( e2 );
-                    }
-                    if ( vs )
-                    {
-                        vs->set( m.topology.org( e0 ) );
-                        vs->set( m.topology.org( e1 ) );
-                        vs->set( m.topology.org( e2 ) );
-                    }
-                }
-            }
-            continue;
-        }
-        addNode( node.r ); // push first to go there later
-        addNode( node.l );
-    }
+        return box.min.z <= zLevel && box.max.z >= zLevel;
+    }, fs, ues, vs, fsVec );
 }
 
 } //namespace MR

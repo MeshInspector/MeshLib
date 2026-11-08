@@ -360,14 +360,17 @@ jobs:
             --build cpp-examples-build \
             --parallel $(sysctl -n hw.physicalcpu)
 
+      # Not on the cross leg: cargo and the JVM of the arm64 host build for and load
+      # arm64, which cannot link or load the x86_64 libraries. (cargo could target
+      # x86_64-apple-darwin with that rustup target installed; a follow-up.)
       - name: Build and test Rust bindings
-        if: ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' }}
+        if: ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' && matrix.arch != 'x64-cross' }}
         uses: ./.github/actions/build-rust-bindings
         with:
           lib-dir: ${{ github.workspace }}/build/${{ matrix.config }}/bin
 
       - name: Build and test Java bindings
-        if: ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' }}
+        if: ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' && matrix.arch != 'x64-cross' }}
         uses: ./.github/actions/build-java-bindings
         with:
           lib-dir: ${{ github.workspace }}/build/${{ matrix.config }}/bin

@@ -35,7 +35,7 @@ AABBTree::AABBTree( const MeshPart & mp )
     if ( numFaces <= 0 )
         return;
 
-    // the tree is built with the input indices [0, numFaces) as leaf ids to address the vertices of i-th face in tris
+    // the i-th boxed face and tris address the i-th face of the region
     Vector<BoxedFace> boxedFaces;
     boxedFaces.resizeNoInit( numFaces );
     Buffer<VertId> tris( 3 * size_t( numFaces ) );
@@ -51,7 +51,6 @@ AABBTree::AABBTree( const MeshPart & mp )
 
     ParallelFor( 0, numFaces, [&] ( int i )
     {
-        boxedFaces[i].leafId = FaceId( i );
         const auto v = mp.mesh.topology.getTriVerts( packed ? FaceId( i ) : faces[i] );
         for ( int j = 0; j < 3; ++j )
             tris[3 * size_t( i ) + j] = v[j];
@@ -60,16 +59,13 @@ AABBTree::AABBTree( const MeshPart & mp )
 
     leaves_.resizeNoInit( numFaces );
     leafBoxes_.resizeNoInit( numFaces );
-    auto fillLeaf = [&]( size_t pos )
+    nodes_ = makeAABBTreeNodeVec( boxedFaces, [&]( size_t pos, size_t i )
     {
-        const int i = boxedFaces[pos].leafId;
-        leafBoxes_[pos] = boxedFaces[pos].box;
+        leafBoxes_[pos] = boxedFaces[i].box;
         leaves_[pos].leafId = packed ? FaceId( i ) : faces[i];
         for ( int j = 0; j < 3; ++j )
-            leaves_[pos].verts[j] = tris[3 * size_t( i ) + j];
-    };
-    const OnLeafCallback onLeaf( fillLeaf );
-    nodes_ = makeAABBTreeNodeVec( boxedFaces, &onLeaf );
+            leaves_[pos].verts[j] = tris[3 * i + j];
+    } );
 }
 
 void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )

@@ -2,10 +2,10 @@
 #include "MRAABBTreeNode.h"
 #include "MRAABBTreeBase.h"
 #include "MRBuffer.h"
+#include "MRParallelFor.h"
 #include "MRTimer.h"
 #include "MRPch/MRTBB.h"
-#include <stack>
-#include <thread>
+#include <algorithm>
 
 namespace MR
 {
@@ -13,179 +13,134 @@ namespace MR
 namespace
 {
 
-template<typename T>
-struct Subtree
-{
-    Subtree( NodeId root, int f, int n ) : root( root ), firstLeaf( f ), numLeaves( n ) { }
-    NodeId root; // of subtree, only for subtrees with at least two leaves
-    int firstLeaf = 0;
-    int numLeaves = 0;
-    bool leaf() const { assert( numLeaves >= 1 );  return numLeaves == 1; }
-};
-
+/// splits each node at the median of the leaf box centers along the largest extent of these centers;
+/// node boxes are united from the children's boxes
 template<typename T>
 class AABBTreeMaker
 {
 public:
     using Node = AABBTreeNode<T>;
     using NodeVec = Vector<Node, NodeId>;
-    using Subtree = MR::Subtree<T>;
     using BoxT = typename T::BoxT;
+    using V = decltype( BoxT{}.min );
 
-    NodeVec construct( Vector<BoxedLeaf<T>> & boxedLeaves, const OnLeafCallback * onLeaf );
+    AABBTreeMaker( const Vector<BoxedLeaf<T>> & boxedLeaves, OnLeafCallback onLeaf ) : boxedLeaves_( boxedLeaves ), onLeaf_( onLeaf ) { }
+    NodeVec construct();
 
 private:
-    BoxedLeaf<T> * boxedLeaves_ = nullptr;
-    const OnLeafCallback * onLeaf_ = nullptr;
+    /// sorted instead of BoxedLeaf: smaller and compared by one coordinate
+    struct Center
+    {
+        int i; ///< in boxedLeaves_
+        V c; ///< doubled center of the box
+
+        Center( int i, const V & c ) noexcept : i( i ), c( c ) { }
+        explicit Center( NoInit ) noexcept : c( noInit ) { }
+    };
+
+    const Vector<BoxedLeaf<T>> & boxedLeaves_;
+    OnLeafCallback onLeaf_;
+    Buffer<Center> centers_;
     NodeVec nodes_;
 
-private:
-    // [firstLeaf, result) will go to left child and [result, lastLeaf) - to the right child
-    int partitionLeaves_( const BoxT & box, int firstLeaf, int lastLeaf );
-    // constructs not-leaf node
-    std::pair<Subtree, Subtree> makeNode_( const Subtree & s );
-    // constructs given subtree, optionally splitting the job on given number of threads
-    void makeSubtree_( const Subtree & s, int numThreads );
+    int largestCentersAxis_( int first, int num ) const;
+    const BoxT & childBox_( NodeId c ) const { return Node::isLeaf( c ) ? boxedLeaves_[centers_[Node::leafIndex( c )].i].box : nodes_[c].box; }
+    // fills node n with the subtree of at least two leaves centers_[first, first + num)
+    void make_( NodeId n, int first, int num );
+    void makeChild_( NodeId c, int first, int num );
 };
 
 template<typename T>
-int AABBTreeMaker<T>::partitionLeaves_( const BoxT & box, int firstLeaf, int lastLeaf )
+int AABBTreeMaker<T>::largestCentersAxis_( int first, int num ) const
 {
-    assert( firstLeaf + 1 < lastLeaf );
-
-    // define total order of BoxedLeaves: no two distinct leaves are equivalent
-    auto less = [sortedDims = findSortedBoxDims( box )]( const BoxedLeaf<T> & a, const BoxedLeaf<T> & b )
-    {
-        // first compare (and split later) by the largest box dimension
-        for ( int i = decltype( sortedDims )::elements - 1; i >= 0; --i )
-        {
-            const int splitDim = sortedDims[i];
-            const auto aDim = a.box.min[splitDim] + a.box.max[splitDim];
-            const auto bDim = b.box.min[splitDim] + b.box.max[splitDim];
-            if ( aDim != bDim )
-                return aDim < bDim;
-        }
-        // if two boxes have equal centers then compare by id to distinguish them
-        return a.leafId < b.leafId;
-    };
-
-    const int midLeaf = firstLeaf + ( lastLeaf - firstLeaf ) / 2;
-    std::nth_element( boxedLeaves_ + firstLeaf, boxedLeaves_ + midLeaf, boxedLeaves_ + lastLeaf, less );
-    return midLeaf;
+    BoxT box;
+    for ( int i = 0; i < num; ++i )
+        box.include( centers_[first + i].c );
+    const auto sz = box.size();
+    int axis = 0;
+    for ( int d = 1; d < BoxT::elements; ++d )
+        if ( sz[d] > sz[axis] )
+            axis = d;
+    return axis;
 }
 
 template<typename T>
-auto AABBTreeMaker<T>::makeNode_( const Subtree & s ) -> std::pair<Subtree, Subtree>
+void AABBTreeMaker<T>::makeChild_( NodeId c, int first, int num )
 {
-    assert( !s.leaf() );
-    auto& node = nodes_[s.root];
-    node.box = {};
-    for ( size_t i = 0; i < s.numLeaves; ++i )
-        node.box.include( boxedLeaves_[s.firstLeaf + i].box );
+    if ( num == 1 )
+        onLeaf_( first, centers_[first].i );
+    else
+        make_( c, first, num );
+}
 
-    const int midLeaf = partitionLeaves_( node.box, s.firstLeaf, s.firstLeaf + s.numLeaves );
-    const int leftNumLeaves = midLeaf - s.firstLeaf;
-    const int rightNumLeaves = s.numLeaves - leftNumLeaves;
-    const auto lRoot = s.root + 1;
-    const auto rRoot = lRoot + getNumNodes( leftNumLeaves );
-    node.l = leftNumLeaves == 1 ? Node::leafChild( s.firstLeaf ) : lRoot;
-    node.r = rightNumLeaves == 1 ? Node::leafChild( midLeaf ) : rRoot;
-    if ( onLeaf_ )
+template<typename T>
+void AABBTreeMaker<T>::make_( NodeId n, int first, int num )
+{
+    assert( num >= 2 );
+    // ties are ordered by index to make the tree independent of std::nth_element
+    const int axis = largestCentersAxis_( first, num );
+    const int numL = num / 2;
+    const int numR = num - numL;
+    std::nth_element( centers_.data() + first, centers_.data() + first + numL, centers_.data() + first + num,
+        [axis]( const Center & a, const Center & b ) { return a.c[axis] < b.c[axis] || ( a.c[axis] == b.c[axis] && a.i < b.i ); } );
+
+    auto & node = nodes_[n];
+    node.l = numL == 1 ? Node::leafChild( first ) : n + 1;
+    node.r = numR == 1 ? Node::leafChild( first + numL ) : n + 1 + getNumNodes( numL );
+    if ( num < 4096 )
     {
-        if ( leftNumLeaves == 1 )
-            ( *onLeaf_ )( s.firstLeaf );
-        if ( rightNumLeaves == 1 )
-            ( *onLeaf_ )( midLeaf );
+        makeChild_( node.l, first, numL );
+        makeChild_( node.r, first + numL, numR );
     }
-    return
+    else
     {
-        Subtree( lRoot, s.firstLeaf, leftNumLeaves ),
-        Subtree( rRoot, midLeaf,     rightNumLeaves )
-    };
-}
-
-template<typename T>
-void AABBTreeMaker<T>::makeSubtree_( const Subtree & s, int numThreads )
-{
-    if ( s.leaf() )
-        return;
-    assert( s.root + getNumNodes( s.numLeaves ) <= nodes_.size() );
-
-    if ( numThreads >= 2 && s.numLeaves >= 32 )
-    {
-        // split subtree between two threads
-        const auto& lr = makeNode_( s );
-        const int rThreads = numThreads / 2;
-        const int lThreads = numThreads - rThreads;
         tbb::task_group group;
-        group.run( [&] () { makeSubtree_( lr.second, rThreads ); } );
-        makeSubtree_( lr.first, lThreads );
+        group.run( [&] { makeChild_( node.r, first + numL, numR ); } );
+        makeChild_( node.l, first, numL );
         group.wait();
-        return;
     }
-
-    // process subtree in this thread only
-    Timer t( "finishing" );
-    std::stack<Subtree> stack;
-    stack.push( s );
-
-    while ( !stack.empty() )
-    {
-        const Subtree x = stack.top();
-        stack.pop();
-        const auto & [ls, rs] = makeNode_( x );
-        if ( !rs.leaf() )
-            stack.push( rs );
-        if ( !ls.leaf() )
-            stack.push( ls ); // to process it first
-    }
+    auto box = childBox_( node.l );
+    box.include( childBox_( node.r ) );
+    node.box = box;
 }
 
 } // anonymous namespace
 
 template<typename T>
-auto AABBTreeMaker<T>::construct( Vector<BoxedLeaf<T>> & boxedLeaves, const OnLeafCallback * onLeaf ) -> NodeVec
+auto AABBTreeMaker<T>::construct() -> NodeVec
 {
     MR_TIMER;
 
-    boxedLeaves_ = boxedLeaves.data();
-    onLeaf_ = onLeaf;
-
-    const auto numLeaves = (int)boxedLeaves.size();
+    const auto numLeaves = (int)boxedLeaves_.size();
     assert( numLeaves > 0 );
-    nodes_.resizeNoInit( getNumNodes( numLeaves ) );
-    if ( numLeaves == 1 && onLeaf_ )
-        ( *onLeaf_ )( 0 );
-
-    // to equally balance the load on threads, subdivide the task on
-    // a power of two subtasks, which is at least twice the hardware concurrency
-    int numThreads = 1;
-    int target = std::thread::hardware_concurrency();
-    if ( target > 1 )
-        numThreads *= 2;
-    while ( target > 1 )
+    centers_.resize( numLeaves );
+    ParallelFor( 0, numLeaves, [&]( int i )
     {
-        numThreads *= 2;
-        target = ( target + 1 ) / 2;
-    }
-    makeSubtree_( Subtree( NodeId{ 0 }, 0, numLeaves ), numThreads );
+        const auto & box = boxedLeaves_[i].box;
+        centers_[i] = Center( i, box.min + box.max );
+    } );
+
+    nodes_.resizeNoInit( getNumNodes( numLeaves ) );
+    makeChild_( NodeId{ 0 }, 0, numLeaves );
 
     return std::move( nodes_ );
 }
 
 template<typename T>
-AABBTreeNodeVec<T> makeAABBTreeNodeVec( Vector<BoxedLeaf<T>> & boxedLeaves, const OnLeafCallback * onLeaf )
+AABBTreeNodeVec<T> makeAABBTreeNodeVec( const Vector<BoxedLeaf<T>> & boxedLeaves, OnLeafCallback onLeaf )
 {
-    return AABBTreeMaker<T>().construct( boxedLeaves, onLeaf );
+    return AABBTreeMaker<T>( boxedLeaves, onLeaf ).construct();
 }
 
 template<typename T>
 void AABBTreeBase<T>::build_( Vector<BoxedLeaf<T>> leaves ) requires leavesHaveBoxes
 {
     nodes_.clear();
-    leaves_ = std::move( leaves );
-    if ( !leaves_.empty() )
-        nodes_ = makeAABBTreeNodeVec( leaves_ );
+    leaves_.clear();
+    if ( leaves.empty() )
+        return;
+    leaves_.resizeNoInit( leaves.size() );
+    nodes_ = makeAABBTreeNodeVec( leaves, [&]( size_t leafIndex, size_t boxedLeafIndex ) { leaves_[leafIndex] = leaves[boxedLeafIndex]; } );
 }
 
 } //namespace MR

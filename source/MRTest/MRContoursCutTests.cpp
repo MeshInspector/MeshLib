@@ -16,6 +16,7 @@
 #include <MRMesh/MRCylinder.h>
 #include <MRMesh/MR2DContoursTriangulation.h>
 #include <MRMesh/MRMakeSphereMesh.h>
+#include <algorithm>
 #include <cmath>
 #include <random>
 
@@ -1061,15 +1062,17 @@ TEST( MRMesh, MeshCollidePrecise )
     EXPECT_EQ( intersections.size(), 152 );
 
     const auto contours = orderIntersectionContours( meshA.topology, meshB.topology, intersections );
-    EXPECT_EQ( contours.size(), 4 );
-    EXPECT_TRUE( contours[0].size() == 69 || // Apple Debug
-                 contours[0].size() == 71 );
-    EXPECT_TRUE( contours[1].size() == 9 ||  // Apple Debug
-                 contours[1].size() == 7 );
-    EXPECT_TRUE( contours[2].size() == 69 || // without FMA instruction (default settings for x86 or old compilers for ARM)
-                 contours[2].size() == 71 ); // with FMA instruction (modern compilers for ARM)
-    EXPECT_TRUE( contours[3].size() == 9 ||  // without FMA instruction (default settings for x86 or old compilers for ARM)
-                 contours[3].size() == 7 );  // with FMA instruction (modern compilers for ARM)
+    ASSERT_EQ( contours.size(), 4 );
+    // the order of the contours follows the order of the intersections found in the trees
+    std::vector<size_t> sizes;
+    for ( const auto & c : contours )
+        sizes.push_back( c.size() );
+    std::sort( sizes.begin(), sizes.end() );
+    // 7 and 71 with FMA instruction (modern compilers for ARM) or in Apple Debug, otherwise 9 and 69
+    EXPECT_TRUE( sizes[0] == 7 || sizes[0] == 9 );
+    EXPECT_TRUE( sizes[1] == 7 || sizes[1] == 9 );
+    EXPECT_TRUE( sizes[2] == 69 || sizes[2] == 71 );
+    EXPECT_TRUE( sizes[3] == 69 || sizes[3] == 71 );
 
     for ( const auto & c : contours )
     {

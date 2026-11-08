@@ -150,8 +150,8 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
     MR_TIMER;
     // build the trees of the input meshes: important for many calls to Boolean for the same mesh to avoid tree construction on every call
     tbb::task_group taskGroup;
-    taskGroup.run( [&] () { meshA.getAABBTree(); } );
-    meshB.getAABBTree();
+    taskGroup.run( [&] () { meshA.getAABBTreeWide(); } );
+    meshB.getAABBTreeWide();
     taskGroup.wait();
 
     // the meshes are copied in booleanImpl only when their cuts are known, with the room the cuts need

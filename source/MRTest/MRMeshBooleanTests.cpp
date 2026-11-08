@@ -885,6 +885,7 @@ TEST( MRMesh, SubdivideLoneContoursUpdatesAABBTree )
         for ( const auto & c : loneIntsA )
             loneFaces.autoResizeSet( c.intersections.front().face() );
         const auto numFaces = meshA.topology.numValidFaces();
+        (void)meshA.getAABBTree(); // the collisions above used AABBTreeWide
         subdivideLoneContours( meshA, loneIntsA );
         EXPECT_EQ( meshA.topology.numValidFaces(), numFaces + 2 * int( loneFaces.count() ) );
         const auto * tree = meshA.getAABBTreeNotCreate();

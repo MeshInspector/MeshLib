@@ -341,10 +341,12 @@ AABBTreeWide::AABBTreeWide( const MeshPart & mp )
     } );
     AABBTreeWideMaker maker( boxedFaces, centers, nodes_ );
     leafTris_.resize( boxedFaces.size() );
+    leafBoxes_.resize( boxedFaces.size() );
     ParallelFor( size_t( 0 ), leafTris_.size(), [&]( size_t i )
     {
-        const auto f = boxedFaces[centers[i].i].leafId;
-        leafTris_[i] = { f, mp.mesh.topology.getTriVerts( f ) };
+        const auto & bf = boxedFaces[centers[i].i];
+        leafTris_[i] = { bf.leafId, mp.mesh.topology.getTriVerts( bf.leafId ) };
+        leafBoxes_[i] = bf.box;
     } );
 }
 

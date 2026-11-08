@@ -237,6 +237,9 @@
     <ClInclude Include="MRAABBTreeWide.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
+    <ClInclude Include="MRAABBTreeWideTraversal.hpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
     <ClInclude Include="MRMeshDistance.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>

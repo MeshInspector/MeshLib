@@ -29,8 +29,8 @@ struct AABBTreeWideLeafTri
 };
 
 /// bounding volume hierarchy of mesh triangles with up to 4 children per node and up to 4 triangles per leaf;
-/// the children of a node are stored contiguously, and every leaf keeps the vertices of its triangles,
-/// which makes closest-point queries about 2x faster than with AABBTree and takes half of its memory
+/// the children of a node are stored contiguously, and every leaf keeps the vertices and the boxes of its triangles,
+/// which makes closest-point queries about 2x faster than with AABBTree and takes 80% of its memory
 class AABBTreeWide
 {
 public:
@@ -56,8 +56,11 @@ public:
     /// triangles of all leaves, the triangles of each leaf are contiguous
     [[nodiscard]] const Vector<LeafTri> & leafTris() const { return leafTris_; }
 
+    /// the bounding boxes of the triangles in the order of leafTris(), slightly expanded as the leaf boxes of AABBTree
+    [[nodiscard]] const Vector<Box3f> & leafBoxes() const { return leafBoxes_; }
+
     /// returns the amount of memory this object occupies on heap
-    [[nodiscard]] size_t heapBytes() const { return nodes_.heapBytes() + leafTris_.heapBytes(); }
+    [[nodiscard]] size_t heapBytes() const { return nodes_.heapBytes() + leafTris_.heapBytes() + leafBoxes_.heapBytes(); }
 
 private:
     AABBTreeWide( const AABBTreeWide & ) = default;
@@ -67,6 +70,7 @@ private:
 
     Vector<Node, NodeId> nodes_;
     Vector<LeafTri> leafTris_;
+    Vector<Box3f> leafBoxes_;
 };
 
 /// \}

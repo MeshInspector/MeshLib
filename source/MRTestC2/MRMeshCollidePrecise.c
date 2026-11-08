@@ -45,14 +45,17 @@ void testMeshCollidePrecise( void )
     const MR_MeshTopology* meshBTop = MR_Mesh_Get_topology( meshB );
     MR_Vector_MR_Vector_MR_VarEdgeTri* contours = MR_orderIntersectionContours( meshATop, meshBTop, intersections );
     TEST_ASSERT_INT_EQUAL( (int)MR_Vector_MR_Vector_MR_VarEdgeTri_size( contours ), 4 )
-    TEST_ASSERT( MR_Vector_MR_VarEdgeTri_size( MR_Vector_MR_Vector_MR_VarEdgeTri_index( contours, 0 ) ) == 69 || // Apple Debug
-                 MR_Vector_MR_VarEdgeTri_size( MR_Vector_MR_Vector_MR_VarEdgeTri_index( contours, 0 ) ) == 71 )
-    TEST_ASSERT( MR_Vector_MR_VarEdgeTri_size( MR_Vector_MR_Vector_MR_VarEdgeTri_index( contours, 1 ) ) == 9  || // Apple Debug
-                 MR_Vector_MR_VarEdgeTri_size( MR_Vector_MR_Vector_MR_VarEdgeTri_index( contours, 1 ) ) == 7 )
-    TEST_ASSERT( MR_Vector_MR_VarEdgeTri_size( MR_Vector_MR_Vector_MR_VarEdgeTri_index( contours, 2 ) ) == 69 || // without FMA instruction (default settings for x86 or old compilers for ARM)
-                 MR_Vector_MR_VarEdgeTri_size( MR_Vector_MR_Vector_MR_VarEdgeTri_index( contours, 2 ) ) == 71 ); // with FMA instruction (modern compilers for ARM)
-    TEST_ASSERT( MR_Vector_MR_VarEdgeTri_size( MR_Vector_MR_Vector_MR_VarEdgeTri_index( contours, 3 ) ) == 9 ||  // without FMA instruction (default settings for x86 or old compilers for ARM)
-                 MR_Vector_MR_VarEdgeTri_size( MR_Vector_MR_Vector_MR_VarEdgeTri_index( contours, 3 ) ) == 7 );  // with FMA instruction (modern compilers for ARM)
+    // the order of the contours follows the order of the intersections found in the trees;
+    // 7 and 71 with FMA instruction (modern compilers for ARM) or in Apple Debug, otherwise 9 and 69
+    int numShort = 0, numLong = 0;
+    for ( int i = 0; i < 4; ++i )
+    {
+        size_t size = MR_Vector_MR_VarEdgeTri_size( MR_Vector_MR_Vector_MR_VarEdgeTri_index( contours, i ) );
+        numShort += size == 7 || size == 9;
+        numLong += size == 69 || size == 71;
+    }
+    TEST_ASSERT_INT_EQUAL( numShort, 2 )
+    TEST_ASSERT_INT_EQUAL( numLong, 2 )
 
     MR_OneMeshContours* meshAContours = MR_OneMeshContours_DefaultConstruct();
     MR_OneMeshContours* meshBContours = MR_OneMeshContours_DefaultConstruct();

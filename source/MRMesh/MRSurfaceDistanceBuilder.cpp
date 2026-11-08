@@ -54,7 +54,8 @@ bool getFieldAtC( const Vector3f & b, const Vector3f & c, float vb, float & vc )
 
 /// consider triangle abc and a point source on the other side of line ab from c, at distances da from a and db from b;
 /// computes the distance from the source to c; if checkCross, returns false if the straight path from the source to c does not cross ab
-static bool getPointSourceDistAtC( const Vector3d & a, const Vector3d & b, const Vector3d & c, double da, double db, double & dc, bool checkCross = true )
+template <bool checkCross = true>
+static bool getPointSourceDistAtC( const Vector3d & a, const Vector3d & b, const Vector3d & c, double da, double db, double & dc )
 {
     const auto ab = b - a;
     const auto ac = c - a;
@@ -66,10 +67,15 @@ static bool getPointSourceDistAtC( const Vector3d & a, const Vector3d & b, const
         return false;
     const double sx = ( ( da - db ) * ( da + db ) + e2 ) / 2;
     const double sy2 = sqr( da ) * e2 - sqr( sx );
-    if ( !( sy2 > 0 ) )
-        return false;
+    if constexpr ( checkCross )
+    {
+        if ( !( sy2 > 0 ) )
+            return false;
+    }
+    else if ( !( sy2 > -1e-6 * sqr( e2 ) ) )
+        return false; // without the crossing check, the source on line ab (e.g. in vertex a or b) is accepted
     const double cy = std::sqrt( cy2 );
-    const double sy = -std::sqrt( sy2 );
+    const double sy = checkCross ? -std::sqrt( sy2 ) : -std::sqrt( std::max( sy2, 0.0 ) );
     // the path from the source to c crosses line ab at x = sx + ( cx - sx ) * sy / ( sy - cy ), which must be within (0, e2)
     const double t = ( cx - sx ) * sy;
     const double h = sy - cy; // negative
@@ -378,7 +384,8 @@ bool SurfaceDistanceBuilder::distAtC_( const Vector3f & pa, const Vector3f & pb,
     if ( !s1 )
     {
         double dc = 0;
-        if ( !getPointSourceDistAtC( Vector3d( pa ), Vector3d( pb ), Vector3d( pc ), da, db, dc, checkCross ) )
+        if ( !( checkCross ? getPointSourceDistAtC<true>( Vector3d( pa ), Vector3d( pb ), Vector3d( pc ), da, db, dc )
+            : getPointSourceDistAtC<false>( Vector3d( pa ), Vector3d( pb ), Vector3d( pc ), da, db, dc ) ) )
             return false;
         vc = start + dc;
         return true;

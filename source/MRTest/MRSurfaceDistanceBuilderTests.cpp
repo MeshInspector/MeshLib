@@ -107,6 +107,27 @@ TEST( MRMesh, SurfaceDistanceTwoSources )
     EXPECT_LT( maxErr, 2e-2f );
 }
 
+TEST( MRMesh, SurfaceDistanceAdjacentPoints )
+{
+    const int n = 41;
+    const auto mesh = makePlanarGrid( n, true );
+    const VertId s0( n / 2 * n + n / 2 ), s1( s0 + 1 );
+    VertBitSet points( mesh.topology.vertSize() );
+    points.set( s0 );
+    points.set( s1 );
+    // two separate start points at the ends of one edge: the fronts meet right from the start
+    const auto dist = computeSurfaceDistances( mesh, UndirectedEdgeBitSet{}, points );
+    float sumErr = 0, maxErr = 0;
+    for ( auto v : mesh.topology.getValidVerts() )
+    {
+        const float err = std::abs( dist[v] - std::min( ( mesh.points[v] - mesh.points[s0] ).length(), ( mesh.points[v] - mesh.points[s1] ).length() ) );
+        sumErr += err;
+        maxErr = std::max( maxErr, err );
+    }
+    EXPECT_LT( sumErr / ( n * n ), 1e-2f );
+    EXPECT_LT( maxErr, 0.2f );
+}
+
 TEST( MRMesh, SurfaceDistanceTwoSegments )
 {
     const int n = 41;

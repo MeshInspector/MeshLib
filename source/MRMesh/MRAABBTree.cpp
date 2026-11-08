@@ -35,43 +35,41 @@ AABBTree::AABBTree( const MeshPart & mp )
     if ( numFaces <= 0 )
         return;
 
+    // the tree is built with the input indices [0, numFaces) as leaf ids to address the vertices of i-th face in tris
     Vector<BoxedFace> boxedFaces;
     boxedFaces.resizeNoInit( numFaces );
+    Buffer<VertId> tris( 3 * size_t( numFaces ) );
     const bool packed = numFaces == mp.mesh.topology.faceSize();
+    Buffer<FaceId> faces;
     if ( !packed )
     {
+        faces = Buffer<FaceId>( numFaces );
         int n = 0;
         for ( auto f : mp.mesh.topology.getFaceIds( mp.region ) )
-            boxedFaces[n++].leafId = f;
+            faces[n++] = f;
     }
 
-    // compute aabb's of each face, and keep its vertices to put in the leaf after the leaves are ordered
-    Buffer<VertId> faceVerts( 3 * size_t( mp.mesh.topology.faceSize() ) );
     ParallelFor( 0, numFaces, [&] ( int i )
     {
-        FaceId f;
-        if ( packed )
-            boxedFaces[i].leafId = f = FaceId( i );
-        else
-            f = boxedFaces[i].leafId;
-        const auto v = mp.mesh.topology.getTriVerts( f );
+        boxedFaces[i].leafId = FaceId( i );
+        const auto v = mp.mesh.topology.getTriVerts( packed ? FaceId( i ) : faces[i] );
         for ( int j = 0; j < 3; ++j )
-            faceVerts[3 * size_t( f ) + j] = v[j];
+            tris[3 * size_t( i ) + j] = v[j];
         boxedFaces[i].box = computeTriBox( mp.mesh.points, v );
     } );
 
-    nodes_ = makeAABBTreeNodeVec( boxedFaces );
-
     leaves_.resizeNoInit( numFaces );
     leafBoxes_.resizeNoInit( numFaces );
-    ParallelFor( leaves_, [&]( size_t i )
+    auto fillLeaf = [&]( size_t pos )
     {
-        const auto f = boxedFaces[i].leafId;
-        leafBoxes_[i] = boxedFaces[i].box;
-        leaves_[i].leafId = f;
+        const int i = boxedFaces[pos].leafId;
+        leafBoxes_[pos] = boxedFaces[pos].box;
+        leaves_[pos].leafId = packed ? FaceId( i ) : faces[i];
         for ( int j = 0; j < 3; ++j )
-            leaves_[i].verts[j] = faceVerts[3 * size_t( f ) + j];
-    } );
+            leaves_[pos].verts[j] = tris[3 * size_t( i ) + j];
+    };
+    const OnLeafCallback onLeaf( fillLeaf );
+    nodes_ = makeAABBTreeNodeVec( boxedFaces, &onLeaf );
 }
 
 void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )

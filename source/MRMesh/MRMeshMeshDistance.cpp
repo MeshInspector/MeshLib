@@ -81,9 +81,8 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
             const auto aFace = aTree.leafId( s.a );
             const auto bFace = bTree.leafId( s.b );
 
-            Triangle3f av, bv;
-            a.mesh.getTriPoints( aFace, av[0], av[1], av[2] );
-            b.mesh.getTriPoints( bFace, bv[0], bv[1], bv[2] );
+            const auto av = aTree.leafTriPoints( a.mesh.points, s.a );
+            auto bv = bTree.leafTriPoints( b.mesh.points, s.b );
             if ( rigidB2A )
             {
                 bv[0] = ( *rigidB2A )( bv[0] );

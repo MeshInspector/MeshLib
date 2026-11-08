@@ -32,10 +32,11 @@ public:
     using Subtree = MR::Subtree<T>;
     using BoxT = typename T::BoxT;
 
-    NodeVec construct( Vector<BoxedLeaf<T>> & boxedLeaves );
+    NodeVec construct( Vector<BoxedLeaf<T>> & boxedLeaves, const OnLeafCallback * onLeaf );
 
 private:
     BoxedLeaf<T> * boxedLeaves_ = nullptr;
+    const OnLeafCallback * onLeaf_ = nullptr;
     NodeVec nodes_;
 
 private:
@@ -89,6 +90,13 @@ auto AABBTreeMaker<T>::makeNode_( const Subtree & s ) -> std::pair<Subtree, Subt
     const auto rRoot = lRoot + getNumNodes( leftNumLeaves );
     node.l = leftNumLeaves == 1 ? Node::leafChild( s.firstLeaf ) : lRoot;
     node.r = rightNumLeaves == 1 ? Node::leafChild( midLeaf ) : rRoot;
+    if ( onLeaf_ )
+    {
+        if ( leftNumLeaves == 1 )
+            ( *onLeaf_ )( s.firstLeaf );
+        if ( rightNumLeaves == 1 )
+            ( *onLeaf_ )( midLeaf );
+    }
     return
     {
         Subtree( lRoot, s.firstLeaf, leftNumLeaves ),
@@ -136,15 +144,18 @@ void AABBTreeMaker<T>::makeSubtree_( const Subtree & s, int numThreads )
 } // anonymous namespace
 
 template<typename T>
-auto AABBTreeMaker<T>::construct( Vector<BoxedLeaf<T>> & boxedLeaves ) -> NodeVec
+auto AABBTreeMaker<T>::construct( Vector<BoxedLeaf<T>> & boxedLeaves, const OnLeafCallback * onLeaf ) -> NodeVec
 {
     MR_TIMER;
 
     boxedLeaves_ = boxedLeaves.data();
+    onLeaf_ = onLeaf;
 
     const auto numLeaves = (int)boxedLeaves.size();
     assert( numLeaves > 0 );
     nodes_.resizeNoInit( getNumNodes( numLeaves ) );
+    if ( numLeaves == 1 && onLeaf_ )
+        ( *onLeaf_ )( 0 );
 
     // to equally balance the load on threads, subdivide the task on
     // a power of two subtasks, which is at least twice the hardware concurrency
@@ -163,9 +174,9 @@ auto AABBTreeMaker<T>::construct( Vector<BoxedLeaf<T>> & boxedLeaves ) -> NodeVe
 }
 
 template<typename T>
-AABBTreeNodeVec<T> makeAABBTreeNodeVec( Vector<BoxedLeaf<T>> & boxedLeaves )
+AABBTreeNodeVec<T> makeAABBTreeNodeVec( Vector<BoxedLeaf<T>> & boxedLeaves, const OnLeafCallback * onLeaf )
 {
-    return AABBTreeMaker<T>().construct( boxedLeaves );
+    return AABBTreeMaker<T>().construct( boxedLeaves, onLeaf );
 }
 
 template<typename T>

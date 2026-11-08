@@ -15,16 +15,12 @@
 #include "MRBuffer.h"
 #include "MRBitSet.h"
 
+#include <algorithm>
 #include <atomic>
 #include <thread>
 
 namespace MR
 {
-
-namespace
-{
-
-} // anonymous namespace
 
 std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart & b, const AffineXf3f * rigidB2A, bool firstIntersectionOnly )
 {
@@ -254,8 +250,8 @@ Expected<bool> findSelfCollidingTriangles(
                     }
                     else
                     {
-                        mp.mesh.topology.getTriVerts( aFace, av[0], av[1], av[2] );
-                        mp.mesh.topology.getTriVerts( bFace, bv[0], bv[1], bv[2] );
+                        std::copy_n( tree.leafVerts( s.aNode ).begin(), 3, av );
+                        std::copy_n( tree.leafVerts( s.bNode ).begin(), 3, bv );
                     }
                     for ( int j = 0; j < 3; ++j )
                     {

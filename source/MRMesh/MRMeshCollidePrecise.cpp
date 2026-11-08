@@ -172,14 +172,15 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const A
     };
 
     const int aVertsSize = (int)a.mesh.topology.vertSize();
-    auto checkTwoTris = [&]( FaceId aTri, FaceId bTri, PreciseCollisionResult & res )
+    auto checkTwoTris = [&]( NodeId aLeaf, NodeId bLeaf, PreciseCollisionResult & res )
     {
+        const auto aTri = aTree.leafId( aLeaf );
+        const auto bTri = bTree.leafId( bLeaf );
         PreciseVertCoords avc[3], bvc[3];
-        a.mesh.topology.getTriVerts( aTri, avc[0].id, avc[1].id, avc[2].id );
-        b.mesh.topology.getTriVerts( bTri, bvc[0].id, bvc[1].id, bvc[2].id );
-
         for ( int j = 0; j < 3; ++j )
         {
+            avc[j].id = aTree.leafVerts( aLeaf )[j];
+            bvc[j].id = bTree.leafVerts( bLeaf )[j];
             avc[j].pt = conv( a.mesh.points[avc[j].id] );
             const auto bf = b.mesh.points[bvc[j].id];
             bvc[j].pt = conv( rigidB2A ? (*rigidB2A)( bf ) : bf );
@@ -291,7 +292,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const A
                 const auto bFace = bTree.leafId( s.bNode );
                 if ( b.region && !b.region->test( bFace ) )
                     continue;
-                checkTwoTris( aFace, bFace, *myRes.vec );
+                checkTwoTris( s.aNode, s.bNode, *myRes.vec );
                 if ( anyIntersection && !myRes.vec->empty() )
                 {
                     anyIntersectionAtm.store( true, std::memory_order_relaxed );
@@ -576,11 +577,16 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
         return l < r;
     };
 
-    auto checkTwoTris = [&] ( FaceId lTri, FaceId rTri, std::vector<EdgeTri>& res )
+    auto checkTwoTris = [&] ( NodeId lLeaf, NodeId rLeaf, std::vector<EdgeTri>& res )
     {
+        const auto lTri = tree.leafId( lLeaf );
+        const auto rTri = tree.leafId( rLeaf );
         PreciseVertCoords lvc[3], rvc[3];
-        mp.mesh.topology.getTriVerts( lTri, lvc[0].id, lvc[1].id, lvc[2].id );
-        mp.mesh.topology.getTriVerts( rTri, rvc[0].id, rvc[1].id, rvc[2].id );
+        for ( int j = 0; j < 3; ++j )
+        {
+            lvc[j].id = tree.leafVerts( lLeaf )[j];
+            rvc[j].id = tree.leafVerts( rLeaf )[j];
+        }
 
         // the triangles with two shared vertices (connected by a shared edge or by multiple edges) can meet only along the segment between them,
         // so they are skipped; otherwise find the indices of the shared vertex in both triangles
@@ -689,7 +695,7 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
                 const auto rFace = tree.leafId( s.bNode );
                 if ( mp.region && !mp.region->test( rFace ) )
                     return Processing::Continue;
-                checkTwoTris( lFace, rFace, myRes );
+                checkTwoTris( s.aNode, s.bNode, myRes );
                 if ( anyIntersection && !myRes.empty() )
                 {
                     keepGoing.store( false, std::memory_order_relaxed );

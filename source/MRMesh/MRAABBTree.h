@@ -29,6 +29,10 @@ public:
     /// returns the vertices of the triangle of given leaf
     [[nodiscard]] const ThreeVertIds & leafVerts( NodeId n ) const { return leaf( n ).verts; }
 
+    /// returns the coordinates of the vertices of the triangle of given leaf in the order of leafVerts( n )
+    [[nodiscard]] Triangle3f leafTriPoints( const VertCoords & points, NodeId n ) const
+        { const auto & v = leafVerts( n ); return { points[v[0]], points[v[1]], points[v[2]] }; }
+
     /// the bounding boxes of the triangles of all leaves, in the order of leaves()
     using LeafBoxes = Vector<Box3f>;
     [[nodiscard]] const LeafBoxes & leafBoxes() const { return leafBoxes_; }

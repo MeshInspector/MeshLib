@@ -34,6 +34,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRCudaPointsProject.cpp" />
+    <ClCompile Include="MRCudaSolarRadiationTests.cpp" />
     <ClCompile Include="MRTestCuda.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

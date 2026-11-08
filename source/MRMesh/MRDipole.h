@@ -29,10 +29,6 @@ struct Dipole
 
 static_assert( sizeof( Dipole ) == 8 * sizeof( float ) );
 
-/// calculates dipoles for given mesh and its binary AABB-tree, which only CUDA still uses
-MRMESH_API void calcDipoles( Dipoles& dipoles, const AABBTreeBinary& tree, const Mesh& mesh );
-[[nodiscard]] MRMESH_API Dipoles calcDipoles( const AABBTreeBinary& tree, const Mesh& mesh );
-
 /// calculates the dipoles of all nodes of given AABBTree of the mesh, a leaf has one dipole for all its triangles
 MRMESH_API void calcDipoles( Dipoles& dipoles, const AABBTree& tree, const Mesh& mesh );
 [[nodiscard]] MRMESH_API Dipoles calcDipoles( const AABBTree& tree, const Mesh& mesh );

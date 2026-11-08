@@ -76,7 +76,7 @@ Expected<void> FastWindingNumber::prepareData_( ProgressCallback cb )
     if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
 
-    CUDA_LOGE_RETURN_UNEXPECTED( data->dipoles.fromVector( mesh_.getDipoles() ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( data->dipoles.fromVector( calcDipoles( tree, mesh_ ) ) );
     if ( !reportProgress( cb, 1.0f ) )
         return unexpectedOperationCanceled();
 

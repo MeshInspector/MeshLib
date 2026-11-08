@@ -203,7 +203,7 @@ std::optional<float> Mesh::signedDistance( const Vector3f & pt, float maxDistSq,
 
 float Mesh::calcFastWindingNumber( const Vector3f & pt, float beta ) const
 {
-    return MR::calcFastWindingNumber( getDipoles(), getAABBTree(), *this, pt, beta, {} );
+    return MR::calcFastWindingNumber( getDipoles(), getAABBTreeWide(), *this, pt, beta, {} );
 }
 
 QuadraticForm3f Mesh::quadraticForm( VertId v, bool angleWeigted, const FaceBitSet * region, const UndirectedEdgeBitSet * creases ) const
@@ -566,7 +566,7 @@ const Dipoles & Mesh::getDipoles() const
 {
     if ( auto pRes = dipolesOwner_.get() )
         return *pRes; // fast path without tree access
-    const auto & tree = getAABBTree(); // must be ready before lambda body for single-threaded Emscripten
+    const auto & tree = getAABBTreeWide(); // must be ready before lambda body for single-threaded Emscripten
     const auto & res = dipolesOwner_.getOrCreate(
         [this, &tree] {
             return calcDipoles( tree, *this );

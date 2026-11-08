@@ -1,5 +1,6 @@
 #include "MRDipole.h"
 #include "MRAABBTree.h"
+#include "MRAABBTreeWide.h"
 #include "MRInplaceStack.h"
 #include "MRMesh.h"
 #include "MRParallelFor.h"
@@ -77,6 +78,68 @@ Dipoles calcDipoles( const AABBTree& tree, const Mesh& mesh )
     return dipoles;
 }
 
+void calcDipoles( Dipoles& dipoles, const AABBTreeWide& tree, const Mesh& mesh )
+{
+    MR_TIMER;
+    const auto & nodes = tree.nodes();
+    dipoles.resize( nodes.size() );
+
+    // the leaves from their triangles
+    ParallelFor( dipoles, [&]( NodeId i )
+    {
+        const auto & node = nodes[i];
+        if ( !node.leaf() )
+            return;
+        Dipole d;
+        for ( int t = node.first, end = node.first + node.numLeafTris(); t < end; ++t )
+        {
+            const auto & lt = tree.leafTris()[t];
+            const auto & a = mesh.points[lt.verts[0]];
+            const auto & b = mesh.points[lt.verts[1]];
+            const auto & c = mesh.points[lt.verts[2]];
+            const auto da = 0.5f * cross( b - a, c - a );
+            const auto area = da.length();
+            d.pos += area * ( a + b + c ) / 3.0f; // ( area * pos ) for now
+            d.area += area;
+            d.dirArea += da;
+        }
+        dipoles[i] = d;
+    } );
+
+    // the other nodes from the last: children follow their parent
+    for ( auto i = dipoles.backId(); i.valid(); --i )
+    {
+        const auto & node = nodes[i];
+        if ( node.leaf() )
+            continue;
+        Dipole d;
+        for ( int c = 0; c < node.count; ++c )
+        {
+            const auto & dc = dipoles[NodeId( node.first + c )];
+            d.pos += dc.pos;
+            d.area += dc.area;
+            d.dirArea += dc.dirArea;
+        }
+        dipoles[i] = d;
+    }
+
+    // center of mass and the distance to the farthest corner for all nodes
+    ParallelFor( dipoles, [&]( NodeId i )
+    {
+        auto & d = dipoles[i];
+        if ( d.area > 0 )
+            d.pos /= d.area;
+        d.rr = distToFarthestCornerSq( nodes[i].box, d.pos );
+    } );
+}
+
+Dipoles calcDipoles( const AABBTreeWide& tree, const Mesh& mesh )
+{
+    Dipoles dipoles;
+    calcDipoles( dipoles, tree, mesh );
+    return dipoles;
+}
+
 /// see (6) in https://users.cs.utah.edu/~ladislav/jacobson13robust/jacobson13robust.pdf
 static float triangleSolidAngle( const Vector3f & p, const Triangle3f & tri )
 {
@@ -122,6 +185,46 @@ float calcFastWindingNumber( const Dipoles& dipoles, const AABBTree& tree, const
         }
         if ( node.leafId() != skipFace )
             res += triangleSolidAngle( q, mesh.getTriPoints( node.leafId() ) );
+    }
+    constexpr float INV_4PI = 1.0f / ( 4 * PI_F );
+    return INV_4PI * res;
+}
+
+float calcFastWindingNumber( const Dipoles& dipoles, const AABBTreeWide& tree, const Mesh& mesh,
+    const Vector3f & q, float beta, FaceId skipFace )
+{
+    if ( dipoles.empty() )
+    {
+        assert( false );
+        return 0;
+    }
+
+    const float betaSq = sqr( beta );
+    const auto & nodes = tree.nodes();
+    // every level adds at most MaxChildren - 1 nodes, and the tree of 2^31 triangles has 16 levels
+    InplaceStack<NoInitNodeId, 64> subtasks;
+    subtasks.push( NodeId( 0 ) );
+
+    float res = 0;
+    while ( !subtasks.empty() )
+    {
+        const NodeId i = subtasks.top();
+        subtasks.pop();
+        if ( dipoles[i].addIfGoodApprox( q, betaSq, res ) )
+            continue;
+        const auto & node = nodes[i];
+        if ( !node.leaf() )
+        {
+            for ( int c = node.count - 1; c >= 0; --c )
+                subtasks.push( NodeId( node.first + c ) );
+            continue;
+        }
+        for ( int t = node.first, end = node.first + node.numLeafTris(); t < end; ++t )
+        {
+            const auto & lt = tree.leafTris()[t];
+            if ( lt.face != skipFace )
+                res += triangleSolidAngle( q, { mesh.points[lt.verts[0]], mesh.points[lt.verts[1]], mesh.points[lt.verts[2]] } );
+        }
     }
     constexpr float INV_4PI = 1.0f / ( 4 * PI_F );
     return INV_4PI * res;

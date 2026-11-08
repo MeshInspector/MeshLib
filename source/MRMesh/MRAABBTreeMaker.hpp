@@ -24,7 +24,7 @@ public:
     using BoxT = typename T::BoxT;
     using V = decltype( BoxT{}.min );
 
-    AABBTreeMaker( const Vector<BoxedLeaf<T>> & boxedLeaves, OnLeafCallback onLeaf ) : boxedLeaves_( boxedLeaves ), onLeaf_( onLeaf ) { }
+    AABBTreeMaker( const Vector<BoxedLeaf<T>> & boxedLeaves, const OnLeafCallback & onLeaf ) : boxedLeaves_( boxedLeaves ), onLeaf_( onLeaf ) { }
     NodeVec construct();
 
 private:
@@ -39,7 +39,7 @@ private:
     };
 
     const Vector<BoxedLeaf<T>> & boxedLeaves_;
-    OnLeafCallback onLeaf_;
+    const OnLeafCallback & onLeaf_; // a copy would reference the source FunctionRef via its template constructor
     Buffer<Center> centers_;
     NodeVec nodes_;
 

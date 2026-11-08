@@ -36,8 +36,6 @@ public:
 private:
     AABBTreeBinary( const AABBTreeBinary & ) = default;
     AABBTreeBinary & operator =( const AABBTreeBinary & ) = default;
-    friend class UniqueThreadSafeOwner<AABBTreeBinary>;
-    friend class SharedThreadSafeOwner<AABBTreeBinary>;
 };
 
 } // namespace MR

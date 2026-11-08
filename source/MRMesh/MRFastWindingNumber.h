@@ -66,7 +66,7 @@ private:
     [[nodiscard]] float calc_( const Vector3f & q, float beta, FaceId skipFace = {} ) const;
 
     const Mesh & mesh_;
-    const AABBTreeWide & tree_;
+    const AABBTree & tree_;
     const Dipoles & dipoles_;
 };
 

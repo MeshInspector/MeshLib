@@ -234,10 +234,7 @@
     <ClInclude Include="MRAABBTree.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
-    <ClInclude Include="MRAABBTreeWide.h">
-      <Filter>Source Files\AABBTree</Filter>
-    </ClInclude>
-    <ClInclude Include="MRAABBTreeWideTraversal.hpp">
+    <ClInclude Include="MRAABBTreeTraversal.hpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshDistance.h">
@@ -1335,7 +1332,7 @@
     <ClInclude Include="MRMeshDoubleLayer.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
-    <ClInclude Include="MRProcessSelfTreeSubtasks.h">
+    <ClInclude Include="MRAABBTreeBinary.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRParallelMinMax.h">
@@ -2321,7 +2318,7 @@
     <ClCompile Include="MRMeshDoubleLayer.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
-    <ClCompile Include="MRProcessSelfTreeSubtasks.cpp">
+    <ClCompile Include="MRAABBTreeBinary.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRClosestWeightedPoint.cpp">

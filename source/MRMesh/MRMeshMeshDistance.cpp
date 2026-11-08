@@ -1,5 +1,5 @@
 #include "MRMeshMeshDistance.h"
-#include "MRAABBTreeWide.h"
+#include "MRAABBTree.h"
 #include "MRInplaceStack.h"
 #include "MRMesh.h"
 #include "MRTriDist.h"
@@ -17,8 +17,8 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
 {
     MR_TIMER;
 
-    const AABBTreeWide& aTree = a.mesh.getAABBTreeWide();
-    const AABBTreeWide& bTree = b.mesh.getAABBTreeWide();
+    const AABBTree& aTree = a.mesh.getAABBTree();
+    const AABBTree& bTree = b.mesh.getAABBTree();
 
     MeshMeshDistanceResult res;
     res.distSq = upDistLimitSq;
@@ -65,8 +65,8 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
         const auto& bNode = bTree.nodes()[s.b];
         if ( aNode.leaf() && bNode.leaf() )
         {
-            Box3f bBoxes[AABBTreeWide::MaxLeafTris];
-            Triangle3f bTris[AABBTreeWide::MaxLeafTris];
+            Box3f bBoxes[AABBTree::MaxLeafTris];
+            Triangle3f bTris[AABBTree::MaxLeafTris];
             for ( int j = 0; j < bNode.numLeafTris(); ++j )
             {
                 const auto & bt = bTree.leafTris()[bNode.first + j];
@@ -104,7 +104,7 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
         }
 
         // split the bigger non-leaf node, and add the children with smaller distance last to descend there first
-        SubTask ch[AABBTreeWide::MaxChildren];
+        SubTask ch[AABBTree::MaxChildren];
         int numCh = 0;
         auto add = [&]( const SubTask & t )
         {

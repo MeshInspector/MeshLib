@@ -3,7 +3,7 @@
 
 #include "MRCudaBasic.h"
 
-#include "MRMesh/MRAABBTree.h"
+#include "MRMesh/MRAABBTreeBinary.h"
 #include "MRMesh/MRChunkIterator.h"
 #include "MRMesh/MRMatrix3Decompose.h"
 #include "MRMesh/MRMesh.h"
@@ -37,7 +37,7 @@ void PointsToMeshProjector::updateMeshData( const MR::Mesh* mesh )
     }
     MR_TIMER;
 
-    const AABBTree& tree = mesh->getAABBTree();
+    const AABBTreeBinary tree( *mesh );
     const auto& nodes = tree.nodes();
     const auto& meshPoints = mesh->points;
     const auto tris = mesh->topology.getTriangulation();

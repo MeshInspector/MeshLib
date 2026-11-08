@@ -35,7 +35,7 @@ public:
     /// implemented via obj.getBoundingBox()
     [[nodiscard]] MRMESH_API Box3f getObjBoundingBox() const;
 
-    /// if the tree used by projections (AABBTreeWide of a mesh, AABBTreePoints of a cloud) is already built does nothing otherwise builds and caches it
+    /// if the tree used by projections (AABBTree of a mesh, AABBTreePoints of a cloud) is already built does nothing otherwise builds and caches it
     MRMESH_API void cacheAABBTree() const;
 
     /// passes through all valid vertices and finds the minimal bounding box containing all of them;

@@ -5,7 +5,7 @@
 #include "MRBitSetParallelFor.h"
 #include "MRVolumeIndexer.h"
 #include "MRMeshProject.h"
-#include "MRAABBTreeWide.h"
+#include "MRAABBTree.h"
 #include "MRDipole.h"
 #include "MRIsNaN.h"
 #include "MRDistanceToMeshOptions.h"
@@ -15,7 +15,7 @@ namespace MR
 
 FastWindingNumber::FastWindingNumber( const Mesh & mesh ) :
     mesh_( mesh ),
-    tree_( mesh.getAABBTreeWide() ),
+    tree_( mesh.getAABBTree() ),
     dipoles_( mesh.getDipoles() )
 {
 }

@@ -1,5 +1,5 @@
 #include "MRMeshCollidePrecise.h"
-#include "MRAABBTreeWideTraversal.hpp"
+#include "MRAABBTreeTraversal.hpp"
 #include "MRMesh.h"
 #include "MRPrecisePredicates3.h"
 #include "MRFaceFace.h"
@@ -37,7 +37,7 @@ bool preciseBoxesIntersect( const Box3f & a, const Box3f & b, const ConvertToInt
 class PreciseBoxesIntersection
 {
 public:
-    PreciseBoxesIntersection( const AABBTreeWide & aTree, const AABBTreeWide & bTree, const ConvertToIntVector & conv, const AffineXf3f * xf )
+    PreciseBoxesIntersection( const AABBTree & aTree, const AABBTree & bTree, const ConvertToIntVector & conv, const AffineXf3f * xf )
         : aTree_( aTree ), bTree_( bTree ), conv_( conv ), minGap_( 2 / conv.invRange )
     {
         if ( xf )
@@ -55,8 +55,8 @@ private:
     bool test_( const Box3f & a, const Box3f & b ) const { return preciseBoxesIntersect( a, b, conv_, minGap_ ); }
     Box3f bNodeBox_( NodeId b ) const { return bNodeBoxes_ ? bNodeBoxes_->get( b, bTree_.nodes()[b].box ) : bTree_.nodes()[b].box; }
 
-    const AABBTreeWide & aTree_;
-    const AABBTreeWide & bTree_;
+    const AABBTree & aTree_;
+    const AABBTree & bTree_;
     const ConvertToIntVector & conv_;
     double minGap_ = 0;
     std::optional<LazyTransformedBoxes<NodeId>> bNodeBoxes_;
@@ -64,8 +64,8 @@ private:
 };
 
 /// finds all pairs of colliding edges and triangles of two mesh parts, given the AABB trees with (at least) all triangles of the parts
-PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const AABBTreeWide & aTree,
-    const MeshPart & b, const AABBTreeWide & bTree, const PreciseBoxesIntersection & boxesIntersect,
+PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const AABBTree & aTree,
+    const MeshPart & b, const AABBTree & bTree, const PreciseBoxesIntersection & boxesIntersect,
     ConvertToIntVector conv, const AffineXf3f * rigidB2A, bool anyIntersection )
 {
     PreciseCollisionResult res;
@@ -95,7 +95,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const A
     };
 
     const int aVertsSize = (int)a.mesh.topology.vertSize();
-    auto checkTwoTris = [&]( const AABBTreeWide::LeafTri & at, const AABBTreeWide::LeafTri & bt, PreciseCollisionResult & res )
+    auto checkTwoTris = [&]( const AABBTree::LeafTri & at, const AABBTree::LeafTri & bt, PreciseCollisionResult & res )
     {
         const FaceId aTri = at.face;
         const FaceId bTri = bt.face;
@@ -246,8 +246,8 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
     ConvertToIntVector conv, const AffineXf3f * rigidB2A, bool anyIntersection )
 {
     MR_TIMER;
-    const AABBTreeWide & aTree = a.mesh.getAABBTreeWide();
-    const AABBTreeWide & bTree = b.mesh.getAABBTreeWide();
+    const AABBTree & aTree = a.mesh.getAABBTree();
+    const AABBTree & bTree = b.mesh.getAABBTree();
     const PreciseBoxesIntersection boxesIntersect( aTree, bTree, conv, rigidB2A );
     return findCollidingEdgeTrisPrecise( a, aTree, b, bTree, boxesIntersect, conv, rigidB2A, anyIntersection );
 }
@@ -408,8 +408,8 @@ void updateCollidingEdgeTrisPrecise( PreciseCollisionResult & res,
         // and find them again: the intersections of these triangles and their edges with the whole other mesh,
         // the same as findCollidingEdgeTrisPrecise( MeshPart{ mesh, &tris }, other ) finds, but with the tree of these triangles only
         const MeshPart part{ mesh, &tris };
-        const AABBTreeWide trisTree( part );
-        const auto & otherTree = ( inA ? b : a ).getAABBTreeWide();
+        const AABBTree trisTree( part );
+        const auto & otherTree = ( inA ? b : a ).getAABBTree();
         const PreciseBoxesIntersection boxesIntersect( inA ? trisTree : otherTree, inA ? otherTree : trisTree, conv, rigidB2A );
         const auto found = inA ? findCollidingEdgeTrisPrecise( part, trisTree, b, otherTree, boxesIntersect, conv, rigidB2A, false )
             : findCollidingEdgeTrisPrecise( a, otherTree, part, trisTree, boxesIntersect, conv, rigidB2A, false );
@@ -424,7 +424,7 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
     MR_TIMER;
 
     std::vector<EdgeTri> res;
-    const AABBTreeWide& tree = mp.mesh.getAABBTreeWide();
+    const AABBTree& tree = mp.mesh.getAABBTree();
     if ( tree.nodes().empty() )
         return res;
 
@@ -462,7 +462,7 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
         return l < r;
     };
 
-    auto checkTwoTris = [&] ( const AABBTreeWide::LeafTri & lt, const AABBTreeWide::LeafTri & rt, std::vector<EdgeTri>& res )
+    auto checkTwoTris = [&] ( const AABBTree::LeafTri & lt, const AABBTree::LeafTri & rt, std::vector<EdgeTri>& res )
     {
         const FaceId lTri = lt.face;
         const FaceId rTri = rt.face;

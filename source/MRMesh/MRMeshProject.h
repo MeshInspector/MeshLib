@@ -77,15 +77,6 @@ MRMESH_API MeshProjectionTransforms createProjectionTransforms( AffineXf3f& stor
     const FacePredicate & validFaces = {},
     const std::function<bool(const MeshProjectionResult&)> & validProjections = {} );
 
-/// the same for an explicitly given AABBTreeWide of whole mesh or part of mesh we are searching projection on
-[[nodiscard]] MRMESH_API MeshProjectionResult findProjectionSubtree( const Vector3f & pt,
-    const MeshPart & mp, const AABBTreeWide & tree,
-    float upDistLimitSq = FLT_MAX,
-    const AffineXf3f * xf = nullptr,
-    float loDistLimitSq = 0,
-    const FacePredicate & validFaces = {},
-    const std::function<bool(const MeshProjectionResult&)> & validProjections = {} );
-
 /// this callback is invoked on every triangle with bounding box at least partially in the ball (the triangle itself can be fully out of ball),
 /// and allows changing (shrinking only) the ball
 using FoundBoxedTriCallback = std::function<Processing( FaceId found, Ball3f & ball )>;

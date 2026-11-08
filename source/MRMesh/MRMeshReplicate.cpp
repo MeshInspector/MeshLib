@@ -24,7 +24,7 @@ void replicateZ( Mesh & m, const Mesh & target )
 
     Vector<MeshTriPoint, VertId> targetVertProjections;
     targetVertProjections.resizeNoInit( target.topology.vertSize() );
-    m.getAABBTreeWide();
+    m.getAABBTree();
     BitSetParallelFor( target.topology.getValidVerts(), [&]( VertId v )
     {
         targetVertProjections[v] = findProjection( target.points[v], m ).mtp;

@@ -5,7 +5,6 @@
 #include "MRMeshIntersect.h"
 #include "MRStringConvert.h"
 #include "MRAABBTree.h"
-#include "MRAABBTreeWide.h"
 #include "MRAABBTreePoints.h"
 #include "MRLine3.h"
 #include "MRTimer.h"
@@ -134,7 +133,7 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
         size_t treesSize = 0;
         if ( auto tree = data_.mesh->getAABBTreeNotCreate() )
             treesSize += tree->heapBytes();
-        if ( auto tree = data_.mesh->getAABBTreeWideNotCreate() )
+        if ( auto tree = data_.mesh->getAABBTreeNotCreate() )
             treesSize += tree->heapBytes();
         if ( auto tree = data_.mesh->getAABBTreePointsNotCreate() )
             treesSize += tree->heapBytes();

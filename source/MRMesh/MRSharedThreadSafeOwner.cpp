@@ -1,6 +1,5 @@
 #include "MRSharedThreadSafeOwner.h"
 #include "MRAABBTree.h"
-#include "MRAABBTreeWide.h"
 #include "MRAABBTreePolyline.h"
 #include "MRAABBTreePoints.h"
 #include "MRDipole.h"
@@ -122,7 +121,6 @@ size_t SharedThreadSafeOwner<T>::heapBytes() const
 }
 
 template class SharedThreadSafeOwner<AABBTree>;
-template class SharedThreadSafeOwner<AABBTreeWide>;
 template class SharedThreadSafeOwner<AABBTreePolyline2>;
 template class SharedThreadSafeOwner<AABBTreePolyline3>;
 template class SharedThreadSafeOwner<AABBTreePoints>;

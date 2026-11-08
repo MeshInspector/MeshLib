@@ -1,6 +1,5 @@
 #include "MRUniqueThreadSafeOwner.h"
 #include "MRAABBTree.h"
-#include "MRAABBTreeWide.h"
 #include "MRAABBTreePolyline.h"
 #include "MRAABBTreePoints.h"
 #include "MRDipole.h"
@@ -132,7 +131,6 @@ size_t UniqueThreadSafeOwner<T>::heapBytes() const
 }
 
 template class UniqueThreadSafeOwner<AABBTree>;
-template class UniqueThreadSafeOwner<AABBTreeWide>;
 template class UniqueThreadSafeOwner<AABBTreePolyline2>;
 template class UniqueThreadSafeOwner<AABBTreePolyline3>;
 template class UniqueThreadSafeOwner<AABBTreePoints>;

@@ -2,7 +2,7 @@
 #include "MRMesh/MRPointsToMeshProjector.h"
 #include "MRMesh/MRPointsProject.h"
 #include "MRMesh/MRFastWindingNumber.h"
-#include "MRMesh/MRAABBTree.h"
+#include "MRMesh/MRAABBTreeBinary.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRAABBTreeMaker.h"
 #include "MRMesh/MRDipole.h"
@@ -152,7 +152,7 @@ size_t CudaAccessor::fastWindingNumberMeshMemory( const Mesh& mesh )
     size_t treeNodesSize = getNumNodes( mesh.topology.numValidFaces() );
     size_t memoryAmount = treeNodesSize * sizeof( Dipole );
     memoryAmount += mesh.points.size() * sizeof( Vector3f );
-    memoryAmount += treeNodesSize * sizeof( AABBTree::Node );
+    memoryAmount += treeNodesSize * sizeof( AABBTreeBinary::Node );
     memoryAmount += mesh.topology.faceSize() * sizeof( Vector3i );
     return memoryAmount;
 }

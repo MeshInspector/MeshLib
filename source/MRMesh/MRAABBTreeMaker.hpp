@@ -45,9 +45,10 @@ private:
 
     int largestCentersAxis_( int first, int num ) const;
     const BoxT & childBox_( NodeId c ) const { return Node::isLeaf( c ) ? boxedLeaves_[centers_[Node::leafIndex( c )].i].box : nodes_[c].box; }
-    // fills node n with the subtree of at least two leaves centers_[first, first + num)
-    void make_( NodeId n, int first, int num );
-    void makeChild_( NodeId c, int first, int num );
+    // fills node n with the subtree of at least two leaves centers_[first, first + num);
+    // its children that are nodes are placed at next and next + 1, followed by the other nodes of the left subtree, then of the right one
+    void make_( NodeId n, int first, int num, NodeId next );
+    void makeChild_( NodeId c, int first, int num, NodeId next );
 };
 
 template<typename T>
@@ -65,16 +66,16 @@ int AABBTreeMaker<T>::largestCentersAxis_( int first, int num ) const
 }
 
 template<typename T>
-void AABBTreeMaker<T>::makeChild_( NodeId c, int first, int num )
+void AABBTreeMaker<T>::makeChild_( NodeId c, int first, int num, NodeId next )
 {
     if ( num == 1 )
         onLeaf_( first, centers_[first].i );
     else
-        make_( c, first, num );
+        make_( c, first, num, next );
 }
 
 template<typename T>
-void AABBTreeMaker<T>::make_( NodeId n, int first, int num )
+void AABBTreeMaker<T>::make_( NodeId n, int first, int num, NodeId next )
 {
     assert( num >= 2 );
     // ties are ordered by index to make the tree independent of std::nth_element
@@ -85,18 +86,21 @@ void AABBTreeMaker<T>::make_( NodeId n, int first, int num )
         [axis]( const Center & a, const Center & b ) { return a.c[axis] < b.c[axis] || ( a.c[axis] == b.c[axis] && a.i < b.i ); } );
 
     auto & node = nodes_[n];
-    node.l = numL == 1 ? Node::leafChild( first ) : n + 1;
-    node.r = numR == 1 ? Node::leafChild( first + numL ) : n + 1 + getNumNodes( numL );
+    NodeId slot = next;
+    node.l = numL == 1 ? Node::leafChild( first ) : slot++;
+    node.r = numR == 1 ? Node::leafChild( first + numL ) : slot++;
+    const NodeId nextL = slot;
+    const NodeId nextR = numL == 1 ? nextL : nextL + getNumNodes( numL ) - 1;
     if ( num < 4096 )
     {
-        makeChild_( node.l, first, numL );
-        makeChild_( node.r, first + numL, numR );
+        makeChild_( node.l, first, numL, nextL );
+        makeChild_( node.r, first + numL, numR, nextR );
     }
     else
     {
         tbb::task_group group;
-        group.run( [&] { makeChild_( node.r, first + numL, numR ); } );
-        makeChild_( node.l, first, numL );
+        group.run( [&] { makeChild_( node.r, first + numL, numR, nextR ); } );
+        makeChild_( node.l, first, numL, nextL );
         group.wait();
     }
     auto box = childBox_( node.l );
@@ -121,7 +125,7 @@ auto AABBTreeMaker<T>::construct() -> NodeVec
     } );
 
     nodes_.resizeNoInit( getNumNodes( numLeaves ) );
-    makeChild_( NodeId{ 0 }, 0, numLeaves );
+    makeChild_( NodeId{ 0 }, 0, numLeaves, NodeId{ 1 } );
 
     return std::move( nodes_ );
 }

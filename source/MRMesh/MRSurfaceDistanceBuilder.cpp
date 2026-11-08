@@ -1,5 +1,6 @@
 #include "MRSurfaceDistanceBuilder.h"
 #include "MRMesh.h"
+#include "MRRegionBoundary.h"
 #include "MRRingIterator.h"
 #include "MRTimer.h"
 #include "MRphmap.h"
@@ -99,15 +100,7 @@ SurfaceDistanceBuilder::SurfaceDistanceBuilder( const Mesh & mesh, const VertBit
 
 void SurfaceDistanceBuilder::addStartRegion( const VertBitSet & region, float startDistance )
 {
-    MR_TIMER;
-    for ( auto v : region )
-        addStartVert_( v, startDistance );
-    for ( auto v : region )
-        uniteTouchingSources_( v );
-    finishSourceGroups_();
-
-    for ( auto v : region )
-        suggestDistancesAround_( v );
+    addStartEdgesAndPoints( getInnerEdges( mesh_.topology, region ), region, startDistance );
 }
 
 void SurfaceDistanceBuilder::addStartVertices( const HashMap<VertId, float>& startVertices )
@@ -116,7 +109,8 @@ void SurfaceDistanceBuilder::addStartVertices( const HashMap<VertId, float>& sta
     for ( const auto & [v, dist] : startVertices )
         addStartVert_( v, dist );
     for ( const auto & [v, dist] : startVertices )
-        uniteTouchingSources_( v );
+        for ( EdgeId e : orgRing( mesh_.topology, v ) )
+            addStartEdge_( e );
     finishSourceGroups_();
 
     for ( const auto & [v, dist] : startVertices )
@@ -289,14 +283,6 @@ void SurfaceDistanceBuilder::finishSourceGroups_()
     for ( SurfaceDistanceStartId s( 0 ); s < n; ++s )
         if ( regionRoots.test( sourceGroup_.parent( s ) ) )
             regionSources_.set( s );
-}
-
-void SurfaceDistanceBuilder::uniteTouchingSources_( VertId v )
-{
-    if ( !startInVert_( v ) )
-        return;
-    for ( EdgeId e : orgRing( mesh_.topology, v ) )
-        addStartEdge_( e );
 }
 
 bool SurfaceDistanceBuilder::suggestVertDistance_( VertDistance c, SurfaceDistanceStartId source, SurfaceDistanceStartId lineEnd )

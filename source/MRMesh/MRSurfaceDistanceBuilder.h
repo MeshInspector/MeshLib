@@ -126,8 +126,6 @@ private:
     /// returns the straight-line distance (relative to the start distance) from p to start point s0 or to start edge s0-s1 (both with vertices),
     /// which is not larger than the distance along the surface
     double straightDistToStart_( const Vector3f & p, SurfaceDistanceStartId s0, SurfaceDistanceStartId s1 ) const;
-    /// makes start edges from v to its neighbor start vertices
-    void uniteTouchingSources_( VertId v );
     /// finds the groups of start points, then fills regionSources_
     void finishSourceGroups_();
     /// suggests new distance around a (recently updated) vertex

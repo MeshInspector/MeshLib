@@ -42,8 +42,9 @@ private:
     NodeVec nodes_;
 
     int largestCentersAxis_( int first, int num ) const;
-    // fills node n with the subtree of leaves centers_[first, first + num)
-    void make_( NodeId n, int first, int num );
+    // fills node n with the subtree of leaves centers_[first, first + num);
+    // its two children are placed at (next, next + 1), followed by the other nodes of the left subtree, then of the right one
+    void make_( NodeId n, int first, int num, NodeId next );
 };
 
 template<typename T>
@@ -61,7 +62,7 @@ int AABBTreeMaker<T>::largestCentersAxis_( int first, int num ) const
 }
 
 template<typename T>
-void AABBTreeMaker<T>::make_( NodeId n, int first, int num )
+void AABBTreeMaker<T>::make_( NodeId n, int first, int num, NodeId next )
 {
     auto & node = nodes_[n];
     if ( num == 1 )
@@ -78,18 +79,20 @@ void AABBTreeMaker<T>::make_( NodeId n, int first, int num )
     std::nth_element( centers_.data() + first, centers_.data() + first + numL, centers_.data() + first + num,
         [axis]( const Center & a, const Center & b ) { return a.c[axis] < b.c[axis] || ( a.c[axis] == b.c[axis] && a.i < b.i ); } );
 
-    node.l = n + 1;
-    node.r = n + 1 + getNumNodes( numL );
+    node.l = next;
+    node.r = next + 1;
+    const NodeId nextL = next + 2;
+    const NodeId nextR = nextL + getNumNodes( numL ) - 1;
     if ( num < 4096 )
     {
-        make_( node.l, first, numL );
-        make_( node.r, first + numL, num - numL );
+        make_( node.l, first, numL, nextL );
+        make_( node.r, first + numL, num - numL, nextR );
     }
     else
     {
         tbb::task_group group;
-        group.run( [&] { make_( node.r, first + numL, num - numL ); } );
-        make_( node.l, first, numL );
+        group.run( [&] { make_( node.r, first + numL, num - numL, nextR ); } );
+        make_( node.l, first, numL, nextL );
         group.wait();
     }
     auto box = nodes_[node.l].box;
@@ -115,7 +118,7 @@ auto AABBTreeMaker<T>::construct( Buffer<BoxedLeaf<T>> boxedLeaves, const OnLeaf
     } );
 
     nodes_.resizeNoInit( getNumNodes( numLeaves ) );
-    make_( NodeId{ 0 }, 0, numLeaves );
+    make_( NodeId{ 0 }, 0, numLeaves, NodeId{ 1 } );
 
     return std::move( nodes_ );
 }

@@ -40,10 +40,14 @@ runs:
       env:
         MESHLIB_LIB_DIR: ${{ inputs.lib-dir }}
         LD_LIBRARY_PATH: ${{ inputs.lib-dir }}
-        DYLD_LIBRARY_PATH: ${{ inputs.lib-dir }}
         TARGET: ${{ inputs.target }}
       run: |
         set -eu
+        # Exported here, not in `env`: with System Integrity Protection on (the
+        # self-hosted Macs), dyld strips DYLD_* from the environment of a platform
+        # binary such as the /bin/bash that runs this step, so nothing below would
+        # inherit it. Set after bash has started, it reaches cargo and the examples.
+        export DYLD_LIBRARY_PATH="$MESHLIB_LIB_DIR"
         export CARGO_TARGET_DIR="$PWD/source/MeshLibRust/target"
         # With a target, cargo compiles and links the crates for it (the build
         # scripts still for the host) and puts the output under target/<triple>/.

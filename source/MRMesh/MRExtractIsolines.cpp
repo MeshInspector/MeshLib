@@ -396,7 +396,7 @@ PlaneSections extractPlaneSections( const MeshPart& mp, const Plane3f& plane, Us
         return plane.distance( points[v] );
     };
 
-    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeNotCreate() ) )
+    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeWideNotCreate() ) )
     {
         //brute force
         Isoliner s( mp.mesh.topology, valueInPoint, mp.region );
@@ -419,7 +419,7 @@ bool hasAnyPlaneSection( const MeshPart& mp, const Plane3f& plane, UseAABBTree u
         return plane.distance( points[v] );
     };
 
-    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeNotCreate() ) )
+    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeWideNotCreate() ) )
     {
         //brute force
         Isoliner s( mp.mesh.topology, valueInPoint, mp.region );
@@ -442,7 +442,7 @@ PlaneSections extractXYPlaneSections( const MeshPart & mp, float zLevel, UseAABB
         return points[v].z - zLevel;
     };
 
-    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeNotCreate() ) )
+    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeWideNotCreate() ) )
     {
         //brute force
         Isoliner s( mp.mesh.topology, valueInPoint, mp.region );
@@ -465,7 +465,7 @@ bool hasAnyXYPlaneSection( const MeshPart & mp, float zLevel, UseAABBTree u )
         return points[v].z - zLevel;
     };
 
-    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeNotCreate() ) )
+    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeWideNotCreate() ) )
     {
         //brute force
         Isoliner s( mp.mesh.topology, valueInPoint, mp.region );
@@ -491,7 +491,7 @@ std::vector<LineSegm3f> findTriangleSectionsByXYPlane( const MeshPart & mp, floa
 
     std::vector<FaceId> crossedFacesVec; // the faces crossing given zLevel
 
-    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeNotCreate() ) )
+    if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeWideNotCreate() ) )
     {
         // brute force checking all region triangles
         VertBitSet store;

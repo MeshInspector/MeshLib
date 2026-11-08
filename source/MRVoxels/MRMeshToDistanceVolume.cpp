@@ -8,7 +8,7 @@
 #include "MRMesh/MRFastWindingNumber.h"
 #include "MRMesh/MRParallelMinMax.h"
 #include "MRMesh/MRBitSetParallelFor.h"
-#include "MRMesh/MRAABBTree.h"
+#include "MRMesh/MRAABBTreeWide.h"
 #include "MRMesh/MRPointsToMeshProjector.h"
 #include "MRMesh/MRMeshIntersect.h"
 #include "MRMesh/MRParallelFor.h"
@@ -272,10 +272,10 @@ Expected<SimpleVolumeMinMax> meshRegionToIndicatorVolume( const Mesh& mesh, cons
     VolumeIndexer indexer( res.dims );
     res.data.resize( indexer.size() );
 
-    AABBTree regionTree( { mesh, &region } );
+    AABBTreeWide regionTree( { mesh, &region } );
     const FaceBitSet notRegion = mesh.topology.getValidFaces() - region;
     //TODO: check that notRegion is not empty
-    AABBTree notRegionTree( { mesh, &notRegion } );
+    AABBTreeWide notRegionTree( { mesh, &notRegion } );
 
     const auto voxelSize = std::max( { params.voxelSize.x, params.voxelSize.y, params.voxelSize.z } );
 

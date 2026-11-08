@@ -4,6 +4,8 @@
 #include "MRAffineXf.h"
 #include "MRBitSet.h"
 #include "MRBuffer.h"
+#include "MREnums.h"
+#include "MRInplaceStack.h"
 #include "MRVector.h"
 #include <atomic>
 #include <cstdint>
@@ -135,29 +137,33 @@ private:
     mutable Vector<std::atomic<std::uint8_t>, I> state_;
 };
 
-/// returns the nodes of the tree having at least one triangle of the region
-inline NodeBitSet getWideNodesWithFaces( const AABBTreeWide & tree, const FaceBitSet & region )
+/// visits depth-first the nodes with boxes passing nodeOk( box ), children in their order, and calls onTri( i )
+/// for the triangles (indices in leafTris()) of the visited leaves with boxes passing triOk( box );
+/// stops as soon as onTri returns Processing::Stop
+template<typename NodeOk, typename TriOk, typename OnTri>
+void forWideTris( const AABBTreeWide & tree, NodeOk && nodeOk, TriOk && triOk, OnTri && onTri )
 {
-    NodeBitSet res( tree.nodes().size() );
-    // children follow their parent
-    for ( int n = (int)tree.nodes().size() - 1; n >= 0; --n )
+    const auto & nodes = tree.nodes();
+    if ( nodes.empty() || !nodeOk( nodes.front().box ) )
+        return;
+    // every level adds at most MaxChildren - 1 nodes, and the tree of 2^31 triangles has 16 levels
+    InplaceStack<NoInitNodeId, 64> subtasks;
+    subtasks.push( NodeId( 0 ) );
+    while ( !subtasks.empty() )
     {
-        const auto & node = tree.nodes()[NodeId( n )];
-        bool any = false;
+        const auto & node = nodes[subtasks.top()];
+        subtasks.pop();
         if ( node.leaf() )
         {
-            for ( int i = 0; i < node.numLeafTris() && !any; ++i )
-                any = region.test( tree.leafTris()[node.first + i].face );
+            for ( int i = node.first, end = node.first + node.numLeafTris(); i < end; ++i )
+                if ( triOk( tree.leafBoxes()[i] ) && onTri( i ) == Processing::Stop )
+                    return;
+            continue;
         }
-        else
-        {
-            for ( int i = 0; i < node.count && !any; ++i )
-                any = res.test( NodeId( node.first + i ) );
-        }
-        if ( any )
-            res.set( NodeId( n ) );
+        for ( int i = node.count - 1; i >= 0; --i )
+            if ( const NodeId c( node.first + i ); nodeOk( nodes[c].box ) )
+                subtasks.push( c );
     }
-    return res;
 }
 
 } // namespace MR

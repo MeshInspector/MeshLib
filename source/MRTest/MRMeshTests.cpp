@@ -589,12 +589,12 @@ TEST( MRMesh, PackOptimallyWithCachedTree )
 {
     const auto src = makeSphere( { .numMeshVertices = 1000 } );
     Mesh a = src, b = src;
-    (void)a.getAABBTree();
-    (void)b.getAABBTree();
+    (void)a.getAABBTreeWide();
+    (void)b.getAABBTreeWide();
     a.packOptimally( false );
     b.packOptimally( true );
-    EXPECT_FALSE( a.getAABBTreeNotCreate() );
-    EXPECT_TRUE( b.getAABBTreeNotCreate() );
+    EXPECT_FALSE( a.getAABBTreeWideNotCreate() );
+    EXPECT_TRUE( b.getAABBTreeWideNotCreate() );
     EXPECT_EQ( a.points, b.points );
     EXPECT_EQ( a.topology, b.topology );
     EXPECT_TRUE( a.topology.checkValidity() );

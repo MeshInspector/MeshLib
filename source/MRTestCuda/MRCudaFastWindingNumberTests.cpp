@@ -59,6 +59,8 @@ TEST( MRCuda, FastWindingNumberFromGrid )
         const float g = gpuDist.vec[i], c = cpuDist.vec[i];
         ASSERT_EQ( std::isnan( g ), std::isnan( c ) ) << "voxel " << i;
         if ( !std::isnan( c ) )
+        {
             ASSERT_NEAR( g, c, 1e-5f ) << "voxel " << i;
+        }
     }
 }

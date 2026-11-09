@@ -103,7 +103,7 @@ WindowSystem getWindowSystem()
     return WindowSystem::OsNative;
 #elif defined( _GLFW_X11 )
     return WindowSystem::X11;
-#elif defined( _GLFW_X11 )
+#elif defined( _GLFW_WAYLAND )
     return WindowSystem::Wayland;
 #else
     return WindowSystem::Unknown;

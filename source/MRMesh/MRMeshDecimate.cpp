@@ -639,6 +639,8 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
     originNeis_.clear();
     triDblAreas_.clear(); // new directed areas of triangles that flip their normal or became not-degenerate from degenerate
     Vector3d sumDblArea;
+    // new and old directed areas of the faces on the sides of the deleted triangles: [0],[1] around vl, [2],[3] around vr
+    std::pair<Vector3f, Vector3f> sideAreas[4];
     EdgeId oBdEdge; // a boundary edge !right(e) incident to org( edgeToCollapse )
     for ( EdgeId e : orgRing0( topology, edgeToCollapse ) )
     {
@@ -662,7 +664,8 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
 
         if ( !checkAspectRatios )
             continue;
-        const auto pDest2 = mesh_.destPnt( topology.next( e ) );
+        const auto eDest2 = topology.dest( topology.next( e ) );
+        const auto pDest2 = mesh_.points[eDest2];
         if ( eDest != vr )
         {
             const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
@@ -676,6 +679,10 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
                     const auto oldA = cross( pDest - po, pDest2 - po );
                     if ( dot( da, oldA ) <= 0 )
                         triDblAreas_.push_back( da );
+                    if ( eDest == vl )
+                        sideAreas[0] = { da, oldA };
+                    if ( eDest2 == vr )
+                        sideAreas[2] = { da, oldA };
                 }
             }
         }
@@ -709,7 +716,8 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
 
         if ( !checkAspectRatios )
             continue;
-        const auto pDest2 = mesh_.destPnt( topology.next( e ) );
+        const auto eDest2 = topology.dest( topology.next( e ) );
+        const auto pDest2 = mesh_.points[eDest2];
         if ( eDest != vl )
         {
             const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
@@ -723,6 +731,10 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
                     const auto oldA = cross( pDest - pd, pDest2 - pd );
                     if ( dot( da, oldA ) <= 0 )
                         triDblAreas_.push_back( da );
+                    if ( eDest2 == vl )
+                        sideAreas[1] = { da, oldA };
+                    if ( eDest == vr )
+                        sideAreas[3] = { da, oldA };
                 }
             }
         }
@@ -756,31 +768,10 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
 
     // the two faces on the sides of a deleted triangle become neighbours; each of them can turn by almost 90 degrees without a flip,
     // so together they can fold onto each other: prohibit their new dihedral angle sharper than 60 degrees, unless it was before
-    if ( settings_.preventNormalFlips )
-    {
-        auto newTri = [&]( FaceId f )
-        {
-            const auto vs = topology.getTriVerts( f );
-            Triangle3f t;
-            for ( int i = 0; i < 3; ++i )
-                t[i] = ( vs[i] == vo || vs[i] == vd ) ? collapsePos : mesh_.points[vs[i]];
-            return t;
-        };
-        auto sharp = []( const Vector3f & a, const Vector3f & b ) { return dot( a, b ) < -0.5f * std::sqrt( a.lengthSq() * b.lengthSq() ); };
-        auto fold = [&]( FaceId f0, FaceId f1 )
-        {
-            if ( !f0 || !f1 )
-                return false;
-            const auto t0 = newTri( f0 ), t1 = newTri( f1 );
-            return sharp( dirDblArea( t0 ), dirDblArea( t1 ) ) && !sharp( mesh_.dirDblArea( f0 ), mesh_.dirDblArea( f1 ) )
-                // can trust direction of not-degenerate triangles only
-                && triangleAspectRatio( t0[0], t0[1], t0[2] ) < settings_.criticalTriAspectRatio
-                && triangleAspectRatio( t1[0], t1[1], t1[2] ) < settings_.criticalTriAspectRatio;
-        };
-        if ( ( vl && fold( topology.left( topology.next( edgeToCollapse ) ), topology.right( topology.prev( edgeToCollapse.sym() ) ) ) )
-          || ( vr && fold( topology.right( topology.prev( edgeToCollapse ) ), topology.left( topology.next( edgeToCollapse.sym() ) ) ) ) )
+    auto sharp = []( const Vector3f & a, const Vector3f & b ) { return dot( a, b ) < -0.5f * std::sqrt( a.lengthSq() * b.lengthSq() ); };
+    for ( int i = 0; i < 4; i += 2 )
+        if ( sharp( sideAreas[i].first, sideAreas[i + 1].first ) && !sharp( sideAreas[i].second, sideAreas[i + 1].second ) )
             return { .status =  CollapseStatus::NormalFlip };
-    }
 
     if ( settings_.preCollapse && !settings_.preCollapse( edgeToCollapse, collapsePos ) )
         return { .status =  CollapseStatus::User }; // user prohibits the collapse

@@ -506,6 +506,10 @@ struct [[nodiscard]] Mesh
     /// would add the earlier faces to the tree once more
     MRMESH_API void updateCachesAfterSplits( const FaceHashMap & new2Old );
 
+    /// changes the orientation of all triangles, or only of the components with given edges as MeshTopology::flipOrientation() does,
+    /// and updates existing AABB tree instead of rebuilding it
+    MRMESH_API void flipOrientation( const UndirectedEdgeBitSet * fullComponents = nullptr );
+
     // returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API size_t heapBytes() const;
 

@@ -23,7 +23,7 @@ public:
     using BoxT = typename T::BoxT;
     using V = decltype( BoxT{}.min );
 
-    NodeVec construct( Buffer<BoxedLeaf<T>> boxedLeaves );
+    NodeVec construct( Buffer<BoxedLeaf<T>> boxedLeaves, const OnLeafCallback<T> * onLeaf );
 
 private:
     /// sorted instead of BoxedLeaf: smaller and compared by one coordinate
@@ -38,6 +38,7 @@ private:
 
     Buffer<BoxedLeaf<T>> boxedLeaves_;
     Buffer<Center> centers_;
+    const OnLeafCallback<T> * onLeaf_ = nullptr;
     NodeVec nodes_;
 
     int largestCentersAxis_( int first, int num ) const;
@@ -67,7 +68,7 @@ void AABBTreeMaker<T>::make_( NodeId n, int first, int num, NodeId next )
     if ( num == 1 )
     {
         const auto & bl = boxedLeaves_[centers_[first].i];
-        node.setLeafId( bl.leafId );
+        node.setLeafId( onLeaf_ ? ( *onLeaf_ )( bl.leafId, first ) : bl.leafId, first );
         node.box = bl.box;
         return;
     }
@@ -102,11 +103,12 @@ void AABBTreeMaker<T>::make_( NodeId n, int first, int num, NodeId next )
 } // anonymous namespace
 
 template<typename T>
-auto AABBTreeMaker<T>::construct( Buffer<BoxedLeaf<T>> boxedLeaves ) -> NodeVec
+auto AABBTreeMaker<T>::construct( Buffer<BoxedLeaf<T>> boxedLeaves, const OnLeafCallback<T> * onLeaf ) -> NodeVec
 {
     MR_TIMER;
 
     boxedLeaves_ = std::move( boxedLeaves );
+    onLeaf_ = onLeaf;
     const auto numLeaves = (int)boxedLeaves_.size();
     centers_.resize( numLeaves );
     ParallelFor( 0, numLeaves, [&]( int i )
@@ -122,9 +124,9 @@ auto AABBTreeMaker<T>::construct( Buffer<BoxedLeaf<T>> boxedLeaves ) -> NodeVec
 }
 
 template<typename T>
-AABBTreeNodeVec<T> makeAABBTreeNodeVec( Buffer<BoxedLeaf<T>> boxedLeaves )
+AABBTreeNodeVec<T> makeAABBTreeNodeVec( Buffer<BoxedLeaf<T>> boxedLeaves, const OnLeafCallback<T> * onLeaf )
 {
-    return AABBTreeMaker<T>().construct( std::move( boxedLeaves ) );
+    return AABBTreeMaker<T>().construct( std::move( boxedLeaves ), onLeaf );
 }
 
 } //namespace MR

@@ -48,7 +48,7 @@ public:
         state_ = Vector<std::atomic<std::uint8_t>>( sz );
     }
 
-    Box3f operator()( NodeId n ) const
+    const Box3f & operator()( NodeId n ) const
     {
         if ( !xf_ )
             return tree_.box( n );
@@ -56,15 +56,19 @@ public:
         auto & state = state_[i];
         if ( state.load( std::memory_order_acquire ) == cReady )
             return boxes_[i];
-        const auto res = transformed( tree_.box( n ), *xf_ );
-        // only the thread marking the box first stores it; the others meanwhile use their own copies
         std::uint8_t expected = cEmpty;
         if ( state.compare_exchange_strong( expected, cWriting, std::memory_order_relaxed ) )
         {
-            boxes_[i] = res;
+            boxes_[i] = transformed( tree_.box( n ), *xf_ );
             state.store( cReady, std::memory_order_release );
         }
-        return res;
+        else
+        {
+            // another thread is storing this box right now
+            while ( state.load( std::memory_order_acquire ) != cReady )
+                {}
+        }
+        return boxes_[i];
     }
 
 private:
@@ -81,17 +85,18 @@ class PreciseBoxesIntersection
 {
 public:
     PreciseBoxesIntersection( const AABBTree & aTree, const AABBTree & bTree, const ConvertToIntVector & conv, const AffineXf3f * xf )
-        : aBoxes_( aTree, nullptr ), bBoxes_( bTree, xf ), conv_( conv ), minGap_( 2 / conv.invRange )
+        : aTree_( aTree ), bBoxes_( bTree, xf ), conv_( conv ), minGap_( 2 / conv.invRange )
     {
     }
 
     bool operator()( NodeId a, NodeId b ) const
     {
-        return preciseBoxesIntersect( aBoxes_( a ), bBoxes_( b ), conv_, minGap_ );
+        return preciseBoxesIntersect( aTree_.box( a ), bBoxes_( b ), conv_, minGap_ );
     }
 
 private:
-    CachedBoxes aBoxes_, bBoxes_;
+    const AABBTree & aTree_;
+    CachedBoxes bBoxes_;
     const ConvertToIntVector & conv_;
     double minGap_ = 0;
 };

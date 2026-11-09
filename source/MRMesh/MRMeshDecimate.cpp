@@ -628,8 +628,8 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
         }
     }
 
-    // triangle aspect ratios are needed for the aspect ratio check and to find not-degenerate triangles for the normal flip check
-    const bool checkAspectRatios = settings_.preventNormalFlips || settings_.maxTriangleAspectRatio < FLT_MAX;
+    // the triangles around the edge are needed for the aspect ratio check, and their aspect ratios find not-degenerate triangles for the normal flip and fold checks
+    const bool checkTriangles = settings_.preventNormalFlips || settings_.maxTriangleAspectRatio < FLT_MAX;
     float maxOldAspectRatio = settings_.maxTriangleAspectRatio;
     float maxNewAspectRatio = 0;
     const float edgeLenSq = ( po - pd ).lengthSq();
@@ -662,7 +662,7 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
         if ( !settings_.collapseNearNotFlippable && collapsingFlippable && settings_.notFlippable && settings_.notFlippable->test( e ) )
             return { .status =  CollapseStatus::Flippable }; // cannot collapse a flippable edge incident to a not-flippable edge
 
-        if ( !checkAspectRatios )
+        if ( !checkTriangles )
             continue;
         const auto eDest2 = topology.dest( topology.next( e ) );
         const auto pDest2 = mesh_.points[eDest2];
@@ -714,7 +714,7 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
         if ( !settings_.collapseNearNotFlippable && collapsingFlippable && settings_.notFlippable && settings_.notFlippable->test( e ) )
             return { .status =  CollapseStatus::Flippable }; // cannot collapse a flippable edge incident to a not-flippable edge
 
-        if ( !checkAspectRatios )
+        if ( !checkTriangles )
             continue;
         const auto eDest2 = topology.dest( topology.next( e ) );
         const auto pDest2 = mesh_.points[eDest2];

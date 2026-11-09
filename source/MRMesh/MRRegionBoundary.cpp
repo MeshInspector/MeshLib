@@ -703,13 +703,30 @@ FaceBitSet getNeighborFaces( const MeshTopology& topology, const UndirectedEdgeB
 {
     MR_TIMER;
     FaceBitSet res( topology.faceSize() );
-    for ( auto ue : edges )
+    if ( const auto walk = chooseWalk( edges, topology.undirectedEdgeSize(), 48, 64, 2 ); walk != Walk::None )
     {
-        if ( auto l = topology.left( ue ) )
-            res.set( l );
-        if ( auto r = topology.right( ue ) )
-            res.set( r );
+        BitSetWalk( edges, res, walk == Walk::Parallel, [&]( UndirectedEdgeId ue, auto && add )
+        {
+            if ( ue >= topology.undirectedEdgeSize() )
+                return;
+            if ( auto l = topology.left( ue ) )
+                add( l );
+            if ( auto r = topology.right( ue ) )
+                add( r );
+        } );
+        return res;
     }
+    BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f )
+    {
+        for ( auto e : leftRing( topology, f ) )
+        {
+            if ( edges.test( e.undirected() ) )
+            {
+                res.set( f );
+                break;
+            }
+        }
+    } );
     return res;
 }
 

@@ -21,7 +21,9 @@ __global__ void kernel( const Node3* nodes, const float3* meshPoints, const Face
 
     MeshIntersectionResult interRes = rayMeshIntersect( nodes, meshPoints, faces, org, -FLT_MAX, FLT_MAX, prec );
 
-    res[index] = -FLT_MAX;
+    res[index] = -FLT_MAX; // DistanceMap::NOT_VALID_VALUE
+    if ( interRes.proj.faceId < 0 )
+        return; // the ray misses the mesh
     if ( !params.useDistanceLimits
          || ( interRes.distanceAlongLine < params.minValue )
          || ( interRes.distanceAlongLine > params.maxValue ) )

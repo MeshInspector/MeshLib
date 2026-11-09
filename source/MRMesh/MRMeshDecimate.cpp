@@ -144,8 +144,8 @@ private:
     /// canCollapse_ + forceCollapse_
     CollapseRes collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos, const QuadraticForm3f & collapseForm );
 
-    /// returns false if the edge is not of a closed tetrahedron; otherwise removes the tetrahedron completely if the region and the limits permit,
-    /// since any collapse would make two triangles lying on each other
+    /// returns false if the edge is not of a closed tetrahedron; otherwise never collapses it in two triangles lying on each other, but
+    /// removes it completely if its four vertices can be collapsed in one point within maxError and the region and the limits permit
     bool tetrahedron_( EdgeId e );
 };
 
@@ -860,6 +860,14 @@ bool MeshDecimator::tetrahedron_( EdgeId e )
     if ( res_.facesDeleted + 4 > settings_.maxDeletedFaces || res_.vertsDeleted + 4 > settings_.maxDeletedVertices )
         return true;
     if ( settings_.region && !std::all_of( fs, fs + 4, [&]( FaceId f ) { return settings_.region->test( f ); } ) )
+        return true;
+    // a large tetrahedron is kept: its four vertices cannot be collapsed in one point within maxError
+    const auto & fm = *pVertForms_;
+    const auto & pts = mesh_.points;
+    const VertId vo = tp.org( e ), vd = tp.dest( e ), vl = tp.dest( tp.next( e ) ), vr = tp.dest( tp.prev( e ) );
+    const auto [qod, pod] = sum( fm[vo], pts[vo], fm[vd], pts[vd] );
+    const auto [qlr, plr] = sum( fm[vl], pts[vl], fm[vr], pts[vr] );
+    if ( sum( qod, pod, qlr, plr ).first.c > maxErrorSq_ )
         return true;
     for ( EdgeId x : { e, tp.next( e ), tp.prev( e ), tp.next( e.sym() ), tp.prev( e.sym() ), tp.prev( tp.next( e ).sym() ) } )
         onEdgeDel_( x, {} );

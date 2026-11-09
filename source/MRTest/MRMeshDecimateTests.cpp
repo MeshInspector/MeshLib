@@ -13,6 +13,7 @@
 #include <MRMesh/MRRegionBoundary.h>
 #include <MRMesh/MRQuadraticForm.h>
 #include <map>
+#include <random>
 #include <tuple>
 #include <sstream>
 
@@ -70,6 +71,43 @@ TEST( MRMesh, MeshDecimateParallel )
         EXPECT_EQ( mesh.topology.numValidFaces(), 0 ) << preventNormalFlips;
         EXPECT_EQ( mesh.topology.numValidVerts(), 0 ) << preventNormalFlips;
     }
+}
+
+// a closed tetrahedron is removed completely if its four vertices can be collapsed in one point within maxError, otherwise it is kept whole
+TEST( MRMesh, MeshDecimateTetrahedron )
+{
+    std::mt19937 gen( 1 );
+    auto rnd = [&] { return float( gen() % 2001 ) / 1000 - 1; };
+    int removed = 0, keptWithSmallEdge = 0;
+    for ( int i = 0; i < 200; ++i )
+    {
+        VertCoords pts;
+        for ( int k = 0; k < 4; ++k )
+        {
+            const float x = rnd(), y = rnd(), z = rnd();
+            pts.push_back( { x, y, z } );
+        }
+        if ( dot( pts[1_v] - pts[0_v], cross( pts[2_v] - pts[0_v], pts[3_v] - pts[0_v] ) ) < 0 )
+            std::swap( pts[1_v], pts[2_v] );
+        Mesh mesh = Mesh::fromTriangles( pts, { { 0_v, 2_v, 1_v }, { 0_v, 1_v, 3_v }, { 0_v, 3_v, 2_v }, { 1_v, 2_v, 3_v } } );
+        const DecimateSettings settings{ .maxError = 0.03f * ( 1 + i % 10 ) };
+        const auto forms = computeFormsAtVertices( mesh, settings.stabilizer, settings.angleWeightedDistToPlane );
+        auto collapse = [&]( int a, int b ) { return sum( forms[VertId( a )], pts[VertId( a )], forms[VertId( b )], pts[VertId( b )] ); };
+        const auto [q01, p01] = collapse( 0, 1 );
+        const auto [q23, p23] = collapse( 2, 3 );
+        const bool small = sum( q01, p01, q23, p23 ).first.c <= sqr( settings.maxError );
+        bool smallEdge = false;
+        for ( int a = 0; a < 4; ++a )
+            for ( int b = a + 1; b < 4; ++b )
+                smallEdge = smallEdge || collapse( a, b ).first.c <= sqr( settings.maxError );
+
+        decimateMesh( mesh, settings );
+        EXPECT_EQ( mesh.topology.numValidFaces(), small ? 0 : 4 ) << i;
+        removed += small;
+        keptWithSmallEdge += !small && smallEdge;
+    }
+    EXPECT_GT( removed, 0 );
+    EXPECT_GT( keptWithSmallEdge, 0 ); // one of their edges alone could be collapsed within maxError
 }
 
 // all parts modes decimate a region of the mesh in parallel and keep the sets from the settings consistent with the mesh

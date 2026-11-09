@@ -321,11 +321,6 @@ static SphereErrors sphereErrors( const Mesh & mesh, const VertScalars & dist, c
     return res;
 }
 
-static float sphereAngle( const Vector3f & a, const Vector3f & b )
-{
-    return std::atan2( cross( a, b ).length(), dot( a, b ) );
-}
-
 TEST( MRMesh, SurfaceDistanceSpherePoints )
 {
     const auto mesh = makeSphere( { .radius = 1, .numMeshVertices = 10000 } );
@@ -346,9 +341,9 @@ TEST( MRMesh, SurfaceDistanceSpherePoints )
     seeds.set( s1 );
     const auto two = computeSurfaceDistances( mesh, seeds );
     for ( const auto & errs : {
-        sphereErrors( mesh, one, [&]( const Vector3f & p ) { return sphereAngle( p, p0 ); } ),
-        sphereErrors( mesh, two, [&]( const Vector3f & p ) { return std::min( sphereAngle( p, p0 ), sphereAngle( p, p1 ) ); } ),
-        sphereErrors( mesh, computeSurfaceDistances( mesh, start ), [&]( const Vector3f & p ) { return sphereAngle( p, ps ); } ) } )
+        sphereErrors( mesh, one, [&]( const Vector3f & p ) { return angle( p, p0 ); } ),
+        sphereErrors( mesh, two, [&]( const Vector3f & p ) { return std::min( angle( p, p0 ), angle( p, p1 ) ); } ),
+        sphereErrors( mesh, computeSurfaceDistances( mesh, start ), [&]( const Vector3f & p ) { return angle( p, ps ); } ) } )
     {
         EXPECT_LT( errs.mean, 3e-3f );
         EXPECT_LT( errs.over, 1e-3f );
@@ -386,7 +381,7 @@ TEST( MRMesh, SurfaceDistanceSphereLines )
         const float lon = std::atan2( p.x, p.y );
         if ( lon >= 0 && lon <= PI_F / 2 )
             return std::abs( pointLatitude( p ) );
-        return std::min( sphereAngle( p, a ), sphereAngle( p, b ) );
+        return std::min( angle( p, a ), angle( p, b ) );
     } );
     EXPECT_LT( arc.mean, 4e-3f );
     EXPECT_LT( arc.over, 1e-3f );

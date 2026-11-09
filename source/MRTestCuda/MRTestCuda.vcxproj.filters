@@ -13,6 +13,9 @@
     <ClCompile Include="MRCudaFastWindingNumberTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRCudaMeshDistanceMapTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRCudaPointsProject.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

@@ -143,6 +143,10 @@ private:
     };
     /// canCollapse_ + forceCollapse_
     CollapseRes collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos, const QuadraticForm3f & collapseForm );
+
+    /// returns false if the edge is not of a closed tetrahedron; otherwise removes the tetrahedron completely if the region and the limits permit,
+    /// since any collapse would make two triangles lying on each other
+    bool tetrahedron_( EdgeId e );
 };
 
 MeshDecimator::MeshDecimator( Mesh & mesh, const DecimateSettings & settings, const UndirectedEdgeBitSet * initialEdges )
@@ -846,6 +850,30 @@ auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapseP
     return { .v = forceCollapse_( can.e, collapsePos, collapseForm ) };
 }
 
+bool MeshDecimator::tetrahedron_( EdgeId e )
+{
+    auto & tp = mesh_.topology;
+    // if both ends of the edge and its left vertex have three neighbours each, then the four vertices and four faces form a closed tetrahedron
+    if ( !tp.isOrgInnerAndHasDegree( e, 3 ) || !tp.isOrgInnerAndHasDegree( e.sym(), 3 ) || !tp.isOrgInnerAndHasDegree( tp.next( e ).sym(), 3 ) )
+        return false;
+    const FaceId fs[4] = { tp.left( e ), tp.right( e ), tp.left( tp.next( e ) ), tp.left( tp.next( e.sym() ) ) };
+    if ( res_.facesDeleted + 4 > settings_.maxDeletedFaces || res_.vertsDeleted + 4 > settings_.maxDeletedVertices )
+        return true;
+    if ( settings_.region && !std::all_of( fs, fs + 4, [&]( FaceId f ) { return settings_.region->test( f ); } ) )
+        return true;
+    for ( EdgeId x : { e, tp.next( e ), tp.prev( e ), tp.next( e.sym() ), tp.prev( e.sym() ), tp.prev( tp.next( e ).sym() ) } )
+        onEdgeDel_( x, {} );
+    for ( FaceId f : fs )
+    {
+        if ( settings_.region )
+            settings_.region->reset( f );
+        tp.deleteFace( f );
+    }
+    res_.facesDeleted += 4;
+    res_.vertsDeleted += 4;
+    return true;
+}
+
 static void packMesh( Mesh & mesh, const DecimateSettings & settings,
     FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr )
 {
@@ -991,7 +1019,7 @@ DecimateResult MeshDecimator::run()
                 if ( auto twin = getAt( *settings_.twinMap, ue ) )
                     flipEdge_( twin );
         }
-        else
+        else if ( !tetrahedron_( ue ) )
         {
             // edge collapse
             auto canCollapseRes = canCollapse_( ue, collapsePos );

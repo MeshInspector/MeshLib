@@ -49,17 +49,27 @@ TEST( MRMesh, MeshDecimate )
 TEST( MRMesh, MeshDecimateParallel )
 {
     const int cNumVerts = 400;
-    auto mesh = makeSphere( { .numMeshVertices = cNumVerts } );
-    mesh.packOptimally();
-    DecimateSettings settings
+    for ( bool preventNormalFlips : { true, false } )
     {
-        .maxError = 1000000, // no actual limit
-        .maxDeletedVertices = cNumVerts - 3,
-        .subdivideParts = 8
-    };
-    decimateMesh( mesh, settings );
-    ASSERT_EQ( mesh.topology.numValidFaces(), 2 );
-    ASSERT_EQ( mesh.topology.numValidVerts(), 3 );
+        auto mesh = makeSphere( { .numMeshVertices = cNumVerts } );
+        mesh.packOptimally();
+        DecimateSettings settings
+        {
+            .maxError = 1000000, // no actual limit
+            .preventNormalFlips = preventNormalFlips,
+            .maxDeletedVertices = cNumVerts - 3,
+            .subdivideParts = 8
+        };
+        decimateMesh( mesh, settings );
+        // the last tetrahedron is not collapsed in two triangles lying on each other, and its removal would exceed the limit
+        EXPECT_EQ( mesh.topology.numValidFaces(), 4 ) << preventNormalFlips;
+        EXPECT_EQ( mesh.topology.numValidVerts(), 4 ) << preventNormalFlips;
+
+        // without the limit, the tetrahedron is removed completely
+        decimateMesh( mesh, { .maxError = 1000000, .preventNormalFlips = preventNormalFlips } );
+        EXPECT_EQ( mesh.topology.numValidFaces(), 0 ) << preventNormalFlips;
+        EXPECT_EQ( mesh.topology.numValidVerts(), 0 ) << preventNormalFlips;
+    }
 }
 
 // all parts modes decimate a region of the mesh in parallel and keep the sets from the settings consistent with the mesh

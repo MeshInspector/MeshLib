@@ -33,6 +33,7 @@
     <None Include="..\.editorconfig" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRCudaFastWindingNumberTests.cpp" />
     <ClCompile Include="MRCudaMeshDistanceMapTests.cpp" />
     <ClCompile Include="MRCudaPointsProject.cpp" />
     <ClCompile Include="MRCudaSolarRadiationTests.cpp" />

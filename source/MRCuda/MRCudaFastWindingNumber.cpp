@@ -205,6 +205,7 @@ Expected<void> FastWindingNumber::calcFromGrid( std::vector<float>& res, const V
     if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
 
+    res.resize( totalSize );
     const auto cb1 = subprogress( cb, 0.60f, 1.00f );
     const auto iterCount = chunkCount( totalSize, bufferSize );
     size_t iterIndex = 0;
@@ -260,6 +261,7 @@ Expected<void> FastWindingNumber::calcFromGridWithDistances( VoxelScalars& res, 
     if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
 
+    res.resize( totalSize );
     const auto cb1 = subprogress( cb, 0.60f, 1.00f );
     const auto iterCount = chunkCount( totalSize, bufferSize );
     size_t iterIndex = 0;

@@ -15,10 +15,11 @@ namespace MR
 /// same leafs are skipped and different leafs area processed with `processLeaf` callback
 /// </summary>
 /// <param name="tree">the AABB tree</param>
-/// <param name="subtasks">initial tasks to process</param>
+/// <param name="subtasks">initial tasks to process: a node with itself, or two nodes already accepted by `processNodes`</param>
 /// <param name="nextSubtasks">subtasks to process next, could be same as `subtasks`</param>
-/// <param name="processLeaf">function that is called for two different leafs</param>
-/// <param name="processNodes">function that determines how to process two different nodes (e.g. whether their boxes intersect)</param>
+/// <param name="processLeaf">function that is called for two different leafs accepted by `processNodes`</param>
+/// <param name="processNodes">function that determines how to process two different nodes (e.g. whether their boxes intersect);
+/// it is called for a pair before the pair is added to `nextSubtasks`, and a pair of leaves is given to `processLeaf` at once</param>
 /// the callbacks are template parameters to be inlined in this hot loop
 template <typename ProcessLeaf, typename ProcessNodes>
 MR_BIND_IGNORE void processSelfSubtasks( const AABBTree& tree,
@@ -27,12 +28,24 @@ MR_BIND_IGNORE void processSelfSubtasks( const AABBTree& tree,
     ProcessLeaf && processLeaf,
     ProcessNodes && processNodes )
 {
+    // the pair of children is added to nextSubtasks or given to processLeaf only if processNodes accepts it;
+    // a macro, since the same code in a loop over children or in a lambda was 5..10% slower with MSVC
+#define MR_PROCESS_CHILDREN_PAIR( A, B ) \
+    { \
+        const NodeNode c{ A, B }; \
+        if ( processNodes( c ) == Processing::Continue ) \
+        { \
+            if ( !tree.isLeaf( c.aNode ) || !tree.isLeaf( c.bNode ) ) \
+                nextSubtasks.push_back( c ); \
+            else if ( processLeaf( c ) == Processing::Stop ) \
+                return; \
+        } \
+    }
     while ( !subtasks.empty() )
     {
         const auto s = subtasks.back();
         subtasks.pop_back();
         const bool aLeaf = tree.isLeaf( s.aNode );
-        const bool bLeaf = tree.isLeaf( s.bNode );
         if ( s.aNode == s.bNode )
         {
             if ( !aLeaf )
@@ -40,13 +53,11 @@ MR_BIND_IGNORE void processSelfSubtasks( const AABBTree& tree,
                 const auto& aNode = tree[s.aNode];
                 nextSubtasks.push_back( { aNode.l, aNode.l } );
                 nextSubtasks.push_back( { aNode.r, aNode.r } );
-                nextSubtasks.push_back( { aNode.l, aNode.r } );
+                MR_PROCESS_CHILDREN_PAIR( aNode.l, aNode.r )
             }
             continue;
         }
-        const auto processNode = processNodes( s );
-        if ( processNode == Processing::Stop )
-            continue;
+        const bool bLeaf = tree.isLeaf( s.bNode );
         if ( aLeaf && bLeaf )
         {
             if ( processLeaf( s ) == Processing::Stop )
@@ -57,18 +68,19 @@ MR_BIND_IGNORE void processSelfSubtasks( const AABBTree& tree,
         {
             // split aNode
             const auto& aNode = tree[s.aNode];
-            nextSubtasks.push_back( { aNode.l, s.bNode } );
-            nextSubtasks.push_back( { aNode.r, s.bNode } );
+            MR_PROCESS_CHILDREN_PAIR( aNode.l, s.bNode )
+            MR_PROCESS_CHILDREN_PAIR( aNode.r, s.bNode )
         }
         else
         {
             assert( !bLeaf );
             // split bNode
             const auto& bNode = tree[s.bNode];
-            nextSubtasks.push_back( { s.aNode, bNode.l } );
-            nextSubtasks.push_back( { s.aNode, bNode.r } );
+            MR_PROCESS_CHILDREN_PAIR( s.aNode, bNode.l )
+            MR_PROCESS_CHILDREN_PAIR( s.aNode, bNode.r )
         }
     }
+#undef MR_PROCESS_CHILDREN_PAIR
 }
 
 }

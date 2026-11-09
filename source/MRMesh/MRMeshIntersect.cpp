@@ -112,7 +112,10 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
             break;
         }
 
-        const auto [nid, nStart] = nodesStack[currentNode--];
+        // not a structured binding, which MSVC in C++20 mode copies through memory
+        const NodeId nid = nodesStack[currentNode].first;
+        const T nStart = nodesStack[currentNode].second;
+        --currentNode;
         if( !( nStart < rayEnd ) )
             continue;
 

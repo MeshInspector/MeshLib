@@ -963,12 +963,14 @@ int Viewer::launchInit_( const LaunchParams& params )
     glfwWindowHint( GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE ); // required for GLFW 3.3
     hasScaledFramebuffer_ = true;
 #else
-    if ( getWindowSystem() == WindowSystem::Wayland )
+#if GLFW_VERSION_MAJOR > 3 || ( GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4 )
+   if ( getWindowSystem() == WindowSystem::Wayland )
     {
         glfwWindowHintString( GLFW_WAYLAND_APP_ID, MR_PROJECT_NAME );
         glfwWindowHint( GLFW_SCALE_FRAMEBUFFER, GLFW_TRUE );
         hasScaledFramebuffer_ = true;
     }
+#endif
 #endif
     glfwWindowHint( GLFW_SAMPLES, getRequiredMSAA_( params.render3dSceneInTexture, false ) );
 #ifndef __EMSCRIPTEN__

@@ -208,7 +208,9 @@ struct DecimateResult
 /**
  * \brief Performs mesh simplification in mesh region according to the settings
  * \details A closed tetrahedron is never collapsed in two triangles lying on each other: it is removed completely
- * if its four vertices can be collapsed in one point within maxError, otherwise it is kept.
+ * if its four vertices can be collapsed in one point within maxError (for ShortestEdgeFirst: none of its edges is longer than maxError),
+ * and preCollapse, the limits on deleted faces and vertices, region, fixed boundary vertices, notFlippable and edgesToCollapse permit it;
+ * otherwise it is kept whole.
  * \ingroup DecimateGroup
  * \snippet cpp-examples/MeshDecimate.dox.cpp 0
  *

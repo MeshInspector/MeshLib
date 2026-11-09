@@ -95,7 +95,10 @@ TEST( MRMesh, MeshDecimateTetrahedron )
         auto collapse = [&]( int a, int b ) { return sum( forms[VertId( a )], pts[VertId( a )], forms[VertId( b )], pts[VertId( b )] ); };
         const auto [q01, p01] = collapse( 0, 1 );
         const auto [q23, p23] = collapse( 2, 3 );
-        const bool small = sum( q01, p01, q23, p23 ).first.c <= sqr( settings.maxError );
+        const float errSq = sum( q01, p01, q23, p23 ).first.c, maxErrSq = sqr( settings.maxError );
+        if ( std::abs( errSq - maxErrSq ) <= 1e-3f * maxErrSq )
+            continue; // the decimator may sum the forms in another order, so the rounding can decide such case
+        const bool small = errSq <= maxErrSq;
         bool smallEdge = false;
         for ( int a = 0; a < 4; ++a )
             for ( int b = a + 1; b < 4; ++b )
@@ -108,6 +111,44 @@ TEST( MRMesh, MeshDecimateTetrahedron )
     }
     EXPECT_GT( removed, 0 );
     EXPECT_GT( keptWithSmallEdge, 0 ); // one of their edges alone could be collapsed within maxError
+}
+
+// a small tetrahedron is kept whole if the settings do not permit its removal
+TEST( MRMesh, MeshDecimateTetrahedronKept )
+{
+    const Mesh tetra = Mesh::fromTriangles( { { 0, 0, 0 }, { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 } },
+        { { 0_v, 2_v, 1_v }, { 0_v, 1_v, 3_v }, { 0_v, 3_v, 2_v }, { 1_v, 2_v, 3_v } } );
+    const auto e12 = tetra.topology.findEdge( 1_v, 2_v ).undirected();
+    auto facesLeft = [&]( const DecimateSettings & settings )
+    {
+        Mesh mesh = tetra;
+        decimateMesh( mesh, settings );
+        return mesh.topology.numValidFaces();
+    };
+    EXPECT_EQ( facesLeft( { .maxError = 10 } ), 0 );
+    EXPECT_EQ( facesLeft( { .maxError = 10, .maxDeletedFaces = 3 } ), 4 );
+
+    FaceBitSet region( 4, true );
+    region.reset( 3_f );
+    EXPECT_EQ( facesLeft( { .maxError = 10, .region = &region } ), 4 );
+
+    UndirectedEdgeBitSet notFlippable( 6 );
+    notFlippable.set( e12 );
+    EXPECT_EQ( facesLeft( { .maxError = 10, .notFlippable = &notFlippable } ), 4 );
+
+    UndirectedEdgeBitSet edgesToCollapse( 6, true );
+    edgesToCollapse.reset( e12 );
+    EXPECT_EQ( facesLeft( { .maxError = 10, .edgesToCollapse = &edgesToCollapse } ), 4 );
+
+    VertBitSet bdVerts( 4 );
+    bdVerts.set( 3_v );
+    EXPECT_EQ( facesLeft( { .maxError = 10, .touchBdVerts = false, .bdVerts = &bdVerts } ), 4 );
+
+    EXPECT_EQ( facesLeft( { .maxError = 10, .preCollapse = []( EdgeId, const Vector3f & ) { return false; } } ), 4 );
+
+    // for ShortestEdgeFirst, maxError limits the length of the edges, and the longest one is sqrt(2)
+    EXPECT_EQ( facesLeft( { .strategy = DecimateStrategy::ShortestEdgeFirst, .maxError = 1.2f } ), 4 );
+    EXPECT_EQ( facesLeft( { .strategy = DecimateStrategy::ShortestEdgeFirst, .maxError = 1.5f } ), 0 );
 }
 
 // all parts modes decimate a region of the mesh in parallel and keep the sets from the settings consistent with the mesh

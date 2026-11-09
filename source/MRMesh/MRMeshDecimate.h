@@ -64,7 +64,7 @@ struct DecimateSettings
     /// and the algorithm will permit temporary increase in aspect ratio after collapse, if before collapse one of the triangles had larger aspect ratio
     float criticalTriAspectRatio = FLT_MAX;
 
-    /// whether to prohibit a collapse if it inverts the normal of a remaining triangle;
+    /// whether to prohibit a collapse if it inverts the normal of a remaining triangle, or folds two triangles onto each other;
     /// turning it off (together with maxTriangleAspectRatio = FLT_MAX) makes decimation faster, but some triangles may appear inverted
     bool preventNormalFlips = true;
 

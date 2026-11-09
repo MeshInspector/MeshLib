@@ -109,7 +109,7 @@ private:
         TouchBd,     ///< prohibit collapse of an inner edge if it brings two boundaries in touch
         TriAspect,   ///< new triangle aspect ratio would be larger than all of old triangle aspect ratios and larger than allowed in settings
         LongEdge,    ///< new edge would be longer than all of old edges and longer than allowed in settings
-        NormalFlip,  ///< if at least one triangle normal flips, checks that all new normals are consistent (do not check for degenerate edges)
+        NormalFlip,  ///< if at least one triangle normal flips, checks that all new normals are consistent (do not check for degenerate edges); or two triangles would fold onto each other
         User         ///< user callback prohibits the collapse
     };
 
@@ -634,8 +634,8 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
         }
     }
 
-    // triangle aspect ratios are needed for the aspect ratio check and to find not-degenerate triangles for the normal flip check
-    const bool checkAspectRatios = settings_.preventNormalFlips || settings_.maxTriangleAspectRatio < FLT_MAX;
+    // the triangles around the edge are needed for the aspect ratio check, and their aspect ratios find not-degenerate triangles for the normal flip and fold checks
+    const bool checkTriangles = settings_.preventNormalFlips || settings_.maxTriangleAspectRatio < FLT_MAX;
     float maxOldAspectRatio = settings_.maxTriangleAspectRatio;
     float maxNewAspectRatio = 0;
     const float edgeLenSq = ( po - pd ).lengthSq();
@@ -645,6 +645,8 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
     originNeis_.clear();
     triDblAreas_.clear(); // new directed areas of triangles that flip their normal or became not-degenerate from degenerate
     Vector3d sumDblArea;
+    // new and old directed areas of the faces on the sides of the deleted triangles: [0],[1] around vl, [2],[3] around vr
+    std::pair<Vector3f, Vector3f> sideAreas[4];
     EdgeId oBdEdge; // a boundary edge !right(e) incident to org( edgeToCollapse )
     for ( EdgeId e : orgRing0( topology, edgeToCollapse ) )
     {
@@ -666,9 +668,10 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
         if ( !settings_.collapseNearNotFlippable && collapsingFlippable && settings_.notFlippable && settings_.notFlippable->test( e ) )
             return { .status =  CollapseStatus::Flippable }; // cannot collapse a flippable edge incident to a not-flippable edge
 
-        if ( !checkAspectRatios )
+        if ( !checkTriangles )
             continue;
-        const auto pDest2 = mesh_.destPnt( topology.next( e ) );
+        const auto eDest2 = topology.dest( topology.next( e ) );
+        const auto pDest2 = mesh_.points[eDest2];
         if ( eDest != vr )
         {
             const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
@@ -682,6 +685,10 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
                     const auto oldA = cross( pDest - po, pDest2 - po );
                     if ( dot( da, oldA ) <= 0 )
                         triDblAreas_.push_back( da );
+                    if ( eDest == vl )
+                        sideAreas[0] = { da, oldA };
+                    if ( eDest2 == vr )
+                        sideAreas[2] = { da, oldA };
                 }
             }
         }
@@ -713,9 +720,10 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
         if ( !settings_.collapseNearNotFlippable && collapsingFlippable && settings_.notFlippable && settings_.notFlippable->test( e ) )
             return { .status =  CollapseStatus::Flippable }; // cannot collapse a flippable edge incident to a not-flippable edge
 
-        if ( !checkAspectRatios )
+        if ( !checkTriangles )
             continue;
-        const auto pDest2 = mesh_.destPnt( topology.next( e ) );
+        const auto eDest2 = topology.dest( topology.next( e ) );
+        const auto pDest2 = mesh_.points[eDest2];
         if ( eDest != vl )
         {
             const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
@@ -729,6 +737,10 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
                     const auto oldA = cross( pDest - pd, pDest2 - pd );
                     if ( dot( da, oldA ) <= 0 )
                         triDblAreas_.push_back( da );
+                    if ( eDest2 == vl )
+                        sideAreas[1] = { da, oldA };
+                    if ( eDest == vr )
+                        sideAreas[3] = { da, oldA };
                 }
             }
         }
@@ -759,6 +771,13 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
             if ( dot( da, n ) < 0 )
                 return { .status =  CollapseStatus::NormalFlip };
     }
+
+    // the two faces on the sides of a deleted triangle become neighbours; each of them can turn by almost 90 degrees without a flip,
+    // so together they can fold onto each other: prohibit their new dihedral angle sharper than 60 degrees, unless it was before
+    auto sharp = []( const Vector3f & a, const Vector3f & b ) { return dot( a, b ) < -0.5f * std::sqrt( a.lengthSq() * b.lengthSq() ); };
+    for ( int i = 0; i < 4; i += 2 )
+        if ( sharp( sideAreas[i].first, sideAreas[i + 1].first ) && !sharp( sideAreas[i].second, sideAreas[i + 1].second ) )
+            return { .status =  CollapseStatus::NormalFlip };
 
     if ( settings_.preCollapse && !settings_.preCollapse( edgeToCollapse, collapsePos ) )
         return { .status =  CollapseStatus::User }; // user prohibits the collapse

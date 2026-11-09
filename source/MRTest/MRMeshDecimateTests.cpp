@@ -3,6 +3,7 @@
 #include <MRMesh/MRCylinder.h>
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRCube.h>
+#include <MRMesh/MREdgeIterator.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBuffer.h>
 #include <MRMesh/MRMeshLoad.h>
@@ -419,6 +420,41 @@ TEST( MRMesh, RemeshKeepsSharpEdges )
     for ( auto v : mesh.topology.getValidVerts() )
         maxDist = std::max( maxDist, std::sqrt( findProjection( mesh.points[v], cube ).distSq ) );
     EXPECT_LT( maxDist, rs.targetEdgeLen );
+}
+
+TEST( MRMesh, MeshDecimateNoFold )
+{
+    // box [0,1]x[0,1]x[0,2] with tiny top triangle (c,a,b) at the corner (0,0,2);
+    // moving b onto a deletes it, side triangle (b0,c,b) turns by almost 90 degrees and folds onto its new neighbour (c0,a,c)
+    const float d = 0.01f, h = 0.2f;
+    const VertCoords points
+    {
+        { 0, 0, 2 }, { d, 0.001f, 2 }, { 0, h, 2 }, { 1, 0, 2 }, { 1, 1, 2 }, { 0, 1, 2 }, // c, a, b, top corners
+        { 0, 0, 0 }, { d, 0, 0 }, { 0, h, 0 }, { 1, 0, 0 }, { 1, 1, 0 }, { 0, 1, 0 }        // c0, a0, b0, bottom corners
+    };
+    const Triangulation t
+    {
+        { 0_v, 1_v, 2_v }, { 1_v, 3_v, 4_v }, { 1_v, 4_v, 2_v }, { 2_v, 4_v, 5_v },      // top
+        { 6_v, 7_v, 1_v }, { 6_v, 1_v, 0_v }, { 7_v, 9_v, 3_v }, { 7_v, 3_v, 1_v },      // y = 0
+        { 8_v, 0_v, 2_v }, { 6_v, 0_v, 8_v }, { 8_v, 2_v, 5_v }, { 8_v, 5_v, 11_v },     // x = 0
+        { 9_v, 10_v, 4_v }, { 9_v, 4_v, 3_v }, { 10_v, 11_v, 5_v }, { 10_v, 5_v, 4_v },  // x = 1, y = 1
+        { 10_v, 9_v, 7_v }, { 10_v, 7_v, 6_v }, { 10_v, 6_v, 8_v }, { 10_v, 8_v, 11_v }  // bottom
+    };
+    Mesh mesh = Mesh::fromTriangles( points, t );
+    ASSERT_TRUE( mesh.topology.isClosed() );
+
+    UndirectedEdgeBitSet edgesToCollapse( mesh.topology.undirectedEdgeSize() );
+    edgesToCollapse.set( mesh.topology.findEdge( 1_v, 2_v ).undirected() );
+    DecimateSettings settings
+    {
+        .maxError = 0.05f, // allows moving b onto a, but not a onto b
+        .maxTriangleAspectRatio = FLT_MAX,
+        .optimizeVertexPos = false,
+        .edgesToCollapse = &edgesToCollapse
+    };
+    decimateMesh( mesh, settings );
+    for ( auto ue : undirectedEdges( mesh.topology ) )
+        EXPECT_GT( dot( mesh.normal( mesh.topology.left( ue ) ), mesh.normal( mesh.topology.right( ue ) ) ), -0.5f );
 }
 
 } //namespace MR

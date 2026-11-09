@@ -30,10 +30,10 @@ namespace
 
 enum class EdgeOp : unsigned int
 {
-    CollapseOptPos, ///< collapse the edge with target position optimization
-    CollapseEnd,    ///< collapse the edge in one of its current vertices
-    Flip            ///< flip the edge inside quadrangle
-    // one more option is available to fit in 2 bits
+    CollapseOptPos,   ///< collapse the edge with target position optimization
+    CollapseEnd,      ///< collapse the edge in one of its current vertices
+    CollapseOtherEnd, ///< collapse the edge in its vertex not selected by CollapseEnd
+    Flip              ///< flip the edge inside quadrangle
 };
 
 struct QueueElement
@@ -63,6 +63,7 @@ private:
     const DecimateSettings & settings_;
     const DeloneSettings deloneSettings_;
     const float maxErrorSq_;
+    const EdgeOp firstOp_; // the operation for edges entering the queue
     Vector<QuadraticForm3f, VertId> myVertForms_;
     Vector<QuadraticForm3f, VertId> * pVertForms_ = nullptr;
     UndirectedEdgeBitSet regionEdges_;
@@ -86,7 +87,7 @@ private:
     Vector<QueueElement> makeQueueElements_();
     void updateQueue_();
     QuadraticForm3f collapseForm_( UndirectedEdgeId ue, const Vector3f & collapsePos ) const;
-    std::optional<QueueElement> computeQueueElement_( UndirectedEdgeId ue, bool optimizeVertexPos,
+    std::optional<QueueElement> computeQueueElement_( UndirectedEdgeId ue, EdgeOp op,
         QuadraticForm3f * outCollapseForm = nullptr, Vector3f * outCollapsePos = nullptr ) const;
 
     /// adds given edge in the queue if it was missing there;
@@ -94,7 +95,7 @@ private:
     bool addInQueueIfMissing_( UndirectedEdgeId ue );
 
     /// adds given edges (currently missing) in queue
-    void addInQueue_( UndirectedEdgeId ue, bool optimizeVertexPos );
+    void addInQueue_( UndirectedEdgeId ue, EdgeOp op );
 
     void flipEdge_( UndirectedEdgeId ue );
 
@@ -152,6 +153,7 @@ MeshDecimator::MeshDecimator( Mesh & mesh, const DecimateSettings & settings, co
         .criticalTriAspectRatio = settings.criticalTriAspectRatio,
         .region = settings.region }
     , maxErrorSq_( sqr( settings.maxError ) )
+    , firstOp_( settings.optimizeVertexPos ? EdgeOp::CollapseOptPos : EdgeOp::CollapseEnd )
     , initialEdges_( initialEdges )
 {
     onEdgeDel_ =
@@ -320,7 +322,7 @@ auto MeshDecimator::makeQueueElements_() -> Vector<QueueElement>
                 edges.push_back( ue );
         ParallelFor( edges, [&]( size_t i )
         {
-            if ( auto qe = computeQueueElement_( edges[i], settings_.optimizeVertexPos ) )
+            if ( auto qe = computeQueueElement_( edges[i], firstOp_ ) )
                 threadData.local().push_back( *qe );
         } );
         for ( const auto & v : threadData )
@@ -341,7 +343,7 @@ auto MeshDecimator::makeQueueElements_() -> Vector<QueueElement>
                 if ( !regionEdges_.test( ue ) )
                     return;
             }
-            if ( auto qe = computeQueueElement_( ue, settings_.optimizeVertexPos ) )
+            if ( auto qe = computeQueueElement_( ue, firstOp_ ) )
             {
                 threadData.local().push_back( *qe );
                 validInQueue_.set( ue );
@@ -396,7 +398,7 @@ void MeshDecimator::updateQueue_()
             return;
         if ( !outdated_.test( ue ) )
             return;
-        if ( auto n = computeQueueElement_( qe.uedgeId(), qe.x.edgeOp == EdgeOp::CollapseOptPos ) )
+        if ( auto n = computeQueueElement_( qe.uedgeId(), qe.x.edgeOp ) )
             qe = *n;
         else
             del.set( i );
@@ -430,7 +432,7 @@ QuadraticForm3f MeshDecimator::collapseForm_( UndirectedEdgeId ue, const Vector3
     return sumAt( vo, po, vd, pd, collapsePos );
 }
 
-auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, bool optimizeVertexPos,
+auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, EdgeOp op,
     QuadraticForm3f * outCollapseForm, Vector3f * outCollapsePos ) const -> std::optional<QueueElement>
 {
     EdgeId e{ ue };
@@ -445,7 +447,7 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, bool optimizeVert
     // prepares res; checks flip metric; returns true if the edge does not collpase and function can return
     auto earlyReturn = [&]( float errSq )
     {
-        EdgeOp edgeOp = optimizeVertexPos ? EdgeOp::CollapseOptPos : EdgeOp::CollapseEnd;
+        EdgeOp edgeOp = op == EdgeOp::Flip ? EdgeOp::CollapseEnd : op;
         if ( maxRemainingFlips_ > 0 && ( !settings_.notFlippable || !settings_.notFlippable->test( ue ) ) )
         {
             float deviationSqAfterFlip = FLT_MAX;
@@ -476,12 +478,14 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, bool optimizeVert
     if ( settings_.touchBdVerts // if boundary vertices can be moved ...
         || ( settings_.notFlippable && settings_.notFlippable->test( ue ) ) ) // ... or this is a not-flippable edge (if you do not want such collapses then exclude it from settings_.edgesToCollapse)
     {
-        std::tie( qf, pos ) = sum( vo, po, vd, pd, !optimizeVertexPos );
+        std::tie( qf, pos ) = sum( vo, po, vd, pd, op != EdgeOp::CollapseOptPos );
     }
     else
     {
         const bool bdO = pBdVerts_->test( o );
         const bool bdD = pBdVerts_->test( d );
+        if ( ( bdO || bdD ) && op == EdgeOp::CollapseOtherEnd )
+            return {}; // only one end can be kept, and the collapse in it failed
         if ( bdO )
         {
             if ( bdD )
@@ -492,8 +496,10 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, bool optimizeVert
         else if ( bdD )
             qf = sumAt( vo, po, vd, pd, pos = pd );
         else
-            std::tie( qf, pos ) = sum( vo, po, vd, pd, !optimizeVertexPos );
+            std::tie( qf, pos ) = sum( vo, po, vd, pd, op != EdgeOp::CollapseOptPos );
     }
+    if ( op == EdgeOp::CollapseOtherEnd )
+        qf = sumAt( vo, po, vd, pd, pos = pos == po ? pd : po );
 
     if ( settings_.strategy == DecimateStrategy::MinimizeError )
     {
@@ -526,14 +532,14 @@ bool MeshDecimator::addInQueueIfMissing_( UndirectedEdgeId ue )
         return false;
     if ( validInQueue_.test( ue ) )
         return true;
-    addInQueue_( ue, settings_.optimizeVertexPos );
+    addInQueue_( ue, firstOp_ );
     return false;
 }
 
-void MeshDecimator::addInQueue_( UndirectedEdgeId ue, bool optimizeVertexPos )
+void MeshDecimator::addInQueue_( UndirectedEdgeId ue, EdgeOp op )
 {
     assert ( !validInQueue_.test( ue ) );
-    if ( auto qe = computeQueueElement_( ue, optimizeVertexPos ) )
+    if ( auto qe = computeQueueElement_( ue, op ) )
     {
         queue_.push( *qe );
         validInQueue_.set( ue );
@@ -942,7 +948,7 @@ DecimateResult MeshDecimator::run()
 
         QuadraticForm3f collapseForm;
         Vector3f collapsePos;
-        auto qe = computeQueueElement_( ue, topQE.x.edgeOp == EdgeOp::CollapseOptPos, &collapseForm, &collapsePos );
+        auto qe = computeQueueElement_( ue, topQE.x.edgeOp, &collapseForm, &collapsePos );
         if ( !qe )
         {
             validInQueue_.reset( ue );
@@ -972,9 +978,10 @@ DecimateResult MeshDecimator::run()
             auto canCollapseRes = canCollapse_( ue, collapsePos );
             if ( canCollapseRes.status != CollapseStatus::Ok )
             {
-                if ( topQE.x.edgeOp == EdgeOp::CollapseOptPos && geomFail_( canCollapseRes.status ) )
+                if ( topQE.x.edgeOp != EdgeOp::CollapseOtherEnd && geomFail_( canCollapseRes.status ) )
                 {
-                    addInQueue_( ue, false );
+                    // after the optimal position try the end with smaller error, then the other end
+                    addInQueue_( ue, topQE.x.edgeOp == EdgeOp::CollapseOptPos ? EdgeOp::CollapseEnd : EdgeOp::CollapseOtherEnd );
                     continue;
                 }
                 if ( canCollapseRes.status != CollapseStatus::MultipleEdge )

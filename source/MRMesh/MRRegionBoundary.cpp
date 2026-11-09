@@ -201,8 +201,9 @@ static Walk chooseWalk( const BitSet & set, size_t meshSize, size_t denseFractio
 static void addVertsOfFaces( const MeshTopology & topology, const FaceBitSet & faces, VertBitSet & res )
 {
     for ( auto f : faces )
-        for ( auto e : leftRing( topology, f ) )
-            res.set( topology.org( e ) );
+        if ( auto e = topology.edgeWithLeft( f ) )
+            for ( auto v : topology.getLeftTriVerts( e ) )
+                res.set( v );
 }
 
 // vertices that can be touched by the region: its own when the region is small, otherwise all valid vertices
@@ -415,8 +416,9 @@ VertBitSet getIncidentVerts( const MeshTopology & topology, const FaceBitSet & f
         VertBitSet res( topology.getValidVerts().size() );
         BitSetWalk( faces, res, walk == Walk::Parallel, [&]( FaceId f, auto && add )
         {
-            for ( auto e : leftRing( topology, f ) ) // empty for a deleted or out-of-range face
-                add( topology.org( e ) );
+            if ( auto e = topology.edgeWithLeft( f ) ) // invalid for a deleted or out-of-range face
+                for ( auto v : topology.getLeftTriVerts( e ) )
+                    add( v );
         } );
         return res;
     }

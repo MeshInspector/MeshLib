@@ -524,8 +524,8 @@ void planeMeshIntersect( const MeshPart& meshPart, const Plane3f & plane,
                     if ( vs )
                     {
                         vs->set( m.topology.org( e0 ) );
-                        vs->set( m.topology.org( e1 ) );
-                        vs->set( m.topology.org( e2 ) );
+                        vs->set( m.topology.dest( e0 ) ); // = org( e1 ), but from the record getTriEdges already read
+                        vs->set( m.topology.dest( e1 ) );
                     }
                 }
             }
@@ -595,8 +595,8 @@ void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
                     if ( vs )
                     {
                         vs->set( m.topology.org( e0 ) );
-                        vs->set( m.topology.org( e1 ) );
-                        vs->set( m.topology.org( e2 ) );
+                        vs->set( m.topology.dest( e0 ) ); // = org( e1 ), but from the record getTriEdges already read
+                        vs->set( m.topology.dest( e1 ) );
                     }
                 }
             }

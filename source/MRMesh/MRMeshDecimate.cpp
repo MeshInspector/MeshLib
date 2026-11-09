@@ -1677,7 +1677,7 @@ DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings0 )
         res = decimateMeshSerial( mesh, settings );
     else
         res = decimateMeshParallelInplace( mesh, settings, treeParts.empty() ? nullptr : &treeParts );
-    assert ( !mesh.getAABBTreeNotCreate() && !mesh.getAABBTreeNotCreate() ); // make sure that nobody created the tree by mistake
+    assert ( !mesh.getAABBTreeNotCreate() ); // make sure that nobody created the tree by mistake
     assert ( mesh.topology.checkValidity() );
     return res;
 }

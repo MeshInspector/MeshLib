@@ -54,6 +54,7 @@ TEST( MRMesh, MeshDecimateParallel )
     DecimateSettings settings
     {
         .maxError = 1000000, // no actual limit
+        .preventNormalFlips = false, // the last collapse folds a tetrahedron into two triangles
         .maxDeletedVertices = cNumVerts - 3,
         .subdivideParts = 8
     };

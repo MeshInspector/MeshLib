@@ -350,13 +350,6 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
         invDirLenSq = 1 / line.d.lengthSq();
     }
 
-    auto pushChild = [&]( NodeId n )
-    {
-        T cs = rayStart, ce = rayEnd;
-        if( rayBoxIntersect( nodeBox( n ), rayOrigin, cs, ce, prec ) )
-            nodesStack[++currentNode] = n;
-    };
-
     while( currentNode >= 0 )
     {
         if( currentNode >= maxTreeDepth ) // max depth exceeded
@@ -420,8 +413,12 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
         else
         {
             const auto& node = tree[nid];
-            pushChild( node.l );
-            pushChild( node.r );
+            s = rayStart, e = rayEnd;
+            if( rayBoxIntersect( nodeBox( node.l ), rayOrigin, s, e, prec ) )
+                nodesStack[++currentNode] = node.l;
+            s = rayStart, e = rayEnd;
+            if( rayBoxIntersect( nodeBox( node.r ), rayOrigin, s, e, prec ) )
+                nodesStack[++currentNode] = node.r;
         }
     }
 }

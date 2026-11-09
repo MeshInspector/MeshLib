@@ -8,6 +8,18 @@ description: >
 runs:
   using: composite
   steps:
+    # The keg follows the brew prefix, not the host: /usr/local is x86_64 also on the
+    # x86_64-on-arm64 cross runner. Custom prefixes carry the keg already.
+    - name: Pick the keg architecture
+      shell: bash
+      run: |
+        case "$(brew --prefix)" in
+          /usr/local)    KEG_ARCH=x86_64 ;;
+          /opt/homebrew) KEG_ARCH=arm64 ;;
+          *)             KEG_ARCH="$(uname -m)" ;;
+        esac
+        echo "KEG_ARCH=$KEG_ARCH" >> "$GITHUB_ENV"
+
     - name: Install llvm-pgo keg
       shell: bash
       run: |
@@ -17,16 +29,7 @@ runs:
           echo "llvm-pgo keg already present"
           exit 0
         fi
-        # The published kegs are built for the standard prefixes only, and each one is
-        # tied to a prefix: /opt/homebrew is arm64, /usr/local is x86_64. Pick by prefix,
-        # not by `uname -m`, so the x86_64-on-arm64 cross runner (arm64 host, Intel brew
-        # at /usr/local) gets the Intel keg. Custom prefixes fall back to the host arch;
-        # those machines carry the keg already and returned above.
-        case "$BP" in
-          /usr/local)    KEG_ARCH=x86_64 ;;
-          /opt/homebrew) KEG_ARCH=arm64 ;;
-          *)             KEG_ARCH="$(uname -m)" ;;
-        esac
+        # The published kegs are built for the standard prefixes only.
         if [[ "$KEG_ARCH" == "arm64" ]]; then
           NEED=/opt/homebrew
           ASSET=llvm-pgo-22.1.8_2-arm64/llvm-pgo-22.1.8_2.arm64_opt-homebrew.tar.gz
@@ -56,12 +59,6 @@ runs:
         if [[ -x "$KEG/bin/ld64.lld" ]]; then
           echo "ld64.lld already in the keg"
         else
-          # Match the keg's architecture, which follows the prefix (see above).
-          case "$BP" in
-            /usr/local)    KEG_ARCH=x86_64 ;;
-            /opt/homebrew) KEG_ARCH=arm64 ;;
-            *)             KEG_ARCH="$(uname -m)" ;;
-          esac
           if [[ "$KEG_ARCH" == "arm64" ]]; then
             ASSET=ld64.lld-22.1.8-pgo.arm64-macos13
             SHA=8abf0ba324dea357ae4fbd8baee835353b560f62e9b1d001588a6df888755550

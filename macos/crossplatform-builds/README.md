@@ -1,162 +1,81 @@
 # macOS Intel (x86_64) cross build on Apple Silicon
 
-Builds the **Intel (`x86_64`)** macOS target of MeshLib on an **Apple Silicon (`arm64`)** self-hosted
-runner, using a **native arm64 toolchain that cross-targets x86_64**: cmake/ninja/clang run natively
-(fast compiles) and emit x86_64 via `-arch x86_64`, linking the x86_64 Homebrew at `/usr/local`. The
-binaries run on Intel Macs — and on the build host under Rosetta, which is how CI tests them.
+Builds the **Intel (`x86_64`)** macOS target of MeshLib on an **Apple Silicon (`arm64`)**
+self-hosted runner with the **native arm64 toolchain cross-targeting x86_64**: cmake, ninja and
+clang run natively and emit x86_64 (`CMAKE_OSX_ARCHITECTURES=x86_64`), the dependencies come from
+vcpkg. The binaries run on Intel Macs, and on the build host under Rosetta, which is how CI
+tests them. The Build step takes about 2 minutes there against 12-17 on the GitHub-hosted Intel
+runner.
 
 ## Where it lives in CI
 
-- The `x64-cross` leg of the `macos-build-test` job in
-  [`build-test-macos.yml`](../../.github/workflows/build-test-macos.yml). The matrix is
-  [`matrix/macos-config.json`](../../.github/workflows/matrix/macos-config.json);
-  [`config.yml`](../../.github/workflows/config.yml) (step `set-macos-matrix`) selects it and **drops the
-  `x64-cross` leg when the PR carries the `disable-build-macos-crossplatform` label**, so a down or busy
-  self-hosted runner can never hang the hosted macOS legs (`disable-build-macos` skips all of macOS).
-  The cross-only steps — the shim setup, `-DMR_PLATFORM=APPLE_x86_64`, `Verify x86_64 output` — are
-  gated on `matrix.cross-osx-arch`, which only that leg sets.
-- Runs on a runner labelled `[self-hosted, macos, arm64, crossplatform-build]`, provisioned by
-  [`provision-runner.sh`](provision-runner.sh).
-- Produces `meshlib_x64-cross.pkg`; [`test-distribution.yml`](../../.github/workflows/test-distribution.yml)
-  installs and smoke-tests it on a real Intel Mac. That leg is gated by its `test_macos_crossplatform`
-  input (= `build_enable_macos_crossplatform` from `config.yml`), so disabling the cross build also
-  disables the distro test that would otherwise look for a `.pkg` that was never published.
+- The `x64-cross` leg of [`matrix/macos-config.json`](../../.github/workflows/matrix/macos-config.json),
+  run by the `macos-build-test` job of
+  [`build-test-macos.yml`](../../.github/workflows/build-test-macos.yml) on a runner labelled
+  `[self-hosted, macos, arm64, crossplatform-build]`. The cross-only steps (the shim setup,
+  `-DMR_PLATFORM=APPLE_x86_64`, `Verify x86_64 output`) are gated on `matrix.cross-osx-arch`.
+- The PR label `disable-build-macos-crossplatform` drops the leg
+  ([`config.yml`](../../.github/workflows/config.yml), step `set-macos-matrix`), so a down or busy
+  runner cannot hang the hosted macOS legs. It also drops the distribution tests of the package.
+- The leg produces `meshlib_x64-cross.pkg`;
+  [`test-distribution.yml`](../../.github/workflows/test-distribution.yml) installs it on Intel
+  macOS 12 (a real Mac Pro), 15 and 26, checks that every Mach-O in it is x86_64 with a
+  deployment target of at most 12.0, and runs MeshViewer and the examples.
 
-> **Intent:** once proven, this replaces the GitHub-hosted `macos-15-intel` x64 leg (Intel runners are
-> being retired). Until then both run, and both `.pkg`s are published (the cross one suffixed
-> `-x64-cross`).
-
-## The vcpkg leg
-
-`x64-cross` runs twice, with `lib-source` Homebrew and vcpkg; as for the hosted legs, the
-package comes from the vcpkg one. Its triplet,
-[`x64-cross-osx-meshlib.cmake`](../../thirdparty/vcpkg/triplets/x64-cross-osx-meshlib.cmake), is
-`x64-osx-meshlib` under a separate name so the vcpkg caches (S3, GitHub) of the two legs stay
-apart. The host triplet is left equal to the target one, as on the Intel runners: vcpkg's
-cmake-driven compiles still use the native arm64 clang, while the x86_64 host tools it builds
-(boost's b2, CPython's own build steps) run under Rosetta. With `arm64-osx-meshlib` as the host
-triplet, CPython is configured in cross mode and fails on an undeclared `sendfile`. The
-Homebrew-only environment (the `/usr/local` prefix, the python shim, the pkg-config paths) is
-not set on this leg; its x86_64 `python3` comes from vcpkg and runs under Rosetta like the other
-Intel outputs. The first run builds every port from source on the runner; later runs restore
-`vcpkg_installed` from the GitHub cache or the ports from the S3 binary cache. The Rust bindings
-are built with `CARGO_BUILD_TARGET=x86_64-apple-darwin` (the `target` input of
-`build-rust-bindings`, which also adds that target's standard library with rustup), so cargo
-links the x86_64 libraries; its examples and tests run under Rosetta. The Java bindings stay off
-this leg: the host's arm64 JVM cannot load x86_64 libraries.
+> **Intent:** once proven, this replaces the GitHub-hosted `macos-15-intel` x64 leg (Intel
+> runners are being retired). Until then both run and both packages are built.
 
 ## How it works
 
-- **cmake / ninja / clang run natively as arm64.** `CMAKE_OSX_ARCHITECTURES=x86_64` makes AppleClang
-  emit x86_64 objects. `-D MR_PLATFORM=APPLE_x86_64` labels the binary correctly — otherwise it
-  inherits the host's `CMAKE_SYSTEM_PROCESSOR` (`arm64`) and ships a wrong platform string.
-- x86_64 dependencies come from the **x86_64 Homebrew at `/usr/local`** (coexisting with the native
-  arm64 Homebrew). [`ConfigureHomebrew.cmake`](../../cmake/Modules/ConfigureHomebrew.cmake) honors
-  `-D HOMEBREW_PREFIX=/usr/local`.
+- **cmake / ninja / clang run natively as arm64.** A PATH shim puts the arm64 `cmake` and `ninja`
+  first, and `CMAKE_MAKE_PROGRAM` pins that ninja: CMake's `find_program` would otherwise pick an
+  x86_64 ninja from `/usr/local/bin`, which spawns clang under Rosetta and silently loses the
+  speed. A translated parent makes every child translated.
+- **`-D MR_PLATFORM=APPLE_x86_64`** labels the binaries: cmake is native, so
+  `CMAKE_SYSTEM_PROCESSOR` stays `arm64`.
+- **vcpkg** uses the triplet
+  [`x64-cross-osx-meshlib`](../../thirdparty/vcpkg/triplets/x64-cross-osx-meshlib.cmake), which is
+  `x64-osx-meshlib` under another name so that the caches (S3, GitHub) of the cross and the
+  hosted leg stay apart. The host triplet is left equal to the target one, as on an Intel
+  runner: the cmake-driven compiles still use the native clang, and the x86_64 host tools vcpkg
+  builds (boost's b2, CPython's own build steps) run under Rosetta. With `arm64-osx-meshlib` as
+  the host triplet CPython is configured in cross mode and fails on an undeclared `sendfile`.
+  The first run builds every port from source (about 10 minutes); later runs restore them.
+- **The x86_64 Homebrew at `/usr/local`** (next to the native arm64 one) provides the x86_64
+  llvm-pgo keg and the GNU `make` for the bindings generation. The shim's `brew` wrapper makes
+  every `brew --prefix` in the job resolve to it.
+- **Rust bindings** are built with `CARGO_BUILD_TARGET=x86_64-apple-darwin` (the `target` input
+  of `build-rust-bindings`). **Java bindings** are skipped: the host's arm64 JVM cannot load
+  x86_64 libraries.
 
 ## What still runs under Rosetta
 
-Compilation is native; Rosetta is used for four things, only the last of which is fundamental:
-
-1. **The `/usr/local` Homebrew itself.** Its Portable Ruby is an x86_64 binary, so every `brew` call
-   there (install, `--prefix`, config) is translated, as are formula post-install hooks.
-2. **Configure-time execution of x86_64 programs:** `python3.12-config` / CMake's FindPython (the
-   `/usr/local` interpreter is x86_64) and CMake `try_run` probes.
-3. **The bindings step.** `scripts/mrbind/generate.mk` has no macOS target-arch flag; it yields an
-   x86_64 `mrmeshpy.so` because the x86_64 GNU `make` from `/usr/local` is first on `PATH` and its
-   children (`clang++`, `mrbind`) inherit the translated execution. It works, but it is not native —
-   a candidate follow-up is a native `make` plus an explicit `-arch x86_64`.
-4. **Running the Intel output** for `MRTest`, `MRTestC2`, the MeshViewer smoke test, the Python
-   tests and the Rust examples and tests. Intel code cannot run on Apple Silicon hardware any other
-   way.
-
-A fully Rosetta-free runner would therefore be build-only (different x86_64 dependency source, a
-toolchain file with pre-seeded `try_run` results) with all testing on real Intel hardware.
-
-## Critical gotchas (why a naive attempt silently falls back to Rosetta)
-
-1. **Force the arm64 ninja.** CMake's `find_program` searches `/usr/local/bin` by default and picks up
-   the **x86_64** ninja, which spawns **x86_64 clang under Rosetta** — silently defeating the native
-   build. Pass `-D CMAKE_MAKE_PROGRAM=<arm64-brew>/bin/ninja`. Verify with
-   `vmmap <clang-pid> | grep "Code Type"` → must say `ARM64`, not `X86-64 (Translated)`.
-2. **Point find_package at `/usr/local`** with `-D CMAKE_PREFIX_PATH=/usr/local` so Python, OpenSSL,
-   etc. resolve their x86_64 copies.
-3. **x86_64 Python vs native cmake PATH tension.** Resolve with a small PATH shim mapping
-   `cmake`/`ninja` → the arm64 brew and `python3.12*` → `/usr/local` (x86_64). See the
-   "Configure native x86_64 cross-build environment" step.
-4. **`CMAKE_SYSTEM_PROCESSOR` stays `arm64`** (it reflects the host, since cmake is native). Harmless
-   for MeshLib's own SIMD (gated on the target macros `__x86_64__`/`__aarch64__`); `MR_PLATFORM` is
-   set explicitly to compensate for the label.
-5. **A translated parent makes every child translated.** Anything started from an x86_64 process
-   (the `/usr/local` `make`, a translated shell) runs `/usr/bin/clang++` as x86_64 too. Keep the
-   compile driven by the native `ninja` (gotcha 1); this is also why the bindings step is translated.
+1. The `/usr/local` brew (its Ruby is x86_64) and the x86_64 host tools of vcpkg.
+2. The bindings generation: `scripts/mrbind/generate.mk` has no target-arch flag and yields
+   x86_64 modules because the x86_64 `make` and the x86_64 keg's clang run translated. A native
+   `make` plus an explicit `-arch x86_64` would remove this.
+3. Running the Intel output: MRTest, MRTestC2, MeshViewer, the Python tests (with vcpkg's x86_64
+   `python3`), the Rust examples and tests. On this runner `DYLD_*` variables set in a step's
+   `env` are stripped by System Integrity Protection; export them inside the script.
 
 ## Provisioning a runner
 
-Two accounts are involved: an **administrator** (has sudo) and the CI **service account** (`runner`, no
-sudo, runs the jobs). Run [`provision-runner.sh`](provision-runner.sh) as the service account; wherever
-root is required it prints the exact one-time command for the administrator and exits 1:
-
-1. **Rosetta 2** — `sudo softwareupdate --install-rosetta --agree-to-license`. Needed *before* the first
-   `/usr/local` brew command (brew's Ruby there is x86_64).
-2. **`/usr/local` skeleton owned by the service account** — `sudo mkdir -p /usr/local/{…}` plus
-   `sudo chown -R runner:staff /usr/local/{…}` over Homebrew's directory set (the script prints the
-   full list). `/usr/local` itself stays `root:wheel`.
-
-The service account's re-run then `git clone`s Homebrew into `/usr/local/Homebrew`, links
-`/usr/local/bin/brew` and runs `brew update --force --quiet`. The official installer is deliberately
-not used: since 2026-09 it is Apple-Silicon-only (it aborts on an x86_64 `uname`, and natively it only
-targets `/opt/homebrew`) and it hard-requires sudo. No `arch -x86_64` is needed anywhere: brew at
-`/usr/local` selects its x86_64 Ruby by prefix and serves Intel bottles regardless of the caller's
-architecture (`/usr/local/bin/brew config` reports `macOS: …-x86_64`), which is exactly how the CI shim
-(`exec /usr/local/bin/brew`) invokes it. `--prewarm` installs the `requirements/macos.txt` formulae and
-the binding-generation deps up front.
-
-## Support horizon
-
-Homebrew 7.0 (2026-09-13) moved Intel macOS to **Tier 3: no new Intel bottles**. Existing bottles keep
-installing, but an updated formula may build from source — under Rosetta on this runner, which for
-`llvm@22` means hours — and Homebrew intends to stop running on Intel in or after September 2027. This
-applies equally to the GitHub-hosted `macos-15-intel` leg, which installs the same Intel bottles.
-Consequences:
-
-- Keep the runner's `/usr/local` formulae pinned: CI already sets `HOMEBREW_NO_AUTO_UPDATE=1` and
-  `HOMEBREW_NO_INSTALL_UPGRADE=1`; never `brew upgrade` that prefix by hand.
-- `brew doctor` on `/usr/local` prints an expected Tier-3 notice; it is not an error.
-- The Intel target as a whole has a bounded life; plan its retirement alongside the runner.
+Run [`provision-runner.sh`](provision-runner.sh) as the CI service account (no sudo). Where root
+is needed (Rosetta 2, the `/usr/local` directory skeleton owned by the account) it prints the
+one-time command for an administrator and exits; re-run it afterwards. It then clones Homebrew
+into `/usr/local/Homebrew` and installs the few formulae CI uses. Homebrew moved Intel macOS to
+Tier 3 in 2026-09 (no new bottles, end of support planned for 2027), so keep that prefix
+pinned: CI sets `HOMEBREW_NO_AUTO_UPDATE` and `HOMEBREW_NO_INSTALL_UPGRADE`; never
+`brew upgrade` it by hand.
 
 ## Reproducing locally
 
+With a vcpkg tree for the triplet installed by `scripts/build_vcpkg_thirdparty.sh`:
+
 ```bash
-SHIM=$(mktemp -d)
-ln -sf "$(brew --prefix)/bin/cmake"     "$SHIM/cmake"    # native arm64 cmake/ninja
-ln -sf "$(brew --prefix)/bin/ninja"     "$SHIM/ninja"
-ln -sf /usr/local/bin/python3.12        "$SHIM/python3.12"       # x86_64 Python
-ln -sf /usr/local/bin/python3.12-config "$SHIM/python3.12-config"
-
-env -i HOME="$HOME" \
-  PATH="$SHIM:$(brew --prefix)/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
-  MESHLIB_BUILD_RELEASE=ON MESHLIB_BUILD_DEBUG=OFF \
-  CMAKE_C_COMPILER=/usr/bin/clang CMAKE_CXX_COMPILER=/usr/bin/clang++ \
-  MR_CMAKE_OPTIONS="\
-    -D CMAKE_MAKE_PROGRAM=$(brew --prefix)/bin/ninja \
-    -D HOMEBREW_PREFIX=/usr/local \
-    -D CMAKE_PREFIX_PATH=/usr/local \
-    -D CMAKE_OSX_ARCHITECTURES=x86_64 \
-    -D MR_PLATFORM=APPLE_x86_64 \
-    -D MR_CXX_STANDARD=23 -D MR_PCH_USE_EXTRA_HEADERS=ON" \
-  bash ./scripts/build_source.sh
+export VCPKG_TRIPLET=x64-cross-osx-meshlib MESHLIB_USE_VCPKG=ON VCPKG_MANIFEST_MODE=ON
+export CMAKE_OSX_ARCHITECTURES=x86_64 CMAKE_MAKE_PROGRAM="$(brew --prefix)/bin/ninja"
+export MESHLIB_BUILD_RELEASE=ON MESHLIB_BUILD_DEBUG=OFF
+MR_CMAKE_OPTIONS="-D MR_PLATFORM=APPLE_x86_64 -D MR_CXX_STANDARD=23" ./scripts/build_source.sh
+lipo -archs build/Release/bin/libMRMesh.dylib   # x86_64
 ```
-
-Confirm the output arch with `lipo -archs build/Release/bin/libMRMesh.dylib` → `x86_64` (CI asserts
-this). The thirdparty-from-source libraries build the same way (native tools + the same `-D` flags).
-
-## Source changes this requires
-
-Everything else is CI wiring (the matrix JSON, the `config.yml` gate, the runner shim in the
-workflow); the only non-CI source changes are:
-
-| Change | File |
-|---|---|
-| Honor `-D HOMEBREW_PREFIX=<prefix>` (falls back to `brew --prefix`) and validate it | [`ConfigureHomebrew.cmake`](../../cmake/Modules/ConfigureHomebrew.cmake) |
-| Forward the cross knobs (`CMAKE_OSX_ARCHITECTURES`, `CMAKE_MAKE_PROGRAM`, `HOMEBREW_PREFIX`) and honor a caller `NPROC` | [`build_source.sh`](../../scripts/build_source.sh), [`build_thirdparty.sh`](../../scripts/build_thirdparty.sh) |

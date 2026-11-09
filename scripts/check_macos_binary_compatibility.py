@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check every packaged Mach-O binary against the current macOS host."""
+"""Check the architecture and the macOS deployment target of every packaged Mach-O binary."""
 
 import argparse
 from pathlib import Path
@@ -24,9 +24,7 @@ def main():
     parser.add_argument(
         '--floor',
         help='highest macOS deployment target any binary may require; '
-             'default: the host version. The bundled Homebrew dylibs carry the '
-             'target of the bottles they were poured from (14.0 for sonoma), '
-             'which dyld on an older host loads regardless.',
+             'default: the host version',
     )
     args = parser.parse_args()
     root = args.framework.resolve(strict=True)

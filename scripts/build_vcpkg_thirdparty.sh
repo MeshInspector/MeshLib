@@ -9,9 +9,9 @@ INSTALL_DIR="${1:-./vcpkg_installed}"
 if [ -z "${VCPKG_TRIPLET}" ] ; then
   VCPKG_TRIPLET=$("${BASE_DIR}/scripts/detect_vcpkg_triplet.sh")
 fi
-# The host triplet defaults to the target one. A cross build sets it explicitly
-# (macOS x64-cross: VCPKG_DEFAULT_HOST_TRIPLET=arm64-osx-meshlib), so the target
-# must be passed explicitly too: vcpkg's default target is its host triplet.
+# The host triplet defaults to the target one. The target is passed to vcpkg
+# explicitly below: its own default would be the host's native triplet, which is
+# wrong on the macOS x64-cross runner (arm64 host, x64-cross-osx-meshlib target).
 if [ -z "${VCPKG_DEFAULT_HOST_TRIPLET}" ] ; then
   export VCPKG_DEFAULT_HOST_TRIPLET="${VCPKG_TRIPLET}"
 fi

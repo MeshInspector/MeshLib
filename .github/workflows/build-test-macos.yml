@@ -68,59 +68,34 @@ jobs:
       - name: macOS Diagnostics
         uses: ./.github/actions/macos-diagnostics
 
-      # Before compiler setup and every other `brew --prefix`: the shim makes
-      # them resolve the x86_64 /usr/local brew whose bottles this target links.
+      # Before compiler setup and every other `brew --prefix`: the x86_64 llvm keg and
+      # the GNU make that drives the bindings generation live in the /usr/local brew.
       - name: Configure native x86_64 cross-build environment
         if: ${{ matrix.cross-osx-arch == 'x86_64' }}
         run: |
-          PYVER=3.12
           SHIM="$RUNNER_TEMP/x86_64-cross-shim"
           mkdir -p "$SHIM"
-          # The native arm64 Homebrew prefix varies across the self-hosted fleet
-          # (/opt/homebrew, ~/.homebrew, ...); find it by its arm64 cmake so build
-          # tools run natively, not the x86_64 copies under /usr/local (which would
-          # drag clang into Rosetta).
+          # The native arm64 Homebrew prefix varies across the self-hosted fleet; find
+          # it by its arm64 cmake and ninja, so the build tools run natively and not
+          # the x86_64 copies under /usr/local (which would drag clang into Rosetta).
           ARM_BREW=""
           for p in /opt/homebrew "$HOME/.homebrew"; do
             if file -b "$p/bin/cmake" 2>/dev/null | grep -q arm64 &&
                file -b "$p/bin/ninja" 2>/dev/null | grep -q arm64; then ARM_BREW="$p"; break; fi
           done
-          [ -n "$ARM_BREW" ] || { echo "::error::x86_64 cross setup: no arm64 Homebrew cmake found"; exit 1; }
-          for t in "$ARM_BREW/bin/cmake" "$ARM_BREW/bin/ninja" /usr/local/bin/brew; do
-            [ -x "$t" ] || { echo "::error::x86_64 cross setup: missing $t"; exit 1; }
-          done
+          [ -n "$ARM_BREW" ] || { echo "::error::x86_64 cross setup: no arm64 Homebrew cmake and ninja found"; exit 1; }
+          [ -x /usr/local/bin/brew ] || { echo "::error::x86_64 cross setup: missing /usr/local/bin/brew"; exit 1; }
           ln -sf "$ARM_BREW/bin/cmake" "$SHIM/cmake"
           ln -sf "$ARM_BREW/bin/ninja" "$SHIM/ninja"
-          if [ "${{ matrix.lib-source }}" = "Homebrew" ]; then
-            # Python is installed by Install thirdparty libs later in this job; the
-            # vcpkg leg uses the x86_64 python3 it builds (see Create virtualenv).
-            ln -sf "/usr/local/bin/python$PYVER" "$SHIM/python$PYVER"
-            ln -sf "/usr/local/bin/python$PYVER-config" "$SHIM/python$PYVER-config"
-          fi
           # A symlink-to-a-symlink breaks Homebrew's self-location, so wrap brew.
           printf '#!/bin/bash\nexec /usr/local/bin/brew "$@"\n' > "$SHIM/brew"
           chmod +x "$SHIM/brew"
           echo "$SHIM" >> "$GITHUB_PATH"
+          # No VCPKG_DEFAULT_HOST_TRIPLET: the host triplet stays equal to the target,
+          # see macos/crossplatform-builds/README.md.
           {
             echo "CMAKE_OSX_ARCHITECTURES=${{ matrix.cross-osx-arch }}"
             echo "CMAKE_MAKE_PROGRAM=$ARM_BREW/bin/ninja"
-            if [ "${{ matrix.lib-source }}" = "Homebrew" ]; then
-              echo "CMAKE_PREFIX_PATH=/usr/local"
-              echo "MESHLIB_HOMEBREW_PREFIX=/usr/local"
-              echo "HOMEBREW_DIR=/usr/local"
-              echo "PKG_CONFIG_PATH=/usr/local/opt/python@$PYVER/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
-              # The arm64 brew's pkg-config is first on PATH; without this its own .pc
-              # directory is searched too and generate.mk picks the native Python headers
-              # (python-3.10-embed from ~/.homebrew) for the x86_64 bindings.
-              echo "PKG_CONFIG_LIBDIR=/usr/local/lib/pkgconfig:/usr/local/share/pkgconfig:/usr/local/opt/python@$PYVER/lib/pkgconfig"
-            fi
-            # vcpkg: no VCPKG_DEFAULT_HOST_TRIPLET override; the host triplet stays equal
-            # to the target (x64-cross-osx-meshlib) as on the Intel runners. vcpkg then
-            # treats every port as a native build: its cmake-driven compiles still run
-            # the arm64 clang, and the x86_64 host tools it builds (boost's b2, CPython's
-            # own build steps) run under Rosetta. With arm64-osx-meshlib as the host,
-            # python3 is configured in cross mode, cannot run its test programs and
-            # fails on an undeclared sendfile.
           } >> "$GITHUB_ENV"
 
       - name: Set up compilers

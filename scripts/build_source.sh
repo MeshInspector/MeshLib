@@ -47,9 +47,6 @@ fi
 if [ -n "${CMAKE_MAKE_PROGRAM}" ]; then
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D CMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
 fi
-if [ -n "${MESHLIB_HOMEBREW_PREFIX}" ]; then
-  MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D HOMEBREW_PREFIX=${MESHLIB_HOMEBREW_PREFIX}"
-fi
 
 if command -v ninja >/dev/null 2>&1 ; then
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -G Ninja"
@@ -121,14 +118,10 @@ if [[ $OSTYPE == 'darwin'* && "${MESHLIB_USE_VCPKG}" != "ON" ]]; then
   "
 fi
 
-# Respect a caller-provided NPROC (e.g. to cap parallelism / limit heat);
-# otherwise default to all available cores.
-if [ -z "${NPROC}" ]; then
-  if [[ $OSTYPE == 'darwin'* ]]; then
-    NPROC=$(sysctl -n hw.logicalcpu)
-  else
-    NPROC=$(nproc)
-  fi
+if [[ $OSTYPE == 'darwin'* ]]; then
+  NPROC=$(sysctl -n hw.logicalcpu)
+else
+  NPROC=$(nproc)
 fi
 echo "The number of concurrent build threads NPROC=${NPROC}"
 

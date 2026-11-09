@@ -1,0 +1,13 @@
+{
+  "include": [
+    { "arch": "arm64", "runner": "macos-13", "pkg_pattern": "*arm64.pkg" },
+    { "arch": "arm64", "runner": "macos-15", "pkg_pattern": "*arm64.pkg" },
+    { "arch": "arm64", "runner": "macos-26", "pkg_pattern": "*arm64.pkg" },
+    { "arch": "x64", "runner": "macos-12-intel", "pkg_pattern": "*x64.pkg" },
+    { "arch": "x64", "runner": "macos-15-intel", "pkg_pattern": "*x64.pkg" },
+    { "arch": "x64", "runner": "macos-26-intel", "pkg_pattern": "*x64.pkg" },
+    { "arch": "x64-cross", "runner": ["self-hosted", "X64", "macOS", "macos-x64-build", "macos-12-intel"], "pkg_pattern": "*x64-cross.pkg" },
+    { "arch": "x64-cross", "runner": "macos-15-intel", "pkg_pattern": "*x64-cross.pkg" },
+    { "arch": "x64-cross", "runner": "macos-26-intel", "pkg_pattern": "*x64-cross.pkg" }
+  ]
+}

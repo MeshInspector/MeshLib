@@ -33,14 +33,14 @@ __global__ void rayKernel( const WideNode3* nodes, const float3* meshPoints, con
         {
             const size_t patch = index % precCount;
             const auto intersectRes = rayMeshIntersect( nodes, meshPoints, leafTris, samples[sample], 0, FLT_MAX, precs[patch], bool( outIntersections ) );
-            if ( intersectRes.distanceAlongLine > 0 )
-            {
-                block |= currentBit;         
-            }
-            else if ( outIntersections )
-            {
-                outIntersections[index] = intersectRes;
-            }
+            if ( intersectRes.proj.faceId < 0 )
+                block |= currentBit; // the ray reaches the sky
+            if ( outIntersections )
+                outIntersections[index] = intersectRes; // no face if the ray reaches the sky
+        }
+        else if ( outIntersections )
+        {
+            outIntersections[index] = MeshIntersectionResult{};
         }
         currentBit <<= 1;
     }
@@ -57,8 +57,16 @@ __global__ void radiationKernel( const WideNode3* nodes, const float3* meshPoint
     }
 
     const size_t sampleVertId = blockIdx.x * blockDim.x + threadIdx.x;
-    if ( sampleVertId >= sampleCount || !testBit( validSamples, sampleVertId ) )
+    if ( sampleVertId >= sampleCount )
         return;
+
+    if ( !testBit( validSamples, sampleVertId ) )
+    {
+        if ( outIntersections )
+            for ( int i = 0; i < precCount; ++i )
+                outIntersections[sampleVertId * precCount + i] = MeshIntersectionResult{};
+        return;
+    }
 
     const auto samplePt = samples[sampleVertId];
 
@@ -66,11 +74,10 @@ __global__ void radiationKernel( const WideNode3* nodes, const float3* meshPoint
     for ( int i = 0; i < precCount; ++i )
     {
         const auto intersectRes = rayMeshIntersect( nodes, meshPoints, leafTris, samplePt, 0, FLT_MAX, precs[i], bool( outIntersections ) );
-        if ( intersectRes.distanceAlongLine < 0 )
-            totalRadiation += skyPatches[i].radiation;
-        else if ( outIntersections )
-            outIntersections[sampleVertId * precCount + i] = intersectRes;
-
+        if ( intersectRes.proj.faceId < 0 )
+            totalRadiation += skyPatches[i].radiation; // the ray reaches the sky
+        if ( outIntersections )
+            outIntersections[sampleVertId * precCount + i] = intersectRes; // no face if the ray reaches the sky
     }
 
     res[sampleVertId] = rMaxRadiation * totalRadiation;

@@ -10,7 +10,13 @@
     <None Include="..\.editorconfig" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRCudaMeshDistanceMapTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRCudaPointsProject.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRCudaSolarRadiationTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRTestCuda.cpp">

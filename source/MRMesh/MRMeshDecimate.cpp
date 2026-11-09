@@ -1300,8 +1300,8 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
         BitSetParallelFor( mesh.topology.getValidFaces(), [&]( FaceId f )
         {
             PartRange r;
-            for ( auto e : leftRing( mesh.topology, f ) )
-                r.include( vertRange[mesh.topology.org( e )] );
+            for ( auto v : mesh.topology.getTriVerts( f ) )
+                r.include( vertRange[v] );
             faceRange[f] = r;
         } );
         BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )

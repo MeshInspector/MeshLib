@@ -4,6 +4,7 @@
 #include "MRMeshFwd.h"
 #include "MRAffineXf3.h"
 #include "MRVectorTraits.h"
+#include "MRNextUpDown.h"
 #include <algorithm>
 #include <cassert>
 #include <iosfwd>
@@ -263,8 +264,8 @@ public:
         Box res;
         for ( int i = 0; i < elements; ++i )
         {
-            VTraits::getElem( i, res.min ) = std::nextafter( VTraits::getElem( i, min ), std::numeric_limits<T>::lowest() );
-            VTraits::getElem( i, res.max ) = std::nextafter( VTraits::getElem( i, max ), std::numeric_limits<T>::max() );
+            VTraits::getElem( i, res.min ) = nextDown( VTraits::getElem( i, min ) );
+            VTraits::getElem( i, res.max ) = nextUp( VTraits::getElem( i, max ) );
         }
         return res;
     }
@@ -283,6 +284,7 @@ public:
     {
         return s >> box.min >> box.max;
     }
+
 };
 
 template <typename T>

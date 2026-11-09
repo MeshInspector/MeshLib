@@ -428,14 +428,13 @@ bool MeshTopology::isLeftTri( EdgeId a ) const
 
 void MeshTopology::getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const
 {
+    assert( isLeftTri( a ) );
     v0 = org( a );
     EdgeId b = prev( a.sym() );
-    assert( a != b );
     v1 = org( b );
-    EdgeId c = prev( b.sym() );
-    assert( a != c );
-    v2 = org( c );
-    assert( a == prev( c.sym() ) );
+    // same as org( prev( b.sym() ) ), but reads only b's sibling record (typically in the same cache line as b's)
+    // instead of the record of the third edge, which is usually far away in memory
+    v2 = dest( b );
 }
 
 void MeshTopology::getLeftTriEdges( EdgeId e0, EdgeId & e1, EdgeId & e2 ) const

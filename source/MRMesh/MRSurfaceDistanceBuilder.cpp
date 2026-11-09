@@ -1,5 +1,6 @@
 #include "MRSurfaceDistanceBuilder.h"
 #include "MRMesh.h"
+#include "MRNextUpDown.h"
 #include "MRRingIterator.h"
 #include "MRTimer.h"
 #include "MRphmap.h"
@@ -121,7 +122,7 @@ void SurfaceDistanceBuilder::suggestDistancesAround_( VertId v )
         c.vert = dest;
         c.distance = vDist + mesh_.edgeLength( e );
         if( c.distance <= vDist )
-            c.distance = std::nextafter( vDist, FLT_MAX );
+            c.distance = nextUp( vDist );
         if ( !suggestVertDistance_( c ) )
         {
             // a shorter distance is known for dest
@@ -159,7 +160,7 @@ void SurfaceDistanceBuilder::considerLeftTriPath_( EdgeId e )
 
     float vc = va + dvac;
     if( vc <= va )
-        vc = std::nextafter( va, FLT_MAX );
+        vc = nextUp( va );
     suggestVertDistance_( { c, vc } );
 }
 

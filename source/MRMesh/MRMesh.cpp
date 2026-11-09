@@ -501,6 +501,9 @@ Expected<PackMapping> Mesh::packOptimally( bool preserveAABBTree, ProgressCallba
     if ( auto r = pack( map, subprogress( cb, 0.7f, 1.0f ) ); !r )
         return unexpected( std::move( r.error() ) );
 
+    if ( preserveAABBTree )
+        AABBTreeOwner_.update( [this]( AABBTree & t ) { t.updateTriangulation( topology ); } );
+
     return map;
 }
 
@@ -596,6 +599,20 @@ void Mesh::updateCachesAfterSplits( const FaceHashMap & new2Old )
         assert( tree.numLeaves() == topology.numValidFaces() );
     } );
     AABBTreePointsOwner_.reset(); // new vertices appeared
+    dipolesOwner_.reset();
+}
+
+void Mesh::flipOrientation( const UndirectedEdgeBitSet * fullComponents )
+{
+    MR_TIMER;
+    topology.flipOrientation( fullComponents );
+    AABBTreeOwner_.update( [&]( AABBTree & tree )
+    {
+        if ( !fullComponents )
+            return tree.flipOrientation();
+        const auto flipped = getNeighborFaces( topology, *fullComponents );
+        tree.flipOrientation( &flipped );
+    } );
     dipolesOwner_.reset();
 }
 

@@ -56,9 +56,8 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
                 auto face = node.leafId();
                 if( ( !meshPart.region || meshPart.region->test( face ) ) && ( !validFaces || validFaces( face ) ) )
                 {
-                    VertId a, b, c;
-                    m.topology.getTriVerts( face, a, b, c );
-
+                    const auto & tri = tree.leafTriVerts( node );
+                    const auto [a, b, c] = tri;
                     const Vector3<T> vA = Vector3<T>( m.points[a] ) - line.p;
                     const Vector3<T> vB = Vector3<T>( m.points[b] ) - line.p;
                     const Vector3<T> vC = Vector3<T>( m.points[c] ) - line.p;
@@ -348,7 +347,9 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
             auto face = node.leafId();
             if( !meshPart.region || meshPart.region->test( face ) )
             {
-                m.topology.getTriVerts( face, pvc[0].id, pvc[1].id, pvc[2].id );
+                const auto & tri = tree.leafTriVerts( node );
+                for ( int i = 0; i < 3; ++i )
+                    pvc[i].id = tri[i];
                 if constexpr ( std::is_same_v<T, double> )
                 {
                     // double version (more precise)
@@ -524,8 +525,8 @@ void planeMeshIntersect( const MeshPart& meshPart, const Plane3f & plane,
                     if ( vs )
                     {
                         vs->set( m.topology.org( e0 ) );
-                        vs->set( m.topology.org( e1 ) );
-                        vs->set( m.topology.org( e2 ) );
+                        vs->set( m.topology.dest( e0 ) ); // = org( e1 ), but from the record getTriEdges already read
+                        vs->set( m.topology.dest( e1 ) );
                     }
                 }
             }
@@ -595,8 +596,8 @@ void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
                     if ( vs )
                     {
                         vs->set( m.topology.org( e0 ) );
-                        vs->set( m.topology.org( e1 ) );
-                        vs->set( m.topology.org( e2 ) );
+                        vs->set( m.topology.dest( e0 ) ); // = org( e1 ), but from the record getTriEdges already read
+                        vs->set( m.topology.dest( e1 ) );
                     }
                 }
             }

@@ -17,6 +17,8 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
     res.distSq = upDistLimitSq;
     if ( tree.nodes().empty() )
         return res;
+    const auto & points = mp.mesh.points;
+    TriPointd resBary; // res.mtp is computed only in the end
 
     struct SubTask
     {
@@ -55,32 +57,29 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
                 continue;
             if ( mp.region && !mp.region->test( face ) )
                 continue;
-            Vector3f a, b, c;
-            mp.mesh.getTriPoints( face, a, b, c );
+            const auto & tri = tree.leafTriVerts( node );
+            auto a = points[tri[0]], b = points[tri[1]], c = points[tri[2]];
             if ( xf )
             {
                 a = (*xf)( a );
                 b = (*xf)( b );
                 c = (*xf)( c );
             }
-            
+
             // compute the closest point in double-precision, because float might be not enough
             const auto [projD, baryD] = closestPointInTriangle( Vector3d( pt ), Vector3d( a ), Vector3d( b ), Vector3d( c ) );
             const Vector3f proj( projD );
-            const MeshProjectionResult candidate
-            {
-                .proj = PointOnFace{ face, proj },
-                .mtp = MeshTriPoint{ mp.mesh.topology.edgeWithLeft( face ), TriPointf( baryD ) },
-                .distSq = ( proj - pt ).lengthSq()
-            };
-            if ( validProjections && !validProjections( candidate ) )
+            const auto distSq = ( proj - pt ).lengthSq();
+            if ( !( distSq < res.distSq ) )
                 continue;
-            if ( candidate.distSq < res.distSq )
-            {
-                res = candidate;
-                if ( res.distSq <= loDistLimitSq )
-                    break;
-            }
+            if ( validProjections && !validProjections( { .proj = { face, proj },
+                .mtp = MeshTriPoint( mp.mesh.topology.edgeWithLeft( face ), TriPointf( baryD ) ), .distSq = distSq } ) )
+                continue;
+            res.proj = { face, proj };
+            res.distSq = distSq;
+            resBary = baryD;
+            if ( res.distSq <= loDistLimitSq )
+                break;
             continue;
         }
         
@@ -99,6 +98,8 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
         }
     }
 
+    if ( res.proj.face )
+        res.mtp = MeshTriPoint( mp.mesh.topology.edgeWithLeft( res.proj.face ), TriPointf( resBary ) );
     return res;
 }
 
@@ -126,9 +127,10 @@ MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp, f
     return findProjectionSubtree( pt, mp, mp.mesh.getAABBTree(), upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
 }
 
-void findBoxedTrisInBall( const MeshPart & mp, Ball3f ball, const FoundBoxedTriCallback& foundCallback )
+/// calls foundCallback( leaf node, ball ) for every leaf of mp.region with the box intersecting the ball
+template<typename F>
+static void findBoxedLeavesInBall( const MeshPart & mp, const AABBTree & tree, Ball3f ball, F && foundCallback )
 {
-    const auto & tree = mp.mesh.getAABBTree();
     if ( tree.nodes().empty() )
         return;
 
@@ -159,7 +161,7 @@ void findBoxedTrisInBall( const MeshPart & mp, Ball3f ball, const FoundBoxedTriC
             const auto face = node.leafId();
             if ( mp.region && !mp.region->test( face ) )
                 continue;
-            if ( foundCallback( face, ball ) == Processing::Stop )
+            if ( foundCallback( node, ball ) == Processing::Stop )
                 break;
             continue;
         }
@@ -180,27 +182,33 @@ void findBoxedTrisInBall( const MeshPart & mp, Ball3f ball, const FoundBoxedTriC
     }
 }
 
+void findBoxedTrisInBall( const MeshPart & mp, Ball3f ball, const FoundBoxedTriCallback& foundCallback )
+{
+    findBoxedLeavesInBall( mp, mp.mesh.getAABBTree(), ball, [&]( const AABBTree::Node & node, Ball3f & ball )
+    {
+        return foundCallback( node.leafId(), ball );
+    } );
+}
+
 void findTrisInBall( const MeshPart & mp, const Ball3f& ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces )
 {
-    findBoxedTrisInBall( mp, ball, [&]( FaceId face, Ball3f & ball )
+    const auto & tree = mp.mesh.getAABBTree();
+    const auto & points = mp.mesh.points;
+    findBoxedLeavesInBall( mp, tree, ball, [&]( const AABBTree::Node & node, Ball3f & ball )
     {
+        const auto face = node.leafId();
         if ( validFaces && !validFaces( face ) )
             return Processing::Continue;
-        Vector3f a, b, c;
-        mp.mesh.getTriPoints( face, a, b, c );
-            
+        const auto & tri = tree.leafTriVerts( node );
+        const auto a = points[tri[0]], b = points[tri[1]], c = points[tri[2]];
+
         // compute the closest point in double-precision, because float might be not enough
         const auto [projD, baryD] = closestPointInTriangle( Vector3d( ball.center ), Vector3d( a ), Vector3d( b ), Vector3d( c ) );
         const Vector3f proj( projD );
-        const MeshProjectionResult candidate
-        {
-            .proj = PointOnFace{ face, proj },
-            .mtp = MeshTriPoint{ mp.mesh.topology.edgeWithLeft( face ), TriPointf( baryD ) },
-            .distSq = ( proj - ball.center ).lengthSq()
-        };
-        if ( candidate.distSq < ball.radiusSq )
-            return foundCallback( candidate, ball );
-        return Processing::Continue;
+        const auto distSq = ( proj - ball.center ).lengthSq();
+        if ( !( distSq < ball.radiusSq ) )
+            return Processing::Continue;
+        return foundCallback( { .proj = { face, proj }, .mtp = MeshTriPoint( mp.mesh.topology.edgeWithLeft( face ), TriPointf( baryD ) ), .distSq = distSq }, ball );
     } );
 }
 

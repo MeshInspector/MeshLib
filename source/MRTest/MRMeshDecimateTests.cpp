@@ -3,6 +3,7 @@
 #include <MRMesh/MRCylinder.h>
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRCube.h>
+#include <MRMesh/MREdgeIterator.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBuffer.h>
 #include <MRMesh/MRMeshLoad.h>
@@ -305,6 +306,30 @@ TEST( MRMesh, MeshDecimateResolveDegen )
     );
 }
 
+TEST( MRMesh, MeshDecimateOtherEnd )
+{
+    // prism of height 2 whose side has a tiny stair step: wall b-c, strip c-a 0.014 wide, wall a-e;
+    // edge c-a is the cheapest to collapse, its optimal position and keeping c make too thin triangles, but keeping a removes the step
+    const VertCoords points
+    {
+        { -0.2f, 1.1f, 2 }, { 0, 0.165f, 2 }, { 0, 0, 2 }, { 0.014f, 0, 2 }, { 0.6f, -10, 2 }, { 20, -10, 2 }, { 20, 40, 2 }, { -0.2f, 40, 2 }, // k b c a e f g h
+        { -0.2f, 1.1f, 0 }, { 0, 0.165f, 0 }, { 0, 0, 0 }, { 0.6f, -10, 0 }, { 20, -10, 0 }, { 20, 40, 0 }, { -0.2f, 40, 0 }               // k0 b0 c0 e0 f0 g0 h0
+    };
+    const Triangulation t
+    {
+        { 2_v, 3_v, 1_v }, { 6_v, 1_v, 3_v }, { 4_v, 6_v, 3_v }, { 1_v, 6_v, 0_v }, { 4_v, 5_v, 6_v }, { 0_v, 6_v, 7_v },      // top
+        { 9_v, 2_v, 1_v }, { 9_v, 10_v, 2_v }, { 2_v, 10_v, 3_v }, { 10_v, 4_v, 3_v }, { 10_v, 11_v, 4_v },                // b-c, strip c-a, a-e
+        { 8_v, 9_v, 0_v }, { 0_v, 9_v, 1_v }, { 11_v, 12_v, 5_v }, { 11_v, 5_v, 4_v }, { 12_v, 13_v, 6_v }, { 12_v, 6_v, 5_v },  // k-b, e-f, f-g
+        { 13_v, 14_v, 7_v }, { 13_v, 7_v, 6_v }, { 14_v, 8_v, 0_v }, { 14_v, 0_v, 7_v },                                    // g-h, h-k
+        { 13_v, 9_v, 8_v }, { 13_v, 10_v, 9_v }, { 13_v, 11_v, 10_v }, { 13_v, 12_v, 11_v }, { 13_v, 8_v, 14_v }            // bottom
+    };
+    Mesh mesh = Mesh::fromTriangles( points, t );
+    const auto res = decimateMesh( mesh, { .maxError = 0.03f, .stabilizer = 1e-5f } );
+    EXPECT_EQ( res.vertsDeleted, 1 );
+    EXPECT_FALSE( mesh.topology.hasVert( 2_v ) );
+    EXPECT_EQ( mesh.points[3_v], points[3_v] );
+}
+
 TEST( MRMesh, DecimateObjectMeshDataShortAttributes )
 {
     const Mesh original = makeSphere( { .numMeshVertices = 400 } );
@@ -395,6 +420,41 @@ TEST( MRMesh, RemeshKeepsSharpEdges )
     for ( auto v : mesh.topology.getValidVerts() )
         maxDist = std::max( maxDist, std::sqrt( findProjection( mesh.points[v], cube ).distSq ) );
     EXPECT_LT( maxDist, rs.targetEdgeLen );
+}
+
+TEST( MRMesh, MeshDecimateNoFold )
+{
+    // box [0,1]x[0,1]x[0,2] with tiny top triangle (c,a,b) at the corner (0,0,2);
+    // moving b onto a deletes it, side triangle (b0,c,b) turns by almost 90 degrees and folds onto its new neighbour (c0,a,c)
+    const float d = 0.01f, h = 0.2f;
+    const VertCoords points
+    {
+        { 0, 0, 2 }, { d, 0.001f, 2 }, { 0, h, 2 }, { 1, 0, 2 }, { 1, 1, 2 }, { 0, 1, 2 }, // c, a, b, top corners
+        { 0, 0, 0 }, { d, 0, 0 }, { 0, h, 0 }, { 1, 0, 0 }, { 1, 1, 0 }, { 0, 1, 0 }        // c0, a0, b0, bottom corners
+    };
+    const Triangulation t
+    {
+        { 0_v, 1_v, 2_v }, { 1_v, 3_v, 4_v }, { 1_v, 4_v, 2_v }, { 2_v, 4_v, 5_v },      // top
+        { 6_v, 7_v, 1_v }, { 6_v, 1_v, 0_v }, { 7_v, 9_v, 3_v }, { 7_v, 3_v, 1_v },      // y = 0
+        { 8_v, 0_v, 2_v }, { 6_v, 0_v, 8_v }, { 8_v, 2_v, 5_v }, { 8_v, 5_v, 11_v },     // x = 0
+        { 9_v, 10_v, 4_v }, { 9_v, 4_v, 3_v }, { 10_v, 11_v, 5_v }, { 10_v, 5_v, 4_v },  // x = 1, y = 1
+        { 10_v, 9_v, 7_v }, { 10_v, 7_v, 6_v }, { 10_v, 6_v, 8_v }, { 10_v, 8_v, 11_v }  // bottom
+    };
+    Mesh mesh = Mesh::fromTriangles( points, t );
+    ASSERT_TRUE( mesh.topology.isClosed() );
+
+    UndirectedEdgeBitSet edgesToCollapse( mesh.topology.undirectedEdgeSize() );
+    edgesToCollapse.set( mesh.topology.findEdge( 1_v, 2_v ).undirected() );
+    DecimateSettings settings
+    {
+        .maxError = 0.05f, // allows moving b onto a, but not a onto b
+        .maxTriangleAspectRatio = FLT_MAX,
+        .optimizeVertexPos = false,
+        .edgesToCollapse = &edgesToCollapse
+    };
+    decimateMesh( mesh, settings );
+    for ( auto ue : undirectedEdges( mesh.topology ) )
+        EXPECT_GT( dot( mesh.normal( mesh.topology.left( ue ) ), mesh.normal( mesh.topology.right( ue ) ) ), -0.5f );
 }
 
 } //namespace MR

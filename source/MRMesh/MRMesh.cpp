@@ -610,10 +610,7 @@ void Mesh::flipOrientation( const UndirectedEdgeBitSet * fullComponents )
     {
         if ( !fullComponents )
             return tree.flipOrientation();
-        FaceBitSet flipped( topology.faceSize() );
-        for ( auto f : topology.getValidFaces() )
-            if ( fullComponents->test( topology.edgeWithLeft( f ).undirected() ) )
-                flipped.set( f );
+        const auto flipped = getNeighborFaces( topology, *fullComponents );
         tree.flipOrientation( &flipped );
     } );
     dipolesOwner_.reset();

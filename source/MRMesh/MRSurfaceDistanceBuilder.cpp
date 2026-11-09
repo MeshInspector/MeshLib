@@ -104,14 +104,18 @@ void SurfaceDistanceBuilder::addStartRegion( const VertBitSet & region, float st
 void SurfaceDistanceBuilder::addStartVertices( const HashMap<VertId, float>& startVertices )
 {
     MR_TIMER;
+    // in the order of vertex ids, not of the hash map, for the same results on all platforms
+    VertBitSet verts( vertDistanceMap_.size() );
     for ( const auto & [v, dist] : startVertices )
-        addStartVert_( v, dist );
-    for ( const auto & [v, dist] : startVertices )
+        verts.set( v );
+    for ( auto v : verts )
+        addStartVert_( v, startVertices.at( v ) );
+    for ( auto v : verts )
         for ( EdgeId e : orgRing( mesh_.topology, v ) )
             addStartEdge_( e );
     finishSourceGroups_();
 
-    for ( const auto & [v, dist] : startVertices )
+    for ( auto v : verts )
         suggestDistancesAround_( v );
 }
 

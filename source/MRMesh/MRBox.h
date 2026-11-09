@@ -4,8 +4,10 @@
 #include "MRMeshFwd.h"
 #include "MRAffineXf3.h"
 #include "MRVectorTraits.h"
+#include "MRBitCast.h"
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
 #include <iosfwd>
 #include <limits>
 #include <type_traits>
@@ -263,8 +265,8 @@ public:
         Box res;
         for ( int i = 0; i < elements; ++i )
         {
-            VTraits::getElem( i, res.min ) = std::nextafter( VTraits::getElem( i, min ), std::numeric_limits<T>::lowest() );
-            VTraits::getElem( i, res.max ) = std::nextafter( VTraits::getElem( i, max ), std::numeric_limits<T>::max() );
+            VTraits::getElem( i, res.min ) = nextDown_( VTraits::getElem( i, min ) );
+            VTraits::getElem( i, res.max ) = nextUp_( VTraits::getElem( i, max ) );
         }
         return res;
     }
@@ -282,6 +284,32 @@ public:
     friend std::istream& operator>>( std::istream& s, Box<V>& box )
     {
         return s >> box.min >> box.max;
+    }
+
+private:
+    // the same as std::nextafter( x, max() ) and std::nextafter( x, lowest() ), but inline for finite nonzero floats,
+    // since std::nextafter is a library call in MSVC
+    static T nextUp_( T x )
+    {
+        if constexpr ( std::is_same_v<T, float> )
+        {
+            if ( x > 0 && x < std::numeric_limits<float>::max() )
+                return bit_cast<float>( bit_cast<std::uint32_t>( x ) + 1 );
+            if ( x < 0 && x >= std::numeric_limits<float>::lowest() )
+                return bit_cast<float>( bit_cast<std::uint32_t>( x ) - 1 );
+        }
+        return std::nextafter( x, std::numeric_limits<T>::max() );
+    }
+    static T nextDown_( T x )
+    {
+        if constexpr ( std::is_same_v<T, float> )
+        {
+            if ( x > 0 && x <= std::numeric_limits<float>::max() )
+                return bit_cast<float>( bit_cast<std::uint32_t>( x ) - 1 );
+            if ( x < 0 && x > std::numeric_limits<float>::lowest() )
+                return bit_cast<float>( bit_cast<std::uint32_t>( x ) + 1 );
+        }
+        return std::nextafter( x, std::numeric_limits<T>::lowest() );
     }
 };
 

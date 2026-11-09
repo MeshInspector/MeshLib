@@ -2,7 +2,9 @@
 #include <MRMesh/MRSurfaceDistance.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBitSet.h>
+#include <MRMesh/MRConstants.h>
 #include <MRMesh/MRLineSegm.h>
+#include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRMeshTriPoint.h>
 #include <MRMesh/MRRegionBoundary.h>
 #include <MRMesh/MRVector3.h>
@@ -11,6 +13,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <functional>
 
 namespace MR
 {
@@ -294,6 +297,100 @@ TEST( MRMesh, SurfaceDistanceVaryingStartValues )
     }
     EXPECT_LT( sumErr / ( n * n ), 0.1f );
     EXPECT_GT( minErr, -1e-3f );
+}
+
+// the distances on a unit sphere mesh against the exact geodesic distances on the sphere:
+// the mean error, and the largest overestimate and underestimate
+struct SphereErrors
+{
+    float mean = 0, over = 0, under = 0;
+};
+
+static SphereErrors sphereErrors( const Mesh & mesh, const VertScalars & dist, const std::function<float( const Vector3f & )> & exact )
+{
+    SphereErrors res;
+    double sum = 0;
+    for ( auto v : mesh.topology.getValidVerts() )
+    {
+        const float err = dist[v] - exact( mesh.points[v] );
+        sum += std::abs( err );
+        res.over = std::max( res.over, err );
+        res.under = std::max( res.under, -err );
+    }
+    res.mean = float( sum / mesh.topology.numValidVerts() );
+    return res;
+}
+
+static float sphereAngle( const Vector3f & a, const Vector3f & b )
+{
+    return std::atan2( cross( a, b ).length(), dot( a, b ) );
+}
+
+TEST( MRMesh, SurfaceDistanceSpherePoints )
+{
+    const auto mesh = makeSphere( { .radius = 1, .numMeshVertices = 10000 } );
+    const VertId s0( 0 );
+    const auto p0 = mesh.points[s0];
+    // the vertex at about 90 degrees from s0
+    VertId s1;
+    for ( auto v : mesh.topology.getValidVerts() )
+        if ( !s1 || std::abs( dot( mesh.points[v], p0 ) ) < std::abs( dot( mesh.points[s1], p0 ) ) )
+            s1 = v;
+    const auto p1 = mesh.points[s1];
+    const MeshTriPoint start( mesh.topology.edgeWithLeft( FaceId( 0 ) ), { 0.3f, 0.3f } );
+    const auto ps = mesh.triPoint( start );
+
+    VertBitSet seeds( mesh.topology.vertSize() );
+    seeds.set( s0 );
+    const auto one = computeSurfaceDistances( mesh, seeds );
+    seeds.set( s1 );
+    const auto two = computeSurfaceDistances( mesh, seeds );
+    for ( const auto & errs : {
+        sphereErrors( mesh, one, [&]( const Vector3f & p ) { return sphereAngle( p, p0 ); } ),
+        sphereErrors( mesh, two, [&]( const Vector3f & p ) { return std::min( sphereAngle( p, p0 ), sphereAngle( p, p1 ) ); } ),
+        sphereErrors( mesh, computeSurfaceDistances( mesh, start ), [&]( const Vector3f & p ) { return sphereAngle( p, ps ); } ) } )
+    {
+        EXPECT_LT( errs.mean, 3e-3f );
+        EXPECT_LT( errs.over, 1e-3f );
+        // the paths on the mesh are shorter than on the sphere, most of all where the fronts meet
+        EXPECT_LT( errs.under, 3e-2f );
+    }
+}
+
+TEST( MRMesh, SurfaceDistanceSphereLines )
+{
+    const int nLon = 64, nLat = 35;
+    const auto mesh = makeUVSphere( 1, nLon, nLat );
+    auto latitude = [&]( int j ) { return PI_F * ( float( j + 1 ) / ( nLat + 1 ) - 0.5f ); };
+    auto pointLatitude = []( const Vector3f & p ) { return std::asin( std::clamp( p.z, -1.f, 1.f ) ); };
+
+    // the parallel at 30 degrees: the line is curved on the sphere
+    const int j30 = 23;
+    VertBitSet seeds( mesh.topology.vertSize() );
+    for ( int i = 0; i < nLon; ++i )
+        seeds.set( VertId( j30 * nLon + i ) );
+    const auto parallel = sphereErrors( mesh, computeSurfaceDistances( mesh, seeds ),
+        [&]( const Vector3f & p ) { return std::abs( pointLatitude( p ) - latitude( j30 ) ); } );
+    EXPECT_LT( parallel.mean, 1e-3f );
+    EXPECT_LT( parallel.over, 1e-3f );
+    EXPECT_LT( parallel.under, 3e-3f );
+
+    // a quarter of the equator: the distances from its ends are on both sides
+    const int jEq = nLat / 2;
+    seeds.reset();
+    for ( int i = 0; i <= nLon / 4; ++i )
+        seeds.set( VertId( jEq * nLon + i ) );
+    const auto a = mesh.points[VertId( jEq * nLon )], b = mesh.points[VertId( jEq * nLon + nLon / 4 )];
+    const auto arc = sphereErrors( mesh, computeSurfaceDistances( mesh, seeds ), [&]( const Vector3f & p )
+    {
+        const float lon = std::atan2( p.x, p.y );
+        if ( lon >= 0 && lon <= PI_F / 2 )
+            return std::abs( pointLatitude( p ) );
+        return std::min( sphereAngle( p, a ), sphereAngle( p, b ) );
+    } );
+    EXPECT_LT( arc.mean, 4e-3f );
+    EXPECT_LT( arc.over, 1e-3f );
+    EXPECT_LT( arc.under, 2e-2f );
 }
 
 } //namespace MR

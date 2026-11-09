@@ -221,7 +221,7 @@ Expected<Mesh> build( const Vector3f& size, const MeshParams& params, ProgressCa
     if ( !res )
         return res;
     if ( isThick( params.type ) )
-        res->topology.flipOrientation();
+        res->flipOrientation();
     res->packOptimally( false );
 
     if ( params.decimate )

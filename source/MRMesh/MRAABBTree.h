@@ -82,6 +82,10 @@ public:
     /// renumbers the triangles and their vertices after the mesh was packed with given maps from old to new ids
     MRMESH_API void renumber( const FaceBMap & faceMap, const VertBMap & vertMap );
 
+    /// changes the order of the vertices of the triangles of given faces (all if nullptr) as MeshTopology::flipOrientation() does;
+    /// shall be called after MeshTopology::flipOrientation() if this tree is kept
+    MRMESH_API void flipOrientation( const FaceBitSet * region = nullptr );
+
     /// updates the boxes of the triangles with changed vertices and of their ancestors;
     /// this is a faster alternative to full tree rebuild (but the tree after refit might be less efficient)
     /// \param mesh same mesh for which this tree was constructed but with updated coordinates;

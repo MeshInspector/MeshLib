@@ -334,6 +334,17 @@ void AABBTree::renumber( const FaceBMap & faceMap, const VertBMap & vertMap )
     } );
 }
 
+void AABBTree::flipOrientation( const FaceBitSet * region )
+{
+    MR_TIMER;
+    ParallelFor( leafTris_, [&]( size_t i )
+    {
+        auto & lt = leafTris_[i];
+        if ( !region || region->test( lt.face ) )
+            std::swap( lt.verts[0], lt.verts[1] );
+    } );
+}
+
 void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
 {
     MR_TIMER;

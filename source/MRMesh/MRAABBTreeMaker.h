@@ -2,6 +2,7 @@
 
 #include "MRAABBTreeNode.h"
 #include "MRVector.h"
+#include "MRFunctional.h"
 
 namespace MR
 {
@@ -27,7 +28,11 @@ inline int getNumNodes( int numLeaves )
 }
 
 template<typename T>
-AABBTreeNodeVec<T> makeAABBTreeNodeVec( Buffer<BoxedLeaf<T>> boxedLeaves );
+using OnLeafCallback = FunctionRef<typename T::LeafId( typename T::LeafId id, int pos )>;
+
+/// \param onLeaf optional, called in parallel for every leaf with its id and position (AABBTreeNode::leafPos), returns the id to store in the leaf
+template<typename T>
+AABBTreeNodeVec<T> makeAABBTreeNodeVec( Buffer<BoxedLeaf<T>> boxedLeaves, const OnLeafCallback<T> * onLeaf = nullptr );
 
 /// \}
 

@@ -116,7 +116,7 @@ void AABBTreeBase<T>::getLeafOrderAndReset( LeafBMap & leafMap )
         if ( !n.leaf() )
             continue;
         leafMap.b[n.leafId()] = l;
-        n.setLeafId( l++ );
+        n.setLeafId( l++, n.leafPos() );
     }
     leafMap.tsize = int( l );
 }

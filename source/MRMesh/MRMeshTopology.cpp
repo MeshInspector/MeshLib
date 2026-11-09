@@ -432,10 +432,13 @@ void MeshTopology::getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId &
     EdgeId b = prev( a.sym() );
     assert( a != b );
     v1 = org( b );
+    v2 = dest( b );
+    // not v2 = org( prev( b.sym() ) ) to avoid extra edge-record access
+#ifndef NDEBUG
     EdgeId c = prev( b.sym() );
     assert( a != c );
-    v2 = org( c );
     assert( a == prev( c.sym() ) );
+#endif
 }
 
 void MeshTopology::getLeftTriEdges( EdgeId e0, EdgeId & e1, EdgeId & e2 ) const

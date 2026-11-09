@@ -13,6 +13,8 @@
 #include <MRMesh/MRRingIterator.h>
 #include <MRMesh/MRphmap.h>
 #include <gtest/gtest.h>
+#include <algorithm>
+#include <cmath>
 
 namespace MR
 {
@@ -22,6 +24,7 @@ namespace
 
 const Color cStock( 150, 60, 60 );
 const Color cTool( 0, 255, 0 );
+const Vector3f cToolAxis( 20, 0, 0 );
 
 // a stock box with a cylindrical pocket, the faces from the cylinder have the tool color
 ObjectMeshData makeColoredCut()
@@ -29,7 +32,7 @@ ObjectMeshData makeColoredCut()
     auto stock = makeCube( Vector3f( 100, 100, 52 ), Vector3f( -50, -50, -50 ) );
     subdivideMesh( stock, { .maxEdgeLen = 4.0f, .maxEdgeSplits = 10'000'000 } );
     const auto tool = makeCylinder( 5.0f, 10.0f, 32 );
-    const auto xf = AffineXf3f::translation( Vector3f( 20, 0, -4 ) );
+    const auto xf = AffineXf3f::translation( cToolAxis + Vector3f( 0, 0, -4 ) );
     BooleanResultMapper mapper;
     auto res = boolean( stock, tool, BooleanOperation::DifferenceAB, &xf, &mapper );
     EXPECT_TRUE( res.valid() );
@@ -48,17 +51,26 @@ void copyNewColors( FaceColors & colors, const FaceHashMap & new2Old, size_t fac
         colors[nf] = colors[of];
 }
 
-// directed edges with a stock face on the left and a tool face on the right
-std::vector<EdgeId> borderEdges( const MeshTopology & t, const FaceColors & colors )
+// directed edges with a stock face on the left and a tool face on the right,
+// ordered by the angle of their middles around the tool axis (and not by the edge ids, which depend on the Boolean)
+std::vector<EdgeId> borderEdges( const Mesh & mesh, const FaceColors & colors )
 {
-    std::vector<EdgeId> res;
+    const auto & t = mesh.topology;
+    std::vector<std::pair<float, EdgeId>> res;
     for ( EdgeId e( 0 ); e < t.edgeSize(); ++e )
     {
         const auto l = t.left( e ), r = t.right( e );
         if ( l && r && colors[l] == cStock && colors[r] == cTool )
-            res.push_back( e );
+        {
+            const auto mid = mesh.edgeCenter( e ) - cToolAxis;
+            res.emplace_back( std::atan2( mid.y, mid.x ), e );
+        }
     }
-    return res;
+    std::sort( res.begin(), res.end() );
+    std::vector<EdgeId> edges;
+    for ( const auto & x : res )
+        edges.push_back( x.second );
+    return edges;
 }
 
 // duplicates edge (eb): splits its left face and flips the new edge going to the vertex opposite to (eb)
@@ -100,7 +112,7 @@ void addCaps( Mesh & mesh, FaceColors & colors, const std::vector<EdgeId> & edge
 // needle slivers and cap slivers on the color border
 void addDefects( Mesh & mesh, FaceColors & colors )
 {
-    const auto be = borderEdges( mesh.topology, colors );
+    const auto be = borderEdges( mesh, colors );
     ASSERT_GE( be.size(), 36 );
     FaceHashMap n2o;
     for ( size_t i = 5; i < 15; ++i )
@@ -171,13 +183,27 @@ void checkAttributes( const ObjectMeshData & data, FixMeshDegeneraciesParams::Mo
     }
 }
 
-// total area of the faces with another color than the original surface at their centers
+// total area of the faces with another color than the original surface at their centers;
+// a center equally close to original triangles of several colors (findProjection returns any of them) matches each of these colors
 float wrongColorArea( const ObjectMeshData & data, const ObjectMeshData & original )
 {
+    std::vector<std::pair<Color, FaceBitSet>> byColor;
+    for ( auto f : original.mesh->topology.getValidFaces() )
+    {
+        const auto c = original.faceColors[f];
+        auto it = std::find_if( byColor.begin(), byColor.end(), [c]( const auto & x ) { return x.first == c; } );
+        if ( it == byColor.end() )
+            it = byColor.insert( byColor.end(), { c, FaceBitSet( original.mesh->topology.faceSize() ) } );
+        it->second.set( f );
+    }
     float res = 0;
     for ( auto f : data.mesh->topology.getValidFaces() )
-        if ( data.faceColors[f] != original.faceColors[findProjection( data.mesh->triCenter( f ), *original.mesh ).proj.face] )
+    {
+        const auto p = data.mesh->triCenter( f );
+        const auto it = std::find_if( byColor.begin(), byColor.end(), [&]( const auto & x ) { return x.first == data.faceColors[f]; } );
+        if ( it == byColor.end() || findProjection( p, { *original.mesh, &it->second } ).distSq > findProjection( p, *original.mesh ).distSq )
             res += data.mesh->area( f );
+    }
     return res;
 }
 

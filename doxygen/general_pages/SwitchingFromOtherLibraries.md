@@ -156,6 +156,19 @@ std::vector<double> radii = {0.005, 0.01, 0.02, 0.04};
 auto mesh = geometry::TriangleMesh::CreateFromPointCloudBallPivoting(*pcd, radii);
 ```
 
+MeshLib (ball pivoting, no normals needed):
+```cpp
+#include <MRMesh/MRPointsLoad.h>
+#include <MRMesh/MRPointCloud.h>
+#include <MRMesh/MRPointCloudRadius.h>
+#include <MRMesh/MRAlphaShape.h>
+#include <MRMesh/MRMesh.h>
+
+auto cloud = MR::PointsLoad::fromAnySupportedFormat("cloud.ply").value();
+float radius = MR::findAvgPointsRadius(cloud, 20); // a ball holds about 20 points
+MR::Mesh mesh = MR::findBallPivotingMesh(cloud, radius);
+```
+
 MeshLib (voxel fusion):
 ```cpp
 #include <MRMesh/MRPointsLoad.h>

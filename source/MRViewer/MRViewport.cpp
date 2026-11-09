@@ -507,6 +507,7 @@ std::vector<ConstObjAndPick> Viewport::constMultiPickObjects( const std::vector<
 
 void Viewport::setupView()
 {
+    updateCameraAnimation_();
     setupViewMatrix_();
     setupProjMatrix_();
     setupAxesViewProjMatrix_();
@@ -529,9 +530,9 @@ void Viewport::postDraw() const
     drawAxesAndViewController();
 }
 
-void Viewport::updateSceneBox_()
+Box3f Viewport::calcSceneBox_() const
 {
-    sceneBox_ = SceneRoot::get().getWorldTreeBox( id );
+    return SceneRoot::get().getWorldTreeBox( id );
 }
 
 void Viewport::setViewportRect( const ViewportRectangle& rect )

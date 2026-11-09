@@ -494,10 +494,11 @@ jobs:
           cuda-minor: ${{ env.CUDA-MINOR }}
           install-vs-integration: false
 
-      - name: Install MSYS2 for MRBind
+      - name: Install MSYS2 clang and make
         uses: ./.github/actions/install-msys2-mrbind
         with:
           packages-suffix: ${{ matrix.msys2-pkgs }}
+          compile-only: true
 
       - name: Add clang-cl to MSYS2 clang
         # MSYS2 ships no clang-cl.exe; clang.exe called by that name runs in cl mode

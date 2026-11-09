@@ -12,6 +12,7 @@
 #include "MRTouchpadController.h"
 #include "MRMouseController.h"
 #include "MRViewportGlobalBasis.h"
+#include "MRViewportCornerController.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRGLMacro.h"
 #include "MRViewer/MRGladGlfw.h"
@@ -82,6 +83,7 @@ const std::string cMruInnerVoxelsFormat = "mruInner.voxelsFormat";
 const std::string cSortDroppedFiles = "sortDroppedFiles";
 const std::string cScrollForceConfigKey = "scrollForce";
 const std::string cInvertZoomConfigKey = "invertZoom";
+const std::string cViewCubeAnimationKey = "viewCubeAnimation";
 const std::string cVisualObjectTags = "visualObjectTags";
 [[maybe_unused]] const std::string cLanguage = "language";
 }
@@ -222,6 +224,8 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         viewer.scrollForce = cfg.getJsonValue( cScrollForceConfigKey ).asFloat();
     }
     viewer.mouseController().setZoomInverted( cfg.getBool( cInvertZoomConfigKey, false ) );
+    if ( viewer.basisViewController )
+        viewer.basisViewController->enableCameraAnimation( cfg.getBool( cViewCubeAnimationKey, true ) );
 
     if ( cfg.hasJsonValue( cGlobalBasisKey ) && viewer.globalBasis )
     {
@@ -573,6 +577,8 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     cfg.setBool( cSortDroppedFiles, viewer.getSortDroppedFiles() );
     cfg.setJsonValue( cScrollForceConfigKey, viewer.scrollForce );
     cfg.setBool( cInvertZoomConfigKey, viewer.mouseController().isZoomInverted() );
+    if ( viewer.basisViewController )
+        cfg.setBool( cViewCubeAnimationKey, viewer.basisViewController->isCameraAnimationEnabled() );
 
     if ( viewer.globalBasis )
     {

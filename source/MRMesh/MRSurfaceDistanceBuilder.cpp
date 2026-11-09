@@ -87,6 +87,21 @@ static bool getPointSourceDistAtC( const Vector3d & a, const Vector3d & b, const
     return true;
 }
 
+/// the linear field with values va in a and vb in b, extended to c
+static bool getLinearFieldAtC( Vector3f a, float va, Vector3f b, float vb, const Vector3f & c, float & vc )
+{
+    if ( vb < va )
+    {
+        std::swap( a, b );
+        std::swap( va, vb );
+    }
+    float dvac = 0;
+    if ( !getFieldAtC( b - a, c - a, vb - va, dvac ) )
+        return false;
+    vc = va + dvac;
+    return true;
+}
+
 SurfaceDistanceBuilder::SurfaceDistanceBuilder( const Mesh & mesh, const VertBitSet* region )
     : mesh_( mesh ), region_{region}
 {
@@ -170,6 +185,7 @@ void SurfaceDistanceBuilder::addStartVert_( VertId v, float startDistance )
     {
         vi = startDistance;
         vertSource_[v] = addSource_( startDistance, v, mesh_.points[v] );
+        vertLineEnd_[v] = {};
     }
 }
 
@@ -215,7 +231,7 @@ bool SurfaceDistanceBuilder::distToStart_( VertId v, SurfaceDistanceStartId s0, 
         return false;
     const auto ps = mesh_.points[vsv];
     const double t = dot( mesh_.points[v] - ps, ( mesh_.points[vrv] - ps ).normalized() );
-    d = s1 ? std::sqrt( std::max( 0.0, sqr( dv ) - sqr( t ) ) ) : std::hypot( dv, t );
+    d = s1 ? std::sqrt( std::max( 0.0, sqr( dv ) - sqr( t ) ) ) : std::sqrt( sqr( dv ) + sqr( t ) );
     return true;
 }
 
@@ -234,7 +250,7 @@ void SurfaceDistanceBuilder::nearestStartEdge_( const Vector3f & p, SurfaceDista
     // p is beyond the end s of edge s0-s1: it is near another start edge from s (or further along the start edges) or near point s itself
     auto s = t < 0 ? s0 : s1;
     auto other = t < 0 ? s1 : s0;
-    for ( int step = 0; step < 4; ++step )
+    for ( int step = 0; ; ++step )
     {
         const auto vs = sourceVert_[s];
         const auto ps = mesh_.points[vs];
@@ -261,6 +277,13 @@ void SurfaceDistanceBuilder::nearestStartEdge_( const Vector3f & p, SurfaceDista
         }
         if ( !next )
             break;
+        if ( step == 15 )
+        {
+            // too far along short start edges: the last of them, not its end point
+            s0 = s;
+            s1 = next;
+            return;
+        }
         other = s;
         s = next;
     }
@@ -431,12 +454,13 @@ MR_SD_NOINLINE void SurfaceDistanceBuilder::considerTriBetweenGroups_( EdgeId e,
         VertId q0, q1;
         mesh_.topology.getLeftTriVerts( e.sym(), q0, q1, w );
     }
-    if ( !w || !( vertDistanceMap_[w] < FLT_MAX ) )
-        return;
+    const bool hasW = w && vertDistanceMap_[w] < FLT_MAX;
     float best = FLT_MAX;
     SurfaceDistanceStartId best0, best1;
     auto tryFrom = [&]( VertId x, VertId y )
     {
+        if ( !hasW )
+            return;
         const auto s0 = vertSource_[x];
         const auto s1 = vertLineEnd_[x];
         if ( regionSources_.test( s0 ) )
@@ -464,6 +488,17 @@ MR_SD_NOINLINE void SurfaceDistanceBuilder::considerTriBetweenGroups_( EdgeId e,
     };
     tryFrom( a, b );
     tryFrom( b, a );
+    if ( best == FLT_MAX && ( regionSources_.test( vertSource_[a] ) || regionSources_.test( vertSource_[b] ) ) )
+    {
+        // the fronts of a region and of another start meet: the plane wave through a and b, as near a region
+        float vc = 0;
+        if ( getLinearFieldAtC( mesh_.points[a], va, mesh_.points[b], vertDistanceMap_[b], mesh_.points[c], vc ) )
+        {
+            best = std::max( vc, nextUp( va ) );
+            best0 = vertSource_[a];
+            best1 = vertLineEnd_[a];
+        }
+    }
     if ( best < FLT_MAX )
         suggestVertDistance_( { c, best }, best0, best1 );
 }

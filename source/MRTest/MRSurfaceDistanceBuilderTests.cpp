@@ -274,6 +274,46 @@ TEST( MRMesh, SurfaceDistanceRingWithGap )
     EXPECT_GT( minErrNearGap, -0.1f );
 }
 
+TEST( MRMesh, SurfaceDistanceRegions )
+{
+    const int n = 41;
+    const auto mesh = makePlanarGrid( n, true );
+    auto addDisk = [&]( VertBitSet & seeds, float x, float y, float r )
+    {
+        for ( auto v : mesh.topology.getValidVerts() )
+            if ( ( mesh.points[v] - Vector3f( x, y, 0 ) ).length() <= r )
+                seeds.set( v );
+    };
+    // two separate disks of start vertices; a disk and a line
+    VertBitSet twoDisks( mesh.topology.vertSize() ), diskAndLine( mesh.topology.vertSize() );
+    addDisk( twoDisks, 11, 20, 8 );
+    addDisk( twoDisks, 29, 20, 8 );
+    addDisk( diskAndLine, 12, 20, 5 );
+    for ( int x = 22; x <= 34; ++x )
+        diskAndLine.set( VertId( 20 * n + x ) );
+    // the fronts meet between the starts; the largest errors are far from them, in the linear field near a disk
+    for ( const auto & [seeds, maxLimit] : { std::pair{ twoDisks, 0.8f }, std::pair{ diskAndLine, 0.7f } } )
+    {
+        const auto edges = getInnerEdges( mesh.topology, seeds );
+        const auto dist = computeSurfaceDistances( mesh, seeds );
+        float sumErr = 0, maxErr = 0;
+        for ( auto v : mesh.topology.getValidVerts() )
+        {
+            const auto & p = mesh.points[v];
+            float d = FLT_MAX;
+            for ( auto s : seeds )
+                d = std::min( d, ( p - mesh.points[s] ).length() );
+            for ( auto ue : edges )
+                d = std::min( d, ( p - closestPointOnLineSegm( p, LineSegm3f( mesh.points[mesh.topology.org( ue )], mesh.points[mesh.topology.dest( ue )] ) ) ).length() );
+            const float err = std::abs( dist[v] - d );
+            sumErr += err;
+            maxErr = std::max( maxErr, err );
+        }
+        EXPECT_LT( sumErr / ( n * n ), 0.13f );
+        EXPECT_LT( maxErr, maxLimit );
+    }
+}
+
 TEST( MRMesh, SurfaceDistanceVaryingStartValues )
 {
     const int n = 41;

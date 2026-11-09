@@ -50,7 +50,7 @@ public:
     /// initiates distance construction from given start vertices with values in them (these vertices will NOT be returned by growOne if values in them are not decreased);
     /// the vertices connected by mesh edges make lines or regions (a line with different values is handled as a region), each isolated vertex is a point
     MRMESH_API void addStartVertices( const HashMap<VertId, float>& startVertices );
-    /// initiates distance construction from given start edges and start points with known start distance in all of them;
+    /// initiates distance construction from given start edges and start points with known start distance in all of them (their vertices will NOT be returned by growOne);
     /// the start edges connected by vertices make lines or regions; each start point is a point never united with other starts,
     /// even if it is one edge away from them, unless it is an end of a start edge
     MRMESH_API void addStartEdgesAndPoints( const UndirectedEdgeBitSet & startEdges, const VertBitSet & startPoints, float startDistance );

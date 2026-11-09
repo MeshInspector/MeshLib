@@ -968,19 +968,15 @@ FaceBitSet findHoleComplicatingFaces( const Mesh & mesh )
     return res;
 }
 
-/// returns true if the faces of the region can be replaced by a planar triangulation of the region's boundary with all triangles facing n;
-/// otherwise sets pinch to a vertex that the boundary passes twice, if any (fillContours2D does not fill such boundaries)
-static bool hasPlanarFill( const Mesh& mesh, const FaceBitSet& region, const Vector3f& n, VertId& pinch )
+/// returns true if the faces of the region can be replaced by a planar triangulation of the region's boundary with all triangles facing n
+static bool hasPlanarFill( const Mesh& mesh, const FaceBitSet& region, const Vector3f& n )
 {
     const auto loops = findLeftBoundary( mesh.topology, region );
     HashSet<VertId> bdVerts;
     for ( const auto& loop : loops )
         for ( auto e : loop )
             if ( !bdVerts.insert( mesh.topology.org( e ) ).second )
-            {
-                pinch = mesh.topology.org( e );
-                return false;
-            }
+                return false; // fillContours2D does not fill boundaries passing a vertex twice
     const auto patch = PlanarTriangulation::triangulateDisjointContours( mesh, loops, n );
     if ( !patch )
         return false;
@@ -1061,82 +1057,55 @@ void fixMeshCreases( Mesh& mesh, const FixCreasesParams& params )
         if ( creases.none() )
             return;
 
-        // first fix flat folds: re-triangulate the folded parts of the flat patches around creases
+        // first fix flat folds: the flat area around a crease grows by rings of faces parallel to it in either orientation (and slivers)
+        // until all such faces next to it are oriented the same way and its boundary has a planar triangulation facing them, which replaces it
         bool changed = false;
         FaceBitSet visited( mesh.topology.faceSize() );
         for ( auto ue : creases )
         {
-            const auto seed = mesh.topology.left( ue );
-            if ( !seed || !mesh.topology.right( ue ) || visited.test( seed ) )
+            const auto l = mesh.topology.left( ue ), r = mesh.topology.right( ue );
+            if ( !l || !r || visited.test( l ) || visited.test( r ) )
                 continue;
-            // the flat patch around the crease: faces parallel to the seed in either orientation, and slivers
-            const auto seedNormal = mesh.normal( seed );
-            FaceBitSet patch( mesh.topology.faceSize() );
-            patch.set( seed );
-            std::vector<FaceId> patchFaces{ seed };
-            Vector3d sumArea;
-            for ( size_t i = 0; i < patchFaces.size(); ++i )
+            const auto seedNormal = mesh.normal( l );
+            FaceBitSet region( mesh.topology.faceSize() );
+            region.set( l );
+            region.set( r );
+            std::vector<FaceId> ring{ l, r }, next;
+            for ( ;; )
             {
-                sumArea += Vector3d( mesh.dirDblArea( patchFaces[i] ) );
-                for ( auto e : leftRing( mesh.topology, patchFaces[i] ) )
+                next.clear();
+                size_t numUp = 0;
+                for ( auto f : ring )
+                    for ( auto e : leftRing( mesh.topology, f ) )
+                    {
+                        const auto g = mesh.topology.right( e );
+                        if ( !g || region.test( g ) )
+                            continue;
+                        const auto d = dot( mesh.normal( g ), seedNormal );
+                        if ( mesh.triangleAspectRatio( g ) <= params.criticalTriAspectRatio && std::abs( d ) < planarAngleCos )
+                            continue;
+                        region.set( g );
+                        next.push_back( g );
+                        numUp += d > 0;
+                    }
+                if ( next.empty() )
+                    break;
+                if ( numUp == 0 || numUp == next.size() )
                 {
-                    const auto g = mesh.topology.right( e );
-                    if ( !g || patch.test( g ) || visited.test( g ) )
-                        continue;
-                    if ( mesh.triangleAspectRatio( g ) <= params.criticalTriAspectRatio && std::abs( dot( mesh.normal( g ), seedNormal ) ) < planarAngleCos )
-                        continue;
-                    patch.set( g );
-                    patchFaces.push_back( g );
-                }
-            }
-            visited |= patch;
-
-            // the folds are the faces opposite to the patch's total area
-            const Vector3f n( sumArea.normalized() );
-            FaceBitSet folded( mesh.topology.faceSize() );
-            for ( auto f : patchFaces )
-                if ( dot( mesh.dirDblArea( f ), n ) < 0 )
-                    folded.set( f );
-            while ( auto f0 = folded.find_first() )
-            {
-                // the folded faces connected with f0 by vertices
-                FaceBitSet region( mesh.topology.faceSize() );
-                region.set( f0 );
-                std::vector<FaceId> queue{ f0 };
-                for ( size_t i = 0; i < queue.size(); ++i )
-                    for ( auto e : leftRing( mesh.topology, queue[i] ) )
-                        for ( auto ee : orgRing( mesh.topology, e ) )
-                            if ( auto g = mesh.topology.left( ee ); folded.test( g ) && !region.test( g ) )
-                            {
-                                region.set( g );
-                                queue.push_back( g );
-                            }
-                folded -= region;
-                // grow the region inside the patch until its boundary has a planar triangulation facing n
-                for ( ;; )
-                {
-                    VertId pinch;
-                    if ( hasPlanarFill( mesh, region, n, pinch ) )
+                    for ( auto g : next )
+                        region.reset( g );
+                    if ( hasPlanarFill( mesh, region, numUp ? seedNormal : -seedNormal ) )
                     {
                         replace( region, true );
                         changed = true;
                         break;
                     }
-                    const auto size = region.count();
-                    if ( pinch )
-                        for ( auto e : orgRing( mesh.topology, pinch ) )
-                            if ( auto g = mesh.topology.left( e ); patch.test( g ) )
-                                region.set( g );
-                    if ( region.count() == size )
-                        for ( auto f : FaceBitSet( region ) )
-                            for ( auto e : leftRing( mesh.topology, f ) )
-                                if ( auto g = mesh.topology.right( e ); patch.test( g ) )
-                                    region.set( g );
-                    if ( region.count() == size )
-                        break;
+                    for ( auto g : next )
+                        region.set( g );
                 }
-                folded &= mesh.topology.getValidFaces();
+                ring.swap( next );
             }
+            visited |= region;
             visited.resize( mesh.topology.faceSize(), true ); // the new faces are not folded
         }
         if ( changed )

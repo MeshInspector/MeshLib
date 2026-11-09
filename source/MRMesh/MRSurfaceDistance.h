@@ -28,8 +28,8 @@ MRMESH_API VertScalars computeSurfaceDistances( const Mesh& mesh, const VertBitS
     float maxDist = FLT_MAX, const VertBitSet* region = nullptr, int maxVertUpdates = 3 );
 
 /// computes path distances in mesh vertices from given start vertices with values in them, stopping when maxDist is reached;
-/// start vertices connected by mesh edges make lines or regions (distances from the edges between them),
-/// each isolated start vertex is a point;
+/// start vertices connected by mesh edges make lines or regions (distances from the edges between them;
+/// a line with different values is handled as a region), each isolated start vertex is a point;
 /// considered paths can go either along edges or straightly within triangles
 MRMESH_API VertScalars computeSurfaceDistances( const Mesh& mesh, const HashMap<VertId, float>& startVertices, float maxDist = FLT_MAX, 
                                                           const VertBitSet* region = nullptr, int maxVertUpdates = 3 );

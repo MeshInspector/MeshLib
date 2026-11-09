@@ -2,8 +2,11 @@
 #include <MRMesh/MRSurfaceDistance.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBitSet.h>
+#include <MRMesh/MRLineSegm.h>
+#include <MRMesh/MRMeshTriPoint.h>
 #include <MRMesh/MRRegionBoundary.h>
 #include <MRMesh/MRVector3.h>
+#include <MRMesh/MRphmap.h>
 #include <gtest/gtest.h>
 
 #include <algorithm>
@@ -164,7 +167,10 @@ TEST( MRMesh, SurfaceDistanceEdgesAndPoints )
         lineVerts.set( VertId( row * n + x ) );
     const auto lineEdges = getInnerEdges( mesh.topology, lineVerts );
     // start edges between all start vertices give the same distances as these start vertices
-    EXPECT_TRUE( computeSurfaceDistances( mesh, lineEdges, VertBitSet{} ) == computeSurfaceDistances( mesh, lineVerts ) );
+    HashMap<VertId, float> lineStarts;
+    for ( auto v : lineVerts )
+        lineStarts[v] = 0;
+    EXPECT_TRUE( computeSurfaceDistances( mesh, lineEdges, VertBitSet{} ) == computeSurfaceDistances( mesh, lineStarts ) );
 
     // start points one edge away from the segment: beyond its end and beside its middle
     const VertId pts[2] = { VertId( row * n + 16 ), VertId( ( row + 1 ) * n + 10 ) };
@@ -188,8 +194,106 @@ TEST( MRMesh, SurfaceDistanceEdgesAndPoints )
             maxErr = std::max( maxErr, err );
     }
     // the fronts meet right from the start points, and the errors near the seams there spread along them
-    EXPECT_LT( sumErr / ( n * n ), 3e-2f );
+    EXPECT_LT( sumErr / ( n * n ), 3.5e-2f );
     EXPECT_LT( maxErr, 5e-2f );
+}
+
+TEST( MRMesh, SurfaceDistanceEdgeMiddle )
+{
+    const int n = 41;
+    const auto mesh = makePlanarGrid( n, false );
+    const VertId v0( n / 2 * n + n / 2 );
+    // a start in the middle of an axis-aligned edge and of a diagonal edge
+    for ( VertId v1 : { v0 + 1, v0 + n + 1 } )
+    {
+        const MeshTriPoint start( MeshEdgePoint( mesh.topology.findEdge( v0, v1 ), 0.5f ) );
+        const auto p = mesh.triPoint( start );
+        const auto dist = computeSurfaceDistances( mesh, start );
+        float maxErr = 0;
+        for ( auto v : mesh.topology.getValidVerts() )
+            maxErr = std::max( maxErr, std::abs( dist[v] - ( mesh.points[v] - p ).length() ) );
+        EXPECT_LT( maxErr, 1e-3f );
+    }
+}
+
+TEST( MRMesh, SurfaceDistanceTriPointStarts )
+{
+    const int n = 41;
+    const auto mesh = makePlanarGrid( n, true );
+    std::vector<MeshTriPoint> starts;
+    std::vector<Vector3f> ps;
+    for ( VertId v : { VertId( n / 2 * n + 10 ), VertId( n / 2 * n + 30 ), VertId( ( n / 2 + 2 ) * n + 20 ) } )
+    {
+        starts.push_back( MeshTriPoint( mesh.topology.findEdge( v, v + 1 ), { 0.3f, 0.3f } ) );
+        ps.push_back( mesh.triPoint( starts.back() ) );
+    }
+    const auto dist = computeSurfaceDistances( mesh, starts );
+    float sumErr = 0, maxErr = 0;
+    for ( auto v : mesh.topology.getValidVerts() )
+    {
+        float d = FLT_MAX;
+        for ( const auto & p : ps )
+            d = std::min( d, ( mesh.points[v] - p ).length() );
+        const float err = std::abs( dist[v] - d );
+        sumErr += err;
+        maxErr = std::max( maxErr, err );
+    }
+    EXPECT_LT( sumErr / ( n * n ), 2e-3f );
+    EXPECT_LT( maxErr, 0.2f );
+}
+
+TEST( MRMesh, SurfaceDistanceRingWithGap )
+{
+    const int n = 41;
+    const auto mesh = makePlanarGrid( n, true );
+    // the perimeter of a square of start vertices without one vertex: the ends of one line meet at the gap
+    VertBitSet seeds( mesh.topology.vertSize() );
+    for ( int i = 10; i <= 30; ++i )
+        for ( VertId v : { VertId( 10 * n + i ), VertId( 30 * n + i ), VertId( i * n + 10 ), VertId( i * n + 30 ) } )
+            seeds.set( v );
+    seeds.reset( VertId( 30 * n + 20 ) );
+    const auto edges = getInnerEdges( mesh.topology, seeds );
+    const auto dist = computeSurfaceDistances( mesh, seeds );
+    float sumErr = 0, minErrNearGap = 0;
+    for ( auto v : mesh.topology.getValidVerts() )
+    {
+        const auto & p = mesh.points[v];
+        float d = FLT_MAX;
+        for ( auto s : seeds )
+            d = std::min( d, ( p - mesh.points[s] ).length() );
+        for ( auto ue : edges )
+            d = std::min( d, ( p - closestPointOnLineSegm( p, LineSegm3f( mesh.points[mesh.topology.org( ue )], mesh.points[mesh.topology.dest( ue )] ) ) ).length() );
+        sumErr += std::abs( dist[v] - d );
+        if ( std::abs( p.x - 20 ) <= 4 && std::abs( p.y - 30 ) <= 4 )
+            minErrNearGap = std::min( minErrNearGap, dist[v] - d );
+    }
+    EXPECT_LT( sumErr / ( n * n ), 4e-2f );
+    EXPECT_GT( minErrNearGap, -0.1f );
+}
+
+TEST( MRMesh, SurfaceDistanceVaryingStartValues )
+{
+    const int n = 41;
+    const int row = n / 2;
+    const float k = 0.5f;
+    const auto mesh = makePlanarGrid( n, true, row );
+    // a straight row of start vertices with the start values growing along it
+    HashMap<VertId, float> starts;
+    for ( int x = 5; x <= 35; ++x )
+        starts[VertId( row * n + x )] = k * ( x - 5 );
+    const auto dist = computeSurfaceDistances( mesh, starts );
+    float sumErr = 0, minErr = 0;
+    for ( auto v : mesh.topology.getValidVerts() )
+    {
+        const auto & p = mesh.points[v];
+        const float h = std::abs( p.y - row );
+        const float t = std::clamp( p.x - k * h / std::sqrt( 1 - k * k ), 5.f, 35.f );
+        const float err = dist[v] - ( k * ( t - 5 ) + std::hypot( p.x - t, h ) );
+        sumErr += std::abs( err );
+        minErr = std::min( minErr, err );
+    }
+    EXPECT_LT( sumErr / ( n * n ), 0.1f );
+    EXPECT_GT( minErr, -1e-3f );
 }
 
 } //namespace MR

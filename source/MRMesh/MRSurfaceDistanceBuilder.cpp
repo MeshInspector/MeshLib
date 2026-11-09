@@ -1,5 +1,6 @@
 #include "MRSurfaceDistanceBuilder.h"
 #include "MRMesh.h"
+#include "MRLineSegm.h"
 #include "MRNextUpDown.h"
 #include "MRRegionBoundary.h"
 #include "MRRingIterator.h"
@@ -69,16 +70,12 @@ static bool getPointSourceDistAtC( const Vector3d & a, const Vector3d & b, const
         return false;
     const double sx = ( ( da - db ) * ( da + db ) + e2 ) / 2;
     const double sy2 = sqr( da ) * e2 - sqr( sx );
-    if constexpr ( checkCross )
-    {
-        if ( !( sy2 > 0 ) )
-            return false;
-    }
-    else if ( !( sy2 > -1e-6 * sqr( e2 ) ) )
-        return false; // without the crossing check, the source on line ab (e.g. in vertex a or b) is accepted
+    if ( !( sy2 > -1e-6 * sqr( e2 ) ) )
+        return false; // the source on line ab up to rounding is accepted (a start on edge ab)
     const double cy = std::sqrt( cy2 );
-    const double sy = checkCross ? -std::sqrt( sy2 ) : -std::sqrt( std::max( sy2, 0.0 ) );
-    // the path from the source to c crosses line ab at x = sx + ( cx - sx ) * sy / ( sy - cy ), which must be within (0, e2)
+    const double sy = -std::sqrt( std::max( sy2, 0.0 ) );
+    // the path from the source to c crosses line ab at x = sx + ( cx - sx ) * sy / ( sy - cy ), which must be within (0, e2);
+    // for the source on ab, it means strictly between a and b
     const double t = ( cx - sx ) * sy;
     const double h = sy - cy; // negative
     if constexpr ( checkCross )
@@ -122,16 +119,16 @@ void SurfaceDistanceBuilder::addStartEdgesAndPoints( const UndirectedEdgeBitSet 
 {
     MR_TIMER;
     VertBitSet verts = startPoints;
-    verts.resize( vertDistanceMap_.size() );
-    for ( auto ue : startEdges )
-    {
-        verts.set( mesh_.topology.org( ue ) );
-        verts.set( mesh_.topology.dest( ue ) );
-    }
+    verts &= mesh_.topology.getValidVerts();
+    verts |= getIncidentVerts( mesh_.topology, startEdges );
     for ( auto v : verts )
         addStartVert_( v, startDistance );
     for ( auto ue : startEdges )
+    {
+        if ( ue >= mesh_.topology.undirectedEdgeSize() )
+            break;
         addStartEdge_( ue );
+    }
     finishSourceGroups_();
 
     for ( auto v : verts )
@@ -141,7 +138,7 @@ void SurfaceDistanceBuilder::addStartEdgesAndPoints( const UndirectedEdgeBitSet 
 void SurfaceDistanceBuilder::addStart( const MeshTriPoint & start )
 {
     const auto pt = mesh_.triPoint( start );
-    const auto source = addSource_( 0, {} );
+    const auto source = addSource_( 0, start.inVertex( mesh_.topology ), pt );
     mesh_.topology.forEachVertex( start, [&]( VertId v )
     {
         suggestVertDistance_( { v, ( mesh_.points[v] - pt ).length() }, source, {} );
@@ -154,10 +151,11 @@ void SurfaceDistanceBuilder::setMaxVertUpdates( int v )
     maxVertUpdates_ = std::clamp( v, 1, 255 );
 }
 
-SurfaceDistanceStartId SurfaceDistanceBuilder::addSource_( float startDistance, VertId v )
+SurfaceDistanceStartId SurfaceDistanceBuilder::addSource_( float startDistance, VertId v, const Vector3f & pos )
 {
     sourceStartDistance_.push_back( startDistance );
     sourceVert_.push_back( v );
+    sourcePos_.push_back( pos );
     return sourceGroup_.add();
 }
 
@@ -167,7 +165,7 @@ void SurfaceDistanceBuilder::addStartVert_( VertId v, float startDistance )
     if ( vi > startDistance )
     {
         vi = startDistance;
-        vertSource_[v] = addSource_( startDistance, v );
+        vertSource_[v] = addSource_( startDistance, v, mesh_.points[v] );
     }
 }
 
@@ -179,8 +177,12 @@ SurfaceDistanceStartId SurfaceDistanceBuilder::startInVert_( VertId v ) const
 
 void SurfaceDistanceBuilder::addStartEdge_( EdgeId e )
 {
-    const auto s0 = startInVert_( mesh_.topology.org( e ) );
-    const auto s1 = startInVert_( mesh_.topology.dest( e ) );
+    const auto o = mesh_.topology.org( e );
+    const auto d = mesh_.topology.dest( e );
+    if ( !o || !d )
+        return;
+    const auto s0 = startInVert_( o );
+    const auto s1 = startInVert_( d );
     if ( !s0 || !s1 )
         return;
     startEdges_.autoResizeSet( e.undirected() );
@@ -273,10 +275,20 @@ void SurfaceDistanceBuilder::finishSourceGroups_()
         if ( !v )
             continue;
         int numStartNeis = 0;
+        bool sameStartDistance = true;
         for ( EdgeId e : orgRing( mesh_.topology, v ) )
-            if ( startEdges_.test( e.undirected() ) && startInVert_( mesh_.topology.dest( e ) ) )
+        {
+            if ( !startEdges_.test( e.undirected() ) )
+                continue;
+            if ( const auto r = startInVert_( mesh_.topology.dest( e ) ) )
+            {
                 ++numStartNeis;
-        if ( numStartNeis > 3 )
+                if ( sourceStartDistance_[r] != sourceStartDistance_[s] )
+                    sameStartDistance = false;
+            }
+        }
+        // the distances to start edges assume the same start distance in their ends; otherwise the linear field as near a region
+        if ( numStartNeis > 3 || !sameStartDistance )
             regionRoots.set( sourceGroup_.parent( s ) );
     }
     regionSources_.clear();
@@ -364,7 +376,7 @@ void SurfaceDistanceBuilder::considerLeftTriPath_( EdgeId e )
     if ( sourceGroup_.parent( source ) != sourceGroup_.parent( sourceB ) )
         considerTriBetweenGroups_( e, a, b, c, va );
     else
-        considerTriNearStarts_( a, b, c, va, vb );
+        considerTriNearStarts_( e, a, b, c, va, vb );
 }
 
 bool SurfaceDistanceBuilder::distAtC_( const Vector3f & pa, const Vector3f & pb, const Vector3f & pc, SurfaceDistanceStartId s0, SurfaceDistanceStartId s1,
@@ -392,14 +404,16 @@ bool SurfaceDistanceBuilder::distAtC_( const Vector3f & pa, const Vector3f & pb,
     return true;
 }
 
-double SurfaceDistanceBuilder::straightDistToStart_( const Vector3f & p, SurfaceDistanceStartId s0, SurfaceDistanceStartId s1 ) const
+double SurfaceDistanceBuilder::straightDistToStart_( const Vector3f & p, SurfaceDistanceStartId s0, SurfaceDistanceStartId s1, bool infiniteLine ) const
 {
-    const auto p0 = mesh_.points[sourceVert_[s0]];
+    const auto & p0 = sourcePos_[s0];
     if ( !s1 )
         return ( p - p0 ).length();
-    const auto d = mesh_.points[sourceVert_[s1]] - p0;
-    const float t = std::clamp( dot( p - p0, d ) / std::max( d.lengthSq(), FLT_MIN ), 0.f, 1.f );
-    return ( p - p0 - t * d ).length();
+    const LineSegm3f segm( p0, sourcePos_[s1] );
+    if ( !infiniteLine )
+        return ( p - closestPointOnLineSegm( p, segm ) ).length();
+    const auto d = segm.dir();
+    return ( p - p0 - dot( p - p0, d ) / std::max( d.lengthSq(), FLT_MIN ) * d ).length();
 }
 
 // not inlined: inlining it in considerLeftTriPath_ costs 1.5-2% even with no fronts meeting
@@ -421,8 +435,8 @@ MR_SD_NOINLINE void SurfaceDistanceBuilder::considerTriBetweenGroups_( EdgeId e,
     {
         const auto s0 = vertSource_[x];
         const auto s1 = vertLineEnd_[x];
-        if ( !sourceVert_[s0] || regionSources_.test( s0 ) )
-            return; // no straight-line bound for a start inside a triangle, and the linear field near a region
+        if ( regionSources_.test( s0 ) )
+            return; // the linear field near a region
         // the field extended over the seam can be less accurate, but never less than the straight-line distance
         const double minVc = sourceStartDistance_[s0] + straightDistToStart_( mesh_.points[c], s0, s1 );
         if ( minVc >= std::min( best, vertDistanceMap_[c] ) )
@@ -450,7 +464,7 @@ MR_SD_NOINLINE void SurfaceDistanceBuilder::considerTriBetweenGroups_( EdgeId e,
         suggestVertDistance_( { c, best }, best0, best1 );
 }
 
-void SurfaceDistanceBuilder::considerTriNearStarts_( VertId a, VertId b, VertId c, float va, float vb )
+void SurfaceDistanceBuilder::considerTriNearStarts_( EdgeId e, VertId a, VertId b, VertId c, float va, float vb )
 {
     const auto pa = mesh_.points[a];
     const auto pb = mesh_.points[b];
@@ -496,20 +510,34 @@ void SurfaceDistanceBuilder::considerTriNearStarts_( VertId a, VertId b, VertId 
             best1 = s1;
         }
     };
+    if ( !lineEndA && !lineEndB )
+    {
+        // a and b have distances from two start points: if they are not the ends of a start edge,
+        // then the fronts of two parts of one line meet here (e.g. near a gap in a ring of start points)
+        const auto sv = sourceVert_[source];
+        const auto svB = sourceVert_[sourceB];
+        const auto se = sv && svB ? mesh_.topology.findEdge( sv, svB ) : EdgeId{};
+        if ( !se || !startEdges_.test( se.undirected() ) )
+        {
+            considerTriBetweenGroups_( e, a, b, c, va );
+            return;
+        }
+    }
+
     tryStart( source, lineEndA );
-    if ( sourceB != source || lineEndB != lineEndA )
+    if ( !( sourceB == source && lineEndB == lineEndA ) && !( lineEndA && sourceB == lineEndA && lineEndB == source ) )
         tryStart( sourceB, lineEndB );
-    if ( !lineEndA && !lineEndB && sourceVert_[source] && sourceVert_[sourceB] )
-        if ( const auto e = mesh_.topology.findEdge( sourceVert_[source], sourceVert_[sourceB] ); e && startEdges_.test( e.undirected() ) )
-            tryStart( source, sourceB );
+    if ( !lineEndA && !lineEndB )
+        tryStart( source, sourceB );
     if ( best < FLT_MAX )
     {
         suggestVertDistance_( { c, best }, best0, best1 );
         return;
     }
 
-    // otherwise find the start nearest to c, and the distances of a and b to it;
-    // if they are unknown, then the plane wave through a and b
+    // otherwise find the start nearest to c, and the distances of a and b to it; if they are unknown, then the plane wave through a and b,
+    // not less than the straight-line distance to their start points or the lines of their start edges (the plane wave fitted
+    // to the fields of different parts of the line underestimates, e.g. inside a corner)
     auto s0 = lineEndA ? source : lineEndB ? sourceB : source;
     auto s1 = lineEndA ? lineEndA : lineEndB ? lineEndB : sourceB;
     nearestStartEdge_( pc, s0, s1 );
@@ -517,7 +545,10 @@ void SurfaceDistanceBuilder::considerTriNearStarts_( VertId a, VertId b, VertId 
     if ( best < FLT_MAX )
         suggestVertDistance_( { c, best }, best0, best1 );
     else if ( const auto vc = planeWave(); vc < FLT_MAX )
-        suggestVertDistance_( { c, vc }, s0, s1 );
+    {
+        const double minVc = sourceStartDistance_[source] + std::min( straightDistToStart_( pc, source, lineEndA, true ), straightDistToStart_( pc, sourceB, lineEndB, true ) );
+        suggestVertDistance_( { c, std::max( vc, float( minVc ) ) }, s0, s1 );
+    }
 }
 
 VertId SurfaceDistanceBuilder::growOne()

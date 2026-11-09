@@ -83,7 +83,7 @@ enum class WindowSystem
 };
 
 /// Returns the current type of window system.
-/// On Windows and macOS usually returns DisplayServer::OsNative.
-WindowSystem getWindowSystem();
+/// On Windows and macOS usually returns WindowSystem::OsNative.
+MRVIEWER_API WindowSystem getWindowSystem();
 
 } //namespace MR

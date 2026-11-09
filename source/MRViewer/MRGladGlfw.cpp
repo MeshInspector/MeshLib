@@ -1,10 +1,6 @@
 #include "MRGladGlfw.h"
 #include "MRPch/MRWasm.h"
 
-#if __has_include(<GLFW/glfw_config.h>)
-#include <GLFW/glfw_config.h>
-#endif
-
 // Modifier for shortcuts
 // Some shortcuts still use GLFW_MOD_CONTROL on Mac to avoid conflict with system shortcuts
 #if !defined( __APPLE__ )
@@ -99,12 +95,10 @@ WindowSystem getWindowSystem()
     default:
         return WindowSystem::Unknown;
     }
-#elif defined( _GLFW_WIN32 ) || defined( _GLFW_COCOA )
+#elif defined( _WIN32 ) || defined( __APPLE__ )
     return WindowSystem::OsNative;
-#elif defined( _GLFW_X11 )
+#elif !defined( __EMSCRIPTEN__ )
     return WindowSystem::X11;
-#elif defined( _GLFW_WAYLAND )
-    return WindowSystem::Wayland;
 #else
     return WindowSystem::Unknown;
 #endif

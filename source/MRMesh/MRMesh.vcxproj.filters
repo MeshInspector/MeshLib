@@ -1377,6 +1377,9 @@
     <ClInclude Include="MRBitCast.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MRNextUpDown.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
     <ClInclude Include="MRRound.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>

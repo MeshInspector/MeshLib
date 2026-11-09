@@ -4,8 +4,8 @@
 #include "MRMeshFwd.h"
 #include "MRAffineXf3.h"
 #include "MRVectorTraits.h"
+#include "MRBitCast.h"
 #include <algorithm>
-#include <bit>
 #include <cassert>
 #include <cstdint>
 #include <iosfwd>
@@ -294,9 +294,9 @@ private:
         if constexpr ( std::is_same_v<T, float> )
         {
             if ( x > 0 && x < std::numeric_limits<float>::max() )
-                return std::bit_cast<float>( std::bit_cast<std::uint32_t>( x ) + 1 );
+                return bit_cast<float>( bit_cast<std::uint32_t>( x ) + 1 );
             if ( x < 0 && x >= std::numeric_limits<float>::lowest() )
-                return std::bit_cast<float>( std::bit_cast<std::uint32_t>( x ) - 1 );
+                return bit_cast<float>( bit_cast<std::uint32_t>( x ) - 1 );
         }
         return std::nextafter( x, std::numeric_limits<T>::max() );
     }
@@ -305,9 +305,9 @@ private:
         if constexpr ( std::is_same_v<T, float> )
         {
             if ( x > 0 && x <= std::numeric_limits<float>::max() )
-                return std::bit_cast<float>( std::bit_cast<std::uint32_t>( x ) - 1 );
+                return bit_cast<float>( bit_cast<std::uint32_t>( x ) - 1 );
             if ( x < 0 && x > std::numeric_limits<float>::lowest() )
-                return std::bit_cast<float>( std::bit_cast<std::uint32_t>( x ) + 1 );
+                return bit_cast<float>( bit_cast<std::uint32_t>( x ) + 1 );
         }
         return std::nextafter( x, std::numeric_limits<T>::lowest() );
     }

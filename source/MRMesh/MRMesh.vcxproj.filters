@@ -2315,9 +2315,6 @@
     <ClCompile Include="MRMeshDoubleLayer.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
-    <ClCompile Include="MRProcessSelfTreeSubtasks.cpp">
-      <Filter>Source Files\AABBTree</Filter>
-    </ClCompile>
     <ClCompile Include="MRClosestWeightedPoint.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>

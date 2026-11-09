@@ -1,8 +1,9 @@
 #pragma once
 #include "MRMeshFwd.h"
-#include "MRAABBTreeNode.h"
+#include "MRAABBTree.h"
 #include "MREnums.h"
-#include <functional>
+#include <cassert>
+#include <vector>
 
 namespace MR
 {
@@ -18,10 +19,56 @@ namespace MR
 /// <param name="nextSubtasks">subtasks to process next, could be same as `subtasks`</param>
 /// <param name="processLeaf">function that is called for two different leafs</param>
 /// <param name="processNodes">function that determines how to process two different nodes (e.g. whether their boxes intersect)</param>
+/// the callbacks are template parameters to be inlined in this hot loop
+template <typename ProcessLeaf, typename ProcessNodes>
 MR_BIND_IGNORE void processSelfSubtasks( const AABBTree& tree,
     std::vector<NodeNode>& subtasks,
     std::vector<NodeNode>& nextSubtasks, ///< may be same as subtasks
-    std::function<Processing( const NodeNode& )> processLeaf,
-    std::function<Processing( const NodeNode& )> processNodes );
+    ProcessLeaf && processLeaf,
+    ProcessNodes && processNodes )
+{
+    while ( !subtasks.empty() )
+    {
+        const auto s = subtasks.back();
+        subtasks.pop_back();
+        const bool aLeaf = tree.isLeaf( s.aNode );
+        const bool bLeaf = tree.isLeaf( s.bNode );
+        if ( s.aNode == s.bNode )
+        {
+            if ( !aLeaf )
+            {
+                const auto& aNode = tree[s.aNode];
+                nextSubtasks.push_back( { aNode.l, aNode.l } );
+                nextSubtasks.push_back( { aNode.r, aNode.r } );
+                nextSubtasks.push_back( { aNode.l, aNode.r } );
+            }
+            continue;
+        }
+        const auto processNode = processNodes( s );
+        if ( processNode == Processing::Stop )
+            continue;
+        if ( aLeaf && bLeaf )
+        {
+            if ( processLeaf( s ) == Processing::Stop )
+                return;
+            continue;
+        }
+        if ( !aLeaf && ( bLeaf || tree[s.aNode].box.volume() >= tree[s.bNode].box.volume() ) )
+        {
+            // split aNode
+            const auto& aNode = tree[s.aNode];
+            nextSubtasks.push_back( { aNode.l, s.bNode } );
+            nextSubtasks.push_back( { aNode.r, s.bNode } );
+        }
+        else
+        {
+            assert( !bLeaf );
+            // split bNode
+            const auto& bNode = tree[s.bNode];
+            nextSubtasks.push_back( { s.aNode, bNode.l } );
+            nextSubtasks.push_back( { s.aNode, bNode.r } );
+        }
+    }
+}
 
 }

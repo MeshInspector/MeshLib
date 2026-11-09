@@ -973,15 +973,21 @@ static bool hasPlanarFill( const Mesh& mesh, const FaceBitSet& region, const Vec
 {
     const auto loops = findLeftBoundary( mesh.topology, region );
     HashSet<VertId> bdVerts;
+    double loopArea = 0;
     for ( const auto& loop : loops )
         for ( auto e : loop )
+        {
             if ( !bdVerts.insert( mesh.topology.org( e ) ).second )
                 return false; // fillContours2D does not fill boundaries passing a vertex twice
+            loopArea += dot( cross( Vector3d( mesh.orgPnt( e ) ), Vector3d( mesh.destPnt( e ) ) ), Vector3d( n ) );
+        }
+    if ( loopArea <= 0 )
+        return false;
     const auto patch = PlanarTriangulation::triangulateDisjointContours( mesh, loops, n );
     if ( !patch )
         return false;
-    // all triangles face n, and the loops wind around n as the triangles do (and bound something)
-    double triArea = 0, loopArea = 0;
+    // all triangles face n, and the loops wind around n as the triangles do
+    double triArea = 0;
     for ( auto f : patch->topology.getValidFaces() )
     {
         const double a = dot( patch->dirDblArea( f ), n );
@@ -989,9 +995,6 @@ static bool hasPlanarFill( const Mesh& mesh, const FaceBitSet& region, const Vec
             return false;
         triArea += a;
     }
-    for ( const auto& loop : loops )
-        for ( auto e : loop )
-            loopArea += dot( cross( Vector3d( mesh.orgPnt( e ) ), Vector3d( mesh.destPnt( e ) ) ), Vector3d( n ) );
     return std::abs( loopArea - triArea ) < 1e-4 * triArea;
 }
 
@@ -1057,9 +1060,9 @@ void fixMeshCreases( Mesh& mesh, const FixCreasesParams& params )
         if ( creases.none() )
             return;
 
-        // first fix flat folds: the flat area around a crease grows by rings of faces parallel to it in either orientation (and slivers)
-        // until all such faces next to it are oriented the same way and its boundary has a planar triangulation facing them, which replaces it
-        bool changed = false;
+        // the flat area around a crease grows by rings of faces parallel to it in either orientation (and slivers) until all faces next to it
+        // are oriented the same way (or there are none) and its boundary has a planar triangulation facing them, which replaces the area;
+        // if the area runs out first (a zero-width fold has no such triangulation), the minimal-area fill replaces the two faces of the crease
         FaceBitSet visited( mesh.topology.faceSize() );
         for ( auto ue : creases )
         {
@@ -1071,7 +1074,8 @@ void fixMeshCreases( Mesh& mesh, const FixCreasesParams& params )
             region.set( l );
             region.set( r );
             std::vector<FaceId> ring{ l, r }, next;
-            for ( ;; )
+            bool planar = false;
+            while ( !planar && !ring.empty() )
             {
                 next.clear();
                 size_t numUp = 0;
@@ -1081,92 +1085,29 @@ void fixMeshCreases( Mesh& mesh, const FixCreasesParams& params )
                         const auto g = mesh.topology.right( e );
                         if ( !g || region.test( g ) )
                             continue;
-                        const auto d = dot( mesh.normal( g ), seedNormal );
-                        if ( mesh.triangleAspectRatio( g ) <= params.criticalTriAspectRatio && std::abs( d ) < planarAngleCos )
+                        const auto c = dot( mesh.normal( g ), seedNormal );
+                        if ( std::abs( c ) < planarAngleCos && mesh.triangleAspectRatio( g ) <= params.criticalTriAspectRatio )
                             continue;
                         region.set( g );
                         next.push_back( g );
-                        numUp += d > 0;
+                        numUp += c > 0;
                     }
-                if ( next.empty() )
-                    break;
                 if ( numUp == 0 || numUp == next.size() )
                 {
                     for ( auto g : next )
                         region.reset( g );
-                    if ( hasPlanarFill( mesh, region, numUp ? seedNormal : -seedNormal ) )
-                    {
-                        replace( region, true );
-                        changed = true;
-                        break;
-                    }
-                    for ( auto g : next )
-                        region.set( g );
+                    planar = ( numUp == next.size() && hasPlanarFill( mesh, region, seedNormal ) ) || ( numUp == 0 && hasPlanarFill( mesh, region, -seedNormal ) );
+                    if ( !planar )
+                        for ( auto g : next )
+                            region.set( g );
                 }
                 ring.swap( next );
             }
             visited |= region;
+            if ( !planar )
+                region.reset().set( l ).set( r );
+            replace( region, planar );
             visited.resize( mesh.topology.faceSize(), true ); // the new faces are not folded
-        }
-        if ( changed )
-            continue;
-
-        // then re-triangulate planar areas around the remaining creases
-        FaceBitSet fixFacesBuffer( mesh.topology.faceSize() );
-        for ( auto ue : creases )
-        {
-            if ( mesh.topology.isLoneEdge( EdgeId( ue ) ) )
-                continue;
-            auto findBadFaces = [&] ( EdgeId ce, bool left )
-            {
-                for ( auto e = ce;; )
-                {
-                    auto f = left ? mesh.topology.left( e ) : mesh.topology.right( e );
-                    if ( !f )
-                        return;
-                    fixFacesBuffer.autoResizeSet( f ); // as far as we triangulate holes - new faces might appear, so we need to resize
-                    e = left ? mesh.topology.next( e ) : mesh.topology.prev( e );
-                    if ( e == ce )
-                        return; // full cycle
-                    auto nextF = left ? mesh.topology.left( e ) : mesh.topology.right( e );
-                    if ( !nextF )
-                        return;
-                    if ( creases.test( e.undirected() ) )
-                        continue;
-                    if ( mesh.triangleAspectRatio( f ) > params.criticalTriAspectRatio || mesh.triangleAspectRatio( nextF ) > params.criticalTriAspectRatio )
-                        continue;
-                    auto digAngCos = mesh.dihedralAngleCos( e.undirected() );
-                    if ( digAngCos < planarAngleCos )
-                        return; // stop propagation on sharp angle
-                }
-            };
-
-            int numIncidentLCreases = 0;
-            int numIncidentRCreases = 0;
-            auto creaseEdge = EdgeId( ue );
-            for ( auto e : orgRing( mesh.topology, creaseEdge ) )
-            {
-                if ( creases.test( e.undirected() ) )
-                    numIncidentLCreases++;
-            }
-            for ( auto e : orgRing( mesh.topology, creaseEdge.sym() ) )
-            {
-                if ( creases.test( e.undirected() ) )
-                    numIncidentRCreases++;
-            }
-            if ( ( numIncidentRCreases > numIncidentLCreases )
-                || ( numIncidentRCreases == numIncidentLCreases &&
-                    mesh.topology.getOrgDegree( creaseEdge ) < mesh.topology.getOrgDegree( creaseEdge.sym() ) ) )
-            {
-                creaseEdge = creaseEdge.sym();// important part to triangulate worse end of the edge (mb we should change degree check to area check?)
-            }
-            fixFacesBuffer.reset();
-            findBadFaces( creaseEdge, true );
-            findBadFaces( creaseEdge, false );
-            if ( fixFacesBuffer.none() )
-                continue;
-
-            replace( fixFacesBuffer, false );
         }
     }
 }

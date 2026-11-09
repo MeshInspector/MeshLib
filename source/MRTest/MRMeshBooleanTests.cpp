@@ -10,6 +10,7 @@
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRRegionBoundary.h>
 #include <MRMesh/MRMakeSphereMesh.h>
+#include <MRMesh/MRNextUpDown.h>
 #include <MRMesh/MRMeshCollide.h>
 #include <MRMesh/MRMeshCollidePrecise.h>
 #include <MRMesh/MRMeshFixer.h>
@@ -711,7 +712,7 @@ TEST( MRMesh, EmbedStructureLoneContour )
 {
     for ( float shift : { 0.f, 1000.f } )
     {
-        const float peak = shift == 0 ? 2.f : std::nextafter( 1.f, 2.f );
+        const float peak = shift == 0 ? 2.f : nextUp( 1.f );
         const auto terrain = makeRegularGridMesh( 21, 21, [] ( size_t, size_t ) { return true; }, [&] ( size_t x, size_t y )
         {
             return Vector3f( shift + float( x ) - 10.f, shift + float( y ) - 10.f, x == 10 && y == 10 ? peak : 0.f );

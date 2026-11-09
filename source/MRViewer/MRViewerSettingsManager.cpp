@@ -345,8 +345,8 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
             CommandLoop::appendCommand( [&viewer, size]
             {
                 spdlog::info( "Resize window: {} {}", size.x, size.y );
-                // Wayland tells the framebuffer scale only after the first frame is shown, so the saved framebuffer
-                // size cannot be converted into the window size here: the size is saved in screen coordinates there
+                // on Wayland, the framebuffer scale is unknown until the first frame is shown
+                // thus we should save and restore the window size in screen coordinates
                 if ( viewer.window && getWindowSystem() == WindowSystem::Wayland )
                     glfwSetWindowSize( viewer.window, size.x, size.y );
                 else
@@ -674,8 +674,10 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     cfg.setJsonValue( "lastExtextentions", xtext );
 
     auto windowSize = viewer.windowSaveSize;
-    if ( getWindowSystem() == WindowSystem::Wayland ) // in screen coordinates, see loadSettings
+    if ( getWindowSystem() == WindowSystem::Wayland )
     {
+        // on Wayland, the framebuffer scale is unknown until the first frame is shown
+        // thus we should save and restore the window size in screen coordinates
         assert( viewer.pixelRatio > 0.f );
         windowSize = {
             (int)std::lround( (float)windowSize.x / viewer.pixelRatio ),

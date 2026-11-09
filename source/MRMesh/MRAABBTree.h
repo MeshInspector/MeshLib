@@ -10,7 +10,9 @@ namespace MR
  * \brief This chapter represents documentation about AABB Tree
  */
 
-/// bounding volume hierarchy
+/// bounding volume hierarchy of mesh triangles; it keeps the vertex ids of its triangles,
+/// so a change of mesh topology requires either Mesh::invalidateCaches() or updateTriangulation(),
+/// and MeshTopology::flipOrientation() requires flipOrientation() here (as Mesh::flipOrientation() does)
 /// \ingroup AABBTreeGroup
 class AABBTree : public AABBTreeBase<FaceTreeTraits3>
 {
@@ -50,8 +52,12 @@ public:
     /// takes vertex ids of all tree's faces from given topology, e.g. after its vertices were renumbered
     MRMESH_API void updateTriangulation( const MeshTopology & topology );
 
+    /// changes the order of the vertices of the triangles of given faces (all if nullptr) as MeshTopology::flipOrientation() does;
+    /// shall be called after MeshTopology::flipOrientation() if this tree is kept
+    MRMESH_API void flipOrientation( const FaceBitSet * region = nullptr );
+
     /// converts barycentric coordinates relative to vertices (t) of face (f) into the point relative to topology.edgeWithLeft( f ),
-    /// which can list the same vertices in another order (e.g. after topology.flipOrientation() with this tree kept)
+    /// which lists the vertices in the same order as this tree
     [[nodiscard]] MRMESH_API static MeshTriPoint toMeshTriPoint( const MeshTopology & topology, FaceId f, const ThreeVertIds & t, const TriPointf & bary );
 
     /// returns the amount of memory this object occupies on heap

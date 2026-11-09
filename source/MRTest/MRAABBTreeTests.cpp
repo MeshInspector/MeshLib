@@ -140,20 +140,39 @@ TEST( MRMesh, AABBTreeTriangulation )
     ASSERT_TRUE( mesh.getAABBTreeNotCreate() );
     expectValidTree( *mesh.getAABBTreeNotCreate(), mesh );
 
-    // after direct topology change keeping the tree, the stored triangulation lists the vertices in other order
-    mesh.topology.flipOrientation();
-    for ( const auto & pt : { Vector3f( 0.3f, 0.2f, 1.5f ), Vector3f( -2, 0.1f, 0 ), Vector3f( 0.1f, 0.1f, 0.1f ) } )
-    {
-        const auto proj = findProjection( pt, mesh );
-        ASSERT_TRUE( proj.valid() );
-        EXPECT_EQ( mesh.topology.left( proj.mtp.e ), proj.proj.face );
-        EXPECT_LT( ( mesh.triPoint( proj.mtp ) - proj.proj.point ).length(), 1e-6f );
+}
 
-        const auto hit = rayMeshIntersect( mesh, Line3f( pt, proj.proj.point - pt ) );
-        ASSERT_TRUE( hit );
-        EXPECT_EQ( mesh.topology.left( hit.mtp.e ), hit.proj.face );
-        EXPECT_LT( ( mesh.triPoint( hit.mtp ) - hit.proj.point ).length(), 1e-6f );
-    }
+TEST( MRMesh, AABBTreeFlippedOrientation )
+{
+    Mesh mesh = makeSphere( { .radius = 1.0f, .numMeshVertices = 200 } );
+    const auto firstSphereEdges = mesh.topology.undirectedEdgeSize();
+    Mesh other = mesh;
+    other.transform( AffineXf3f::translation( Vector3f( 3.0f, 0.0f, 0.0f ) ) );
+    mesh.addMesh( other );
+    (void)mesh.getAABBTree();
+    auto expectRightTriPoints = [&]
+    {
+        ASSERT_TRUE( mesh.getAABBTreeNotCreate() );
+        expectValidTree( *mesh.getAABBTreeNotCreate(), mesh );
+        for ( const Vector3f pt : { Vector3f( 0.3f, 0.4f, 2.0f ), Vector3f( 3.3f, 0.4f, 2.0f ) } )
+        {
+            const auto proj = findProjection( pt, mesh );
+            ASSERT_TRUE( proj.proj.face );
+            EXPECT_EQ( mesh.topology.left( proj.mtp.e ), proj.proj.face );
+            EXPECT_LT( ( mesh.triPoint( proj.mtp ) - proj.proj.point ).length(), 1e-5f );
+            const auto hit = rayMeshIntersect( mesh, Line3f( pt, Vector3f( 0.0f, 0.0f, -1.0f ) ) );
+            ASSERT_TRUE( hit.proj.face );
+            EXPECT_EQ( mesh.topology.left( hit.mtp.e ), hit.proj.face );
+            EXPECT_LT( ( mesh.triPoint( hit.mtp ) - hit.proj.point ).length(), 1e-5f );
+        }
+    };
+    mesh.flipOrientation(); // the tree is updated, not rebuilt
+    expectRightTriPoints();
+    UndirectedEdgeBitSet firstSphere( mesh.topology.undirectedEdgeSize() );
+    for ( UndirectedEdgeId ue( 0 ); ue < firstSphereEdges; ++ue )
+        firstSphere.set( ue );
+    mesh.flipOrientation( &firstSphere );
+    expectRightTriPoints();
 }
 
 TEST(MRMesh, AABBTreeCopyDuringConstruction)

@@ -82,15 +82,25 @@ void AABBTree::updateTriangulation( const MeshTopology & topology )
     } );
 }
 
-MeshTriPoint AABBTree::toMeshTriPoint( const MeshTopology & topology, FaceId f, const ThreeVertIds & t, const TriPointf & bary )
+void AABBTree::flipOrientation( const FaceBitSet * region )
+{
+    MR_TIMER;
+    ParallelFor( nodes_, [&]( NodeId nid )
+    {
+        const auto & node = nodes_[nid];
+        if ( node.leaf() && ( !region || region->test( node.leafId() ) ) )
+        {
+            auto & t = leafTris_[node.leafPos()];
+            std::swap( t[0], t[1] );
+        }
+    } );
+}
+
+MeshTriPoint AABBTree::toMeshTriPoint( const MeshTopology & topology, FaceId f, [[maybe_unused]] const ThreeVertIds & t, const TriPointf & bary )
 {
     const auto e = topology.edgeWithLeft( f );
-    if ( topology.org( e ) == t[0] && topology.dest( e ) == t[1] )
-        return { e, bary };
-    const auto v = topology.getLeftTriVerts( e );
-    const float w[3] = { 1 - bary.a - bary.b, bary.a, bary.b };
-    auto weight = [&]( VertId x ) { return x == t[0] ? w[0] : x == t[1] ? w[1] : w[2]; };
-    return { e, TriPointf( weight( v[1] ), weight( v[2] ) ) };
+    assert( topology.getLeftTriVerts( e ) == t ); // otherwise flipOrientation() or updateTriangulation() was not called
+    return { e, bary };
 }
 
 void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )

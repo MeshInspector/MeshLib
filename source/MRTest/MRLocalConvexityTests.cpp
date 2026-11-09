@@ -70,7 +70,7 @@ TEST( MRMesh, LocalConvexitySphere )
     for ( auto v : sphere.topology.getValidVerts() )
         EXPECT_NEAR( ( *convex )[v], expected, 0.2f * expected );
 
-    sphere.topology.flipOrientation();
+    sphere.flipOrientation();
     auto concave = computeLocalConvexity( sphere, radius );
     ASSERT_TRUE( concave.has_value() );
     for ( auto v : sphere.topology.getValidVerts() )

@@ -1,6 +1,10 @@
 #include "MRGladGlfw.h"
 #include "MRPch/MRWasm.h"
 
+#if __has_include(<GLFW/glfw_config.h>)
+#include <GLFW/glfw_config.h>
+#endif
+
 // Modifier for shortcuts
 // Some shortcuts still use GLFW_MOD_CONTROL on Mac to avoid conflict with system shortcuts
 #if !defined( __APPLE__ )
@@ -80,4 +84,30 @@ const char* getAltModName()
     return altName;
 }
 
+WindowSystem getWindowSystem()
+{
+#if GLFW_VERSION_MAJOR > 3 || ( GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4 )
+    switch ( glfwGetPlatform() )
+    {
+    case GLFW_PLATFORM_WIN32:
+    case GLFW_PLATFORM_COCOA:
+        return WindowSystem::OsNative;
+    case GLFW_PLATFORM_WAYLAND:
+        return WindowSystem::Wayland;
+    case GLFW_PLATFORM_X11:
+        return WindowSystem::X11;
+    default:
+        return WindowSystem::Unknown;
+    }
+#elif defined( _GLFW_WIN32 ) || defined( _GLFW_COCOA )
+    return WindowSystem::OsNative;
+#elif defined( _GLFW_X11 )
+    return WindowSystem::X11;
+#elif defined( _GLFW_X11 )
+    return WindowSystem::Wayland;
+#else
+    return WindowSystem::Unknown;
+#endif
 }
+
+} // namespace MR

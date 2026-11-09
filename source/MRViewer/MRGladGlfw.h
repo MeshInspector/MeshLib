@@ -73,4 +73,17 @@ inline int getMSAAPow( int msaa )
     return i;
 }
 
+/// Type of window system
+enum class WindowSystem
+{
+    OsNative,
+    X11,
+    Wayland,
+    Unknown,
+};
+
+/// Returns the current type of window system.
+/// On Windows and macOS usually returns DisplayServer::OsNative.
+WindowSystem getWindowSystem();
+
 } //namespace MR

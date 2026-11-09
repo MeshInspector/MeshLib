@@ -963,14 +963,12 @@ int Viewer::launchInit_( const LaunchParams& params )
     glfwWindowHint( GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE ); // required for GLFW 3.3
     hasScaledFramebuffer_ = true;
 #else
-#if GLFW_VERSION_MAJOR > 3 || ( GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4 )
-    if ( glfwGetPlatform() == GLFW_PLATFORM_WAYLAND )
+    if ( getWindowSystem() == WindowSystem::Wayland )
     {
         glfwWindowHintString( GLFW_WAYLAND_APP_ID, MR_PROJECT_NAME );
         glfwWindowHint( GLFW_SCALE_FRAMEBUFFER, GLFW_TRUE );
         hasScaledFramebuffer_ = true;
     }
-#endif
 #endif
     glfwWindowHint( GLFW_SAMPLES, getRequiredMSAA_( params.render3dSceneInTexture, false ) );
 #ifndef __EMSCRIPTEN__
@@ -1989,14 +1987,12 @@ bool Viewer::isMultiViewportAvailable()
 {
 #ifdef __EMSCRIPTEN__
     return false;
-#elif GLFW_VERSION_MAJOR > 3 || ( GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4 )
+#else
     // ImGui multi-viewport has unresolved issues with tooltips on X11 (incorrect window class?)
     // See also:
     //  - https://github.com/ocornut/imgui/issues/7950
     //  - https://github.com/ocornut/imgui/issues/8252
-    return !hasScaledFramebuffer_ && glfwGetPlatform() != GLFW_PLATFORM_X11;
-#else
-    return !hasScaledFramebuffer_;
+    return !hasScaledFramebuffer_ && getWindowSystem() != WindowSystem::X11;
 #endif
 }
 

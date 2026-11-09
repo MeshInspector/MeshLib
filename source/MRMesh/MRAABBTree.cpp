@@ -2,7 +2,6 @@
 #include "MRAABBTreeBase.hpp"
 #include "MRAABBTreeMaker.hpp"
 #include "MRMesh.h"
-#include "MRMeshTriPoint.h"
 #include "MRTimer.h"
 #include "MRBuffer.h"
 #include "MRParallelFor.h"
@@ -94,13 +93,6 @@ void AABBTree::flipOrientation( const FaceBitSet * region )
             std::swap( t[0], t[1] );
         }
     } );
-}
-
-MeshTriPoint AABBTree::toMeshTriPoint( const MeshTopology & topology, FaceId f, [[maybe_unused]] const ThreeVertIds & t, const TriPointf & bary )
-{
-    const auto e = topology.edgeWithLeft( f );
-    assert( topology.getLeftTriVerts( e ) == t ); // otherwise flipOrientation() or updateTriangulation() was not called
-    return { e, bary };
 }
 
 void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )

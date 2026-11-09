@@ -39,7 +39,6 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
     nodesStack[0] = { tree.rootNodeId(), rayStart };
 
     TriPointf triP;
-    const ThreeVertIds * resTri = nullptr;
     while( currentNode >= 0 && ( closestIntersect || !res.proj.face ) )
     {
         if( currentNode >= maxTreeDepth ) // max depth exceeded
@@ -70,7 +69,6 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
                             res.distanceAlongLine = triIsect->t;
                             res.proj.face = face;
                             triP = triIsect->bary;
-                            resTri = &tri;
                             if ( t == 0 )
                             {
                                 rayStart = rayEnd = 0;
@@ -130,7 +128,7 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
     if( res.proj.face.valid() )
     {
         res.proj.point = Vector3f( line.p + res.distanceAlongLine * line.d );
-        res.mtp = AABBTree::toMeshTriPoint( m.topology, res.proj.face, *resTri, triP );
+        res.mtp = MeshTriPoint( m.topology.edgeWithLeft( res.proj.face ), triP );
     }
     return res;
 }
@@ -367,7 +365,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
                         // the segment is already limited by [rayStart, rayEnd], so the hit is reported without checking its distance,
                         // which is computed from the rounded point and can be slightly outside of the range
                         found.distanceAlongLine = float( dot( Vector3d( found.proj.point ) - line.p, line.d ) * invDirLenSq );
-                        found.mtp = AABBTree::toMeshTriPoint( m.topology, face, tri, TriPointf( found.proj.point, m.points[pvc[0].id], m.points[pvc[1].id], m.points[pvc[2].id] ) );
+                        found.mtp = MeshTriPoint( m.topology.edgeWithLeft( face ), TriPointf( found.proj.point, m.points[pvc[0].id], m.points[pvc[1].id], m.points[pvc[2].id] ) );
                         // segment start pvc[3] is behind the triangle if dIsLeftFromABC
                         if ( !report( found, [&] { return !isect.dIsLeftFromABC; } ) )
                             return;
@@ -385,7 +383,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
                         MeshIntersectionResult found;
                         found.proj.face = face;
                         found.proj.point = Vector3f( line( triIsect->t ) );
-                        found.mtp = AABBTree::toMeshTriPoint( m.topology, face, tri, triIsect->bary );
+                        found.mtp = MeshTriPoint( m.topology.edgeWithLeft( face ), triIsect->bary );
                         found.distanceAlongLine = float( triIsect->t );
                         if ( !report( found, [&] { return dot( cross( vB - vA, vC - vA ), line.d ) < 0; } ) )
                             return;

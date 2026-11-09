@@ -56,10 +56,6 @@ public:
     /// shall be called after MeshTopology::flipOrientation() if this tree is kept
     MRMESH_API void flipOrientation( const FaceBitSet * region = nullptr );
 
-    /// converts barycentric coordinates relative to vertices (t) of face (f) into the point relative to topology.edgeWithLeft( f ),
-    /// which lists the vertices in the same order as this tree
-    [[nodiscard]] MRMESH_API static MeshTriPoint toMeshTriPoint( const MeshTopology & topology, FaceId f, const ThreeVertIds & t, const TriPointf & bary );
-
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] size_t heapBytes() const { return AABBTreeBase::heapBytes() + leafTris_.heapBytes(); }
 

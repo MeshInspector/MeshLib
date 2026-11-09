@@ -18,8 +18,7 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
     if ( tree.nodes().empty() )
         return res;
     const auto & points = mp.mesh.points;
-    TriPointd resBary; // relative to *resTri, res.mtp is computed only in the end
-    const ThreeVertIds * resTri = nullptr;
+    TriPointd resBary; // res.mtp is computed only in the end
 
     struct SubTask
     {
@@ -74,12 +73,11 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
             if ( !( distSq < res.distSq ) )
                 continue;
             if ( validProjections && !validProjections( { .proj = { face, proj },
-                .mtp = AABBTree::toMeshTriPoint( mp.mesh.topology, face, tri, TriPointf( baryD ) ), .distSq = distSq } ) )
+                .mtp = MeshTriPoint( mp.mesh.topology.edgeWithLeft( face ), TriPointf( baryD ) ), .distSq = distSq } ) )
                 continue;
             res.proj = { face, proj };
             res.distSq = distSq;
             resBary = baryD;
-            resTri = &tri;
             if ( res.distSq <= loDistLimitSq )
                 break;
             continue;
@@ -101,7 +99,7 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
     }
 
     if ( res.proj.face )
-        res.mtp = AABBTree::toMeshTriPoint( mp.mesh.topology, res.proj.face, *resTri, TriPointf( resBary ) );
+        res.mtp = MeshTriPoint( mp.mesh.topology.edgeWithLeft( res.proj.face ), TriPointf( resBary ) );
     return res;
 }
 
@@ -210,7 +208,7 @@ void findTrisInBall( const MeshPart & mp, const Ball3f& ball, const FoundTriCall
         const auto distSq = ( proj - ball.center ).lengthSq();
         if ( !( distSq < ball.radiusSq ) )
             return Processing::Continue;
-        return foundCallback( { .proj = { face, proj }, .mtp = AABBTree::toMeshTriPoint( mp.mesh.topology, face, tri, TriPointf( baryD ) ), .distSq = distSq }, ball );
+        return foundCallback( { .proj = { face, proj }, .mtp = MeshTriPoint( mp.mesh.topology.edgeWithLeft( face ), TriPointf( baryD ) ), .distSq = distSq }, ball );
     } );
 }
 

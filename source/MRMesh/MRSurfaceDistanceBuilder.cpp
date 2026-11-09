@@ -1,5 +1,6 @@
 #include "MRSurfaceDistanceBuilder.h"
 #include "MRMesh.h"
+#include "MRLine.h"
 #include "MRLineSegm.h"
 #include "MRNextUpDown.h"
 #include "MRRegionBoundary.h"
@@ -221,10 +222,23 @@ bool SurfaceDistanceBuilder::distToStart_( VertId v, SurfaceDistanceStartId s0, 
         return ( vs == s0 && ve == s1 ) || ( vs == s1 && ve == s0 );
     }
     // a start edge and its end point: v is in the plane of the distance to the line of the edge and the offset along it
-    const auto s = s1 ? vs : s0; // the common start point
-    const auto r = s1 ? ( vs == s0 ? s1 : s0 ) : ( vs == s0 ? ve : vs ); // the other end of the edge
-    if ( s1 ? ( vs != s0 && vs != s1 ) : ( vs != s0 && ve != s0 ) )
-        return false;
+    SurfaceDistanceStartId s, r; // the common start point and the other end of the edge
+    if ( s1 )
+    {
+        // v has the distance from point vs, and the distance to edge s0-s1 is asked
+        if ( vs != s0 && vs != s1 )
+            return false;
+        s = vs;
+        r = vs == s0 ? s1 : s0;
+    }
+    else
+    {
+        // v has the distance to edge vs-ve, and the distance from its end s0 is asked
+        if ( vs != s0 && ve != s0 )
+            return false;
+        s = s0;
+        r = vs == s0 ? ve : vs;
+    }
     const auto vsv = sourceVert_[s];
     const auto vrv = sourceVert_[r];
     if ( !vsv || !vrv )
@@ -440,7 +454,9 @@ double SurfaceDistanceBuilder::straightDistToStart_( const Vector3f & p, Surface
     if ( !infiniteLine )
         return ( p - closestPointOnLineSegm( p, segm ) ).length();
     const auto d = segm.dir();
-    return ( p - p0 - dot( p - p0, d ) / std::max( d.lengthSq(), FLT_MIN ) * d ).length();
+    if ( !( d.lengthSq() > 0 ) )
+        return ( p - p0 ).length();
+    return std::sqrt( Line3f( p0, d ).distanceSq( p ) );
 }
 
 // not inlined: inlining it in considerLeftTriPath_ costs 1.5-2% even with no fronts meeting
@@ -495,8 +511,7 @@ MR_SD_NOINLINE void SurfaceDistanceBuilder::considerTriBetweenGroups_( EdgeId e,
         if ( getLinearFieldAtC( mesh_.points[a], va, mesh_.points[b], vertDistanceMap_[b], mesh_.points[c], vc ) )
         {
             best = std::max( vc, nextUp( va ) );
-            best0 = vertSource_[a];
-            best1 = vertLineEnd_[a];
+            best0 = best1 = regionSources_.test( vertSource_[a] ) ? vertSource_[a] : vertSource_[b];
         }
     }
     if ( best < FLT_MAX )
@@ -514,16 +529,14 @@ void SurfaceDistanceBuilder::considerTriNearStarts_( EdgeId e, VertId a, VertId 
     const auto lineEndB = vertLineEnd_[b];
     auto planeWave = [&]
     {
-        float dvac = 0;
-        if ( !getFieldAtC( pb - pa, pc - pa, vb - va, dvac ) )
-            return FLT_MAX;
-        return std::max( va + dvac, nextUp( va ) );
+        float vc = 0;
+        return getLinearFieldAtC( pa, va, pb, vb, pc, vc ) ? std::max( vc, nextUp( va ) ) : FLT_MAX;
     };
 
     if ( regionSources_.test( source ) )
     {
         if ( const auto vc = planeWave(); vc < FLT_MAX )
-            suggestVertDistance_( { c, vc }, source, lineEndA ? lineEndA : lineEndB ? lineEndB : sourceB );
+            suggestVertDistance_( { c, vc }, source, source );
         return;
     }
 

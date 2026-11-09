@@ -85,7 +85,8 @@ private:
     /// for each reached vertex: the start point, the distance from which is stored in the vertex
     Vector<SurfaceDistanceStartId, VertId> vertSource_;
     /// for each reached vertex: invalid if its distance is from the point vertSource_,
-    /// otherwise its distance is from the line through vertSource_ and this start point (a start edge of a line, or any start point near a region)
+    /// vertSource_ itself if its distance is from the linear field near a region,
+    /// otherwise its distance is from the start edge of a line between vertSource_ and this start point
     Vector<SurfaceDistanceStartId, VertId> vertLineEnd_;
     /// for each start point: the distance assigned to it in the beginning
     Vector<float, SurfaceDistanceStartId> sourceStartDistance_;

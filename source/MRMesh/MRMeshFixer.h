@@ -152,19 +152,20 @@ struct FixCreasesParams
     /// edges with dihedral angle sharper this will be considered as creases
     float creaseAngle = PI_F * 175.0f / 180.0f;
 
-    /// planar check is skipped for faces with worse aspect ratio
+    /// faces with worse aspect ratio (slivers) join the flat area or the fan around a crease whatever their normals
     float criticalTriAspectRatio = 1e3f;
 
     /// maximum number of algorithm iterations
     int maxIters = 10;
 
-    /// optional output: mapping from each newly appeared triangle to the original triangle it covers (to copy per-face attributes)
+    /// optional output: maps each new face to the replaced original face nearest to its center (one oriented the same way first),
+    /// to copy per-face attributes; existing entries are composed with the new ones, so pass an empty map
     FaceHashMap* new2Old = nullptr;
 };
 
 /// Finds creases edges and fixes the folds of the surface around them, useful to fix double faces:
-/// first the folded parts of flat areas are re-triangulated in their plane within their unchanged boundaries, so the shape stays,
-/// then planar areas around the remaining creases are re-triangulated
+/// the flat area around a crease, until its neighbours are oriented the same way, is re-triangulated in its plane within its boundary, so the shape stays;
+/// without such an area, the fan around the worse end of the crease is re-triangulated by the minimal area
 MRMESH_API void fixMeshCreases( Mesh& mesh, const FixCreasesParams& params = {} );
 
 /// Parameters for `findDisorientedFaces` function

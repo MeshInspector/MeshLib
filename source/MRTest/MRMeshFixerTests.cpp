@@ -18,6 +18,7 @@
 #include <MRMesh/MRMeshMeshDistance.h>
 #include <MRMesh/MRClosestPointInTriangle.h>
 #include <MRMesh/MRPlane3.h>
+#include <MRMesh/MRMakeSphereMesh.h>
 #include <gtest/gtest.h>
 
 namespace MR
@@ -377,6 +378,8 @@ TEST( MRMesh, FixMeshCreasesFlatFold )
     for ( auto f : mesh.topology.getValidFaces() )
         EXPECT_GT( mesh.dirDblArea( f ).z, 0 );
     EXPECT_NEAR( mesh.area(), 9.0, 1e-5 );
+    EXPECT_TRUE( mesh.topology.checkValidity() );
+    EXPECT_EQ( mesh.topology.findNumHoles(), 1 );
 
     // a new face takes an original face facing up under its center, the others keep their ids
     EXPECT_FALSE( new2Old.empty() );
@@ -408,6 +411,23 @@ TEST( MRMesh, FixMeshCreasesKeepsShape )
     EXPECT_NEAR( mesh.area(), box.area(), 1e-4 );
     EXPECT_NEAR( mesh.volume(), box.volume(), 1e-4 );
     EXPECT_LT( findMaxDistanceSqOneWay( mesh, box ), 1e-10f );
+    EXPECT_TRUE( mesh.topology.checkValidity() );
+    EXPECT_EQ( mesh.topology.findNumHoles(), 0 );
+}
+
+// a vertex next to the pole of a coarse sphere slid along its meridian past its neighbour folds the curved surface,
+// which has no flat area around the fold: the fan of triangles around the fold is re-triangulated
+TEST( MRMesh, FixMeshCreasesCurvedFold )
+{
+    auto mesh = makeUVSphere( 1, 12, 12 );
+    const VertId v( 11 * 12 + 11 ), u( 10 * 12 + 11 ); // the last two rows of vertices are next to the pole
+    mesh.points[v] = ( mesh.points[v] + 1.3f * ( mesh.points[u] - mesh.points[v] ) ).normalized();
+    const auto creaseAngle = FixCreasesParams{}.creaseAngle;
+    EXPECT_TRUE( mesh.findCreaseEdges( creaseAngle ).any() );
+    fixMeshCreases( mesh );
+    EXPECT_TRUE( mesh.findCreaseEdges( creaseAngle ).none() );
+    EXPECT_TRUE( mesh.topology.checkValidity() );
+    EXPECT_EQ( mesh.topology.findNumHoles(), 0 );
 }
 
 } //namespace MR

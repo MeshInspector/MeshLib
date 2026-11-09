@@ -543,8 +543,9 @@ public:
     /// copies topology (from) into this;
     /// \param from edges must be tightly packes without any lone edges, and they are mapped [0, from.edges.size()) -> [toEdgeId, toEdgeId + from.edges.size());
     /// \param fmap,vmap mapping of vertices and faces if it is given ( from.id -> this.id )
+    /// \param shiftFaceId is added to all face ids from fmap
     MRMESH_API void addPackedPart( const MeshTopology & from, EdgeId toEdgeId,
-        const FaceMap & fmap, const VertMap & vmap );
+        const FaceMap & fmap, const VertMap & vmap, int shiftFaceId = 0 );
 
     /// compute
     /// 1) numValidVerts_ and validVerts_ from edgePerVertex_
@@ -564,6 +565,12 @@ public:
 
     // constructs triangular grid mesh topology in parallel
     MRMESH_API bool buildGridMesh( const GridSettings& settings, ProgressCallback cb = {} );
+
+    /// constructs topology from given triangles in parallel, if every edge has at most two triangles with opposite directions on it,
+    /// and the triangles around every vertex form either one closed fan or at most two open fans; returns false and leaves this and settings.region unchanged otherwise;
+    /// triangles with invalid or repeated vertices are not added, as in MeshBuilder::fromTriangles with the same settings;
+    /// \param nonManifoldVertsOnly if given, set to whether it failed only on vertices having several fans of triangles around, but not just one or two open fans
+    MRMESH_API bool buildFromManifoldTriangles( const Triangulation & t, const MeshBuilder::BuildSettings & settings, bool * nonManifoldVertsOnly = nullptr );
 
     /// verifies that all internal data structures are valid;
     /// if allVerts=true then checks in addition that all not-lone edges have valid vertices on both ends

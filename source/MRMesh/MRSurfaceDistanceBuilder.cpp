@@ -1,5 +1,6 @@
 #include "MRSurfaceDistanceBuilder.h"
 #include "MRMesh.h"
+#include "MRNextUpDown.h"
 #include "MRRegionBoundary.h"
 #include "MRRingIterator.h"
 #include "MRTimer.h"
@@ -312,7 +313,7 @@ void SurfaceDistanceBuilder::suggestDistancesAround_( VertId v )
         c.vert = dest;
         c.distance = vDist + mesh_.edgeLength( e );
         if( c.distance <= vDist )
-            c.distance = std::nextafter( vDist, FLT_MAX );
+            c.distance = nextUp( vDist );
         if ( !suggestVertDistance_( c, vertSource_[v], vertLineEnd_[v] ) )
         {
             // a shorter distance is known for dest
@@ -435,7 +436,7 @@ MR_SD_NOINLINE void SurfaceDistanceBuilder::considerTriBetweenGroups_( EdgeId e,
             return;
         float v = float( std::max( vc, minVc ) );
         if ( s1 )
-            v = std::max( v, std::nextafter( va, FLT_MAX ) );
+            v = std::max( v, nextUp( va ) );
         if ( v < best )
         {
             best = v;
@@ -463,7 +464,7 @@ void SurfaceDistanceBuilder::considerTriNearStarts_( VertId a, VertId b, VertId 
         float dvac = 0;
         if ( !getFieldAtC( pb - pa, pc - pa, vb - va, dvac ) )
             return FLT_MAX;
-        return std::max( va + dvac, std::nextafter( va, FLT_MAX ) );
+        return std::max( va + dvac, nextUp( va ) );
     };
 
     if ( regionSources_.test( source ) )
@@ -487,7 +488,7 @@ void SurfaceDistanceBuilder::considerTriNearStarts_( VertId a, VertId b, VertId 
             return;
         float vc = float( dc );
         if ( s1 )
-            vc = std::max( vc, std::nextafter( va, FLT_MAX ) );
+            vc = std::max( vc, nextUp( va ) );
         if ( vc < best )
         {
             best = vc;

@@ -109,21 +109,10 @@ static nlohmann::json transformToJson( const AffineXf3f& xf )
     } );
 }
 
-// Color in/out as `[r, g, b]` or `[r, g, b, a]` floats in [0, 1].
+// Color out as `[r, g, b, a]` floats in [0, 1], as `parseColor` reads it.
 static nlohmann::json colorToJson( const Color& c )
 {
     return nlohmann::json::array( { c.r / 255.f, c.g / 255.f, c.b / 255.f, c.a / 255.f } );
-}
-
-static Color parseColor( const nlohmann::json& j, std::string_view field )
-{
-    if ( !j.is_array() || ( j.size() != 3 && j.size() != 4 ) )
-        throw std::runtime_error( fmt::format( "`{}` must be a 3- or 4-element array of floats in [0,1]", field ) );
-    const float r = j[0].get<float>();
-    const float g = j[1].get<float>();
-    const float b = j[2].get<float>();
-    const float a = j.size() == 4 ? j[3].get<float>() : 1.0f;
-    return Color{ r, g, b, a }; // the float ctor clamps to [0, 1]
 }
 
 // Geometry counts and measures of mesh and point-cloud objects, in object-local units;

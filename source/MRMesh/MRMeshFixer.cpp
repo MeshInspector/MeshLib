@@ -992,13 +992,11 @@ static bool hasPlanarFill( const Mesh& mesh, const FaceBitSet& region, const Vec
             height.include( dot( Vector3d( mesh.points[v] ), dir ) );
     if ( sqr( ( height.max - height.min ) * maxAspectRatio ) > sumCross.length() / 2 )
         return false; // the planar triangulation of a region that is not flat changes the shape
-    const auto patch = PlanarTriangulation::triangulateDisjointContours( mesh, loops, Vector3f( dir ) );
-    if ( !patch )
-        return false;
     // all triangles face dir, and the loops wind around it as the triangles do: otherwise the triangles have more or less area than the loops
-    double triArea = 0;
-    for ( auto f : patch->topology.getValidFaces() )
-        triArea += std::abs( dot( Vector3d( patch->dirDblArea( f ) ), dir ) );
+    double triArea = 0; // stays zero if the boundary has no planar triangulation
+    if ( const auto patch = PlanarTriangulation::triangulateDisjointContours( mesh, loops, Vector3f( dir ) ) )
+        for ( auto f : patch->topology.getValidFaces() )
+            triArea += std::abs( dot( Vector3d( patch->dirDblArea( f ) ), dir ) );
     return std::abs( sumCross.length() - triArea ) < 1e-4 * triArea;
 }
 
@@ -1016,8 +1014,7 @@ void fixMeshCreases( Mesh& mesh, const FixCreasesParams& params )
             {
                 auto it = new2Old->find( f );
                 replaced.push_back( { it != new2Old->end() ? it->second : f, mesh.getTriPoints( f ), mesh.dirDblArea( f ) } );
-                if ( it != new2Old->end() )
-                    new2Old->erase( it );
+                new2Old->erase( f );
             }
         const FaceId firstNew( mesh.topology.faceSize() );
         const auto loops = delRegionKeepBd( mesh, region, true );
@@ -1025,14 +1022,9 @@ void fixMeshCreases( Mesh& mesh, const FixCreasesParams& params )
         for ( const auto& loop : loops )
             holes.push_back( loop.front() );
         if ( !planar || !fillContours2D( mesh, holes ) )
-        {
             for ( const auto& loop : loops )
-            {
-                auto it = std::find_if( loop.begin(), loop.end(), [&] ( EdgeId e ) { return !mesh.topology.left( e ); } );
-                if ( it != loop.end() )
+                if ( auto it = std::find_if( loop.begin(), loop.end(), [&] ( EdgeId e ) { return !mesh.topology.left( e ); } ); it != loop.end() )
                     fillHole( mesh, *it, { .metric = getMinAreaMetric( mesh ) } );
-            }
-        }
         if ( !new2Old )
             return;
         // each new face takes the replaced face closest to its center, preferring the faces oriented as it is

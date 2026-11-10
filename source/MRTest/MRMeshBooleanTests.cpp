@@ -856,6 +856,20 @@ TEST( MRMesh, SelfCollidingEdgeTrisPreciseMultipleEdges )
     }
 }
 
+// two intersections with the same next one, which only inconsistent intersections give (as those of a face that is not a triangle, tested
+// as the triangle of its first three vertices): the contour that enters the first triangle from the second one goes on between
+// the intersections of two of its edges, which follow each other in a loop without the start of the contour;
+// no contours are returned then instead of following that loop forever; Debug asserts there
+#ifdef NDEBUG
+TEST( MRMesh, OrderSelfIntersectionContoursCommonNext )
+{
+    const auto topology = MeshBuilder::fromTriangles( { { 0_v, 1_v, 2_v }, { 1_v, 0_v, 3_v }, { 4_v, 5_v, 6_v } } );
+    // each edge has the triangle that the contour enters on its left: 1_f, then 0_f twice
+    const std::vector<EdgeTri> intersections{ { topology.findEdge( 0_v, 3_v ), 2_f }, { topology.findEdge( 0_v, 1_v ), 2_f }, { topology.findEdge( 1_v, 2_v ), 2_f } };
+    EXPECT_TRUE( orderSelfIntersectionContours( topology, intersections ).empty() );
+}
+#endif
+
 TEST( MRMesh, BooleanResultMapper )
 {
     Mesh meshA = makeTorus( 1.1f, 0.5f, 8, 8 );

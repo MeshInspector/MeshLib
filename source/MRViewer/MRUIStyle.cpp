@@ -1912,6 +1912,15 @@ bool inputTextIntoArrayMultiline( const char* label, char* buf, size_t buf_size,
     return basicTextInputIntoArray( label, buf, buf_size, flags, [&]{ return ImGui::InputTextMultiline( label, buf, buf_size, size, flags, callback, user_data ); } );
 }
 
+bool inputTextIntoArrayMultilineWithHint( const char* label, const char* hint, char* buf, size_t buf_size, const ImVec2& size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data )
+{
+    // ImGui::InputTextWithHint() does not accept the multiline flag, and ImGui::InputTextMultiline() does not accept a hint
+    return basicTextInputIntoArray( label, buf, buf_size, flags, [&]
+    {
+        return ImGui::InputTextEx( label, hint, buf, int( buf_size ), size, flags | ImGuiInputTextFlags_Multiline, callback, user_data );
+    } );
+}
+
 static bool basicTextInputMultilineFullyScrollable( CachedTextSize& cache, const char *label, const char* buf, ImVec2 size, auto &&func )
 {
     auto calcSize = [&]

@@ -45,7 +45,7 @@ bool isLeaf( const Tree & tree, NodeId n )
 template<class Tree>
 const auto & nodeBox( const Tree & tree, NodeId n )
 {
-    if constexpr ( hasLeafNodes<Tree> || leavesWithoutBoxes<Tree> )
+    if constexpr ( hasLeafNodes<Tree> )
         return tree[n].box;
     else
         return tree.box( n );

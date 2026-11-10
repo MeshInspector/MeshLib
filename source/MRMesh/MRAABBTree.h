@@ -12,7 +12,7 @@ namespace MR
  */
 
 /// bounding volume hierarchy of mesh triangles;
-/// the leaves store the vertices of their triangles, and the boxes of the triangles are kept separately in leafBoxes(),
+/// the leaves store the vertices of their triangles, and the boxes of nodes and of leaves are kept in one array boxes(),
 /// so a change of mesh topology requires either Mesh::invalidateCaches() or updateLeafVerts(),
 /// and MeshTopology::flipOrientation() requires flipOrientation() here (as Mesh::flipOrientation() does)
 /// \ingroup AABBTreeGroup
@@ -23,8 +23,9 @@ public:
     [[nodiscard]] MRMESH_API explicit AABBTree( const MeshPart & mp );
 
     AABBTree() = default;
-    AABBTree( AABBTree && ) noexcept = default;
-    AABBTree & operator =( AABBTree && ) noexcept = default;
+    AABBTree( AABBTree && b ) noexcept : AABBTreeBase( std::move( b ) ), boxes_( std::move( b.boxes_ ) ) { updateBoxBase_(); b.boxBase_ = nullptr; }
+    AABBTree & operator =( AABBTree && b ) noexcept
+        { AABBTreeBase::operator =( std::move( b ) ); boxes_ = std::move( b.boxes_ ); updateBoxBase_(); b.boxBase_ = nullptr; return *this; }
 
     /// returns the vertices of the triangle of given leaf
     [[nodiscard]] const ThreeVertIds & leafVerts( NodeId n ) const { return leaf( n ).verts; }
@@ -33,21 +34,23 @@ public:
     [[nodiscard]] Triangle3f leafTriPoints( const VertCoords & points, NodeId n ) const
         { const auto & v = leafVerts( n ); return { points[v[0]], points[v[1]], points[v[2]] }; }
 
-    /// the bounding boxes of the triangles of all leaves, in the order of leaves()
-    using LeafBoxes = Vector<Box3f>;
-    [[nodiscard]] const LeafBoxes & leafBoxes() const { return leafBoxes_; }
-
-    /// returns the bounding box of the triangle of given leaf
-    [[nodiscard]] const Box3f & leafBox( NodeId n ) const { return leafBoxes_[Node::leafIndex( n )]; }
+    /// the bounding boxes of all leaves (the triangles) in the reverse order of leaves() followed by the boxes of all nodes,
+    /// so that the box of a node or leaf n is boxes()[numLeaves() + n] (a leaf is encoded as negative n = ~leafIndex)
+    using Boxes = Vector<Box3f>;
+    [[nodiscard]] const Boxes & boxes() const { return boxes_; }
 
     /// returns the bounding box of given node or leaf
-    [[nodiscard]] const Box3f & box( NodeId n ) const { return isLeaf( n ) ? leafBox( n ) : nodes_[n].box; }
+    [[nodiscard]] const Box3f & box( NodeId n ) const
+        { assert( int( n ) >= -int( leaves_.size() ) && int( n ) < int( nodes_.size() ) ); return boxBase_[int( n )]; }
+
+    /// returns the bounding box of the triangle of given leaf
+    [[nodiscard]] const Box3f & leafBox( NodeId n ) const { assert( isLeaf( n ) ); return box( n ); }
 
     /// returns the bounding box of the whole tree
     [[nodiscard]] Box3f getBoundingBox() const { return empty() ? Box3f{} : box( rootNodeId() ); }
 
     /// returns the amount of memory this object occupies on heap
-    [[nodiscard]] size_t heapBytes() const { return AABBTreeBase::heapBytes() + leafBoxes_.heapBytes(); }
+    [[nodiscard]] size_t heapBytes() const { return AABBTreeBase::heapBytes() + boxes_.heapBytes(); }
 
     /// updates bounding boxes of the nodes containing changed vertices;
     /// this is a faster alternative to full tree rebuild (but the tree after refit might be less efficient)
@@ -72,10 +75,13 @@ public:
     MRMESH_API void flipOrientation( const FaceBitSet * region = nullptr );
 
 private:
-    LeafBoxes leafBoxes_;
+    Boxes boxes_;
+    Box3f * boxBase_ = nullptr; ///< boxes_.data() + numLeaves(): the box of node or leaf n is boxBase_[n]
+    void updateBoxBase_() { boxBase_ = boxes_.data() + leaves_.size(); }
+    Box3f & box_( NodeId n ) { return boxBase_[int( n )]; }
 
-    AABBTree( const AABBTree & ) = default;
-    AABBTree & operator =( const AABBTree & ) = default;
+    AABBTree( const AABBTree & b ) : AABBTreeBase( b ), boxes_( b.boxes_ ) { updateBoxBase_(); }
+    AABBTree & operator =( const AABBTree & b ) { AABBTreeBase::operator =( b ); boxes_ = b.boxes_; updateBoxBase_(); return *this; }
     friend class UniqueThreadSafeOwner<AABBTree>;
     friend class SharedThreadSafeOwner<AABBTree>;
 };

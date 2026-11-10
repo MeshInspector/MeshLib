@@ -155,7 +155,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const A
                 continue;
             }
 
-            if ( !aLeaf && ( bLeaf || aTree[s.aNode].box.volume() >= bTree[s.bNode].box.volume() ) )
+            if ( !aLeaf && ( bLeaf || aTree.box( s.aNode ).volume() >= bTree.box( s.bNode ).volume() ) )
             {
                 // split aNode
                 const auto & aNode = aTree[s.aNode];
@@ -322,7 +322,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const A
                 const bool aLeaf = aTree.isLeaf( s.aNode );
                 const bool bLeaf = bTree.isLeaf( s.bNode );
                 assert( !aLeaf || !bLeaf );
-                if ( !aLeaf && ( bLeaf || aTree[s.aNode].box.volume() >= bTree[s.bNode].box.volume() ) )
+                if ( !aLeaf && ( bLeaf || aTree.box( s.aNode ).volume() >= bTree.box( s.bNode ).volume() ) )
                 {
                     // split aNode
                     const auto & aNode = aTree[s.aNode];
@@ -546,23 +546,18 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
         return res;
 
     // the traversal visits every node, and each many times, so the boxes after the transformation are computed once in advance
-    Vector<Box3f, NodeId> xfBoxes;
+    AABBTree::Boxes xfBoxes; // in the order of tree.boxes()
     if ( rigidB2A )
     {
-        xfBoxes.resizeNoInit( tree.nodes().size() );
-        ParallelFor( xfBoxes, [&]( NodeId i ) { xfBoxes[i] = transformed( tree[i].box, *rigidB2A ); } );
+        xfBoxes.resizeNoInit( tree.boxes().size() );
+        ParallelFor( xfBoxes, [&]( size_t i ) { xfBoxes[i] = transformed( tree.boxes()[i], *rigidB2A ); } );
     }
-    AABBTree::LeafBoxes xfLeafBoxes;
-    if ( rigidB2A )
-    {
-        xfLeafBoxes.resizeNoInit( tree.numLeaves() );
-        ParallelFor( xfLeafBoxes, [&]( size_t i ) { xfLeafBoxes[i] = transformed( tree.leafBoxes()[i], *rigidB2A ); } );
-    }
+    const auto numLeaves = std::ptrdiff_t( tree.numLeaves() );
     auto xfBox = [&]( NodeId n ) -> const Box3f &
     {
         if ( !rigidB2A )
             return tree.box( n );
-        return AABBTree::isLeaf( n ) ? xfLeafBoxes[AABBTree::Node::leafIndex( n )] : xfBoxes[n];
+        return xfBoxes.data()[numLeaves + int( n )];
     };
     const double minGap = 2 / conv.invRange;
     auto processBoxes = [&] ( const NodeNode & s )

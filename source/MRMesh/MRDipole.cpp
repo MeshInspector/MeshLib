@@ -64,11 +64,10 @@ void calcDipoles( Dipoles& dipoles, const AABBTree& tree_, const Mesh& mesh )
     // compute 1) center mass 2) distance to farthest corner for all nodes
     ParallelFor( dipoles, [&]( NodeId i )
     {
-        const auto& node = tree_[i];
         auto& d = dipoles[i];
         if ( d.area > 0 )
             d.pos /= d.area;
-        d.rr = distToFarthestCornerSq( node.box, d.pos );
+        d.rr = distToFarthestCornerSq( tree_.box( i ), d.pos );
     } );
 }
 

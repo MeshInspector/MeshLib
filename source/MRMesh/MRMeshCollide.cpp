@@ -59,7 +59,7 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
         {
             const bool aLeaf = aTree.isLeaf( s.aNode );
             const bool bLeaf = bTree.isLeaf( s.bNode );
-            if ( !aLeaf && ( bLeaf || aTree[s.aNode].box.volume() >= bTree[s.bNode].box.volume() ) )
+            if ( !aLeaf && ( bLeaf || aTree.box( s.aNode ).volume() >= bTree.box( s.bNode ).volume() ) )
             {
                 const auto & aNode = aTree[s.aNode];
                 to.push_back( { aNode.l, s.bNode } );
@@ -179,7 +179,7 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
             continue;
         }
 
-        if ( !aLeaf && ( bLeaf || aTree[s.aNode].box.volume() >= bTree[s.bNode].box.volume() ) )
+        if ( !aLeaf && ( bLeaf || aTree.box( s.aNode ).volume() >= bTree.box( s.bNode ).volume() ) )
         {
             // split aNode
             const auto & aNode = aTree[s.aNode];

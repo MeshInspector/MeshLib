@@ -4,6 +4,7 @@
 #include "MRId.h"
 #include "MRVector2.h"
 #include "MRVector3.h"
+#include <type_traits>
 
 namespace MR
 {
@@ -53,8 +54,19 @@ struct AABBTreeLeaf { using type = BoxedLeaf<T>; };
 template<>
 struct AABBTreeLeaf<FaceTreeTraits3> { using type = FaceLeaf; };
 
+/// the encoding of the children of AABB-tree nodes
+struct AABBTreeChildEncoding
+{
+    /// returns true if given child of a node is a leaf rather than another node
+    [[nodiscard]] static bool isLeaf( NodeId child ) { return int( child ) < 0; }
+    /// returns the index in the vector of leaves of the leaf encoded in given child of a node
+    [[nodiscard]] static size_t leafIndex( NodeId child ) { assert( isLeaf( child ) ); return size_t( ~int( child ) ); }
+    /// encodes given index in the vector of leaves as a child of a node
+    [[nodiscard]] static NodeId leafChild( size_t leafIndex ) { return NodeId( ~int( leafIndex ) ); }
+};
+
 template<typename T>
-struct AABBTreeNode
+struct AABBTreeNode : AABBTreeChildEncoding
 {
     using LeafId = typename T::LeafId;
     using BoxT = typename T::BoxT;
@@ -62,16 +74,26 @@ struct AABBTreeNode
     BoxT box; ///< bounding box of whole subtree
     NodeId l, r; ///< two children: each is either another node (non-negative id) or a leaf (encoded as negative number ~leafIndex)
 
-    /// returns true if given child of a node is a leaf rather than another node
-    [[nodiscard]] static bool isLeaf( NodeId child ) { return int( child ) < 0; }
-    /// returns the index in the vector of leaves of the leaf encoded in given child of a node
-    [[nodiscard]] static size_t leafIndex( NodeId child ) { assert( isLeaf( child ) ); return size_t( ~int( child ) ); }
-    /// encodes given index in the vector of leaves as a child of a node
-    [[nodiscard]] static NodeId leafChild( size_t leafIndex ) { return NodeId( ~int( leafIndex ) ); }
-
     AABBTreeNode() noexcept = default;
     explicit AABBTreeNode( NoInit ) noexcept : box( noInit ), l( noInit ), r( noInit ){}
 };
+
+/// a node of the AABB-tree of a mesh: only the children, the boxes of nodes and leaves are in one array AABBTree::boxes()
+template<>
+struct AABBTreeNode<FaceTreeTraits3> : AABBTreeChildEncoding
+{
+    using LeafId = FaceId;
+    using BoxT = Box3f;
+
+    NodeId l, r; ///< two children: each is either another node (non-negative id) or a leaf (encoded as negative number ~leafIndex)
+
+    AABBTreeNode() noexcept = default;
+    explicit AABBTreeNode( NoInit ) noexcept : l( noInit ), r( noInit ){}
+};
+
+/// whether the nodes of the tree with given traits store their boxes
+template<typename T>
+inline constexpr bool nodesHaveBoxes = !std::is_same_v<T, FaceTreeTraits3>;
 
 template<typename T>
 using AABBTreeNodeVec = Vector<AABBTreeNode<T>, NodeId>;

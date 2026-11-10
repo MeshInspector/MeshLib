@@ -104,7 +104,7 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
         }
 
         SubTask s1, s2;
-        if ( !aLeaf && ( bLeaf || aTree[s.a].box.volume() >= bTree[s.b].box.volume() ) )
+        if ( !aLeaf && ( bLeaf || aTree.box( s.a ).volume() >= bTree.box( s.b ).volume() ) )
         {
             // split aNode
             const auto& aNode = aTree[s.a];

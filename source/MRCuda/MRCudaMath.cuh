@@ -88,10 +88,16 @@ struct Node2
     int l, r;
 };
 
-// the same as AABBTreeNode of the trees of meshes and of 3D polylines: each child is either another node (non-negative) or a leaf (encoded as ~leafIndex)
+// the same as AABBTreeNode of the trees of 3D polylines: each child is either another node (non-negative) or a leaf (encoded as ~leafIndex)
 struct TreeNode3
 {
     Box3 box;
+    int l, r;
+};
+
+// the same as AABBTreeNode<FaceTreeTraits3>: only the children, the boxes are in MeshTree::boxes
+struct MeshTreeNode
+{
     int l, r;
 };
 
@@ -121,16 +127,16 @@ struct LineLeaf3
     Box3 box;
 };
 
-// AABB tree of a mesh as on CPU: nodes, the boxes of leaves and the leaves with the vertices of their triangles
+// AABB tree of a mesh as on CPU: nodes, the boxes of nodes and leaves, and the leaves with the vertices of their triangles
 struct MeshTree
 {
-    const TreeNode3* __restrict__ nodes = nullptr;
-    const Box3* __restrict__ leafBoxes = nullptr;
+    const MeshTreeNode* __restrict__ nodes = nullptr;
+    const Box3* __restrict__ boxes = nullptr; ///< AABBTree::boxes() offset by the number of leaves: boxes[n] for a node or a leaf n
     const FaceLeaf* __restrict__ leaves = nullptr;
     int root = 0; ///< 0, or ~0 if the tree has only one leaf
 
     __device__ static bool isLeaf( int n ) { return n < 0; }
-    __device__ const Box3& box( int n ) const { return n < 0 ? leafBoxes[~n] : nodes[n].box; }
+    __device__ const Box3& box( int n ) const { return boxes[n]; }
     __device__ const FaceLeaf& leaf( int n ) const { return leaves[~n]; }
 };
 

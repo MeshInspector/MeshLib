@@ -33,9 +33,9 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
     auto nodeBox = [&]( NodeId n ) -> decltype( auto )
     {
         if constexpr ( std::is_same_v<T, float> )
-            return ( tree[n].box );
+            return ( tree.box( n ) );
         else
-            return Box3<T>( tree[n].box );
+            return Box3<T>( tree.box( n ) );
     };
 
     TriPointf triP;

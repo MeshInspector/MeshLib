@@ -152,7 +152,8 @@ size_t CudaAccessor::fastWindingNumberMeshMemory( const Mesh& mesh )
     size_t treeNodesSize = 2 * size_t( mesh.topology.numValidFaces() ); // in CUDA each leaf is a separate node
     size_t memoryAmount = treeNodesSize * sizeof( Dipole );
     memoryAmount += mesh.points.size() * sizeof( Vector3f );
-    memoryAmount += treeNodesSize * sizeof( AABBTree::Node );
+    memoryAmount += treeNodesSize * ( sizeof( AABBTree::Node ) + sizeof( Box3f ) ); // the nodes and the boxes of nodes and leaves
+    memoryAmount += size_t( mesh.topology.numValidFaces() ) * sizeof( FaceLeaf );
     memoryAmount += mesh.topology.faceSize() * sizeof( Vector3i );
     return memoryAmount;
 }

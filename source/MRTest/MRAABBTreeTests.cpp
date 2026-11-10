@@ -23,7 +23,8 @@ TEST(MRMesh, AABBTree)
     AABBTree tree( sphere );
     EXPECT_EQ( tree.nodes().size(), getNumNodes( sphere.topology.numValidFaces() ) );
     EXPECT_EQ( tree.rootNodeId(), NodeId( 0 ) );
-    EXPECT_EQ( tree[tree.rootNodeId()].box, sphere.computeBoundingBox().insignificantlyExpanded() );
+    EXPECT_EQ( tree.box( tree.rootNodeId() ), sphere.computeBoundingBox().insignificantlyExpanded() );
+    EXPECT_EQ( tree.boxes().size(), tree.numLeaves() + tree.nodes().size() );
     EXPECT_EQ( tree.getBoundingBox(), sphere.computeBoundingBox().insignificantlyExpanded() );
     EXPECT_FALSE( tree.isLeaf( tree[tree.rootNodeId()].l ) );
     EXPECT_FALSE( tree.isLeaf( tree[tree.rootNodeId()].r ) );
@@ -59,6 +60,7 @@ static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
 {
     const auto & nodes = tree.nodes();
     EXPECT_EQ( tree.numLeaves(), size_t( mesh.topology.numValidFaces() ) );
+    EXPECT_EQ( tree.boxes().size(), tree.numLeaves() + nodes.size() );
     FaceBitSet leaves( mesh.topology.faceSize() );
     auto checkLeaf = [&]( NodeId c )
     {
@@ -82,7 +84,7 @@ static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
                 checkLeaf( c );
             else
                 ASSERT_TRUE( c > n && c < nodes.size() );
-            EXPECT_TRUE( node.box.contains( tree.box( c ) ) );
+            EXPECT_TRUE( tree.box( n ).contains( tree.box( c ) ) );
         }
     }
     EXPECT_EQ( leaves.count(), size_t( mesh.topology.numValidFaces() ) );

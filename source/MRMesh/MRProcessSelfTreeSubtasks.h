@@ -68,7 +68,7 @@ MR_BIND_IGNORE void processSelfSubtasks( const AABBTree& tree,
             {
                 leafPairs[numLeafPairs++] = s;
             }
-            else if ( !aLeaf && ( bLeaf || tree[s.aNode].box.volume() >= tree[s.bNode].box.volume() ) )
+            else if ( !aLeaf && ( bLeaf || tree.box( s.aNode ).volume() >= tree.box( s.bNode ).volume() ) )
             {
                 // split aNode
                 const auto& aNode = tree[s.aNode];

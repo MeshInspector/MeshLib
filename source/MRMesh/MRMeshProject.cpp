@@ -38,7 +38,7 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
     {
         if ( !tree.isLeaf( n ) )
         {
-            const auto & box = tree[n].box;
+            const auto & box = tree.box( n );
             float distSq = xf ? transformed( box, *xf ).getDistanceSq( pt ) : box.getDistanceSq( pt );
             return SubTask { n, distSq };
         }
@@ -218,7 +218,7 @@ void findTrisInBall( const MeshPart & mp, const Ball3f & ball0, const FoundTriCa
     auto processChild = [&]( NodeId n ) -> float
     {
         if ( !tree.isLeaf( n ) )
-            return tree[n].box.getDistanceSq( ball.center );
+            return tree.box( n ).getDistanceSq( ball.center );
         const auto face = tree.leafId( n );
         if ( mp.region && !mp.region->test( face ) )
             return FLT_MAX;
@@ -250,7 +250,7 @@ void findTrisInBall( const MeshPart & mp, const Ball3f & ball0, const FoundTriCa
     {
         const auto n = subtasks.top();
         subtasks.pop();
-        if ( !( tree[n].box.getDistanceSq( ball.center ) < ball.radiusSq ) )
+        if ( !( tree.box( n ).getDistanceSq( ball.center ) < ball.radiusSq ) )
             continue; // the ball has shrunk
 
         const auto & node = tree[n];

@@ -2,6 +2,8 @@
 #include "MRMesh/MRUniqueTemporaryFolder.h"
 #include "MRMesh/MRObjectSave.h"
 #include "MRMesh/MRObjectLoad.h"
+#include "MRMesh/MRLoadedMeshData.h"
+#include "MRMesh/MRColor.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRDistanceMeasurementObject.h"
@@ -270,6 +272,32 @@ TEST( MRMesh, PointMeasurementSetAllVisualizeProperties )
     dst.setAllVisualizeProperties( props );
     EXPECT_EQ( dst.getVisualizePropertyMask( CapVisibility ), capMask );
     EXPECT_EQ( dst.getAllVisualizeProperties(), props );
+}
+
+TEST( MRMesh, MakeObjectMeshTransparentColorsWarning )
+{
+    const auto make = [] ( const VertColors& vertColors, const FaceColors& faceColors )
+    {
+        LoadedMeshData data;
+        data.mesh = std::make_shared<Mesh>( makeCube() );
+        data.vertColors = vertColors;
+        data.faceColors = faceColors;
+        return makeObjectMesh( "cube", std::move( data ) ).warnings;
+    };
+    const Color transparent( 255, 0, 0, 0 );
+    const Color opaque( 255, 0, 0, 255 );
+    const auto mentionsTransparency = [] ( const std::string& warnings ) { return warnings.find( "transparent" ) != std::string::npos; };
+
+    EXPECT_FALSE( mentionsTransparency( make( {}, {} ) ) );
+    EXPECT_TRUE( mentionsTransparency( make( VertColors( 8, transparent ), {} ) ) );
+    EXPECT_FALSE( mentionsTransparency( make( VertColors( 8, opaque ), {} ) ) );
+    auto mixed = VertColors( 8, transparent );
+    mixed[VertId( 3 )] = opaque;
+    EXPECT_FALSE( mentionsTransparency( make( mixed, {} ) ) );
+    EXPECT_TRUE( mentionsTransparency( make( {}, FaceColors( 12, transparent ) ) ) );
+    EXPECT_FALSE( mentionsTransparency( make( {}, FaceColors( 12, opaque ) ) ) );
+    // vertex colors are shown, not triangle colors
+    EXPECT_FALSE( mentionsTransparency( make( VertColors( 8, opaque ), FaceColors( 12, transparent ) ) ) );
 }
 
 } //namespace MR

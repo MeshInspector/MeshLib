@@ -28,6 +28,7 @@
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRFmt.h"
 #include "MRPch/MRJson.h"
+#include <algorithm>
 
 namespace MR
 {
@@ -249,6 +250,23 @@ LoadedObject makeObjectMesh( std::string objName, LoadedMeshData data )
         hasFaceColors = false;
         warnings += fmt::format( "Ignoring too few ({}) colors loaded for a mesh with {} triangles.\n", data.faceColors.size(), numVerts );
         data.faceColors.clear();
+    }
+
+    // colors with zero alpha make the mesh invisible, which looks like a failed import
+    if ( !( hasUV && !data.texture.pixels.empty() ) )
+    {
+        if ( hasVertColors )
+        {
+            const auto& validVerts = data.mesh->topology.getValidVerts();
+            if ( validVerts.any() && std::all_of( begin( validVerts ), end( validVerts ), [&] ( VertId v ) { return data.vertColors[v].a == 0; } ) )
+                warnings += "All vertex colors of the mesh are fully transparent (alpha is zero), so the mesh may be invisible.\n";
+        }
+        else if ( hasFaceColors )
+        {
+            const auto& validFaces = data.mesh->topology.getValidFaces();
+            if ( validFaces.any() && std::all_of( begin( validFaces ), end( validFaces ), [&] ( FaceId f ) { return data.faceColors[f].a == 0; } ) )
+                warnings += "All triangle colors of the mesh are fully transparent (alpha is zero), so the mesh may be invisible.\n";
+        }
     }
 
     auto objectMesh = std::make_unique<ObjectMesh>();

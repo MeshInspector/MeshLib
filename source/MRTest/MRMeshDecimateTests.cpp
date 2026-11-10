@@ -146,6 +146,14 @@ TEST( MRMesh, MeshDecimateTetrahedronKept )
 
     EXPECT_EQ( facesLeft( { .maxError = 10, .preCollapse = []( EdgeId, const Vector3f & ) { return false; } } ), 4 );
 
+    // preCollapse is called only right before the removal, since it may update vertex attributes
+    int preCollapseCalls = 0;
+    auto countCalls = [&]( EdgeId, const Vector3f & ) { ++preCollapseCalls; return true; };
+    EXPECT_EQ( facesLeft( { .maxError = 10, .maxDeletedFaces = 3, .preCollapse = countCalls } ), 4 );
+    EXPECT_EQ( preCollapseCalls, 0 );
+    EXPECT_EQ( facesLeft( { .maxError = 10, .preCollapse = countCalls } ), 0 );
+    EXPECT_EQ( preCollapseCalls, 1 );
+
     // for ShortestEdgeFirst, maxError limits the length of the edges, and the longest one is sqrt(2)
     EXPECT_EQ( facesLeft( { .strategy = DecimateStrategy::ShortestEdgeFirst, .maxError = 1.2f } ), 4 );
     EXPECT_EQ( facesLeft( { .strategy = DecimateStrategy::ShortestEdgeFirst, .maxError = 1.5f } ), 0 );

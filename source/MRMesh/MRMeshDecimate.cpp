@@ -146,7 +146,7 @@ private:
     CollapseRes collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos, const QuadraticForm3f & collapseForm );
 
     /// after canCollapse_ returned CollapseStatus::Tetrahedron for the edge, removes its tetrahedron completely if its four vertices can be collapsed in one point within maxError,
-    /// and the limits, region, fixed boundary vertices, not-flippable edges and edgesToCollapse permit; otherwise keeps it whole
+    /// and the limits, region, fixed boundary vertices, not-flippable edges, edgesToCollapse and finally preCollapse permit; otherwise keeps it whole
     void removeTetrahedron_( EdgeId e );
 };
 
@@ -789,11 +789,14 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
         if ( sharp( sideAreas[i].first, sideAreas[i + 1].first ) && !sharp( sideAreas[i].second, sideAreas[i + 1].second ) )
             return { .status =  CollapseStatus::NormalFlip };
 
+    assert( topology.org( edgeToCollapse ) == vo );
+    if ( tetrahedron )
+        return { .e = edgeToCollapse, .status = CollapseStatus::Tetrahedron }; // removeTetrahedron_ calls preCollapse right before the removal
+
     if ( settings_.preCollapse && !settings_.preCollapse( edgeToCollapse, collapsePos ) )
         return { .status =  CollapseStatus::User }; // user prohibits the collapse
 
-    assert( topology.org( edgeToCollapse ) == vo );
-    return { .e = edgeToCollapse, .status = tetrahedron ? CollapseStatus::Tetrahedron : CollapseStatus::Ok };
+    return { .e = edgeToCollapse };
 }
 
 VertId MeshDecimator::forceCollapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos, const QuadraticForm3f & collapseForm )
@@ -890,6 +893,10 @@ void MeshDecimator::removeTetrahedron_( EdgeId e )
         settings_.adjustCollapse( e.undirected(), errSq, pos );
     if ( errSq > maxErrorSq_ )
         return; // a large tetrahedron is kept
+
+    // the last check, since preCollapse may update vertex attributes expecting the removal
+    if ( settings_.preCollapse && !settings_.preCollapse( e, pos ) )
+        return;
 
     for ( EdgeId x : es )
         onEdgeDel_( x, {} );

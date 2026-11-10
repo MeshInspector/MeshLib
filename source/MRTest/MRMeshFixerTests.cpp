@@ -430,4 +430,19 @@ TEST( MRMesh, FixMeshCreasesCurvedFold )
     EXPECT_EQ( mesh.topology.findNumHoles(), 0 );
 }
 
+TEST( MRMesh, FixMeshCreasesKeepsCurvedShape )
+{
+    const auto sphere = makeUVSphere( 1, 160, 160 );
+    auto mesh = sphere;
+    const VertId v( 16781 ), u( 16622 ); // next to each other
+    mesh.points[v] = ( mesh.points[v] + 1.333f * ( mesh.points[u] - mesh.points[v] ) ).normalized();
+    const auto creaseAngle = FixCreasesParams{}.creaseAngle;
+    EXPECT_TRUE( mesh.findCreaseEdges( creaseAngle ).any() );
+    fixMeshCreases( mesh );
+    EXPECT_TRUE( mesh.findCreaseEdges( creaseAngle ).none() );
+    // the faces around the fold are parallel within 5 degrees, but not in one plane: no area is re-triangulated in a plane,
+    // and the fill of the fan around the moved vertex removes it
+    EXPECT_LT( findMaxDistanceSq( mesh, sphere ), sqr( 0.0005f ) );
+}
+
 } //namespace MR

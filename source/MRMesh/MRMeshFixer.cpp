@@ -969,8 +969,9 @@ FaceBitSet findHoleComplicatingFaces( const Mesh & mesh )
 }
 
 /// returns true if fillContours2D can replace the faces of the region by the planar triangulation of the region's boundary
-/// with all triangles facing the boundary's vector area, which must have a positive projection on n
-static bool hasPlanarFill( const Mesh& mesh, const FaceBitSet& region, const Vector3f& n )
+/// with all triangles facing the boundary's vector area, which must have a positive projection on n,
+/// and if the region is flat: its size along that vector is below the square root of its area divided by maxAspectRatio
+static bool hasPlanarFill( const Mesh& mesh, const FaceBitSet& region, const Vector3f& n, float maxAspectRatio )
 {
     const auto loops = findLeftBoundary( mesh.topology, region );
     HashSet<VertId> bdVerts;
@@ -984,19 +985,20 @@ static bool hasPlanarFill( const Mesh& mesh, const FaceBitSet& region, const Vec
         }
     if ( dot( sumCross, Vector3d( n ) ) <= 0 )
         return false;
-    const auto dir = Vector3f( sumCross.normalized() ); // fillContours2D triangulates around it
-    const auto patch = PlanarTriangulation::triangulateDisjointContours( mesh, loops, dir );
+    const auto dir = sumCross.normalized(); // fillContours2D triangulates around it
+    MinMaxd height; // of the region's vertices along dir
+    for ( auto f : region )
+        for ( auto v : mesh.topology.getTriVerts( f ) )
+            height.include( dot( Vector3d( mesh.points[v] ), dir ) );
+    if ( sqr( ( height.max - height.min ) * maxAspectRatio ) > sumCross.length() / 2 )
+        return false; // the planar triangulation of a region that is not flat changes the shape
+    const auto patch = PlanarTriangulation::triangulateDisjointContours( mesh, loops, Vector3f( dir ) );
     if ( !patch )
         return false;
-    // all triangles face dir, and the loops wind around it as the triangles do
+    // all triangles face dir, and the loops wind around it as the triangles do: otherwise the triangles have more or less area than the loops
     double triArea = 0;
     for ( auto f : patch->topology.getValidFaces() )
-    {
-        const double a = dot( patch->dirDblArea( f ), dir );
-        if ( a <= 0 )
-            return false;
-        triArea += a;
-    }
+        triArea += std::abs( dot( Vector3d( patch->dirDblArea( f ) ), dir ) );
     return std::abs( sumCross.length() - triArea ) < 1e-4 * triArea;
 }
 
@@ -1062,12 +1064,13 @@ void fixMeshCreases( Mesh& mesh, const FixCreasesParams& params )
 
         // the flat area around a crease grows by rings of faces parallel to it in either orientation (and slivers) until all faces of the next ring
         // are oriented the same way and the area's boundary has a planar triangulation facing them, which replaces the area;
-        // if the area runs out first (or did for an earlier crease), the minimal-area fill replaces the fan around the worse end of the crease
-        FaceBitSet visited( mesh.topology.faceSize() ), failed = visited;
+        // if the area runs out first (or did for an earlier crease), the minimal-area fill replaces the fan around the worse end of the crease;
+        // the creases of the faces of planar triangulations wait for the next iteration, and no flat area grows from the faces of failed areas and fans
+        FaceBitSet filled( mesh.topology.faceSize() ), failed = filled;
         for ( auto ue : creases )
         {
             const auto l = mesh.topology.left( ue ), r = mesh.topology.right( ue );
-            if ( !l || !r || visited.test( l ) || visited.test( r ) )
+            if ( !l || !r || filled.test( l ) || filled.test( r ) )
                 continue;
             const auto seedNormal = mesh.normal( l );
             FaceBitSet region( mesh.topology.faceSize() );
@@ -1095,7 +1098,7 @@ void fixMeshCreases( Mesh& mesh, const FixCreasesParams& params )
                 {
                     for ( auto g : next )
                         region.reset( g );
-                    planar = hasPlanarFill( mesh, region, numUp ? seedNormal : -seedNormal );
+                    planar = hasPlanarFill( mesh, region, numUp ? seedNormal : -seedNormal, params.criticalTriAspectRatio );
                     if ( !planar )
                         for ( auto g : next )
                             region.set( g );
@@ -1124,9 +1127,8 @@ void fixMeshCreases( Mesh& mesh, const FixCreasesParams& params )
                             break;
                     }
             }
-            visited |= region;
             replace( region, planar );
-            visited.resize( mesh.topology.faceSize(), true ); // the new faces are not folded
+            ( planar ? filled : failed ).resize( mesh.topology.faceSize(), true ); // with the new faces
         }
     }
 }

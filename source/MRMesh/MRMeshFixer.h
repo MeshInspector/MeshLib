@@ -152,7 +152,8 @@ struct FixCreasesParams
     /// edges with dihedral angle sharper this will be considered as creases
     float creaseAngle = PI_F * 175.0f / 180.0f;
 
-    /// faces with worse aspect ratio (slivers) join the flat area or the fan around a crease whatever their normals
+    /// faces with worse aspect ratio (slivers) join the flat area or the fan around a crease whatever their normals;
+    /// and an area is flat if its size along its normal is below the square root of its area divided by this ratio
     float criticalTriAspectRatio = 1e3f;
 
     /// maximum number of algorithm iterations

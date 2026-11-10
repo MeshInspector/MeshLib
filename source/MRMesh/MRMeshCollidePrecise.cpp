@@ -17,6 +17,22 @@ namespace MR
 namespace
 {
 
+/// tests the boxes of a pair of nodes; the pair is pushed in the stack unless both are leaves, then it is given to processLeaves;
+/// returns true to stop the search
+template <typename BoxesIntersect, typename ProcessLeaves>
+MR_FORCE_INLINE bool processNodePair( const NodeNode & c, const AABBTree & aTree, const AABBTree & bTree,
+    const BoxesIntersect & boxesIntersect, Vector<NodeNode> & stack, ProcessLeaves && processLeaves )
+{
+    if ( !boxesIntersect( c.aNode, c.bNode ) )
+        return false;
+    if ( !aTree[c.aNode].leaf() || !bTree[c.bNode].leaf() )
+    {
+        stack.push_back( c );
+        return false;
+    }
+    return processLeaves( c );
+}
+
 /// whether the int boxes of two float boxes intersect (int boxes are used for consistency with precise intersections), given minGap = 2 / conv.invRange:
 /// the conversion is monotone, so the int boxes intersect if the float boxes do, and do not if the float boxes are at least two int units apart;
 /// only the boxes in between are converted
@@ -269,22 +285,9 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const A
             }
             return false;
         };
-        // the boxes of a pair are tested before it is pushed, and a pair of leaves is processed at once;
-        // a macro, since the same code in a lambda was slower with MSVC
-#define MR_PROCESS_PAIR( A, B ) \
-        { \
-            const NodeNode c{ A, B }; \
-            if ( boxesIntersect( c.aNode, c.bNode ) ) \
-            { \
-                if ( !aTree[c.aNode].leaf() || !bTree[c.bNode].leaf() ) \
-                    mySubtasks.push_back( c ); \
-                else if ( processLeaves( c ) ) \
-                    break; \
-            } \
-        }
-        do
+        // the boxes of a pair are tested before it is pushed, and a pair of leaves is processed at once
+        if ( !processNodePair( subtasks[is], aTree, bTree, boxesIntersect, mySubtasks, processLeaves ) )
         {
-            MR_PROCESS_PAIR( subtasks[is].aNode, subtasks[is].bNode )
             while ( !mySubtasks.empty() )
             {
                 if ( anyIntersection && anyIntersectionAtm.load( std::memory_order_relaxed ) )
@@ -298,18 +301,19 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const A
                 if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
                 {
                     // split aNode
-                    MR_PROCESS_PAIR( aNode.l, s.bNode )
-                    MR_PROCESS_PAIR( aNode.r, s.bNode )
+                    if ( processNodePair( { aNode.l, s.bNode }, aTree, bTree, boxesIntersect, mySubtasks, processLeaves )
+                      || processNodePair( { aNode.r, s.bNode }, aTree, bTree, boxesIntersect, mySubtasks, processLeaves ) )
+                        break;
                 }
                 else
                 {
                     // split bNode
-                    MR_PROCESS_PAIR( s.aNode, bNode.l )
-                    MR_PROCESS_PAIR( s.aNode, bNode.r )
+                    if ( processNodePair( { s.aNode, bNode.l }, aTree, bTree, boxesIntersect, mySubtasks, processLeaves )
+                      || processNodePair( { s.aNode, bNode.r }, aTree, bTree, boxesIntersect, mySubtasks, processLeaves ) )
+                        break;
                 }
             }
-        } while ( false );
-#undef MR_PROCESS_PAIR
+        }
         mySubtasks.clear();
         myRes.last = (int)myRes.vec->size();
         subtaskRes[is] = std::move( myRes );

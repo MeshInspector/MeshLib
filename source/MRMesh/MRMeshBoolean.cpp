@@ -173,6 +173,7 @@ struct JoinedSelfLoops
 };
 Vector<JoinedSelfLoops> findSelfContoursMapping( const ContinuousContours& contours )
 {
+    assert( contours.size() % 2 == 0 );
     Vector<JoinedSelfLoops> holePairs( contours.size() / 2 );
     BitSet visitedConts( contours.size(), true );
     int i = 0;
@@ -207,7 +208,6 @@ Vector<JoinedSelfLoops> findSelfContoursMapping( const ContinuousContours& conto
             }
         } );
     }
-    holePairs.resize( i ); // fewer if some contours have no pair
     return holePairs;
 }
 }
@@ -244,12 +244,11 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh, FaceMap* outNew2Old )
                         break;
     std::erase_if( intersections, [&] ( const EdgeTri& x ) { return !mesh.topology.hasFace( x.tri ) || mesh.topology.isLoneEdge( x.edge ); } );
     auto contours = orderSelfIntersectionContours( mesh.topology, intersections );
+    if ( contours.empty() && !intersections.empty() )
+        return unexpected( "Self-Boolean cannot order the intersections: the mesh has a face that is not a triangle" );
     removeTwoPointLoops( contours ); // both contours of a pair together, as they have the same points
 
     auto holePairs = detail::findSelfContoursMapping( contours );
-    // every contour is found twice, from either sheet, unless the intersections are inconsistent (as of a face that is not a triangle)
-    if ( 2 * holePairs.size() != contours.size() )
-        return unexpected( "Self-Boolean cannot pair the intersection contours" );
     auto intContours = getOneMeshSelfIntersectionContours( mesh, contours, converters );
     // what the pairs below do with the contours: the first contour of a pair is closed through the vertices sv and fv and followed by
     // the second one, which is dropped then; or both contours of a pair are dropped
@@ -501,8 +500,12 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     const size_t meshAVertsNum = srcA.topology.vertSize(); // before any cut of A
 
     // find and order intersections
-    contours = orderIntersectionContours( srcA.topology, srcB.topology,
-        findCollidingEdgeTrisPrecise( srcA, srcB, converters.toInt, params.rigidB2A ) );
+    {
+        const auto intersections = findCollidingEdgeTrisPrecise( srcA, srcB, converters.toInt, params.rigidB2A );
+        contours = orderIntersectionContours( srcA.topology, srcB.topology, intersections );
+        if ( contours.empty() && !intersections.empty() )
+            return { .errorString = "Boolean cannot order the intersections: a mesh has a face that is not a triangle" };
+    }
     removeTwoPointLoops( contours );
 
     if ( params.cb && !params.cb( 0.0f ) )

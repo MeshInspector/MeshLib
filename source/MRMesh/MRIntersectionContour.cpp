@@ -223,12 +223,18 @@ Vector<ContourInfo> calcContoursInfo( const AccumulativeSet& accumulativeSet )
             queuedRecords.reset( nextIndex );
 
             auto next = accumulativeSet.nList[nextIndex].next;
-            // two records can have the same next one if the intersections are inconsistent (as of a face that is not a triangle), so a walk
-            // can reach a record that this contour or an earlier one has taken, never to return to its start: the contour ends there as an open one
-            if ( next == -1 || ( next != int( currInfo.startIndex ) && !queuedRecords.test( next ) ) )
+            if ( next == -1 )
             {
                 closed = false;
                 break;
+            }
+            // a record that this contour or an earlier one has taken: two records have the same next one, and the walk would never return
+            // to its start; only the inconsistent intersections of a face that is not a triangle give that (the search for collisions
+            // takes it as the triangle of its first three vertices), and no contours are returned then
+            if ( next != int( currInfo.startIndex ) && !queuedRecords.test( next ) )
+            {
+                assert( false );
+                return {};
             }
             ++currInfo.size;
             nextIndex = next;

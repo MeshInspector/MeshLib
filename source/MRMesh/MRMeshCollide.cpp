@@ -12,6 +12,7 @@
 #include "MRPrecisePredicates3.h"
 #include "MRRingIterator.h"
 
+#include <algorithm>
 #include <atomic>
 #include <optional>
 #include <thread>
@@ -48,76 +49,94 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
     {
         return ( !a.region || aNodes.test( an ) ) && ( !b.region || bNodes.test( bn ) ) && aTree.nodes()[an].box.intersects( bNodeBox( bn ) );
     };
+    auto triNodeIntersect = [&]( int i, NodeId bn ) { return aTree.leafBoxes()[i].intersects( bNodeBox( bn ) ); };
+    auto trisIntersect = [&]( int i, int j ) { return aTree.leafBoxes()[i].intersects( bLeafBox( j ) ); };
+    auto inRegions = [&]( int i, int j )
+    {
+        return ( !a.region || a.region->test( aTree.leafTris()[i].face ) ) && ( !b.region || b.region->test( bTree.leafTris()[j].face ) );
+    };
+    auto trianglesIntersect = [&]( int i, int j )
+    {
+        const auto & at = aTree.leafTris()[i];
+        const auto & bt = bTree.leafTris()[j];
+        Vector3f av[3], bv[3];
+        for ( int k = 0; k < 3; ++k )
+        {
+            av[k] = a.mesh.points[at.verts[k]];
+            bv[k] = b.mesh.points[bt.verts[k]];
+            if ( rigidB2A )
+                bv[k] = (*rigidB2A)( bv[k] );
+        }
+        return doTrianglesIntersect( Vector3d{ av[0] }, Vector3d{ av[1] }, Vector3d{ av[2] }, Vector3d{ bv[0] }, Vector3d{ bv[1] }, Vector3d{ bv[2] } );
+    };
+    if ( !nodesIntersect( NodeId{ 0 }, NodeId{ 0 } ) )
+        return res;
+
+    if ( firstIntersectionOnly )
+    {
+        // ordered subtasks for parallel traversals, each testing triangles as soon as it reaches them;
+        // the intersection from the first subtask that has one is returned, the same in every run; 6 levels -> at most 4^6 = 2^12 subtasks
+        auto split = [&]( const WideNodePair & s, auto && push ) { return splitWidePair( aTree, bTree, s, nodesIntersect, push ); };
+        const auto subtasks = makeWideSubtasks( { { NodeId{ 0 }, NodeId{ 0 } } }, 6, split );
+
+        std::atomic<size_t> firstFound{ subtasks.size() };
+        std::vector<std::pair<int, int>> found( subtasks.size() );
+        tbb::enumerable_thread_specific<std::vector<WideNodePair>> stacks;
+        ParallelFor( size_t( 0 ), subtasks.size(), stacks, [&]( size_t i, std::vector<WideNodePair> & stack )
+        {
+            stack.clear();
+            stack.push_back( subtasks[i] );
+            while ( !stack.empty() && i < firstFound.load( std::memory_order_relaxed ) )
+            {
+                const auto s = stack.back();
+                stack.pop_back();
+                if ( split( s, [&stack]( const WideNodePair & c ) { stack.push_back( c ); } ) )
+                    continue;
+                const bool none = forWideLeafTris( aTree, bTree, s, triNodeIntersect, trisIntersect, [&]( int ti, int tj )
+                {
+                    if ( !inRegions( ti, tj ) || !trianglesIntersect( ti, tj ) )
+                        return true;
+                    found[i] = { ti, tj };
+                    return false;
+                } );
+                if ( none )
+                    continue;
+                auto known = firstFound.load( std::memory_order_relaxed );
+                while ( i < known && !firstFound.compare_exchange_weak( known, i ) ) { }
+                return;
+            }
+        } );
+
+        if ( const auto i = firstFound.load(); i < subtasks.size() )
+            res.push_back( FaceFace( aTree.leafTris()[found[i].first].face, bTree.leafTris()[found[i].second].face ) );
+        return res;
+    }
 
     // the pairs of triangles with intersecting boxes, as their indices in leafTris()
     std::vector<std::pair<int, int>> tris;
     Vector<WideNodePair> stack;
-    if ( nodesIntersect( NodeId{ 0 }, NodeId{ 0 } ) )
-        stack.push_back( { NodeId{ 0 }, NodeId{ 0 } } );
+    stack.push_back( { NodeId{ 0 }, NodeId{ 0 } } );
     while ( !stack.empty() )
     {
         const auto s = stack.back();
         stack.pop_back();
         if ( splitWidePair( aTree, bTree, s, nodesIntersect, [&stack]( const WideNodePair & c ) { stack.push_back( c ); } ) )
             continue;
-        forWideLeafTris( aTree, bTree, s,
-            [&]( int i, NodeId bn ) { return aTree.leafBoxes()[i].intersects( bNodeBox( bn ) ); },
-            [&]( int i, int j ) { return aTree.leafBoxes()[i].intersects( bLeafBox( j ) ); },
-            [&]( int i, int j )
-            {
-                if ( ( !a.region || a.region->test( aTree.leafTris()[i].face ) ) && ( !b.region || b.region->test( bTree.leafTris()[j].face ) ) )
-                    tris.emplace_back( i, j );
-                return true;
-            } );
+        forWideLeafTris( aTree, bTree, s, triNodeIntersect, trisIntersect, [&]( int i, int j )
+        {
+            if ( inRegions( i, j ) )
+                tris.emplace_back( i, j );
+            return true;
+        } );
     }
 
     res.resize( tris.size() );
-    std::atomic<int> firstIntersection{ (int)res.size() };
     ParallelFor( res, [&] ( size_t i )
     {
-        const auto & at = aTree.leafTris()[tris[i].first];
-        const auto & bt = bTree.leafTris()[tris[i].second];
-        res[i] = FaceFace( at.face, bt.face );
-        int knownIntersection = firstIntersection.load( std::memory_order_relaxed );
-        if ( firstIntersectionOnly && knownIntersection < i )
-            return;
-        Vector3f av[3], bv[3];
-        for ( int j = 0; j < 3; ++j )
-        {
-            av[j] = a.mesh.points[at.verts[j]];
-            bv[j] = b.mesh.points[bt.verts[j]];
-            if ( rigidB2A )
-                bv[j] = (*rigidB2A)( bv[j] );
-        }
-        if ( doTrianglesIntersect( Vector3d{ av[0] }, Vector3d{ av[1] }, Vector3d{ av[2] }, Vector3d{ bv[0] }, Vector3d{ bv[1] }, Vector3d{ bv[2] } ) )
-        {
-            if ( firstIntersectionOnly )
-            {
-                while ( knownIntersection > i && !firstIntersection.compare_exchange_strong( knownIntersection, (int)i ) ) { }
-                return;
-            }
-        }
-        else
-        {
-            res[i].aFace = FaceId{}; //invalidate
-        }
+        const auto [ti, tj] = tris[i];
+        res[i] = trianglesIntersect( ti, tj ) ? FaceFace( aTree.leafTris()[ti].face, bTree.leafTris()[tj].face ) : FaceFace{};
     } );
-
-    if ( firstIntersectionOnly )
-    {
-        int knownIntersection = firstIntersection.load( std::memory_order_relaxed );
-        if ( knownIntersection < res.size() )
-        {
-            res[0] = res[knownIntersection];
-            res.erase( res.begin() + 1, res.end() );
-        }
-        else
-            res.clear();
-    }
-    else
-    {
-        res.erase( std::remove_if( res.begin(), res.end(), []( const FaceFace & ff ) { return !ff.aFace.valid(); } ), res.end() );
-    }
+    res.erase( std::remove_if( res.begin(), res.end(), []( const FaceFace & ff ) { return !ff.aFace.valid(); } ), res.end() );
 
     return res;
 }

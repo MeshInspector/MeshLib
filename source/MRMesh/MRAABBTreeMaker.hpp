@@ -19,13 +19,13 @@ template<typename T>
 class AABBTreeMaker
 {
 public:
-    using Node = typename AABBTreeNodeType<T>::type;
+    using Node = AABBTreeNode<T>;
     using NodeVec = Vector<Node, NodeId>;
     using BoxT = typename T::BoxT;
     using V = decltype( BoxT{}.min );
 
-    AABBTreeMaker( const Vector<BoxedLeaf<T>> & boxedLeaves, const OnLeafCallback & onLeaf, BoxT * nodeBoxes )
-        : boxedLeaves_( boxedLeaves ), onLeaf_( onLeaf ), nodeBoxes_( nodeBoxes ) { }
+    AABBTreeMaker( const Vector<BoxedLeaf<T>> & boxedLeaves, const OnLeafCallback & onLeaf )
+        : boxedLeaves_( boxedLeaves ), onLeaf_( onLeaf ) { }
     NodeVec construct();
 
 private:
@@ -43,12 +43,9 @@ private:
     const OnLeafCallback & onLeaf_; // a copy would reference the source FunctionRef via its template constructor
     Buffer<Center> centers_;
     NodeVec nodes_;
-    BoxT * nodeBoxes_ = nullptr; // for the nodes without boxes
 
-    BoxT & nodeBox_( NodeId n ) { if constexpr ( nodesHaveBoxes<T> ) return nodes_[n].box; else return nodeBoxes_[int( n )]; }
-    const BoxT & nodeBox_( NodeId n ) const { if constexpr ( nodesHaveBoxes<T> ) return nodes_[n].box; else return nodeBoxes_[int( n )]; }
     int largestCentersAxis_( int first, int num ) const;
-    const BoxT & childBox_( NodeId c ) const { return Node::isLeaf( c ) ? boxedLeaves_[centers_[Node::leafIndex( c )].i].box : nodeBox_( c ); }
+    const BoxT & childBox_( NodeId c ) const { return Node::isLeaf( c ) ? boxedLeaves_[centers_[Node::leafIndex( c )].i].box : nodes_[c].box; }
     // fills node n with the subtree of at least two leaves centers_[first, first + num);
     // its children that are nodes are placed at next and next + 1, followed by the other nodes of the left subtree, then of the right one
     void make_( NodeId n, int first, int num, NodeId next );
@@ -109,7 +106,7 @@ void AABBTreeMaker<T>::make_( NodeId n, int first, int num, NodeId next )
     }
     auto box = childBox_( node.l );
     box.include( childBox_( node.r ) );
-    nodeBox_( n ) = box;
+    nodes_[n].box = box;
 }
 
 } // anonymous namespace
@@ -121,7 +118,6 @@ auto AABBTreeMaker<T>::construct() -> NodeVec
 
     const auto numLeaves = (int)boxedLeaves_.size();
     assert( numLeaves > 0 );
-    assert( nodesHaveBoxes<T> || nodeBoxes_ || numLeaves == 1 );
     centers_.resize( numLeaves );
     ParallelFor( 0, numLeaves, [&]( int i )
     {
@@ -136,13 +132,13 @@ auto AABBTreeMaker<T>::construct() -> NodeVec
 }
 
 template<typename T>
-AABBTreeNodeVec<T> makeAABBTreeNodeVec( const Vector<BoxedLeaf<T>> & boxedLeaves, OnLeafCallback onLeaf, typename T::BoxT * nodeBoxes )
+AABBTreeNodeVec<T> makeAABBTreeNodeVec( const Vector<BoxedLeaf<T>> & boxedLeaves, OnLeafCallback onLeaf )
 {
-    return AABBTreeMaker<T>( boxedLeaves, onLeaf, nodeBoxes ).construct();
+    return AABBTreeMaker<T>( boxedLeaves, onLeaf ).construct();
 }
 
 template<typename T>
-void AABBTreeBase<T>::build_( Vector<BoxedLeaf<T>> leaves ) requires leavesHaveBoxes
+void AABBTreeBase<T>::build_( Vector<BoxedLeaf<T>> leaves )
 {
     nodes_.clear();
     leaves_.clear();

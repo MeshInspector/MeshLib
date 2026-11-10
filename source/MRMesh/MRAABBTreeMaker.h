@@ -21,10 +21,9 @@ inline int getNumNodes( int numLeaves )
 using OnLeafCallback = FunctionRef<void( size_t leafIndex, size_t boxedLeafIndex )>;
 
 /// constructs the nodes of the tree with given leaves; the children of the nodes reference the leaves by their indices in the order of the tree,
-/// which the caller receives in onLeaf to fill its leaves;
-/// the boxes of nodes are stored in the nodes, or in nodeBoxes[node id] for the nodes without boxes (see nodesHaveBoxes)
+/// which the caller receives in onLeaf to fill its leaves
 template<typename T>
-AABBTreeNodeVec<T> makeAABBTreeNodeVec( const Vector<BoxedLeaf<T>> & boxedLeaves, OnLeafCallback onLeaf, typename T::BoxT * nodeBoxes = nullptr );
+AABBTreeNodeVec<T> makeAABBTreeNodeVec( const Vector<BoxedLeaf<T>> & boxedLeaves, OnLeafCallback onLeaf );
 
 /// \}
 

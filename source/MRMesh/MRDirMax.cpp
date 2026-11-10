@@ -9,6 +9,7 @@
 #include "MRPointCloud.h"
 
 #include <cfloat>
+#include <type_traits>
 
 namespace MR
 {

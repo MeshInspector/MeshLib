@@ -90,8 +90,10 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
 
         // ordered subtasks for parallel traversals, each testing triangles as soon as it reaches them;
         // the intersection from the first subtask that has one is returned, the same in every run
+        // at most 2^12 = 4096 subtasks: enough to load all threads evenly, while the serial splitting stays cheap
+        constexpr int maxSplitDepth = 12;
         std::vector<NodeNode> subtasks{ { NodeId{ 0 }, NodeId{ 0 } } }, next;
-        for ( int depth = 0; depth < 12; ++depth )
+        for ( int depth = 0; depth < maxSplitDepth; ++depth )
         {
             bool anySplit = false;
             for ( const auto & s : subtasks )

@@ -160,7 +160,7 @@ struct FixCreasesParams
     int maxIters = 10;
 
     /// optional output: maps each new face to the replaced original face nearest to its center (one oriented the same way first),
-    /// to copy per-face attributes; existing entries are composed with the new ones, so pass an empty map
+    /// to copy per-face attributes; if a replaced face has an entry already, its new faces take the original face of that entry, and the entry is removed
     FaceHashMap* new2Old = nullptr;
 };
 

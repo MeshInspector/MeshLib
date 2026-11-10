@@ -421,7 +421,7 @@ TEST( MRMesh, FixMeshCreasesCurvedFold )
 {
     auto mesh = makeUVSphere( 1, 12, 12 );
     const VertId v( 11 * 12 + 11 ), u( 10 * 12 + 11 ); // the last two rows of vertices are next to the pole
-    mesh.points[v] = ( mesh.points[v] + 1.3f * ( mesh.points[u] - mesh.points[v] ) ).normalized();
+    mesh.points[v] = ( mesh.points[v] + 1.7f * ( mesh.points[u] - mesh.points[v] ) ).normalized();
     const auto creaseAngle = FixCreasesParams{}.creaseAngle;
     EXPECT_TRUE( mesh.findCreaseEdges( creaseAngle ).any() );
     fixMeshCreases( mesh );
@@ -477,6 +477,40 @@ TEST( MRMesh, FixMeshCreasesFlatAndCurvedFolds )
     fixMeshCreases( curved, oneIter );
     fixMeshCreases( both, oneIter );
     EXPECT_EQ( numCreases( both ), numCreases( curved ) );
+}
+
+// fans re-filled one over another on a curved surface: every new face is mapped to a replaced original face near it,
+// and the faces replaced again leave the map
+TEST( MRMesh, FixMeshCreasesNew2OldOfFans )
+{
+    auto mesh = makeUVSphere( 1, 16, 16 );
+    for ( auto v : { 0_v, 31_v } ) // two neighbours of a vertex next to the pole slid past it
+        mesh.points[v] = ( mesh.points[v] + 1.5f * ( mesh.points[15_v] - mesh.points[v] ) ).normalized();
+    const auto folded = mesh;
+    FaceHashMap new2Old;
+    fixMeshCreases( mesh, { .new2Old = &new2Old } );
+    EXPECT_TRUE( mesh.topology.checkValidity() );
+
+    size_t numNew = 0;
+    for ( auto f : mesh.topology.getValidFaces() )
+    {
+        const auto it = new2Old.find( f );
+        if ( folded.topology.hasFace( f ) )
+        {
+            // a face that was not replaced keeps its vertices and has no entry
+            EXPECT_TRUE( it == new2Old.end() && mesh.topology.getTriVerts( f ) == folded.topology.getTriVerts( f ) );
+            continue;
+        }
+        ++numNew;
+        ASSERT_TRUE( it != new2Old.end() );
+        ASSERT_TRUE( folded.topology.hasFace( it->second ) );
+        EXPECT_FALSE( mesh.topology.hasFace( it->second ) );
+        const auto c = mesh.triCenter( f );
+        const auto [a, b, d] = folded.getTriPoints( it->second );
+        EXPECT_LT( ( closestPointInTriangle( c, a, b, d ).first - c ).length(), 0.05f );
+    }
+    EXPECT_EQ( new2Old.size(), numNew );
+    EXPECT_GT( mesh.topology.faceSize() - folded.topology.faceSize(), numNew ); // some new faces were replaced again
 }
 
 } //namespace MR

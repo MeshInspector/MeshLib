@@ -409,31 +409,50 @@ bool segmentIntersectionTriPlaneOrder( const std::array<PreciseVertCoords, 8> & 
     return segmentIntersectionOrderDegenerate<cMaxPolyDTriPlane>( vs );
 }
 
-ConvertToIntVector getToIntConverter( const Box3d& box )
+namespace
 {
-    Vector3d center{ box.center() };
-    auto bbSize = box.size();
-    double maxDim = std::max( { bbSize[0],bbSize[1],bbSize[2] } );
+
+struct IntGrid
+{
+    double step = 1; // distance between neighbor integer points
+    Vector3d origin; // the point with zero integer coordinates
+};
+
+// returns the integer grid for the points of the given box;
+// its step is a power of two and its origin is a multiple of the step, so the grids of all boxes are nested:
+// a point rounded to one grid is not moved by rounding to another grid with the same or smaller step
+IntGrid getIntGrid( const Box3d& box )
+{
+    const auto center = box.center();
+    const auto bbSize = box.size();
+    const double maxDim = std::max( { bbSize[0], bbSize[1], bbSize[2] } );
+    // a box of one point (e.g. a hole loop of coincident points) maps it to zero instead of inf * 0 = NaN
+    if ( !( maxDim > 0 ) )
+        return { 1, center };
 
     // range is selected so that after centering each integer point is within [-max/2; +max/2] range,
     // so the difference of any two points will be within [-max; +max] range
-    // a box of one point (e.g. a hole loop of coincident points) maps it to zero instead of inf * 0 = NaN
-    double invRange = maxDim > 0 ? cRangeIntMax / maxDim : 1;
+    const double step = std::exp2( std::ceil( std::log2( maxDim / cRangeIntMax ) ) );
+    const auto align = [step] ( double c )
+    {
+        const double n = std::round( c / step );
+        return std::abs( n ) < 0x1p52 ? n * step : c; // otherwise c is too far from zero to tell it from a multiple of step
+    };
+    return { step, { align( center.x ), align( center.y ), align( center.z ) } };
+}
 
-    return ConvertToIntVector{ center, invRange };
+} // anonymous namespace
+
+ConvertToIntVector getToIntConverter( const Box3d& box )
+{
+    const auto grid = getIntGrid( box );
+    return ConvertToIntVector{ grid.origin, 1 / grid.step };
 }
 
 ConvertToFloatVector getToFloatConverter( const Box3d& box )
 {
-    Vector3d center{ box.center() };
-    auto bbSize = box.size();
-    double maxDim = std::max( { bbSize[0],bbSize[1],bbSize[2] } );
-
-    // range is selected so that after centering each integer point is within [-max/2; +max/2] range,
-    // so the difference of any two points will be within [-max; +max] range
-    double range = maxDim > 0 ? maxDim / cRangeIntMax : 1;
-
-    return ConvertToFloatVector{ range, center };
+    const auto grid = getIntGrid( box );
+    return ConvertToFloatVector{ grid.step, grid.origin };
 }
 
 Vector<Vector3i, VertId> computeIntCoords( const ConvertToIntVector& conv,

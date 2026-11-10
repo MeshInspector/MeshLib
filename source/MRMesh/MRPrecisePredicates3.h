@@ -144,9 +144,11 @@ struct CoordinateConverters
     ConvertToFloatVector toFloat;
 };
 
-/// creates converter from Vector3f to Vector3i in Box range (int diapason is mapped to box range)
+/// creates converter from Vector3f to Vector3i in Box range (int diapason is mapped to box range);
+/// the step between integer points is a power of two, and the point with zero integer coordinates is a multiple of the step,
+/// so a point rounded with the converters of one box is not moved by the converters of another box with the same or smaller step
 [[nodiscard]] MRMESH_API ConvertToIntVector getToIntConverter( const Box3d& box );
-/// creates converter from Vector3i to Vector3f in Box range (int diapason is mapped to box range)
+/// creates converter from Vector3i to Vector3f in Box range (int diapason is mapped to box range), the inverse of \ref getToIntConverter
 [[nodiscard]] MRMESH_API ConvertToFloatVector getToFloatConverter( const Box3d& box );
 
 /// converts given points into integer coordinates in parallel

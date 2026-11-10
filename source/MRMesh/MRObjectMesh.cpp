@@ -133,8 +133,6 @@ std::vector<std::string> ObjectMesh::getInfoLines() const
         size_t treesSize = 0;
         if ( auto tree = data_.mesh->getAABBTreeNotCreate() )
             treesSize += tree->heapBytes();
-        if ( auto tree = data_.mesh->getAABBTreeNotCreate() )
-            treesSize += tree->heapBytes();
         if ( auto tree = data_.mesh->getAABBTreePointsNotCreate() )
             treesSize += tree->heapBytes();
         if ( treesSize > 0 )

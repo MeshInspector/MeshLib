@@ -10,7 +10,12 @@
 namespace MR
 {
 
-MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart & mp, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
+namespace
+{
+
+// Plain: no transformation, region, validFaces or validProjections, so the hot loop skips their checks
+template <bool Plain>
+MeshProjectionResult findProjectionT( const Vector3f & pt, const MeshPart & mp, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
     const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections )
 {
     MeshProjectionResult res;
@@ -39,22 +44,27 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
         if ( !tree.isLeaf( n ) )
         {
             const auto & box = tree.box( n );
-            float distSq = xf ? transformed( box, *xf ).getDistanceSq( pt ) : box.getDistanceSq( pt );
-            return SubTask { n, distSq };
+            if constexpr ( !Plain )
+                if ( xf )
+                    return SubTask { n, transformed( box, *xf ).getDistanceSq( pt ) };
+            return SubTask { n, box.getDistanceSq( pt ) };
         }
         const SubTask none{ n, FLT_MAX };
         const auto face = tree.leafId( n );
-        if ( validFaces && !validFaces( face ) )
-            return none;
-        if ( mp.region && !mp.region->test( face ) )
-            return none;
         const auto & v = tree.leafVerts( n );
         Vector3f a = mp.mesh.points[v[0]], b = mp.mesh.points[v[1]], c = mp.mesh.points[v[2]];
-        if ( xf )
+        if constexpr ( !Plain )
         {
-            a = (*xf)( a );
-            b = (*xf)( b );
-            c = (*xf)( c );
+            if ( validFaces && !validFaces( face ) )
+                return none;
+            if ( mp.region && !mp.region->test( face ) )
+                return none;
+            if ( xf )
+            {
+                a = (*xf)( a );
+                b = (*xf)( b );
+                c = (*xf)( c );
+            }
         }
 
         // compute the closest point in double-precision, because float might be not enough
@@ -63,7 +73,7 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
         const float distSq = ( proj - pt ).lengthSq();
         if ( !( distSq < res.distSq ) )
             return none;
-        if ( validProjections )
+        if ( !Plain && validProjections )
         {
             const MeshProjectionResult candidate
             {
@@ -115,9 +125,19 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
         }
     }
 
-    if ( res.proj.face && !validProjections )
+    if ( res.proj.face && ( Plain || !validProjections ) )
         res.mtp = MeshTriPoint( mp.mesh.topology.edgeWithLeft( res.proj.face ), TriPointf( resBary ) );
     return res;
+}
+
+} // anonymous namespace
+
+MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart & mp, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
+    const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections )
+{
+    if ( !xf && !mp.region && !validFaces && !validProjections )
+        return findProjectionT<true>( pt, mp, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
+    return findProjectionT<false>( pt, mp, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
 }
 
 MeshProjectionTransforms createProjectionTransforms( AffineXf3f& storageXf, const AffineXf3f* pointXf, const AffineXf3f* treeXf )

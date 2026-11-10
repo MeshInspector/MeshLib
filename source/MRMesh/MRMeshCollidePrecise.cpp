@@ -250,52 +250,66 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const A
     {
         Vector<NodeNode>& mySubtasks = tls.subtasks;
         assert( mySubtasks.empty() );
-        mySubtasks.push_back( subtasks[is] );
         SubtaskRes myRes{ .vec = &tls.res };
         myRes.first = (int)myRes.vec->size();
-        while ( !mySubtasks.empty() )
+        // returns true to stop the search
+        auto processLeaves = [&]( const NodeNode & s )
         {
-            if ( anyIntersection && anyIntersectionAtm.load( std::memory_order_relaxed ) )
-                break;
-            const auto s = mySubtasks.back();
-            mySubtasks.pop_back();
-
-            if ( !boxesIntersect( s.aNode, s.bNode ) )
-                continue;
-
-            const auto & aNode = aTree[s.aNode];
-            const auto & bNode = bTree[s.bNode];
-            if ( aNode.leaf() && bNode.leaf() )
+            const auto aFace = aTree[s.aNode].leafId();
+            if ( a.region && !a.region->test( aFace ) )
+                return false;
+            const auto bFace = bTree[s.bNode].leafId();
+            if ( b.region && !b.region->test( bFace ) )
+                return false;
+            checkTwoTris( aFace, bFace, *myRes.vec );
+            if ( anyIntersection && !myRes.vec->empty() )
             {
-                const auto aFace = aNode.leafId();
-                if ( a.region && !a.region->test( aFace ) )
-                    continue;
-                const auto bFace = bNode.leafId();
-                if ( b.region && !b.region->test( bFace ) )
-                    continue;
-                checkTwoTris( aFace, bFace, *myRes.vec );
-                if ( anyIntersection && !myRes.vec->empty() )
-                {
-                    anyIntersectionAtm.store( true, std::memory_order_relaxed );
-                    break;
-                }
-                continue;
+                anyIntersectionAtm.store( true, std::memory_order_relaxed );
+                return true;
             }
-        
-            if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
-            {
-                // split aNode
-                mySubtasks.push_back( { aNode.l, s.bNode } );
-                mySubtasks.push_back( { aNode.r, s.bNode } );
-            }
-            else
-            {
-                assert( !bNode.leaf() );
-                // split bNode
-                mySubtasks.push_back( { s.aNode, bNode.l } );
-                mySubtasks.push_back( { s.aNode, bNode.r } );
-            }
+            return false;
+        };
+        // the boxes of a pair are tested before it is pushed, and a pair of leaves is processed at once;
+        // a macro, since the same code in a lambda was slower with MSVC
+#define MR_PROCESS_PAIR( A, B ) \
+        { \
+            const NodeNode c{ A, B }; \
+            if ( boxesIntersect( c.aNode, c.bNode ) ) \
+            { \
+                if ( !aTree[c.aNode].leaf() || !bTree[c.bNode].leaf() ) \
+                    mySubtasks.push_back( c ); \
+                else if ( processLeaves( c ) ) \
+                    break; \
+            } \
         }
+        do
+        {
+            MR_PROCESS_PAIR( subtasks[is].aNode, subtasks[is].bNode )
+            while ( !mySubtasks.empty() )
+            {
+                if ( anyIntersection && anyIntersectionAtm.load( std::memory_order_relaxed ) )
+                    break;
+                const auto s = mySubtasks.back();
+                mySubtasks.pop_back();
+
+                const auto & aNode = aTree[s.aNode];
+                const auto & bNode = bTree[s.bNode];
+                assert( !aNode.leaf() || !bNode.leaf() );
+                if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
+                {
+                    // split aNode
+                    MR_PROCESS_PAIR( aNode.l, s.bNode )
+                    MR_PROCESS_PAIR( aNode.r, s.bNode )
+                }
+                else
+                {
+                    // split bNode
+                    MR_PROCESS_PAIR( s.aNode, bNode.l )
+                    MR_PROCESS_PAIR( s.aNode, bNode.r )
+                }
+            }
+        } while ( false );
+#undef MR_PROCESS_PAIR
         mySubtasks.clear();
         myRes.last = (int)myRes.vec->size();
         subtaskRes[is] = std::move( myRes );

@@ -1725,7 +1725,7 @@ TEST( MRMesh, getToIntConverter )
     EXPECT_EQ( getToFloatConverter( Box3d( Vector3d( p ), Vector3d( p ) ) )( Vector3i{} ), p );
 }
 
-TEST( MRMesh, getToIntConverterNestedGrids )
+TEST( MRMesh, getNestedCoordinateConverters )
 {
     // a point rounded to the integer grid of one box must not be moved by the grid of another box of the same or smaller size,
     // otherwise every boolean in a chain moves all the vertices made by the previous ones
@@ -1743,10 +1743,8 @@ TEST( MRMesh, getToIntConverterNestedGrids )
             center2[i] = center1[i] + rnd( -1, 1 ) * ( halfSize1[i] - halfSize2[i] );
         const Box3d box2( center2 - halfSize2, center2 + halfSize2 );
 
-        const auto toInt1 = getToIntConverter( box1 );
-        const auto toFloat1 = getToFloatConverter( box1 );
-        const auto toInt2 = getToIntConverter( box2 );
-        const auto toFloat2 = getToFloatConverter( box2 );
+        const auto [toInt1, toFloat1] = getNestedCoordinateConverters( box1 );
+        const auto [toInt2, toFloat2] = getNestedCoordinateConverters( box2 );
         EXPECT_LE( toFloat2.range, toFloat1.range );
 
         for ( int j = 0; j < 8; ++j )

@@ -227,7 +227,7 @@ BooleanResult forceBoolean( const Mesh& meshA, const Mesh& meshB, BooleanOperati
 Expected<MR::Mesh> selfBoolean( const Mesh& inMesh, FaceMap* outNew2Old )
 {
     auto box = Box3d( inMesh.computeBoundingBox() );
-    CoordinateConverters converters{ .toInt = getToIntConverter( box ),.toFloat = getToFloatConverter( box ) };
+    const auto converters = getNestedCoordinateConverters( box );
     Mesh mesh = inMesh;
 
     // find and order intersections

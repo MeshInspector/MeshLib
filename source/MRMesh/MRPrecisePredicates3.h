@@ -144,12 +144,16 @@ struct CoordinateConverters
     ConvertToFloatVector toFloat;
 };
 
-/// creates converter from Vector3f to Vector3i in Box range (int diapason is mapped to box range);
-/// the step between integer points is a power of two, and the point with zero integer coordinates is a multiple of the step,
-/// so a point rounded with the converters of one box is not moved by the converters of another box with the same or smaller step
+/// creates converter from Vector3f to Vector3i in Box range (int diapason is mapped to box range)
 [[nodiscard]] MRMESH_API ConvertToIntVector getToIntConverter( const Box3d& box );
-/// creates converter from Vector3i to Vector3f in Box range (int diapason is mapped to box range), the inverse of \ref getToIntConverter
+/// creates converter from Vector3i to Vector3f in Box range (int diapason is mapped to box range)
 [[nodiscard]] MRMESH_API ConvertToFloatVector getToFloatConverter( const Box3d& box );
+
+/// creates both converters for the points of the given box with the integer grids of all boxes nested:
+/// the step between integer points is a power of two, and the point with zero integer coordinates is a multiple of the step,
+/// so a point rounded with the converters of one box is not moved by the converters of another box with the same or smaller step;
+/// the step is up to two times larger than in \ref getToIntConverter
+[[nodiscard]] MRMESH_API CoordinateConverters getNestedCoordinateConverters( const Box3d& box );
 
 /// converts given points into integer coordinates in parallel
 /// \param valid if given then only valid points are converted, and the content of other elements in the returned vector is undefined

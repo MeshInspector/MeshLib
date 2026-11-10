@@ -1056,7 +1056,7 @@ void fixMeshCreases( Mesh& mesh, const FixCreasesParams& params )
 
         // the flat area around a crease grows by rings of faces parallel to it in either orientation (and slivers) until all faces of the next ring
         // are oriented the same way and the area's boundary has a planar triangulation facing them, which replaces the area;
-        // if the area runs out, is not flat or folds at a mesh border (or did for an earlier crease), the minimal-area fill replaces the fan around the worse end of the crease;
+        // if the area runs out, is not flat, folds at a mesh border or is rejected 16 times (or an earlier crease failed there), the minimal-area fill replaces the fan around the worse end of the crease;
         // the creases of the faces of planar triangulations wait for the next iteration, and no flat area grows from the faces of failed areas and fans
         FaceBitSet filled( mesh.topology.faceSize() ), failed = filled;
         for ( auto ue : creases )
@@ -1069,7 +1069,7 @@ void fixMeshCreases( Mesh& mesh, const FixCreasesParams& params )
             region.set( l ).set( r );
             std::vector<FaceId> ring{ l, r }, next;
             bool planar = false, grow = true;
-            while ( !planar && grow && !ring.empty() && !failed.test( l ) && !failed.test( r ) )
+            for ( int tries = 16; !planar && grow && tries > 0 && !ring.empty() && !failed.test( l ) && !failed.test( r ); )
             {
                 next.clear();
                 size_t numUp = 0;
@@ -1091,6 +1091,7 @@ void fixMeshCreases( Mesh& mesh, const FixCreasesParams& params )
                     for ( auto g : next )
                         region.reset( g );
                     planar = hasPlanarFill( mesh, region, numUp ? seedNormal : -seedNormal, params.criticalTriAspectRatio, grow );
+                    --tries;
                     if ( !planar )
                         for ( auto g : next )
                             region.set( g );

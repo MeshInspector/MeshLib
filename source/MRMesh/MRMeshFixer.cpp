@@ -969,7 +969,7 @@ FaceBitSet findHoleComplicatingFaces( const Mesh & mesh )
 }
 
 /// returns true if fillContours2D can replace the faces of the region by the planar triangulation of the region's boundary
-/// with all triangles facing the boundary's vector area, which must have a positive projection on n; resets grow if no larger region can be replaced:
+/// with all triangles facing the boundary's vector area, which must have a positive projection on n; resets grow if larger regions are not to be tried:
 /// a face oriented against n is at a mesh border (it would be removed with what it covers), or the region is not flat: larger along that vector than sqrt(area) / maxAspectRatio
 static bool hasPlanarFill( const Mesh& mesh, const FaceBitSet& region, const Vector3f& n, float maxAspectRatio, bool& grow )
 {

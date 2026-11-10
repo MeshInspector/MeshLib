@@ -26,13 +26,91 @@
 #include <gdcmImageReader.h>
 #include <gdcmImageWriter.h>
 #include <gdcmTagKeywords.h>
+#include <gdcmTrace.h>
 #pragma warning(pop)
 
 #include <variant>
 #include <fstream>
+#include <streambuf>
 
 namespace MR
 {
+
+namespace
+{
+
+/// logs every multi-line GDCM diagnostic as one line of the given level instead of printing it in stderr
+class GdcmLogBuf : public std::streambuf
+{
+public:
+    explicit GdcmLogBuf( spdlog::level::level_enum level ) : level_( level ) {}
+
+protected:
+    virtual std::streamsize xsputn( const char* s, std::streamsize n ) override
+    {
+        append_( std::string_view( s, size_t( n ) ) );
+        return n;
+    }
+
+    virtual int_type overflow( int_type c ) override
+    {
+        if ( !traits_type::eq_int_type( c, traits_type::eof() ) )
+        {
+            const char ch = traits_type::to_char_type( c );
+            append_( std::string_view( &ch, 1 ) );
+        }
+        return traits_type::not_eof( c );
+    }
+
+private:
+    void append_( std::string_view s )
+    {
+        // files are read in parallel, and GDCM passes a whole message ending with an empty line in one call
+        thread_local std::string buf;
+        buf += s;
+        if ( !buf.ends_with( '\n' ) )
+            return;
+
+        // "Warning: In <full path>, line N, function F\n<text>\n\n" -> "Warning: In <file name>, line N, function F: <text>"
+        std::string msg;
+        for ( size_t pos = 0; pos < buf.size(); )
+        {
+            const auto end = buf.find( '\n', pos );
+            auto line = buf.substr( pos, end - pos );
+            pos = end + 1;
+            if ( line.empty() )
+                continue;
+            if ( msg.empty() )
+            {
+                const auto in = line.find( "In " );
+                const auto comma = in != std::string::npos ? line.find( ", line ", in ) : std::string::npos;
+                const auto slash = comma != std::string::npos ? line.find_last_of( "/\\", comma ) : std::string::npos;
+                if ( slash != std::string::npos && slash > in )
+                    line.erase( in + 3, slash - in - 2 );
+            }
+            else
+                msg += msg.ends_with( ':' ) ? " " : ": ";
+            msg += line;
+        }
+        buf.clear();
+        if ( !msg.empty() )
+            spdlog::log( level_, "GDCM {}", msg );
+    }
+
+    spdlog::level::level_enum level_;
+};
+
+[[maybe_unused]] const bool sGdcmTraceRedirected = []
+{
+    // never destroyed, since GDCM keeps the pointers
+    static auto* warningStream = new std::ostream( new GdcmLogBuf( spdlog::level::warn ) );
+    static auto* errorStream = new std::ostream( new GdcmLogBuf( spdlog::level::err ) );
+    gdcm::Trace::SetWarningStream( *warningStream );
+    gdcm::Trace::SetErrorStream( *errorStream );
+    return true;
+}();
+
+} // anonymous namespace
 
 template <>
 struct VoxelTraits<openvdb::FloatGrid::Accessor>

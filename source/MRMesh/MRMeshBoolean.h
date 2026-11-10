@@ -142,8 +142,7 @@ MRMESH_API BooleanResult forceBoolean( const Mesh& meshA, const Mesh& meshB, Boo
 /// performs boolean operation on mesh with itself, cutting its self-intersection contours and flipping their connectivity;
 /// the contours may cross one another where three sheets of the mesh meet at a point (nested intersections);
 /// two triangles with the same vertices glued along two edges or all three (a part without volume) that cross other parts are eliminated,
-/// see eliminateDoubleTris;
-/// a mesh with a face that is not a triangle gives an error
+/// see eliminateDoubleTris
 /// this function is experimental and likely to change signature and/or behavior in future 
 /// \param new2Old optional output, set on success: for every valid face of the result, the face of the input mesh that it is or is a part of;
 /// the faces with new ids (not less than the face size of the input mesh) are the parts of the cut input faces

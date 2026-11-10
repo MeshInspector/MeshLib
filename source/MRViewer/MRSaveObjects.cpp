@@ -99,6 +99,11 @@ Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path&
                 saveSettings.uvMap = &objMesh->getUVCoords();
             if ( !objMesh->getTexture().pixels.empty() )
                 saveSettings.texture = &objMesh->getTexture();
+            if ( objMesh->getTextures().size() > 1 && !objMesh->getTexturePerFace().empty() )
+            {
+                saveSettings.textures = &objMesh->getTextures();
+                saveSettings.texturePerFace = &objMesh->getTexturePerFace();
+            }
             saveSettings.materialName = utf8string( filename.stem() );
             result = MeshSave::toAnySupportedFormat( *objMesh->meshPtr(), filename, saveSettings );
         }

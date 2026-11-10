@@ -1004,4 +1004,61 @@ TEST(MRMesh, GcodeSaveLoad)
     }
 }
 
+#ifndef __EMSCRIPTEN__ // material and texture files are not written there
+TEST(MRMesh, SaveObjManyTextures)
+{
+    if ( !ImageSave::getImageSaver( "*.png" ) || !ImageLoad::getImageLoader( "*.png" ) )
+    {
+        GTEST_SKIP() << "PNG format is not supported in this build";
+    }
+
+    // two triangles, each with its own texture
+    const auto mesh = Mesh::fromTriangles(
+        { { 0, 0, 0 }, { 1, 0, 0 }, { 1, 1, 0 }, { 0, 1, 0 } },
+        { { VertId( 0 ), VertId( 1 ), VertId( 2 ) }, { VertId( 0 ), VertId( 2 ), VertId( 3 ) } } );
+    const VertUVCoords uvCoords{ { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 } };
+    Vector<MeshTexture, TextureId> textures( 2 );
+    textures[TextureId( 0 )].pixels = { Color::red() };
+    textures[TextureId( 0 )].resolution = { 1, 1 };
+    textures[TextureId( 1 )].pixels = { Color::blue(), Color::green() };
+    textures[TextureId( 1 )].resolution = { 2, 1 };
+    const TexturePerFace texturePerFace{ TextureId( 1 ), TextureId( 0 ) };
+
+    UniqueTemporaryFolder dir;
+    SaveSettings settings;
+    settings.uvMap = &uvCoords;
+    settings.texture = &textures.front();
+    settings.textures = &textures;
+    settings.texturePerFace = &texturePerFace;
+    settings.materialName = "model";
+    ASSERT_TRUE( MeshSave::toObj( mesh, dir / "model.obj", settings ).has_value() );
+
+    auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
+    ASSERT_TRUE( res.has_value() );
+    ASSERT_EQ( res->objs.size(), 1 );
+    auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( res->objs.front() );
+    ASSERT_TRUE( objMesh );
+    ASSERT_EQ( objMesh->meshPtr()->topology.numValidFaces(), 2 );
+
+    // materials appear in the file in the order of their first use, so compare the pixels of each face's texture
+    const auto& loadedTextures = objMesh->getTextures();
+    const auto& loadedTexturePerFace = objMesh->getTexturePerFace();
+    ASSERT_EQ( loadedTextures.size(), 2 );
+    ASSERT_EQ( loadedTexturePerFace.size(), 2 );
+    for ( FaceId f{ 0 }; f < 2; ++f )
+        EXPECT_EQ( loadedTextures[loadedTexturePerFace[f]].pixels, textures[texturePerFace[f]].pixels );
+
+    // one texture is saved as before
+    settings.textures = nullptr;
+    settings.texturePerFace = nullptr;
+    ASSERT_TRUE( MeshSave::toObj( mesh, dir / "single.obj", settings ).has_value() );
+    res = MeshLoad::loadObjectFromObj( dir / "single.obj" );
+    ASSERT_TRUE( res.has_value() );
+    ASSERT_EQ( res->objs.size(), 1 );
+    objMesh = std::dynamic_pointer_cast<ObjectMesh>( res->objs.front() );
+    ASSERT_TRUE( objMesh );
+    EXPECT_EQ( objMesh->getTexture().pixels, textures.front().pixels );
+}
+#endif
+
 } //namespace MR

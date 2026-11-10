@@ -483,6 +483,7 @@ Expected<PackMapping> Mesh::packOptimally( bool preserveAABBTree, ProgressCallba
         {
             AABBTreeOwner_.get()->getLeafOrder( map.f );
             AABBTreeOwner_.reset();
+            dipolesOwner_.reset(); // the dipoles of the dropped tree
         }
     }
     else

@@ -390,20 +390,21 @@ TEST( MRMesh, BooleanPreCutExactCut )
 }
 
 // checks the faces map of selfBoolean: a face of the result with an id of the input mesh is that face left whole, and the other faces
-// are the parts of the input faces missing in the result; the parts of every input face make its area together
+// are the parts of the input faces missing in the result; the parts of every input face make its area together, except for the faces
+// eliminated before the cut, which have invalid entries and no parts
 static void expectSelfBooleanFaceMap( const Mesh& mesh, const Mesh& res, const FaceMap& new2Old )
 {
+    ASSERT_EQ( new2Old.size(), res.topology.faceSize() );
     Vector<double, FaceId> partsArea( mesh.topology.faceSize(), 0. );
     for ( auto f : res.topology.getValidFaces() )
     {
-        ASSERT_TRUE( f < new2Old.size() );
         const auto old = new2Old[f];
         ASSERT_TRUE( mesh.topology.hasFace( old ) );
         EXPECT_TRUE( f < mesh.topology.faceSize() ? old == f : !res.topology.hasFace( old ) );
         partsArea[old] += res.area( f );
     }
     for ( auto f : mesh.topology.getValidFaces() )
-        EXPECT_NEAR( partsArea[f], mesh.area( f ), 1e-4 * mesh.area( f ) );
+        EXPECT_NEAR( partsArea[f], new2Old[f] ? mesh.area( f ) : 0, 1e-4 * mesh.area( f ) );
 }
 
 // selfBoolean of a mesh of two parts, a cube and a small sphere piercing a big triangle of it without crossing its edges
@@ -568,14 +569,32 @@ TEST( MRMesh, SelfBooleanTwinTriangles )
             if ( flip )
                 mesh.topology.flipOrientation();
             mesh.transform( AffineXf3f::linear( Matrix3f::scale( 1.f, 1.f, zScale ) ) );
-            const auto res = selfBoolean( mesh );
+            FaceMap new2Old;
+            const auto res = selfBoolean( mesh, &new2Old );
             ASSERT_TRUE( res.has_value() ) << res.error() << " flip " << flip << " zScale " << zScale;
             EXPECT_TRUE( res->topology.checkValidity() );
+            expectSelfBooleanFaceMap( mesh, *res, new2Old );
             EXPECT_EQ( res->topology.numValidFaces(), 12 );
             EXPECT_EQ( res->topology.findNumHoles(), 0 );
             EXPECT_NEAR( res->volume(), ( flip ? -8. : 8. ) * zScale, 1e-6 * 8 * zScale );
         }
     }
+}
+
+// two crossing spheres and an open square through both, whose side passes inside the first sphere: the contour of the square with that
+// sphere runs out to the mesh boundary and is not cut, so the crossings of the other contours with it are split on one sheet only;
+// selfBoolean reports that as an error and leaves the faces map as it was
+TEST( MRMesh, SelfBooleanErrorKeepsFaceMap )
+{
+    Mesh mesh = makeSphere( { .radius = 1.f, .numMeshVertices = 100 } );
+    Mesh second = makeSphere( { .radius = 0.7f, .numMeshVertices = 100 } );
+    second.transform( AffineXf3f::translation( Vector3f( 1.2f, 0.f, 0.f ) ) );
+    mesh.addMesh( second );
+    mesh.addMesh( makeSquare( Vector3f( 0.3f, -2.f, 0.1f ), 4.f ) );
+
+    FaceMap new2Old( 1, 5_f );
+    EXPECT_FALSE( selfBoolean( mesh, &new2Old ).has_value() );
+    EXPECT_EQ( new2Old, FaceMap( 1, 5_f ) );
 }
 
 // closed mesh of two parts (apexes 3_v and 6_v) stitched along their common boundary, which passes through all vertices of triangle 0_v, 2_v, 1_v

@@ -41,6 +41,14 @@ public:
             parents_.push_back( i );
     }
 
+    /// adds new element in its own disjoint set, returns its identifier
+    I add()
+    {
+        const I res( parents_.size() );
+        parents_.push_back( res );
+        return res;
+    }
+
     /// unites the two sets containing given elements WITHOUT balancing by set size (BaseUnionFind keeps no sizes):
     /// it simply attaches one set's root under the other's, so chained calls can build taller trees.
     /// Prefer UnionFind::unite, which selects the new root by set size, when many unions follow one another.
@@ -171,6 +179,13 @@ public:
         BaseUnionFind<I>::reset( size );
         sizes_.clear();
         sizes_.resize( size, 1 );
+    }
+
+    /// adds new element in its own disjoint set, returns its identifier
+    I add()
+    {
+        sizes_.push_back( 1 );
+        return BaseUnionFind<I>::add();
     }
 
     /// unite two elements,

@@ -1008,7 +1008,9 @@ int Viewer::launchInit_( const LaunchParams& params )
 
     // current time plus minimum delay splash screen to stay present
     decltype( std::chrono::steady_clock::now() + std::chrono::duration<float>( 0 ) ) continueTime;
-    if ( windowMode && params.windowMode != LaunchParams::Hide && params.splashWindow )
+    const bool showSplash = windowMode && params.windowMode != LaunchParams::Hide && params.splashWindow
+        && Config::instance().getBool( cShowSplashScreenKey, true );
+    if ( showSplash )
     {
         params.splashWindow->start();
         continueTime = std::chrono::steady_clock::now() + std::chrono::duration<float>( params.splashWindow->minimumTimeSec() );
@@ -1036,7 +1038,7 @@ int Viewer::launchInit_( const LaunchParams& params )
     CommandLoop::setState( CommandLoop::StartPosition::AfterPluginInit );
     CommandLoop::processCommands();
 
-    if ( windowMode && params.windowMode != LaunchParams::Hide && params.splashWindow )
+    if ( showSplash )
     {
         spdlog::info( "Waiting for minimal splash screen time..." );
         std::this_thread::sleep_until( continueTime );

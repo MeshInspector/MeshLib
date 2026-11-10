@@ -17,6 +17,22 @@ namespace MR
 namespace
 {
 
+/// tests the boxes of a pair of nodes; the pair is pushed in the stack unless both are leaves, then it is given to processLeaves;
+/// returns true to stop the search
+template <typename BoxesIntersect, typename ProcessLeaves>
+MR_FORCE_INLINE bool processNodePair( const NodeNode & c, const AABBTree & aTree, const AABBTree & bTree,
+    const BoxesIntersect & boxesIntersect, Vector<NodeNode> & stack, ProcessLeaves && processLeaves )
+{
+    if ( !boxesIntersect( c.aNode, c.bNode ) )
+        return false;
+    if ( !aTree[c.aNode].leaf() || !bTree[c.bNode].leaf() )
+    {
+        stack.push_back( c );
+        return false;
+    }
+    return processLeaves( c );
+}
+
 /// whether the int boxes of two float boxes intersect (int boxes are used for consistency with precise intersections), given minGap = 2 / conv.invRange:
 /// the conversion is monotone, so the int boxes intersect if the float boxes do, and do not if the float boxes are at least two int units apart;
 /// only the boxes in between are converted
@@ -250,50 +266,52 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const A
     {
         Vector<NodeNode>& mySubtasks = tls.subtasks;
         assert( mySubtasks.empty() );
-        mySubtasks.push_back( subtasks[is] );
         SubtaskRes myRes{ .vec = &tls.res };
         myRes.first = (int)myRes.vec->size();
-        while ( !mySubtasks.empty() )
+        // returns true to stop the search
+        auto processLeaves = [&]( const NodeNode & s )
         {
-            if ( anyIntersection && anyIntersectionAtm.load( std::memory_order_relaxed ) )
-                break;
-            const auto s = mySubtasks.back();
-            mySubtasks.pop_back();
-
-            if ( !boxesIntersect( s.aNode, s.bNode ) )
-                continue;
-
-            const auto & aNode = aTree[s.aNode];
-            const auto & bNode = bTree[s.bNode];
-            if ( aNode.leaf() && bNode.leaf() )
+            const auto aFace = aTree[s.aNode].leafId();
+            if ( a.region && !a.region->test( aFace ) )
+                return false;
+            const auto bFace = bTree[s.bNode].leafId();
+            if ( b.region && !b.region->test( bFace ) )
+                return false;
+            checkTwoTris( aFace, bFace, *myRes.vec );
+            if ( anyIntersection && !myRes.vec->empty() )
             {
-                const auto aFace = aNode.leafId();
-                if ( a.region && !a.region->test( aFace ) )
-                    continue;
-                const auto bFace = bNode.leafId();
-                if ( b.region && !b.region->test( bFace ) )
-                    continue;
-                checkTwoTris( aFace, bFace, *myRes.vec );
-                if ( anyIntersection && !myRes.vec->empty() )
-                {
-                    anyIntersectionAtm.store( true, std::memory_order_relaxed );
+                anyIntersectionAtm.store( true, std::memory_order_relaxed );
+                return true;
+            }
+            return false;
+        };
+        // the boxes of a pair are tested before it is pushed, and a pair of leaves is processed at once
+        if ( !processNodePair( subtasks[is], aTree, bTree, boxesIntersect, mySubtasks, processLeaves ) )
+        {
+            while ( !mySubtasks.empty() )
+            {
+                if ( anyIntersection && anyIntersectionAtm.load( std::memory_order_relaxed ) )
                     break;
+                const auto s = mySubtasks.back();
+                mySubtasks.pop_back();
+
+                const auto & aNode = aTree[s.aNode];
+                const auto & bNode = bTree[s.bNode];
+                assert( !aNode.leaf() || !bNode.leaf() );
+                if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
+                {
+                    // split aNode
+                    if ( processNodePair( { aNode.l, s.bNode }, aTree, bTree, boxesIntersect, mySubtasks, processLeaves )
+                      || processNodePair( { aNode.r, s.bNode }, aTree, bTree, boxesIntersect, mySubtasks, processLeaves ) )
+                        break;
                 }
-                continue;
-            }
-        
-            if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
-            {
-                // split aNode
-                mySubtasks.push_back( { aNode.l, s.bNode } );
-                mySubtasks.push_back( { aNode.r, s.bNode } );
-            }
-            else
-            {
-                assert( !bNode.leaf() );
-                // split bNode
-                mySubtasks.push_back( { s.aNode, bNode.l } );
-                mySubtasks.push_back( { s.aNode, bNode.r } );
+                else
+                {
+                    // split bNode
+                    if ( processNodePair( { s.aNode, bNode.l }, aTree, bTree, boxesIntersect, mySubtasks, processLeaves )
+                      || processNodePair( { s.aNode, bNode.r }, aTree, bTree, boxesIntersect, mySubtasks, processLeaves ) )
+                        break;
+                }
             }
         }
         mySubtasks.clear();

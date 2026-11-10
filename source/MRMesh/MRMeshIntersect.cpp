@@ -110,7 +110,7 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
             break;
         }
 
-        // not a structured binding, which MSVC in C++20 mode copies through memory
+        // fields one by one: MSVC in C++20 mode copies a non-const 8-byte pair through a stack temporary
         const NodeId nid = nodesStack[currentNode].first;
         const T nStart = nodesStack[currentNode].second;
         --currentNode;

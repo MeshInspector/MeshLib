@@ -73,7 +73,7 @@ MeshProjectionResult findProjectionT( const Vector3f & pt, const MeshPart & mp, 
         const float distSq = ( proj - pt ).lengthSq();
         if ( !( distSq < res.distSq ) )
             return none;
-        if ( !Plain && validProjections )
+        if ( validProjections )
         {
             const MeshProjectionResult candidate
             {
@@ -125,7 +125,7 @@ MeshProjectionResult findProjectionT( const Vector3f & pt, const MeshPart & mp, 
         }
     }
 
-    if ( res.proj.face && ( Plain || !validProjections ) )
+    if ( res.proj.face && !validProjections )
         res.mtp = MeshTriPoint( mp.mesh.topology.edgeWithLeft( res.proj.face ), TriPointf( resBary ) );
     return res;
 }

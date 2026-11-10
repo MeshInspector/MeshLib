@@ -82,6 +82,7 @@ TEST( MRMesh, PointCloudDefaultPointSize )
     op->setPointSize( 7.0f );
     op->setPointCloud( std::make_shared<PointCloud>( meshToPointCloud( makeCube() ) ) );
     Object o;
+    o.setName( "root" );
     o.addChild( op );
     UniqueTemporaryFolder f;
     const auto mruPath = f / "pointSize.mru";

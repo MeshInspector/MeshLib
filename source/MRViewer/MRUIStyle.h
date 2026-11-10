@@ -97,6 +97,9 @@ struct ButtonIconCustomizationParams
 
     // if false - text is to the right
     bool textUnderImage = true;
+
+    // if set, the icon is drawn in this color, otherwise in the color of the text
+    std::optional<ImVec4> iconColor;
 };
 
 struct PlotAxis

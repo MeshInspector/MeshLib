@@ -1243,7 +1243,8 @@ PaletteChanges Palette(
     bool* fixZero,
     float speed,
     float min,
-    float max )
+    float max,
+    bool lengthUnits )
 {
     using namespace MR;
     PaletteChanges changes = PaletteChanges::None;
@@ -1376,9 +1377,13 @@ PaletteChanges Palette(
         }
         else
         {
-            rangesChanged |= UI::drag<LengthUnit>( _tr( "Max (red)" ), ranges[3], speed, min, max );
+            const auto dragLimit = [&] ( const char* limitLabel, float& value )
+            {
+                return lengthUnits ? UI::drag<LengthUnit>( limitLabel, value, speed, min, max ) : UI::drag<NoUnit>( limitLabel, value, speed, min, max );
+            };
+            rangesChanged |= dragLimit( _tr( "Max (red)" ), ranges[3] );
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { ImGui::GetStyle().ItemSpacing.x, cSeparateBlocksSpacing * UI::scale() } );
-            rangesChanged |= UI::drag<LengthUnit>( _tr( "Min (blue)" ), ranges[0], speed, min, max );
+            rangesChanged |= dragLimit( _tr( "Min (blue)" ), ranges[0] );
             ImGui::PopStyleVar();
         }
     }

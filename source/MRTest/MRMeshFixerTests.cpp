@@ -445,6 +445,21 @@ TEST( MRMesh, FixMeshCreasesKeepsCurvedShape )
     EXPECT_LT( findMaxDistanceSq( mesh, sphere ), sqr( 0.0005f ) );
 }
 
+// a border strip folded under a sheet: the planar triangulation of the two layers would keep only the part of the sheet not covered by the strip
+TEST( MRMesh, FixMeshCreasesFoldAtBorder )
+{
+    // the sheet is 8 x 4, and its strip of width 3 is folded under it along x = 0
+    const auto folded = *makeRegularGridMesh( 12, 5, [] ( size_t, size_t ) { return true; },
+        [] ( size_t x, size_t y ) { return Vector3f( std::abs( float( x ) - 3 ), float( y ), 0 ); } );
+    auto mesh = folded;
+    fixMeshCreases( mesh );
+    // the fans re-filled around the fold line take at most one cell from its side, as they always did
+    EXPECT_LT( findMaxDistanceSqOneWay( mesh, folded ), sqr( 1.5f ) );
+    EXPECT_GT( mesh.area(), 32 );
+    EXPECT_TRUE( mesh.topology.checkValidity() );
+    EXPECT_EQ( mesh.topology.findNumHoles(), 1 );
+}
+
 // a fold of a flat area and a fold of a curved area in one mesh: the planar triangulation of the first does not postpone
 // the creases next to the fans re-filled before it, so one iteration leaves the curved fold as without the flat fold
 TEST( MRMesh, FixMeshCreasesFlatAndCurvedFolds )

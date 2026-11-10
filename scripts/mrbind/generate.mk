@@ -545,9 +545,6 @@ MRBIND_PARSER_OUTPUT_FORMAT=json
 MRBIND_PARSER_OUTPUT_EXT=.json
 endif
 
-# Note that we're ignoring `operator<=>` in `mrbind_flags.txt` because it causes errors on VS2022:
-# `undefined symbol: void __cdecl std::_Literal_zero_is_expected(void)`,
-# `referenced by source/TempOutput/PythonBindings/x64/Release/binding.0.o:(public: __cdecl std::_Literal_zero::_Literal_zero<int>(int))`.
 MRBIND_FLAGS := --format=$(MRBIND_PARSER_OUTPUT_FORMAT) $(call load_file,$(makefile_dir)mrbind_flags.txt)
 COMPILER_FLAGS := $(ABI_COMPAT_FLAG) $(EXTRA_CFLAGS) $(call load_file,$(makefile_dir)common_compiler_parser_flags.txt) -I. $(if $(DEPS_INCLUDE_DIR),-I$(DEPS_INCLUDE_DIR)) -I$(makefile_dir)../../source
 # Add `-frelaxed-template-template-args` if Clang is old enough to support it. Newer versions have this behavior by default.

@@ -236,6 +236,14 @@ void writeJsonError( httplib::Response& res, int httpStatus, std::string message
     }.dump(), "application/json" );
 }
 
+// Call only from a catch block. Telemetry gets the tool id only, never the error text (unbounded, may carry
+// object names or file paths); the text goes to the local log and back to the caller.
+void writeToolCallFailure( httplib::Response& res, const std::string& toolId, int httpStatus, RpcErrorCode rpcCode, const char* telemetryName )
+{
+    TelemetrySignal( telemetryName + toolId );
+    writeJsonError( res, httpStatus, logToolFailure( toolId ), rpcCode );
+}
+
 struct BinaryOutput
 {
     std::string data;     // base64
@@ -347,26 +355,20 @@ void Server::State::handleToolsCall( const httplib::Request& req, httplib::Respo
         checkRequiredArgs( reifyStringEncodedArgs( args, schema ), schema );
         result = toolManager.invoke( toolId, args );
     }
+    // Distinct per-cause signals, so analytics can break failures down by cause.
     catch ( const fastmcpp::NotFoundError& )
     {
-        // Distinctive per-type failure signals (vs. one generic string) so analytics
-        // can break failures down by cause. Tool id only — never e.what(), which is
-        // unbounded and may carry object names or file paths (PII / high cardinality),
-        // matching the invocation event above. The text is still returned to the
-        // caller via writeJsonError below.
-        TelemetrySignal( "MCP Tool Not Found Failed: " + toolId );
-        writeJsonError( res, 404, logToolFailure( toolId ), RpcErrorCode::MethodNotFound );
+        writeToolCallFailure( res, toolId, 404, RpcErrorCode::MethodNotFound, "MCP Tool Not Found Failed: " );
         return;
     }
     catch ( const fastmcpp::ValidationError& )
     {
-        TelemetrySignal( "MCP Tool Validation Failed: " + toolId );
-        writeJsonError( res, 400, logToolFailure( toolId ), RpcErrorCode::InvalidParams );
+        writeToolCallFailure( res, toolId, 400, RpcErrorCode::InvalidParams, "MCP Tool Validation Failed: " );
         return;
     }
     catch ( ... )
     {
-        writeJsonError( res, 500, logToolFailure( toolId ), RpcErrorCode::InternalError );
+        writeToolCallFailure( res, toolId, 500, RpcErrorCode::InternalError, "MCP Tool Failed: " );
         return;
     }
     if ( result.is_object() && result.value( "isError", false ) )

@@ -22,6 +22,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRMeshFillHole.h"
 #include "MRMeshFixer.h"
+#include <atomic>
 
 namespace MR
 {
@@ -226,6 +227,16 @@ BooleanResult forceBoolean( const Mesh& meshA, const Mesh& meshB, BooleanOperati
 
 Expected<MR::Mesh> selfBoolean( const Mesh& inMesh, FaceMap* outNew2Old )
 {
+    // the search for intersections takes every face as the triangle of its first three vertices, so the intersections of another face
+    // are inconsistent
+    std::atomic<bool> notTriangle{ false };
+    BitSetParallelFor( inMesh.topology.getValidFaces(), [&] ( FaceId f )
+    {
+        if ( !inMesh.topology.isLeftTri( inMesh.topology.edgeWithLeft( f ) ) )
+            notTriangle.store( true, std::memory_order_relaxed );
+    } );
+    if ( notTriangle )
+        return unexpected( "Self-Boolean needs a mesh of triangles only" );
     auto box = Box3d( inMesh.computeBoundingBox() );
     CoordinateConverters converters{ .toInt = getToIntConverter( box ),.toFloat = getToFloatConverter( box ) };
     Mesh mesh = inMesh;
@@ -247,7 +258,7 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh, FaceMap* outNew2Old )
     removeTwoPointLoops( contours ); // both contours of a pair together, as they have the same points
 
     auto holePairs = detail::findSelfContoursMapping( contours );
-    // every contour is found twice, from either sheet, unless the intersections are inconsistent (as of a face that is not a triangle)
+    // every contour is found twice, from either sheet, unless the intersections are inconsistent
     if ( 2 * holePairs.size() != contours.size() )
         return unexpected( "Self-Boolean cannot pair the intersection contours" );
     auto intContours = getOneMeshSelfIntersectionContours( mesh, contours, converters );

@@ -554,6 +554,22 @@ TEST( MRMesh, SelfBooleanThreeSpheres )
     EXPECT_NEAR( maxVolume, uni.mesh.volume(), 1e-8 * uni.mesh.volume() );
 }
 
+// a cube with two of its triangles replaced by one quadrangle: selfBoolean reports a face that is not a triangle,
+// which the search for intersections would take as the triangle of its first three vertices
+TEST( MRMesh, SelfBooleanNotTriangle )
+{
+    Mesh mesh = makeCube();
+    auto& tp = mesh.topology;
+    const EdgeId e( 0_ue );
+    const EdgeId side = tp.prev( e.sym() ); // of the left triangle of e, and of the hole when e is deleted with both its triangles
+    const FaceId l = tp.left( e ), r = tp.right( e );
+    tp.deleteFace( l );
+    tp.deleteFace( r );
+    tp.setLeft( side, tp.addFaceId() );
+    ASSERT_TRUE( tp.isLeftQuad( side ) );
+    EXPECT_FALSE( selfBoolean( mesh ).has_value() );
+}
+
 // a cube with two triangles of the same vertices and opposite orientations glued along all their edges through it, a closed part
 // without volume; its crossings with the cube are alike for both triangles, so no cut can resolve them: selfBoolean removes the part,
 // which leaves the cube as it was, also turned inside out or flattened

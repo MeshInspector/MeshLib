@@ -4,6 +4,7 @@
 #include "MRMesh/MRObjectLoad.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPoints.h"
+#include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRDistanceMeasurementObject.h"
 #include "MRMesh/MRPointMeasurementObject.h"
 #include "MRMesh/MRCube.h"
@@ -11,6 +12,7 @@
 #include "MRMesh/MRMeshSave.h"
 #include "MRMesh/MRMeshToPointCloud.h"
 #include "MRMesh/MRPointsSave.h"
+#include "MRMesh/MRSceneSettings.h"
 #include "MRMesh/MRTelemetry.h"
 #include "MRPch/MRJson.h"
 #include <gtest/gtest.h>
@@ -67,6 +69,35 @@ TEST( MRMesh, SerializeObjectMesh )
 }
 
 // writing a scene in .mru file must not report any telemetry about the models saved inside it
+TEST( MRMesh, PointCloudDefaultPointSize )
+{
+    const auto type = SceneSettings::FloatType::PointCloudPointSize;
+    const float saved = SceneSettings::get( type );
+
+    SceneSettings::set( type, 9.0f );
+    auto op = std::make_shared<ObjectPoints>();
+    EXPECT_EQ( op->getPointSize(), 9.0f );
+
+    // the size saved with the object has priority over the default one
+    op->setPointSize( 7.0f );
+    op->setPointCloud( std::make_shared<PointCloud>( meshToPointCloud( makeCube() ) ) );
+    Object o;
+    o.addChild( op );
+    UniqueTemporaryFolder f;
+    const auto mruPath = f / "pointSize.mru";
+    const auto s = serializeObjectTree( o, mruPath );
+    EXPECT_TRUE( s.has_value() ) << ( s.has_value() ? "" : s.error() );
+    SceneSettings::set( type, 11.0f );
+    const auto l = loadSceneFromAnySupportedFormat( mruPath );
+    SceneSettings::set( type, saved );
+    ASSERT_TRUE( l.has_value() ) << ( l.has_value() ? "" : l.error() );
+    const auto loaded = getAllObjectsInTree<ObjectPoints>( l->obj.get() );
+    ASSERT_EQ( loaded.size(), 1 );
+    EXPECT_EQ( loaded[0]->getPointSize(), 7.0f );
+
+    EXPECT_EQ( ObjectPoints().getPointSize(), saved );
+}
+
 TEST( MRMesh, SerializeNoTelemetry )
 {
     Object o;

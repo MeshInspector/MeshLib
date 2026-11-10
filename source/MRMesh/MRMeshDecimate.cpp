@@ -110,7 +110,8 @@ private:
         TriAspect,   ///< new triangle aspect ratio would be larger than all of old triangle aspect ratios and larger than allowed in settings
         LongEdge,    ///< new edge would be longer than all of old edges and longer than allowed in settings
         NormalFlip,  ///< if at least one triangle normal flips, checks that all new normals are consistent (do not check for degenerate edges); or two triangles would fold onto each other
-        User         ///< user callback prohibits the collapse
+        User,        ///< user callback prohibits the collapse
+        Tetrahedron  ///< the edge is of a closed tetrahedron, which cannot be collapsed in two triangles lying on each other, only removed completely
     };
 
     /// true if collapse failed due to a geometric criterion, and may succeed for another collapse position
@@ -123,7 +124,7 @@ private:
 
     struct CanCollapseRes
     {
-        /// if collapse cannot be done then it is invalid,
+        /// if collapse cannot be done then it is invalid (except for CollapseStatus::Tetrahedron),
         /// otherwise it is input edge, oriented such that org( e ) will be the remaining vertex after collapse
         EdgeId e;
         CollapseStatus status = CollapseStatus::Ok;
@@ -143,6 +144,10 @@ private:
     };
     /// canCollapse_ + forceCollapse_
     CollapseRes collapse_( EdgeId edgeToCollapse, const Vector3f & collapsePos, const QuadraticForm3f & collapseForm );
+
+    /// after canCollapse_ returned CollapseStatus::Tetrahedron for the edge, removes its tetrahedron completely if its four vertices can be collapsed in one point within maxError,
+    /// and the limits, region, fixed boundary vertices, not-flippable edges, edgesToCollapse and finally preCollapse permit; otherwise keeps it whole
+    void removeTetrahedron_( EdgeId e );
 };
 
 MeshDecimator::MeshDecimator( Mesh & mesh, const DecimateSettings & settings, const UndirectedEdgeBitSet * initialEdges )
@@ -754,17 +759,22 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
     if ( vl && vr && oBdEdge && dBdEdge )
         return { .status =  CollapseStatus::TouchBd }; // prohibit collapse of an inner edge if it brings two boundaries in touch
 
+    // if both ends of the edge and its left vertex have three neighbours each, then the four vertices and four faces form a closed tetrahedron:
+    // any collapse would leave two triangles lying on each other, so the geometric checks below do not apply, and the tetrahedron can only be removed
+    const bool tetrahedron = vl && vr && topology.isOrgInnerAndHasDegree( edgeToCollapse, 3 ) && topology.isOrgInnerAndHasDegree( edgeToCollapse.sym(), 3 )
+        && topology.isOrgInnerAndHasDegree( topology.next( edgeToCollapse ).sym(), 3 );
+
     // special treatment for short edges on the last stage when collapse position is equal to one of edge's ends
     const bool tinyEdge = ( settings_.tinyEdgeLength >= 0 && ( po == collapsePos || pd == collapsePos ) )
         ? edgeLenSq <= sqr( settings_.tinyEdgeLength ) : false;
-    if ( !tinyEdge && maxNewAspectRatio > maxOldAspectRatio && maxOldAspectRatio <= settings_.criticalTriAspectRatio )
+    if ( !tetrahedron && !tinyEdge && maxNewAspectRatio > maxOldAspectRatio && maxOldAspectRatio <= settings_.criticalTriAspectRatio )
         return { .status =  CollapseStatus::TriAspect }; // new triangle aspect ratio would be larger than all of old triangle aspect ratios and larger than allowed in settings
 
-    if ( maxNewEdgeLenSq > maxOldEdgeLenSq )
+    if ( !tetrahedron && maxNewEdgeLenSq > maxOldEdgeLenSq )
         return { .status =  CollapseStatus::LongEdge }; // new edge would be longer than all of old edges and longer than allowed in settings
 
     // if at least one remaining triangle flips its normal, checks that new normal is consistent with the average normal of new vertex neighborhood
-    if ( !triDblAreas_.empty() && ( ( po != pd ) || ( po != collapsePos ) ) )
+    if ( !tetrahedron && !triDblAreas_.empty() && ( ( po != pd ) || ( po != collapsePos ) ) )
     {
         auto n = Vector3f{ sumDblArea.normalized() };
         for ( const auto da : triDblAreas_ )
@@ -775,14 +785,17 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
     // the two faces on the sides of a deleted triangle become neighbours; each of them can turn by almost 90 degrees without a flip,
     // so together they can fold onto each other: prohibit their new dihedral angle sharper than 60 degrees, unless it was before
     auto sharp = []( const Vector3f & a, const Vector3f & b ) { return dot( a, b ) < -0.5f * std::sqrt( a.lengthSq() * b.lengthSq() ); };
-    for ( int i = 0; i < 4; i += 2 )
+    for ( int i = 0; !tetrahedron && i < 4; i += 2 )
         if ( sharp( sideAreas[i].first, sideAreas[i + 1].first ) && !sharp( sideAreas[i].second, sideAreas[i + 1].second ) )
             return { .status =  CollapseStatus::NormalFlip };
+
+    assert( topology.org( edgeToCollapse ) == vo );
+    if ( tetrahedron )
+        return { .e = edgeToCollapse, .status = CollapseStatus::Tetrahedron }; // removeTetrahedron_ calls preCollapse right before the removal
 
     if ( settings_.preCollapse && !settings_.preCollapse( edgeToCollapse, collapsePos ) )
         return { .status =  CollapseStatus::User }; // user prohibits the collapse
 
-    assert( topology.org( edgeToCollapse ) == vo );
     return { .e = edgeToCollapse };
 }
 
@@ -844,6 +857,57 @@ auto MeshDecimator::collapse_( EdgeId edgeToCollapse, const Vector3f & collapseP
         return { .status = can.status };
     assert( can.e == edgeToCollapse || can.e == edgeToCollapse.sym() );
     return { .v = forceCollapse_( can.e, collapsePos, collapseForm ) };
+}
+
+void MeshDecimator::removeTetrahedron_( EdgeId e )
+{
+    auto & tp = mesh_.topology;
+    const FaceId fs[4] = { tp.left( e ), tp.right( e ), tp.left( tp.next( e ) ), tp.left( tp.next( e.sym() ) ) };
+    const VertId vs[4] = { tp.org( e ), tp.dest( e ), tp.dest( tp.next( e ) ), tp.dest( tp.prev( e ) ) };
+    const EdgeId es[6] = { e, tp.next( e ), tp.prev( e ), tp.next( e.sym() ), tp.prev( e.sym() ), tp.prev( tp.next( e ).sym() ) };
+    if ( res_.facesDeleted + 4 > settings_.maxDeletedFaces || res_.vertsDeleted + 4 > settings_.maxDeletedVertices )
+        return;
+    if ( settings_.region && !std::all_of( fs, fs + 4, [&]( FaceId f ) { return settings_.region->test( f ); } ) )
+        return;
+    if ( !( settings_.touchBdVerts && settings_.touchNearBdEdges ) && std::any_of( vs, vs + 4, [&]( VertId v ) { return pBdVerts_->test( v ); } ) )
+        return; // a fixed boundary vertex
+    if ( !settings_.collapseNearNotFlippable && settings_.notFlippable && std::any_of( es, es + 6, [&]( EdgeId x ) { return settings_.notFlippable->test( x ); } ) )
+        return;
+    if ( settings_.edgesToCollapse && !std::all_of( es, es + 6, [&]( EdgeId x ) { return settings_.edgesToCollapse->test( x ); } ) )
+        return;
+
+    // the error of collapsing all four vertices in one point; for ShortestEdgeFirst, maxError limits the length of collapsing edges instead
+    const auto & fm = *pVertForms_;
+    const auto & pts = mesh_.points;
+    const auto [q01, p01] = sum( fm[vs[0]], pts[vs[0]], fm[vs[1]], pts[vs[1]] );
+    const auto [q23, p23] = sum( fm[vs[2]], pts[vs[2]], fm[vs[3]], pts[vs[3]] );
+    auto [q, pos] = sum( q01, p01, q23, p23 );
+    float errSq = q.c;
+    if ( settings_.strategy == DecimateStrategy::ShortestEdgeFirst )
+    {
+        errSq = 0;
+        for ( EdgeId x : es )
+            errSq = std::max( errSq, mesh_.edgeLengthSq( x ) );
+    }
+    if ( settings_.adjustCollapse )
+        settings_.adjustCollapse( e.undirected(), errSq, pos );
+    if ( errSq > maxErrorSq_ )
+        return; // a large tetrahedron is kept
+
+    // the last check, since preCollapse may update vertex attributes expecting the removal
+    if ( settings_.preCollapse && !settings_.preCollapse( e, pos ) )
+        return;
+
+    for ( EdgeId x : es )
+        onEdgeDel_( x, {} );
+    for ( FaceId f : fs )
+    {
+        if ( settings_.region )
+            settings_.region->reset( f );
+        tp.deleteFace( f );
+    }
+    res_.facesDeleted += 4;
+    res_.vertsDeleted += 4;
 }
 
 static void packMesh( Mesh & mesh, const DecimateSettings & settings,
@@ -995,6 +1059,11 @@ DecimateResult MeshDecimator::run()
         {
             // edge collapse
             auto canCollapseRes = canCollapse_( ue, collapsePos );
+            if ( canCollapseRes.status == CollapseStatus::Tetrahedron )
+            {
+                removeTetrahedron_( canCollapseRes.e );
+                continue;
+            }
             if ( canCollapseRes.status != CollapseStatus::Ok )
             {
                 if ( topQE.x.edgeOp != EdgeOp::CollapseOtherEnd && geomFail_( canCollapseRes.status ) )

@@ -19,7 +19,7 @@ template<typename T>
 class AABBTreeMaker
 {
 public:
-    using Node = AABBTreeNode<T>;
+    using Node = typename AABBTreeNodeType<T>::type;
     using NodeVec = Vector<Node, NodeId>;
     using BoxT = typename T::BoxT;
     using V = decltype( BoxT{}.min );

@@ -79,24 +79,29 @@ struct AABBTreeNode : AABBTreeChildEncoding
 };
 
 /// a node of the AABB-tree of a mesh: only the children, the boxes of nodes and leaves are in one array AABBTree::boxes()
-template<>
-struct AABBTreeNode<FaceTreeTraits3> : AABBTreeChildEncoding
+struct FaceTreeNode : AABBTreeChildEncoding
 {
     using LeafId = FaceId;
     using BoxT = Box3f;
 
     NodeId l, r; ///< two children: each is either another node (non-negative id) or a leaf (encoded as negative number ~leafIndex)
 
-    AABBTreeNode() noexcept = default;
-    explicit AABBTreeNode( NoInit ) noexcept : l( noInit ), r( noInit ){}
+    FaceTreeNode() noexcept = default;
+    explicit FaceTreeNode( NoInit ) noexcept : l( noInit ), r( noInit ){}
 };
+
+/// the type of the nodes of the AABB-tree with given traits
+template<typename T>
+struct AABBTreeNodeType { using type = AABBTreeNode<T>; };
+template<>
+struct AABBTreeNodeType<FaceTreeTraits3> { using type = FaceTreeNode; };
 
 /// whether the nodes of the tree with given traits store their boxes
 template<typename T>
-inline constexpr bool nodesHaveBoxes = !std::is_same_v<T, FaceTreeTraits3>;
+inline constexpr bool nodesHaveBoxes = !std::is_same_v<typename AABBTreeNodeType<T>::type, FaceTreeNode>;
 
 template<typename T>
-using AABBTreeNodeVec = Vector<AABBTreeNode<T>, NodeId>;
+using AABBTreeNodeVec = Vector<typename AABBTreeNodeType<T>::type, NodeId>;
 
 struct NodeNode
 {

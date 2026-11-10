@@ -95,7 +95,7 @@ struct TreeNode3
     int l, r;
 };
 
-// the same as AABBTreeNode<FaceTreeTraits3>: only the children, the boxes are in MeshTree::boxes
+// the same as MR::FaceTreeNode: only the children, the boxes are in MeshTree::boxes
 struct MeshTreeNode
 {
     int l, r;

@@ -12,7 +12,7 @@ class MRMESH_CLASS AABBTreeBase
 {
 public:
     using Traits = T;
-    using Node = AABBTreeNode<Traits>;
+    using Node = typename AABBTreeNodeType<Traits>::type;
     using NodeVec = Vector<Node, NodeId>;
     using LeafTag = typename T::LeafTag;
     using LeafId = typename T::LeafId;

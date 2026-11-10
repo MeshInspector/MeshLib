@@ -224,7 +224,7 @@ BooleanResult forceBoolean( const Mesh& meshA, const Mesh& meshB, BooleanOperati
     return res;
 }
 
-Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
+Expected<MR::Mesh> selfBoolean( const Mesh& inMesh, FaceMap* outNew2Old )
 {
     auto box = Box3d( inMesh.computeBoundingBox() );
     CoordinateConverters converters{ .toInt = getToIntConverter( box ),.toFloat = getToFloatConverter( box ) };
@@ -441,6 +441,11 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
         }
     }
 
+    if ( outNew2Old )
+    {
+        new2Old.resize( mesh.topology.faceSize() );
+        *outNew2Old = std::move( new2Old );
+    }
     return mesh;
 }
 

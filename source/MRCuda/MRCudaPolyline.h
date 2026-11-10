@@ -32,6 +32,8 @@ public:
 
 private:
     DynamicArray<Node2> nodes_;
+    DynamicArray<LineLeaf2> leaves_;
+    int root_ = 0;
     DynamicArray<float2> points_;
     DynamicArray<int> orgs_;
 };
@@ -55,7 +57,9 @@ public:
     MRCUDA_API static size_t heapBytes( const Polyline3& polyline );
 
 private:
-    DynamicArray<Node3> nodes_;
+    DynamicArray<TreeNode3> nodes_;
+    DynamicArray<LineLeaf3> leaves_;
+    int root_ = 0;
     DynamicArray<float3> points_;
     DynamicArray<int> orgs_;
 };

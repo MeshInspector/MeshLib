@@ -154,6 +154,7 @@
     <ClCompile Include="MRScalarConvertTests.cpp" />
     <ClCompile Include="MRTupleBindingsTests.cpp" />
     <ClCompile Include="MRViewportIdTests.cpp" />
+    <ClCompile Include="MRViewportTests.cpp" />
     <ClCompile Include="MRVolumeIndexerTests.cpp" />
     <ClCompile Include="MRVectorTests.cpp" />
     <ClCompile Include="MRVoxelsLoadTests.cpp" />

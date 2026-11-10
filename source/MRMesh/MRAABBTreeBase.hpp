@@ -14,7 +14,7 @@ auto AABBTreeBase<T>::getSubtrees( int minNum ) const -> std::vector<NodeId>
     MR_TIMER;
     assert( minNum > 0 );
     std::vector<NodeId> res;
-    if ( nodes_.empty() )
+    if ( empty() )
         return res;
     res.push_back( rootNodeId() );
     std::vector<NodeId> tmp;
@@ -22,7 +22,7 @@ auto AABBTreeBase<T>::getSubtrees( int minNum ) const -> std::vector<NodeId>
     {
         for ( NodeId n : res )
         {
-            if ( nodes_[n].leaf() )
+            if ( isLeaf( n ) )
                 tmp.push_back( n );
             else
             {
@@ -47,8 +47,8 @@ auto AABBTreeBase<T>::getSubtreeLeaves( NodeId subtreeRoot ) const -> LeafBitSet
     InplaceStack<NoInitNodeId, 32> subtasks;
     auto addSubTask = [&]( NodeId n )
     {
-        if ( nodes_[n].leaf() )
-            res.autoResizeSet( nodes_[n].leafId() );
+        if ( isLeaf( n ) )
+            res.autoResizeSet( leafId( n ) );
         else
             subtasks.push( n );
     };
@@ -70,22 +70,19 @@ NodeBitSet AABBTreeBase<T>::getNodesFromLeaves( const LeafBitSet & leaves ) cons
 {
     MR_TIMER;
     NodeBitSet res( nodes_.size() );
+    if ( nodes_.empty() )
+        return res;
 
-    // mark leaves
-    BitSetParallelForAll( res, [&]( NodeId nid )
+    auto marked = [&]( NodeId c )
+    {
+        return isLeaf( c ) ? leaves.test( leafId( c ) ) : res.test( c );
+    };
+
+    // mark nodes marching from leaves to root (children always have larger ids than their parents)
+    for ( NodeId nid = nodes_.backId(); nid >= 0; --nid )
     {
         auto & node = nodes_[nid];
-        if ( node.leaf() && leaves.test( node.leafId() ) )
-            res.set( nid );
-    } );
-
-    // mark inner nodes marching from leaves to root
-    for ( NodeId nid{ nodes_.size() - 1 }; nid; --nid )
-    {
-        auto & node = nodes_[nid];
-        if ( node.leaf() )
-            continue;
-        if ( res.test( node.l ) || res.test( node.r ) )
+        if ( marked( node.l ) || marked( node.r ) )
             res.set( nid );
     }
 
@@ -97,11 +94,23 @@ void AABBTreeBase<T>::getLeafOrder( LeafBMap & leafMap ) const
 {
     MR_TIMER;
     LeafId l( 0 );
-    for ( auto & n : nodes_ )
+    if ( !empty() )
     {
-        if ( !n.leaf() )
-            continue;
-        leafMap.b[n.leafId()] = l++;
+        // depth-first traversal visits the leaves from left to right
+        Vector<NodeId> subtasks; // not InplaceStack: the tree after AABBTree::addSplitFaces can be deep
+        subtasks.push_back( rootNodeId() );
+        while ( !subtasks.empty() )
+        {
+            NodeId n = subtasks.back();
+            subtasks.pop_back();
+            if ( isLeaf( n ) )
+            {
+                leafMap.b[leafId( n )] = l++;
+                continue;
+            }
+            subtasks.push_back( nodes_[n].r );
+            subtasks.push_back( nodes_[n].l );
+        }
     }
     leafMap.tsize = int( l );
 }
@@ -110,15 +119,12 @@ template <typename T>
 void AABBTreeBase<T>::getLeafOrderAndReset( LeafBMap & leafMap )
 {
     MR_TIMER;
-    LeafId l( 0 );
-    for ( auto & n : nodes_ )
-    {
-        if ( !n.leaf() )
-            continue;
-        leafMap.b[n.leafId()] = l;
-        n.setLeafId( l++, n.leafPos() );
-    }
-    leafMap.tsize = int( l );
+    getLeafOrder( leafMap );
+    if ( empty() )
+        return;
+
+    for ( auto & l : leaves_ )
+        l.leafId = leafMap.b[l.leafId];
 }
 
 } //namespace MR

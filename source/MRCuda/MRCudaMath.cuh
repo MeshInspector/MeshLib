@@ -81,23 +81,40 @@ struct IntersectionPrecomputes
     float Sx, Sy, Sz;
 };
 
-// struct simular to AABBTreeNode<LineTreeTraits<Vector2f>> with minimal needed functions
+// the same as AABBTreeNode<LineTreeTraits<Vector2f>>: each child is either another node (non-negative) or a leaf (encoded as ~leafIndex)
 struct Node2
 {
     Box2 box;
     int l, r;
+};
 
-    __device__ bool leaf() const
+// the same as AABBTreeNode of the trees of 3D polylines: each child is either another node (non-negative) or a leaf (encoded as ~leafIndex)
+struct TreeNode3
+{
+    Box3 box;
+    int l, r;
+};
+
+// the same as BoxedLeaf<LineTreeTraits<Vector2f>>: the box is stored by floats, because float2 would align it by 8 bytes
+struct LineLeaf2
+{
+    int line;
+    float minX, minY, maxX, maxY;
+
+    __device__ Box2 box() const
     {
-        return r < 0;
-    }
-    __device__ int leafId() const
-    {
-        return l;
+        return { { minX, minY }, { maxX, maxY } };
     }
 };
 
-// struct similar to AABBTreeNode of the trees of points and 3D polylines with minimal needed functions
+// the same as BoxedLeaf<LineTreeTraits<Vector3f>>
+struct LineLeaf3
+{
+    int line;
+    Box3 box;
+};
+
+// AABB tree of points with leaf nodes, similar to AABBTreeNode<ObjTreeTraits> with minimal needed functions
 struct Node3
 {
     Box3 box;

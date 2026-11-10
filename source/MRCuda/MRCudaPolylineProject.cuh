@@ -3,6 +3,7 @@
 #include "MRCudaInplaceStack.cuh"
 #include "MRCudaLineSegm.cuh"
 #include "MRCudaMath.cuh"
+#include "MRCudaPolyline.cuh"
 
 namespace MR::Cuda
 {
@@ -19,7 +20,7 @@ struct PolylineProjectionResult2
 #pragma warning( pop )
 
 /// CUDA variant of MR::findProjectionOnPolyline2
-__device__ inline PolylineProjectionResult2 findProjectionOnPolyline2( const float2 point, const Node2* __restrict__ nodes, const float2* __restrict__ points, const int* __restrict__ orgs, float upDistLimitSq, float loDistLimitSq )
+__device__ inline PolylineProjectionResult2 findProjectionOnPolyline2( const float2 point, const Polyline2Data& polyline, float upDistLimitSq, float loDistLimitSq )
 {
     PolylineProjectionResult2 result;
     result.line = -1;
@@ -41,10 +42,10 @@ __device__ inline PolylineProjectionResult2 findProjectionOnPolyline2( const flo
 
     auto getSubTask = [&] ( int n )
     {
-        return SubTask { n, lengthSq( nodes[n].box.getBoxClosestPointTo( point ) - point ) };
+        return SubTask { n, lengthSq( polyline.box( n ).getBoxClosestPointTo( point ) - point ) };
     };
 
-    addSubTask( getSubTask( 0 ) );
+    addSubTask( getSubTask( polyline.root ) );
 
     while ( !subtasks.empty() )
     {
@@ -54,12 +55,11 @@ __device__ inline PolylineProjectionResult2 findProjectionOnPolyline2( const flo
         if ( result.distSq <= s.distSq )
             continue;
 
-        const auto& node = nodes[s.n];
-        if ( node.leaf() )
+        if ( Polyline2Data::isLeaf( s.n ) )
         {
-            const auto ue = node.leafId();
-            const auto a = points[orgs[2 * ue + 0]];
-            const auto b = points[orgs[2 * ue + 1]];
+            const auto ue = polyline.leafId( s.n );
+            const auto a = polyline.points[polyline.orgs[2 * ue + 0]];
+            const auto b = polyline.points[polyline.orgs[2 * ue + 1]];
 
             const auto proj = closestPointOnLineSegm( point, a, b );
             const auto distSq = lengthSq( proj - point );
@@ -75,6 +75,7 @@ __device__ inline PolylineProjectionResult2 findProjectionOnPolyline2( const flo
             continue;
         }
 
+        const auto& node = polyline.nodes[s.n];
         const auto sl = getSubTask( node.l );
         const auto sr = getSubTask( node.r );
         if ( sl.distSq < sr.distSq )
@@ -94,7 +95,7 @@ __device__ inline PolylineProjectionResult2 findProjectionOnPolyline2( const flo
 
 /// CUDA variant of MR::findEdgesInBall
 template <typename Func>
-__device__ void findEdgesInBall( const Node3* __restrict__ nodes, const float3* __restrict__ points, const int* __restrict__ orgs, const float3 center, const float radius, Func callback )
+__device__ void findEdgesInBall( const Polyline3Data& polyline, const float3 center, const float radius, Func callback )
 {
     const auto radiusSq = radius * radius;
 
@@ -108,25 +109,24 @@ __device__ void findEdgesInBall( const Node3* __restrict__ nodes, const float3* 
 
     auto getSubTask = [&] ( int n )
     {
-        return SubTask{ n, lengthSq( nodes[n].box.getBoxClosestPointTo( center ) - center ) };
+        return SubTask{ n, lengthSq( polyline.box( n ).getBoxClosestPointTo( center ) - center ) };
     };
 
-    subtasks.push( getSubTask( 0 ) );
+    subtasks.push( getSubTask( polyline.root ) );
 
     while ( !subtasks.empty() )
     {
         const auto s = subtasks.top();
         subtasks.pop();
 
-        const auto& node = nodes[s.n];
-        if ( node.leaf() )
+        if ( Polyline3Data::isLeaf( s.n ) )
         {
             if ( radiusSq < s.distSq )
                 continue;
 
-            const auto ue = node.leafId();
-            const auto a = points[orgs[2 * ue + 0]];
-            const auto b = points[orgs[2 * ue + 1]];
+            const auto ue = polyline.leafId( s.n );
+            const auto a = polyline.points[polyline.orgs[2 * ue + 0]];
+            const auto b = polyline.points[polyline.orgs[2 * ue + 1]];
 
             const auto proj = closestPointOnLineSegm( center, a, b );
             const auto distSq = lengthSq( proj - center );
@@ -136,6 +136,7 @@ __device__ void findEdgesInBall( const Node3* __restrict__ nodes, const float3* 
             continue;
         }
 
+        const auto& node = polyline.nodes[s.n];
         subtasks.push( getSubTask( node.r ) ); // look at right node later
         subtasks.push( getSubTask( node.l ) ); // look at left node first
     }

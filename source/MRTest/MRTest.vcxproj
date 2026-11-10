@@ -69,6 +69,7 @@
     <ClCompile Include="MRDracoTests.cpp" />
     <ClCompile Include="MRLasTests.cpp" />
     <ClCompile Include="MRPdfTests.cpp" />
+    <ClCompile Include="MRSvgTests.cpp" />
     <ClCompile Include="MRPointCloudVariadicOffsetTests.cpp" />
     <ClCompile Include="MRPolyline2IntersectTests.cpp" />
     <ClCompile Include="MRPolylineTests.cpp" />

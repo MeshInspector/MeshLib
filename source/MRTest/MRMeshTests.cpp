@@ -7,6 +7,7 @@
 #include <MRMesh/MRPartMappingAdapters.h>
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRAABBTree.h>
+#include <MRMesh/MRDipole.h>
 #include <MRMesh/MRBuffer.h>
 #include <MRMesh/MRMapOrHashMap.h>
 #include <atomic>
@@ -598,6 +599,33 @@ TEST( MRMesh, PackOptimallyWithCachedTree )
     EXPECT_EQ( a.points, b.points );
     EXPECT_EQ( a.topology, b.topology );
     EXPECT_TRUE( a.topology.checkValidity() );
+}
+
+// packOptimally( false ) drops the dipoles with the tree: a refit tree and the one rebuilt after packing differ
+TEST( MRMesh, PackOptimallyDropsDipoles )
+{
+    Mesh mesh = makeSphere( { .numMeshVertices = 1000 } );
+    (void)mesh.getAABBTree();
+    VertBitSet moved( mesh.topology.vertSize() );
+    for ( auto v : mesh.topology.getValidVerts() )
+    {
+        if ( mesh.points[v].x > 0 )
+        {
+            mesh.points[v].y += 2; // changes the order of the boxes along y
+            moved.set( v );
+        }
+    }
+    mesh.updateCaches( &moved ); // refits the tree
+    (void)mesh.getDipoles();
+    mesh.packOptimally( false );
+    const auto & cached = mesh.getDipoles();
+    const auto fresh = calcDipoles( mesh.getAABBTree(), mesh );
+    ASSERT_EQ( cached.size(), fresh.size() );
+    int differ = 0;
+    for ( NodeId n( 0 ); n < fresh.size(); ++n )
+        if ( cached[n].pos != fresh[n].pos || cached[n].dirArea != fresh[n].dirArea || cached[n].rr != fresh[n].rr )
+            ++differ;
+    EXPECT_EQ( differ, 0 );
 }
 
 } //namespace MR

@@ -31,8 +31,7 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
             subtasks.push( s );
     };
 
-    NodeId bestLeaf; // without validProjections, MeshTriPoint is computed only for the best leaf in the end
-    TriPointd bestBary;
+    TriPointd resBary; // res.mtp is computed only in the end
     bool stop = false;
     // the triangles of leaves are tested as soon as their parent is reached, without the boxes of leaves
     auto processChild = [&]( NodeId n ) -> SubTask
@@ -69,7 +68,7 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
             const MeshProjectionResult candidate
             {
                 .proj = PointOnFace{ face, proj },
-                .mtp = tree.toTriPoint( mp.mesh.topology, n, TriPointf( baryD ) ),
+                .mtp = MeshTriPoint( mp.mesh.topology.edgeWithLeft( face ), TriPointf( baryD ) ),
                 .distSq = distSq
             };
             if ( !validProjections( candidate ) )
@@ -80,8 +79,7 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
         {
             res.proj = PointOnFace{ face, proj };
             res.distSq = distSq;
-            bestLeaf = n;
-            bestBary = baryD;
+            resBary = baryD;
         }
         if ( res.distSq <= loDistLimitSq )
             stop = true;
@@ -118,7 +116,7 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
     }
 
     if ( res.proj.face && !validProjections )
-        res.mtp = tree.toTriPoint( mp.mesh.topology, bestLeaf, TriPointf( bestBary ) );
+        res.mtp = MeshTriPoint( mp.mesh.topology.edgeWithLeft( res.proj.face ), TriPointf( resBary ) );
     return res;
 }
 
@@ -237,7 +235,7 @@ void findTrisInBall( const MeshPart & mp, const Ball3f & ball0, const FoundTriCa
         const MeshProjectionResult candidate
         {
             .proj = PointOnFace{ face, proj },
-            .mtp = tree.toTriPoint( mp.mesh.topology, n, TriPointf( baryD ) ),
+            .mtp = MeshTriPoint( mp.mesh.topology.edgeWithLeft( face ), TriPointf( baryD ) ),
             .distSq = distSq
         };
         if ( foundCallback( candidate, ball ) == Processing::Stop )

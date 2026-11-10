@@ -6,7 +6,6 @@
 #include "MRResizeNoInit.h"
 #include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
-#include "MRMeshTriPoint.h"
 #include "MRBuffer.h"
 #include <algorithm>
 
@@ -236,13 +235,6 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
             node.box.include( box( node.r ) );
         }
     }
-}
-
-MeshTriPoint AABBTree::toTriPoint( const MeshTopology & topology, NodeId n, const TriPointf & bary ) const
-{
-    const auto e = topology.edgeWithLeft( leafId( n ) );
-    assert( topology.getLeftTriVerts( e ) == leafVerts( n ) ); // otherwise flipOrientation() or updateLeafVerts() was not called
-    return { e, bary };
 }
 
 void AABBTree::flipOrientation( const FaceBitSet * region )

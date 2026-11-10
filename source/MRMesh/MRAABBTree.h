@@ -43,10 +43,6 @@ public:
     /// returns the bounding box of given node or leaf
     [[nodiscard]] const Box3f & box( NodeId n ) const { return isLeaf( n ) ? leafBox( n ) : nodes_[n].box; }
 
-    /// converts barycentric coordinates relative to leafVerts( n ) into the point on the mesh with given topology;
-    /// leafVerts( n ) must be in the order of MeshTopology::getTriVerts
-    [[nodiscard]] MRMESH_API MeshTriPoint toTriPoint( const MeshTopology & topology, NodeId n, const TriPointf & bary ) const;
-
     /// returns the bounding box of the whole tree
     [[nodiscard]] Box3f getBoundingBox() const { return empty() ? Box3f{} : box( rootNodeId() ); }
 

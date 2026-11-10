@@ -153,6 +153,16 @@ zip_int64_t deflatedSourceCallback( void* user, void* data, zip_uint64_t len, zi
     }
 }
 
+// returns the text of libzip error with the given code, as returned by zip_open
+std::string zipErrorString( int code )
+{
+    zip_error_t error;
+    zip_error_init_with_code( &error, code );
+    std::string res = zip_error_strerror( &error );
+    zip_error_fini( &error );
+    return res;
+}
+
 // this object stores a handle on open zip-archive, and automatically closes it in the destructor
 class AutoCloseZip
 {
@@ -173,7 +183,8 @@ public:
     }
     operator zip_t *() const { return handle_; }
     explicit operator bool() const { return handle_ != nullptr; }
-    int close()
+    /// \param error if given, receives the reason of failure
+    int close( std::string* error = nullptr )
     {
         if ( !handle_ )
             return 0;
@@ -182,6 +193,13 @@ public:
         zip_register_cancel_callback_with_state( handle_, zipCancelCallback, nullptr, &pd_ );
 #endif
         int res = zip_close( handle_ );
+        if ( res != 0 )
+        {
+            if ( error )
+                *error = zip_strerror( handle_ );
+            // a failed zip_close leaves the archive open
+            zip_discard( handle_ );
+        }
         handle_ = nullptr;
         return res;
     }
@@ -414,7 +432,7 @@ Expected<void> compressZip( const std::filesystem::path& zipFile, const std::fil
     int err;
     AutoCloseZip zip( utf8string( zipFile ).c_str(), ZIP_CREATE | ZIP_TRUNCATE, &err, subprogress( settings.cb, 0.8f, 1.0f ) );
     if ( !zip )
-        return unexpected( "Cannot create zip, error code: " + std::to_string( err ) );
+        return unexpected( "Cannot create " + utf8string( zipFile ) + ": " + zipErrorString( err ) );
 
     auto goodFile = [&]( const std::filesystem::path & path )
     {
@@ -504,14 +522,16 @@ Expected<void> compressZip( const std::filesystem::path& zipFile, const std::fil
     if ( auto res = zip.addPreDeflatedEntries( std::move( entries ), files, level, settings.password ); !res )
         return res;
 
-    auto closeRes = zip.close();
-    spdlog::info( "Compressed {} files into {}", files.size(), utf8string( zipFile ) );
+    std::string closeError;
+    auto closeRes = zip.close( &closeError );
 
     if ( !reportProgress( settings.cb, 1.0f ) )
         return unexpectedOperationCanceled();
 
-    if ( closeRes == -1 )
-        return unexpected( "Cannot close zip" );
+    if ( closeRes != 0 )
+        return unexpected( "Cannot write " + utf8string( zipFile ) + ": " + closeError );
+
+    spdlog::info( "Compressed {} files into {}", files.size(), utf8string( zipFile ) );
 
     return {};
 }
@@ -528,7 +548,7 @@ Expected<void> decompressZip( const std::filesystem::path& zipFile, const std::f
     int err;
     AutoCloseZip zip( utf8string( zipFile ).c_str(), ZIP_RDONLY, &err );
     if ( !zip )
-        return unexpected( "Cannot open zip, error code: " + std::to_string( err ) );
+        return unexpected( "Cannot open " + utf8string( zipFile ) + ": " + zipErrorString( err ) );
 
     return decompressZip_( zip, targetFolder, password );
 }
@@ -554,7 +574,7 @@ Expected<void> decompressZip( const std::filesystem::path& zipFile, const ZipFil
     int err;
     AutoCloseZip zip( utf8string( zipFile ).c_str(), ZIP_RDONLY, &err );
     if ( !zip )
-        return unexpected( "Cannot open zip, error code: " + std::to_string( err ) );
+        return unexpected( "Cannot open " + utf8string( zipFile ) + ": " + zipErrorString( err ) );
 
     return forEachZipEntry_( zip, password, {}, callback );
 }

@@ -258,6 +258,31 @@ TEST( MRMesh, CompressManySmallFilesToZip )
     }
 }
 
+// a failure to write or open an archive must name the file and the reason
+TEST( MRMesh, ZipErrorsNameFileAndReason )
+{
+    UniqueTemporaryFolder srcFolder;
+    ASSERT_TRUE( bool( srcFolder ) );
+    std::ofstream( srcFolder / "a.txt", std::ios::binary ) << "data";
+
+    UniqueTemporaryFolder dstFolder;
+    ASSERT_TRUE( bool( dstFolder ) );
+
+    const auto badZipPath = dstFolder / "missing" / "a.zip";
+    const auto compressRes = compressZip( badZipPath, srcFolder );
+    ASSERT_FALSE( compressRes.has_value() );
+    EXPECT_NE( compressRes.error().find( "a.zip: " ), std::string::npos ) << compressRes.error();
+    std::error_code ec;
+    EXPECT_FALSE( std::filesystem::exists( badZipPath, ec ) );
+
+    UniqueTemporaryFolder outFolder;
+    ASSERT_TRUE( bool( outFolder ) );
+    const auto decompressRes = decompressZip( dstFolder / "absent.zip", outFolder );
+    ASSERT_FALSE( decompressRes.has_value() );
+    EXPECT_NE( decompressRes.error().find( "absent.zip: " ), std::string::npos ) << decompressRes.error();
+    EXPECT_EQ( decompressRes.error().find( "error code" ), std::string::npos ) << decompressRes.error();
+}
+
 // Zip archives made by macOS Finder contain __MACOSX/._<name> metadata entries, which must not be extracted
 TEST( MRMesh, DecompressZipSkipsMacOSMetadata )
 {

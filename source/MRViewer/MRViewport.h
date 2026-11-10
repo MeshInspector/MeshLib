@@ -483,7 +483,7 @@ public:
     MRVIEWER_API std::vector<Vector3f> viewportSpaceToClipSpace( const std::vector<Vector3f>& p ) const;
 
     // updates view and projection matrices due to camera parameters (called each frame)
-    void setupView();
+    MRVIEWER_API void setupView();
     // draws viewport primitives:
     //   lines: if depth test is on
     //   points: if depth test is on

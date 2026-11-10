@@ -905,7 +905,7 @@ Expected<Mesh> fromDxf( std::istream& in, const MeshLoadSettings& settings /*= {
         return unexpectedOperationCanceled();
 
     if ( triangles.empty() )
-        return unexpected( "No mesh is found" );
+        return unexpected( stringUnsupportedFileFormat() + ": no mesh is found in DXF file" ); // lines or points can be there
 
     return Mesh::fromPointTriples( triangles, true );
 }

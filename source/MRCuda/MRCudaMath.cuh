@@ -195,8 +195,8 @@ struct Matrix4
     /// application of the transformation to a box
     __device__ Box3 transform( const Box3& box ) const
     {
-        Box3 res;
-        res.include( transform( float3{ box.min.x, box.min.y, box.min.z } ) );
+        const auto p = transform( float3{ box.min.x, box.min.y, box.min.z } );
+        Box3 res{ p, p };
         res.include( transform( float3{ box.min.x, box.min.y, box.max.z } ) );
         res.include( transform( float3{ box.min.x, box.max.y, box.min.z } ) );
         res.include( transform( float3{ box.min.x, box.max.y, box.max.z } ) );

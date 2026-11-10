@@ -1120,7 +1120,8 @@ void fixMeshCreases( Mesh& mesh, const FixCreasesParams& params )
                     }
             }
             replace( region, planar );
-            ( planar ? filled : failed ).resize( mesh.topology.faceSize(), true ); // with the new faces
+            filled.resize( mesh.topology.faceSize(), planar ); // the new faces
+            failed.resize( mesh.topology.faceSize(), !planar );
         }
     }
 }

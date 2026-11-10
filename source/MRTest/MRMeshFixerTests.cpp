@@ -445,4 +445,23 @@ TEST( MRMesh, FixMeshCreasesKeepsCurvedShape )
     EXPECT_LT( findMaxDistanceSq( mesh, sphere ), sqr( 0.0005f ) );
 }
 
+// a fold of a flat area and a fold of a curved area in one mesh: the planar triangulation of the first does not postpone
+// the creases next to the fans re-filled before it, so one iteration leaves the curved fold as without the flat fold
+TEST( MRMesh, FixMeshCreasesFlatAndCurvedFolds )
+{
+    auto curved = makeUVSphere( 1, 16, 16 );
+    for ( auto & p : curved.points )
+        p.x = std::min( p.x, 0.7f ); // a flat side
+    for ( auto v : { 0_v, 31_v } ) // two neighbours of a vertex next to the pole slid past it
+        curved.points[v] = ( curved.points[v] + 1.5f * ( curved.points[15_v] - curved.points[v] ) ).normalized();
+    auto both = curved;
+    both.points[100_v] += 1.3f * ( both.points[101_v] - both.points[100_v] ); // a vertex of the flat side moved over its neighbour
+    const FixCreasesParams oneIter{ .maxIters = 1 };
+    const auto numCreases = [&] ( const Mesh & m ) { return m.findCreaseEdges( oneIter.creaseAngle ).count(); };
+    EXPECT_GT( numCreases( both ), numCreases( curved ) );
+    fixMeshCreases( curved, oneIter );
+    fixMeshCreases( both, oneIter );
+    EXPECT_EQ( numCreases( both ), numCreases( curved ) );
+}
+
 } //namespace MR

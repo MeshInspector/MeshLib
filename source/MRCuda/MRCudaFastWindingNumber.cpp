@@ -26,14 +26,14 @@ struct FastWindingNumberDataBuffers
 {
     DynamicArray<Dipole> dipoles;
     DynamicArray<float3> cudaMeshPoints;
-    DynamicArray<Node3> cudaNodes;
+    MeshTreeBuffers tree;
     DynamicArray<FaceToThreeVerts> cudaFaces;
 
     [[nodiscard]] FastWindingNumberData toData() const
     {
         return {
             .dipoles = dipoles.data(),
-            .nodes = cudaNodes.data(),
+            .tree = tree.data(),
             .meshPoints = cudaMeshPoints.data(),
             .faces = cudaFaces.data(),
         };
@@ -72,11 +72,11 @@ Expected<void> FastWindingNumber::prepareData_( ProgressCallback cb )
     if ( !reportProgress( cb, 0.5f ) )
         return unexpectedOperationCanceled();
 
-    CUDA_LOGE_RETURN_UNEXPECTED( data->cudaNodes.fromVector( getNodesWithLeaves( tree ) ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( data->tree.fromTree( tree ) );
     if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
 
-    CUDA_LOGE_RETURN_UNEXPECTED( data->dipoles.fromVector( getDipolesWithLeaves( tree, mesh_.getDipoles() ) ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( data->dipoles.fromVector( mesh_.getDipoles() ) );
     if ( !reportProgress( cb, 1.0f ) )
         return unexpectedOperationCanceled();
 

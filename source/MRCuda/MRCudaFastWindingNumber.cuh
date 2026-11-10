@@ -36,10 +36,10 @@ struct Dipole
 
 struct FastWindingNumberData
 {
-    const Dipole* __restrict__ dipoles{ nullptr };
-    const Node3* __restrict__ nodes{ nullptr };
+    const Dipole* __restrict__ dipoles{ nullptr }; ///< of not-leaf nodes, the triangles of leaves are always computed exactly
+    MeshTree tree;
     const float3* __restrict__ meshPoints{ nullptr };
-    const FaceToThreeVerts* __restrict__ faces{ nullptr };
+    const FaceToThreeVerts* __restrict__ faces{ nullptr }; ///< indexed by FaceId, only for the centers of triangles
 };
 
 // calls fast winding number for each point in parallel

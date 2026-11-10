@@ -1,72 +1,57 @@
 #pragma once
 
+#include "MRCudaBasic.hpp"
+#include "MRCudaMath.cuh"
+
 #include "MRMesh/MRAABBTree.h"
-#include "MRMesh/MRDipole.h"
-#include <cfloat>
+#include "MRMesh/MRAABBTreePolyline.h"
 
 namespace MR::Cuda
 {
 
-/// returns the nodes of given tree in the layout of CUDA kernels:
-/// not-leaf nodes keep their ids, and then each leaf is a separate node with leaf id in l and invalid r;
-/// leafBox( NodeId ) returns the box of a leaf
-template<typename T, typename LeafBox>
-AABBTreeNodeVec<T> getNodesWithLeaves( const AABBTreeBase<T> & tree, LeafBox && leafBox )
-{
-    AABBTreeNodeVec<T> res;
-    if ( tree.empty() )
-        return res;
-    const auto & nodes = tree.nodes();
-    res.reserve( 2 * nodes.size() + 1 );
-    res.resize( nodes.size() );
-    auto addLeaf = [&]( NodeId c )
-    {
-        auto & leaf = res.emplace_back();
-        leaf.box = leafBox( c );
-        leaf.l = NodeId( int( tree.leafId( c ) ) );
-        leaf.r = NodeId();
-        return res.backId();
-    };
-    auto toGpu = [&]( NodeId c ) { return tree.isLeaf( c ) ? addLeaf( c ) : c; };
-    if ( nodes.empty() )
-    {
-        addLeaf( tree.rootNodeId() );
-        return res;
-    }
-    for ( NodeId i( 0 ); i < nodes.size(); ++i )
-    {
-        res[i].box = nodes[i].box;
-        res[i].l = toGpu( nodes[i].l );
-        res[i].r = toGpu( nodes[i].r );
-    }
-    return res;
-}
+static_assert( sizeof( TreeNode3 ) == sizeof( AABBTree::Node ) );
+static_assert( sizeof( FaceLeaf ) == sizeof( MR::FaceLeaf ) );
+static_assert( sizeof( Box3 ) == sizeof( Box3f ) );
+static_assert( sizeof( Node2 ) == sizeof( AABBTreePolyline2::Node ) );
+static_assert( sizeof( LineLeaf2 ) == sizeof( AABBTreePolyline2::Leaf ) );
+static_assert( sizeof( TreeNode3 ) == sizeof( AABBTreePolyline3::Node ) );
+static_assert( sizeof( LineLeaf3 ) == sizeof( AABBTreePolyline3::Leaf ) );
 
-/// the same for the trees with the boxes of leaves
+/// the root of given not-empty tree in the encoding of CUDA kernels: 0, or ~0 if the tree has only one leaf
 template<typename T>
-AABBTreeNodeVec<T> getNodesWithLeaves( const AABBTreeBase<T> & tree ) requires AABBTreeBase<T>::leavesHaveBoxes
+int rootNodeId( const AABBTreeBase<T> & tree )
 {
-    return getNodesWithLeaves( tree, [&]( NodeId c ) { return tree.leaf( c ).box; } );
+    return tree.nodes().empty() ? ~0 : 0;
 }
 
-/// the same for the tree of a mesh
-inline AABBTreeNodeVec<FaceTreeTraits3> getNodesWithLeaves( const AABBTree & tree )
+/// AABB tree of a mesh in GPU memory as it is on CPU
+struct MeshTreeBuffers
 {
-    return getNodesWithLeaves( tree, [&]( NodeId c ) { return tree.leafBox( c ); } );
-}
+    DynamicArray<TreeNode3> nodes;
+    DynamicArray<Box3> leafBoxes;
+    DynamicArray<FaceLeaf> leaves;
+    int root = 0;
 
-/// returns the dipoles of given tree in the layout of getNodesWithLeaves:
-/// the dipoles of leaves are never good approximation, so the triangles of leaves are always computed exactly as on CPU
-inline Dipoles getDipolesWithLeaves( const AABBTreeBase<FaceTreeTraits3> & tree, const Dipoles & dipoles )
-{
-    Dipoles res;
-    if ( tree.empty() )
-        return res;
-    assert( dipoles.size() == tree.nodes().size() );
-    res.reserve( 2 * dipoles.size() + 1 );
-    res.assign( dipoles.begin(), dipoles.end() );
-    res.resize( 2 * dipoles.size() + 1, Dipole{ .rr = FLT_MAX } );
-    return res;
-}
+    cudaError_t fromTree( const AABBTree & tree )
+    {
+        root = rootNodeId( tree );
+        if ( auto err = nodes.fromVector( tree.nodes() ); err != cudaSuccess )
+            return err;
+        if ( auto err = leafBoxes.fromVector( tree.leafBoxes() ); err != cudaSuccess )
+            return err;
+        return leaves.fromVector( tree.leaves() );
+    }
+
+    [[nodiscard]] MeshTree data() const
+    {
+        return { .nodes = nodes.data(), .leafBoxes = leafBoxes.data(), .leaves = leaves.data(), .root = root };
+    }
+
+    /// the GPU memory amount required for the tree
+    [[nodiscard]] static size_t heapBytes( const AABBTree & tree )
+    {
+        return tree.nodes().size() * sizeof( TreeNode3 ) + tree.numLeaves() * ( sizeof( Box3 ) + sizeof( FaceLeaf ) );
+    }
+};
 
 } // namespace MR::Cuda

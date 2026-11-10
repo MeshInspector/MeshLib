@@ -670,6 +670,7 @@
     <ClCompile Include="MRPointObject.cpp" />
     <ClCompile Include="MRPointsInBall.cpp" />
     <ClCompile Include="MRPointsLoad.cpp" />
+    <ClCompile Include="MRPointsLoadPcdPtx.cpp" />
     <ClCompile Include="MRMultiScanLoad.cpp" />
     <ClCompile Include="MRPointsSave.cpp" />
     <ClCompile Include="MRPointToPlaneAligningTransform.cpp" />

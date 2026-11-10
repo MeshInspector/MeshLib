@@ -17,7 +17,7 @@ MR_FORCE_INLINE void processChildrenPair( const AABBTree& tree, const NodeNode& 
 {
     if ( processNodes( c ) != Processing::Continue )
         return;
-    if ( !tree[c.aNode].leaf() || !tree[c.bNode].leaf() )
+    if ( !tree.isLeaf( c.aNode ) || !tree.isLeaf( c.bNode ) )
         nextSubtasks.push_back( c );
     else
         leafPairs[numLeafPairs++] = c;
@@ -51,32 +51,35 @@ MR_BIND_IGNORE void processSelfSubtasks( const AABBTree& tree,
         const auto s = subtasks.back();
         subtasks.pop_back();
         numLeafPairs = 0;
-        const auto& aNode = tree[s.aNode];
+        const bool aLeaf = tree.isLeaf( s.aNode );
         if ( s.aNode == s.bNode )
         {
-            if ( aNode.leaf() )
+            if ( aLeaf )
                 continue;
+            const auto& aNode = tree[s.aNode];
             nextSubtasks.push_back( { aNode.l, aNode.l } );
             nextSubtasks.push_back( { aNode.r, aNode.r } );
             processChildrenPair( tree, { aNode.l, aNode.r }, processNodes, nextSubtasks, leafPairs, numLeafPairs );
         }
         else
         {
-            const auto& bNode = tree[s.bNode];
-            if ( aNode.leaf() && bNode.leaf() )
+            const bool bLeaf = tree.isLeaf( s.bNode );
+            if ( aLeaf && bLeaf )
             {
                 leafPairs[numLeafPairs++] = s;
             }
-            else if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
+            else if ( !aLeaf && ( bLeaf || tree.box( s.aNode ).volume() >= tree.box( s.bNode ).volume() ) )
             {
                 // split aNode
+                const auto& aNode = tree[s.aNode];
                 processChildrenPair( tree, { aNode.l, s.bNode }, processNodes, nextSubtasks, leafPairs, numLeafPairs );
                 processChildrenPair( tree, { aNode.r, s.bNode }, processNodes, nextSubtasks, leafPairs, numLeafPairs );
             }
             else
             {
-                assert( !bNode.leaf() );
+                assert( !bLeaf );
                 // split bNode
+                const auto& bNode = tree[s.bNode];
                 processChildrenPair( tree, { s.aNode, bNode.l }, processNodes, nextSubtasks, leafPairs, numLeafPairs );
                 processChildrenPair( tree, { s.aNode, bNode.r }, processNodes, nextSubtasks, leafPairs, numLeafPairs );
             }

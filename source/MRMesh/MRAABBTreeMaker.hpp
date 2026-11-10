@@ -1,5 +1,6 @@
 #include "MRAABBTreeMaker.h"
 #include "MRAABBTreeNode.h"
+#include "MRAABBTreeBase.h"
 #include "MRBuffer.h"
 #include "MRParallelFor.h"
 #include "MRTimer.h"
@@ -18,12 +19,14 @@ template<typename T>
 class AABBTreeMaker
 {
 public:
-    using Node = AABBTreeNode<T>;
+    using Node = typename AABBTreeNodeType<T>::type;
     using NodeVec = Vector<Node, NodeId>;
     using BoxT = typename T::BoxT;
     using V = decltype( BoxT{}.min );
 
-    NodeVec construct( Buffer<BoxedLeaf<T>> boxedLeaves, const OnLeafCallback<T> * onLeaf );
+    AABBTreeMaker( const Vector<BoxedLeaf<T>> & boxedLeaves, const OnLeafCallback & onLeaf, BoxT * nodeBoxes )
+        : boxedLeaves_( boxedLeaves ), onLeaf_( onLeaf ), nodeBoxes_( nodeBoxes ) { }
+    NodeVec construct();
 
 private:
     /// sorted instead of BoxedLeaf: smaller and compared by one coordinate
@@ -36,15 +39,20 @@ private:
         explicit Center( NoInit ) noexcept : c( noInit ) { }
     };
 
-    Buffer<BoxedLeaf<T>> boxedLeaves_;
+    const Vector<BoxedLeaf<T>> & boxedLeaves_;
+    const OnLeafCallback & onLeaf_; // a copy would reference the source FunctionRef via its template constructor
     Buffer<Center> centers_;
-    const OnLeafCallback<T> * onLeaf_ = nullptr;
     NodeVec nodes_;
+    BoxT * nodeBoxes_ = nullptr; // for the nodes without boxes
 
+    BoxT & nodeBox_( NodeId n ) { if constexpr ( nodesHaveBoxes<T> ) return nodes_[n].box; else return nodeBoxes_[int( n )]; }
+    const BoxT & nodeBox_( NodeId n ) const { if constexpr ( nodesHaveBoxes<T> ) return nodes_[n].box; else return nodeBoxes_[int( n )]; }
     int largestCentersAxis_( int first, int num ) const;
-    // fills node n with the subtree of leaves centers_[first, first + num);
-    // its two children are placed at (next, next + 1), followed by the other nodes of the left subtree, then of the right one
+    const BoxT & childBox_( NodeId c ) const { return Node::isLeaf( c ) ? boxedLeaves_[centers_[Node::leafIndex( c )].i].box : nodeBox_( c ); }
+    // fills node n with the subtree of at least two leaves centers_[first, first + num);
+    // its children that are nodes are placed at next and next + 1, followed by the other nodes of the left subtree, then of the right one
     void make_( NodeId n, int first, int num, NodeId next );
+    void makeChild_( NodeId c, int first, int num, NodeId next );
 };
 
 template<typename T>
@@ -62,54 +70,58 @@ int AABBTreeMaker<T>::largestCentersAxis_( int first, int num ) const
 }
 
 template<typename T>
+void AABBTreeMaker<T>::makeChild_( NodeId c, int first, int num, NodeId next )
+{
+    if ( num == 1 )
+        onLeaf_( first, centers_[first].i );
+    else
+        make_( c, first, num, next );
+}
+
+template<typename T>
 void AABBTreeMaker<T>::make_( NodeId n, int first, int num, NodeId next )
 {
-    auto & node = nodes_[n];
-    if ( num == 1 )
-    {
-        const auto & bl = boxedLeaves_[centers_[first].i];
-        node.setLeafId( onLeaf_ ? ( *onLeaf_ )( bl.leafId, first ) : bl.leafId, first );
-        node.box = bl.box;
-        return;
-    }
-
+    assert( num >= 2 );
     // ties are ordered by index to make the tree independent of std::nth_element
     const int axis = largestCentersAxis_( first, num );
     const int numL = num / 2;
+    const int numR = num - numL;
     std::nth_element( centers_.data() + first, centers_.data() + first + numL, centers_.data() + first + num,
         [axis]( const Center & a, const Center & b ) { return a.c[axis] < b.c[axis] || ( a.c[axis] == b.c[axis] && a.i < b.i ); } );
 
-    node.l = next;
-    node.r = next + 1;
-    const NodeId nextL = next + 2;
-    const NodeId nextR = nextL + getNumNodes( numL ) - 1;
+    auto & node = nodes_[n];
+    NodeId slot = next;
+    node.l = numL == 1 ? Node::leafChild( first ) : slot++;
+    node.r = numR == 1 ? Node::leafChild( first + numL ) : slot++;
+    const NodeId nextL = slot;
+    const NodeId nextR = numL == 1 ? nextL : nextL + getNumNodes( numL ) - 1;
     if ( num < 4096 )
     {
-        make_( node.l, first, numL, nextL );
-        make_( node.r, first + numL, num - numL, nextR );
+        makeChild_( node.l, first, numL, nextL );
+        makeChild_( node.r, first + numL, numR, nextR );
     }
     else
     {
         tbb::task_group group;
-        group.run( [&] { make_( node.r, first + numL, num - numL, nextR ); } );
-        make_( node.l, first, numL, nextL );
+        group.run( [&] { makeChild_( node.r, first + numL, numR, nextR ); } );
+        makeChild_( node.l, first, numL, nextL );
         group.wait();
     }
-    auto box = nodes_[node.l].box;
-    box.include( nodes_[node.r].box );
-    node.box = box;
+    auto box = childBox_( node.l );
+    box.include( childBox_( node.r ) );
+    nodeBox_( n ) = box;
 }
 
 } // anonymous namespace
 
 template<typename T>
-auto AABBTreeMaker<T>::construct( Buffer<BoxedLeaf<T>> boxedLeaves, const OnLeafCallback<T> * onLeaf ) -> NodeVec
+auto AABBTreeMaker<T>::construct() -> NodeVec
 {
     MR_TIMER;
 
-    boxedLeaves_ = std::move( boxedLeaves );
-    onLeaf_ = onLeaf;
     const auto numLeaves = (int)boxedLeaves_.size();
+    assert( numLeaves > 0 );
+    assert( nodesHaveBoxes<T> || nodeBoxes_ || numLeaves == 1 );
     centers_.resize( numLeaves );
     ParallelFor( 0, numLeaves, [&]( int i )
     {
@@ -118,15 +130,26 @@ auto AABBTreeMaker<T>::construct( Buffer<BoxedLeaf<T>> boxedLeaves, const OnLeaf
     } );
 
     nodes_.resizeNoInit( getNumNodes( numLeaves ) );
-    make_( NodeId{ 0 }, 0, numLeaves, NodeId{ 1 } );
+    makeChild_( NodeId{ 0 }, 0, numLeaves, NodeId{ 1 } );
 
     return std::move( nodes_ );
 }
 
 template<typename T>
-AABBTreeNodeVec<T> makeAABBTreeNodeVec( Buffer<BoxedLeaf<T>> boxedLeaves, const OnLeafCallback<T> * onLeaf )
+AABBTreeNodeVec<T> makeAABBTreeNodeVec( const Vector<BoxedLeaf<T>> & boxedLeaves, OnLeafCallback onLeaf, typename T::BoxT * nodeBoxes )
 {
-    return AABBTreeMaker<T>().construct( std::move( boxedLeaves ), onLeaf );
+    return AABBTreeMaker<T>( boxedLeaves, onLeaf, nodeBoxes ).construct();
+}
+
+template<typename T>
+void AABBTreeBase<T>::build_( Vector<BoxedLeaf<T>> leaves ) requires leavesHaveBoxes
+{
+    nodes_.clear();
+    leaves_.clear();
+    if ( leaves.empty() )
+        return;
+    leaves_.resizeNoInit( leaves.size() );
+    nodes_ = makeAABBTreeNodeVec( leaves, [&]( size_t leafIndex, size_t boxedLeafIndex ) { leaves_[leafIndex] = leaves[boxedLeafIndex]; } );
 }
 
 } //namespace MR

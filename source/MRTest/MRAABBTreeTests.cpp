@@ -3,13 +3,13 @@
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshCollide.h>
-#include <MRMesh/MRMeshIntersect.h>
-#include <MRMesh/MRLine.h>
-#include <MRMesh/MRMeshProject.h>
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRMatrix3.h>
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRBuffer.h>
+#include <MRMesh/MRMeshProject.h>
+#include <MRMesh/MRMeshIntersect.h>
+#include <MRMesh/MRLine3.h>
 #include <gtest/gtest.h>
 #include <MRPch/MRTBB.h>
 #include <algorithm>
@@ -22,18 +22,29 @@ TEST(MRMesh, AABBTree)
     Mesh sphere = makeUVSphere( 1, 8, 8 );
     AABBTree tree( sphere );
     EXPECT_EQ( tree.nodes().size(), getNumNodes( sphere.topology.numValidFaces() ) );
-    EXPECT_EQ( tree[AABBTree::rootNodeId()].box, sphere.computeBoundingBox().insignificantlyExpanded() );
-    EXPECT_TRUE( tree[AABBTree::rootNodeId()].l.valid() );
-    EXPECT_TRUE( tree[AABBTree::rootNodeId()].r.valid() );
+    EXPECT_EQ( tree.rootNodeId(), NodeId( 0 ) );
+    EXPECT_EQ( tree.box( tree.rootNodeId() ), sphere.computeBoundingBox().insignificantlyExpanded() );
+    EXPECT_EQ( tree.boxes().size(), tree.numLeaves() + tree.nodes().size() );
+    EXPECT_EQ( tree.getBoundingBox(), sphere.computeBoundingBox().insignificantlyExpanded() );
+    EXPECT_FALSE( tree.isLeaf( tree[tree.rootNodeId()].l ) );
+    EXPECT_FALSE( tree.isLeaf( tree[tree.rootNodeId()].r ) );
+    EXPECT_EQ( tree.leaves().size(), sphere.topology.numValidFaces() );
 
-    assert( !tree.nodes().empty() );
+    assert( !tree.empty() );
     auto m = std::move( tree );
-    assert( tree.nodes().empty() );
+    assert( tree.empty() );
 
     FaceBitSet fs;
     fs.autoResizeSet( 1_f );
     AABBTree smallerTree( { sphere, &fs } );
-    EXPECT_EQ( smallerTree.nodes().size(), 1 );
+    EXPECT_EQ( smallerTree.nodes().size(), 0 );
+    EXPECT_EQ( smallerTree.numLeaves(), 1 );
+    ASSERT_TRUE( smallerTree.isLeaf( smallerTree.rootNodeId() ) );
+    EXPECT_EQ( smallerTree.leafId( smallerTree.rootNodeId() ), 1_f );
+    EXPECT_EQ( smallerTree.getBoundingBox(), sphere.computeBoundingBox( &fs ).insignificantlyExpanded() );
+    EXPECT_EQ( smallerTree.leafVerts( smallerTree.rootNodeId() ), sphere.topology.getTriVerts( 1_f ) );
+    EXPECT_EQ( smallerTree.getSubtreeLeaves( smallerTree.rootNodeId() ), fs );
+    EXPECT_EQ( smallerTree.getSubtrees( 4 ), std::vector<NodeId>{ smallerTree.rootNodeId() } );
 }
 
 TEST(MRMesh, ProjectionToEmptyMesh)
@@ -43,39 +54,76 @@ TEST(MRMesh, ProjectionToEmptyMesh)
     EXPECT_FALSE( hasProjection );
 }
 
-// checks that every valid face of the mesh is in exactly one leaf, which box contains the face,
-// and the box of every other node contains the boxes of its children having larger ids
+// checks that every valid face of the mesh is in exactly one leaf with the vertices of the face,
+// and the box of every node contains the boxes of its children having larger ids
 static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
 {
     const auto & nodes = tree.nodes();
     EXPECT_EQ( tree.numLeaves(), size_t( mesh.topology.numValidFaces() ) );
+    EXPECT_EQ( tree.boxes().size(), tree.numLeaves() + nodes.size() );
     FaceBitSet leaves( mesh.topology.faceSize() );
-    std::vector<bool> leafPoses( tree.leafTriangulation().size() );
+    auto checkLeaf = [&]( NodeId c )
+    {
+        const auto f = tree.leafId( c );
+        ASSERT_TRUE( mesh.topology.hasFace( f ) );
+        EXPECT_FALSE( leaves.test_set( f ) );
+        EXPECT_EQ( tree.leafVerts( c ), mesh.topology.getTriVerts( f ) );
+        Box3f box;
+        for ( auto v : mesh.topology.getTriVerts( f ) )
+            box.include( mesh.points[v] );
+        EXPECT_EQ( tree.leafBox( c ), box.insignificantlyExpanded() );
+    };
+    if ( nodes.empty() && !tree.empty() )
+        checkLeaf( tree.rootNodeId() );
     for ( NodeId n( 0 ); n < nodes.size(); ++n )
     {
         const auto & node = nodes[n];
-        if ( node.leaf() )
+        for ( auto c : { node.l, node.r } )
         {
-            const auto f = node.leafId();
-            ASSERT_TRUE( mesh.topology.hasFace( f ) );
-            EXPECT_FALSE( leaves.test_set( f ) );
-            ASSERT_TRUE( node.leafPos() >= 0 && node.leafPos() < leafPoses.size() );
-            EXPECT_FALSE( leafPoses[node.leafPos()] );
-            leafPoses[node.leafPos()] = true;
-            EXPECT_EQ( tree.leafTriVerts( node ), mesh.topology.getTriVerts( f ) );
-            Vector3f a, b, c;
-            mesh.getTriPoints( f, a, b, c );
-            EXPECT_TRUE( node.box.contains( a ) && node.box.contains( b ) && node.box.contains( c ) );
-        }
-        else
-        {
-            ASSERT_TRUE( node.l > n && node.r > n && node.l < nodes.size() && node.r < nodes.size() );
-            EXPECT_TRUE( node.box.contains( nodes[node.l].box ) );
-            EXPECT_TRUE( node.box.contains( nodes[node.r].box ) );
+            if ( tree.isLeaf( c ) )
+                checkLeaf( c );
+            else
+                ASSERT_TRUE( c > n && c < nodes.size() );
+            EXPECT_TRUE( tree.box( n ).contains( tree.box( c ) ) );
         }
     }
     EXPECT_EQ( leaves.count(), size_t( mesh.topology.numValidFaces() ) );
-    EXPECT_EQ( leafPoses.size(), leaves.count() );
+}
+
+TEST( MRMesh, AABBTreeRefitAndPack )
+{
+    Mesh mesh = makeSphere( { .radius = 1.0f, .numMeshVertices = 1000 } );
+    (void)mesh.getAABBTree();
+
+    // move some vertices and refit the tree
+    VertBitSet changed( mesh.topology.vertSize() );
+    for ( VertId v( 0 ); v < mesh.topology.vertSize(); v += 7 )
+    {
+        mesh.points[v] *= 1.2f;
+        changed.set( v );
+    }
+    mesh.updateCaches( &changed );
+    expectValidTree( mesh.getAABBTree(), mesh );
+    EXPECT_EQ( mesh.getAABBTree().getBoundingBox(), AABBTree( mesh ).getBoundingBox() );
+
+    // delete some faces and pack the mesh preserving the tree
+    FaceBitSet del( mesh.topology.faceSize() );
+    for ( FaceId f( 0 ); f < mesh.topology.faceSize(); f += 5 )
+        del.set( f );
+    mesh.topology.deleteFaces( del );
+    mesh.invalidateCaches();
+    (void)mesh.getAABBTree();
+    mesh.packOptimally( true );
+    const auto & tree = mesh.getAABBTree();
+    expectValidTree( tree, mesh );
+    EXPECT_EQ( tree.numLeaves(), mesh.topology.faceSize() );
+
+    // the faces are in the order of the leaves now
+    AABBTree::LeafBMap map;
+    map.b.resize( mesh.topology.faceSize() );
+    tree.getLeafOrder( map );
+    for ( FaceId f( 0 ); f < mesh.topology.faceSize(); ++f )
+        EXPECT_EQ( map.b[f], f );
 }
 
 TEST( MRMesh, AABBTreeAddSplitFaces )
@@ -126,22 +174,6 @@ TEST( MRMesh, AABBTreeAddSplitFaces )
     EXPECT_GT( numWithNewFaces, 0 );
 }
 
-TEST( MRMesh, AABBTreeTriangulation )
-{
-    Mesh mesh = makeUVSphere( 1, 16, 16 );
-    FaceBitSet del( mesh.topology.faceSize() );
-    for ( FaceId f = 0_f; f < del.size(); f += 7 )
-        del.set( f );
-    mesh.deleteFaces( del );
-    expectValidTree( mesh.getAABBTree(), mesh );
-
-    // the tree is kept, and its triangulation is renumbered
-    mesh.packOptimally( true );
-    ASSERT_TRUE( mesh.getAABBTreeNotCreate() );
-    expectValidTree( *mesh.getAABBTreeNotCreate(), mesh );
-
-}
-
 TEST( MRMesh, AABBTreeFlippedOrientation )
 {
     Mesh mesh = makeSphere( { .radius = 1.0f, .numMeshVertices = 200 } );
@@ -152,17 +184,14 @@ TEST( MRMesh, AABBTreeFlippedOrientation )
     (void)mesh.getAABBTree();
     auto expectRightTriPoints = [&]
     {
-        ASSERT_TRUE( mesh.getAABBTreeNotCreate() );
-        expectValidTree( *mesh.getAABBTreeNotCreate(), mesh );
+        expectValidTree( mesh.getAABBTree(), mesh );
         for ( const Vector3f pt : { Vector3f( 0.3f, 0.4f, 2.0f ), Vector3f( 3.3f, 0.4f, 2.0f ) } )
         {
             const auto proj = findProjection( pt, mesh );
             ASSERT_TRUE( proj.proj.face );
-            EXPECT_EQ( mesh.topology.left( proj.mtp.e ), proj.proj.face );
             EXPECT_LT( ( mesh.triPoint( proj.mtp ) - proj.proj.point ).length(), 1e-5f );
             const auto hit = rayMeshIntersect( mesh, Line3f( pt, Vector3f( 0.0f, 0.0f, -1.0f ) ) );
             ASSERT_TRUE( hit.proj.face );
-            EXPECT_EQ( mesh.topology.left( hit.mtp.e ), hit.proj.face );
             EXPECT_LT( ( mesh.triPoint( hit.mtp ) - hit.proj.point ).length(), 1e-5f );
         }
     };

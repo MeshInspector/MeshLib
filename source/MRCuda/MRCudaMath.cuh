@@ -81,23 +81,66 @@ struct IntersectionPrecomputes
     float Sx, Sy, Sz;
 };
 
-// struct simular to AABBTreeNode<LineTreeTraits<Vector2f>> with minimal needed functions
+// the same as AABBTreeNode<LineTreeTraits<Vector2f>>: each child is either another node (non-negative) or a leaf (encoded as ~leafIndex)
 struct Node2
 {
     Box2 box;
     int l, r;
+};
 
-    __device__ bool leaf() const
+// the same as AABBTreeNode of the trees of 3D polylines: each child is either another node (non-negative) or a leaf (encoded as ~leafIndex)
+struct TreeNode3
+{
+    Box3 box;
+    int l, r;
+};
+
+// the same as MR::FaceTreeNode: only the children, the boxes are in MeshTree::boxes
+struct MeshTreeNode
+{
+    int l, r;
+};
+
+// the same as MR::FaceLeaf
+struct FaceLeaf
+{
+    int face;
+    int verts[3];
+};
+
+// the same as BoxedLeaf<LineTreeTraits<Vector2f>>: the box is stored by floats, because float2 would align it by 8 bytes
+struct LineLeaf2
+{
+    int line;
+    float minX, minY, maxX, maxY;
+
+    __device__ Box2 box() const
     {
-        return r < 0;
-    }
-    __device__ int leafId() const
-    {
-        return l;
+        return { { minX, minY }, { maxX, maxY } };
     }
 };
 
-// struct simular to AABBTreeNode<FaceTreeTraits3> with minimal needed functions
+// the same as BoxedLeaf<LineTreeTraits<Vector3f>>
+struct LineLeaf3
+{
+    int line;
+    Box3 box;
+};
+
+// AABB tree of a mesh as on CPU: nodes, the boxes of nodes and leaves, and the leaves with the vertices of their triangles
+struct MeshTree
+{
+    const MeshTreeNode* __restrict__ nodes = nullptr;
+    const Box3* __restrict__ boxes = nullptr; ///< AABBTree::boxes() offset by the number of leaves: boxes[n] for a node or a leaf n
+    const FaceLeaf* __restrict__ leaves = nullptr;
+    int root = 0; ///< 0, or ~0 if the tree has only one leaf
+
+    __device__ static bool isLeaf( int n ) { return n < 0; }
+    __device__ const Box3& box( int n ) const { return boxes[n]; }
+    __device__ const FaceLeaf& leaf( int n ) const { return leaves[~n]; }
+};
+
+// AABB tree of points with leaf nodes, similar to AABBTreeNode<ObjTreeTraits> with minimal needed functions
 struct Node3
 {
     Box3 box;
@@ -308,10 +351,10 @@ __device__ inline TriIntersectResult rayTriangleIntersect(const float* oriA, con
     return res;
 }
 
-__device__ inline MeshIntersectionResult rayMeshIntersect( const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, 
+__device__ inline MeshIntersectionResult rayMeshIntersect( const MeshTree& tree, const float3* meshPoints,
                                                            const float3& rayOrigin, float rayStart, float rayEnd, const IntersectionPrecomputes& prec, bool closestIntersect = true )
 {
-    const Box3& box = nodes[0].box;
+    const Box3& box = tree.box( tree.root );
     MeshIntersectionResult res;
 
     float start = rayStart;
@@ -332,7 +375,7 @@ __device__ inline MeshIntersectionResult rayMeshIntersect( const Node3* nodes, c
         subtasks.push( { n, rayStart } );
     };
 
-    addSubTask( 0, rayStart );
+    addSubTask( tree.root, rayStart );
 
     float baryA = 0;
     float baryB = 0;
@@ -344,10 +387,11 @@ __device__ inline MeshIntersectionResult rayMeshIntersect( const Node3* nodes, c
 
         if ( s.rayStart < rayEnd )
         {
-            if ( nodes[s.n].leaf() )
+            if ( MeshTree::isLeaf( s.n ) )
             {
-                auto face = nodes[s.n].leafId();
-                const auto& vs = faces[face].verts;
+                const auto& leaf = tree.leaf( s.n );
+                const auto face = leaf.face;
+                const auto& vs = leaf.verts;
                 float3 a = meshPoints[vs[0]] - rayOrigin;
                 float3 b = meshPoints[vs[1]] - rayOrigin;
                 float3 c = meshPoints[vs[2]] - rayOrigin;
@@ -382,32 +426,33 @@ __device__ inline MeshIntersectionResult rayMeshIntersect( const Node3* nodes, c
             {
                 float lStart = rayStart, lEnd = rayEnd;
                 float rStart = rayStart, rEnd = rayEnd;
+                const auto& node = tree.nodes[s.n];
 
-                if ( rayBoxIntersect( nodes[nodes[s.n].l].box, rayOrigin, lStart, lEnd, prec ) )
+                if ( rayBoxIntersect( tree.box( node.l ), rayOrigin, lStart, lEnd, prec ) )
                 {
-                    if ( rayBoxIntersect( nodes[nodes[s.n].r].box, rayOrigin, rStart, rEnd, prec ) )
+                    if ( rayBoxIntersect( tree.box( node.r ), rayOrigin, rStart, rEnd, prec ) )
                     {
                         if ( lStart > rStart )
                         {
-                            addSubTask( nodes[s.n].l, lStart );
-                            addSubTask( nodes[s.n].r, rStart );
+                            addSubTask( node.l, lStart );
+                            addSubTask( node.r, rStart );
                         }
                         else
                         {
-                            addSubTask( nodes[s.n].r, rStart );
-                            addSubTask( nodes[s.n].l, lStart );
+                            addSubTask( node.r, rStart );
+                            addSubTask( node.l, lStart );
                         }
                     }
                     else
                     {
-                        addSubTask( nodes[s.n].l, lStart );
+                        addSubTask( node.l, lStart );
                     }
                 }
                 else
                 {
-                    if ( rayBoxIntersect( nodes[nodes[s.n].r].box, rayOrigin, rStart, rEnd, prec ) )
+                    if ( rayBoxIntersect( tree.box( node.r ), rayOrigin, rStart, rEnd, prec ) )
                     {
-                        addSubTask( nodes[s.n].r, rStart );
+                        addSubTask( node.r, rStart );
                     }
                 }
             }

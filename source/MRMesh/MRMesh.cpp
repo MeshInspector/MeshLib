@@ -502,7 +502,7 @@ Expected<PackMapping> Mesh::packOptimally( bool preserveAABBTree, ProgressCallba
         return unexpected( std::move( r.error() ) );
 
     if ( preserveAABBTree )
-        AABBTreeOwner_.update( [this]( AABBTree & t ) { t.updateTriangulation( topology ); } );
+        AABBTreeOwner_.update( [this]( AABBTree & t ) { t.updateLeafVerts( topology ); } );
 
     return map;
 }

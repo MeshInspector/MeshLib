@@ -11,6 +11,7 @@
 #include <atomic>
 #include <cstring>
 #include <cstdlib>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 
@@ -789,6 +790,19 @@ void setupLoggerByDefault( const std::function<void()>& customLogSinkAdder )
     logger->flush_on( minLevel );
 
     spdlog::info( "MR Version info: {}", GetMRVersionString() );
+
+    // the times in the log are local, so write the offset from UTC to compare logs made in different places
+    if ( tm.tm_mday > 0 )
+    {
+        auto tmAsUtc = tm;
+#ifdef _WIN32
+        const auto asUtc = _mkgmtime( &tmAsUtc );
+#else
+        const auto asUtc = timegm( &tmAsUtc );
+#endif
+        const int offsetMin = int( std::difftime( asUtc, t ) / 60 );
+        spdlog::info( "Local time zone: UTC{}{:02}:{:02}", offsetMin < 0 ? '-' : '+', std::abs( offsetMin ) / 60, std::abs( offsetMin ) % 60 );
+    }
 }
 
 } //namespace MR

@@ -1126,6 +1126,44 @@ auto MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSe
     return vacant;
 }
 
+void MeshTopology::deleteFacesNoVacant( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
+{
+    // the parallel deletion of deleteFaces overtakes the serial one below at the number of faces inversely proportional to the number of threads
+    const auto maxSerialFaces = faceSize() / ( 4 * tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) );
+    if ( fs.countBitsAndBlocks( maxSerialFaces ).bits > maxSerialFaces )
+    {
+        deleteFaces( fs, keepEdges );
+        return;
+    }
+    for ( auto f : fs )
+    {
+        auto e = edgeWithLeft( f );
+        if ( !e )
+            continue; // the face is deleted already
+        setLeft( e, FaceId{} );
+        for ( int i = getLeftDegree( e ); i > 0; --i )
+        {
+            const auto e1 = e;
+            e = prev( e.sym() );
+            if ( right( e1 ) || ( keepEdges && keepEdges->test( e1 ) ) )
+                continue;
+            // make e1 lone, deleting its end vertices that have no other edge
+            for ( auto x : { e1, e1.sym() } )
+            {
+                if ( prev( x ) == x )
+                {
+                    setOrg( x, VertId{} );
+                    continue;
+                }
+                // as in deleteFaces, the vertex passes to its next edge
+                if ( auto v = org( x ); v && edgePerVertex_[v] == x )
+                    edgePerVertex_[v] = next( x );
+                splice( prev( x ), x );
+            }
+        }
+    }
+}
+
 template<typename FM, typename VM, typename WEM>
 void MeshTopology::translateNoFlip_( HalfEdgeRecord & r, const FM & fmap, const VM & vmap, const WEM & emap ) const
 {

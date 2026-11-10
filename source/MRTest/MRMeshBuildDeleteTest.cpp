@@ -6,6 +6,8 @@
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRExpandShrink.h>
 #include <MRMesh/MRRegionBoundary.h>
+#include <MRMesh/MRMakeSphereMesh.h>
+#include <MRMesh/MRRingIterator.h>
 #include <gtest/gtest.h>
 
 namespace MR
@@ -195,6 +197,82 @@ TEST(MRMesh, FlipEdge)
     EXPECT_TRUE( topology.isLeftTri( e.sym() ) );
     EXPECT_NE( topology.edgeWithOrg( VertId{0} ), e );
     EXPECT_NE( topology.edgeWithOrg( VertId{2} ), e.sym() );
+}
+
+// the serial deletion of few faces must give what the parallel deletion of deleteFaces gives
+TEST( MRMesh, DeleteFacesNoVacant )
+{
+    // fine enough (32768 faces) that the sets below, of up to 11 faces, are deleted serially:
+    // at most 1/(4T) of the faces with T threads, up to about 700 threads
+    MeshTopology bulk = makeUVSphere( 1, 128, 128 ).topology;
+    MeshTopology serial = bulk;
+    // the topologies with the same edges stored for vertices and faces, which operator == does not compare
+    auto same = [&]
+    {
+        for ( auto v : bulk.getValidVerts() )
+            if ( bulk.edgeWithOrg( v ) != serial.edgeWithOrg( v ) )
+                return false;
+        for ( auto f : bulk.getValidFaces() )
+            if ( bulk.edgeWithLeft( f ) != serial.edgeWithLeft( f ) )
+                return false;
+        return bulk == serial;
+    };
+    auto del = [&]( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr )
+    {
+        bulk.deleteFaces( fs, keepEdges );
+        serial.deleteFacesNoVacant( fs, keepEdges );
+    };
+    auto facesAround = [&]( VertId v )
+    {
+        FaceBitSet res( serial.faceSize() );
+        for ( auto e : orgRing( serial, v ) )
+            if ( auto f = serial.left( e ) )
+                res.set( f );
+        return res;
+    };
+
+    // all faces of a vertex: the vertex and its edges are deleted
+    const auto v0 = 5000_v;
+    const auto v1 = serial.dest( serial.edgeWithOrg( v0 ) );
+    auto fs = facesAround( v0 );
+    EXPECT_EQ( fs.count(), 6u );
+    del( fs );
+    EXPECT_FALSE( serial.hasVert( v0 ) );
+    EXPECT_TRUE( same() );
+
+    // faces at the hole boundary, together with deleted faces and a face beyond the end
+    fs |= facesAround( v1 );
+    fs.autoResizeSet( FaceId( serial.faceSize() + 50 ) );
+    del( fs );
+    EXPECT_FALSE( serial.hasVert( v1 ) );
+    EXPECT_TRUE( same() );
+
+    // all faces of a vertex with their outer edges kept, then the faces on the other side of the kept edges
+    const auto v2 = 9000_v;
+    fs = facesAround( v2 );
+    UndirectedEdgeBitSet keepEdges( serial.undirectedEdgeSize() );
+    FaceBitSet outerFaces( serial.faceSize() );
+    for ( auto e : orgRing( serial, v2 ) )
+    {
+        const auto outer = serial.prev( e.sym() );
+        keepEdges.set( outer );
+        outerFaces.set( serial.right( outer ) );
+    }
+    del( fs, &keepEdges );
+    EXPECT_FALSE( serial.hasVert( v2 ) );
+    EXPECT_TRUE( same() );
+    del( outerFaces, &keepEdges );
+    const EdgeId kept( keepEdges.find_first() );
+    EXPECT_FALSE( serial.isLoneEdge( kept ) );
+    EXPECT_FALSE( serial.left( kept ) || serial.right( kept ) );
+    EXPECT_TRUE( same() );
+
+    // the kept edges without faces are made lone by the parallel deletion of any faces, and stay after the serial one
+    del( facesAround( 13000_v ) );
+    EXPECT_TRUE( bulk.isLoneEdge( kept ) );
+    EXPECT_FALSE( serial.isLoneEdge( kept ) );
+    serial.deleteFaces( {} );
+    EXPECT_TRUE( same() );
 }
 
 } //namespace MR

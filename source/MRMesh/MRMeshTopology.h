@@ -283,6 +283,10 @@ public:
     /// return bit sets of all vacant elements in this topology after deletion
     MRMESH_API VacantElements deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
+    /// same as \ref deleteFaces, but returns nothing, so few faces are deleted in the time proportional to their number, not to the mesh size;
+    /// in that case the edges having no left and no right face before the call stay with their vertices, while deleteFaces makes them lone
+    MRMESH_API void deleteFacesNoVacant( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
+
     /// deletes the given valid faces (in parallel), keeping all their edges and vertices, which get no face on that side
     MRMESH_API void deleteFacesKeepEdges( const FaceBitSet & fs );
 

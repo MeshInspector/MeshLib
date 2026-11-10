@@ -8,6 +8,10 @@
 #include "MRMeshRelax.h"
 #include "MRMeshComponents.h"
 #include "MRMeshSubdivide.h"
+#include "MRMeshBoolean.h"
+#include "MRRingIterator.h"
+#include "MRParallelFor.h"
+#include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
 #include "MRBox.h"
 #include "MRMapOrHashMap.h"
@@ -105,12 +109,117 @@ Expected<void> fixOld( Mesh& mesh, const Settings& settings )
     return {};
 }
 
+// fixes the self-intersections of a connected mesh by selfBoolean, which cuts only the contours not reaching a boundary: so the holes
+// that they can reach are filled first, and the fill faces are removed after the cut together with all parts but the largest one
+static Expected<Mesh> fixComponentBySelfBoolean( Mesh mesh )
+{
+    // only the holes with self-intersecting faces along them are filled, then the holes that the new fills reach, and so on;
+    // a hole is filled with the triangles from its edges to a vertex away from it and from the faces along it (a fill towards them
+    // would cut them off): where the intersecting parts of the mesh reach the holes,
+    // the holes overlap or cross themselves, and such fills cross one another and themselves along lines, while the fills
+    // in the surfaces of the holes would overlap
+    FaceBitSet fill;
+    for ( auto holes = mesh.topology.findHoleRepresentiveEdges(); !holes.empty(); )
+    {
+        const auto bad = *findSelfCollidingTrianglesBS( mesh );
+        const auto numHoles = holes.size();
+        std::erase_if( holes, [&] ( EdgeId e )
+        {
+            bool reached = false;
+            Vector3f away; // from the faces along the hole
+            for ( auto x : leftRing( mesh.topology, e ) )
+            {
+                const auto r = mesh.topology.right( x );
+                reached = reached || contains( bad, r );
+                away += mesh.edgeCenter( x ) - mesh.triCenter( r );
+            }
+            if ( reached )
+            {
+                // as far from the hole as the radius of a circle with its perimeter, on the side without the faces
+                auto shift = Vector3f( mesh.holeDirArea( e ).normalized() * ( mesh.holePerimeter( e ) / ( 2 * PI ) ) );
+                if ( dot( shift, away ) < 0 )
+                    shift = -shift;
+                mesh.points[fillHoleTrivially( mesh, e, &fill )] += shift;
+            }
+            return reached;
+        } );
+        if ( holes.size() == numHoles )
+            break;
+        mesh.invalidateCaches();
+    }
+
+    FaceMap new2Old;
+    auto res = selfBoolean( mesh, &new2Old );
+    if ( !res )
+        return res;
+    const auto& valid = res->topology.getValidFaces();
+    auto del = valid - MeshComponents::getLargestComponent( *res );
+    for ( auto f : valid )
+        if ( fill.test( new2Old[f] ) )
+            del.set( f );
+    res->deleteFaces( del );
+    return res;
+}
+
+// replaces every connected component of the mesh that has self-intersections with its part fixed by selfBoolean
+static Expected<void> fixBySelfBoolean( Mesh& mesh, const ProgressCallback& cb )
+{
+    MR_TIMER;
+    const auto compsMap = MeshComponents::getAllComponentsMap( mesh );
+    const auto& compMap = compsMap.first;
+    const auto numComps = compsMap.second;
+    auto bad = findSelfCollidingTrianglesBS( mesh, subprogress( cb, 0.0f, 0.2f ), &compMap );
+    if ( !bad )
+        return unexpected( std::move( bad.error() ) );
+    if ( bad->none() )
+        return {};
+    bad->resize( mesh.topology.faceSize() );
+
+    // all faces of the components with self-intersections
+    BitSet badComps( numComps );
+    for ( auto f : *bad )
+        badComps.set( compMap[f] );
+    BitSetParallelFor( mesh.topology.getValidFaces(), [&] ( FaceId f )
+    {
+        if ( badComps.test( compMap[f] ) )
+            bad->set( f );
+    } );
+    const auto comps = MeshComponents::getAllComponentsFaces( compMap, numComps, *bad );
+    std::vector<RegionId> ids;
+    for ( auto c : badComps )
+        ids.emplace_back( int( c ) );
+
+    std::vector<Expected<Mesh>> fixed( ids.size() );
+    if ( !ParallelFor( fixed, [&] ( size_t i )
+    {
+        FaceBitSet compFaces( mesh.topology.faceSize() );
+        comps.setComponentBits( ids[i], compFaces );
+        fixed[i] = fixComponentBySelfBoolean( mesh.cloneRegion( compFaces ) );
+    }, subprogress( cb, 0.2f, 0.9f ) ) )
+        return unexpectedOperationCanceled();
+    for ( auto& f : fixed )
+        if ( !f )
+            return unexpected( std::move( f.error() ) );
+
+    // the mesh is changed only after all its components are fixed
+    if ( bad->count() == mesh.topology.numValidFaces() )
+        mesh = {};
+    else
+        mesh.deleteFaces( *bad );
+    for ( const auto& f : fixed )
+        mesh.addMesh( *f );
+    return {};
+}
+
 Expected<void> fix( Mesh& mesh, const Settings& settings )
 {
     MR_TIMER;
 
     if ( !reportProgress( settings.callback, 0.0f ) )
         return unexpectedOperationCanceled();
+
+    if ( settings.method == Settings::Method::SelfBoolean )
+        return fixBySelfBoolean( mesh, settings.callback );
 
     if ( settings.touchIsIntersection )
     {

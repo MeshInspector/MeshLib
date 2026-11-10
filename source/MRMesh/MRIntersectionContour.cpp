@@ -223,7 +223,9 @@ Vector<ContourInfo> calcContoursInfo( const AccumulativeSet& accumulativeSet )
             queuedRecords.reset( nextIndex );
 
             auto next = accumulativeSet.nList[nextIndex].next;
-            if ( next == -1 )
+            // two records can have the same next one if the intersections are inconsistent (as of a face that is not a triangle), so a walk
+            // can reach a record that this contour or an earlier one has taken, never to return to its start: the contour ends there as an open one
+            if ( next == -1 || ( next != int( currInfo.startIndex ) && !queuedRecords.test( next ) ) )
             {
                 closed = false;
                 break;

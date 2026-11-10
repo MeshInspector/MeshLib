@@ -173,7 +173,6 @@ struct JoinedSelfLoops
 };
 Vector<JoinedSelfLoops> findSelfContoursMapping( const ContinuousContours& contours )
 {
-    assert( contours.size() % 2 == 0 );
     Vector<JoinedSelfLoops> holePairs( contours.size() / 2 );
     BitSet visitedConts( contours.size(), true );
     int i = 0;
@@ -208,6 +207,7 @@ Vector<JoinedSelfLoops> findSelfContoursMapping( const ContinuousContours& conto
             }
         } );
     }
+    holePairs.resize( i ); // fewer if some contours have no pair
     return holePairs;
 }
 }
@@ -247,6 +247,9 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh, FaceMap* outNew2Old )
     removeTwoPointLoops( contours ); // both contours of a pair together, as they have the same points
 
     auto holePairs = detail::findSelfContoursMapping( contours );
+    // every contour is found twice, from either sheet, unless the intersections are inconsistent (as of a face that is not a triangle)
+    if ( 2 * holePairs.size() != contours.size() )
+        return unexpected( "Self-Boolean cannot pair the intersection contours" );
     auto intContours = getOneMeshSelfIntersectionContours( mesh, contours, converters );
     // what the pairs below do with the contours: the first contour of a pair is closed through the vertices sv and fv and followed by
     // the second one, which is dropped then; or both contours of a pair are dropped

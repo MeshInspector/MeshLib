@@ -1,4 +1,5 @@
 #include <MRMesh/MRRegionBoundary.h>
+#include <MRMesh/MRMeshBoundary.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshTopology.h>
 #include <MRMesh/MRMakeSphereMesh.h>
@@ -30,6 +31,43 @@ TEST(MRMesh, findLeftBoundary)
             EXPECT_NE( sphere.topology.right( e ), 0_f );
         }
     }
+}
+
+TEST( MRMesh, sameBoundary )
+{
+    const Mesh sphere = makeUVSphere( 1, 8, 8 );
+    EXPECT_TRUE( sameBoundary( sphere, sphere ) );
+
+    FaceBitSet cap( sphere.topology.faceSize() );
+    for ( auto f : sphere.topology.getValidFaces() )
+        if ( sphere.triCenter( f ).z > 0.5f )
+            cap.set( f );
+    ASSERT_TRUE( cap.any() );
+
+    Mesh open = sphere;
+    open.deleteFaces( cap );
+    EXPECT_FALSE( sameBoundary( sphere, open ) );
+
+    // other ids of vertices and edges
+    Mesh packed = open;
+    packed.pack();
+    EXPECT_TRUE( sameBoundary( open, packed ) );
+
+    // the complementary part has the same edges on the boundary but the hole on the other side
+    Mesh capMesh = sphere;
+    capMesh.deleteFaces( sphere.topology.getValidFaces() - cap );
+    EXPECT_FALSE( sameBoundary( open, capMesh ) );
+    capMesh.flipOrientation();
+    EXPECT_TRUE( sameBoundary( open, capMesh ) );
+
+    // one more hole
+    Mesh twoHoles = open;
+    FaceBitSet bottom( sphere.topology.faceSize() );
+    for ( auto f : sphere.topology.getValidFaces() )
+        if ( sphere.triCenter( f ).z < -0.5f )
+            bottom.set( f );
+    twoHoles.deleteFaces( bottom );
+    EXPECT_FALSE( sameBoundary( open, twoHoles ) );
 }
 
 TEST( MRMesh, findRightBoundary )

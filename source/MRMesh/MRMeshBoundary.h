@@ -14,4 +14,10 @@ namespace MR
 /// \ingroup MeshAlgorithmGroup
 MRMESH_API void straightenBoundary( Mesh & mesh, EdgeId bd, float minNeiNormalsDot, float maxTriAspectRatio, FaceBitSet* newFaces = nullptr );
 
+/// returns true if two meshes have exactly the same boundary: every boundary edge of one mesh has a boundary edge in the other mesh
+/// with the same coordinates of origin and destination and with the hole on the same side;
+/// ids of vertices and edges, and the triangles not touching the boundary can be different
+/// \ingroup MeshAlgorithmGroup
+[[nodiscard]] MRMESH_API bool sameBoundary( const Mesh & a, const Mesh & b );
+
 } // namespace MR

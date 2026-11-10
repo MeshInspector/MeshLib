@@ -469,6 +469,7 @@ void filterReservedCmdArgs( std::vector<std::string>& args )
     bool nextW{ false };
     bool nextH{ false };
     bool nextFPS{ false };
+    bool nextLanguage{ false };
     std::vector<int> indicesToRemove;
     indicesToRemove.push_back( 0 );
     for ( int i = 1; i < args.size(); ++i )
@@ -488,6 +489,11 @@ void filterReservedCmdArgs( std::vector<std::string>& args )
         else if ( nextFPS )
         {
             nextFPS = false;
+            reserved = true;
+        }
+        else if ( nextLanguage )
+        {
+            nextLanguage = false;
             reserved = true;
         }
         else if (
@@ -528,6 +534,11 @@ void filterReservedCmdArgs( std::vector<std::string>& args )
             nextFPS = true;
             reserved = true;
         }
+        else if ( flag == "-language" )
+        {
+            nextLanguage = true;
+            reserved = true;
+        }
 
         if ( reserved )
             indicesToRemove.push_back( i );
@@ -541,6 +552,7 @@ void Viewer::parseLaunchParams( LaunchParams& params )
     bool nextW{ false };
     bool nextH{ false };
     bool nextFPS{ false };
+    bool nextLanguage{ false };
     for ( int i = 1; i < params.argc; ++i )
     {
         std::string flag( params.argv[i] );
@@ -563,6 +575,11 @@ void Viewer::parseLaunchParams( LaunchParams& params )
                 params.isAnimating = true;
                 params.animationMaxFps = fps;
             }
+        }
+        else if ( nextLanguage )
+        {
+            nextLanguage = false;
+            params.language = flag;
         }
         else if ( flag == "-noWindow" )
         {
@@ -611,6 +628,8 @@ void Viewer::parseLaunchParams( LaunchParams& params )
             nextH = true;
         else if ( flag == "-animateFPS" )
             nextFPS = true;
+        else if ( flag == "-language" )
+            nextLanguage = true;
         else if ( flag == "-unloadPluginsAtEnd" )
             params.unloadPluginsAtEnd = true;
         else if ( flag == "-noMSAA" )

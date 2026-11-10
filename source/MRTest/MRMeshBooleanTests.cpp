@@ -389,6 +389,23 @@ TEST( MRMesh, BooleanPreCutExactCut )
     }
 }
 
+// checks the faces map of selfBoolean: a face of the result with an id of the input mesh is that face left whole, and the other faces
+// are the parts of the input faces missing in the result; the parts of every input face make its area together
+static void expectSelfBooleanFaceMap( const Mesh& mesh, const Mesh& res, const FaceMap& new2Old )
+{
+    Vector<double, FaceId> partsArea( mesh.topology.faceSize(), 0. );
+    for ( auto f : res.topology.getValidFaces() )
+    {
+        ASSERT_TRUE( f < new2Old.size() );
+        const auto old = new2Old[f];
+        ASSERT_TRUE( mesh.topology.hasFace( old ) );
+        EXPECT_TRUE( f < mesh.topology.faceSize() ? old == f : !res.topology.hasFace( old ) );
+        partsArea[old] += res.area( f );
+    }
+    for ( auto f : mesh.topology.getValidFaces() )
+        EXPECT_NEAR( partsArea[f], mesh.area( f ), 1e-4 * mesh.area( f ) );
+}
+
 // selfBoolean of a mesh of two parts, a cube and a small sphere piercing a big triangle of it without crossing its edges
 // (a lone contour); the parts are only reconnected along their intersection, so the result keeps the sum of their volumes
 TEST( MRMesh, SelfBooleanLoneContour )
@@ -399,11 +416,19 @@ TEST( MRMesh, SelfBooleanLoneContour )
     const double volume = mesh.volume() + sphere.volume();
     mesh.addMesh( sphere );
 
-    const auto res = selfBoolean( mesh );
+    FaceMap new2Old;
+    const auto res = selfBoolean( mesh, &new2Old );
     ASSERT_TRUE( res.has_value() ) << res.error();
     EXPECT_TRUE( res->topology.checkValidity() );
     EXPECT_EQ( res->topology.findNumHoles(), 0 );
     EXPECT_NEAR( res->volume(), volume, 1e-5 * volume );
+    expectSelfBooleanFaceMap( mesh, *res, new2Old );
+
+    // a mesh without self-intersections stays as it is
+    const auto same = selfBoolean( sphere, &new2Old );
+    ASSERT_TRUE( same.has_value() ) << same.error();
+    EXPECT_EQ( same->topology, sphere.topology );
+    expectSelfBooleanFaceMap( sphere, *same, new2Old );
 }
 
 // open fan of three triangles around 0_v: the last one crosses the first one from the shared vertex 0_v to its boundary edge 3_v-4_v;
@@ -460,10 +485,12 @@ TEST( MRMesh, SelfBooleanNestedIntersections )
     for ( const auto& trajectory : trajectories )
     {
         const Mesh mesh = makeMovementBuildBody( { circle }, { trajectory } );
-        const auto res = selfBoolean( mesh );
+        FaceMap new2Old;
+        const auto res = selfBoolean( mesh, &new2Old );
         ASSERT_TRUE( res.has_value() ) << res.error();
         EXPECT_TRUE( res->topology.checkValidity() );
         EXPECT_EQ( res->topology.findNumHoles(), 0 );
+        expectSelfBooleanFaceMap( mesh, *res, new2Old );
 
         const auto box = mesh.computeBoundingBox();
         const int n = 16;
@@ -508,10 +535,12 @@ TEST( MRMesh, SelfBooleanThreeSpheres )
     Mesh mesh = a;
     mesh.addMesh( b );
     mesh.addMesh( c );
-    const auto res = selfBoolean( mesh );
+    FaceMap new2Old;
+    const auto res = selfBoolean( mesh, &new2Old );
     ASSERT_TRUE( res.has_value() ) << res.error();
     EXPECT_TRUE( res->topology.checkValidity() );
     EXPECT_EQ( res->topology.findNumHoles(), 0 );
+    expectSelfBooleanFaceMap( mesh, *res, new2Old );
     double maxVolume = 0;
     for ( const auto& component : MeshComponents::getAllComponents( *res ) )
     {

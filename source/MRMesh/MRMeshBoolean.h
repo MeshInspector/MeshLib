@@ -144,7 +144,11 @@ MRMESH_API BooleanResult forceBoolean( const Mesh& meshA, const Mesh& meshB, Boo
 /// two triangles with the same vertices glued along two edges or all three (a part without volume) that cross other parts are eliminated,
 /// see eliminateDoubleTris
 /// this function is experimental and likely to change signature and/or behavior in future 
-MRMESH_API Expected<Mesh> selfBoolean( const Mesh& mesh );
+/// \param new2Old optional output, set on success: for every valid face of the result, the face of the input mesh that it is or is a part of;
+/// a face of the result with an id of the input mesh is that face left whole, and all the other ones have new ids, not less than the face size
+/// of the input mesh, and replace the input faces that the cut touches, whose ids are not valid in the result;
+/// the entries of the ids that are not valid in the result mean nothing, and the map can be shorter than the face size of the result
+MRMESH_API Expected<Mesh> selfBoolean( const Mesh& mesh, FaceMap* new2Old = nullptr );
 
 /// returns intersection contours of given meshes
 MRMESH_API Contours3f findIntersectionContours( const Mesh& meshA, const Mesh& meshB, const AffineXf3f* rigidB2A = nullptr );

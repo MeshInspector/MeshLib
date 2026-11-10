@@ -1338,11 +1338,14 @@ void ViewerSettingsPlugin::drawTouchpadSettings_()
 
     drawSeparator_( _t( "Touchpad" ) );
 
-    const std::vector<std::string> swipeModeList = { _tr( "Swipe Rotates Camera" ), _tr( "Swipe Moves Camera" ) };
+    const std::vector<std::string> swipeModeList = { _tr( "Swipe Rotates Camera" ), _tr( "Swipe Moves Camera" ), _tr( "Swipe Does Nothing" ) };
     assert( swipeModeList.size() == (size_t)TouchpadParameters::SwipeMode::Count );
 
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, style.ItemSpacing.y * 1.5f } );
     bool updateSettings = false;
+    if ( UI::checkbox( _tr( "Enable Touchpad Gestures" ), &touchpadParameters_.gesturesEnabled ) )
+        updateSettings = true;
+    UI::setTooltipIfHovered( _tr( "If unchecked, the swipe, pinch and rotation gestures of the touchpad do not move the camera." ) );
     if ( UI::checkbox( _tr( "Ignore Kinetic Movements" ), &touchpadParameters_.ignoreKineticMoves ) )
         updateSettings = true;
     if ( UI::checkbox( _tr( "Allow System to Interrupt Gestures" ), &touchpadParameters_.cancellable ) )

@@ -31,6 +31,9 @@ void TouchpadController::reset()
 
 bool TouchpadController::touchpadRotateGestureBegin_()
 {
+    if ( !parameters_.gesturesEnabled )
+        return true;
+
     auto& viewer = getViewerInstance();
     // operate on the viewport under the cursor, matching zoom and mouse-click behavior
     viewer.select_hovered_viewport();
@@ -47,6 +50,9 @@ bool TouchpadController::touchpadRotateGestureBegin_()
 
 bool TouchpadController::touchpadRotateGestureUpdate_( float angle )
 {
+    if ( !parameters_.gesturesEnabled )
+        return true;
+
     auto& viewer = getViewerInstance();
     auto& viewport = viewer.viewport();
 
@@ -58,6 +64,9 @@ bool TouchpadController::touchpadRotateGestureUpdate_( float angle )
 
 bool TouchpadController::touchpadRotateGestureEnd_()
 {
+    if ( !parameters_.gesturesEnabled )
+        return true;
+
     auto& viewer = getViewerInstance();
     auto& viewport = viewer.viewport();
 
@@ -70,6 +79,9 @@ bool TouchpadController::touchpadRotateGestureEnd_()
 
 bool TouchpadController::touchpadSwipeGestureBegin_()
 {
+    if ( !parameters_.gesturesEnabled )
+        return true;
+
     auto& viewer = getViewerInstance();
     // operate on the viewport under the cursor, matching zoom and mouse-click behavior
     viewer.select_hovered_viewport();
@@ -86,6 +98,7 @@ bool TouchpadController::touchpadSwipeGestureBegin_()
         case TouchpadParameters::SwipeMode::SwipeMovesCamera:
             currentSwipeMode_ = TouchpadParameters::SwipeMode::SwipeRotatesCamera;
             break;
+        case TouchpadParameters::SwipeMode::SwipeDoesNothing:
         case TouchpadParameters::SwipeMode::Count:
             break;
         }
@@ -101,6 +114,9 @@ bool TouchpadController::touchpadSwipeGestureBegin_()
 
 bool TouchpadController::touchpadSwipeGestureUpdate_( float deltaX, float deltaY, bool kinetic )
 {
+    if ( !parameters_.gesturesEnabled )
+        return true;
+
     if ( parameters_.ignoreKineticMoves && kinetic )
         return true;
 
@@ -163,6 +179,8 @@ bool TouchpadController::touchpadSwipeGestureUpdate_( float deltaX, float deltaY
 
         return true;
     }
+    case TouchpadParameters::SwipeMode::SwipeDoesNothing:
+        return true;
     case TouchpadParameters::SwipeMode::Count:
         break;
     }
@@ -172,6 +190,9 @@ bool TouchpadController::touchpadSwipeGestureUpdate_( float deltaX, float deltaY
 
 bool TouchpadController::touchpadSwipeGestureEnd_()
 {
+    if ( !parameters_.gesturesEnabled )
+        return true;
+
     auto& viewer = getViewerInstance();
     auto& viewport = viewer.viewport();
 
@@ -185,6 +206,9 @@ bool TouchpadController::touchpadSwipeGestureEnd_()
 
 bool TouchpadController::touchpadZoomGestureBegin_()
 {
+    if ( !parameters_.gesturesEnabled )
+        return true;
+
     auto& viewer = getViewerInstance();
     initZoomParams_ = viewer.viewport().getParameters();
 
@@ -193,6 +217,9 @@ bool TouchpadController::touchpadZoomGestureBegin_()
 
 bool TouchpadController::touchpadZoomGestureUpdate_( float scale, bool kinetic )
 {
+    if ( !parameters_.gesturesEnabled )
+        return true;
+
     if ( parameters_.ignoreKineticMoves && kinetic )
         return true;
 
@@ -216,6 +243,9 @@ bool TouchpadController::touchpadZoomGestureUpdate_( float scale, bool kinetic )
 
 bool TouchpadController::touchpadZoomGestureEnd_()
 {
+    if ( !parameters_.gesturesEnabled )
+        return true;
+
     return true;
 }
 

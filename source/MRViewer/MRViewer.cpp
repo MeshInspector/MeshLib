@@ -69,7 +69,6 @@
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
-#include "MRMesh/MRTelemetry.h"
 #include "MRSymbolMesh/MRObjectLabel.h"
 #include "MRMesh/MRObjectLoad.h"
 #include "MRMesh/MRSerializer.h"
@@ -416,9 +415,6 @@ int preLaunchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetu
     setup.setupCommonPlugins( &viewer );
     setup.setupSettingsManager( &viewer, params.name, params.resetConfig );
     setup.setupConfiguration( &viewer );
-    // not in setupLoggerByDefault: an application connects to TelemetrySignal in setupConfiguration
-    if ( const auto tz = getLocalTimeZone(); !tz.empty() )
-        TelemetrySignal( "Local time zone: " + tz );
     CommandLoop::appendCommand( [&] ()
     {
         setup.setupExtendedLibraries();

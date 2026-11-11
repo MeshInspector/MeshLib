@@ -50,6 +50,7 @@ TEST( MRMesh, AABBTreeOfEmptyMesh )
     EXPECT_FALSE( mesh.getBoundingBox().valid() );
     mesh.updateCaches( nullptr );
     EXPECT_EQ( mesh.calcFastWindingNumber( Vector3f( 1.f, 2.f, 3.f ) ), 0.f );
+    EXPECT_TRUE( mesh.getAABBTree().getNodesFromFaces( FaceBitSet{} ).none() );
 }
 
 // checks that every valid face of the mesh is in exactly one leaf with its vertices and a box containing it,

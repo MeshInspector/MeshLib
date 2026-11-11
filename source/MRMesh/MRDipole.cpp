@@ -25,6 +25,8 @@ void calcDipoles( Dipoles& dipoles, const AABBTree& tree, const Mesh& mesh )
     MR_TIMER;
     const auto & nodes = tree.nodes();
     dipoles.resize( nodes.size() );
+    if ( nodes.empty() )
+        return;
 
     // the leaves from their triangles
     ParallelFor( dipoles, [&]( NodeId i )

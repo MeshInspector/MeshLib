@@ -368,6 +368,8 @@ NodeBitSet AABBTree::getNodesFromFaces( const FaceBitSet & faces ) const
 {
     MR_TIMER;
     NodeBitSet res( nodes_.size() );
+    if ( nodes_.empty() )
+        return res;
     BitSetParallelForAll( res, [&]( NodeId n )
     {
         const auto & node = nodes_[n];

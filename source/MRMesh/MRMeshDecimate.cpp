@@ -1176,7 +1176,7 @@ static Vector<FaceBitSet> getTreeParts( const Mesh & mesh, const DecimateSetting
     Vector<FaceBitSet> res( roots.size() );
     ParallelFor( res, [&]( size_t i )
     {
-        res[i] = tree->getSubtreeLeaves( roots[i] );
+        res[i] = tree->getSubtreeFaces( roots[i] );
         res[i].resize( mesh.topology.faceSize() );
     } );
     return res;

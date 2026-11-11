@@ -10,7 +10,6 @@
 #include "MRMesh/MRMeshIntersect.h"
 #include "MRMesh/MRLine3.h"
 #include "MRMesh/MRVector2.h"
-#include "MRMesh/MRVector3.h"
 #include "MRMesh/MR2to3.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRPolyline.h"
@@ -189,7 +188,8 @@ FaceBitSet findIncidentFaces( const Viewport& viewport, const BitSet& pixBs, con
         std::vector<Line3fMesh> lineMeshes;
         xfMeshToOccMesh.emplace_back();
         cameraEyes.push_back( xf.inverse()( viewport.getCameraPoint() ) );
-        lineMeshes.push_back( Line3fMesh{ .mesh = mesh, .tree = &mesh->getAABBTree() } );
+        (void)mesh->getAABBTree(); // build the tree of the rays before the parallel region
+        lineMeshes.push_back( Line3fMesh{ .mesh = mesh } );
         if ( occludingMeshes )
         {
             for ( const auto * occ : *occludingMeshes )
@@ -200,7 +200,8 @@ FaceBitSet findIncidentFaces( const Viewport& viewport, const BitSet& pixBs, con
                 xfMeshToOccMesh.push_back( worldToOccMesh * xf );
                 cameraEyes.push_back( worldToOccMesh( viewport.getCameraPoint() ) );
                 const auto * occmesh = occ->meshPtr();
-                lineMeshes.push_back( Line3fMesh{ .mesh = occmesh, .tree = &occmesh->getAABBTree() } );
+                (void)occmesh->getAABBTree();
+                lineMeshes.push_back( Line3fMesh{ .mesh = occmesh } );
             }
         }
 

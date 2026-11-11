@@ -1,6 +1,5 @@
 #include "MRMeshDistance.h"
-#include "MRAABBTree.h"
-#include "MRInplaceStack.h"
+#include "MRAABBTreeTraversal.hpp"
 #include "MRMesh.h"
 #include "MRTriDist.h"
 #include "MRLine3.h"
@@ -64,58 +63,23 @@ void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rang
     if ( !call )
         return;
 
-    const AABBTree & tree = mp.mesh.getAABBTree();
-    if ( tree.empty() )
-        return;
-
+    const auto & tree = mp.mesh.getAABBTree();
     Box3f tbox;
     for ( const auto & p : t )
         tbox.include( p );
+    auto isClose = [&]( const Box3f & box ) { return box.getDistanceSq( tbox ) < rangeSq; };
 
-    struct SubTask
+    forWideTris( tree, isClose, isClose, [&]( int i )
     {
-        NoInitNodeId n;
-        float distSq;
-    };
-    InplaceStack<SubTask, 32> subtasks;
-
-    auto addSubTask = [&]( const SubTask & s )
-    {
-        if ( s.distSq < rangeSq )
-            subtasks.push( s );
-    };
-
-    auto getSubTask = [&]( NodeId n )
-    {
-        float distSq = tree.box( n ).getDistanceSq( tbox );
-        return SubTask { n, distSq };
-    };
-
-    addSubTask( getSubTask( tree.rootNodeId() ) );
-
-    while ( !subtasks.empty() )
-    {
-        const auto s = subtasks.top();
-        subtasks.pop();
-
-        if ( tree.isLeaf( s.n ) )
-        {
-            const auto face = tree.leafId( s.n );
-            if ( mp.region && !mp.region->test( face ) )
-                continue;
-            const auto leafTriangle = tree.leafTriPoints( mp.mesh.points, s.n );
-            const auto td = findTriTriDistance( t, leafTriangle, { .upDistLimitSq = rangeSq } );
-            if ( td.distSq > rangeSq )
-                continue;
-            if ( call( td.a, face, td.b, td.distSq ) == ProcessOneResult::ContinueProcessing )
-                continue;
-            break;
-        }
-
-        const auto & node = tree[s.n];
-        addSubTask( getSubTask( node.r ) ); // right to look later
-        addSubTask( getSubTask( node.l ) ); // left to look first
-    }
+        const auto & lt = tree.leafTris()[i];
+        if ( mp.region && !mp.region->test( lt.face ) )
+            return Processing::Continue;
+        const Triangle3f leafTriangle{ mp.mesh.points[lt.verts[0]], mp.mesh.points[lt.verts[1]], mp.mesh.points[lt.verts[2]] };
+        const auto td = findTriTriDistance( t, leafTriangle, { .upDistLimitSq = rangeSq } );
+        if ( td.distSq > rangeSq )
+            return Processing::Continue;
+        return call( td.a, lt.face, td.b, td.distSq ) == ProcessOneResult::ContinueProcessing ? Processing::Continue : Processing::Stop;
+    } );
 }
 
 } //namespace MR

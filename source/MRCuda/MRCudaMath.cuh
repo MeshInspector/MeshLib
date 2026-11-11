@@ -95,19 +95,6 @@ struct TreeNode3
     int l, r;
 };
 
-// the same as MR::FaceTreeNode: only the children, the boxes are in MeshTree::boxes
-struct MeshTreeNode
-{
-    int l, r;
-};
-
-// the same as MR::FaceLeaf
-struct FaceLeaf
-{
-    int face;
-    int verts[3];
-};
-
 // the same as BoxedLeaf<LineTreeTraits<Vector2f>>: the box is stored by floats, because float2 would align it by 8 bytes
 struct LineLeaf2
 {
@@ -125,19 +112,6 @@ struct LineLeaf3
 {
     int line;
     Box3 box;
-};
-
-// AABB tree of a mesh as on CPU: nodes, the boxes of nodes and leaves, and the leaves with the vertices of their triangles
-struct MeshTree
-{
-    const MeshTreeNode* __restrict__ nodes = nullptr;
-    const Box3* __restrict__ boxes = nullptr; ///< AABBTree::boxes() offset by the number of leaves: boxes[n] for a node or a leaf n
-    const FaceLeaf* __restrict__ leaves = nullptr;
-    int root = 0; ///< 0, or ~0 if the tree has only one leaf
-
-    __device__ static bool isLeaf( int n ) { return n < 0; }
-    __device__ const Box3& box( int n ) const { return boxes[n]; }
-    __device__ const FaceLeaf& leaf( int n ) const { return leaves[~n]; }
 };
 
 // AABB tree of points with leaf nodes, similar to AABBTreeNode<ObjTreeTraits> with minimal needed functions
@@ -162,6 +136,30 @@ struct Node3
 
 struct FaceToThreeVerts
 {
+    int verts[3];
+};
+
+// struct similar to AABBTreeWideNode: a node of the mesh's AABBTree with up to 4 children or triangles
+struct WideNode3
+{
+    Box3 box;
+    int first; ///< the first child node, or for a leaf, the first of its triangles
+    int count; ///< the number of children, or for a leaf, minus the number of its triangles
+
+    __device__ bool leaf() const
+    {
+        return count < 0;
+    }
+    __device__ int numLeafTris() const
+    {
+        return -count;
+    }
+};
+
+// struct similar to AABBTreeWideLeafTri: a triangle in a leaf of the mesh's AABBTree
+struct LeafTri3
+{
+    int face;
     int verts[3];
 };
 
@@ -349,15 +347,14 @@ __device__ inline TriIntersectResult rayTriangleIntersect(const float* oriA, con
     return res;
 }
 
-__device__ inline MeshIntersectionResult rayMeshIntersect( const MeshTree& tree, const float3* meshPoints,
+__device__ inline MeshIntersectionResult rayMeshIntersect( const WideNode3* nodes, const float3* meshPoints, const LeafTri3* leafTris,
                                                            const float3& rayOrigin, float rayStart, float rayEnd, const IntersectionPrecomputes& prec, bool closestIntersect = true )
 {
-    const Box3& box = tree.box( tree.root );
     MeshIntersectionResult res;
 
     float start = rayStart;
     float end = rayEnd;
-    if ( !rayBoxIntersect( box, rayOrigin, start, end, prec ) )
+    if ( !rayBoxIntersect( nodes[0].box, rayOrigin, start, end, prec ) )
         return res;
 
     struct SubTask
@@ -366,45 +363,65 @@ __device__ inline MeshIntersectionResult rayMeshIntersect( const MeshTree& tree,
         float rayStart;
     };
 
-    InplaceStack<SubTask, 32> subtasks;
-
-    auto addSubTask = [&] ( int n, float rayStart )
-    {
-        subtasks.push( { n, rayStart } );
-    };
-
-    addSubTask( tree.root, rayStart );
-
+    // every level adds at most 3 tasks, and the tree of 2^31 triangles has 16 levels
+    InplaceStack<SubTask, 64> subtasks;
     float baryA = 0;
     float baryB = 0;
 
-    while ( !subtasks.empty() && ( closestIntersect || res.proj.faceId < 0 ) )
+    // the node to visit next is not pushed in the stack
+    SubTask s{ 0, rayStart };
+    while ( true )
     {
-        const auto s = subtasks.top();
-        subtasks.pop();
-
         if ( s.rayStart < rayEnd )
         {
-            if ( MeshTree::isLeaf( s.n ) )
+            const auto& node = nodes[s.n];
+            if ( !node.leaf() )
             {
-                const auto& leaf = tree.leaf( s.n );
-                const auto face = leaf.face;
-                const auto& vs = leaf.verts;
-                float3 a = meshPoints[vs[0]] - rayOrigin;
-                float3 b = meshPoints[vs[1]] - rayOrigin;
-                float3 c = meshPoints[vs[2]] - rayOrigin;
-                
-                const auto tri = rayTriangleIntersect( ( float* ) (&a), ( float* ) (&b), ( float* ) (&c), prec );
-                if ( tri.t < rayEnd && tri.t > rayStart )
+                // the children crossed by the ray ordered by the entry, the farthest first
+                SubTask ch[4];
+                int numCh = 0;
+                for ( int c = 0; c < node.count; ++c )
                 {
+                    const int n = node.first + c;
+                    float cStart = rayStart, cEnd = rayEnd;
+                    if ( !rayBoxIntersect( nodes[n].box, rayOrigin, cStart, cEnd, prec ) )
+                        continue;
+                    int k = numCh++;
+                    for ( ; k > 0 && ch[k - 1].rayStart < cStart; --k )
+                        ch[k] = ch[k - 1];
+                    ch[k] = { n, cStart };
+                }
+                if ( numCh > 0 )
+                {
+                    // descend in the nearest child, the others wait in the stack
+                    for ( int i = 0; i + 1 < numCh; ++i )
+                        subtasks.push( ch[i] );
+                    s = ch[numCh - 1];
+                    continue;
+                }
+            }
+            else
+            {
+                bool stop = false;
+                for ( int i = node.first, e = node.first + node.numLeafTris(); i < e; ++i )
+                {
+                    const auto& lt = leafTris[i];
+                    float3 a = meshPoints[lt.verts[0]] - rayOrigin;
+                    float3 b = meshPoints[lt.verts[1]] - rayOrigin;
+                    float3 c = meshPoints[lt.verts[2]] - rayOrigin;
+
+                    const auto tri = rayTriangleIntersect( ( float* ) (&a), ( float* ) (&b), ( float* ) (&c), prec );
+                    if ( !( tri.t < rayEnd && tri.t > rayStart ) )
+                        continue;
                     res.distanceAlongLine = tri.t;
-                    res.proj.faceId = face;
+                    res.proj.faceId = lt.face;
                     baryA = tri.a;
                     baryB = tri.b;
                     if ( tri.t == 0 )
                     {
                         rayStart = rayEnd = 0;
-                        break; // intersection exactly at ray origin
+                        stop = true; // intersection exactly at ray origin
+                        break;
                     }
                     if ( tri.t < 0 )
                     {
@@ -418,43 +435,17 @@ __device__ inline MeshIntersectionResult rayMeshIntersect( const MeshTree& tree,
                         rayEnd = tri.t;
                         rayStart = max( rayStart, -tri.t );
                     }
+                    if ( !closestIntersect )
+                        break;
                 }
-            }
-            else
-            {
-                float lStart = rayStart, lEnd = rayEnd;
-                float rStart = rayStart, rEnd = rayEnd;
-                const auto& node = tree.nodes[s.n];
-
-                if ( rayBoxIntersect( tree.box( node.l ), rayOrigin, lStart, lEnd, prec ) )
-                {
-                    if ( rayBoxIntersect( tree.box( node.r ), rayOrigin, rStart, rEnd, prec ) )
-                    {
-                        if ( lStart > rStart )
-                        {
-                            addSubTask( node.l, lStart );
-                            addSubTask( node.r, rStart );
-                        }
-                        else
-                        {
-                            addSubTask( node.r, rStart );
-                            addSubTask( node.l, lStart );
-                        }
-                    }
-                    else
-                    {
-                        addSubTask( node.l, lStart );
-                    }
-                }
-                else
-                {
-                    if ( rayBoxIntersect( tree.box( node.r ), rayOrigin, rStart, rEnd, prec ) )
-                    {
-                        addSubTask( node.r, rStart );
-                    }
-                }
+                if ( stop || ( !closestIntersect && res.proj.faceId >= 0 ) )
+                    break;
             }
         }
+        if ( subtasks.empty() )
+            break;
+        s = subtasks.top();
+        subtasks.pop();
     }
     if ( res.proj.faceId < 0 )
         return res;

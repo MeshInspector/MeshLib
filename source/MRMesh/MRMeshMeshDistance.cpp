@@ -22,7 +22,7 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
 
     MeshMeshDistanceResult res;
     res.distSq = upDistLimitSq;
-    if ( aTree.empty() || bTree.empty() )
+    if ( aTree.nodes().empty() || bTree.nodes().empty() )
     {
         assert( false );
         return res;
@@ -30,34 +30,26 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
 
     NodeBitSet aNodes, bNodes;
     if ( a.region )
-        aNodes = aTree.getNodesFromLeaves( *a.region );
+        aNodes = aTree.getNodesFromFaces( *a.region );
     if ( b.region )
-        bNodes = bTree.getNodesFromLeaves( *b.region );
-    auto inRegion = []( const AABBTree & tree, const FaceBitSet * region, const NodeBitSet & nodes, NodeId n )
-    {
-        return !region || ( tree.isLeaf( n ) ? region->test( tree.leafId( n ) ) : nodes.test( n ) );
-    };
+        bNodes = bTree.getNodesFromFaces( *b.region );
 
     struct SubTask
     {
         NoInitNodeId a, b;
         float distSq;
     };
+    // every split adds at most MaxChildren - 1 tasks, and two trees of 2^31 triangles have 32 levels together
     InplaceStack<SubTask, 128> subtasks;
 
-    auto addSubTask = [&]( const SubTask& s )
-    {
-        if ( s.distSq < res.distSq )
-            subtasks.push( s );
-    };
-
+    auto bBox = [&]( const Box3f & box ) { return rigidB2A ? transformed( box, *rigidB2A ) : box; };
     auto getSubTask = [&]( NodeId an, NodeId bn )
     {
-        float distSq = aTree.box( an ).getDistanceSq( transformed( bTree.box( bn ), rigidB2A ) );
-        return SubTask { an, bn, distSq };
+        return SubTask { an, bn, aTree.nodes()[an].box.getDistanceSq( bBox( bTree.nodes()[bn].box ) ) };
     };
 
-    addSubTask( getSubTask( aTree.rootNodeId(), bTree.rootNodeId() ) );
+    if ( ( !a.region || aNodes.test( NodeId( 0 ) ) ) && ( !b.region || bNodes.test( NodeId( 0 ) ) ) )
+        subtasks.push( getSubTask( NodeId( 0 ), NodeId( 0 ) ) );
     // the closest triangles found so far, their points are computed at the end
     TriTriDistanceResultf bestTd;
     Triangle3f bestAv, bestBv;
@@ -66,70 +58,78 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
     {
         const auto s = subtasks.top();
         subtasks.pop();
-        if ( !inRegion( aTree, a.region, aNodes, s.a ) )
-            continue;
-        if ( !inRegion( bTree, b.region, bNodes, s.b ) )
+        if ( !( s.distSq < res.distSq ) )
             continue;
 
-        if ( s.distSq >= res.distSq )
-            continue;
-
-        const bool aLeaf = aTree.isLeaf( s.a );
-        const bool bLeaf = bTree.isLeaf( s.b );
-        if ( aLeaf && bLeaf )
+        const auto& aNode = aTree.nodes()[s.a];
+        const auto& bNode = bTree.nodes()[s.b];
+        if ( aNode.leaf() && bNode.leaf() )
         {
-            const auto aFace = aTree.leafId( s.a );
-            const auto bFace = bTree.leafId( s.b );
-
-            const auto av = aTree.leafTriPoints( a.mesh.points, s.a );
-            auto bv = bTree.leafTriPoints( b.mesh.points, s.b );
-            if ( rigidB2A )
+            Box3f bBoxes[AABBTree::MaxLeafTris];
+            Triangle3f bTris[AABBTree::MaxLeafTris];
+            for ( int j = 0; j < bNode.numLeafTris(); ++j )
             {
-                bv[0] = ( *rigidB2A )( bv[0] );
-                bv[1] = ( *rigidB2A )( bv[1] );
-                bv[2] = ( *rigidB2A )( bv[2] );
+                const auto & bt = bTree.leafTris()[bNode.first + j];
+                bBoxes[j] = bBox( bTree.leafBoxes()[bNode.first + j] );
+                for ( int k = 0; k < 3; ++k )
+                    bTris[j][k] = rigidB2A ? ( *rigidB2A )( b.mesh.points[bt.verts[k]] ) : b.mesh.points[bt.verts[k]];
             }
-
-            const auto td = findTriTriDistance( av, bv, { .upDistLimitSq = res.distSq, .upLimitCheck = UpLimitCheck::GreaterOrEqual } );
-            if ( td.distSq < res.distSq )
+            for ( int i = aNode.first, aEnd = aNode.first + aNode.numLeafTris(); i < aEnd; ++i )
             {
-                res.distSq = td.distSq;
-                res.a.proj.face = aFace;
-                res.b.proj.face = bFace;
-                bestTd = td;
-                bestAv = av;
-                bestBv = bv;
+                const auto & at = aTree.leafTris()[i];
+                if ( a.region && !a.region->test( at.face ) )
+                    continue;
+                const auto & aBox = aTree.leafBoxes()[i];
+                const Triangle3f av{ a.mesh.points[at.verts[0]], a.mesh.points[at.verts[1]], a.mesh.points[at.verts[2]] };
+                for ( int j = 0; j < bNode.numLeafTris(); ++j )
+                {
+                    const auto bFace = bTree.leafTris()[bNode.first + j].face;
+                    if ( b.region && !b.region->test( bFace ) )
+                        continue;
+                    if ( !( aBox.getDistanceSq( bBoxes[j] ) < res.distSq ) )
+                        continue;
+                    const auto td = findTriTriDistance( av, bTris[j], { .upDistLimitSq = res.distSq, .upLimitCheck = UpLimitCheck::GreaterOrEqual } );
+                    if ( td.distSq < res.distSq )
+                    {
+                        res.distSq = td.distSq;
+                        res.a.proj.face = at.face;
+                        res.b.proj.face = bFace;
+                        bestTd = td;
+                        bestAv = av;
+                        bestBv = bTris[j];
+                    }
+                }
             }
             continue;
         }
 
-        SubTask s1, s2;
-        if ( !aLeaf && ( bLeaf || aTree.box( s.a ).volume() >= bTree.box( s.b ).volume() ) )
+        // split the bigger non-leaf node, and add the children with smaller distance last to descend there first
+        SubTask ch[AABBTree::MaxChildren];
+        int numCh = 0;
+        auto add = [&]( const SubTask & t )
         {
-            // split aNode
-            const auto& aNode = aTree[s.a];
-            s1 = getSubTask( aNode.l, s.b );
-            s2 = getSubTask( aNode.r, s.b );
+            if ( !( t.distSq < res.distSq ) )
+                return;
+            int k = numCh++;
+            for ( ; k > 0 && ch[k - 1].distSq < t.distSq; --k )
+                ch[k] = ch[k - 1];
+            ch[k] = t;
+        };
+        if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
+        {
+            for ( int i = 0; i < aNode.count; ++i )
+                if ( const NodeId c( aNode.first + i ); !a.region || aNodes.test( c ) )
+                    add( getSubTask( c, s.b ) );
         }
         else
         {
-            assert( !bLeaf );
-            // split bNode
-            const auto& bNode = bTree[s.b];
-            s1 = getSubTask( s.a, bNode.l );
-            s2 = getSubTask( s.a, bNode.r );
+            assert( !bNode.leaf() );
+            for ( int i = 0; i < bNode.count; ++i )
+                if ( const NodeId c( bNode.first + i ); !b.region || bNodes.test( c ) )
+                    add( getSubTask( s.a, c ) );
         }
-        // add task with smaller distance last to descend there first
-        if ( s1.distSq < s2.distSq )
-        {
-            addSubTask( s2 );
-            addSubTask( s1 );
-        }
-        else
-        {
-            addSubTask( s1 );
-            addSubTask( s2 );
-        }
+        for ( int i = 0; i < numCh; ++i )
+            subtasks.push( ch[i] );
     }
 
     if ( res.a ) // found closer than upDistLimitSq

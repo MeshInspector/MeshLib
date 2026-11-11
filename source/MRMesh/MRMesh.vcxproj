@@ -265,7 +265,6 @@
     <ClInclude Include="MRPrimitiveMapsComposition.h" />
     <ClInclude Include="MRPriorityQueue.h" />
     <ClInclude Include="MRPrism.h" />
-    <ClInclude Include="MRProcessSelfTreeSubtasks.h" />
     <ClInclude Include="MRProgressReadWrite.h" />
     <ClInclude Include="MRProtectedRun.h" />
     <ClInclude Include="MRRadiusCompensation.h" />
@@ -315,6 +314,7 @@
     <ClInclude Include="MRMeshToPointCloud.h" />
     <ClInclude Include="miniply.h" />
     <ClInclude Include="MRAABBTree.h" />
+    <ClInclude Include="MRAABBTreeTraversal.hpp" />
     <ClInclude Include="MRBitSetParallelFor.h" />
     <ClInclude Include="MRClosestPointInTriangle.h" />
     <ClInclude Include="MRArrow.h" />

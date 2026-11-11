@@ -3,14 +3,11 @@
 #include "MRCudaBasic.hpp"
 #include "MRCudaMath.cuh"
 
-#include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRAABBTreePolyline.h"
 
 namespace MR::Cuda
 {
 
-static_assert( sizeof( MeshTreeNode ) == sizeof( AABBTree::Node ) );
-static_assert( sizeof( FaceLeaf ) == sizeof( MR::FaceLeaf ) );
 static_assert( sizeof( Box3 ) == sizeof( Box3f ) );
 static_assert( sizeof( Node2 ) == sizeof( AABBTreePolyline2::Node ) );
 static_assert( sizeof( LineLeaf2 ) == sizeof( AABBTreePolyline2::Leaf ) );
@@ -23,37 +20,5 @@ int rootNodeId( const AABBTreeBase<T> & tree )
 {
     return tree.nodes().empty() ? ~0 : 0;
 }
-
-/// AABB tree of a mesh in GPU memory as it is on CPU
-struct MeshTreeBuffers
-{
-    DynamicArray<MeshTreeNode> nodes;
-    DynamicArray<Box3> boxes;
-    DynamicArray<FaceLeaf> leaves;
-    int root = 0;
-    size_t numLeaves = 0;
-
-    cudaError_t fromTree( const AABBTree & tree )
-    {
-        root = rootNodeId( tree );
-        numLeaves = tree.numLeaves();
-        if ( auto err = nodes.fromVector( tree.nodes() ); err != cudaSuccess )
-            return err;
-        if ( auto err = boxes.fromVector( tree.boxes() ); err != cudaSuccess )
-            return err;
-        return leaves.fromVector( tree.leaves() );
-    }
-
-    [[nodiscard]] MeshTree data() const
-    {
-        return { .nodes = nodes.data(), .boxes = boxes.data() + numLeaves, .leaves = leaves.data(), .root = root };
-    }
-
-    /// the GPU memory amount required for the tree
-    [[nodiscard]] static size_t heapBytes( const AABBTree & tree )
-    {
-        return tree.nodes().size() * sizeof( MeshTreeNode ) + tree.boxes().size() * sizeof( Box3 ) + tree.numLeaves() * sizeof( FaceLeaf );
-    }
-};
 
 } // namespace MR::Cuda

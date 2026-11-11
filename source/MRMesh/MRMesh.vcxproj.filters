@@ -234,6 +234,9 @@
     <ClInclude Include="MRAABBTree.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
+    <ClInclude Include="MRAABBTreeTraversal.hpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
     <ClInclude Include="MRMeshDistance.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
@@ -1327,9 +1330,6 @@
       <Filter>Source Files\DataModel</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshDoubleLayer.h">
-      <Filter>Source Files\AABBTree</Filter>
-    </ClInclude>
-    <ClInclude Include="MRProcessSelfTreeSubtasks.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRParallelMinMax.h">

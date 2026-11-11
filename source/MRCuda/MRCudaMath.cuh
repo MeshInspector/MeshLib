@@ -318,21 +318,19 @@ __device__ inline TriIntersectResult rayTriangleIntersect(const float* oriA, con
     const float Cx = oriC[prec.idxX] - Sx * oriC[prec.maxDimIdxZ];
     const float Cy = oriC[prec.idxY] - Sy * oriC[prec.maxDimIdxZ];
 
-    // due to fused multiply-add (FMA): (A*B-A*B) can be different from zero, so we need epsilon
-    const float eps = FLT_EPSILON * max( Ax, Bx, Cx, Ay, By, Cy );
+    // bound of rounding errors in U,V,W, e.g. due to fused multiply-add (FMA) (A*B-A*B) can be different from zero
+    const float eps = FLT_EPSILON
+        * max( fabsf( Ax ), fabsf( Bx ), fabsf( Cx ) )
+        * max( fabsf( Ay ), fabsf( By ), fabsf( Cy ) );
 
     float U = Cx * By - Cy * Bx;
     float V = Ax * Cy - Ay * Cx;
     float W = Bx * Ay - By * Ax;
     TriIntersectResult res;
-    if ( U < -eps || V < -eps || W < -eps )
-    {
-        if ( U > eps || V > eps || W > eps )
-        {
-            // U,V,W have clearly different signs, so the ray misses the triangle
-            return res;
-        }
-    }
+    const bool someNeg = U < -eps || V < -eps || W < -eps;
+    const bool somePos = U > eps || V > eps || W > eps;
+    if ( someNeg == somePos )
+        return res; // U,V,W have clearly different signs (the ray misses the triangle), or all are within rounding errors (the triangle is degenerate in the projection)
 
     float det = U + V + W;
     if ( det == 0 )

@@ -116,17 +116,10 @@ public:
     /// returns box i, which is src before the transformation
     Box3f get( I i, const Box3f & src ) const
     {
-        return getOrMake( i, [&] { return transformed( src, xf_ ); } );
-    }
-
-    /// returns box i, which is make() if it was not requested before
-    template<typename Make>
-    Box3f getOrMake( I i, Make && make ) const
-    {
         auto & state = state_[i];
         if ( state.load( std::memory_order_acquire ) == cReady )
             return boxes_[i];
-        const Box3f res = make();
+        const auto res = transformed( src, xf_ );
         // only the thread marking the box first stores it; the others meanwhile use their own copies
         std::uint8_t expected = cEmpty;
         if ( state.compare_exchange_strong( expected, cWriting, std::memory_order_relaxed ) )
@@ -136,8 +129,6 @@ public:
         }
         return res;
     }
-
-    const AffineXf3f & xf() const { return xf_; }
 
 private:
     static constexpr std::uint8_t cEmpty = 0, cWriting = 1, cReady = 2;

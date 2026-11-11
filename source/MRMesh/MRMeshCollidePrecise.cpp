@@ -37,8 +37,8 @@ bool preciseBoxesIntersect( const Box3f & a, const Box3f & b, const ConvertToInt
 class PreciseBoxesIntersection
 {
 public:
-    PreciseBoxesIntersection( const AABBTree & aTree, const AABBTree & bTree, const VertCoords & bPoints, const ConvertToIntVector & conv, const AffineXf3f * xf )
-        : aTree_( aTree ), bTree_( bTree ), bPoints_( bPoints ), conv_( conv ), minGap_( 2 / conv.invRange )
+    PreciseBoxesIntersection( const AABBTree & aTree, const AABBTree & bTree, const ConvertToIntVector & conv, const AffineXf3f * xf )
+        : aTree_( aTree ), bTree_( bTree ), conv_( conv ), minGap_( 2 / conv.invRange )
     {
         if ( xf )
         {
@@ -49,24 +49,14 @@ public:
 
     bool nodes( NodeId a, NodeId b ) const { return test_( aTree_.nodes()[a].box, bNodeBox_( b ) ); }
     bool triNode( int a, NodeId b ) const { return test_( aTree_.leafBoxes()[a], bNodeBox_( b ) ); }
-    bool tris( int a, int b ) const { return test_( aTree_.leafBoxes()[a], bLeafBoxes_ ? bLeafBoxes_->getOrMake( b, [&] { return bTriBox_( b ); } ) : bTree_.leafBoxes()[b] ); }
+    bool tris( int a, int b ) const { return test_( aTree_.leafBoxes()[a], bLeafBoxes_ ? bLeafBoxes_->get( b, bTree_.leafBoxes()[b] ) : bTree_.leafBoxes()[b] ); }
 
 private:
     bool test_( const Box3f & a, const Box3f & b ) const { return preciseBoxesIntersect( a, b, conv_, minGap_ ); }
-    // the box of the transformed vertices of a triangle is tighter than its transformed box;
-    // expanded, as the precise predicates transform the vertices again, maybe with other rounding (FMA)
-    Box3f bTriBox_( int b ) const
-    {
-        Box3f box;
-        for ( auto v : bTree_.leafTris()[b].verts )
-            box.include( bLeafBoxes_->xf()( bPoints_[v] ) );
-        return box.insignificantlyExpanded();
-    }
     Box3f bNodeBox_( NodeId b ) const { return bNodeBoxes_ ? bNodeBoxes_->get( b, bTree_.nodes()[b].box ) : bTree_.nodes()[b].box; }
 
     const AABBTree & aTree_;
     const AABBTree & bTree_;
-    const VertCoords & bPoints_;
     const ConvertToIntVector & conv_;
     double minGap_ = 0;
     std::optional<LazyTransformedBoxes<NodeId>> bNodeBoxes_;
@@ -254,7 +244,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
     MR_TIMER;
     const AABBTree & aTree = a.mesh.getAABBTree();
     const AABBTree & bTree = b.mesh.getAABBTree();
-    const PreciseBoxesIntersection boxesIntersect( aTree, bTree, b.mesh.points, conv, rigidB2A );
+    const PreciseBoxesIntersection boxesIntersect( aTree, bTree, conv, rigidB2A );
     return findCollidingEdgeTrisPrecise( a, aTree, b, bTree, boxesIntersect, conv, rigidB2A, anyIntersection );
 }
 
@@ -416,7 +406,7 @@ void updateCollidingEdgeTrisPrecise( PreciseCollisionResult & res,
         const MeshPart part{ mesh, &tris };
         const AABBTree trisTree( part );
         const auto & otherTree = ( inA ? b : a ).getAABBTree();
-        const PreciseBoxesIntersection boxesIntersect( inA ? trisTree : otherTree, inA ? otherTree : trisTree, b.points, conv, rigidB2A );
+        const PreciseBoxesIntersection boxesIntersect( inA ? trisTree : otherTree, inA ? otherTree : trisTree, conv, rigidB2A );
         const auto found = inA ? findCollidingEdgeTrisPrecise( part, trisTree, b, otherTree, boxesIntersect, conv, rigidB2A, false )
             : findCollidingEdgeTrisPrecise( a, otherTree, part, trisTree, boxesIntersect, conv, rigidB2A, false );
         res.insert( res.end(), found.begin(), found.end() );

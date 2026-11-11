@@ -19,10 +19,10 @@ public:
     constexpr static const char* StaticTypeName() noexcept { return "RadiusMeasurementObject"; }
     const char* typeName() const override { return StaticTypeName(); }
 
-    constexpr static const char* StaticClassName() noexcept { return "Radius"; }
+    constexpr static const char* StaticClassName() noexcept { return _t( "Radius" ); }
     virtual std::string className() const override { return StaticClassName(); }
 
-    constexpr static const char* StaticClassNameInPlural() noexcept { return "Radii"; }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return _t( "Radii" ); }
     virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     // For `std::make_shared()` in `clone()`.

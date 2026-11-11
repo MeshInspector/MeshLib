@@ -70,11 +70,11 @@ public:
     virtual const char* typeName() const { return StaticTypeName(); }
 
     /// return human readable name of subclass
-    constexpr static const char* StaticClassName() noexcept { return "Object"; }
+    constexpr static const char* StaticClassName() noexcept { return _t( "Object" ); }
     virtual std::string className() const { return StaticClassName(); }
 
     /// return human readable name of subclass in plural form
-    constexpr static const char* StaticClassNameInPlural() noexcept { return "Objects"; }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return _t( "Objects" ); }
     virtual std::string classNameInPlural() const { return StaticClassNameInPlural(); }
 
     template <typename T>

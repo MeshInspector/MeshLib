@@ -1687,7 +1687,7 @@ float ImGuiMenu::drawSelectionInformation_()
 
     if ( selectedObjs.size() == 1 )
     {
-        UI::inputTextCenteredReadOnly( _tr( "Object Type" ), selectedObjs.front()->className(), itemWidth, textColor, labelColor );
+        UI::inputTextCenteredReadOnly( _tr( "Object Type" ), _tr( selectedObjs.front()->className() ), itemWidth, textColor, labelColor );
     }
     else if ( selectedObjs.size() > 1 )
     {

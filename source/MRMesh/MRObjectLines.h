@@ -17,7 +17,7 @@ public:
     constexpr static const char* StaticTypeName() noexcept { return "ObjectLines"; }
     virtual const char* typeName() const override { return StaticTypeName(); }
 
-    constexpr static const char* StaticClassName() noexcept { return Locale::translate_noop( "Polyline" ); }
+    constexpr static const char* StaticClassName() noexcept { return _t( "Polyline" ); }
     virtual std::string className() const override { return StaticClassName(); }
 
     constexpr static const char* StaticClassNameInPlural() noexcept { return "Polylines"; }

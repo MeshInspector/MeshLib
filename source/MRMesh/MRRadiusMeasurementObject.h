@@ -19,7 +19,7 @@ public:
     constexpr static const char* StaticTypeName() noexcept { return "RadiusMeasurementObject"; }
     const char* typeName() const override { return StaticTypeName(); }
 
-    constexpr static const char* StaticClassName() noexcept { return Locale::translate_noop( "Radius" ); }
+    constexpr static const char* StaticClassName() noexcept { return _t( "Radius" ); }
     virtual std::string className() const override { return StaticClassName(); }
 
     constexpr static const char* StaticClassNameInPlural() noexcept { return "Radii"; }

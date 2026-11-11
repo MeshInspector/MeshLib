@@ -24,7 +24,7 @@ public:
     constexpr static const char* StaticTypeName() noexcept { return "ObjectVoxels"; }
     virtual const char* typeName() const override { return StaticTypeName(); }
 
-    constexpr static const char* StaticClassName() noexcept { return Locale::translate_noop( "Voxel Volume" ); }
+    constexpr static const char* StaticClassName() noexcept { return _t( "Voxel Volume" ); }
     virtual std::string className() const override { return StaticClassName(); }
 
     constexpr static const char* StaticClassNameInPlural() noexcept { return "Voxel Volumes"; }

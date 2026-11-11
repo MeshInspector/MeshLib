@@ -636,7 +636,7 @@ bool buttonIconEx(
     if ( !params.baseParams.forceImguiTextColor )
         sh.addColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::GradBtnText ) );
 
-    ImVec4 multColor = ImGui::GetStyleColorVec4( ImGuiCol_Text );
+    const ImVec4 multColor = params.iconColor ? *params.iconColor : ImGui::GetStyleColorVec4( ImGuiCol_Text );
 
     if ( icon )
         ImGui::Image( *icon, { iconSize.x , iconSize.y }, multColor );

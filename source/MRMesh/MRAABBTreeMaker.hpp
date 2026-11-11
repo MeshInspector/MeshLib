@@ -6,6 +6,8 @@
 #include "MRTimer.h"
 #include "MRPch/MRTBB.h"
 #include <algorithm>
+#include <cstdint>
+#include <vector>
 
 namespace MR
 {
@@ -42,12 +44,17 @@ private:
     const Vector<BoxedLeaf<T>> & boxedLeaves_;
     const OnLeafCallback & onLeaf_; // a copy would reference the source FunctionRef via its template constructor
     Buffer<Center> centers_;
+    Buffer<Center> scratch_; // for parallel splits of big ranges
+    static constexpr int cParallelSplitNum = 1 << 17;
+    bool parallelSplits_ = false; // on one thread the parallel split only adds passes over the range
     NodeVec nodes_;
     BoxT * nodeBoxes_ = nullptr; // for the nodes without boxes
 
     BoxT & nodeBox_( NodeId n ) { if constexpr ( nodesHaveBoxes<T> ) return nodes_[n].box; else return nodeBoxes_[int( n )]; }
     const BoxT & nodeBox_( NodeId n ) const { if constexpr ( nodesHaveBoxes<T> ) return nodes_[n].box; else return nodeBoxes_[int( n )]; }
     int largestCentersAxis_( int first, int num ) const;
+    // [first, first + num / 2) get the smaller centers along axis; ties are ordered by index to make the tree independent of std::nth_element
+    void split_( int first, int num, int axis );
     const BoxT & childBox_( NodeId c ) const { return Node::isLeaf( c ) ? boxedLeaves_[centers_[Node::leafIndex( c )].i].box : nodeBox_( c ); }
     // fills node n with the subtree of at least two leaves centers_[first, first + num);
     // its children that are nodes are placed at next and next + 1, followed by the other nodes of the left subtree, then of the right one
@@ -59,14 +66,95 @@ template<typename T>
 int AABBTreeMaker<T>::largestCentersAxis_( int first, int num ) const
 {
     BoxT box;
-    for ( int i = 0; i < num; ++i )
-        box.include( centers_[first + i].c );
+    if ( parallelSplits_ && num >= cParallelSplitNum )
+    {
+        box = tbb::parallel_reduce( tbb::blocked_range<int>( first, first + num, 1 << 14 ), BoxT(),
+            [&]( const tbb::blocked_range<int> & r, BoxT b )
+            {
+                for ( int i = r.begin(); i < r.end(); ++i )
+                    b.include( centers_[i].c );
+                return b;
+            },
+            []( BoxT a, const BoxT & b ) { a.include( b ); return a; } );
+    }
+    else
+    {
+        for ( int i = 0; i < num; ++i )
+            box.include( centers_[first + i].c );
+    }
     const auto sz = box.size();
     int axis = 0;
     for ( int d = 1; d < BoxT::elements; ++d )
         if ( sz[d] > sz[axis] )
             axis = d;
     return axis;
+}
+
+template<typename T>
+void AABBTreeMaker<T>::split_( int first, int num, int axis )
+{
+    const auto less = [axis]( const Center & a, const Center & b ) { return a.c[axis] < b.c[axis] || ( a.c[axis] == b.c[axis] && a.i < b.i ); };
+    Center * const data = centers_.data() + first;
+    const int mid = num / 2;
+    if ( !parallelSplits_ || num < cParallelSplitNum )
+    {
+        std::nth_element( data, data + mid, data + num, less );
+        return;
+    }
+
+    // a big range is partitioned in parallel in three parts by two samples around the median,
+    // and only the small middle part with the median is given to std::nth_element
+    constexpr int cNumSamples = 1024, cHalfGap = 64;
+    Buffer<Center> samples( cNumSamples );
+    for ( int k = 0; k < cNumSamples; ++k )
+        samples[k] = data[ std::int64_t( k ) * num / cNumSamples ];
+    std::sort( samples.data(), samples.data() + cNumSamples, less );
+    const Center lo = samples[cNumSamples / 2 - cHalfGap];
+    const Center hi = samples[cNumSamples / 2 + cHalfGap];
+    const auto part = [&]( const Center & c ) { return less( c, lo ) ? 0 : ( less( c, hi ) ? 1 : 2 ); };
+
+    constexpr int cChunk = 1 << 13;
+    const int numChunks = ( num + cChunk - 1 ) / cChunk;
+    struct Counts { int n[3]; };
+    std::vector<Counts> counts( numChunks );
+    ParallelFor( 0, numChunks, [&]( int ch )
+    {
+        Counts cnt{};
+        for ( int i = ch * cChunk, e = std::min( num, i + cChunk ); i < e; ++i )
+            ++cnt.n[part( data[i] )];
+        counts[ch] = cnt;
+    } );
+    Counts total{};
+    for ( const auto & c : counts )
+        for ( int k = 0; k < 3; ++k )
+            total.n[k] += c.n[k];
+    if ( mid < total.n[0] || mid >= total.n[0] + total.n[1] )
+    {
+        // the median is not between the samples
+        std::nth_element( data, data + mid, data + num, less );
+        return;
+    }
+    Counts pos{ { 0, total.n[0], total.n[0] + total.n[1] } };
+    for ( auto & c : counts )
+    {
+        const auto my = pos;
+        for ( int k = 0; k < 3; ++k )
+            pos.n[k] += c.n[k];
+        c = my;
+    }
+    Center * const tmp = scratch_.data() + first;
+    ParallelFor( 0, numChunks, [&]( int ch )
+    {
+        auto p = counts[ch];
+        for ( int i = ch * cChunk, e = std::min( num, i + cChunk ); i < e; ++i )
+            tmp[ p.n[part( data[i] )]++ ] = data[i];
+    } );
+    ParallelFor( 0, numChunks, [&]( int ch )
+    {
+        const int i = ch * cChunk, e = std::min( num, i + cChunk );
+        std::copy( tmp + i, tmp + e, data + i );
+    } );
+    std::nth_element( data + total.n[0], data + mid, data + total.n[0] + total.n[1], less );
 }
 
 template<typename T>
@@ -82,12 +170,9 @@ template<typename T>
 void AABBTreeMaker<T>::make_( NodeId n, int first, int num, NodeId next )
 {
     assert( num >= 2 );
-    // ties are ordered by index to make the tree independent of std::nth_element
-    const int axis = largestCentersAxis_( first, num );
     const int numL = num / 2;
     const int numR = num - numL;
-    std::nth_element( centers_.data() + first, centers_.data() + first + numL, centers_.data() + first + num,
-        [axis]( const Center & a, const Center & b ) { return a.c[axis] < b.c[axis] || ( a.c[axis] == b.c[axis] && a.i < b.i ); } );
+    split_( first, num, largestCentersAxis_( first, num ) );
 
     auto & node = nodes_[n];
     NodeId slot = next;
@@ -123,6 +208,11 @@ auto AABBTreeMaker<T>::construct() -> NodeVec
     assert( numLeaves > 0 );
     assert( nodesHaveBoxes<T> || nodeBoxes_ || numLeaves == 1 );
     centers_.resize( numLeaves );
+    parallelSplits_ = numLeaves >= cParallelSplitNum
+        && tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) > 1
+        && tbb::this_task_arena::max_concurrency() > 1;
+    if ( parallelSplits_ )
+        scratch_ = Buffer<Center>( numLeaves );
     ParallelFor( 0, numLeaves, [&]( int i )
     {
         const auto & box = boxedLeaves_[i].box;

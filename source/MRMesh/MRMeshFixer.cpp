@@ -969,7 +969,7 @@ FaceBitSet findHoleComplicatingFaces( const Mesh & mesh )
 }
 
 /// returns true if fillContours2D can replace the faces of the region by the planar triangulation of the region's boundary
-/// with all triangles facing the boundary's vector area, which must have a positive projection on n; resets grow if larger regions are not to be tried:
+/// with all triangles facing the boundary's vector area, which must have a positive projection on n, and with aspect ratios below maxAspectRatio; resets grow if larger regions are not to be tried:
 /// a face oriented against n is at a mesh border (it would be removed with what it covers), or the region is not flat: larger along that vector than sqrt(area) / maxAspectRatio
 static bool hasPlanarFill( const Mesh& mesh, const FaceBitSet& region, const Vector3f& n, float maxAspectRatio, bool& grow )
 {
@@ -993,10 +993,10 @@ static bool hasPlanarFill( const Mesh& mesh, const FaceBitSet& region, const Vec
     if ( sqr( ( height.max - height.min ) * maxAspectRatio ) > sumCross.length() / 2 )
         return grow = false; // the planar triangulation of a region that is not flat changes the shape
     // all triangles face dir, and the loops wind around it as the triangles do: otherwise the triangles have more or less area than the loops
-    double triArea = 0; // stays zero if the boundary has no planar triangulation
+    double triArea = 0; // stays zero if the boundary has no planar triangulation; a triangle without area or a sliver, which may double an edge of the mesh, makes it huge
     if ( const auto patch = PlanarTriangulation::triangulateDisjointContours( mesh, loops, Vector3f( dir ) ) )
         for ( auto f : patch->topology.getValidFaces() )
-            triArea += std::abs( dot( Vector3d( patch->dirDblArea( f ) ), dir ) );
+            triArea += patch->triangleAspectRatio( f ) < maxAspectRatio ? std::abs( dot( Vector3d( patch->dirDblArea( f ) ), dir ) ) : DBL_MAX;
     return std::abs( sumCross.length() - triArea ) < 1e-4 * triArea;
 }
 

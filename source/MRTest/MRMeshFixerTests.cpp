@@ -351,10 +351,10 @@ TEST( MRMesh, EliminateDoubleTrisPillow )
     EXPECT_EQ( lone.numValidVerts(), 3 );
 }
 
-// a flat square of 3x3 cells in the plane z = 0
-static Mesh makeGrid3x3()
+// a flat sheet of nx x ny square cells in the plane z = 0
+static Mesh makeGrid( size_t nx, size_t ny )
 {
-    return *makeRegularGridMesh( 4, 4, [] ( size_t, size_t ) { return true; },
+    return *makeRegularGridMesh( nx + 1, ny + 1, [] ( size_t, size_t ) { return true; },
         [] ( size_t x, size_t y ) { return Vector3f( float( x ), float( y ), 0 ); } );
 }
 
@@ -368,7 +368,7 @@ static void moveVert( Mesh & mesh, const Vector3f & from, const Vector3f & to )
 // a vertex moved over its neighbour folds its triangles over the next ones, away from its own star
 TEST( MRMesh, FixMeshCreasesFlatFold )
 {
-    auto folded = makeGrid3x3();
+    auto folded = makeGrid( 3, 3 );
     moveVert( folded, { 2, 2, 0 }, { 2, 0.4f, 0 } );
     auto mesh = folded;
     FaceHashMap new2Old;
@@ -398,10 +398,31 @@ TEST( MRMesh, FixMeshCreasesFlatFold )
     }
 }
 
+// a planar triangulation with a triangle without area is not used: it would double an edge of the mesh in the pleat,
+// and leave that triangle around the moved vertex, where a larger area has a planar triangulation without it
+TEST( MRMesh, FixMeshCreasesDegenerateTriangulation )
+{
+    auto pleat = makeGrid( 4, 4 ), moved = pleat;
+    for ( auto & p : pleat.points )
+        if ( p.x == 1 || p.x == 3 )
+            p.x = 4 - p.x; // two columns swapped: a pleat across the sheet
+    moveVert( moved, { 2, 3, 0 }, { 0.5f, 0.5f, 0 } ); // onto the diagonal of a cell away from it
+    for ( auto * mesh : { &pleat, &moved } )
+    {
+        fixMeshCreases( *mesh );
+        EXPECT_TRUE( mesh->findCreaseEdges( FixCreasesParams{}.creaseAngle ).none() );
+        EXPECT_FALSE( hasMultipleEdges( mesh->topology ) );
+        EXPECT_TRUE( mesh->topology.checkValidity() );
+    }
+    // the fans re-filled along the pleat have triangles without area, as before the planar triangulation was added
+    for ( auto f : moved.topology.getValidFaces() )
+        EXPECT_GT( moved.dirDblArea( f ).z, 0 );
+}
+
 // the top of a box folded by a vertex moved over its neighbour: fixing the fold keeps the box
 TEST( MRMesh, FixMeshCreasesKeepsShape )
 {
-    auto box = makeGrid3x3();
+    auto box = makeGrid( 3, 3 );
     const auto e = extendHole( box, box.topology.findHoleRepresentiveEdges().front(), Plane3f( Vector3f::plusZ(), -1 ) );
     fillHole( box, e, { .metric = getPlaneFillMetric( box, e ) } );
 

@@ -285,6 +285,24 @@ TEST( MRMesh, DeleteFacesFewAndMany )
     top.deleteFaces( top.getValidFaces() );
     EXPECT_EQ( top.numValidVerts(), 0 );
     EXPECT_TRUE( same() );
+
+    // the largest set deleted one by one and the smallest set deleted in parallel, with some edges kept inside the set and at its border
+    for ( size_t extra : { 0, 1 } )
+    {
+        ref = top = makeUVSphere( 1, 128, 128 ).topology;
+        const auto n = std::max( size_t( 64 ), top.faceSize() / 128 ) + extra;
+        FaceBitSet region( top.faceSize() );
+        UndirectedEdgeBitSet keep( top.undirectedEdgeSize() );
+        for ( FaceId f( 10000 ); f < FaceId( int( 10000 + n ) ); ++f )
+        {
+            region.set( f );
+            if ( int( f ) % 3 == 0 )
+                keep.set( top.edgeWithLeft( f ).undirected() );
+        }
+        del( region, &keep );
+        EXPECT_EQ( top.numValidFaces() + n, top.faceSize() );
+        EXPECT_TRUE( same() );
+    }
 }
 
 } //namespace MR

@@ -514,6 +514,13 @@ void Mesh::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keep
     topology.deleteFaces( fs, keepEdges );
 }
 
+VacantElements Mesh::deleteFacesFindVacant( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
+{
+    if ( fs.any() )
+        invalidateCaches(); // some points can be deleted as well
+    return topology.deleteFacesFindVacant( fs, keepEdges );
+}
+
 bool Mesh::projectPoint( const Vector3f& point, PointOnFace& res, float maxDistSq, const FaceBitSet * region, const AffineXf3f * xf ) const
 {
     auto proj = findProjection( point, { *this, region }, maxDistSq, xf );

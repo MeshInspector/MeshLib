@@ -1006,16 +1006,19 @@ void MeshTopology::deleteFace( FaceId f, const UndirectedEdgeBitSet * keepEdges 
         if ( !right( e1 ) && !( keepEdges && keepEdges->test( e1 ) ) )
         {
             // delete e1 since it has no right face as well (and not in keepEdges);
-            // also delete any end-vertex of e1 if e1 was the last edge from it
-            if ( prev( e1 ) == e1 )
-                setOrg( e1, VertId{} );
-            else
-                splice( prev( e1 ), e1 );
-
-            if ( prev( e1.sym() ) == e1.sym() )
-                setOrg( e1.sym(), VertId{} );
-            else
-                splice( prev( e1.sym() ), e1.sym() );
+            // also delete any end-vertex of e1 if e1 was the last edge from it,
+            // otherwise the vertex passes to its next edge, as in deleteFaces_
+            for ( auto x : { e1, e1.sym() } )
+            {
+                if ( prev( x ) == x )
+                    setOrg( x, VertId{} );
+                else
+                {
+                    if ( auto v = org( x ); v && edgePerVertex_[v] == x )
+                        edgePerVertex_[v] = next( x );
+                    splice( prev( x ), x );
+                }
+            }
 
             assert( isLoneEdge( e1 ) );
         }
@@ -1136,40 +1139,17 @@ auto MeshTopology::deleteFacesFindVacant( const FaceBitSet & fs, const Undirecte
 
 void MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
 {
-    // the serial deletion below gives the same result, and it is faster up to 1/20 of the faces at least (measured with 1 to 24 threads)
+    assert( updateValids_ );
+    // deleting faces one by one gives the same result; with 1 to 24 threads it was faster than the parallel deletion up to 1/20 of the faces
+    // at least, and the parallel deletion is limited by memory (only 1.1 times faster with 24 threads than with 8),
+    // so the limit 1/128 leaves a margin for machines with many more threads
     const auto maxSerialFaces = std::max( size_t( 64 ), faceSize() / 128 );
     if ( fs.countBitsAndBlocks( maxSerialFaces ).bits > maxSerialFaces )
-    {
         deleteFaces_( fs, keepEdges, true );
-        return;
-    }
-    for ( auto f : fs )
-    {
-        auto e = edgeWithLeft( f );
-        if ( !e )
-            continue; // the face is deleted already
-        setLeft( e, FaceId{} );
-        for ( int i = getLeftDegree( e ); i > 0; --i )
-        {
-            const auto e1 = e;
-            e = prev( e.sym() );
-            if ( right( e1 ) || ( keepEdges && keepEdges->test( e1 ) ) )
-                continue;
-            // make e1 lone, deleting its end vertices that have no other edge
-            for ( auto x : { e1, e1.sym() } )
-            {
-                if ( prev( x ) == x )
-                {
-                    setOrg( x, VertId{} );
-                    continue;
-                }
-                // as in deleteFaces_, the vertex passes to its next edge
-                if ( auto v = org( x ); v && edgePerVertex_[v] == x )
-                    edgePerVertex_[v] = next( x );
-                splice( prev( x ), x );
-            }
-        }
-    }
+    else
+        for ( auto f : fs )
+            if ( edgeWithLeft( f ) ) // skip the faces deleted already
+                deleteFace( f, keepEdges );
 }
 
 template<typename FM, typename VM, typename WEM>

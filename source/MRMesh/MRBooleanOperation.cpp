@@ -134,9 +134,7 @@ VacantElements preparePart( Mesh& mesh, const FaceBitSet& leftPart,
     MR_TIMER;
 
     auto rightPart = mesh.topology.getValidFaces() - leftPart;
-    if ( rightPart.any() )
-        mesh.invalidateCaches(); // some points can be deleted as well
-    auto res = mesh.topology.deleteFacesFindVacant( rightPart );
+    auto res = mesh.deleteFacesFindVacant( rightPart );
     if ( needFlip )
         mesh.flipOrientation();
 

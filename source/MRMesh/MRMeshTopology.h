@@ -277,14 +277,15 @@ public:
     MRMESH_API void deleteFace( FaceId f, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
     /// deletes the given faces, also deletes their edges and vertices if they were not shared by other faces and not in \p keepEdges;
-    /// few faces (up to 64 or 1/128 of all faces, whichever is larger) are deleted in the time proportional to their number, not to the mesh size
+    /// unlike \ref deleteFacesFindVacant, the edges that had no left and no right face before the call are not touched;
+    /// few faces (up to 64 or 1/128 of all faces, whichever is larger) are deleted one by one, in the time not depending on the mesh size
     MRMESH_API void deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
     /// deletes from this topology:
-    /// 1) all the gives faces,
+    /// 1) all the given faces,
     /// 2) all the vertices, which had incident only deleted faces and no edges from \p keepEdges,
-    /// 3) make lone all the edges, which had to the left/right only deleted faces or no faces at all, except for the edges from \p keepEdges;
-    /// return bit sets of all vacant elements in this topology after deletion
+    /// 3) make lone all the edges, which had to the left/right only deleted faces or no faces at all (unlike \ref deleteFaces), except for the edges from \p keepEdges;
+    /// return bit sets of all vacant elements in this topology after deletion; it takes a pass over the whole mesh for any number of faces
     MRMESH_API VacantElements deleteFacesFindVacant( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
     /// deletes the given valid faces (in parallel), keeping all their edges and vertices, which get no face on that side

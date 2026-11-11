@@ -6,10 +6,13 @@ BASE_DIR=$( cd "$( dirname "$0" )"/.. ; pwd -P )
 
 INSTALL_DIR="${1:-./vcpkg_installed}"
 
+if [ -z "${VCPKG_TRIPLET}" ] ; then
+  VCPKG_TRIPLET=$("${BASE_DIR}/scripts/detect_vcpkg_triplet.sh")
+fi
+# The host triplet defaults to the target one. The target is passed to vcpkg
+# explicitly below: its own default would be the host's native triplet, which is
+# wrong on the macOS x64-cross runner (arm64 host, x64-cross-osx-meshlib target).
 if [ -z "${VCPKG_DEFAULT_HOST_TRIPLET}" ] ; then
-  if [ -z "${VCPKG_TRIPLET}" ] ; then
-    VCPKG_TRIPLET=$("${BASE_DIR}/scripts/detect_vcpkg_triplet.sh")
-  fi
   export VCPKG_DEFAULT_HOST_TRIPLET="${VCPKG_TRIPLET}"
 fi
 
@@ -26,6 +29,7 @@ if [ -n "${CI}" ] ; then
 fi
 
 vcpkg install \
+    --triplet "${VCPKG_TRIPLET}" \
     --x-manifest-root=${BASE_DIR}/thirdparty/vcpkg \
     --x-install-root="${INSTALL_DIR}" \
     --x-abi-tools-use-exact-versions \

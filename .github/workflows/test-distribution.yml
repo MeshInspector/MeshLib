@@ -15,6 +15,10 @@ on:
       test_macos:
         required: true
         type: boolean
+      test_macos_crossplatform:
+        # The *x64-cross.pkg exists only when the self-hosted cross build ran.
+        required: true
+        type: boolean
       test_windows:
         required: true
         type: boolean
@@ -33,6 +37,9 @@ on:
         type: boolean
         default: false
       test_macos:
+        type: boolean
+        default: false
+      test_macos_crossplatform:
         type: boolean
         default: false
       test_windows:
@@ -227,32 +234,32 @@ jobs:
           cmake --build build
           ./build/MeshModification
 
-  macos-test:
+  # The x64-cross legs are dropped when that build did not run: there is no
+  # *x64-cross.pkg to download then.
+  macos-test-matrix:
     if: ${{ inputs.test_macos }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: .github/workflows/matrix
+      - name: Set matrix
+        id: matrix
+        run: |
+          FILTER='${{ inputs.test_macos_crossplatform && '.' || 'del(.include[] | select(.arch == "x64-cross"))' }}'
+          echo "matrix=$(jq -c "$FILTER" .github/workflows/matrix/macos-test-config.json)" >> "$GITHUB_OUTPUT"
+
+  macos-test:
+    needs: macos-test-matrix
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - arch: arm64
-            runner: macos-13
-            pkg_pattern: '*arm64.pkg'
-          - arch: arm64
-            runner: macos-15
-            pkg_pattern: '*arm64.pkg'
-          - arch: arm64
-            runner: macos-26
-            pkg_pattern: '*arm64.pkg'
-          - arch: x64
-            runner: macos-12-intel
-            pkg_pattern: '*x64.pkg'
-          - arch: x64
-            runner: macos-15-intel
-            pkg_pattern: '*x64.pkg'
-          - arch: x64
-            runner: macos-26-intel
-            pkg_pattern: '*x64.pkg'
+      matrix: ${{ fromJSON(needs.macos-test-matrix.outputs.matrix) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -297,6 +304,15 @@ jobs:
           echo "MESHLIB_FW=${MESHLIB_FW}" >> "${GITHUB_ENV}"
           echo "${MESHLIB_FW}/bin" >> "${GITHUB_PATH}"
 
+      # Every Mach-O in the framework must be x86_64 and may not require a macOS
+      # newer than 12.0: the packages come from the vcpkg legs, whose triplets build
+      # every dependency with VCPKG_OSX_DEPLOYMENT_TARGET 12.0, and MeshLib's own
+      # binaries target 12.0 too. (A Homebrew-built package would sit at 15.0, the
+      # bundled bottles carry the target of the macOS they were built on.)
+      - name: Check package binary compatibility
+        if: ${{ matrix.arch != 'arm64' }}
+        run: python3 scripts/check_macos_binary_compatibility.py "$MESHLIB_FW" --arch x86_64 --floor 12.0
+
       # [error] NSGL: Failed to find a suitable pixel format
       - name: Run MeshViewer
         run: MeshViewer -tryHidden -noEventLoop -unloadPluginsAtEnd
@@ -315,7 +331,7 @@ jobs:
           fi
           mkdir build && \
           cd build && \
-          cmake .. -DCMAKE_CXX_COMPILER=/usr/bin/clang++ && \
+          cmake .. -DCMAKE_CXX_COMPILER=/usr/bin/clang++ -DCMAKE_FRAMEWORK_PATH="$(dirname "$(dirname "$(dirname "$MESHLIB_FW")")")" && \
           cmake --build . && \
           ./MeshModification
 
@@ -325,7 +341,7 @@ jobs:
           if [ "$(sw_vers -productVersion | cut -d. -f1)" -lt 13 ]; then
             export MACOSX_DEPLOYMENT_TARGET=12.7
           fi
-          cmake -S . -B build -DCMAKE_C_COMPILER=/usr/bin/clang && \
+          cmake -S . -B build -DCMAKE_C_COMPILER=/usr/bin/clang -DCMAKE_FRAMEWORK_PATH="$(dirname "$(dirname "$(dirname "$MESHLIB_FW")")")" && \
           cmake --build build
           ./build/MeshModification
 

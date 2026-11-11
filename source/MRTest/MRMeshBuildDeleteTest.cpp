@@ -277,6 +277,13 @@ TEST( MRMesh, DeleteFacesNoVacant )
     del( serial.getValidFaces() );
     EXPECT_EQ( serial.numValidFaces(), 0 );
     EXPECT_TRUE( same() );
+
+    // all 32 faces of a small mesh, given as the valid faces of the topology itself, are deleted serially
+    bulk = serial = makeUVSphere( 1, 4, 4 ).topology;
+    bulk.deleteFaces( bulk.getValidFaces() );
+    serial.deleteFacesNoVacant( serial.getValidFaces() );
+    EXPECT_EQ( serial.numValidVerts(), 0 );
+    EXPECT_TRUE( same() );
 }
 
 } //namespace MR

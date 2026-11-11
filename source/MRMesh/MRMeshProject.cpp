@@ -99,33 +99,29 @@ MeshProjectionResult findProjectionT( const Vector3f & pt, const MeshPart & mp, 
         return none;
     };
 
-    addSubTask( processChild( tree.rootNodeId() ) );
-
-    while ( !stop && !subtasks.empty() )
+    // the node to visit next is not pushed in the stack
+    auto s = processChild( tree.rootNodeId() );
+    while ( !stop )
     {
-        const auto s = subtasks.top();
-        subtasks.pop();
-        if ( s.distSq >= res.distSq )
+        if ( !tree.isLeaf( s.n ) && s.distSq < res.distSq )
+        {
+            const auto & node = tree[s.n];
+            const auto s1 = processChild( node.l );
+            if ( stop )
+                break;
+            const auto s2 = processChild( node.r );
+            if ( stop )
+                break;
+            // descend in the nearer child, the other waits in the stack
+            const bool lNearer = s1.distSq < s2.distSq;
+            addSubTask( lNearer ? s2 : s1 );
+            s = lNearer ? s1 : s2;
             continue;
-
-        const auto & node = tree[s.n];
-        auto s1 = processChild( node.l );
-        if ( stop )
-            break;
-        auto s2 = processChild( node.r );
-        if ( stop )
-            break;
-        // add task with smaller distance last to descend there first
-        if ( s1.distSq < s2.distSq )
-        {
-            addSubTask( s2 );
-            addSubTask( s1 );
         }
-        else
-        {
-            addSubTask( s1 );
-            addSubTask( s2 );
-        }
+        if ( subtasks.empty() )
+            break;
+        s = subtasks.top();
+        subtasks.pop();
     }
 
     if constexpr ( !Plain )

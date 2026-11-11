@@ -112,7 +112,7 @@ TEST( MRMesh, PcdBinaryCompressed )
     }
     packed.push_back( char( 3 ) );
     packed.append( raw, 80, 4 );
-    packed.push_back( char( 0xE0 ) ); // long copy with the high bits of distance equal to 0
+    packed.push_back( '\xE0' ); // long copy with the high bits of distance equal to 0
     packed.push_back( char( 36 - 2 - 7 ) ); // 36 bytes
     packed.push_back( char( 4 - 1 ) ); // from the distance 4
 

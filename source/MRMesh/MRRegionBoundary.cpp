@@ -297,10 +297,7 @@ std::vector<EdgeLoop> delRegionKeepBd( Mesh & mesh, const FaceBitSet * region /*
             uset.set( e );
         filteredBds.push_back( std::move( bd ) );
     }
-    const auto & fs = mesh.topology.getFaceIds( region );
-    if ( fs.any() )
-        mesh.invalidateCaches(); // some points can be deleted as well
-    mesh.topology.deleteFacesNoVacant( fs, &uset );
+    mesh.deleteFaces( mesh.topology.getFaceIds( region ), &uset );
     return filteredBds;
 }
 

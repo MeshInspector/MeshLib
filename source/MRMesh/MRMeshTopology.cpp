@@ -1038,7 +1038,7 @@ void MeshTopology::deleteFacesKeepEdges( const FaceBitSet & fs )
     }
 }
 
-auto MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges ) -> VacantElements
+auto MeshTopology::deleteFaces_( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges, bool keepFaceless ) -> VacantElements
 {
     MR_TIMER;
     VacantElements vacant;
@@ -1055,10 +1055,13 @@ auto MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSe
         }
         if ( keepEdges && keepEdges->test( ue ) )
             return;
-        if ( auto l = left( ue ); l && !fs.test( l ) )
+        const auto l = left( ue ), r = right( ue );
+        if ( l && !fs.test( l ) )
             return; // left face exists and will not be deleted
-        if ( auto r = right( ue ); r && !fs.test( r ) )
+        if ( r && !fs.test( r ) )
             return; // right face exists and will not be deleted
+        if ( keepFaceless && !l && !r )
+            return;
         vacant.edges.set( ue );
     } );
 
@@ -1126,14 +1129,18 @@ auto MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSe
     return vacant;
 }
 
-void MeshTopology::deleteFacesNoVacant( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
+auto MeshTopology::deleteFacesFindVacant( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges ) -> VacantElements
 {
-    // the serial deletion below is faster than deleteFaces up to 1/20 of the faces at least (measured with 1 to 24 threads);
-    // the limit does not depend on the number of threads for the result to be the same on every machine
+    return deleteFaces_( fs, keepEdges, false );
+}
+
+void MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
+{
+    // the serial deletion below gives the same result, and it is faster up to 1/20 of the faces at least (measured with 1 to 24 threads)
     const auto maxSerialFaces = std::max( size_t( 64 ), faceSize() / 128 );
     if ( fs.countBitsAndBlocks( maxSerialFaces ).bits > maxSerialFaces )
     {
-        deleteFaces( fs, keepEdges );
+        deleteFaces_( fs, keepEdges, true );
         return;
     }
     for ( auto f : fs )
@@ -1156,7 +1163,7 @@ void MeshTopology::deleteFacesNoVacant( const FaceBitSet & fs, const UndirectedE
                     setOrg( x, VertId{} );
                     continue;
                 }
-                // as in deleteFaces, the vertex passes to its next edge
+                // as in deleteFaces_, the vertex passes to its next edge
                 if ( auto v = org( x ); v && edgePerVertex_[v] == x )
                     edgePerVertex_[v] = next( x );
                 splice( prev( x ), x );

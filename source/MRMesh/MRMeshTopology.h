@@ -276,17 +276,16 @@ public:
     /// deletes the face, also deletes its edges and vertices if they were not shared by other faces and not in \p keepEdges
     MRMESH_API void deleteFace( FaceId f, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
+    /// deletes the given faces, also deletes their edges and vertices if they were not shared by other faces and not in \p keepEdges;
+    /// few faces (up to 64 or 1/128 of all faces, whichever is larger) are deleted in the time proportional to their number, not to the mesh size
+    MRMESH_API void deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
+
     /// deletes from this topology:
     /// 1) all the gives faces,
     /// 2) all the vertices, which had incident only deleted faces and no edges from \p keepEdges,
-    /// 3) make lone all the edges, which had to the left/right only deleted faces except for the edges from \p keepEdges;
+    /// 3) make lone all the edges, which had to the left/right only deleted faces or no faces at all, except for the edges from \p keepEdges;
     /// return bit sets of all vacant elements in this topology after deletion
-    MRMESH_API VacantElements deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
-
-    /// same as \ref deleteFaces, but returns nothing, so few faces (up to 64 or 1/128 of all faces, whichever is larger) are deleted
-    /// in the time proportional to their number, not to the mesh size;
-    /// in that case the edges having no left and no right face before the call stay with their vertices, while deleteFaces makes them lone
-    MRMESH_API void deleteFacesNoVacant( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
+    MRMESH_API VacantElements deleteFacesFindVacant( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
     /// deletes the given valid faces (in parallel), keeping all their edges and vertices, which get no face on that side
     MRMESH_API void deleteFacesKeepEdges( const FaceBitSet & fs );
@@ -589,6 +588,9 @@ private:
     MRMESH_API void computeAllFromEdges_();
 
 private:
+    /// parallel deletion of the given faces, which makes lone the edges without left and right faces only if (keepFaceless) is false
+    VacantElements deleteFaces_( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges, bool keepFaceless );
+
     /// sets new origin to the full origin ring including this edge, without updating edgePerVertex_ table
     void setOrg_( EdgeId a, VertId v );
 

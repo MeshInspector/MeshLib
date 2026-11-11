@@ -108,21 +108,21 @@ float calcFastWindingNumber( const Dipoles& dipoles, const AABBTree& tree, const
     const float betaSq = sqr( beta );
     const auto & nodes = tree.nodes();
     // every level adds at most MaxChildren - 1 nodes, and the tree of 2^31 triangles has 16 levels
+    // only the nodes with not good enough approximation by their dipoles get in the stack
     InplaceStack<NoInitNodeId, 64> subtasks;
-    subtasks.push( NodeId( 0 ) );
 
     float res = 0;
+    if ( !dipoles[NodeId( 0 )].addIfGoodApprox( q, betaSq, res ) )
+        subtasks.push( NodeId( 0 ) );
     while ( !subtasks.empty() )
     {
-        const NodeId i = subtasks.top();
+        const auto & node = nodes[subtasks.top()];
         subtasks.pop();
-        if ( dipoles[i].addIfGoodApprox( q, betaSq, res ) )
-            continue;
-        const auto & node = nodes[i];
         if ( !node.leaf() )
         {
             for ( int c = node.count - 1; c >= 0; --c )
-                subtasks.push( NodeId( node.first + c ) );
+                if ( const NodeId n( node.first + c ); !dipoles[n].addIfGoodApprox( q, betaSq, res ) )
+                    subtasks.push( n );
             continue;
         }
         for ( int t = node.first, end = node.first + node.numLeafTris(); t < end; ++t )

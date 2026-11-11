@@ -35,20 +35,20 @@ __device__ void processPoint( const float3& q, float& res, const Dipole* dipoles
     const float betaSq = beta * beta;
 
     // every level adds at most 3 nodes, and the tree of 2^31 triangles has 16 levels
+    // only the nodes with not good enough approximation by their dipoles get in the stack
     InplaceStack<int, 64> subtasks;
-    subtasks.push( 0 );
+    if ( !dipoles[0].addIfGoodApprox( q, betaSq, res ) )
+        subtasks.push( 0 );
 
     while ( !subtasks.empty() )
     {
-        const auto i = subtasks.top();
+        const auto& node = nodes[subtasks.top()];
         subtasks.pop();
-        if ( dipoles[i].addIfGoodApprox( q, betaSq, res ) )
-            continue;
-        const auto& node = nodes[i];
         if ( !node.leaf() )
         {
-            for ( int c = node.count - 1; c >= 0; --c )
-                subtasks.push( node.first + c );
+            for ( int c = node.first + node.count - 1; c >= node.first; --c )
+                if ( !dipoles[c].addIfGoodApprox( q, betaSq, res ) )
+                    subtasks.push( c );
             continue;
         }
         // the triangles of a leaf with not good enough approximation by its dipole are summed exactly
@@ -82,47 +82,56 @@ __device__ float calcDistanceSq( const float3& pt,
         return lengthSq( nodes[n].box.getBoxClosestPointTo( pt ) - pt );
     };
 
-    subtasks.push( { 0, boxDistSq( 0 ) } );
-
-    while ( !subtasks.empty() )
+    // the node to visit next is not pushed in the stack
+    SubTask s{ 0, boxDistSq( 0 ) };
+    while ( true )
     {
-        const auto s = subtasks.top();
-        subtasks.pop();
-        if ( !( s.distSq < resSq ) )
-            continue;
-
-        const auto& node = nodes[s.n];
-        if ( node.leaf() )
+        if ( s.distSq < resSq )
         {
-            for ( int t = node.first, e = node.first + node.numLeafTris(); t < e; ++t )
+            const auto& node = nodes[s.n];
+            if ( !node.leaf() )
             {
-                const auto& lt = leafTris[t];
-                const auto closestPointRes = closestPointInTriangle( pt, meshPoints[lt.verts[0]], meshPoints[lt.verts[1]], meshPoints[lt.verts[2]] );
-                const float distSq = lengthSq( closestPointRes.proj - pt );
-                if ( distSq < resSq )
-                    resSq = distSq;
+                // the children closer than the found point ordered by distance, the farthest first
+                SubTask ch[4];
+                int numCh = 0;
+                for ( int c = 0; c < node.count; ++c )
+                {
+                    const int n = node.first + c;
+                    const float d = boxDistSq( n );
+                    if ( !( d < resSq ) )
+                        continue;
+                    int k = numCh++;
+                    for ( ; k > 0 && ch[k - 1].distSq < d; --k )
+                        ch[k] = ch[k - 1];
+                    ch[k] = { n, d };
+                }
+                if ( numCh > 0 )
+                {
+                    // descend in the nearest child, the others wait in the stack
+                    for ( int i = 0; i + 1 < numCh; ++i )
+                        subtasks.push( ch[i] );
+                    s = ch[numCh - 1];
+                    continue;
+                }
             }
-            if ( resSq <= minDistSq )
-                break;
-            continue;
+            else
+            {
+                for ( int t = node.first, e = node.first + node.numLeafTris(); t < e; ++t )
+                {
+                    const auto& lt = leafTris[t];
+                    const auto closestPointRes = closestPointInTriangle( pt, meshPoints[lt.verts[0]], meshPoints[lt.verts[1]], meshPoints[lt.verts[2]] );
+                    const float distSq = lengthSq( closestPointRes.proj - pt );
+                    if ( distSq < resSq )
+                        resSq = distSq;
+                }
+                if ( resSq <= minDistSq )
+                    break;
+            }
         }
-
-        // push the children closer than the found point, the nearest last to descend there first
-        SubTask ch[4];
-        int numCh = 0;
-        for ( int c = 0; c < node.count; ++c )
-        {
-            const int n = node.first + c;
-            const float d = boxDistSq( n );
-            if ( !( d < resSq ) )
-                continue;
-            int k = numCh++;
-            for ( ; k > 0 && ch[k - 1].distSq < d; --k )
-                ch[k] = ch[k - 1];
-            ch[k] = { n, d };
-        }
-        for ( int i = 0; i < numCh; ++i )
-            subtasks.push( ch[i] );
+        if ( subtasks.empty() )
+            break;
+        s = subtasks.top();
+        subtasks.pop();
     }
     return resSq;
 }

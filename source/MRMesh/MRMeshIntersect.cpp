@@ -53,83 +53,95 @@ MeshIntersectionResult meshRayIntersectT_( const MeshPart& meshPart, const Line3
     };
     // every level adds at most MaxChildren - 1 tasks, and the tree of 2^31 triangles has 16 levels
     InplaceStack<SubTask, 64> subtasks;
-    subtasks.push( { NodeId( 0 ), rayStart } );
-
     FaceId face;
     float distance = 0;
     TriPointf triP;
-    bool stop = false;
-    while( !stop && !subtasks.empty() )
+    // the node to visit next is not pushed in the stack
+    SubTask st{ NodeId( 0 ), rayStart };
+    for (;;)
     {
-        const auto st = subtasks.top();
-        subtasks.pop();
-        if ( !( st.start < rayEnd ) )
-            continue;
-        const auto & node = nodes[st.n];
-        if ( node.leaf() )
+        if ( st.start < rayEnd )
         {
-            for ( int i = node.first, end = node.first + node.numLeafTris(); i < end; ++i )
+            const auto & node = nodes[st.n];
+            if ( node.leaf() )
             {
-                const auto & lt = tree.leafTris()[i];
-                if constexpr ( Filtered )
+                bool stop = false;
+                for ( int i = node.first, end = node.first + node.numLeafTris(); i < end; ++i )
                 {
-                    if ( ( meshPart.region && !meshPart.region->test( lt.face ) ) || ( validFaces && !validFaces( lt.face ) ) )
+                    const auto & lt = tree.leafTris()[i];
+                    if constexpr ( Filtered )
+                    {
+                        if ( ( meshPart.region && !meshPart.region->test( lt.face ) ) || ( validFaces && !validFaces( lt.face ) ) )
+                            continue;
+                    }
+                    const Vector3<T> vA = Vector3<T>( m.points[lt.verts[0]] ) - line.p;
+                    const Vector3<T> vB = Vector3<T>( m.points[lt.verts[1]] ) - line.p;
+                    const Vector3<T> vC = Vector3<T>( m.points[lt.verts[2]] ) - line.p;
+                    const auto triIsect = rayTriangleIntersect( vA, vB, vC, prec );
+                    if ( !triIsect )
                         continue;
+                    const T t( triIsect->t );
+                    if ( !( t < rayEnd && t > rayStart ) )
+                        continue;
+                    distance = triIsect->t;
+                    face = lt.face;
+                    triP = triIsect->bary;
+                    if ( t == 0 )
+                    {
+                        stop = true; // intersection exactly at ray origin
+                        break;
+                    }
+                    if ( t < 0 )
+                    {
+                        assert( rayStart < 0 );
+                        rayStart = t;
+                        rayEnd = std::min( rayEnd, -t );
+                    }
+                    else
+                    {
+                        assert( rayEnd > 0 );
+                        rayEnd = t;
+                        rayStart = std::max( rayStart, -t );
+                    }
+                    if ( !closestIntersect )
+                    {
+                        stop = true;
+                        break;
+                    }
                 }
-                const Vector3<T> vA = Vector3<T>( m.points[lt.verts[0]] ) - line.p;
-                const Vector3<T> vB = Vector3<T>( m.points[lt.verts[1]] ) - line.p;
-                const Vector3<T> vC = Vector3<T>( m.points[lt.verts[2]] ) - line.p;
-                const auto triIsect = rayTriangleIntersect( vA, vB, vC, prec );
-                if ( !triIsect )
-                    continue;
-                const T t( triIsect->t );
-                if ( !( t < rayEnd && t > rayStart ) )
-                    continue;
-                distance = triIsect->t;
-                face = lt.face;
-                triP = triIsect->bary;
-                if ( t == 0 )
-                {
-                    stop = true; // intersection exactly at ray origin
+                if ( stop )
                     break;
-                }
-                if ( t < 0 )
+            }
+            else
+            {
+                // the children crossed by the ray ordered by the entry, the one entered last first
+                SubTask ch[AABBTree::MaxChildren];
+                int numCh = 0;
+                for ( int i = 0; i < node.count; ++i )
                 {
-                    assert( rayStart < 0 );
-                    rayStart = t;
-                    rayEnd = std::min( rayEnd, -t );
+                    const NodeId n( node.first + i );
+                    T cs = rayStart, ce = rayEnd;
+                    if ( !rayBoxIntersect( nodeBox( n ), rayOrigin, cs, ce, prec ) )
+                        continue;
+                    int k = numCh++;
+                    for ( ; k > 0 && ch[k - 1].start < cs; --k )
+                        ch[k] = ch[k - 1];
+                    ch[k] = { n, cs };
                 }
-                else
+                if ( numCh > 0 )
                 {
-                    assert( rayEnd > 0 );
-                    rayEnd = t;
-                    rayStart = std::max( rayStart, -t );
-                }
-                if ( !closestIntersect )
-                {
-                    stop = true;
-                    break;
+                    // descend in the child entered first, the others wait in the stack
+                    for ( int i = 0; i + 1 < numCh; ++i )
+                        subtasks.push( ch[i] );
+                    st = ch[numCh - 1];
+                    continue;
                 }
             }
-            continue;
         }
-
-        // push the children crossed by the ray, the one entered first last to descend there first
-        SubTask ch[AABBTree::MaxChildren];
-        int numCh = 0;
-        for ( int i = 0; i < node.count; ++i )
-        {
-            const NodeId n( node.first + i );
-            T cs = rayStart, ce = rayEnd;
-            if ( !rayBoxIntersect( nodeBox( n ), rayOrigin, cs, ce, prec ) )
-                continue;
-            int k = numCh++;
-            for ( ; k > 0 && ch[k - 1].start < cs; --k )
-                ch[k] = ch[k - 1];
-            ch[k] = { n, cs };
-        }
-        for ( int i = 0; i < numCh; ++i )
-            subtasks.push( ch[i] );
+        if ( subtasks.empty() )
+            break;
+        st = subtasks.top();
+        subtasks.pop();
     }
 
     if( face )

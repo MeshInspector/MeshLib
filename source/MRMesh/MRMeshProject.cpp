@@ -115,37 +115,48 @@ MeshProjectionResult findProjectionWide( const Vector3f & pt, const MeshPart & m
         return false;
     };
 
-    subtasks.push( { NodeId( 0 ), boxDistSq( NodeId( 0 ) ) } );
-    while ( !subtasks.empty() )
+    // the node to visit next is not pushed in the stack
+    SubTask s{ NodeId( 0 ), boxDistSq( NodeId( 0 ) ) };
+    for (;;)
     {
-        const auto s = subtasks.top();
+        if ( s.distSq < distSq )
+        {
+            const auto & node = nodes[s.n];
+            if ( node.leaf() )
+            {
+                if ( processLeaf( node ) )
+                    break;
+            }
+            else
+            {
+                // the children closer than the found point ordered by distance, the farthest first
+                SubTask ch[AABBTree::MaxChildren];
+                int numCh = 0;
+                for ( int i = 0; i < node.count; ++i )
+                {
+                    const NodeId n( node.first + i );
+                    const float d = boxDistSq( n );
+                    if ( !( d < distSq ) )
+                        continue;
+                    int k = numCh++;
+                    for ( ; k > 0 && ch[k - 1].distSq < d; --k )
+                        ch[k] = ch[k - 1];
+                    ch[k] = { n, d };
+                }
+                if ( numCh > 0 )
+                {
+                    // descend in the nearest child, the others wait in the stack
+                    for ( int i = 0; i + 1 < numCh; ++i )
+                        subtasks.push( ch[i] );
+                    s = ch[numCh - 1];
+                    continue;
+                }
+            }
+        }
+        if ( subtasks.empty() )
+            break;
+        s = subtasks.top();
         subtasks.pop();
-        if ( !( s.distSq < distSq ) )
-            continue;
-        const auto & node = nodes[s.n];
-        if ( node.leaf() )
-        {
-            if ( processLeaf( node ) )
-                break;
-            continue;
-        }
-
-        // push the children closer than the found point, the nearest last to descend there first
-        SubTask ch[AABBTree::MaxChildren];
-        int numCh = 0;
-        for ( int i = 0; i < node.count; ++i )
-        {
-            const NodeId n( node.first + i );
-            const float d = boxDistSq( n );
-            if ( !( d < distSq ) )
-                continue;
-            int k = numCh++;
-            for ( ; k > 0 && ch[k - 1].distSq < d; --k )
-                ch[k] = ch[k - 1];
-            ch[k] = { n, d };
-        }
-        for ( int i = 0; i < numCh; ++i )
-            subtasks.push( ch[i] );
     }
 
     if ( face )

@@ -7,6 +7,7 @@
 #include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
 #include <algorithm>
+#include <tbb/parallel_invoke.h>
 
 namespace MR
 {
@@ -83,6 +84,8 @@ public:
         for ( auto & c : cnt_ )
             c = { -1, -1 };
         nodes_.resize( countNodes_( 0, numTris_ ) );
+        if ( numTris_ >= cParallelSplitNum )
+            scratch_ = Buffer<Center>( numTris_ );
         make_( NodeId( 0 ), NodeId( 1 ), 0, 0, numTris_ );
     }
 
@@ -116,8 +119,22 @@ private:
     int largestCentersAxis_( int first, int num ) const
     {
         Box3f box;
-        for ( int i = 0; i < num; ++i )
-            box.include( centers_[first + i].c );
+        if ( num >= cParallelSplitNum )
+        {
+            box = tbb::parallel_reduce( tbb::blocked_range<int>( first, first + num, 1 << 14 ), Box3f(),
+                [&]( const tbb::blocked_range<int> & r, Box3f b )
+                {
+                    for ( int i = r.begin(); i < r.end(); ++i )
+                        b.include( centers_[i].c );
+                    return b;
+                },
+                []( Box3f a, const Box3f & b ) { a.include( b ); return a; } );
+        }
+        else
+        {
+            for ( int i = 0; i < num; ++i )
+                box.include( centers_[first + i].c );
+        }
         const auto sz = box.size();
         return sz.x >= sz.y ? ( sz.x >= sz.z ? 0 : 2 ) : ( sz.y >= sz.z ? 1 : 2 );
     }
@@ -125,8 +142,68 @@ private:
     // [first, first + num / 2) get the smaller centers along axis; ties are ordered by index to make the tree independent of std::nth_element
     void split_( int first, int num, int axis )
     {
-        std::nth_element( centers_.data() + first, centers_.data() + first + num / 2, centers_.data() + first + num,
-            [axis]( const Center & a, const Center & b ) { return a.c[axis] < b.c[axis] || ( a.c[axis] == b.c[axis] && a.i < b.i ); } );
+        const auto less = [axis]( const Center & a, const Center & b ) { return a.c[axis] < b.c[axis] || ( a.c[axis] == b.c[axis] && a.i < b.i ); };
+        Center * const data = centers_.data() + first;
+        const int mid = num / 2;
+        if ( num < cParallelSplitNum )
+        {
+            std::nth_element( data, data + mid, data + num, less );
+            return;
+        }
+
+        // a big range is partitioned in parallel in three parts by two samples around the median,
+        // and only the small middle part with the median is given to std::nth_element
+        constexpr int cNumSamples = 1024, cHalfGap = 64;
+        Buffer<Center> samples( cNumSamples );
+        for ( int k = 0; k < cNumSamples; ++k )
+            samples[k] = data[ std::int64_t( k ) * num / cNumSamples ];
+        std::sort( samples.data(), samples.data() + cNumSamples, less );
+        const Center lo = samples[cNumSamples / 2 - cHalfGap];
+        const Center hi = samples[cNumSamples / 2 + cHalfGap];
+        const auto part = [&]( const Center & c ) { return less( c, lo ) ? 0 : ( less( c, hi ) ? 1 : 2 ); };
+
+        constexpr int cChunk = 1 << 13;
+        const int numChunks = ( num + cChunk - 1 ) / cChunk;
+        struct Counts { int n[3]; };
+        std::vector<Counts> counts( numChunks );
+        ParallelFor( 0, numChunks, [&]( int ch )
+        {
+            Counts cnt{};
+            for ( int i = ch * cChunk, e = std::min( num, i + cChunk ); i < e; ++i )
+                ++cnt.n[part( data[i] )];
+            counts[ch] = cnt;
+        } );
+        Counts total{};
+        for ( const auto & c : counts )
+            for ( int k = 0; k < 3; ++k )
+                total.n[k] += c.n[k];
+        if ( mid < total.n[0] || mid >= total.n[0] + total.n[1] )
+        {
+            // the median is not between the samples
+            std::nth_element( data, data + mid, data + num, less );
+            return;
+        }
+        Counts pos{ { 0, total.n[0], total.n[0] + total.n[1] } };
+        for ( auto & c : counts )
+        {
+            const auto my = pos;
+            for ( int k = 0; k < 3; ++k )
+                pos.n[k] += c.n[k];
+            c = my;
+        }
+        Center * const tmp = scratch_.data() + first;
+        ParallelFor( 0, numChunks, [&]( int ch )
+        {
+            auto pos = counts[ch];
+            for ( int i = ch * cChunk, e = std::min( num, i + cChunk ); i < e; ++i )
+                tmp[ pos.n[part( data[i] )]++ ] = data[i];
+        } );
+        ParallelFor( 0, numChunks, [&]( int ch )
+        {
+            const int i = ch * cChunk, e = std::min( num, i + cChunk );
+            std::copy( tmp + i, tmp + e, data + i );
+        } );
+        std::nth_element( data + total.n[0], data + mid, data + total.n[0] + total.n[1], less );
     }
 
     // fills node n with its subtree, whose nodes below the children of n start from desc
@@ -154,6 +231,10 @@ private:
         const Child halves[2] = { { depth + 1, first, num / 2 }, { depth + 1, first + num / 2, num - num / 2 } };
         Child ch[AABBTree::MaxChildren];
         int k = 0;
+        const auto splitHalf = [&]( const Child & h ) { split_( h.first, h.num, largestCentersAxis_( h.first, h.num ) ); };
+        const bool parallel = num >= 4096;
+        if ( parallel )
+            tbb::parallel_invoke( [&] { splitHalf( halves[0] ); }, [&] { splitHalf( halves[1] ); } );
         for ( const auto & h : halves )
         {
             if ( h.num <= AABBTree::MaxLeafTris )
@@ -161,7 +242,8 @@ private:
                 ch[k++] = h;
                 continue;
             }
-            split_( h.first, h.num, largestCentersAxis_( h.first, h.num ) );
+            if ( !parallel )
+                splitHalf( h );
             ch[k++] = { depth + 2, h.first, h.num / 2 };
             ch[k++] = { depth + 2, h.first + h.num / 2, h.num - h.num / 2 };
         }
@@ -175,7 +257,7 @@ private:
             childDesc[j] = next;
             next = next + ( numNodes_( ch[j].depth, ch[j].num ) - 1 );
         }
-        if ( num < 4096 )
+        if ( !parallel )
         {
             for ( int j = 0; j < k; ++j )
                 make_( desc + j, childDesc[j], ch[j].depth, ch[j].first, ch[j].num );
@@ -197,6 +279,8 @@ private:
 
     const Buffer<BoxedTri> & boxedTris_;
     Buffer<Center> & centers_;
+    Buffer<Center> scratch_; // for parallel splits of big ranges
+    static constexpr int cParallelSplitNum = 1 << 17;
     Vector<Node, NodeId> & nodes_;
     Vector<AABBTree::LeafTri> & leafTris_;
     Vector<Box3f> & leafBoxes_;

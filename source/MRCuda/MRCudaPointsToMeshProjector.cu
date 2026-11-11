@@ -36,68 +36,79 @@ __global__ void kernel( const float3* points,
         return lengthSq( box.getBoxClosestPointTo( pt ) - pt );
     };
 
-    subtasks.push( { 0, boxDistSq( 0 ) } );
-
-    bool stop = false;
-    while ( !stop && !subtasks.empty() )
+    // the node to visit next is not pushed in the stack
+    SubTask s{ 0, boxDistSq( 0 ) };
+    while ( true )
     {
-        const auto s = subtasks.top();
-        subtasks.pop();
-        if ( !( s.distSq < res.distSq ) )
-            continue;
-
-        const auto& node = nodes[s.n];
-        if ( node.leaf() )
+        if ( s.distSq < res.distSq )
         {
-            for ( int i = node.first, e = node.first + node.numLeafTris(); i < e; ++i )
+            const auto& node = nodes[s.n];
+            if ( !node.leaf() )
             {
-                const auto& lt = leafTris[i];
-                float3 a = meshPoints[lt.verts[0]];
-                float3 b = meshPoints[lt.verts[1]];
-                float3 c = meshPoints[lt.verts[2]];
-
-                if ( !refXf.isIdentity )
+                // the children closer than the found point ordered by distance, the farthest first
+                SubTask ch[4];
+                int numCh = 0;
+                for ( int c = 0; c < node.count; ++c )
                 {
-                    a = refXf.transform( a );
-                    b = refXf.transform( b );
-                    c = refXf.transform( c );
+                    const int n = node.first + c;
+                    const float d = boxDistSq( n );
+                    if ( !( d < res.distSq ) )
+                        continue;
+                    int k = numCh++;
+                    for ( ; k > 0 && ch[k - 1].distSq < d; --k )
+                        ch[k] = ch[k - 1];
+                    ch[k] = { n, d };
                 }
-
-                const auto closestPointRes = closestPointInTriangle( pt, a, b, c );
-
-                float distSq = lengthSq( closestPointRes.proj - pt );
-                if ( distSq < res.distSq )
+                if ( numCh > 0 )
                 {
-                    res.distSq = distSq;
-                    res.proj.point = closestPointRes.proj;
-                    res.proj.faceId = lt.face;
-                    res.tp = MeshTriPoint{ -1, closestPointRes.bary.x, closestPointRes.bary.y };
-                    if ( distSq <= loDistLimitSq )
-                    {
-                        stop = true;
-                        break;
-                    }
+                    // descend in the nearest child, the others wait in the stack
+                    for ( int i = 0; i + 1 < numCh; ++i )
+                        subtasks.push( ch[i] );
+                    s = ch[numCh - 1];
+                    continue;
                 }
             }
-            continue;
-        }
+            else
+            {
+                bool stop = false;
+                for ( int i = node.first, e = node.first + node.numLeafTris(); i < e; ++i )
+                {
+                    const auto& lt = leafTris[i];
+                    float3 a = meshPoints[lt.verts[0]];
+                    float3 b = meshPoints[lt.verts[1]];
+                    float3 c = meshPoints[lt.verts[2]];
 
-        // push the children closer than the found point, the nearest last to descend there first
-        SubTask ch[4];
-        int numCh = 0;
-        for ( int c = 0; c < node.count; ++c )
-        {
-            const int n = node.first + c;
-            const float d = boxDistSq( n );
-            if ( !( d < res.distSq ) )
-                continue;
-            int k = numCh++;
-            for ( ; k > 0 && ch[k - 1].distSq < d; --k )
-                ch[k] = ch[k - 1];
-            ch[k] = { n, d };
+                    if ( !refXf.isIdentity )
+                    {
+                        a = refXf.transform( a );
+                        b = refXf.transform( b );
+                        c = refXf.transform( c );
+                    }
+
+                    const auto closestPointRes = closestPointInTriangle( pt, a, b, c );
+
+                    float distSq = lengthSq( closestPointRes.proj - pt );
+                    if ( distSq < res.distSq )
+                    {
+                        res.distSq = distSq;
+                        res.proj.point = closestPointRes.proj;
+                        res.proj.faceId = lt.face;
+                        res.tp = MeshTriPoint{ -1, closestPointRes.bary.x, closestPointRes.bary.y };
+                        if ( distSq <= loDistLimitSq )
+                        {
+                            stop = true;
+                            break;
+                        }
+                    }
+                }
+                if ( stop )
+                    break;
+            }
         }
-        for ( int i = 0; i < numCh; ++i )
-            subtasks.push( ch[i] );
+        if ( subtasks.empty() )
+            break;
+        s = subtasks.top();
+        subtasks.pop();
     }
     resVec[index] = res;
 }

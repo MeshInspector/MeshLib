@@ -132,56 +132,68 @@ static Expected<void> fixBySelfBoolean( Mesh& mesh, const Settings& settings )
     // a hole is filled with the triangles from its edges to a vertex away from it and from the faces along it (a fill towards them
     // would cut them off): where the intersecting parts of the mesh reach the holes,
     // the holes overlap or cross themselves, and such fills cross one another and themselves along lines, while the fills
-    // in the surfaces of the holes would overlap
+    // in the surfaces of the holes would overlap; the holes are filled in a copy, so that the mesh stays as it is on failure
+    auto filled = mesh;
     FaceBitSet fill;
-    for ( auto holes = mesh.topology.findHoleRepresentiveEdges(); !holes.empty(); bad = findSelfCollidingTrianglesBS( mesh ) )
+    for ( auto holes = filled.topology.findHoleRepresentiveEdges(); !holes.empty(); )
     {
         const auto numHoles = holes.size();
         std::erase_if( holes, [&] ( EdgeId e )
         {
             bool reached = false;
             Vector3f away; // from the faces along the hole
-            for ( auto x : leftRing( mesh.topology, e ) )
+            for ( auto x : leftRing( filled.topology, e ) )
             {
-                const auto r = mesh.topology.right( x );
+                const auto r = filled.topology.right( x );
                 reached = reached || contains( *bad, r );
-                away += mesh.edgeCenter( x ) - mesh.triCenter( r );
+                away += filled.edgeCenter( x ) - filled.triCenter( r );
             }
             if ( reached )
             {
                 // as far from the hole as the radius of a circle with its perimeter, on the side without the faces
-                auto shift = Vector3f( mesh.holeDirArea( e ).normalized() * ( mesh.holePerimeter( e ) / ( 2 * PI ) ) );
+                auto dir = filled.holeDirArea( e );
+                if ( dir.lengthSq() == 0 ) // e.g. two edges between the same vertices
+                    dir = Vector3d( away );
+                auto shift = Vector3f( dir.normalized() * ( filled.holePerimeter( e ) / ( 2 * PI ) ) );
                 if ( dot( shift, away ) < 0 )
                     shift = -shift;
-                mesh.points[fillHoleTrivially( mesh, e, &fill )] += shift;
+                filled.points[fillHoleTrivially( filled, e, &fill )] += shift;
             }
             return reached;
         } );
         if ( holes.size() == numHoles )
             break;
-        mesh.invalidateCaches();
+        filled.invalidateCaches();
+        bad = findSelfCollidingTrianglesBS( filled, subprogress( settings.callback, 0.2f, 0.2f ) );
+        if ( !bad )
+            return unexpected( std::move( bad.error() ) );
     }
 
-    const auto [before, numBefore] = MeshComponents::getAllComponentsMap( mesh );
+    const auto [before, numBefore] = MeshComponents::getAllComponentsMap( filled );
     FaceMap new2Old;
-    auto res = selfBoolean( mesh, &new2Old );
+    auto res = selfBoolean( filled, &new2Old );
     if ( !res )
-    {
-        mesh.deleteFaces( fill );
         return unexpected( std::move( res.error() ) );
-    }
+    if ( !reportProgress( settings.callback, 0.9f ) )
+        return unexpectedOperationCanceled();
     const auto [after, numAfter] = MeshComponents::getAllComponentsMap( *res );
-    const auto areas = MeshComponents::getRegionAreas( *res, after, numAfter );
     const auto& valid = res->topology.getValidFaces();
 
-    // a component of the mesh with faces in each part of the result, and the components with faces in one part united
+    // a component of the mesh with faces in each part of the result, and the components with faces in one part united;
+    // the areas of the parts without the fill faces, which are removed
     UnionFind<RegionId> joined( numBefore );
     Vector<RegionId, RegionId> origin( numAfter ), largest( numBefore );
+    Vector<double, RegionId> areas( numAfter );
     for ( auto f : valid )
-        if ( auto& o = origin[after[f]]; o )
+    {
+        const auto a = after[f];
+        if ( auto& o = origin[a]; o )
             joined.unite( o, before[new2Old[f]] );
         else
             o = before[new2Old[f]];
+        if ( !fill.test( new2Old[f] ) )
+            areas[a] += res->area( f );
+    }
     for ( RegionId a( 0 ); a < origin.endId(); ++a )
         if ( auto& l = largest[joined.find( origin[a] )]; !l || areas[a] > areas[l] )
             l = a;
@@ -194,6 +206,7 @@ static Expected<void> fixBySelfBoolean( Mesh& mesh, const Settings& settings )
     mesh = std::move( *res );
     if ( settings.new2Old )
         *settings.new2Old = std::move( new2Old );
+    reportProgress( settings.callback, 1.0f );
     return {};
 }
 

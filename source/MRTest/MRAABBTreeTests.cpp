@@ -207,6 +207,38 @@ TEST( MRMesh, AABBTreeAddSplitFaces )
     EXPECT_GT( numWithNewFaces, 0 );
 }
 
+// splitting a part of the last split face again and again puts its leaf one level deeper every time:
+// the tree is rebuilt before it gets deeper than MaxDepth, for which the stacks of the traversals are sized
+TEST( MRMesh, AABBTreeDeepSplits )
+{
+    auto treeDepth = []( const AABBTree & tree )
+    {
+        const auto & nodes = tree.nodes();
+        std::vector<int> depth( nodes.size(), 0 );
+        int res = 0;
+        for ( NodeId n( 0 ); n < nodes.size(); ++n )
+        {
+            if ( nodes[n].leaf() )
+                continue;
+            for ( int i = 0; i < nodes[n].count; ++i )
+                res = std::max( res, depth[nodes[n].first + i] = depth[n] + 1 );
+        }
+        return res;
+    };
+    Mesh mesh = makeSphere( { .radius = 1.0f, .numMeshVertices = 1000 } );
+    (void)mesh.getAABBTree();
+    for ( int k = 0; k < 3 * AABBTree::MaxDepth; ++k )
+    {
+        FaceHashMap new2Old;
+        mesh.splitFace( mesh.topology.lastValidFace(), nullptr, &new2Old );
+        mesh.updateCachesAfterSplits( new2Old );
+        const auto * tree = mesh.getAABBTreeNotCreate();
+        ASSERT_TRUE( tree );
+        EXPECT_LE( treeDepth( *tree ), AABBTree::MaxDepth );
+    }
+    expectValidTree( mesh.getAABBTree(), mesh );
+}
+
 TEST( MRMesh, AABBTreeFlippedOrientation )
 {
     Mesh mesh = makeSphere( { .radius = 1.0f, .numMeshVertices = 200 } );

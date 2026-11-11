@@ -53,13 +53,14 @@ public:
 
 private:
     bool test_( const Box3f & a, const Box3f & b ) const { return preciseBoxesIntersect( a, b, conv_, minGap_ ); }
-    // the box of the transformed vertices of a triangle is tighter than its transformed box, and it contains the triangle as the precise predicates see it
+    // the box of the transformed vertices of a triangle is tighter than its transformed box;
+    // expanded, as the precise predicates transform the vertices again, maybe with other rounding (FMA)
     Box3f bTriBox_( int b ) const
     {
         Box3f box;
         for ( auto v : bTree_.leafTris()[b].verts )
             box.include( bLeafBoxes_->xf()( bPoints_[v] ) );
-        return box;
+        return box.insignificantlyExpanded();
     }
     Box3f bNodeBox_( NodeId b ) const { return bNodeBoxes_ ? bNodeBoxes_->get( b, bTree_.nodes()[b].box ) : bTree_.nodes()[b].box; }
 

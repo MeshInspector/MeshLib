@@ -173,15 +173,14 @@ MeshProjectionResult findProjectionWide( const Vector3f & pt, const MeshPart & m
 MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
     const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections )
 {
-    const auto & tree = mp.mesh.getAABBTree();
-    if ( !xf && !mp.region && !validFaces && !validProjections )
-        return findProjectionWide<true>( pt, mp, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
-    return findProjectionWide<false>( pt, mp, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
+    return findProjectionSubtree( pt, mp, mp.mesh.getAABBTree(), upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
 }
 
 MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart & mp, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
     const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections )
 {
+    if ( !xf && !mp.region && !validFaces && !validProjections )
+        return findProjectionWide<true>( pt, mp, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
     return findProjectionWide<false>( pt, mp, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
 }
 

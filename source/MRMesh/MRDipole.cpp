@@ -108,6 +108,7 @@ float calcFastWindingNumber( const Dipoles& dipoles, const AABBTree& tree, const
         assert( false );
         return 0;
     }
+    assert( dipoles.size() == tree.nodes().size() );
 
     const float betaSq = sqr( beta );
     const auto & nodes = tree.nodes();

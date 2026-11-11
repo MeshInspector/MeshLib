@@ -14,7 +14,6 @@
 #include "MRParallelFor.h"
 #include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
-#include "MRPch/MRSpdlog.h"
 #include <type_traits>
 
 namespace MR
@@ -379,7 +378,10 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
                     pvc[j].id = lt.verts[j];
                 if constexpr ( std::is_same_v<T, double> )
                 {
-                    // double version (more precise)
+                    // double version (more precise); a triangle outside its expanded box cannot be crossed in integer coordinates
+                    T bs = rayStart, be = rayEnd;
+                    if ( !rayBoxIntersect( Box3d( tree.leafBoxes()[i] ).expanded( Vector3d::diagonal( boxExpansion ) ), rayOrigin, bs, be, prec ) )
+                        continue;
                     for ( int j = 0; j < 3; ++j )
                         pvc[j].pt = convToInt( m.points[pvc[j].id] );
                     if ( const auto isect = doTriangleSegmentIntersect( pvc ) )

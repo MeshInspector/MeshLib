@@ -40,6 +40,8 @@ class AABBTree
 public:
     static constexpr int MaxChildren = 4;
     static constexpr int MaxLeafTris = 4;
+    /// the deepest level of a node (the root is at 0): the stacks of the traversals are sized for it, and addSplitFaces rebuilds a deeper tree
+    static constexpr int MaxDepth = 16;
 
     using Node = AABBTreeWideNode;
     using LeafTri = AABBTreeWideLeafTri;

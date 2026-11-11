@@ -84,7 +84,10 @@ public:
         for ( auto & c : cnt_ )
             c = { -1, -1 };
         nodes_.resize( countNodes_( 0, numTris_ ) );
-        if ( numTris_ >= cParallelSplitNum )
+        parallelSplits_ = numTris_ >= cParallelSplitNum
+            && tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) > 1
+            && tbb::this_task_arena::max_concurrency() > 1;
+        if ( parallelSplits_ )
             scratch_ = Buffer<Center>( numTris_ );
         make_( NodeId( 0 ), NodeId( 1 ), 0, 0, numTris_ );
     }
@@ -119,7 +122,7 @@ private:
     int largestCentersAxis_( int first, int num ) const
     {
         Box3f box;
-        if ( num >= cParallelSplitNum )
+        if ( parallelSplits_ && num >= cParallelSplitNum )
         {
             box = tbb::parallel_reduce( tbb::blocked_range<int>( first, first + num, 1 << 14 ), Box3f(),
                 [&]( const tbb::blocked_range<int> & r, Box3f b )
@@ -145,7 +148,7 @@ private:
         const auto less = [axis]( const Center & a, const Center & b ) { return a.c[axis] < b.c[axis] || ( a.c[axis] == b.c[axis] && a.i < b.i ); };
         Center * const data = centers_.data() + first;
         const int mid = num / 2;
-        if ( num < cParallelSplitNum )
+        if ( !parallelSplits_ || num < cParallelSplitNum )
         {
             std::nth_element( data, data + mid, data + num, less );
             return;
@@ -283,6 +286,7 @@ private:
     Buffer<Center> & centers_;
     Buffer<Center> scratch_; // for parallel splits of big ranges
     static constexpr int cParallelSplitNum = 1 << 17;
+    bool parallelSplits_ = false; // on one thread the parallel split only adds passes over the range
     Vector<Node, NodeId> & nodes_;
     Vector<AABBTree::LeafTri> & leafTris_;
     Vector<Box3f> & leafBoxes_;
@@ -618,6 +622,25 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
         for ( auto n = nodes_.backId(); n.valid(); --n )
             if ( !nodes_[n].leaf() )
                 updateBox( n );
+
+    // every split leaf went one level deeper: the stacks of the traversals hold the nodes of MaxDepth levels only
+    std::vector<int> depth( nodes_.size(), 0 );
+    int maxDepth = 0;
+    for ( NodeId n( 0 ); n < nodes_.size(); ++n )
+    {
+        const auto & node = nodes_[n];
+        if ( node.leaf() )
+            continue;
+        for ( int i = 0; i < node.count; ++i )
+            maxDepth = std::max( maxDepth, depth[node.first + i] = depth[n] + 1 );
+    }
+    if ( maxDepth > MaxDepth )
+    {
+        FaceBitSet faces( mesh.topology.faceSize() );
+        for ( const auto & lt : leafTris_ )
+            faces.set( lt.face );
+        *this = AABBTree( MeshPart{ mesh, &faces } );
+    }
 }
 
 } //namespace MR

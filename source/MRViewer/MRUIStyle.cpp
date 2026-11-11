@@ -1912,6 +1912,47 @@ bool inputTextIntoArrayMultiline( const char* label, char* buf, size_t buf_size,
     return basicTextInputIntoArray( label, buf, buf_size, flags, [&]{ return ImGui::InputTextMultiline( label, buf, buf_size, size, flags, callback, user_data ); } );
 }
 
+// ImGui::InputTextWithHint() does not accept the multiline flag, and ImGui::InputTextMultiline() does not accept a hint,
+// so these two call ImGui::InputTextEx() as ImGui::InputTextMultiline() does
+bool inputTextMultilineWithHint( const char* label, const char* hint, std::string& str, const ImVec2& size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data )
+{
+    assert( !( flags & ImGuiInputTextFlags_CallbackResize ) );
+    struct ResizeData
+    {
+        std::string* str = nullptr;
+        ImGuiInputTextCallback chain = nullptr;
+        void* chainData = nullptr;
+    } resizeData{ &str, callback, user_data };
+    // the same resizing callback as in imgui_stdlib.cpp, which does not expose it
+    ImGuiInputTextCallback resizeCallback = []( ImGuiInputTextCallbackData* data ) -> int
+    {
+        auto& d = *static_cast<ResizeData*>( data->UserData );
+        if ( data->EventFlag == ImGuiInputTextFlags_CallbackResize )
+        {
+            d.str->resize( size_t( data->BufTextLen ) );
+            data->Buf = d.str->data();
+            return 0;
+        }
+        if ( !d.chain )
+            return 0;
+        data->UserData = d.chainData;
+        return d.chain( data );
+    };
+    return basicTextInput( label, str, flags, [&]
+    {
+        return ImGui::InputTextEx( label, hint, str.data(), int( str.capacity() + 1 ), size,
+            flags | ImGuiInputTextFlags_Multiline | ImGuiInputTextFlags_CallbackResize, resizeCallback, &resizeData );
+    } );
+}
+
+bool inputTextIntoArrayMultilineWithHint( const char* label, const char* hint, char* buf, size_t buf_size, const ImVec2& size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data )
+{
+    return basicTextInputIntoArray( label, buf, buf_size, flags, [&]
+    {
+        return ImGui::InputTextEx( label, hint, buf, int( buf_size ), size, flags | ImGuiInputTextFlags_Multiline, callback, user_data );
+    } );
+}
+
 static bool basicTextInputMultilineFullyScrollable( CachedTextSize& cache, const char *label, const char* buf, ImVec2 size, auto &&func )
 {
     auto calcSize = [&]

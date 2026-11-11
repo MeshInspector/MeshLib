@@ -99,6 +99,8 @@ static float triangleSolidAngle( const Vector3f & p, const Triangle3f & tri )
 float calcFastWindingNumber( const Dipoles& dipoles, const AABBTree& tree, const Mesh& mesh,
     const Vector3f & q, float beta, FaceId skipFace )
 {
+    if ( tree.nodes().empty() )
+        return 0;
     if ( dipoles.empty() )
     {
         assert( false );

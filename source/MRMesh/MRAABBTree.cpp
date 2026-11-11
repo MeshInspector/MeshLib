@@ -212,6 +212,8 @@ private:
         auto & node = nodes_[n];
         if ( num <= AABBTree::MaxLeafTris )
         {
+            // nth_element leaves the triangles of a half in an order of its implementation
+            std::sort( centers_.data() + first, centers_.data() + first + num, []( const Center & a, const Center & b ) { return a.i < b.i; } );
             Box3f box;
             for ( int i = first; i < first + num; ++i )
             {
@@ -432,6 +434,8 @@ void AABBTree::flipOrientation( const FaceBitSet * region )
 void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
 {
     MR_TIMER;
+    if ( nodes_.empty() )
+        return;
     FaceBitSet changedFaces;
     if ( changedVerts )
         changedFaces = getIncidentFaces( mesh.topology, *changedVerts );

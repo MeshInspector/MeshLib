@@ -150,7 +150,7 @@ std::unique_ptr<IComputeToolDistance> CudaAccessor::getCudaComputeToolDistance()
 size_t CudaAccessor::fastWindingNumberMeshMemory( const Mesh& mesh )
 {
     const size_t numFaces = mesh.topology.numValidFaces();
-    const size_t treeNodesSize = numFaces / 2 + 1; // AABBTree has about one node per three triangles
+    const size_t treeNodesSize = 2 * numFaces / 3 + 1; // AABBTree has at most 2 nodes per 3 triangles (leaves of 2 and 3 when halving 5)
     size_t memoryAmount = treeNodesSize * sizeof( Dipole );
     memoryAmount += mesh.points.size() * sizeof( Vector3f );
     memoryAmount += treeNodesSize * sizeof( AABBTree::Node );

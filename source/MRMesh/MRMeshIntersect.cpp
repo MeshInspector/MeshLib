@@ -400,7 +400,10 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
                 }
                 else
                 {
-                    // float version (faster)
+                    // float version (faster); the box of the triangle rejects the near-miss hits of the float triangle test
+                    T bs = rayStart, be = rayEnd;
+                    if ( !rayBoxIntersect( tree.leafBoxes()[i], rayOrigin, bs, be, prec ) )
+                        continue;
                     const Vector3<T> vA = Vector3<T>( m.points[pvc[0].id] ) - line.p;
                     const Vector3<T> vB = Vector3<T>( m.points[pvc[1].id] ) - line.p;
                     const Vector3<T> vC = Vector3<T>( m.points[pvc[2].id] ) - line.p;

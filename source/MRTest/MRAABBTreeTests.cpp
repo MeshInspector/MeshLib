@@ -43,6 +43,15 @@ TEST(MRMesh, ProjectionToEmptyMesh)
     EXPECT_FALSE( hasProjection );
 }
 
+// the cached tree of a mesh without triangles: refit and winding numbers (asserted in Debug before)
+TEST( MRMesh, AABBTreeOfEmptyMesh )
+{
+    Mesh mesh;
+    EXPECT_FALSE( mesh.getBoundingBox().valid() );
+    mesh.updateCaches( nullptr );
+    EXPECT_EQ( mesh.calcFastWindingNumber( Vector3f( 1.f, 2.f, 3.f ) ), 0.f );
+}
+
 // checks that every valid face of the mesh is in exactly one leaf with its vertices and a box containing it,
 // and the box of every node contains the boxes of its triangles or of its children having larger ids
 static void expectValidTree( const AABBTree & tree, const Mesh & mesh )

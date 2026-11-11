@@ -20,7 +20,7 @@ public:
     constexpr static const char* StaticClassName() noexcept { return _t( "Polyline" ); }
     virtual std::string className() const override { return StaticClassName(); }
 
-    constexpr static const char* StaticClassNameInPlural() noexcept { return "Polylines"; }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return _t( "Polylines" ); }
     virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;

@@ -21,7 +21,7 @@ public:
     constexpr static const char* StaticClassName() noexcept { return _t( "Angle" ); }
     virtual std::string className() const override { return StaticClassName(); }
 
-    constexpr static const char* StaticClassNameInPlural() noexcept { return "Angles"; }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return _t( "Angles" ); }
     virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     // For `std::make_shared()` in `clone()`.

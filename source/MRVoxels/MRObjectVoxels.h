@@ -27,7 +27,7 @@ public:
     constexpr static const char* StaticClassName() noexcept { return _t( "Voxel Volume" ); }
     virtual std::string className() const override { return StaticClassName(); }
 
-    constexpr static const char* StaticClassNameInPlural() noexcept { return "Voxel Volumes"; }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return _t( "Voxel Volumes" ); }
     virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     MRVOXELS_API virtual void applyScale( float scaleFactor ) override;

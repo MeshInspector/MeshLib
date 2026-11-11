@@ -26,7 +26,7 @@ public:
     constexpr static const char* StaticClassName() noexcept { return _t( "Line" ); }
     virtual std::string className() const override { return StaticClassName(); }
 
-    constexpr static const char* StaticClassNameInPlural() noexcept { return "Lines"; }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return _t( "Lines" ); }
     virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     /// \note this ctor is public only for std::make_shared used inside clone()

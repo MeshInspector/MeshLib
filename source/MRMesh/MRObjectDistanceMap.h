@@ -27,7 +27,7 @@ public:
     constexpr static const char* StaticClassName() noexcept { return _t( "Distance Map" ); }
     virtual std::string className() const override { return StaticClassName(); }
 
-    constexpr static const char* StaticClassNameInPlural() noexcept { return "Distance Maps"; }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return _t( "Distance Maps" ); }
     virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     MRMESH_API virtual void applyScale( float scaleFactor ) override;

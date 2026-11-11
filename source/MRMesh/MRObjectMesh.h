@@ -21,7 +21,7 @@ public:
     constexpr static const char* StaticClassName() noexcept { return _t( "Mesh" ); }
     virtual std::string className() const override { return StaticClassName(); }
 
-    constexpr static const char* StaticClassNameInPlural() noexcept { return "Meshes"; }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return _t( "Meshes" ); }
     virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     /// returns variable mesh, if const mesh is needed use `meshPtr()` instead

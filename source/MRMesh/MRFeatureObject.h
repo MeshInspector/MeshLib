@@ -98,7 +98,7 @@ public:
     constexpr static const char* StaticClassName() noexcept { return _t( "Feature" ); }
     virtual std::string className() const override { return StaticClassName(); }
 
-    constexpr static const char* StaticClassNameInPlural() noexcept { return "Features"; }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return _t( "Features" ); }
     virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     /// Create and generate list of bounded getters and setters for the main properties of feature object, together with prop. name for display and edit into UI.

@@ -25,7 +25,7 @@ public:
     constexpr static const char* StaticClassName() noexcept { return _t( "Root" ); }
     virtual std::string className() const override { return StaticClassName(); }
 
-    constexpr static const char* StaticClassNameInPlural() noexcept { return "Roots"; }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return _t( "Roots" ); }
     virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     constexpr static const char* RootName() noexcept { return "Root"; }

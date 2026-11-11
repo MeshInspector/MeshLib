@@ -127,7 +127,7 @@ public:
     constexpr static const char* StaticClassName() noexcept { return _t( "Visual Object" ); }
     virtual std::string className() const override { return StaticClassName(); }
 
-    constexpr static const char* StaticClassNameInPlural() noexcept { return "Visual Objects"; }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return _t( "Visual Objects" ); }
     virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     /// Returns true if this class supports the property `type`. Otherwise passing it to the functions below is illegal.

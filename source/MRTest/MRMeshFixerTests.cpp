@@ -365,6 +365,29 @@ static void moveVert( Mesh & mesh, const Vector3f & from, const Vector3f & to )
             p = to;
 }
 
+// each face of mesh not in folded is mapped to a replaced face of folded within maxDist of its center, the other faces keep their vertices and have no entry
+static void checkNew2Old( const Mesh & mesh, const Mesh & folded, const FaceHashMap & new2Old, float maxDist )
+{
+    size_t numNew = 0;
+    for ( auto f : mesh.topology.getValidFaces() )
+    {
+        const auto it = new2Old.find( f );
+        if ( folded.topology.hasFace( f ) )
+        {
+            EXPECT_TRUE( it == new2Old.end() && mesh.topology.getTriVerts( f ) == folded.topology.getTriVerts( f ) );
+            continue;
+        }
+        ++numNew;
+        ASSERT_TRUE( it != new2Old.end() );
+        ASSERT_TRUE( folded.topology.hasFace( it->second ) );
+        EXPECT_FALSE( mesh.topology.hasFace( it->second ) );
+        const auto c = mesh.triCenter( f );
+        const auto [a, b, d] = folded.getTriPoints( it->second );
+        EXPECT_LT( ( closestPointInTriangle( c, a, b, d ).first - c ).length(), maxDist );
+    }
+    EXPECT_EQ( new2Old.size(), numNew );
+}
+
 // a vertex moved over its neighbour folds its triangles over the next ones, away from its own star
 TEST( MRMesh, FixMeshCreasesFlatFold )
 {
@@ -383,19 +406,9 @@ TEST( MRMesh, FixMeshCreasesFlatFold )
 
     // a new face takes an original face facing up under its center, the others keep their ids
     EXPECT_FALSE( new2Old.empty() );
-    for ( auto f : mesh.topology.getValidFaces() )
-    {
-        const auto it = new2Old.find( f );
-        if ( it == new2Old.end() )
-        {
-            EXPECT_TRUE( folded.topology.hasFace( f ) && mesh.topology.getTriVerts( f ) == folded.topology.getTriVerts( f ) );
-            continue;
-        }
-        EXPECT_GT( folded.dirDblArea( it->second ).z, 0 );
-        const auto c = mesh.triCenter( f );
-        const auto [a, b, d] = folded.getTriPoints( it->second );
-        EXPECT_LT( ( closestPointInTriangle( c, a, b, d ).first - c ).length(), 1e-5f );
-    }
+    checkNew2Old( mesh, folded, new2Old, 1e-5f );
+    for ( auto [f, o] : new2Old )
+        EXPECT_GT( folded.dirDblArea( o ).z, 0 );
 }
 
 // a planar triangulation with a triangle without area is not used: it would double an edge of the mesh in the pleat,
@@ -436,34 +449,25 @@ TEST( MRMesh, FixMeshCreasesKeepsShape )
     EXPECT_EQ( mesh.topology.findNumHoles(), 0 );
 }
 
-// a vertex next to the pole of a coarse sphere slid along its meridian past its neighbour folds the curved surface,
-// which has no flat area around the fold: the fan of triangles around the fold is re-triangulated
+// a vertex of a sphere slid past its neighbour folds the curved surface, which has no flat area around the fold (on the fine sphere
+// the faces around it are parallel within 5 degrees, but not in one plane): the fill of the fan around the moved vertex removes it
 TEST( MRMesh, FixMeshCreasesCurvedFold )
 {
-    auto mesh = makeUVSphere( 1, 12, 12 );
-    const VertId v( 11 * 12 + 11 ), u( 10 * 12 + 11 ); // the last two rows of vertices are next to the pole
-    mesh.points[v] = ( mesh.points[v] + 1.7f * ( mesh.points[u] - mesh.points[v] ) ).normalized();
-    const auto creaseAngle = FixCreasesParams{}.creaseAngle;
-    EXPECT_TRUE( mesh.findCreaseEdges( creaseAngle ).any() );
-    fixMeshCreases( mesh );
-    EXPECT_TRUE( mesh.findCreaseEdges( creaseAngle ).none() );
-    EXPECT_TRUE( mesh.topology.checkValidity() );
-    EXPECT_EQ( mesh.topology.findNumHoles(), 0 );
-}
-
-TEST( MRMesh, FixMeshCreasesKeepsCurvedShape )
-{
-    const auto sphere = makeUVSphere( 1, 160, 160 );
-    auto mesh = sphere;
-    const VertId v( 16781 ), u( 16622 ); // next to each other
-    mesh.points[v] = ( mesh.points[v] + 1.333f * ( mesh.points[u] - mesh.points[v] ) ).normalized();
-    const auto creaseAngle = FixCreasesParams{}.creaseAngle;
-    EXPECT_TRUE( mesh.findCreaseEdges( creaseAngle ).any() );
-    fixMeshCreases( mesh );
-    EXPECT_TRUE( mesh.findCreaseEdges( creaseAngle ).none() );
-    // the faces around the fold are parallel within 5 degrees, but not in one plane: no area is re-triangulated in a plane,
-    // and the fill of the fan around the moved vertex removes it
-    EXPECT_LT( findMaxDistanceSq( mesh, sphere ), sqr( 0.0005f ) );
+    // the coarse sphere's vertices are in the last two rows, next to the pole
+    for ( auto [res, v, u, t, maxDist] : { std::tuple{ 12, 11 * 12 + 11, 10 * 12 + 11, 1.7f, 0.05f }, std::tuple{ 160, 16781, 16622, 1.333f, 0.0005f } } )
+    {
+        const auto sphere = makeUVSphere( 1, res, res );
+        auto mesh = sphere;
+        ASSERT_TRUE( mesh.topology.findEdge( VertId( v ), VertId( u ) ) );
+        mesh.points[VertId( v )] = ( mesh.points[VertId( v )] + t * ( mesh.points[VertId( u )] - mesh.points[VertId( v )] ) ).normalized();
+        const auto creaseAngle = FixCreasesParams{}.creaseAngle;
+        EXPECT_TRUE( mesh.findCreaseEdges( creaseAngle ).any() );
+        fixMeshCreases( mesh );
+        EXPECT_TRUE( mesh.findCreaseEdges( creaseAngle ).none() );
+        EXPECT_TRUE( mesh.topology.checkValidity() );
+        EXPECT_EQ( mesh.topology.findNumHoles(), 0 );
+        EXPECT_LT( findMaxDistanceSq( mesh, sphere ), sqr( maxDist ) );
+    }
 }
 
 // a border strip folded under a sheet: the planar triangulation of the two layers would keep only the part of the sheet not covered by the strip
@@ -529,27 +533,8 @@ TEST( MRMesh, FixMeshCreasesNew2OldOfFans )
     FaceHashMap new2Old;
     fixMeshCreases( mesh, { .new2Old = &new2Old } );
     EXPECT_TRUE( mesh.topology.checkValidity() );
-
-    size_t numNew = 0;
-    for ( auto f : mesh.topology.getValidFaces() )
-    {
-        const auto it = new2Old.find( f );
-        if ( folded.topology.hasFace( f ) )
-        {
-            // a face that was not replaced keeps its vertices and has no entry
-            EXPECT_TRUE( it == new2Old.end() && mesh.topology.getTriVerts( f ) == folded.topology.getTriVerts( f ) );
-            continue;
-        }
-        ++numNew;
-        ASSERT_TRUE( it != new2Old.end() );
-        ASSERT_TRUE( folded.topology.hasFace( it->second ) );
-        EXPECT_FALSE( mesh.topology.hasFace( it->second ) );
-        const auto c = mesh.triCenter( f );
-        const auto [a, b, d] = folded.getTriPoints( it->second );
-        EXPECT_LT( ( closestPointInTriangle( c, a, b, d ).first - c ).length(), 0.05f );
-    }
-    EXPECT_EQ( new2Old.size(), numNew );
-    EXPECT_GT( mesh.topology.faceSize() - folded.topology.faceSize(), numNew ); // some new faces were replaced again
+    checkNew2Old( mesh, folded, new2Old, 0.05f );
+    EXPECT_GT( mesh.topology.faceSize() - folded.topology.faceSize(), new2Old.size() ); // some new faces were replaced again
 }
 
 } //namespace MR

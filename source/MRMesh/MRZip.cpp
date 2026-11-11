@@ -179,29 +179,28 @@ public:
     }
     ~AutoCloseZip()
     {
-        close();
+        (void)close();
     }
     operator zip_t *() const { return handle_; }
     explicit operator bool() const { return handle_ != nullptr; }
-    /// \param error if given, receives the reason of failure
-    int close( std::string* error = nullptr )
+    Expected<void> close()
     {
         if ( !handle_ )
-            return 0;
+            return {};
         zip_register_progress_callback_with_state( handle_, 0.001f, zipProgressCallback, nullptr, &pd_ );
 #if (defined(LIBZIP_VERSION_MINOR) && LIBZIP_VERSION_MINOR >= 6 )
         zip_register_cancel_callback_with_state( handle_, zipCancelCallback, nullptr, &pd_ );
 #endif
-        int res = zip_close( handle_ );
-        if ( res != 0 )
+        if ( zip_close( handle_ ) == 0 )
         {
-            if ( error )
-                *error = zip_strerror( handle_ );
-            // a failed zip_close leaves the archive open
-            zip_discard( handle_ );
+            handle_ = nullptr;
+            return {};
         }
+        std::string error = zip_strerror( handle_ );
+        // a failed zip_close leaves the archive open
+        zip_discard( handle_ );
         handle_ = nullptr;
-        return res;
+        return unexpected( std::move( error ) );
     }
 
     /// Takes ownership of pre-deflated entries and registers them in the archive in order.
@@ -522,14 +521,13 @@ Expected<void> compressZip( const std::filesystem::path& zipFile, const std::fil
     if ( auto res = zip.addPreDeflatedEntries( std::move( entries ), files, level, settings.password ); !res )
         return res;
 
-    std::string closeError;
-    auto closeRes = zip.close( &closeError );
+    auto closeRes = zip.close();
 
     if ( !reportProgress( settings.cb, 1.0f ) )
         return unexpectedOperationCanceled();
 
-    if ( closeRes != 0 )
-        return unexpected( "Cannot write " + utf8string( zipFile ) + ": " + closeError );
+    if ( !closeRes )
+        return unexpected( "Cannot write " + utf8string( zipFile ) + ": " + closeRes.error() );
 
     spdlog::info( "Compressed {} files into {}", files.size(), utf8string( zipFile ) );
 

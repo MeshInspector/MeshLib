@@ -116,6 +116,9 @@ struct MR_BIND_IGNORE ProccessMemoryInfo
 /// return the current process's id (or 0 for Wasm)
 MRMESH_API std::uint32_t getCurrentProcessId();
 
+/// returns the current offset of the local time zone from UTC, e.g. "UTC+03:00", or an empty string if it is unknown
+[[nodiscard]] MRMESH_API std::string getLocalTimeZone();
+
 /// Setups logger:
 /// 1) makes stdout sink
 /// 2) makes file sink (MRLog.txt)

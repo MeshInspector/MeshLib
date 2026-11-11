@@ -61,10 +61,22 @@ TEST( MRMesh, FixSelfIntersectionsSelfBoolean )
     const float ringVolume = 0.945f;
     auto fixAndCheck = [&] ( Mesh& mesh )
     {
+        const auto in = mesh;
+        FaceMap new2Old;
+        auto withMap = settings;
+        withMap.new2Old = &new2Old;
         EXPECT_TRUE( SelfIntersections::getFaces( mesh, false )->any() );
-        EXPECT_TRUE( SelfIntersections::fix( mesh, settings ).has_value() );
+        EXPECT_TRUE( SelfIntersections::fix( mesh, withMap ).has_value() );
         EXPECT_TRUE( SelfIntersections::getFaces( mesh, false )->none() );
         EXPECT_TRUE( mesh.topology.checkValidity() );
+        // every face lies in the face of the input mesh that it is a part of
+        ASSERT_EQ( new2Old.size(), mesh.topology.faceSize() );
+        for ( auto f : mesh.topology.getValidFaces() )
+        {
+            const auto old = new2Old[f];
+            ASSERT_TRUE( in.topology.hasFace( old ) );
+            EXPECT_LT( std::abs( dot( in.normal( old ), mesh.triCenter( f ) - in.triCenter( old ) ) ), 1e-5f );
+        }
     };
 
     auto mesh = closed;
@@ -90,10 +102,20 @@ TEST( MRMesh, FixSelfIntersectionsSelfBoolean )
     fixAndCheck( mesh );
     EXPECT_NEAR( mesh.volume(), ringVolume, 1e-2f );
 
-    // another part: its vertices are only rounded by the cut
+    // a mesh without self-intersections stays as it is, and its faces map to themselves
     auto part = makeUVSphere( 0.5f, 16, 16 );
     part.transform( AffineXf3f::translation( { 5, 0, 0 } ) );
     mesh = part;
+    FaceMap new2Old;
+    settings.new2Old = &new2Old;
+    EXPECT_TRUE( SelfIntersections::fix( mesh, settings ).has_value() );
+    settings.new2Old = nullptr;
+    EXPECT_TRUE( mesh == part );
+    ASSERT_EQ( new2Old.size(), part.topology.faceSize() );
+    for ( auto f : part.topology.getValidFaces() )
+        ASSERT_EQ( new2Old[f], f );
+
+    // as another part, it keeps its faces, and its vertices are only rounded by the cut
     mesh.addMesh( closed );
     fixAndCheck( mesh );
     EXPECT_EQ( MeshComponents::getNumComponents( mesh ), 2 );

@@ -21,16 +21,10 @@ struct Settings
         Relax,
         /// Cut and re-fill regions around self-intersections (may fall back to `Relax`)
         CutAndFill,
-        /// Cut the mesh along the exact contours of its self-intersections and reconnect its sheets there (see selfBoolean),
-        /// and keep only the largest by area part of every connected component; the components that collide with one another
-        /// are cut as well and taken as one, so they get united; the holes that the self-intersections reach are closed
-        /// with temporary faces, which are removed after the cut, so the contours ending in a hole are cut too: the largest part is found
-        /// with these faces, and it can fall apart when they are removed;
-        /// the cut is made once and leaves degenerate faces along it, and tiny self-intersections can stay or appear there,
-        /// so the result is not always free of them: call fixMeshDegeneracies after it, and repeat both while fewer of them are left;
-        /// the faces that are not cut keep their ids, and all vertices are rounded as in selfBoolean;
-        /// if the mesh cannot be cut, the error is returned and the mesh keeps its faces;
-        /// all other settings but the callback are ignored (touching faces are not fixed)
+        /// Cut the mesh along the exact contours of its self-intersections (see selfBoolean) and keep only the largest by area part
+        /// of every connected component; colliding components get united, and the holes that the contours reach are closed for the cut.
+        /// The cut is made once and can leave degenerate faces and tiny self-intersections: call fixMeshDegeneracies after it,
+        /// and repeat both if needed. Of the other settings only `new2Old` and `callback` are used
         SelfBoolean
     };
     Method method = Method::Relax;
@@ -43,6 +37,8 @@ struct Settings
     float subdivideEdgeLen = 0.0f;
     /// trying to stay close to initial surface when patching
     bool mimicPatch = false;
+    /// optional output of `Method::SelfBoolean`: for every face of the fixed mesh, the face of the original mesh that it is (a part of)
+    FaceMap* new2Old = nullptr;
     /// Callback function
     ProgressCallback callback = {};
 };

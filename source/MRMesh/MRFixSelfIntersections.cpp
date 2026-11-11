@@ -111,14 +111,22 @@ Expected<void> fixOld( Mesh& mesh, const Settings& settings )
 // fixes the self-intersections of the mesh by selfBoolean, which cuts only the contours not reaching a boundary: so the holes
 // that they can reach are filled first, and the fill faces are removed after the cut; the connected components of the mesh
 // with faces in one part of the result are taken as one, and of all parts of the result made of its faces only the largest one is kept
-static Expected<void> fixBySelfBoolean( Mesh& mesh, const ProgressCallback& cb )
+static Expected<void> fixBySelfBoolean( Mesh& mesh, const Settings& settings )
 {
     MR_TIMER;
-    auto bad = findSelfCollidingTrianglesBS( mesh, subprogress( cb, 0.0f, 0.2f ) );
+    auto bad = findSelfCollidingTrianglesBS( mesh, subprogress( settings.callback, 0.0f, 0.2f ) );
     if ( !bad )
         return unexpected( std::move( bad.error() ) );
     if ( bad->none() )
+    {
+        if ( settings.new2Old )
+        {
+            settings.new2Old->resize( mesh.topology.faceSize() );
+            for ( auto f : mesh.topology.getValidFaces() )
+                ( *settings.new2Old )[f] = f;
+        }
         return {};
+    }
 
     // only the holes with self-intersecting faces along them are filled, then the holes that the new fills reach, and so on;
     // a hole is filled with the triangles from its edges to a vertex away from it and from the faces along it (a fill towards them
@@ -184,6 +192,8 @@ static Expected<void> fixBySelfBoolean( Mesh& mesh, const ProgressCallback& cb )
             del.set( f );
     res->deleteFaces( del );
     mesh = std::move( *res );
+    if ( settings.new2Old )
+        *settings.new2Old = std::move( new2Old );
     return {};
 }
 
@@ -195,7 +205,7 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
         return unexpectedOperationCanceled();
 
     if ( settings.method == Settings::Method::SelfBoolean )
-        return fixBySelfBoolean( mesh, settings.callback );
+        return fixBySelfBoolean( mesh, settings );
 
     if ( settings.touchIsIntersection )
     {

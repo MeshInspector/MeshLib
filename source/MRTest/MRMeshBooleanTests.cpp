@@ -10,6 +10,7 @@
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRRegionBoundary.h>
 #include <MRMesh/MRMakeSphereMesh.h>
+#include <MRMesh/MRNextUpDown.h>
 #include <MRMesh/MRMeshCollide.h>
 #include <MRMesh/MRMeshCollidePrecise.h>
 #include <MRMesh/MRMeshFixer.h>
@@ -388,6 +389,24 @@ TEST( MRMesh, BooleanPreCutExactCut )
     }
 }
 
+// checks the faces map of selfBoolean: a face of the result with an id of the input mesh is that face left whole, and the other faces
+// are the parts of the input faces missing in the result; the parts of every input face make its area together, except for the faces
+// eliminated before the cut, which have invalid entries and no parts
+static void expectSelfBooleanFaceMap( const Mesh& mesh, const Mesh& res, const FaceMap& new2Old )
+{
+    ASSERT_EQ( new2Old.size(), res.topology.faceSize() );
+    Vector<double, FaceId> partsArea( mesh.topology.faceSize(), 0. );
+    for ( auto f : res.topology.getValidFaces() )
+    {
+        const auto old = new2Old[f];
+        ASSERT_TRUE( mesh.topology.hasFace( old ) );
+        EXPECT_TRUE( f < mesh.topology.faceSize() ? old == f : !res.topology.hasFace( old ) );
+        partsArea[old] += res.area( f );
+    }
+    for ( auto f : mesh.topology.getValidFaces() )
+        EXPECT_NEAR( partsArea[f], new2Old[f] ? mesh.area( f ) : 0, 1e-4 * mesh.area( f ) );
+}
+
 // selfBoolean of a mesh of two parts, a cube and a small sphere piercing a big triangle of it without crossing its edges
 // (a lone contour); the parts are only reconnected along their intersection, so the result keeps the sum of their volumes
 TEST( MRMesh, SelfBooleanLoneContour )
@@ -398,11 +417,19 @@ TEST( MRMesh, SelfBooleanLoneContour )
     const double volume = mesh.volume() + sphere.volume();
     mesh.addMesh( sphere );
 
-    const auto res = selfBoolean( mesh );
+    FaceMap new2Old;
+    const auto res = selfBoolean( mesh, &new2Old );
     ASSERT_TRUE( res.has_value() ) << res.error();
     EXPECT_TRUE( res->topology.checkValidity() );
     EXPECT_EQ( res->topology.findNumHoles(), 0 );
     EXPECT_NEAR( res->volume(), volume, 1e-5 * volume );
+    expectSelfBooleanFaceMap( mesh, *res, new2Old );
+
+    // a mesh without self-intersections stays as it is
+    const auto same = selfBoolean( sphere, &new2Old );
+    ASSERT_TRUE( same.has_value() ) << same.error();
+    EXPECT_EQ( same->topology, sphere.topology );
+    expectSelfBooleanFaceMap( sphere, *same, new2Old );
 }
 
 // open fan of three triangles around 0_v: the last one crosses the first one from the shared vertex 0_v to its boundary edge 3_v-4_v;
@@ -459,10 +486,12 @@ TEST( MRMesh, SelfBooleanNestedIntersections )
     for ( const auto& trajectory : trajectories )
     {
         const Mesh mesh = makeMovementBuildBody( { circle }, { trajectory } );
-        const auto res = selfBoolean( mesh );
+        FaceMap new2Old;
+        const auto res = selfBoolean( mesh, &new2Old );
         ASSERT_TRUE( res.has_value() ) << res.error();
         EXPECT_TRUE( res->topology.checkValidity() );
         EXPECT_EQ( res->topology.findNumHoles(), 0 );
+        expectSelfBooleanFaceMap( mesh, *res, new2Old );
 
         const auto box = mesh.computeBoundingBox();
         const int n = 16;
@@ -507,10 +536,12 @@ TEST( MRMesh, SelfBooleanThreeSpheres )
     Mesh mesh = a;
     mesh.addMesh( b );
     mesh.addMesh( c );
-    const auto res = selfBoolean( mesh );
+    FaceMap new2Old;
+    const auto res = selfBoolean( mesh, &new2Old );
     ASSERT_TRUE( res.has_value() ) << res.error();
     EXPECT_TRUE( res->topology.checkValidity() );
     EXPECT_EQ( res->topology.findNumHoles(), 0 );
+    expectSelfBooleanFaceMap( mesh, *res, new2Old );
     double maxVolume = 0;
     for ( const auto& component : MeshComponents::getAllComponents( *res ) )
     {
@@ -538,14 +569,32 @@ TEST( MRMesh, SelfBooleanTwinTriangles )
             if ( flip )
                 mesh.topology.flipOrientation();
             mesh.transform( AffineXf3f::linear( Matrix3f::scale( 1.f, 1.f, zScale ) ) );
-            const auto res = selfBoolean( mesh );
+            FaceMap new2Old;
+            const auto res = selfBoolean( mesh, &new2Old );
             ASSERT_TRUE( res.has_value() ) << res.error() << " flip " << flip << " zScale " << zScale;
             EXPECT_TRUE( res->topology.checkValidity() );
+            expectSelfBooleanFaceMap( mesh, *res, new2Old );
             EXPECT_EQ( res->topology.numValidFaces(), 12 );
             EXPECT_EQ( res->topology.findNumHoles(), 0 );
             EXPECT_NEAR( res->volume(), ( flip ? -8. : 8. ) * zScale, 1e-6 * 8 * zScale );
         }
     }
+}
+
+// two crossing spheres and an open square through both, whose side passes inside the first sphere: the contour of the square with that
+// sphere runs out to the mesh boundary and is not cut, so the crossings of the other contours with it are split on one sheet only;
+// selfBoolean reports that as an error and leaves the faces map as it was
+TEST( MRMesh, SelfBooleanErrorKeepsFaceMap )
+{
+    Mesh mesh = makeSphere( { .radius = 1.f, .numMeshVertices = 100 } );
+    Mesh second = makeSphere( { .radius = 0.7f, .numMeshVertices = 100 } );
+    second.transform( AffineXf3f::translation( Vector3f( 1.2f, 0.f, 0.f ) ) );
+    mesh.addMesh( second );
+    mesh.addMesh( makeSquare( Vector3f( 0.3f, -2.f, 0.1f ), 4.f ) );
+
+    FaceMap new2Old( 1, 5_f );
+    EXPECT_FALSE( selfBoolean( mesh, &new2Old ).has_value() );
+    EXPECT_EQ( new2Old, FaceMap( 1, 5_f ) );
 }
 
 // closed mesh of two parts (apexes 3_v and 6_v) stitched along their common boundary, which passes through all vertices of triangle 0_v, 2_v, 1_v
@@ -711,7 +760,7 @@ TEST( MRMesh, EmbedStructureLoneContour )
 {
     for ( float shift : { 0.f, 1000.f } )
     {
-        const float peak = shift == 0 ? 2.f : std::nextafter( 1.f, 2.f );
+        const float peak = shift == 0 ? 2.f : nextUp( 1.f );
         const auto terrain = makeRegularGridMesh( 21, 21, [] ( size_t, size_t ) { return true; }, [&] ( size_t x, size_t y )
         {
             return Vector3f( shift + float( x ) - 10.f, shift + float( y ) - 10.f, x == 10 && y == 10 ? peak : 0.f );
@@ -806,6 +855,20 @@ TEST( MRMesh, SelfCollidingEdgeTrisPreciseMultipleEdges )
         EXPECT_EQ( found, expected );
     }
 }
+
+// two intersections with the same next one, which only inconsistent intersections give (as those of a face that is not a triangle, tested
+// as the triangle of its first three vertices): the contour that enters the first triangle from the second one goes on between
+// the intersections of two of its edges, which follow each other in a loop without the start of the contour;
+// no contours are returned then instead of following that loop forever; Debug asserts there
+#ifdef NDEBUG
+TEST( MRMesh, OrderSelfIntersectionContoursCommonNext )
+{
+    const auto topology = MeshBuilder::fromTriangles( { { 0_v, 1_v, 2_v }, { 1_v, 0_v, 3_v }, { 4_v, 5_v, 6_v } } );
+    // each edge has the triangle that the contour enters on its left: 1_f, then 0_f twice
+    const std::vector<EdgeTri> intersections{ { topology.findEdge( 0_v, 3_v ), 2_f }, { topology.findEdge( 0_v, 1_v ), 2_f }, { topology.findEdge( 1_v, 2_v ), 2_f } };
+    EXPECT_TRUE( orderSelfIntersectionContours( topology, intersections ).empty() );
+}
+#endif
 
 TEST( MRMesh, BooleanResultMapper )
 {

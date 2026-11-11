@@ -9,6 +9,8 @@
 
 The crate is named `meshlib`. It wraps the C API library `MeshLibC2` (see the [C Setup Guide](\ref MeshLibCSetupGuide)) in safe Rust: C++ classes become types held in `Owned<T>`, which destroys the object when dropped, references and pointers become `&T` / `&mut T` / `Option<&T>`, `std::string` parameters take `&str`, and C++ exceptions become panics. The `MR` namespace is the crate root, so `MR::Mesh` is `meshlib::Mesh`, and the nested namespaces become modules: `MR::MeshSave` is `meshlib::mesh_save`.
 
+The crate is `#![no_std]`: it needs only `core` and `alloc`, so `no_std` projects can use it. The MeshLib libraries it calls are C++, so they still need the C++ runtime and the C library of the platform.
+
 ## Prerequisites {#RustSetupPrerequisites}
 
  - [Rust](https://rustup.rs/) 1.88 or newer, with `cargo`.

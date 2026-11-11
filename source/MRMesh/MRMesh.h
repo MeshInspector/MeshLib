@@ -441,9 +441,13 @@ struct [[nodiscard]] Mesh
     MRMESH_API PackMapping packOptimally( bool preserveAABBTree = true );
     MRMESH_API Expected<PackMapping> packOptimally( bool preserveAABBTree, ProgressCallback cb );
 
-    /// deletes multiple given faces, also deletes adjacent edges and vertices if they were not shared by remaining faces and not in \param keepEdges
-    /// return bit sets of all vacant elements in this mesh after deletion
-    MRMESH_API VacantElements deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
+    /// deletes multiple given faces, also deletes adjacent edges and vertices if they were not shared by remaining faces and not in \param keepEdges;
+    /// the edges that had no left and no right face before the call are not touched, see MeshTopology::deleteFaces
+    MRMESH_API void deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
+
+    /// same as \ref deleteFaces, but also makes lone all edges without faces in this mesh,
+    /// and returns bit sets of all vacant elements in this mesh after deletion, see MeshTopology::deleteFacesFindVacant
+    MRMESH_API VacantElements deleteFacesFindVacant( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
     /// finds the closest mesh point on this mesh (or its region) to given point;
     /// \param point source location to look the closest to
@@ -505,6 +509,10 @@ struct [[nodiscard]] Mesh
     /// it must contain only the splits made since the AABB tree was built or last updated: a map accumulated over several updates
     /// would add the earlier faces to the tree once more
     MRMESH_API void updateCachesAfterSplits( const FaceHashMap & new2Old );
+
+    /// changes the orientation of all triangles, or only of the components with given edges as MeshTopology::flipOrientation() does,
+    /// and updates existing AABB tree instead of rebuilding it
+    MRMESH_API void flipOrientation( const UndirectedEdgeBitSet * fullComponents = nullptr );
 
     // returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API size_t heapBytes() const;

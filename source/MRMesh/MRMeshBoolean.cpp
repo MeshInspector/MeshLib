@@ -224,7 +224,7 @@ BooleanResult forceBoolean( const Mesh& meshA, const Mesh& meshB, BooleanOperati
     return res;
 }
 
-Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
+Expected<MR::Mesh> selfBoolean( const Mesh& inMesh, FaceMap* outNew2Old )
 {
     auto box = Box3d( inMesh.computeBoundingBox() );
     CoordinateConverters converters{ .toInt = getToIntConverter( box ),.toFloat = getToFloatConverter( box ) };
@@ -244,6 +244,8 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
                         break;
     std::erase_if( intersections, [&] ( const EdgeTri& x ) { return !mesh.topology.hasFace( x.tri ) || mesh.topology.isLoneEdge( x.edge ); } );
     auto contours = orderSelfIntersectionContours( mesh.topology, intersections );
+    if ( contours.empty() && !intersections.empty() )
+        return unexpected( "Self-Boolean cannot order the intersections: the mesh has a face that is not a triangle" );
     removeTwoPointLoops( contours ); // both contours of a pair together, as they have the same points
 
     auto holePairs = detail::findSelfContoursMapping( contours );
@@ -441,6 +443,11 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
         }
     }
 
+    if ( outNew2Old )
+    {
+        new2Old.resize( mesh.topology.faceSize() );
+        *outNew2Old = std::move( new2Old );
+    }
     return mesh;
 }
 
@@ -493,8 +500,12 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     const size_t meshAVertsNum = srcA.topology.vertSize(); // before any cut of A
 
     // find and order intersections
-    contours = orderIntersectionContours( srcA.topology, srcB.topology,
-        findCollidingEdgeTrisPrecise( srcA, srcB, converters.toInt, params.rigidB2A ) );
+    {
+        const auto intersections = findCollidingEdgeTrisPrecise( srcA, srcB, converters.toInt, params.rigidB2A );
+        contours = orderIntersectionContours( srcA.topology, srcB.topology, intersections );
+        if ( contours.empty() && !intersections.empty() )
+            return { .errorString = "Boolean cannot order the intersections: a mesh has a face that is not a triangle" };
+    }
     removeTwoPointLoops( contours );
 
     if ( params.cb && !params.cb( 0.0f ) )

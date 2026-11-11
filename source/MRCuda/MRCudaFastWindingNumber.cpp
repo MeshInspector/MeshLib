@@ -1,4 +1,5 @@
 #include "MRCudaFastWindingNumber.h"
+#include "MRCudaAABBTree.hpp"
 #include "MRCudaFastWindingNumber.cuh"
 
 #include "MRCudaBasic.h"
@@ -25,14 +26,14 @@ struct FastWindingNumberDataBuffers
 {
     DynamicArray<Dipole> dipoles;
     DynamicArray<float3> cudaMeshPoints;
-    DynamicArray<Node3> cudaNodes;
+    MeshTreeBuffers tree;
     DynamicArray<FaceToThreeVerts> cudaFaces;
 
     [[nodiscard]] FastWindingNumberData toData() const
     {
         return {
             .dipoles = dipoles.data(),
-            .nodes = cudaNodes.data(),
+            .tree = tree.data(),
             .meshPoints = cudaMeshPoints.data(),
             .faces = cudaFaces.data(),
         };
@@ -71,8 +72,7 @@ Expected<void> FastWindingNumber::prepareData_( ProgressCallback cb )
     if ( !reportProgress( cb, 0.5f ) )
         return unexpectedOperationCanceled();
 
-    const auto& nodes = tree.nodes();
-    CUDA_LOGE_RETURN_UNEXPECTED( data->cudaNodes.fromVector( nodes ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( data->tree.fromTree( tree ) );
     if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
 
@@ -198,6 +198,7 @@ Expected<void> FastWindingNumber::calcFromGrid( std::vector<float>& res, const V
     if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
 
+    res.resize( totalSize );
     const auto cb1 = subprogress( cb, 0.60f, 1.00f );
     const auto iterCount = chunkCount( totalSize, bufferSize );
     size_t iterIndex = 0;
@@ -253,6 +254,7 @@ Expected<void> FastWindingNumber::calcFromGridWithDistances( VoxelScalars& res, 
     if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
 
+    res.resize( totalSize );
     const auto cb1 = subprogress( cb, 0.60f, 1.00f );
     const auto iterCount = chunkCount( totalSize, bufferSize );
     size_t iterIndex = 0;

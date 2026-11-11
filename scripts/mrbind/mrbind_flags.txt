@@ -6,7 +6,6 @@
 --ignore MR::UniquePtr
 --ignore MR::RegisterRenderObjectConstructor
 --ignore MR::Config
---ignore '/.*operator<=>.*/'
 --skip-mentions-of '/std::integral_constant<.*>/'
 --skip-mentions-of '/boost::dynamic_bitset<.*>/'
 --skip-mentions-of '/openvdb::v[0-9][0-9_a-zA-Z]*::Grid<.*>/'

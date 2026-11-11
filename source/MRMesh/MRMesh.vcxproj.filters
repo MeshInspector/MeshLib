@@ -1377,6 +1377,9 @@
     <ClInclude Include="MRBitCast.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MRNextUpDown.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
     <ClInclude Include="MRRound.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
@@ -2313,9 +2316,6 @@
       <Filter>Source Files\DataModel</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshDoubleLayer.cpp">
-      <Filter>Source Files\AABBTree</Filter>
-    </ClCompile>
-    <ClCompile Include="MRProcessSelfTreeSubtasks.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRClosestWeightedPoint.cpp">

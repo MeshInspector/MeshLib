@@ -64,7 +64,7 @@ struct DecimateSettings
     /// and the algorithm will permit temporary increase in aspect ratio after collapse, if before collapse one of the triangles had larger aspect ratio
     float criticalTriAspectRatio = FLT_MAX;
 
-    /// whether to prohibit a collapse if it inverts the normal of a remaining triangle;
+    /// whether to prohibit a collapse if it inverts the normal of a remaining triangle, or folds two triangles onto each other;
     /// turning it off (together with maxTriangleAspectRatio = FLT_MAX) makes decimation faster, but some triangles may appear inverted
     bool preventNormalFlips = true;
 
@@ -207,6 +207,10 @@ struct DecimateResult
 
 /**
  * \brief Performs mesh simplification in mesh region according to the settings
+ * \details A closed tetrahedron is never collapsed in two triangles lying on each other: it is removed completely
+ * if its four vertices can be collapsed in one point within maxError (for ShortestEdgeFirst: none of its edges is longer than maxError),
+ * and preCollapse, the limits on deleted faces and vertices, region, fixed boundary vertices, notFlippable and edgesToCollapse permit it;
+ * otherwise it is kept whole.
  * \ingroup DecimateGroup
  * \snippet cpp-examples/MeshDecimate.dox.cpp 0
  *

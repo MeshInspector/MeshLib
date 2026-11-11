@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: MeshLib\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-07 04:10+0000\n"
+"POT-Creation-Date: 2026-11-11 04:10+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -310,60 +310,67 @@ msgstr ""
 msgid "Open Directory"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:604
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:606
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:617
 msgid ""
 "Select exactly one object of an exportable type (e.g. Mesh, Point Cloud or "
 "Volume)"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:607
+#. TRANSLATORS: example string: Plane objects cannot be exported
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:614
+#, c++-format
+msgid "{} objects cannot be exported"
+msgstr ""
+
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:619
 msgid "Select objects of the same type (e.g. Meshes, Point Clouds or Volumes)"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:672
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:814
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:683
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:825
 msgid "File name is not set"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:778
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:797
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:789
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:808
 msgid "Error saving selected:"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:827
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:838
 msgid "Error saving scene:"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:862
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:873
 msgid "Scene is empty - nothing to save"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:896
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:907
 msgid "Width"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:897
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:908
 msgid "Height"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:898
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:909
 msgid "Transparent Background"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:899
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:910
 msgid "Hide scene overlays"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:900
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:911
 msgid "Capture"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:991
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:1018
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:1002
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:1029
 msgid "Error saving screenshot:"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:1032
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:1043
 msgid "This function is not currently supported in web edition"
 msgstr ""
 
@@ -2645,15 +2652,15 @@ msgstr ""
 msgid "Do not close the application"
 msgstr ""
 
-#: source/MRViewer/MRSceneMcp.cpp:270
+#: source/MRViewer/MRSceneMcp.cpp:259
 msgid "MCP setObjectState"
 msgstr ""
 
-#: source/MRViewer/MRSceneMcp.cpp:380
+#: source/MRViewer/MRSceneMcp.cpp:369
 msgid "MCP removeObject"
 msgstr ""
 
-#: source/MRViewer/MRSceneMcp.cpp:514
+#: source/MRViewer/MRSceneMcp.cpp:503
 msgid "MCP addObject"
 msgstr ""
 
@@ -2836,26 +2843,26 @@ msgstr ""
 msgid "{} as {}"
 msgstr ""
 
-#: source/MRViewer/MRViewportCornerController.cpp:99
+#: source/MRViewer/MRViewportCornerController.cpp:100
 msgid "RIGHT"
 msgstr ""
 
-#: source/MRViewer/MRViewportCornerController.cpp:99
+#: source/MRViewer/MRViewportCornerController.cpp:100
 msgid "LEFT"
 msgstr ""
 
-#: source/MRViewer/MRViewportCornerController.cpp:100
+#: source/MRViewer/MRViewportCornerController.cpp:101
 msgid "TOP"
 msgstr ""
 
-#: source/MRViewer/MRViewportCornerController.cpp:100
+#: source/MRViewer/MRViewportCornerController.cpp:101
 msgid "BOTTOM"
 msgstr ""
 
-#: source/MRViewer/MRViewportCornerController.cpp:101
+#: source/MRViewer/MRViewportCornerController.cpp:102
 msgid "FRONT"
 msgstr ""
 
-#: source/MRViewer/MRViewportCornerController.cpp:101
+#: source/MRViewer/MRViewportCornerController.cpp:102
 msgid "BACK"
 msgstr ""

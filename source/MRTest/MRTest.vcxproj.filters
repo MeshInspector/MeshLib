@@ -388,6 +388,9 @@
     <ClCompile Include="MRViewportIdTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRViewportTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRVolumeIndexerTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

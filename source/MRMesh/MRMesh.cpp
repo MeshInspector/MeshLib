@@ -483,6 +483,7 @@ Expected<PackMapping> Mesh::packOptimally( bool preserveAABBTree, ProgressCallba
         {
             AABBTreeOwner_.get()->getLeafOrder( map.f );
             AABBTreeOwner_.reset();
+            dipolesOwner_.reset(); // the dipoles of the dropped tree
         }
     }
     else
@@ -501,14 +502,24 @@ Expected<PackMapping> Mesh::packOptimally( bool preserveAABBTree, ProgressCallba
     if ( auto r = pack( map, subprogress( cb, 0.7f, 1.0f ) ); !r )
         return unexpected( std::move( r.error() ) );
 
+    if ( preserveAABBTree )
+        AABBTreeOwner_.update( [this]( AABBTree & t ) { t.updateLeafVerts( topology ); } );
+
     return map;
 }
 
-VacantElements Mesh::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
+void Mesh::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
 {
     if ( fs.any() )
         invalidateCaches(); // some points can be deleted as well
-    return topology.deleteFaces( fs, keepEdges );
+    topology.deleteFaces( fs, keepEdges );
+}
+
+VacantElements Mesh::deleteFacesFindVacant( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
+{
+    if ( fs.any() )
+        invalidateCaches(); // some points can be deleted as well
+    return topology.deleteFacesFindVacant( fs, keepEdges );
 }
 
 bool Mesh::projectPoint( const Vector3f& point, PointOnFace& res, float maxDistSq, const FaceBitSet * region, const AffineXf3f * xf ) const
@@ -596,6 +607,20 @@ void Mesh::updateCachesAfterSplits( const FaceHashMap & new2Old )
         assert( tree.numLeaves() == topology.numValidFaces() );
     } );
     AABBTreePointsOwner_.reset(); // new vertices appeared
+    dipolesOwner_.reset();
+}
+
+void Mesh::flipOrientation( const UndirectedEdgeBitSet * fullComponents )
+{
+    MR_TIMER;
+    topology.flipOrientation( fullComponents );
+    AABBTreeOwner_.update( [&]( AABBTree & tree )
+    {
+        if ( !fullComponents )
+            return tree.flipOrientation();
+        const auto flipped = getNeighborFaces( topology, *fullComponents );
+        tree.flipOrientation( &flipped );
+    } );
     dipolesOwner_.reset();
 }
 

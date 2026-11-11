@@ -65,7 +65,7 @@ void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rang
         return;
 
     const AABBTree & tree = mp.mesh.getAABBTree();
-    if ( tree.nodes().empty() )
+    if ( tree.empty() )
         return;
 
     Box3f tbox;
@@ -87,7 +87,7 @@ void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rang
 
     auto getSubTask = [&]( NodeId n )
     {
-        float distSq = tree.nodes()[n].box.getDistanceSq( tbox );
+        float distSq = tree.box( n ).getDistanceSq( tbox );
         return SubTask { n, distSq };
     };
 
@@ -97,14 +97,13 @@ void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rang
     {
         const auto s = subtasks.top();
         subtasks.pop();
-        const auto & node = tree[s.n];
 
-        if ( node.leaf() )
+        if ( tree.isLeaf( s.n ) )
         {
-            const auto face = node.leafId();
+            const auto face = tree.leafId( s.n );
             if ( mp.region && !mp.region->test( face ) )
                 continue;
-            const auto leafTriangle = mp.mesh.getTriPoints( face );
+            const auto leafTriangle = tree.leafTriPoints( mp.mesh.points, s.n );
             const auto td = findTriTriDistance( t, leafTriangle, { .upDistLimitSq = rangeSq } );
             if ( td.distSq > rangeSq )
                 continue;
@@ -113,6 +112,7 @@ void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rang
             break;
         }
 
+        const auto & node = tree[s.n];
         addSubTask( getSubTask( node.r ) ); // right to look later
         addSubTask( getSubTask( node.l ) ); // left to look first
     }

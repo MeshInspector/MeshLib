@@ -2,6 +2,7 @@
 
 #include "MRAABBTreeNode.h"
 #include "MRVector.h"
+#include "MRFunctional.h"
 
 namespace MR
 {
@@ -9,25 +10,21 @@ namespace MR
 /// \addtogroup AABBTreeGroup
 /// \{
 
-template<typename T>
-struct BoxedLeaf
-{
-    typename T::LeafId leafId;
-    typename T::BoxT box;
-
-    BoxedLeaf() noexcept = default;
-    explicit BoxedLeaf( NoInit ) noexcept : leafId( noInit ), box( noInit ) { }
-};
-
-/// returns the number of nodes in the binary tree with given number of leaves
+/// returns the number of not-leaf nodes in the binary tree with given number of leaves
 inline int getNumNodes( int numLeaves )
 {
     assert( numLeaves >  0 );
-    return 2 * numLeaves - 1;
+    return numLeaves - 1;
 }
 
+/// called in parallel for every leaf with its index in the order of the tree and its index in the given boxed leaves
+using OnLeafCallback = FunctionRef<void( size_t leafIndex, size_t boxedLeafIndex )>;
+
+/// constructs the nodes of the tree with given leaves; the children of the nodes reference the leaves by their indices in the order of the tree,
+/// which the caller receives in onLeaf to fill its leaves;
+/// the boxes of nodes are stored in the nodes, or in nodeBoxes[node id] for the nodes without boxes (see nodesHaveBoxes)
 template<typename T>
-AABBTreeNodeVec<T> makeAABBTreeNodeVec( Buffer<BoxedLeaf<T>> boxedLeaves );
+AABBTreeNodeVec<T> makeAABBTreeNodeVec( const Vector<BoxedLeaf<T>> & boxedLeaves, OnLeafCallback onLeaf, typename T::BoxT * nodeBoxes = nullptr );
 
 /// \}
 

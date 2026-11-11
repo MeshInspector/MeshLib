@@ -6,7 +6,7 @@ namespace MR
 namespace Cuda
 {
 
-__global__ void kernel( const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, MeshToDistanceMapParams params,
+__global__ void kernel( const MeshTree tree, const float3* meshPoints, MeshToDistanceMapParams params,
                         IntersectionPrecomputes prec, float shift, float* res, MeshTriPoint* outSamples, size_t chunkSize, float3 xStep, float3 yStep, size_t chunkOffset )
 {
     size_t index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -19,9 +19,11 @@ __global__ void kernel( const Node3* nodes, const float3* meshPoints, const Face
 
     float3 org = params.orgPoint + xStep * ( x + 0.5f ) + yStep * ( y + 0.5f );
 
-    MeshIntersectionResult interRes = rayMeshIntersect( nodes, meshPoints, faces, org, -FLT_MAX, FLT_MAX, prec );
+    MeshIntersectionResult interRes = rayMeshIntersect( tree, meshPoints, org, -FLT_MAX, FLT_MAX, prec );
 
-    res[index] = -FLT_MAX;
+    res[index] = -FLT_MAX; // DistanceMap::NOT_VALID_VALUE
+    if ( interRes.proj.faceId < 0 )
+        return; // the ray misses the mesh
     if ( !params.useDistanceLimits
          || ( interRes.distanceAlongLine < params.minValue )
          || ( interRes.distanceAlongLine > params.maxValue ) )
@@ -34,7 +36,7 @@ __global__ void kernel( const Node3* nodes, const float3* meshPoints, const Face
 
 
 void computeMeshDistanceMapKernel(
-    const Node3* nodes, const float3* meshPoints, const FaceToThreeVerts* faces, MeshToDistanceMapParams params,
+    const MeshTree& tree, const float3* meshPoints, MeshToDistanceMapParams params,
     IntersectionPrecomputes prec, float shift,
     float* res, MeshTriPoint* outSamples, size_t chunkSize, size_t chunkOffset )
 {
@@ -45,7 +47,7 @@ void computeMeshDistanceMapKernel(
     float3 yStep = params.yRange / float( params.resolution.y );
 
     // kernel
-    kernel <<< numBlocks, maxThreadsPerBlock >>> ( nodes, meshPoints, faces, params, prec, shift, res, outSamples, chunkSize, xStep, yStep, chunkOffset );
+    kernel <<< numBlocks, maxThreadsPerBlock >>> ( tree, meshPoints, params, prec, shift, res, outSamples, chunkSize, xStep, yStep, chunkOffset );
 }
 
 }

@@ -22,7 +22,8 @@ EMSCRIPTEN_BINDINGS( meshlib_fix_self_intersections )
 
     emscripten::enum_<SelfIntersections::Settings::Method>( "SelfIntersectionsMethod" )
         .value( "Relax", SelfIntersections::Settings::Method::Relax )
-        .value( "CutAndFill", SelfIntersections::Settings::Method::CutAndFill );
+        .value( "CutAndFill", SelfIntersections::Settings::Method::CutAndFill )
+        .value( "SelfBoolean", SelfIntersections::Settings::Method::SelfBoolean );
 
     emscripten::class_<SelfIntersections::Settings>( "SelfIntersectionsSettings" )
         .constructor<>()

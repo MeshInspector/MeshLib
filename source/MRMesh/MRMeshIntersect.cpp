@@ -316,12 +316,13 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
         convToFloat = getToFloatConverter( rootBox );
         boxExpansion = 2 * convToFloat.range;
     }
-    auto nodeBox = [&] ( NodeId n ) -> Box3<T>
+    // no copy of float box: it costs a lot
+    auto nodeBox = [&] ( NodeId n ) -> decltype( auto )
     {
         if constexpr ( std::is_same_v<T, double> )
             return Box3d( tree.box( n ) ).expanded( Vector3d::diagonal( boxExpansion ) );
         else
-            return tree.box( n );
+            return ( tree.box( n ) );
     };
 
     RayOrigin<T> rayOrigin{ line.p };

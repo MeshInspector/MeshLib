@@ -21,13 +21,15 @@ struct Settings
         Relax,
         /// Cut and re-fill regions around self-intersections (may fall back to `Relax`)
         CutAndFill,
-        /// Cut every connected component with self-intersections along their exact contours and reconnect its sheets there (see selfBoolean),
-        /// and keep only the largest by area part of the component; the holes that the self-intersections reach are closed
+        /// Cut the mesh along the exact contours of its self-intersections and reconnect its sheets there (see selfBoolean),
+        /// and keep only the largest by area part of every connected component; the components that collide with one another
+        /// are cut as well and taken as one, so they get united; the holes that the self-intersections reach are closed
         /// with temporary faces, which are removed after the cut, so the contours ending in a hole are cut too: the largest part is found
         /// with these faces, and it can fall apart when they are removed;
         /// the cut is made once and leaves degenerate faces along it, and tiny self-intersections can stay or appear there,
         /// so the result is not always free of them: call fixMeshDegeneracies after it, and repeat both while fewer of them are left;
-        /// the fixed components get new face, edge and vertex ids; the mesh stays unchanged if a component cannot be cut;
+        /// the faces that are not cut keep their ids, and all vertices are rounded as in selfBoolean;
+        /// if the mesh cannot be cut, the error is returned and the mesh keeps its faces;
         /// all other settings but the callback are ignored (touching faces are not fixed)
         SelfBoolean
     };

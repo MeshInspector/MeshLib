@@ -5,6 +5,8 @@
 #include <MRMesh/MRUVSphere.h>
 #include <MRMesh/MRMeshComponents.h>
 #include <MRMesh/MRAffineXf3.h>
+#include <MRMesh/MRMeshCollide.h>
+#include <MRMesh/MRConstants.h>
 #include <gtest/gtest.h>
 
 namespace MR
@@ -35,7 +37,7 @@ TEST( MRMesh, FixSelfIntersections )
 // A sphere with the cap above z = 0.6 moved down through its bottom crosses itself along two closed curves. The largest part between them
 // is the ring bounded by the band of the sphere and by the surface that the moved cap pulls inside it. Method::SelfBoolean keeps this part
 // of the closed mesh, of the mesh with a hole away from the curves, which stays as it was, and of the mesh with a hole across them;
-// another part of the mesh without self-intersections is not changed.
+// another part of the mesh without self-intersections keeps its faces, and two parts that collide are united.
 TEST( MRMesh, FixSelfIntersectionsSelfBoolean )
 {
     auto closed = makeUVSphere( 1.0f, 32, 32 );
@@ -88,7 +90,7 @@ TEST( MRMesh, FixSelfIntersectionsSelfBoolean )
     fixAndCheck( mesh );
     EXPECT_NEAR( mesh.volume(), ringVolume, 1e-2f );
 
-    // another part
+    // another part: its vertices are only rounded by the cut
     auto part = makeUVSphere( 0.5f, 16, 16 );
     part.transform( AffineXf3f::translation( { 5, 0, 0 } ) );
     mesh = part;
@@ -98,8 +100,26 @@ TEST( MRMesh, FixSelfIntersectionsSelfBoolean )
     for ( auto f : part.topology.getValidFaces() )
     {
         ASSERT_TRUE( mesh.topology.hasFace( f ) );
-        ASSERT_EQ( mesh.getTriPoints( f ), part.getTriPoints( f ) );
+        const auto fixedPoints = mesh.getTriPoints( f );
+        const auto partPoints = part.getTriPoints( f );
+        for ( int i = 0; i < 3; ++i )
+            EXPECT_LT( ( fixedPoints[i] - partPoints[i] ).length(), 1e-6f );
     }
+
+    // two colliding spheres, none of which collides with itself: without the lens that two unit balls have in common
+    const Vector3f shift( 0.9f, 0.3f, 0.1f );
+    mesh = makeUVSphere( 1.0f, 32, 32 );
+    const auto sphereVolume = mesh.volume();
+    part = mesh;
+    part.transform( AffineXf3f::translation( shift ) );
+    mesh.addMesh( part );
+    EXPECT_TRUE( SelfIntersections::getFaces( mesh, false )->none() );
+    EXPECT_TRUE( SelfIntersections::fix( mesh, settings ).has_value() );
+    EXPECT_TRUE( findSelfCollidingTrianglesBS( mesh )->none() );
+    EXPECT_TRUE( mesh.topology.isClosed() );
+    EXPECT_EQ( MeshComponents::getNumComponents( mesh ), 1 );
+    const float d = shift.length();
+    EXPECT_NEAR( mesh.volume(), 2 * sphereVolume - PI * ( 4 + d ) * ( 2 - d ) * ( 2 - d ) / 12, 0.05 );
 }
 
 } //namespace MR

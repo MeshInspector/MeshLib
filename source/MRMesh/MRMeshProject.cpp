@@ -73,24 +73,27 @@ MeshProjectionResult findProjectionT( const Vector3f & pt, const MeshPart & mp, 
         const float distSq = ( proj - pt ).lengthSq();
         if ( !( distSq < res.distSq ) )
             return none;
-        if ( validProjections )
+        if constexpr ( !Plain )
         {
-            const MeshProjectionResult candidate
+            if ( validProjections )
             {
-                .proj = PointOnFace{ face, proj },
-                .mtp = MeshTriPoint( mp.mesh.topology.edgeWithLeft( face ), TriPointf( baryD ) ),
-                .distSq = distSq
-            };
-            if ( !validProjections( candidate ) )
+                const MeshProjectionResult candidate
+                {
+                    .proj = PointOnFace{ face, proj },
+                    .mtp = MeshTriPoint( mp.mesh.topology.edgeWithLeft( face ), TriPointf( baryD ) ),
+                    .distSq = distSq
+                };
+                if ( !validProjections( candidate ) )
+                    return none;
+                res = candidate;
+                if ( res.distSq <= loDistLimitSq )
+                    stop = true;
                 return none;
-            res = candidate;
+            }
         }
-        else
-        {
-            res.proj = PointOnFace{ face, proj };
-            res.distSq = distSq;
-            resBary = baryD;
-        }
+        res.proj = PointOnFace{ face, proj };
+        res.distSq = distSq;
+        resBary = baryD;
         if ( res.distSq <= loDistLimitSq )
             stop = true;
         return none;
@@ -125,7 +128,10 @@ MeshProjectionResult findProjectionT( const Vector3f & pt, const MeshPart & mp, 
         }
     }
 
-    if ( res.proj.face && !validProjections )
+    if constexpr ( !Plain )
+        if ( validProjections )
+            return res; // res.mtp is set with each accepted candidate
+    if ( res.proj.face )
         res.mtp = MeshTriPoint( mp.mesh.topology.edgeWithLeft( res.proj.face ), TriPointf( resBary ) );
     return res;
 }

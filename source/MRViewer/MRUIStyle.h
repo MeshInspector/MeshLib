@@ -331,7 +331,9 @@ MRVIEWER_API bool inputTextIntoArray( const char* label, char* array, std::size_
 MRVIEWER_API bool inputTextMultiline( const char* label, std::string& str, const ImVec2& size = ImVec2(), ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr );
 /// This overload is for arrays, as opposed to `std::string`s.
 MRVIEWER_API bool inputTextIntoArrayMultiline( const char* label, char* buf, size_t buf_size, const ImVec2& size = ImVec2(), ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr );
-/// Same as `inputTextIntoArrayMultiline()`, but shows the given hint in the field while the text is empty.
+/// Same as `inputTextMultiline()`, but shows the given hint in the field while the text is empty.
+MRVIEWER_API bool inputTextMultilineWithHint( const char* label, const char* hint, std::string& str, const ImVec2& size = ImVec2(), ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr );
+/// This overload is for arrays, as opposed to `std::string`s.
 MRVIEWER_API bool inputTextIntoArrayMultilineWithHint( const char* label, const char* hint, char* buf, size_t buf_size, const ImVec2& size = ImVec2(), ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr );
 
 struct CachedTextSize

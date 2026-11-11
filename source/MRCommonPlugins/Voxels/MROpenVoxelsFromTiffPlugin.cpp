@@ -46,7 +46,7 @@ bool OpenVoxelsFromTiffPlugin::onEnable_()
 
 void OpenVoxelsFromTiffPlugin::drawDialog( ImGuiContext* )
 {
-    const float menuWidth = 280.0f * UI::scale();
+    const float menuWidth = 380.0f * UI::scale();
 
     if ( !ImGuiBeginWindow_( { .width = menuWidth } ) )
         return;
@@ -57,7 +57,7 @@ void OpenVoxelsFromTiffPlugin::drawDialog( ImGuiContext* )
     UI::drag<LengthUnit>( _tr( "Voxel Size" ), voxelSize_, 1e-3f, 1e-3f, 1000.f );
 
     UI::checkbox( _tr( "Invert Surface Orientation" ), &invertSurfaceOrientation_ );
-    UI::setTooltipIfHovered( _tr( "By default result voxels has iso-surfaces oriented from bigger value to smaller which represents dense volume,"
+    UI::setTooltipIfHovered( _tr( "By default result voxels has iso-surfaces oriented from bigger value to smaller which represents dense volume, "
                                 "invert to have iso-surface oriented from smaller value to bigger to represent distances volume" ) );
     if ( UI::button( _tr( "Open Directory" ), { -1, 0 } ) )
     {

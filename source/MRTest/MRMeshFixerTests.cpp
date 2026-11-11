@@ -503,6 +503,7 @@ TEST( MRMesh, FixMeshCreasesLongPleat )
 TEST( MRMesh, FixMeshCreasesFlatAndCurvedFolds )
 {
     auto curved = makeUVSphere( 1, 16, 16 );
+    ASSERT_TRUE( curved.topology.findEdge( 0_v, 15_v ) && curved.topology.findEdge( 31_v, 15_v ) && curved.topology.findEdge( 100_v, 101_v ) );
     for ( auto & p : curved.points )
         p.x = std::min( p.x, 0.7f ); // a flat side
     for ( auto v : { 0_v, 31_v } ) // two neighbours of a vertex next to the pole slid past it

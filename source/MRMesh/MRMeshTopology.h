@@ -278,7 +278,7 @@ public:
 
     /// deletes the given faces, also deletes their edges and vertices if they were not shared by other faces and not in \p keepEdges;
     /// unlike \ref deleteFacesFindVacant, the edges that had no left and no right face before the call are not touched;
-    /// few faces (up to 64 or 1/128 of all faces, whichever is larger) are deleted one by one, in the time not depending on the mesh size
+    /// few faces (up to 64 or 1/128 of all faces, whichever is larger) are deleted one by one, without a pass over all mesh elements
     MRMESH_API void deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
     /// deletes from this topology:

@@ -16,6 +16,7 @@
 #include "MRMapOrHashMap.h"
 #include "MRPch/MRSpdlog.h"
 #include <algorithm>
+#include <optional>
 
 namespace MR
 {
@@ -132,46 +133,51 @@ static Expected<void> fixBySelfBoolean( Mesh& mesh, const Settings& settings )
     // a hole is filled with the triangles from its edges to a vertex away from it and from the faces along it (a fill towards them
     // would cut them off): where the intersecting parts of the mesh reach the holes,
     // the holes overlap or cross themselves, and such fills cross one another and themselves along lines, while the fills
-    // in the surfaces of the holes would overlap; the holes are filled in a copy, so that the mesh stays as it is on failure
-    auto filled = mesh;
+    // in the surfaces of the holes would overlap; the holes are filled in a copy made at the first fill, so that the mesh
+    // stays as it is on failure
+    std::optional<Mesh> filled;
     FaceBitSet fill;
-    for ( auto holes = filled.topology.findHoleRepresentiveEdges(); !holes.empty(); )
+    for ( auto holes = mesh.topology.findHoleRepresentiveEdges(); !holes.empty(); )
     {
         const auto numHoles = holes.size();
         std::erase_if( holes, [&] ( EdgeId e )
         {
+            const Mesh& m = filled ? *filled : mesh;
             bool reached = false;
             Vector3f away; // from the faces along the hole
-            for ( auto x : leftRing( filled.topology, e ) )
+            for ( auto x : leftRing( m.topology, e ) )
             {
-                const auto r = filled.topology.right( x );
+                const auto r = m.topology.right( x );
                 reached = reached || contains( *bad, r );
-                away += filled.edgeCenter( x ) - filled.triCenter( r );
+                away += m.edgeCenter( x ) - m.triCenter( r );
             }
             if ( reached )
             {
                 // as far from the hole as the radius of a circle with its perimeter, on the side without the faces
-                auto dir = filled.holeDirArea( e );
+                auto dir = m.holeDirArea( e );
                 if ( dir.lengthSq() == 0 ) // e.g. two edges between the same vertices
                     dir = Vector3d( away );
-                auto shift = Vector3f( dir.normalized() * ( filled.holePerimeter( e ) / ( 2 * PI ) ) );
+                auto shift = Vector3f( dir.normalized() * ( m.holePerimeter( e ) / ( 2 * PI ) ) );
                 if ( dot( shift, away ) < 0 )
                     shift = -shift;
-                filled.points[fillHoleTrivially( filled, e, &fill )] += shift;
+                if ( !filled )
+                    filled.emplace( mesh );
+                filled->points[fillHoleTrivially( *filled, e, &fill )] += shift;
             }
             return reached;
         } );
         if ( holes.size() == numHoles )
             break;
-        filled.invalidateCaches();
-        bad = findSelfCollidingTrianglesBS( filled, subprogress( settings.callback, 0.2f, 0.2f ) );
+        filled->invalidateCaches();
+        bad = findSelfCollidingTrianglesBS( *filled, subprogress( settings.callback, 0.2f, 0.2f ) );
         if ( !bad )
             return unexpected( std::move( bad.error() ) );
     }
 
-    const auto [before, numBefore] = MeshComponents::getAllComponentsMap( filled );
+    const Mesh& cut = filled ? *filled : mesh;
+    const auto [before, numBefore] = MeshComponents::getAllComponentsMap( cut );
     FaceMap new2Old;
-    auto res = selfBoolean( filled, &new2Old );
+    auto res = selfBoolean( cut, &new2Old );
     if ( !res )
         return unexpected( std::move( res.error() ) );
     if ( !reportProgress( settings.callback, 0.9f ) )

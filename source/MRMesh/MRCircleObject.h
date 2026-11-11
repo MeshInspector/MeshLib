@@ -27,7 +27,7 @@ public:
     constexpr static const char* StaticTypeName() noexcept { return "CircleObject"; }
     virtual const char* typeName() const override { return StaticTypeName(); }
 
-    constexpr static const char* StaticClassName() noexcept { return "Circle"; }
+    constexpr static const char* StaticClassName() noexcept { return Locale::translate_noop( "Circle" ); }
     virtual std::string className() const override { return StaticClassName(); }
 
     constexpr static const char* StaticClassNameInPlural() noexcept { return "Circles"; }

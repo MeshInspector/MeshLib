@@ -70,7 +70,7 @@ public:
     virtual const char* typeName() const { return StaticTypeName(); }
 
     /// return human readable name of subclass
-    constexpr static const char* StaticClassName() noexcept { return "Object"; }
+    constexpr static const char* StaticClassName() noexcept { return Locale::translate_noop( "Object" ); }
     virtual std::string className() const { return StaticClassName(); }
 
     /// return human readable name of subclass in plural form

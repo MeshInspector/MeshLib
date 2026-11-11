@@ -19,7 +19,7 @@ public:
     constexpr static const char* StaticTypeName() noexcept { return "DistanceMeasurementObject"; }
     const char* typeName() const override { return StaticTypeName(); }
 
-    constexpr static const char* StaticClassName() noexcept { return "Distance"; }
+    constexpr static const char* StaticClassName() noexcept { return Locale::translate_noop( "Distance" ); }
     virtual std::string className() const override { return StaticClassName(); }
 
     constexpr static const char* StaticClassNameInPlural() noexcept { return "Distances"; }

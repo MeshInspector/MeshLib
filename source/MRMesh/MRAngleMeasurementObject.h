@@ -18,7 +18,7 @@ public:
     constexpr static const char* StaticTypeName() noexcept { return "AngleMeasurementObject"; }
     const char* typeName() const override { return StaticTypeName(); }
 
-    constexpr static const char* StaticClassName() noexcept { return "Angle"; }
+    constexpr static const char* StaticClassName() noexcept { return Locale::translate_noop( "Angle" ); }
     virtual std::string className() const override { return StaticClassName(); }
 
     constexpr static const char* StaticClassNameInPlural() noexcept { return "Angles"; }

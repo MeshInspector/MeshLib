@@ -964,7 +964,7 @@ int Viewer::launchInit_( const LaunchParams& params )
     hasScaledFramebuffer_ = true;
 #else
 #if GLFW_VERSION_MAJOR > 3 || ( GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4 )
-   if ( getWindowSystem() == WindowSystem::Wayland )
+    if ( getWindowSystem() == WindowSystem::Wayland )
     {
         glfwWindowHintString( GLFW_WAYLAND_APP_ID, MR_PROJECT_NAME );
         glfwWindowHint( GLFW_SCALE_FRAMEBUFFER, GLFW_TRUE );

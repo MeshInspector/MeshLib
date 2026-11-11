@@ -10,12 +10,18 @@ GITHUB_HEADERS = {
 }
 
 def fetch_jobs(repo: str, run_id: str):
-    # TODO: pagination support
-    # more info: https://docs.github.com/en/rest/using-the-rest-api/using-pagination-in-the-rest-api
-    url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs?per_page=100'
-    req = urllib.request.Request(url, headers=GITHUB_HEADERS)
-    with urllib.request.urlopen(req) as resp:
-        return json.loads(resp.read().decode())
+    # a run can have well over 100 jobs, and the late ones (e.g. update-win-version) are on later pages
+    jobs = []
+    page = 1
+    while True:
+        url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs?per_page=100&page={page}'
+        req = urllib.request.Request(url, headers=GITHUB_HEADERS)
+        with urllib.request.urlopen(req) as resp:
+            data = json.loads(resp.read().decode())
+        jobs += data['jobs']
+        if not data['jobs'] or len(jobs) >= int(data['total_count']):
+            return jobs
+        page += 1
 
 def filter_job(job, job_name, runner_name):
     return job['status'] == "in_progress" and job_name in job['name'] and runner_name in [job['runner_name'], f"GitHub-Actions-{job['runner_id']}"]
@@ -27,12 +33,9 @@ def get_job_id(attempts=3, cooldown=10):
     runner_name = os.environ.get("RUNNER_NAME")
 
     for attempt in range(1, attempts + 1):
-        resp = fetch_jobs(repo, run_id)
-        if int(resp['total_count']) > 100:
-            print("Total job count has exceeded 100; consider enabling the pagination support")
         jobs = [
             job
-            for job in resp['jobs']
+            for job in fetch_jobs(repo, run_id)
             if filter_job(job, job_name, runner_name)
         ]
         if len(jobs) > 1:

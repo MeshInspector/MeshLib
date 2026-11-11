@@ -37,18 +37,16 @@ DBusConnection* getConnection()
 std::string getWindowId( GLFWwindow* window )
 {
     // https://flatpak.github.io/xdg-desktop-portal/docs/window-identifiers.html
-#if GLFW_VERSION_MAJOR > 3 || ( GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4 )
-    switch ( glfwGetPlatform() )
+    switch ( MR::getWindowSystem() )
     {
-    case GLFW_PLATFORM_X11:
+    case MR::WindowSystem::X11:
         return fmt::format( "x11:{:08x}", glfwGetX11Window( window ) );
-    // TODO: Wayland support
+    case MR::WindowSystem::Wayland:
+        // TODO: Wayland support
+        // https://gitlab.freedesktop.org/wayland/wayland-protocols/-/blob/main/unstable/xdg-foreign/xdg-foreign-unstable-v2.xml
     default:
         return "";
     }
-#else
-    return fmt::format( "x11:{:08x}", glfwGetX11Window( window ) );
-#endif
 }
 
 void dbusAppend( DBusMessageIter& iter, std::byte value )

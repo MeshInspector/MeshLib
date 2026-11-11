@@ -376,20 +376,18 @@ std::optional<TriIntersectResult> rayTriangleIntersect( const Vector3<T>& oriA, 
     const T Cx = oriC[prec.idxX] - Sx * oriC[prec.maxDimIdxZ];
     const T Cy = oriC[prec.idxY] - Sy * oriC[prec.maxDimIdxZ];
 
-    // due to fused multiply-add (FMA): (A*B-A*B) can be different from zero, so we need epsilon
-    const T eps = std::numeric_limits<T>::epsilon() * std::max( { Ax, Bx, Cx, Ay, By, Cy } );
+    // bound of rounding errors in U,V,W, e.g. due to fused multiply-add (FMA) (A*B-A*B) can be different from zero
+    const T eps = std::numeric_limits<T>::epsilon()
+        * std::max( { std::abs( Ax ), std::abs( Bx ), std::abs( Cx ) } )
+        * std::max( { std::abs( Ay ), std::abs( By ), std::abs( Cy ) } );
     T U = Cx * By - Cy * Bx;
     T V = Ax * Cy - Ay * Cx;
     T W = Bx * Ay - By * Ax;
 
-    if( U < -eps || V < -eps || W < -eps )
-    {
-        if( U > eps || V > eps || W > eps )
-        {
-            // U,V,W have clearly different signs, so the ray misses the triangle
-            return std::nullopt;
-        }
-    }
+    const bool someNeg = U < -eps || V < -eps || W < -eps;
+    const bool somePos = U > eps || V > eps || W > eps;
+    if ( someNeg == somePos )
+        return std::nullopt; // U,V,W have clearly different signs (the ray misses the triangle), or all are within rounding errors (the triangle is degenerate in the projection)
 
     T det = U + V + W;
     if( det == T( 0 ) )

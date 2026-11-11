@@ -80,4 +80,28 @@ const char* getAltModName()
     return altName;
 }
 
+WindowSystem getWindowSystem()
+{
+#if GLFW_VERSION_MAJOR > 3 || ( GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4 )
+    switch ( glfwGetPlatform() )
+    {
+    case GLFW_PLATFORM_WIN32:
+    case GLFW_PLATFORM_COCOA:
+        return WindowSystem::OsNative;
+    case GLFW_PLATFORM_WAYLAND:
+        return WindowSystem::Wayland;
+    case GLFW_PLATFORM_X11:
+        return WindowSystem::X11;
+    default:
+        return WindowSystem::Unknown;
+    }
+#elif defined( _WIN32 ) || defined( __APPLE__ )
+    return WindowSystem::OsNative;
+#elif !defined( __EMSCRIPTEN__ )
+    return WindowSystem::X11;
+#else
+    return WindowSystem::Unknown;
+#endif
 }
+
+} // namespace MR

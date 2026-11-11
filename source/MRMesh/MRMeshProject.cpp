@@ -10,7 +10,12 @@
 namespace MR
 {
 
-MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart & mp, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
+namespace
+{
+
+// Plain: no transformation, region, validFaces or validProjections, so the hot loop skips their checks
+template <bool Plain>
+MeshProjectionResult findProjectionT( const Vector3f & pt, const MeshPart & mp, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
     const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections )
 {
     MeshProjectionResult res;
@@ -39,22 +44,27 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
         if ( !tree.isLeaf( n ) )
         {
             const auto & box = tree.box( n );
-            float distSq = xf ? transformed( box, *xf ).getDistanceSq( pt ) : box.getDistanceSq( pt );
-            return SubTask { n, distSq };
+            if constexpr ( !Plain )
+                if ( xf )
+                    return SubTask { n, transformed( box, *xf ).getDistanceSq( pt ) };
+            return SubTask { n, box.getDistanceSq( pt ) };
         }
         const SubTask none{ n, FLT_MAX };
         const auto face = tree.leafId( n );
-        if ( validFaces && !validFaces( face ) )
-            return none;
-        if ( mp.region && !mp.region->test( face ) )
-            return none;
         const auto & v = tree.leafVerts( n );
         Vector3f a = mp.mesh.points[v[0]], b = mp.mesh.points[v[1]], c = mp.mesh.points[v[2]];
-        if ( xf )
+        if constexpr ( !Plain )
         {
-            a = (*xf)( a );
-            b = (*xf)( b );
-            c = (*xf)( c );
+            if ( validFaces && !validFaces( face ) )
+                return none;
+            if ( mp.region && !mp.region->test( face ) )
+                return none;
+            if ( xf )
+            {
+                a = (*xf)( a );
+                b = (*xf)( b );
+                c = (*xf)( c );
+            }
         }
 
         // compute the closest point in double-precision, because float might be not enough
@@ -63,61 +73,73 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
         const float distSq = ( proj - pt ).lengthSq();
         if ( !( distSq < res.distSq ) )
             return none;
-        if ( validProjections )
+        if constexpr ( !Plain )
         {
-            const MeshProjectionResult candidate
+            if ( validProjections )
             {
-                .proj = PointOnFace{ face, proj },
-                .mtp = MeshTriPoint( mp.mesh.topology.edgeWithLeft( face ), TriPointf( baryD ) ),
-                .distSq = distSq
-            };
-            if ( !validProjections( candidate ) )
+                const MeshProjectionResult candidate
+                {
+                    .proj = PointOnFace{ face, proj },
+                    .mtp = MeshTriPoint( mp.mesh.topology.edgeWithLeft( face ), TriPointf( baryD ) ),
+                    .distSq = distSq
+                };
+                if ( !validProjections( candidate ) )
+                    return none;
+                res = candidate;
+                if ( res.distSq <= loDistLimitSq )
+                    stop = true;
                 return none;
-            res = candidate;
+            }
         }
-        else
-        {
-            res.proj = PointOnFace{ face, proj };
-            res.distSq = distSq;
-            resBary = baryD;
-        }
+        res.proj = PointOnFace{ face, proj };
+        res.distSq = distSq;
+        resBary = baryD;
         if ( res.distSq <= loDistLimitSq )
             stop = true;
         return none;
     };
 
-    addSubTask( processChild( tree.rootNodeId() ) );
-
-    while ( !stop && !subtasks.empty() )
+    // the node to visit next is not pushed in the stack
+    auto s = processChild( tree.rootNodeId() );
+    while ( !stop )
     {
-        const auto s = subtasks.top();
-        subtasks.pop();
-        if ( s.distSq >= res.distSq )
+        if ( !tree.isLeaf( s.n ) && s.distSq < res.distSq )
+        {
+            const auto & node = tree[s.n];
+            const auto s1 = processChild( node.l );
+            if ( stop )
+                break;
+            const auto s2 = processChild( node.r );
+            if ( stop )
+                break;
+            // descend in the nearer child, the other waits in the stack
+            const bool lNearer = s1.distSq < s2.distSq;
+            addSubTask( lNearer ? s2 : s1 );
+            s = lNearer ? s1 : s2;
             continue;
-
-        const auto & node = tree[s.n];
-        auto s1 = processChild( node.l );
-        if ( stop )
-            break;
-        auto s2 = processChild( node.r );
-        if ( stop )
-            break;
-        // add task with smaller distance last to descend there first
-        if ( s1.distSq < s2.distSq )
-        {
-            addSubTask( s2 );
-            addSubTask( s1 );
         }
-        else
-        {
-            addSubTask( s1 );
-            addSubTask( s2 );
-        }
+        if ( subtasks.empty() )
+            break;
+        s = subtasks.top();
+        subtasks.pop();
     }
 
-    if ( res.proj.face && !validProjections )
+    if constexpr ( !Plain )
+        if ( validProjections )
+            return res; // res.mtp is set with each accepted candidate
+    if ( res.proj.face )
         res.mtp = MeshTriPoint( mp.mesh.topology.edgeWithLeft( res.proj.face ), TriPointf( resBary ) );
     return res;
+}
+
+} // anonymous namespace
+
+MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart & mp, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
+    const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections )
+{
+    if ( !xf && !mp.region && !validFaces && !validProjections )
+        return findProjectionT<true>( pt, mp, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
+    return findProjectionT<false>( pt, mp, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
 }
 
 MeshProjectionTransforms createProjectionTransforms( AffineXf3f& storageXf, const AffineXf3f* pointXf, const AffineXf3f* treeXf )

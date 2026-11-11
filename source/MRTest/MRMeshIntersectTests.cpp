@@ -97,4 +97,20 @@ TEST( MRMesh, MeshIntersectAllPrecise )
     }
 }
 
+TEST( MRMesh, MeshIntersectNearlyCoplanarRay )
+{
+    // the ray is almost in the plane of the triangle and misses it; tiny Y-coordinates must not be hidden by rounding tolerance
+    const auto mesh = Mesh::fromTriangles( { Vector3f( -63, 1.65e-13f, 87.05f ), Vector3f( -62.66f, 2.82e-13f, 87.72f ), Vector3f( -47.62f, -1.88e-13f, 84.84f ) },
+        { { 0_v, 1_v, 2_v } } );
+    const Vector3d p( -200, 0, 87.5 );
+    EXPECT_FALSE( rayMeshIntersect( mesh, Line3f( Vector3f( p ), Vector3f::plusX() ) ) );
+    EXPECT_FALSE( rayMeshIntersect( mesh, Line3d( p, Vector3d::plusX() ) ) );
+
+    // the ray across the plane hits the triangle in its centroid
+    const Vector3f c = ( mesh.points[0_v] + mesh.points[1_v] + mesh.points[2_v] ) / 3.0f;
+    const auto hit = rayMeshIntersect( mesh, Line3f( c + Vector3f( 0, 1, 0 ), Vector3f::minusY() ) );
+    ASSERT_TRUE( hit );
+    EXPECT_NEAR( hit.distanceAlongLine, 1.0f, 1e-6f );
+}
+
 } //namespace MR

@@ -598,15 +598,12 @@ namespace MR::PointsLoad
 
 Expected<PointCloud> fromLas( const std::filesystem::path& file, const PointsLoadSettings& settings )
 {
-    try
-    {
-        lazperf::reader::named_file reader( utf8string( file ) );
-        return process( reader, settings );
-    }
-    catch ( const std::exception& exc )
-    {
-        return unexpected( fmt::format( "Failed to read file: {}", exc.what() ) );
-    }
+    // lazperf opens a file by narrow name, which fails on Windows if the name has symbols outside the system code page
+    std::ifstream in( file, std::ifstream::binary );
+    if ( !in )
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+
+    return addFileNameInError( fromLas( in, settings ), file );
 }
 
 Expected<PointCloud> fromLas( std::istream& in, const PointsLoadSettings& settings )

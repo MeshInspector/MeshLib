@@ -737,6 +737,22 @@ ProccessMemoryInfo getProccessMemoryInfo()
 }
 #endif //_WIN32
 
+std::string getLocalTimeZone()
+{
+    const auto t = std::time( nullptr );
+    auto tm = LocaltimeOrZero( t );
+    if ( tm.tm_mday <= 0 )
+        return {};
+    // {:%z} of fmt does not compile for std::tm with MSVC
+#ifdef _WIN32
+    const auto asUtc = _mkgmtime( &tm );
+#else
+    const auto asUtc = timegm( &tm );
+#endif
+    const int offsetMin = int( std::difftime( asUtc, t ) / 60 );
+    return fmt::format( "UTC{}{:02}:{:02}", offsetMin < 0 ? '-' : '+', std::abs( offsetMin ) / 60, std::abs( offsetMin ) % 60 );
+}
+
 void setupLoggerByDefault( const std::function<void()>& customLogSinkAdder )
 {
     auto logger = Logger::instance().getSpdLogger();
@@ -792,17 +808,8 @@ void setupLoggerByDefault( const std::function<void()>& customLogSinkAdder )
     spdlog::info( "MR Version info: {}", GetMRVersionString() );
 
     // the times in the log are local, so write the offset from UTC to compare logs made in different places
-    if ( tm.tm_mday > 0 )
-    {
-        auto tmAsUtc = tm;
-#ifdef _WIN32
-        const auto asUtc = _mkgmtime( &tmAsUtc );
-#else
-        const auto asUtc = timegm( &tmAsUtc );
-#endif
-        const int offsetMin = int( std::difftime( asUtc, t ) / 60 );
-        spdlog::info( "Local time zone: UTC{}{:02}:{:02}", offsetMin < 0 ? '-' : '+', std::abs( offsetMin ) / 60, std::abs( offsetMin ) % 60 );
-    }
+    if ( const auto tz = getLocalTimeZone(); !tz.empty() )
+        spdlog::info( "Local time zone: {}", tz );
 }
 
 } //namespace MR

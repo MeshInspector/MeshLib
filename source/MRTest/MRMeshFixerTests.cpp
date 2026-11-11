@@ -481,6 +481,23 @@ TEST( MRMesh, FixMeshCreasesFoldAtBorder )
     EXPECT_EQ( mesh.topology.findNumHoles(), 1 );
 }
 
+// a pleat longer than 16 rings of faces around one of its creases enclose, on a sheet with low ridges along it:
+// the fans around the pleat are re-filled, and the sheet is not re-triangulated in a plane without its ridges
+TEST( MRMesh, FixMeshCreasesLongPleat )
+{
+    auto mesh = makeGrid( 24, 6 );
+    for ( auto & p : mesh.points )
+    {
+        p.z = 0.005f * ( int( p.y ) % 2 ); // the odd rows are the ridges
+        if ( p.x >= 4 && p.x <= 20 && ( p.y == 2 || p.y == 3 ) )
+            p.y = 5 - p.y; // two rows swapped over 16 cells
+    }
+    const auto numVerts = mesh.topology.numValidVerts();
+    fixMeshCreases( mesh );
+    EXPECT_TRUE( mesh.findCreaseEdges( FixCreasesParams{}.creaseAngle ).none() );
+    EXPECT_GT( mesh.topology.numValidVerts(), numVerts - 3 * 17 ); // only vertices in the 17 columns of the pleat are removed
+}
+
 // a fold of a flat area and a fold of a curved area in one mesh: the planar triangulation of the first does not postpone
 // the creases next to the fans re-filled before it, so one iteration leaves the curved fold as without the flat fold
 TEST( MRMesh, FixMeshCreasesFlatAndCurvedFolds )

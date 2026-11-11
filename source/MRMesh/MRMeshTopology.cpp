@@ -1128,8 +1128,9 @@ auto MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSe
 
 void MeshTopology::deleteFacesNoVacant( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
 {
-    // the parallel deletion of deleteFaces overtakes the serial one below at the number of faces inversely proportional to the number of threads
-    const auto maxSerialFaces = faceSize() / ( 4 * tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) );
+    // the serial deletion below is faster than deleteFaces up to 1/20 of the faces at least (measured with 1 to 24 threads);
+    // the limit does not depend on the number of threads for the result to be the same on every machine
+    const auto maxSerialFaces = std::max( size_t( 64 ), faceSize() / 128 );
     if ( fs.countBitsAndBlocks( maxSerialFaces ).bits > maxSerialFaces )
     {
         deleteFaces( fs, keepEdges );

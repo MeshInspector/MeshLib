@@ -202,8 +202,7 @@ TEST(MRMesh, FlipEdge)
 // the serial deletion of few faces must give what the parallel deletion of deleteFaces gives
 TEST( MRMesh, DeleteFacesNoVacant )
 {
-    // fine enough (32768 faces) that the sets below, of up to 11 faces, are deleted serially:
-    // at most 1/(4T) of the faces with T threads, up to about 700 threads
+    // the sets below have at most 11 faces, which are deleted serially
     MeshTopology bulk = makeUVSphere( 1, 128, 128 ).topology;
     MeshTopology serial = bulk;
     // the topologies with the same edges stored for vertices and faces, which operator == does not compare
@@ -272,6 +271,11 @@ TEST( MRMesh, DeleteFacesNoVacant )
     EXPECT_TRUE( bulk.isLoneEdge( kept ) );
     EXPECT_FALSE( serial.isLoneEdge( kept ) );
     serial.deleteFaces( {} );
+    EXPECT_TRUE( same() );
+
+    // a large set, here the valid faces of the topology itself, is passed to deleteFaces
+    del( serial.getValidFaces() );
+    EXPECT_EQ( serial.numValidFaces(), 0 );
     EXPECT_TRUE( same() );
 }
 

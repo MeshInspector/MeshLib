@@ -1006,16 +1006,19 @@ void MeshTopology::deleteFace( FaceId f, const UndirectedEdgeBitSet * keepEdges 
         if ( !right( e1 ) && !( keepEdges && keepEdges->test( e1 ) ) )
         {
             // delete e1 since it has no right face as well (and not in keepEdges);
-            // also delete any end-vertex of e1 if e1 was the last edge from it
-            if ( prev( e1 ) == e1 )
-                setOrg( e1, VertId{} );
-            else
-                splice( prev( e1 ), e1 );
-
-            if ( prev( e1.sym() ) == e1.sym() )
-                setOrg( e1.sym(), VertId{} );
-            else
-                splice( prev( e1.sym() ), e1.sym() );
+            // also delete any end-vertex of e1 if e1 was the last edge from it,
+            // otherwise the vertex passes to its next edge, as in deleteFaces_
+            for ( auto x : { e1, e1.sym() } )
+            {
+                if ( prev( x ) == x )
+                    setOrg( x, VertId{} );
+                else
+                {
+                    if ( auto v = org( x ); v && edgePerVertex_[v] == x )
+                        edgePerVertex_[v] = next( x );
+                    splice( prev( x ), x );
+                }
+            }
 
             assert( isLoneEdge( e1 ) );
         }
@@ -1038,7 +1041,7 @@ void MeshTopology::deleteFacesKeepEdges( const FaceBitSet & fs )
     }
 }
 
-auto MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges ) -> VacantElements
+auto MeshTopology::deleteFaces_( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges, bool keepFaceless ) -> VacantElements
 {
     MR_TIMER;
     VacantElements vacant;
@@ -1055,10 +1058,13 @@ auto MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSe
         }
         if ( keepEdges && keepEdges->test( ue ) )
             return;
-        if ( auto l = left( ue ); l && !fs.test( l ) )
+        const auto l = left( ue ), r = right( ue );
+        if ( l && !fs.test( l ) )
             return; // left face exists and will not be deleted
-        if ( auto r = right( ue ); r && !fs.test( r ) )
+        if ( r && !fs.test( r ) )
             return; // right face exists and will not be deleted
+        if ( keepFaceless && !l && !r )
+            return;
         vacant.edges.set( ue );
     } );
 
@@ -1124,6 +1130,26 @@ auto MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSe
     } );
 
     return vacant;
+}
+
+auto MeshTopology::deleteFacesFindVacant( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges ) -> VacantElements
+{
+    return deleteFaces_( fs, keepEdges, false );
+}
+
+void MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
+{
+    assert( updateValids_ );
+    // deleting faces one by one gives the same result; with 1 to 24 threads it was faster than the parallel deletion up to 1/20 of the faces
+    // at least, and the parallel deletion is limited by memory (only 1.1 times faster with 24 threads than with 8),
+    // so the limit 1/128 leaves a margin for machines with many more threads
+    const auto maxSerialFaces = std::max( size_t( 64 ), faceSize() / 128 );
+    if ( fs.countBitsAndBlocks( maxSerialFaces ).bits > maxSerialFaces )
+        deleteFaces_( fs, keepEdges, true );
+    else
+        for ( auto f : fs )
+            if ( edgeWithLeft( f ) ) // skip the faces deleted already
+                deleteFace( f, keepEdges );
 }
 
 template<typename FM, typename VM, typename WEM>

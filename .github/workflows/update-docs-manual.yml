@@ -8,6 +8,11 @@ on:
         required: false
         type: string
         default: "MeshLib/dev"
+      version:
+        description: "Release tag (v1.2.3.4) whose Rust and Java bindings and version go into the docs"
+        required: false
+        type: string
+        default: ""
 
 jobs:
   create-stubs:
@@ -136,6 +141,7 @@ jobs:
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: ${{ inputs.output_folder }}
+      version: ${{ inputs.version }}
     secrets: inherit
 
   delete-artifacts:

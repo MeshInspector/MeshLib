@@ -94,6 +94,7 @@ jobs:
           path: MeshLib/scripts/npm/meshlib
 
       - name: Download Rust bindings
+        if: ${{ inputs.version == '' }}
         uses: actions/download-artifact@v8
         continue-on-error: true
         with:
@@ -101,38 +102,54 @@ jobs:
           path: MeshLib/RustBindings
 
       - name: Download Java bindings
+        if: ${{ inputs.version == '' }}
         uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: JavaBindings
           path: MeshLib/JavaBindings
 
+      # Only build-test-ubuntu.yml builds the Rust and Java bindings; a release has their sources among its assets.
+      - name: Download Rust and Java bindings of the release
+        if: ${{ inputs.version != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          gh release download "$VERSION" -R ${{ github.repository }} -p '*_rust_bindings.zip' -p '*_java_bindings.zip' -D release_bindings
+          unzip -q 'release_bindings/*.zip' -d release_bindings
+          mv release_bindings/MeshLibRust/src MeshLib/RustBindings
+          mv release_bindings/MeshLibJava MeshLib/JavaBindings
+
       - name: Check for bindings
         id: check_bindings
+        env:
+          # A release must not skip its documentation silently.
+          FAIL: ${{ inputs.version != '' && 1 || 0 }}
         run: |
           if [ ! -d MeshLib/scripts/wheel/meshlib/meshlib ]; then
             echo "Failed to get Python stub files, aborting"
-            exit 0
+            exit $FAIL
           fi
           if [ ! -d MeshLib/Cbindings ]; then
             echo "Failed to get C bindings headers, aborting"
-            exit 0
+            exit $FAIL
           fi
           if [ ! -d MeshLib/CsharpBindings ]; then
             echo "Failed to get C# bindings, aborting"
-            exit 0
+            exit $FAIL
           fi
           if [ ! -f MeshLib/scripts/npm/meshlib/bindings.d.mts ]; then
             echo "Failed to get Wasm definitions, aborting"
-            exit 0
+            exit $FAIL
           fi
           if [ ! -f MeshLib/RustBindings/lib.rs ]; then
             echo "Failed to get Rust bindings, aborting"
-            exit 0
+            exit $FAIL
           fi
           if [ ! -d MeshLib/JavaBindings/src ]; then
             echo "Failed to get Java bindings, aborting"
-            exit 0
+            exit $FAIL
           fi
           echo "all_bindings=true" >> $GITHUB_OUTPUT
 

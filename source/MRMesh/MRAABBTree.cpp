@@ -7,7 +7,11 @@
 #include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
 #include <algorithm>
+#include <cmath>
 #include <tbb/parallel_invoke.h>
+#if defined(__x86_64__) || defined(_M_X64)
+#include <xmmintrin.h>
+#endif
 
 namespace MR
 {
@@ -33,13 +37,26 @@ struct BoxedTri
     explicit BoxedTri( NoInit ) noexcept : tri{ FaceId( noInit ), { VertId( noInit ), VertId( noInit ), VertId( noInit ) } }, box( noInit ) { }
 };
 
-Buffer<BoxedTri> makeBoxedTris( const MeshPart & mp )
+/// sorted instead of BoxedTri: smaller and compared by one coordinate
+struct Center
+{
+    int i; ///< in boxedTris
+    Vector3f c; ///< doubled center of the box
+
+    Center( int i, const Vector3f & c ) noexcept : i( i ), c( c ) { }
+    explicit Center( NoInit ) noexcept : c( noInit ) { }
+};
+static_assert( sizeof( Center ) == 16 );
+
+/// the triangles with their boxes, and the doubled centers of these boxes
+Buffer<BoxedTri> makeBoxedTris( const MeshPart & mp, Buffer<Center> & centers )
 {
     const auto numFaces = mp.region ? (int)mp.region->count() : mp.mesh.topology.numValidFaces();
     if ( numFaces <= 0 )
         return {};
 
     Buffer<BoxedTri> boxedTris( numFaces );
+    centers = Buffer<Center>( numFaces );
     const bool packed = numFaces == mp.mesh.topology.faceSize();
     if ( !packed )
     {
@@ -48,14 +65,170 @@ Buffer<BoxedTri> makeBoxedTris( const MeshPart & mp )
             boxedTris[n++].tri.face = f;
     }
 
+    const auto & topology = mp.mesh.topology;
     ParallelFor( 0, numFaces, [&] ( int i )
     {
         auto & bt = boxedTris[i];
         const FaceId f = packed ? FaceId( i ) : bt.tri.face;
-        bt.tri = { f, mp.mesh.topology.getTriVerts( f ) };
+        // topology.getTriVerts( f ) inlined
+        const EdgeId a = topology.edgeWithLeft( f );
+        const EdgeId b = topology.prev( a.sym() );
+        bt.tri = { f, { topology.org( a ), topology.org( b ), topology.dest( b ) } };
         bt.box = wideTriBox( mp.mesh, bt.tri );
+        centers[i] = Center( i, bt.box.min + bt.box.max );
     } );
     return boxedTris;
+}
+
+/// returns given box including the centers d[0..num)
+Box3f includeCenters( Box3f box, const Center * d, int num )
+{
+#if defined(__x86_64__) || defined(_M_X64)
+    // the lanes of a center: the bits of its index (ignored), x, y, z
+    __m128 lo0 = _mm_set_ps( box.min.z, box.min.y, box.min.x, 0 ), hi0 = _mm_set_ps( box.max.z, box.max.y, box.max.x, 0 );
+    __m128 lo1 = lo0, hi1 = hi0;
+    int i = 0;
+    for ( ; i + 2 <= num; i += 2 )
+    {
+        const __m128 a = _mm_loadu_ps( &d[i].c.x - 1 );
+        const __m128 b = _mm_loadu_ps( &d[i + 1].c.x - 1 );
+        lo0 = _mm_min_ps( lo0, a ); hi0 = _mm_max_ps( hi0, a );
+        lo1 = _mm_min_ps( lo1, b ); hi1 = _mm_max_ps( hi1, b );
+    }
+    if ( i < num )
+    {
+        const __m128 a = _mm_loadu_ps( &d[i].c.x - 1 );
+        lo0 = _mm_min_ps( lo0, a ); hi0 = _mm_max_ps( hi0, a );
+    }
+    alignas( 16 ) float lo[4], hi[4];
+    _mm_store_ps( lo, _mm_min_ps( lo0, lo1 ) );
+    _mm_store_ps( hi, _mm_max_ps( hi0, hi1 ) );
+    return Box3f( Vector3f( lo[1], lo[2], lo[3] ), Vector3f( hi[1], hi[2], hi[3] ) );
+#else
+    // independent boxes for the processor to include several centers at once
+    Box3f b1, b2, b3;
+    int i = 0;
+    for ( ; i + 4 <= num; i += 4 )
+    {
+        box.include( d[i].c );
+        b1.include( d[i + 1].c );
+        b2.include( d[i + 2].c );
+        b3.include( d[i + 3].c );
+    }
+    for ( ; i < num; ++i )
+        box.include( d[i].c );
+    box.include( b1 );
+    box.include( b2 );
+    box.include( b3 );
+    return box;
+#endif
+}
+
+/// the order of centers along an axis, ties by index; without branches to be fast on unordered centers
+struct CenterLess
+{
+    int axis;
+    bool operator()( const Center & a, const Center & b ) const
+    {
+        return bool( int( a.c[axis] < b.c[axis] ) | ( int( !( b.c[axis] < a.c[axis] ) ) & int( a.i < b.i ) ) );
+    }
+};
+
+/// returns the first of the centers in [l, r) not less than p after moving all less ones before it:
+/// blocks of centers are scanned for misplaced ones without branches, then the misplaced ones are swapped in pairs
+Center * partition( Center * l, Center * r, const Center & p, CenterLess less )
+{
+    constexpr int B = 64;
+    unsigned char offL[B], offR[B];
+    int nL = 0, nR = 0, sL = 0, sR = 0;
+    while ( r - l > 2 * B )
+    {
+        if ( nL == 0 )
+        {
+            sL = 0;
+            for ( int i = 0; i < B; ++i )
+            {
+                offL[nL] = (unsigned char)i;
+                nL += !less( l[i], p );
+            }
+        }
+        if ( nR == 0 )
+        {
+            sR = 0;
+            for ( int i = 0; i < B; ++i )
+            {
+                offR[nR] = (unsigned char)( i + 1 );
+                nR += less( *( r - ( i + 1 ) ), p );
+            }
+        }
+        const int n = std::min( nL, nR );
+        for ( int j = 0; j < n; ++j )
+            std::swap( l[offL[sL + j]], *( r - offR[sR + j] ) );
+        nL -= n;
+        nR -= n;
+        sL += n;
+        sR += n;
+        if ( nL == 0 )
+            l += B;
+        if ( nR == 0 )
+            r -= B;
+    }
+    // at most three blocks are left
+    for ( Center * i = l; i != r; ++i )
+    {
+        const bool lt = less( *i, p );
+        std::swap( *i, *l );
+        l += lt;
+    }
+    return l;
+}
+
+/// moves the center of order nth to its place, the less ones before it and the greater ones after it
+void select( Center * first, Center * nth, Center * last, CenterLess less )
+{
+    int budget = 2 * ( 1 + int( std::log2( double( last - first ) + 1 ) ) );
+    while ( last - first > 24 )
+    {
+        if ( --budget < 0 )
+        {
+            // unlucky pivots
+            std::nth_element( first, nth, last, less );
+            return;
+        }
+        const auto med3 = [less]( Center * a, Center * b, Center * c )
+        {
+            if ( less( *b, *a ) )
+                std::swap( a, b );
+            return less( *c, *b ) ? ( less( *c, *a ) ? a : c ) : b;
+        };
+        const auto n = last - first;
+        Center * const m = first + n / 2;
+        Center * pivot;
+        if ( n > 128 )
+        {
+            const auto s = n / 8;
+            pivot = med3( med3( first, first + s, first + 2 * s ), med3( m - s, m, m + s ), med3( last - 1 - 2 * s, last - 1 - s, last - 1 ) );
+        }
+        else
+            pivot = med3( first, m, last - 1 );
+        std::swap( *first, *pivot );
+        Center * const mid = partition( first + 1, last, *first, less ) - 1;
+        std::swap( *first, *mid );
+        if ( mid == nth )
+            return;
+        if ( nth < mid )
+            last = mid;
+        else
+            first = mid + 1;
+    }
+    for ( Center * i = first + 1; i < last; ++i )
+    {
+        const Center x = *i;
+        Center * j = i;
+        for ( ; j > first && less( x, *( j - 1 ) ); --j )
+            *j = *( j - 1 );
+        *j = x;
+    }
 }
 
 /// splits each AABBTree node in two binary levels, each at the median of the triangle box centers
@@ -64,16 +237,6 @@ class AABBTreeWideMaker
 {
 public:
     using Node = AABBTree::Node;
-
-    /// sorted instead of BoxedTri: smaller and compared by one coordinate
-    struct Center
-    {
-        int i; ///< in boxedTris
-        Vector3f c; ///< doubled center of the box
-
-        Center( int i, const Vector3f & c ) noexcept : i( i ), c( c ) { }
-        explicit Center( NoInit ) noexcept : c( noInit ) { }
-    };
 
     /// fills nodes, and the triangles and their boxes in leaf order
     AABBTreeWideMaker( const Buffer<BoxedTri> & boxedTris, Buffer<Center> & centers,
@@ -87,16 +250,25 @@ public:
         parallelSplits_ = numTris_ >= cParallelSplitNum
             && tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) > 1
             && tbb::this_task_arena::max_concurrency() > 1;
-        if ( parallelSplits_ )
+        if ( numTris_ >= cHistSplitNum )
             scratch_ = Buffer<Center>( numTris_ );
-        make_( NodeId( 0 ), NodeId( 1 ), 0, 0, numTris_ );
+        make_( NodeId( 0 ), NodeId( 1 ), { 0, { 0, numTris_, false } } );
     }
 
 private:
+    /// centers [first, first + num) either in centers_ or at the same positions in scratch_
+    struct Range
+    {
+        int first, num;
+        bool inScratch;
+    };
     struct Child
     {
-        int depth, first, num;
+        int depth;
+        Range r;
     };
+
+    Center * data_( const Range & r ) const { return ( r.inScratch ? scratch_.data() : centers_.data() ) + r.first; }
 
     // the number of nodes in the subtree of a node at binary depth d with num triangles
     int countNodes_( int d, int num )
@@ -119,111 +291,142 @@ private:
     }
     int numNodes_( int d, int num ) const { return cnt_[d][num - ( numTris_ >> d )]; }
 
-    int largestCentersAxis_( int first, int num ) const
+    Box3f centersBox_( const Range & r ) const
     {
-        Box3f box;
-        if ( parallelSplits_ && num >= cParallelSplitNum )
-        {
-            box = tbb::parallel_reduce( tbb::blocked_range<int>( first, first + num, 1 << 14 ), Box3f(),
-                [&]( const tbb::blocked_range<int> & r, Box3f b )
-                {
-                    for ( int i = r.begin(); i < r.end(); ++i )
-                        b.include( centers_[i].c );
-                    return b;
-                },
-                []( Box3f a, const Box3f & b ) { a.include( b ); return a; } );
-        }
-        else
-        {
-            for ( int i = 0; i < num; ++i )
-                box.include( centers_[first + i].c );
-        }
-        const auto sz = box.size();
-        return sz.x >= sz.y ? ( sz.x >= sz.z ? 0 : 2 ) : ( sz.y >= sz.z ? 1 : 2 );
+        const Center * d = data_( r );
+        if ( !parallelSplits_ || r.num < cParallelSplitNum )
+            return includeCenters( Box3f(), d, r.num );
+        return tbb::parallel_reduce( tbb::blocked_range<int>( 0, r.num, 1 << 14 ), Box3f(),
+            [d]( const tbb::blocked_range<int> & br, Box3f b ) { return includeCenters( b, d + br.begin(), (int)br.size() ); },
+            []( Box3f a, const Box3f & b ) { a.include( b ); return a; } );
     }
 
-    // [first, first + num / 2) get the smaller centers along axis; ties are ordered by index to make the tree independent of std::nth_element
-    void split_( int first, int num, int axis )
+    // [first, first + num / 2) get the smaller centers along the largest extent of the centers; ties are ordered by index
+    void split_( Range & r )
     {
-        const auto less = [axis]( const Center & a, const Center & b ) { return a.c[axis] < b.c[axis] || ( a.c[axis] == b.c[axis] && a.i < b.i ); };
-        Center * const data = centers_.data() + first;
-        const int mid = num / 2;
-        if ( !parallelSplits_ || num < cParallelSplitNum )
-        {
-            std::nth_element( data, data + mid, data + num, less );
+        const auto box = centersBox_( r );
+        const auto sz = box.size();
+        const int axis = sz.x >= sz.y ? ( sz.x >= sz.z ? 0 : 2 ) : ( sz.y >= sz.z ? 1 : 2 );
+        const CenterLess less{ axis };
+        if ( r.num >= cHistSplitNum && histSplit_( r, less, box.min[axis], box.max[axis] ) )
             return;
+        Center * const data = data_( r );
+        select( data, data + r.num / 2, data + r.num, less );
+    }
+
+    // splits by the buckets of the centers between lo and hi: the counts of the centers in the buckets find the bucket of the median,
+    // one pass moves the centers of the smaller buckets, of the median's bucket and of the bigger buckets to their places in the other buffer,
+    // and only the median's bucket is left to select in; returns false if the buckets cannot be made
+    bool histSplit_( Range & r, CenterLess less, float lo, float hi )
+    {
+        constexpr int K = 256;
+        const float scale = float( K ) / ( hi - lo );
+        if ( !( hi > lo ) || !std::isfinite( scale ) )
+            return false;
+        const int axis = less.axis;
+        // the buckets of the centers do not decrease along the axis
+        const auto bucket = [lo, scale, axis]( const Center & x ) { const float t = ( x.c[axis] - lo ) * scale; return t < float( K ) ? int( t ) : K - 1; };
+        const Center * const src = data_( r );
+        Center * const dst = data_( { r.first, r.num, !r.inScratch } );
+        const int mid = r.num / 2;
+
+        // one chunk if not parallel
+        const int chunk = parallelSplits_ && r.num >= cParallelSplitNum ? cChunk : r.num;
+        const int numChunks = ( r.num + chunk - 1 ) / chunk;
+        std::vector<int> hists( size_t( numChunks ) * K );
+        ParallelFor( 0, numChunks, [&]( int ch )
+        {
+            // several counts for the processor to count several centers at once: neighbor centers are often in the same bucket
+            int h[4][K] = {};
+            const int b = ch * chunk, e = std::min( r.num, b + chunk );
+            int i = b;
+            for ( ; i + 4 <= e; i += 4 )
+            {
+                ++h[0][bucket( src[i] )];
+                ++h[1][bucket( src[i + 1] )];
+                ++h[2][bucket( src[i + 2] )];
+                ++h[3][bucket( src[i + 3] )];
+            }
+            for ( ; i < e; ++i )
+                ++h[0][bucket( src[i] )];
+            int * const res = hists.data() + size_t( ch ) * K;
+            for ( int k = 0; k < K; ++k )
+                res[k] = h[0][k] + h[1][k] + h[2][k] + h[3][k];
+        } );
+
+        int mb = 0, numLess = 0, numMed = 0;
+        for ( ;; ++mb )
+        {
+            numMed = 0;
+            for ( int ch = 0; ch < numChunks; ++ch )
+                numMed += hists[size_t( ch ) * K + mb];
+            if ( numLess + numMed > mid )
+                break;
+            numLess += numMed;
         }
 
-        // a big range is partitioned in parallel in three parts by two samples around the median,
-        // and only the small middle part with the median is given to std::nth_element
-        constexpr int cNumSamples = 1024, cHalfGap = 64;
-        Buffer<Center> samples( cNumSamples );
-        for ( int k = 0; k < cNumSamples; ++k )
-            samples[k] = data[ std::int64_t( k ) * num / cNumSamples ];
-        std::sort( samples.data(), samples.data() + cNumSamples, less );
-        const Center lo = samples[cNumSamples / 2 - cHalfGap];
-        const Center hi = samples[cNumSamples / 2 + cHalfGap];
-        const auto part = [&]( const Center & c ) { return less( c, lo ) ? 0 : ( less( c, hi ) ? 1 : 2 ); };
-
-        constexpr int cChunk = 1 << 13;
-        const int numChunks = ( num + cChunk - 1 ) / cChunk;
-        struct Counts { int n[3]; };
-        std::vector<Counts> counts( numChunks );
-        ParallelFor( 0, numChunks, [&]( int ch )
+        // the first positions of each chunk's centers in the three parts of dst
+        struct Pos { int l, m, g; };
+        std::vector<Pos> pos( numChunks );
+        Pos next{ 0, numLess, numLess + numMed };
+        for ( int ch = 0; ch < numChunks; ++ch )
         {
-            Counts cnt{};
-            for ( int i = ch * cChunk, e = std::min( num, i + cChunk ); i < e; ++i )
-                ++cnt.n[part( data[i] )];
-            counts[ch] = cnt;
-        } );
-        Counts total{};
-        for ( const auto & c : counts )
-            for ( int k = 0; k < 3; ++k )
-                total.n[k] += c.n[k];
-        if ( mid < total.n[0] || mid >= total.n[0] + total.n[1] )
-        {
-            // the median is not between the samples
-            std::nth_element( data, data + mid, data + num, less );
-            return;
+            pos[ch] = next;
+            const int * h = hists.data() + size_t( ch ) * K;
+            int l = 0;
+            for ( int k = 0; k < mb; ++k )
+                l += h[k];
+            const int m = h[mb];
+            next.l += l;
+            next.m += m;
+            next.g += std::min( r.num - ch * chunk, chunk ) - l - m;
         }
-        Counts pos{ { 0, total.n[0], total.n[0] + total.n[1] } };
-        for ( auto & c : counts )
-        {
-            const auto my = pos;
-            for ( int k = 0; k < 3; ++k )
-                pos.n[k] += c.n[k];
-            c = my;
-        }
-        Center * const tmp = scratch_.data() + first;
         ParallelFor( 0, numChunks, [&]( int ch )
         {
-            auto pos = counts[ch];
-            for ( int i = ch * cChunk, e = std::min( num, i + cChunk ); i < e; ++i )
-                tmp[ pos.n[part( data[i] )]++ ] = data[i];
+            Center * pl = dst + pos[ch].l;
+            Center * pm = dst + pos[ch].m;
+            Center * pg = dst + pos[ch].g;
+            for ( int i = ch * chunk, e = std::min( r.num, i + chunk ); i < e; ++i )
+            {
+                const int b = bucket( src[i] );
+                const bool isL = b < mb, isG = b > mb;
+                Center * d = isL ? pl : pm;
+                d = isG ? pg : d;
+                *d = src[i];
+                pl += isL;
+                pg += isG;
+                pm += !isL & !isG;
+            }
         } );
-        ParallelFor( 0, numChunks, [&]( int ch )
-        {
-            const int i = ch * cChunk, e = std::min( num, i + cChunk );
-            std::copy( tmp + i, tmp + e, data + i );
-        } );
-        std::nth_element( data + total.n[0], data + mid, data + total.n[0] + total.n[1], less );
+        r.inScratch = !r.inScratch;
+        select( dst + numLess, dst + mid, dst + numLess + numMed, less );
+        return true;
     }
 
     // fills node n with its subtree, whose nodes below the children of n start from desc
-    void make_( NodeId n, NodeId desc, int depth, int first, int num )
+    void make_( NodeId n, NodeId desc, Child c )
     {
         auto & node = nodes_[n];
+        const int first = c.r.first, num = c.r.num;
         if ( num <= AABBTree::MaxLeafTris )
         {
-            // nth_element leaves the triangles of a half in an order of its implementation
-            std::sort( centers_.data() + first, centers_.data() + first + num, []( const Center & a, const Center & b ) { return a.i < b.i; } );
-            Box3f box;
-            for ( int i = first; i < first + num; ++i )
+            // the triangles of a leaf in the order of their indices
+            Center * const leaf = data_( c.r );
+            const auto cs = [leaf]( int x, int y ) { if ( leaf[y].i < leaf[x].i ) std::swap( leaf[x], leaf[y] ); };
+            switch ( num )
             {
-                const auto & bt = boxedTris_[centers_[i].i];
+            case 2: cs( 0, 1 ); break;
+            case 3: cs( 0, 1 ); cs( 1, 2 ); cs( 0, 1 ); break;
+            case 4: cs( 0, 1 ); cs( 2, 3 ); cs( 0, 2 ); cs( 1, 3 ); cs( 1, 2 ); break;
+            default: break;
+            }
+            Box3f box;
+            for ( int i = 0; i < num; ++i )
+            {
+                const auto & bt = boxedTris_[leaf[i].i];
                 box.include( bt.box );
-                leafTris_[i] = bt.tri;
-                leafBoxes_[i] = bt.box;
+                leafTris_[first + i] = bt.tri;
+                leafBoxes_[first + i] = bt.box;
             }
             node.box = box;
             node.first = first;
@@ -231,26 +434,24 @@ private:
             return;
         }
 
-        const int axis = largestCentersAxis_( first, num );
-        split_( first, num, axis );
-        const Child halves[2] = { { depth + 1, first, num / 2 }, { depth + 1, first + num / 2, num - num / 2 } };
-        Child ch[AABBTree::MaxChildren];
-        int k = 0;
-        const auto splitHalf = [&]( const Child & h ) { split_( h.first, h.num, largestCentersAxis_( h.first, h.num ) ); };
+        split_( c.r );
+        Child halves[2] = { { c.depth + 1, { first, num / 2, c.r.inScratch } }, { c.depth + 1, { first + num / 2, num - num / 2, c.r.inScratch } } };
         const bool parallel = num >= 4096;
         if ( parallel )
-            tbb::parallel_invoke( [&] { splitHalf( halves[0] ); }, [&] { splitHalf( halves[1] ); } );
-        for ( const auto & h : halves )
+            tbb::parallel_invoke( [&] { split_( halves[0].r ); }, [&] { split_( halves[1].r ); } );
+        Child ch[AABBTree::MaxChildren];
+        int k = 0;
+        for ( auto & h : halves )
         {
-            if ( h.num <= AABBTree::MaxLeafTris )
+            if ( h.r.num <= AABBTree::MaxLeafTris )
             {
                 ch[k++] = h;
                 continue;
             }
             if ( !parallel )
-                splitHalf( h );
-            ch[k++] = { depth + 2, h.first, h.num / 2 };
-            ch[k++] = { depth + 2, h.first + h.num / 2, h.num - h.num / 2 };
+                split_( h.r );
+            ch[k++] = { c.depth + 2, { h.r.first, h.r.num / 2, h.r.inScratch } };
+            ch[k++] = { c.depth + 2, { h.r.first + h.r.num / 2, h.r.num - h.r.num / 2, h.r.inScratch } };
         }
         node.first = int( desc );
         node.count = k;
@@ -260,19 +461,19 @@ private:
         for ( int j = 0; j < k; ++j )
         {
             childDesc[j] = next;
-            next = next + ( numNodes_( ch[j].depth, ch[j].num ) - 1 );
+            next = next + ( numNodes_( ch[j].depth, ch[j].r.num ) - 1 );
         }
         if ( !parallel )
         {
             for ( int j = 0; j < k; ++j )
-                make_( desc + j, childDesc[j], ch[j].depth, ch[j].first, ch[j].num );
+                make_( desc + j, childDesc[j], ch[j] );
         }
         else
         {
             tbb::task_group group;
             for ( int j = 1; j < k; ++j )
-                group.run( [&, j] { make_( desc + j, childDesc[j], ch[j].depth, ch[j].first, ch[j].num ); } );
-            make_( desc, childDesc[0], ch[0].depth, ch[0].first, ch[0].num );
+                group.run( [&, j] { make_( desc + j, childDesc[j], ch[j] ); } );
+            make_( desc, childDesc[0], ch[0] );
             group.wait();
         }
 
@@ -284,8 +485,10 @@ private:
 
     const Buffer<BoxedTri> & boxedTris_;
     Buffer<Center> & centers_;
-    Buffer<Center> scratch_; // for parallel splits of big ranges
+    Buffer<Center> scratch_; // the centers of a range move between centers_ and scratch_ by each split of the range with buckets
+    static constexpr int cHistSplitNum = 1024; // smaller ranges are split by select
     static constexpr int cParallelSplitNum = 1 << 17;
+    static constexpr int cChunk = 1 << 14; // the centers counted and moved by one thread in a parallel split
     bool parallelSplits_ = false; // on one thread the parallel split only adds passes over the range
     Vector<Node, NodeId> & nodes_;
     Vector<AABBTree::LeafTri> & leafTris_;
@@ -299,15 +502,10 @@ private:
 AABBTree::AABBTree( const MeshPart & mp )
 {
     MR_TIMER;
-    auto boxedTris = makeBoxedTris( mp );
+    Buffer<Center> centers;
+    auto boxedTris = makeBoxedTris( mp, centers );
     if ( boxedTris.size() == 0 )
         return;
-    Buffer<AABBTreeWideMaker::Center> centers( boxedTris.size() );
-    ParallelFor( size_t( 0 ), centers.size(), [&]( size_t i )
-    {
-        const auto & box = boxedTris[i].box;
-        centers[i] = AABBTreeWideMaker::Center( int( i ), box.min + box.max );
-    } );
     leafTris_.resize( boxedTris.size() );
     leafBoxes_.resizeNoInit( boxedTris.size() );
     AABBTreeWideMaker maker( boxedTris, centers, nodes_, leafTris_, leafBoxes_ );

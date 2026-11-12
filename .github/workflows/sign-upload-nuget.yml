@@ -42,6 +42,9 @@ jobs:
     timeout-minutes: 10
     needs: setup
     runs-on: [windows-x64-codesign]
+    permissions:
+      contents: read   # checkout + gh release download
+      id-token: write  # OIDC token for NuGet Trusted Publishing
     steps:
       # Only the beta-patch script is needed here (used by "Make Beta").
       # Must run before the download step: checkout cleans the workdir by default.
@@ -71,6 +74,14 @@ jobs:
           jsign --storetype ETOKEN --storepass "${{ secrets.WINDOWS_SIGNTOOL_KC_PARAM_TOKEN_PASSWORD }}" -tsaurl http://timestamp.digicert.com MeshLib_${{needs.setup.outputs.version_tag}}.nupkg
           nuget verify -All -Verbosity detailed MeshLib_${{needs.setup.outputs.version_tag}}.nupkg
 
+      - name: NuGet login (OIDC -> temporary API key)
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
       - name: Upload signed NuGet package
+        env:
+          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
         run: |
-          nuget push MeshLib_${{needs.setup.outputs.version_tag}}.nupkg ${{ secrets.NUGET_API_KEY }} -Source https://api.nuget.org/v3/index.json
+          nuget push MeshLib_${{needs.setup.outputs.version_tag}}.nupkg -ApiKey $env:NUGET_API_KEY -Source https://api.nuget.org/v3/index.json

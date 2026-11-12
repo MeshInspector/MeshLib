@@ -24,7 +24,8 @@ jobs:
       fail-fast: false
     env:
       CONFIG: Release
-      CXX-COMPILER: /usr/bin/clang++-14
+      # The compiler of the ubuntu22 arm64 job that uploads these bindings in build-test-distribute.yml.
+      CXX-COMPILER: /usr/bin/g++-12
       CXX-STANDARD: 20
       MESHLIB_THIRDPARTY_ROOT_DIR: /usr/local/lib/MeshLib
     permissions:

@@ -73,6 +73,13 @@ MR_BIND_OVERLOAD_SUFFIX() MRMESH_API PreciseCollisionResult findCollidingEdgeTri
     ConvertToIntVector conv, const AffineXf3f* rigidB2A = nullptr, bool anyIntersection = false );
 
 /**
+ * \brief the same with the trees given by the caller instead of the cached trees of the meshes
+ * \param aTree, bTree each tree must contain at least all the faces of its mesh that can collide with the other mesh,
+ * e.g. it can be a temporary tree of only the faces near the other mesh, which is much faster to construct than the tree of the whole mesh
+ */
+MR_BIND_IGNORE MRMESH_API PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const AABBTree & aTree, const MeshPart & b, const AABBTree & bTree,
+    ConvertToIntVector conv, const AffineXf3f* rigidB2A = nullptr, bool anyIntersection = false );
+/**
  * \brief updates the result of findCollidingEdgeTrisPrecise( a, b, conv, rigidB2A ) after some faces or edges of the meshes were split
  * (e.g. in subdivideLoneContours) with no other changes in the meshes: removes all intersections with the triangles around new vertices
  * (the split triangles and their new parts) and with their edges, and finds them again,

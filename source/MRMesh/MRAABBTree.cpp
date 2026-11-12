@@ -7,7 +7,15 @@
 #include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
 #include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <limits>
 #include <tbb/parallel_invoke.h>
+#if defined(__x86_64__) || defined(_M_X64)
+#include <emmintrin.h>
+#endif
 
 namespace MR
 {
@@ -18,6 +26,36 @@ namespace
 /// the box of a triangle of AABBTree, micro expanded to avoid leaks due to float errors
 Box3f wideTriBox( const Mesh & mesh, const AABBTree::LeafTri & lt )
 {
+#if defined(__x86_64__) || defined(_M_X64)
+    // the three coordinates at once; a point is loaded in two parts not to read past the end of the points
+    const auto load = []( const Vector3f & p )
+    {
+        return _mm_movelh_ps( _mm_castpd_ps( _mm_load_sd( reinterpret_cast<const double*>( &p.x ) ) ), _mm_load_ss( &p.z ) );
+    };
+    const __m128 a = load( mesh.points[lt.verts[0]] ), b = load( mesh.points[lt.verts[1]] ), c = load( mesh.points[lt.verts[2]] );
+    const __m128 mn = _mm_min_ps( _mm_min_ps( a, b ), c );
+    const __m128 mx = _mm_max_ps( _mm_max_ps( a, b ), c );
+    // nextDown and nextUp of finite not-zero values step the integer representation by the sign;
+    // zeros, infinities and NaNs (very rare) take the general way below
+    const __m128 absMask = _mm_castsi128_ps( _mm_set1_epi32( 0x7fffffff ) );
+    const __m128 maxVal = _mm_set1_ps( std::numeric_limits<float>::max() );
+    const __m128 zero = _mm_setzero_ps();
+    const __m128 okMn = _mm_and_ps( _mm_cmpneq_ps( mn, zero ), _mm_cmplt_ps( _mm_and_ps( mn, absMask ), maxVal ) );
+    const __m128 okMx = _mm_and_ps( _mm_cmpneq_ps( mx, zero ), _mm_cmplt_ps( _mm_and_ps( mx, absMask ), maxVal ) );
+    if ( ( _mm_movemask_ps( _mm_and_ps( okMn, okMx ) ) & 7 ) == 7 )
+    {
+        const __m128i one = _mm_set1_epi32( 1 );
+        const __m128i imn = _mm_castps_si128( mn ), imx = _mm_castps_si128( mx );
+        const __m128i resMn = _mm_sub_epi32( imn, _mm_or_si128( _mm_srai_epi32( imn, 31 ), one ) );
+        const __m128i resMx = _mm_add_epi32( imx, _mm_or_si128( _mm_srai_epi32( imx, 31 ), one ) );
+        Box3f res( noInit );
+        _mm_storel_epi64( reinterpret_cast<__m128i*>( &res.min.x ), resMn );
+        _mm_store_ss( &res.min.z, _mm_castsi128_ps( _mm_shuffle_epi32( resMn, _MM_SHUFFLE( 2, 2, 2, 2 ) ) ) );
+        _mm_storel_epi64( reinterpret_cast<__m128i*>( &res.max.x ), resMx );
+        _mm_store_ss( &res.max.z, _mm_castsi128_ps( _mm_shuffle_epi32( resMx, _MM_SHUFFLE( 2, 2, 2, 2 ) ) ) );
+        return res;
+    }
+#endif
     Box3f box;
     for ( auto v : lt.verts )
         box.include( mesh.points[v] );
@@ -87,8 +125,7 @@ public:
         parallelSplits_ = numTris_ >= cParallelSplitNum
             && tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) > 1
             && tbb::this_task_arena::max_concurrency() > 1;
-        if ( parallelSplits_ )
-            scratch_ = Buffer<Center>( numTris_ );
+        scratch_ = Buffer<Center>( numTris_ );
         make_( NodeId( 0 ), NodeId( 1 ), 0, 0, numTris_ );
     }
 
@@ -119,9 +156,184 @@ private:
     }
     int numNodes_( int d, int num ) const { return cnt_[d][num - ( numTris_ >> d )]; }
 
+    // true if a precedes b along axis, ties are ordered by index
+    static bool before_( const Center & a, const Center & b, int axis )
+    {
+        return a.c[axis] < b.c[axis] || ( a.c[axis] == b.c[axis] && a.i < b.i );
+    }
+
+#if defined(__x86_64__) || defined(_M_X64)
+    // The comparisons of a selection are unpredictable, so here they make no branches: quick-select with
+    // partitions that write every center to all its possible places and advance only one of them,
+    // and the ranges of up to cRankSortNum centers are sorted by counting the centers preceding each one.
+    // The loops are written with integers and intrinsics, because the compiler turns before_() into jumps.
+    static_assert( sizeof( Center ) == 16 && offsetof( Center, c ) == 4 );
+    static constexpr int cRankSortNum = 32;
+
+    // ( coordinate, index ) of a center as one integer ordered as before_(); lane is axis + 1
+    static std::uint64_t composite_( const Center & c, int lane )
+    {
+        std::uint32_t u = reinterpret_cast<const std::uint32_t*>( &c )[lane];
+        u = ( u == 0x80000000u ) ? 0u : u; // -0 equals +0
+        u ^= std::uint32_t( std::int32_t( u ) >> 31 ) | 0x80000000u;
+        return ( std::uint64_t( u ) << 32 ) | reinterpret_cast<const std::uint32_t*>( &c )[0];
+    }
+
+    template <int N> // N is a multiple of 4, num <= N
+    static void rankSort_( Center * data, int num, int axis )
+    {
+        alignas( 16 ) float key[N];
+        alignas( 16 ) int id[N];
+        alignas( 16 ) float tmp[N * 4];
+        for ( int i = 0; i < num; ++i )
+        {
+            _mm_store_ps( tmp + i * 4, _mm_loadu_ps( reinterpret_cast<const float*>( data + i ) ) );
+            key[i] = data[i].c[axis];
+            id[i] = data[i].i;
+        }
+        for ( int i = num; i < N; ++i )
+        {
+            key[i] = std::numeric_limits<float>::infinity();
+            id[i] = std::numeric_limits<int>::max();
+        }
+        for ( int i = 0; i < num; ++i )
+        {
+            const __m128 k = _mm_set1_ps( key[i] );
+            const __m128i d = _mm_set1_epi32( id[i] );
+            __m128i acc = _mm_setzero_si128();
+            for ( int j = 0; j < N; j += 4 )
+            {
+                const __m128 kj = _mm_load_ps( key + j );
+                const __m128i lt = _mm_castps_si128( _mm_cmplt_ps( kj, k ) );
+                const __m128i eq = _mm_castps_si128( _mm_cmpeq_ps( kj, k ) );
+                const __m128i il = _mm_cmplt_epi32( _mm_load_si128( reinterpret_cast<const __m128i*>( id + j ) ), d );
+                acc = _mm_sub_epi32( acc, _mm_or_si128( lt, _mm_and_si128( eq, il ) ) );
+            }
+            acc = _mm_add_epi32( acc, _mm_shuffle_epi32( acc, _MM_SHUFFLE( 1, 0, 3, 2 ) ) );
+            acc = _mm_add_epi32( acc, _mm_shuffle_epi32( acc, _MM_SHUFFLE( 2, 3, 0, 1 ) ) );
+            _mm_storeu_ps( reinterpret_cast<float*>( data + _mm_cvtsi128_si32( acc ) ), _mm_load_ps( tmp + i * 4 ) );
+        }
+    }
+
+    // same as std::nth_element( data, data + mid, data + num, before_ ) up to the order inside the two parts;
+    // tmp is a scratch for num centers
+    static void select_( Center * data, Center * tmp, int num, int mid, int axis )
+    {
+        const int lane = axis + 1;
+        int lo = 0, hi = num; // mid is in [lo, hi), and the centers before lo and from hi are in place
+        for (;;)
+        {
+            const int n = hi - lo;
+            if ( n <= cRankSortNum )
+            {
+                if ( n <= 8 )
+                    rankSort_<8>( data + lo, n, axis );
+                else if ( n <= 16 )
+                    rankSort_<16>( data + lo, n, axis );
+                else
+                    rankSort_<32>( data + lo, n, axis );
+                return;
+            }
+
+            // two pivots from a sample bracket the wanted position
+            constexpr int cMaxSamples = 255;
+            std::uint64_t samples[cMaxSamples];
+            const int numSamples = std::clamp( ( n / 16 ) | 1, 5, cMaxSamples );
+            for ( int k = 0; k < numSamples; ++k )
+                samples[k] = composite_( data[lo + int( ( std::int64_t( 2 * k + 1 ) * n ) / ( 2 * numSamples ) )], lane );
+            const float pos = ( float( mid - lo ) + 0.5f ) / float( n ) * float( numSamples ) - 0.5f;
+            const float gap = 0.25f * std::sqrt( float( numSamples ) );
+            const int r1 = std::clamp( int( std::floor( pos - gap ) ), 0, numSamples - 1 );
+            const int r2 = std::clamp( int( std::ceil( pos + gap ) ), 0, numSamples - 1 );
+            std::nth_element( samples, samples + r1, samples + numSamples );
+            if ( r2 > r1 )
+                std::nth_element( samples + r1 + 1, samples + r2, samples + numSamples );
+            const std::uint64_t k1 = samples[r1];
+            const std::uint64_t k2 = samples[r2];
+
+            // the centers before the first pivot go to the left end of tmp, the ones after the second pivot go to its right end,
+            // and the ones in between are compacted in place: their number never exceeds the number of the centers read
+            Center * l = tmp + lo;
+            Center * r = tmp + hi - 1;
+            Center * m = data + lo;
+            for ( const Center * src = data + lo, * const end = data + hi; src < end; ++src )
+            {
+                const __m128 v = _mm_loadu_ps( reinterpret_cast<const float*>( src ) );
+                const std::uint64_t k = composite_( *src, lane );
+                const size_t s1 = k < k1, s2 = k > k2;
+                _mm_storeu_ps( reinterpret_cast<float*>( l ), v );
+                _mm_storeu_ps( reinterpret_cast<float*>( r ), v );
+                _mm_storeu_ps( reinterpret_cast<float*>( m ), v );
+                l += s1;
+                r -= s2;
+                m += 1 - s1 - s2;
+            }
+            const int nl = int( l - ( tmp + lo ) ), nm = int( m - ( data + lo ) ), nr = n - nl - nm;
+            if ( nm == n )
+            {
+                // the pivots are the smallest and the largest centers of the range
+                std::nth_element( data + lo, data + mid, data + hi, [axis]( const Center & a, const Center & b ) { return before_( a, b, axis ); } );
+                return;
+            }
+            std::memmove( static_cast<void*>( data + lo + nl ), data + lo, size_t( nm ) * sizeof( Center ) );
+            std::memcpy( static_cast<void*>( data + lo ), tmp + lo, size_t( nl ) * sizeof( Center ) );
+            std::memcpy( static_cast<void*>( data + hi - nr ), tmp + hi - nr, size_t( nr ) * sizeof( Center ) );
+            if ( mid < lo + nl )
+                hi = lo + nl;
+            else if ( mid >= lo + nl + nm )
+                lo = lo + nl + nm;
+            else
+            {
+                lo += nl;
+                hi = lo + nm;
+            }
+        }
+    }
+#else
+    static void select_( Center * data, Center *, int num, int mid, int axis )
+    {
+        std::nth_element( data, data + mid, data + num, [axis]( const Center & a, const Center & b ) { return before_( a, b, axis ); } );
+    }
+#endif
+
     int largestCentersAxis_( int first, int num ) const
     {
         Box3f box;
+#if defined(__x86_64__) || defined(_M_X64)
+        if ( !( parallelSplits_ && num >= cParallelSplitNum ) )
+        {
+            // one load takes a whole center, and the index lane is ignored;
+            // four independent pairs of accumulators, otherwise every center waits for the min and max of the previous one
+            __m128 mn[4], mx[4];
+            for ( int k = 0; k < 4; ++k )
+            {
+                mn[k] = _mm_set1_ps( std::numeric_limits<float>::max() );
+                mx[k] = _mm_set1_ps( -std::numeric_limits<float>::max() );
+            }
+            const float * p = reinterpret_cast<const float*>( centers_.data() + first );
+            int i = 0;
+            for ( ; i + 4 <= num; i += 4 )
+            {
+                for ( int k = 0; k < 4; ++k )
+                {
+                    const __m128 v = _mm_loadu_ps( p + ( i + k ) * 4 );
+                    mn[k] = _mm_min_ps( mn[k], v );
+                    mx[k] = _mm_max_ps( mx[k], v );
+                }
+            }
+            for ( ; i < num; ++i )
+            {
+                const __m128 v = _mm_loadu_ps( p + i * 4 );
+                mn[0] = _mm_min_ps( mn[0], v );
+                mx[0] = _mm_max_ps( mx[0], v );
+            }
+            mn[0] = _mm_min_ps( _mm_min_ps( mn[0], mn[1] ), _mm_min_ps( mn[2], mn[3] ) );
+            mx[0] = _mm_max_ps( _mm_max_ps( mx[0], mx[1] ), _mm_max_ps( mx[2], mx[3] ) );
+            alignas( 16 ) float sz[4];
+            _mm_store_ps( sz, _mm_sub_ps( mx[0], mn[0] ) );
+            return sz[1] >= sz[2] ? ( sz[1] >= sz[3] ? 0 : 2 ) : ( sz[2] >= sz[3] ? 1 : 2 );
+        }
+#endif
         if ( parallelSplits_ && num >= cParallelSplitNum )
         {
             box = tbb::parallel_reduce( tbb::blocked_range<int>( first, first + num, 1 << 14 ), Box3f(),
@@ -150,7 +362,7 @@ private:
         const int mid = num / 2;
         if ( !parallelSplits_ || num < cParallelSplitNum )
         {
-            std::nth_element( data, data + mid, data + num, less );
+            select_( data, scratch_.data() + first, num, mid, axis );
             return;
         }
 
@@ -183,7 +395,7 @@ private:
         if ( mid < total.n[0] || mid >= total.n[0] + total.n[1] )
         {
             // the median is not between the samples
-            std::nth_element( data, data + mid, data + num, less );
+            select_( data, scratch_.data() + first, num, mid, axis );
             return;
         }
         Counts pos{ { 0, total.n[0], total.n[0] + total.n[1] } };
@@ -206,7 +418,7 @@ private:
             const int i = ch * cChunk, e = std::min( num, i + cChunk );
             std::copy( tmp + i, tmp + e, data + i );
         } );
-        std::nth_element( data + total.n[0], data + mid, data + total.n[0] + total.n[1], less );
+        select_( data + total.n[0], tmp + total.n[0], total.n[1], mid - total.n[0], axis );
     }
 
     // fills node n with its subtree, whose nodes below the children of n start from desc
@@ -284,7 +496,7 @@ private:
 
     const Buffer<BoxedTri> & boxedTris_;
     Buffer<Center> & centers_;
-    Buffer<Center> scratch_; // for parallel splits of big ranges
+    Buffer<Center> scratch_; // for the partitions of the splits
     static constexpr int cParallelSplitNum = 1 << 17;
     bool parallelSplits_ = false; // on one thread the parallel split only adds passes over the range
     Vector<Node, NodeId> & nodes_;

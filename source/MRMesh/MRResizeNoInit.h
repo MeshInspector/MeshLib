@@ -50,19 +50,25 @@ struct NoInitIterator
 
 } //namespace detail
 
+/// how resizeNoInit reserves the memory when the capacity is short
+enum class ReserveMode
+{
+    Exact, ///< exactly the target size: for a vector resized once
+    Grow   ///< the vector grows the capacity geometrically by its own policy, as push_back does, so repeated small growths copy the elements only O(log) times
+};
+
 /// resizes the vector skipping initialization of its elements (more precisely initializing them using ( noInit ) constructor );
 /// this is much faster than ordinary resize(), because the memory of vector's elements is not accessed,
 /// and the optimizer removes the loop over the no-op constructors, so the time does not depend on the number of new elements
-/// \param exactReserve if false and the capacity is short, the vector grows it geometrically as push_back does, so repeated small growths copy the elements only O(log) times
 template <typename T, typename A>
-void resizeNoInit( std::vector<T, A> & vec, size_t targetSize, bool exactReserve = true ) MR_REQUIRES_IF_SUPPORTED( sizeof( T ) > 0 && std::constructible_from<T, NoInit> )
+void resizeNoInit( std::vector<T, A> & vec, size_t targetSize, ReserveMode mode = ReserveMode::Exact ) MR_REQUIRES_IF_SUPPORTED( sizeof( T ) > 0 && std::constructible_from<T, NoInit> )
 {
     if ( targetSize <= vec.size() )
     {
         vec.resize( targetSize );
         return;
     }
-    if ( exactReserve )
+    if ( mode == ReserveMode::Exact )
         vec.reserve( targetSize );
     // inserting a counted range lets the vector apply its own capacity growth
     vec.insert( vec.end(), detail::NoInitIterator<T>{}, detail::NoInitIterator<T>{ std::ptrdiff_t( targetSize - vec.size() ) } );

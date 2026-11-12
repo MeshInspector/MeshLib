@@ -83,7 +83,7 @@ EdgeId MeshTopology::makeEdges( int num )
     assert( edges_.size() % 2 == 0 );
     const EdgeId first( int( edges_.size() ) );
     const auto newSize = edges_.size() + 2 * size_t( num );
-    edges_.resizeNoInit( newSize, false ); // not to reallocate on every call
+    edges_.resizeNoInit( newSize, ReserveMode::Grow ); // not to reallocate on every call
     for ( auto e = first; e < edges_.endId(); ++e )
     {
         auto& r = edges_[e];
@@ -2577,7 +2577,7 @@ bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             {
                 if ( updateValids_ )
                     validVerts_.autoResizeSet( edgePerVertex_.endId(), lastNewVert + 1 - edgePerVertex_.size(), true );
-                edgePerVertex_.resizeNoInit( lastNewVert + 1, false ); // not to reallocate on every addPart
+                edgePerVertex_.resizeNoInit( lastNewVert + 1, ReserveMode::Grow ); // not to reallocate on every addPart
             }
         } );
 
@@ -2605,7 +2605,7 @@ bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             {
                 if ( updateValids_ )
                     validFaces_.autoResizeSet( edgePerFace_.endId(), lastNewFace + 1 - edgePerFace_.size(), true );
-                edgePerFace_.resizeNoInit( lastNewFace + 1, false );
+                edgePerFace_.resizeNoInit( lastNewFace + 1, ReserveMode::Grow );
             }
         } );
 
@@ -2626,7 +2626,7 @@ bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
                 map.tgt2srcEdges->pushBack( ue, EdgeId{ fromUe } );
         } );
         if ( edges_.size() < 2 * ( lastNewEdge + 1 ) )
-            edges_.resizeNoInit( 2 * ( lastNewEdge + 1 ), false );
+            edges_.resizeNoInit( 2 * ( lastNewEdge + 1 ), ReserveMode::Grow );
         taskGroup.wait();
     }
 

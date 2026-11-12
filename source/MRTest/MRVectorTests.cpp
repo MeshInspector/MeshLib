@@ -53,11 +53,11 @@ TEST( MRMesh, VectorResizeNoInit )
     for ( int i = 0; i < 1000; ++i )
         v[VertId( i )] = EdgeId( i );
 
-    v.resizeNoInit( 1001, false );
+    v.resizeNoInit( 1001, ReserveMode::Grow );
     EXPECT_EQ( v.size(), 1001 );
     const auto cap = v.capacity();
     EXPECT_GE( cap, 1500 );
-    v.resizeNoInit( 1002, false );
+    v.resizeNoInit( 1002, ReserveMode::Grow );
     EXPECT_EQ( v.size(), 1002 );
     EXPECT_EQ( v.capacity(), cap );
     for ( int i = 0; i < 1000; ++i )

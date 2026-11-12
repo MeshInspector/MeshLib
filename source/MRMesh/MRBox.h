@@ -124,10 +124,11 @@ public:
     {
         for ( int i = 0; i < elements; ++i )
         {
+            const auto v = VTraits::getElem( i, pt );
             auto & lo = VTraits::getElem( i, min );
             auto & hi = VTraits::getElem( i, max );
-            lo = std::min( lo, VTraits::getElem( i, pt ) );
-            hi = std::max( hi, VTraits::getElem( i, pt ) );
+            lo = v < lo ? v : lo;
+            hi = hi < v ? v : hi;
         }
     }
 
@@ -136,10 +137,12 @@ public:
     {
         for ( int i = 0; i < elements; ++i )
         {
+            const auto bLo = VTraits::getElem( i, b.min );
+            const auto bHi = VTraits::getElem( i, b.max );
             auto & lo = VTraits::getElem( i, min );
             auto & hi = VTraits::getElem( i, max );
-            lo = std::min( lo, VTraits::getElem( i, b.min ) );
-            hi = std::max( hi, VTraits::getElem( i, b.max ) );
+            lo = bLo < lo ? bLo : lo;
+            hi = hi < bHi ? bHi : hi;
         }
     }
 

@@ -44,4 +44,29 @@ TEST( MRMesh, VectorStdMethods )
     EXPECT_EQ( sum, 16 );
 }
 
+TEST( MRMesh, VectorResizeNoInit )
+{
+    Vector<EdgeId, VertId> v;
+    v.resizeNoInit( 1000 );
+    EXPECT_EQ( v.size(), 1000 );
+    EXPECT_EQ( v.capacity(), 1000 );
+    for ( int i = 0; i < 1000; ++i )
+        v[VertId( i )] = EdgeId( i );
+
+    v.resizeNoInit( 1001, false );
+    EXPECT_EQ( v.size(), 1001 );
+    const auto cap = v.capacity();
+    EXPECT_GE( cap, 1500 );
+    v.resizeNoInit( 1002, false );
+    EXPECT_EQ( v.size(), 1002 );
+    EXPECT_EQ( v.capacity(), cap );
+    for ( int i = 0; i < 1000; ++i )
+        EXPECT_EQ( v[VertId( i )], EdgeId( i ) );
+
+    v.resizeNoInit( 5 );
+    EXPECT_EQ( v.size(), 5 );
+    for ( int i = 0; i < 5; ++i )
+        EXPECT_EQ( v[VertId( i )], EdgeId( i ) );
+}
+
 } //namespace MR

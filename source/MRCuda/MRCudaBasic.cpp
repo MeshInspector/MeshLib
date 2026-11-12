@@ -225,8 +225,9 @@ size_t getCudaAvailableMemory()
     size_t memFree = 0, memTot = 0;
     if ( CUDA_EXEC( cudaMemGetInfo( &memFree, &memTot ) ) )
         return 0;
-    // minus extra 128 MB
-    return memFree - 128 * 1024 * 1024;
+    // minus extra 128 MB, not going below zero if the device is (almost) full
+    constexpr size_t cReserve = 128 * 1024 * 1024;
+    return memFree > cReserve ? memFree - cReserve : 0;
 }
 
 size_t getCudaSafeMemoryLimit()

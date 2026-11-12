@@ -11,7 +11,7 @@
 #include <cmath>
 #include <tbb/parallel_invoke.h>
 #if defined(__x86_64__) || defined(_M_X64)
-#include <xmmintrin.h>
+#include <emmintrin.h>
 #endif
 
 namespace MR
@@ -23,6 +23,31 @@ namespace
 /// the box of a triangle of AABBTree, micro expanded to avoid leaks due to float errors
 Box3f wideTriBox( const Mesh & mesh, const AABBTree::LeafTri & lt )
 {
+#if defined(__x86_64__) || defined(_M_X64)
+    // the lanes of a point: x, y, z, z
+    const auto load = [&mesh]( VertId v )
+    {
+        const float * p = &mesh.points[v].x;
+        return _mm_movelh_ps( _mm_castpd_ps( _mm_load_sd( (const double *)p ) ), _mm_load1_ps( p + 2 ) );
+    };
+    const __m128 a = load( lt.verts[0] ), b = load( lt.verts[1] ), c = load( lt.verts[2] );
+    const __m128i lo = _mm_castps_si128( _mm_min_ps( _mm_min_ps( a, b ), c ) );
+    const __m128i hi = _mm_castps_si128( _mm_max_ps( _mm_max_ps( a, b ), c ) );
+    // as in nextDown and nextUp: if 0 < |x| < max in all lanes, then the closest values around x differ from it by one in the bits
+    const __m128i one = _mm_set1_epi32( 1 );
+    const __m128i absMask = _mm_set1_epi32( 0x7fffffff );
+    const __m128i signBit = _mm_set1_epi32( int( 0x80000000u ) ); // to compare unsigned integers as signed ones
+    const __m128i limit = _mm_set1_epi32( int( ( 0x7f7fffffu - 1 ) ^ 0x80000000u ) );
+    const auto fast = [&]( __m128i x ) { return _mm_cmplt_epi32( _mm_xor_si128( _mm_sub_epi32( _mm_and_si128( x, absMask ), one ), signBit ), limit ); };
+    if ( _mm_movemask_ps( _mm_castsi128_ps( _mm_and_si128( fast( lo ), fast( hi ) ) ) ) == 15 )
+    {
+        // minus one for positive and plus one for negative lo, plus one for positive and minus one for negative hi
+        alignas( 16 ) float l[4], h[4];
+        _mm_store_ps( l, _mm_castsi128_ps( _mm_sub_epi32( lo, _mm_or_si128( _mm_srai_epi32( lo, 31 ), one ) ) ) );
+        _mm_store_ps( h, _mm_castsi128_ps( _mm_add_epi32( hi, _mm_or_si128( _mm_srai_epi32( hi, 31 ), one ) ) ) );
+        return Box3f( Vector3f( l[0], l[1], l[2] ), Vector3f( h[0], h[1], h[2] ) );
+    }
+#endif
     Box3f box;
     for ( auto v : lt.verts )
         box.include( mesh.points[v] );

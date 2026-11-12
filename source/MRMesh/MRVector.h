@@ -72,7 +72,7 @@ public:
     void resize( size_t newSize, const T & t ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> ) { vec.resize( newSize, t ); }
 
     // resizes the vector skipping initialization of its elements (more precisely initializing them using ( noInit ) constructor )
-    void resizeNoInit( size_t targetSize ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::constructible_from<T, NoInit> ) { MR::resizeNoInit( vec, targetSize ); }
+    void resizeNoInit( size_t targetSize, ReserveMode mode = ReserveMode::Exact ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::constructible_from<T, NoInit> ) { MR::resizeNoInit( vec, targetSize, mode ); }
 
     [[nodiscard]] std::size_t capacity() const { return vec.capacity(); }
 

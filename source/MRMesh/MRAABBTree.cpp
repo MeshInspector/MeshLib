@@ -31,8 +31,9 @@ Box3f wideTriBox( const Mesh & mesh, const AABBTree::LeafTri & lt )
         return _mm_movelh_ps( _mm_castpd_ps( _mm_load_sd( (const double *)p ) ), _mm_load1_ps( p + 2 ) );
     };
     const __m128 a = load( lt.verts[0] ), b = load( lt.verts[1] ), c = load( lt.verts[2] );
-    const __m128i lo = _mm_castps_si128( _mm_min_ps( _mm_min_ps( a, b ), c ) );
-    const __m128i hi = _mm_castps_si128( _mm_max_ps( _mm_max_ps( a, b ), c ) );
+    // a NaN in b or c is skipped as by Box::include, and a NaN in a leads to the scalar code below
+    const __m128i lo = _mm_castps_si128( _mm_min_ps( c, _mm_min_ps( b, a ) ) );
+    const __m128i hi = _mm_castps_si128( _mm_max_ps( c, _mm_max_ps( b, a ) ) );
     // as in nextDown and nextUp: if 0 < |x| < max in all lanes, then the closest values around x differ from it by one in the bits
     const __m128i one = _mm_set1_epi32( 1 );
     const __m128i absMask = _mm_set1_epi32( 0x7fffffff );
@@ -110,7 +111,7 @@ Buffer<BoxedTri> makeBoxedTris( const MeshPart & mp, Buffer<Center> & centers )
 Box3f includeCenters( Box3f box, const Center * d, int num )
 {
 #if defined(__x86_64__) || defined(_M_X64)
-    // the lanes of a center: the bits of its index (ignored), x, y, z
+    // the lanes of a center: the bits of its index (ignored), x, y, z; the box is the second argument of min and max to skip NaN as Box::include does
     __m128 lo0 = _mm_set_ps( box.min.z, box.min.y, box.min.x, 0 ), hi0 = _mm_set_ps( box.max.z, box.max.y, box.max.x, 0 );
     __m128 lo1 = lo0, hi1 = hi0;
     int i = 0;
@@ -118,13 +119,13 @@ Box3f includeCenters( Box3f box, const Center * d, int num )
     {
         const __m128 a = _mm_loadu_ps( &d[i].c.x - 1 );
         const __m128 b = _mm_loadu_ps( &d[i + 1].c.x - 1 );
-        lo0 = _mm_min_ps( lo0, a ); hi0 = _mm_max_ps( hi0, a );
-        lo1 = _mm_min_ps( lo1, b ); hi1 = _mm_max_ps( hi1, b );
+        lo0 = _mm_min_ps( a, lo0 ); hi0 = _mm_max_ps( a, hi0 );
+        lo1 = _mm_min_ps( b, lo1 ); hi1 = _mm_max_ps( b, hi1 );
     }
     if ( i < num )
     {
         const __m128 a = _mm_loadu_ps( &d[i].c.x - 1 );
-        lo0 = _mm_min_ps( lo0, a ); hi0 = _mm_max_ps( hi0, a );
+        lo0 = _mm_min_ps( a, lo0 ); hi0 = _mm_max_ps( a, hi0 );
     }
     alignas( 16 ) float lo[4], hi[4];
     _mm_store_ps( lo, _mm_min_ps( lo0, lo1 ) );
@@ -261,7 +262,9 @@ void sortSmall( Center * data, int n, int axis )
 /// moves the center of order nth to its place, the less ones before it and the greater ones after it
 void select( Center * first, Center * nth, Center * last, CenterLess less )
 {
-    int budget = 2 * ( 1 + int( std::log2( double( last - first ) + 1 ) ) );
+    int budget = 2; // partitions before std::nth_element, about twice the expected number
+    for ( auto n = last - first; n > 16; n >>= 1 )
+        budget += 2;
     while ( last - first > 16 )
     {
         if ( --budget < 0 )

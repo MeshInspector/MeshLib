@@ -9,7 +9,7 @@
 #include <vector>
 
 #if defined(__x86_64__) || defined(_M_X64)
-#include <xmmintrin.h>
+#include <emmintrin.h>
 #elif defined(__aarch64__) || defined(_M_ARM64)
 #include <arm_neon.h>
 #elif defined(__wasm_simd128__)
@@ -157,53 +157,69 @@ TreeCenter * partition( TreeCenter * l, TreeCenter * r, const TreeCenter & p, Ce
     return l;
 }
 
-/// sorts up to 16 centers by a sorting network on their keys: the bits of the coordinate ordered as unsigned integers, then the index
+/// sorts up to 16 centers by counting for each one the centers before it, without branches;
+/// the keys are the bits of the coordinate ordered as signed integers, then the index
 void sortSmall( TreeCenter * data, int n, int axis )
 {
     assert( n <= 16 );
-    struct Pair { unsigned char a, b; };
-    // Batcher's odd-even merge sort
-    static constexpr Pair net8[] = { {0,1}, {2,3}, {4,5}, {6,7}, {0,2}, {1,3}, {4,6}, {5,7}, {1,2}, {5,6}, {0,4}, {1,5}, {2,6}, {3,7}, {2,4}, {3,5}, {1,2}, {3,4}, {5,6} };
-    static constexpr Pair net16[] = { {0,1}, {2,3}, {4,5}, {6,7}, {8,9}, {10,11}, {12,13}, {14,15}, {0,2}, {1,3}, {4,6}, {5,7}, {8,10}, {9,11}, {12,14}, {13,15},
-        {1,2}, {5,6}, {9,10}, {13,14}, {0,4}, {1,5}, {2,6}, {3,7}, {8,12}, {9,13}, {10,14}, {11,15}, {2,4}, {3,5}, {10,12}, {11,13}, {1,2}, {3,4}, {5,6},
-        {9,10}, {11,12}, {13,14}, {0,8}, {1,9}, {2,10}, {3,11}, {4,12}, {5,13}, {6,14}, {7,15}, {4,8}, {5,9}, {6,10}, {7,11}, {2,4}, {3,5}, {6,8}, {7,9},
-        {10,12}, {11,13}, {1,2}, {3,4}, {5,6}, {7,8}, {9,10}, {11,12}, {13,14} };
-    std::uint64_t key[16];
-    unsigned char pos[16];
+    alignas( 16 ) std::int32_t key[16], id[16];
     for ( int j = 0; j < 16; ++j )
     {
         if ( j < n )
         {
             // + 0.0f makes -0 equal to +0
             const auto u = bit_cast<std::uint32_t>( data[j].c[axis] + 0.0f );
-            const auto ordered = u ^ ( std::uint32_t( std::int32_t( u ) >> 31 ) | 0x80000000u );
-            key[j] = ( std::uint64_t( ordered ) << 32 ) | std::uint32_t( data[j].i );
+            key[j] = std::int32_t( u ^ ( std::uint32_t( std::int32_t( u ) >> 31 ) & 0x7fffffffu ) );
+            id[j] = data[j].i;
         }
         else
-            key[j] = ~std::uint64_t( 0 ); // after all centers
-        pos[j] = (unsigned char)j;
-    }
-    const auto sortNet = [&]( const auto & net )
-    {
-        for ( auto [a, b] : net )
         {
-            const auto ka = key[a], kb = key[b];
-            const auto pa = pos[a], pb = pos[b];
-            const bool swap = kb < ka;
-            key[a] = swap ? kb : ka;
-            key[b] = swap ? ka : kb;
-            pos[a] = swap ? pb : pa;
-            pos[b] = swap ? pa : pb;
+            // after all centers
+            key[j] = 0x7fffffff;
+            id[j] = 0x7fffffff;
         }
-    };
-    if ( n <= 8 )
-        sortNet( net8 );
-    else
-        sortNet( net16 );
-    NoDefInit<TreeCenter> sorted[16];
+    }
+    const int numVecs = n <= 8 ? 2 : 4;
+    NoDefInit<TreeCenter> src[16];
+    std::copy( data, data + n, src );
     for ( int j = 0; j < n; ++j )
-        sorted[j] = data[pos[j]];
-    std::copy( sorted, sorted + n, data );
+    {
+#if defined(__x86_64__) || defined(_M_X64)
+        const __m128i kj = _mm_set1_epi32( key[j] ), ij = _mm_set1_epi32( id[j] );
+        __m128i acc = _mm_setzero_si128();
+        for ( int v = 0; v < numVecs; ++v )
+        {
+            const __m128i k = _mm_load_si128( (const __m128i*)key + v ), i = _mm_load_si128( (const __m128i*)id + v );
+            acc = _mm_sub_epi32( acc, _mm_or_si128( _mm_cmplt_epi32( k, kj ), _mm_and_si128( _mm_cmpeq_epi32( k, kj ), _mm_cmplt_epi32( i, ij ) ) ) );
+        }
+        acc = _mm_add_epi32( acc, _mm_shuffle_epi32( acc, _MM_SHUFFLE( 1, 0, 3, 2 ) ) );
+        acc = _mm_add_epi32( acc, _mm_shuffle_epi32( acc, _MM_SHUFFLE( 2, 3, 0, 1 ) ) );
+        const int rank = _mm_cvtsi128_si32( acc );
+#elif defined(__aarch64__) || defined(_M_ARM64)
+        const int32x4_t kj = vdupq_n_s32( key[j] ), ij = vdupq_n_s32( id[j] );
+        uint32x4_t acc = vdupq_n_u32( 0 );
+        for ( int v = 0; v < numVecs; ++v )
+        {
+            const int32x4_t k = vld1q_s32( key + 4 * v ), i = vld1q_s32( id + 4 * v );
+            acc = vsubq_u32( acc, vorrq_u32( vcltq_s32( k, kj ), vandq_u32( vceqq_s32( k, kj ), vcltq_s32( i, ij ) ) ) );
+        }
+        const int rank = int( vaddvq_u32( acc ) );
+#elif defined(__wasm_simd128__)
+        const v128_t kj = wasm_i32x4_splat( key[j] ), ij = wasm_i32x4_splat( id[j] );
+        v128_t acc = wasm_i32x4_splat( 0 );
+        for ( int v = 0; v < numVecs; ++v )
+        {
+            const v128_t k = wasm_v128_load( key + 4 * v ), i = wasm_v128_load( id + 4 * v );
+            acc = wasm_i32x4_sub( acc, wasm_v128_or( wasm_i32x4_lt( k, kj ), wasm_v128_and( wasm_i32x4_eq( k, kj ), wasm_i32x4_lt( i, ij ) ) ) );
+        }
+        const int rank = wasm_i32x4_extract_lane( acc, 0 ) + wasm_i32x4_extract_lane( acc, 1 ) + wasm_i32x4_extract_lane( acc, 2 ) + wasm_i32x4_extract_lane( acc, 3 );
+#else
+        int rank = 0;
+        for ( int i = 0; i < 4 * numVecs; ++i )
+            rank += int( key[i] < key[j] ) | ( int( key[i] == key[j] ) & int( id[i] < id[j] ) );
+#endif
+        data[rank] = src[j];
+    }
 }
 
 } //anonymous namespace
@@ -211,10 +227,11 @@ void sortSmall( TreeCenter * data, int n, int axis )
 void selectCenter( TreeCenter * first, TreeCenter * nth, TreeCenter * last, int axis )
 {
     const CenterLess less{ axis };
+    constexpr int cSmall = 16;
     int budget = 2; // partitions before std::nth_element, about twice the expected number
-    for ( auto n = last - first; n > 16; n >>= 1 )
+    for ( auto n = last - first; n > cSmall; n >>= 1 )
         budget += 2;
-    while ( last - first > 16 )
+    while ( last - first > cSmall )
     {
         if ( --budget < 0 )
         {

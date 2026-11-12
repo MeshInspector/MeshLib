@@ -6,7 +6,6 @@ on:
       release_tag:
         description: 'Tag to build Windows Release from'
         required: true
-  # `prereleased` does not fire for a draft published as a pre-release, so filter `published` in the jobs
   release:
     types: [ published ]
 
@@ -17,7 +16,6 @@ permissions:
 
 jobs:
   config:
-    if: ${{ github.event_name != 'release' || github.event.release.prerelease }}
     runs-on: ubuntu-latest
     env:
       vcpkg_version: "2026.10.16"
@@ -86,7 +84,7 @@ jobs:
     secrets: inherit
 
   upload-distributions:
-    if: ${{ !cancelled() && (github.event_name != 'release' || github.event.release.prerelease) }}
+    if: ${{ !cancelled() }}
     needs:
       - config
       - update-win-version
@@ -99,7 +97,7 @@ jobs:
     timeout-minutes: 15
     runs-on: ubuntu-latest
     needs: upload-distributions
-    if: ${{ always() && (github.event_name != 'release' || github.event.release.prerelease) }}
+    if: always()
     steps:
         # all distribution
       - name: Delete All MeshInspector Distribution Files

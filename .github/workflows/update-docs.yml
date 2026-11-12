@@ -93,33 +93,18 @@ jobs:
           name: WasmBindingsDts
           path: MeshLib/scripts/npm/meshlib
 
-      - name: Download Rust bindings
-        if: ${{ inputs.version == '' }}
+      # Their generated sources come from the generate-c-bindings job, which every caller runs.
+      - name: Download Rust and Java bindings
         uses: actions/download-artifact@v8
         continue-on-error: true
         with:
-          name: RustBindings
-          path: MeshLib/RustBindings
+          name: BindingsSources
+          path: MeshLib/BindingsSourcesTmp
 
-      - name: Download Java bindings
-        if: ${{ inputs.version == '' }}
-        uses: actions/download-artifact@v8
-        continue-on-error: true
-        with:
-          name: JavaBindings
-          path: MeshLib/JavaBindings
-
-      # Only build-test-ubuntu.yml builds the Rust and Java bindings; a release has their sources among its assets.
-      - name: Download Rust and Java bindings of the release
-        if: ${{ inputs.version != '' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ inputs.version }}
+      - name: Prepare Rust and Java bindings folders
         run: |
-          gh release download "$VERSION" -R ${{ github.repository }} -p '*_rust_bindings.zip' -p '*_java_bindings.zip' -D release_bindings
-          unzip -q 'release_bindings/*.zip' -d release_bindings
-          mv release_bindings/MeshLibRust/src MeshLib/RustBindings
-          mv release_bindings/MeshLibJava MeshLib/JavaBindings
+          mv MeshLib/BindingsSourcesTmp/MeshLibRust/src MeshLib/RustBindings
+          mv MeshLib/BindingsSourcesTmp/MeshLibJava MeshLib/JavaBindings
 
       - name: Check for bindings
         id: check_bindings

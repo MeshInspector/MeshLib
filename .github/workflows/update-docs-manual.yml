@@ -99,7 +99,7 @@ jobs:
       - name: Generate and build MRBind bindings
         env:
           CXX: ${{ env.CXX-COMPILER }}
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{ env.CONFIG }}/bin
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace PYTHON_SOURCES_DIR=source/MeshLibC2/temp/python MESHLIB_SHLIB_DIR=build/${{ env.CONFIG }}/bin
 
       - name: Create Python Stubs
         run: python3 ./scripts/wheel/create_stubs.py
@@ -110,9 +110,6 @@ jobs:
           name: PythonStubs
           path: ./scripts/wheel/meshlib/meshlib/*.pyi
           retention-days: 1
-
-      - name: Generate C# bindings # generate only sources
-        run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate
 
       - name: Upload C# bindings headers
         uses: actions/upload-artifact@v7

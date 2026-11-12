@@ -2,6 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRMacros.h"
+#include <algorithm>
 #include <concepts>
 
 namespace MR
@@ -13,8 +14,9 @@ namespace MR
 template <typename T, typename A>
 void resizeNoInit( std::vector<T, A> & vec, size_t targetSize ) MR_REQUIRES_IF_SUPPORTED( sizeof( T ) > 0 && std::constructible_from<T, NoInit> )
 {
-    // allocate enough memory
-    vec.reserve( targetSize );
+    // allocate enough memory, at least doubling the size as push_back does: repeated small growths copy the elements only O(log) times
+    if ( targetSize > vec.capacity() )
+        vec.reserve( std::max( targetSize, 2 * vec.size() ) );
     // resize without memory access
     while ( vec.size() < targetSize )
         vec.emplace_back( noInit );

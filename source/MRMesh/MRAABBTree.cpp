@@ -6,6 +6,7 @@
 #include "MRBuffer.h"
 #include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
+#include "MRBitCast.h"
 #include <algorithm>
 #include <cmath>
 #include <tbb/parallel_invoke.h>
@@ -183,11 +184,60 @@ Center * partition( Center * l, Center * r, const Center & p, CenterLess less )
     return l;
 }
 
+/// sorts up to 16 centers by a sorting network on their keys: the bits of the coordinate ordered as unsigned integers, then the index
+void sortSmall( Center * data, int n, int axis )
+{
+    assert( n <= 16 );
+    struct Pair { unsigned char a, b; };
+    // Batcher's odd-even merge sort
+    static constexpr Pair net8[] = { {0,1}, {2,3}, {4,5}, {6,7}, {0,2}, {1,3}, {4,6}, {5,7}, {1,2}, {5,6}, {0,4}, {1,5}, {2,6}, {3,7}, {2,4}, {3,5}, {1,2}, {3,4}, {5,6} };
+    static constexpr Pair net16[] = { {0,1}, {2,3}, {4,5}, {6,7}, {8,9}, {10,11}, {12,13}, {14,15}, {0,2}, {1,3}, {4,6}, {5,7}, {8,10}, {9,11}, {12,14}, {13,15},
+        {1,2}, {5,6}, {9,10}, {13,14}, {0,4}, {1,5}, {2,6}, {3,7}, {8,12}, {9,13}, {10,14}, {11,15}, {2,4}, {3,5}, {10,12}, {11,13}, {1,2}, {3,4}, {5,6},
+        {9,10}, {11,12}, {13,14}, {0,8}, {1,9}, {2,10}, {3,11}, {4,12}, {5,13}, {6,14}, {7,15}, {4,8}, {5,9}, {6,10}, {7,11}, {2,4}, {3,5}, {6,8}, {7,9},
+        {10,12}, {11,13}, {1,2}, {3,4}, {5,6}, {7,8}, {9,10}, {11,12}, {13,14} };
+    std::uint64_t key[16];
+    unsigned char pos[16];
+    for ( int j = 0; j < 16; ++j )
+    {
+        if ( j < n )
+        {
+            // + 0.0f makes -0 equal to +0
+            const auto u = bit_cast<std::uint32_t>( data[j].c[axis] + 0.0f );
+            const auto ordered = u ^ ( std::uint32_t( std::int32_t( u ) >> 31 ) | 0x80000000u );
+            key[j] = ( std::uint64_t( ordered ) << 32 ) | std::uint32_t( data[j].i );
+        }
+        else
+            key[j] = ~std::uint64_t( 0 ); // after all centers
+        pos[j] = (unsigned char)j;
+    }
+    const auto sortNet = [&]( const auto & net )
+    {
+        for ( auto [a, b] : net )
+        {
+            const auto ka = key[a], kb = key[b];
+            const auto pa = pos[a], pb = pos[b];
+            const bool swap = kb < ka;
+            key[a] = swap ? kb : ka;
+            key[b] = swap ? ka : kb;
+            pos[a] = swap ? pb : pa;
+            pos[b] = swap ? pa : pb;
+        }
+    };
+    if ( n <= 8 )
+        sortNet( net8 );
+    else
+        sortNet( net16 );
+    NoDefInit<Center> sorted[16];
+    for ( int j = 0; j < n; ++j )
+        sorted[j] = data[pos[j]];
+    std::copy( sorted, sorted + n, data );
+}
+
 /// moves the center of order nth to its place, the less ones before it and the greater ones after it
 void select( Center * first, Center * nth, Center * last, CenterLess less )
 {
     int budget = 2 * ( 1 + int( std::log2( double( last - first ) + 1 ) ) );
-    while ( last - first > 24 )
+    while ( last - first > 16 )
     {
         if ( --budget < 0 )
         {
@@ -221,14 +271,7 @@ void select( Center * first, Center * nth, Center * last, CenterLess less )
         else
             first = mid + 1;
     }
-    for ( Center * i = first + 1; i < last; ++i )
-    {
-        const Center x = *i;
-        Center * j = i;
-        for ( ; j > first && less( x, *( j - 1 ) ); --j )
-            *j = *( j - 1 );
-        *j = x;
-    }
+    sortSmall( first, int( last - first ), less.axis );
 }
 
 /// splits each AABBTree node in two binary levels, each at the median of the triangle box centers

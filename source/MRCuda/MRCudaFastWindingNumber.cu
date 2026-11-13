@@ -33,6 +33,7 @@ __device__ void processPoint( const float3& q, float& res, const Dipole* dipoles
     float beta, int skipFace = -1 )
 {
     const float betaSq = beta * beta;
+    res = 0;
 
     // every level adds at most 3 nodes, and the tree of 2^31 triangles has 16 levels
     // only the nodes with not good enough approximation by their dipoles get in the stack

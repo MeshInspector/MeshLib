@@ -1086,9 +1086,15 @@ DecimateResult MeshDecimator::run()
                 // test whether left or right triangle contains single 3-degree vertex inside, then collapse it instead
                 const auto en = mesh_.topology.next( ue );
                 const auto ep = mesh_.topology.prev( ue );
-                // the check that left/right triangle exists is done by isOrgInnerAndHasDegree
+                // the check that left/right triangle exists is done by isOrgInnerAndHasDegree;
+                // the vertex is not deleted if it is fixed (e.g. on the seam with another part) or the edge cannot be collapsed
+                auto deletable = [&]( EdgeId x )
+                {
+                    return !pBdVerts_->test( mesh_.topology.dest( x ) ) && ( regionEdges_.empty() || regionEdges_.test( x.undirected() ) )
+                        && mesh_.topology.isOrgInnerAndHasDegree( x.sym(), 3 );
+                };
                 ue = {};
-                if ( !ue && mesh_.topology.isOrgInnerAndHasDegree( en.sym(), 3 ) )
+                if ( !ue && deletable( en ) )
                 {
                     auto vo = mesh_.topology.org( en );
                     collapsePos = mesh_.points[vo];
@@ -1096,7 +1102,7 @@ DecimateResult MeshDecimator::run()
                     canCollapseRes = CanCollapseRes{ en };
                     ue = en;
                 }
-                if ( !ue && mesh_.topology.isOrgInnerAndHasDegree( ep.sym(), 3 ) )
+                if ( !ue && deletable( ep ) )
                 {
                     auto vo = mesh_.topology.org( ep );
                     collapsePos = mesh_.points[vo];

@@ -127,8 +127,12 @@ struct BooleanParameters
     ProgressCallback cb = {};
 };
 
+/// constructs the AABB trees of the whole meshes if they are not cached yet and caches them in the meshes,
+/// so that the next calls of Boolean with the same meshes are faster
 MR_BIND_OVERLOAD_SUFFIX() MRMESH_API BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
                                   const BooleanParameters& params = {} );
+/// consumes the meshes; if a mesh has no cached AABB tree and only a small part of it is near the other mesh,
+/// then only a temporary tree of that part is constructed, which is much faster
 MR_BIND_OVERLOAD_SUFFIX(move) MRMESH_API BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
                                   const BooleanParameters& params = {} );
 

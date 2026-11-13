@@ -151,7 +151,7 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
 BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation, const BooleanParameters& params /*= {} */ )
 {
     MR_TIMER;
-    // the trees of the input meshes are found or constructed in booleanImpl; a tree of a whole original mesh is cached in it,
+    // the trees of the whole input meshes are constructed in booleanImpl and cached in them (never temporary trees of their parts),
     // which is important for many calls to Boolean for the same mesh to avoid tree construction on every call
 
     // the meshes are copied in booleanImpl only when their cuts are known, with the room the cuts need
@@ -465,10 +465,20 @@ Contours3f findIntersectionContours( const Mesh& meshA, const Mesh& meshB, const
 /// The tree of a whole mesh takes more time than the rest of Boolean, and only the faces near the other mesh can intersect it.
 /// So if a mesh has no cached tree, the common part of the bounding boxes of the meshes is a small part of the box of this mesh,
 /// and few of its faces are there, then a temporary tree of only these faces is used;
-/// otherwise the tree of the whole mesh is taken or constructed and cached as usual
-static PreciseCollisionResult findIntersections( const Mesh& a, const Mesh& b, const ConvertToIntVector& conv, const AffineXf3f* rigidB2A )
+/// otherwise the tree of the whole mesh is taken or constructed and cached as usual.
+/// \param allowPartialTrees false if the meshes belong to the caller, who can call Boolean for them again:
+/// then the trees of the whole meshes are constructed and cached in them, so the next calls do not construct them
+static PreciseCollisionResult findIntersections( const Mesh& a, const Mesh& b, const ConvertToIntVector& conv, const AffineXf3f* rigidB2A,
+    bool allowPartialTrees )
 {
     MR_TIMER;
+    if ( !allowPartialTrees )
+    {
+        tbb::task_group taskGroup;
+        taskGroup.run( [&] { a.getAABBTree(); } );
+        b.getAABBTree();
+        taskGroup.wait();
+    }
     const AABBTree* aTree = a.getAABBTreeNotCreate();
     const AABBTree* bTree = b.getAABBTreeNotCreate();
     if ( aTree && bTree )
@@ -572,7 +582,8 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
 
     // find and order intersections
     {
-        const auto intersections = findIntersections( srcA, srcB, converters.toInt, params.rigidB2A );
+        // the original meshes are the caller's, the others are consumed here and their trees could not be reused
+        const auto intersections = findIntersections( srcA, srcB, converters.toInt, params.rigidB2A, !copyOriginals );
         contours = orderIntersectionContours( srcA.topology, srcB.topology, intersections );
         if ( contours.empty() && !intersections.empty() )
             return { .errorString = "Boolean cannot order the intersections: a mesh has a face that is not a triangle" };

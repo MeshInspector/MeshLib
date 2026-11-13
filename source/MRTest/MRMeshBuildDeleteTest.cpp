@@ -305,4 +305,72 @@ TEST( MRMesh, DeleteFacesFewAndMany )
     }
 }
 
+// deleteFaces_ visits only the elements around the deleted faces if they are few, and all elements otherwise;
+// here a big region and then a small one far from it are deleted from one topology, and both regions at once from another
+TEST( MRMesh, DeleteFacesFewSameAsAll )
+{
+    const MeshTopology sphere = makeUVSphere( 1, 128, 128 ).topology;
+    const auto numFaces = sphere.faceSize();
+
+    // big region near one pole
+    FaceBitSet big( numFaces );
+    for ( FaceId f( 0 ); f < FaceId( int( numFaces / 8 ) ); ++f )
+        big.set( f );
+
+    // small region in the middle: a band with some edges kept inside it and at its border,
+    // and two faces around an edge that starts in a ring without vertex
+    FaceBitSet small( numFaces );
+    UndirectedEdgeBitSet keep( sphere.undirectedEdgeSize() );
+    for ( FaceId f( 16000 ); f < FaceId( 16300 ); ++f )
+    {
+        small.set( f );
+        if ( int( f ) % 3 == 0 )
+            keep.set( sphere.edgeWithLeft( f ).undirected() );
+    }
+    const auto noVertEdge = sphere.edgeWithLeft( 22000_f );
+    small.set( sphere.left( noVertEdge ) );
+    small.set( sphere.right( noVertEdge ) );
+    ASSERT_TRUE( small.count() * 64 < size_t( sphere.numValidFaces() ) - big.count() );
+    ASSERT_TRUE( small.count() > numFaces / 128 ); // deleteFaces calls deleteFaces_ for it
+    ASSERT_TRUE( ( big | small ).count() * 64 >= size_t( sphere.numValidFaces() ) );
+
+    for ( bool findVacant : { false, true } )
+    {
+        MeshTopology seq = sphere;
+        seq.setOrg( noVertEdge, VertId{} );
+        MeshTopology all = seq;
+
+        VacantElements seqVacant, allVacant;
+        if ( findVacant )
+        {
+            seq.deleteFacesFindVacant( big, &keep );
+            seqVacant = seq.deleteFacesFindVacant( small, &keep );
+            allVacant = all.deleteFacesFindVacant( big | small, &keep );
+        }
+        else
+        {
+            seq.deleteFaces( big, &keep );
+            seq.deleteFaces( small, &keep );
+            all.deleteFaces( big | small, &keep );
+        }
+
+        EXPECT_FALSE( seq.hasEdge( noVertEdge ) );
+        EXPECT_TRUE( seq == all );
+        for ( auto v : all.getValidVerts() )
+            EXPECT_EQ( seq.edgeWithOrg( v ), all.edgeWithOrg( v ) );
+        for ( auto f : all.getValidFaces() )
+            EXPECT_EQ( seq.edgeWithLeft( f ), all.edgeWithLeft( f ) );
+        EXPECT_EQ( seq.numValidVerts(), all.numValidVerts() );
+        EXPECT_EQ( seq.numValidFaces(), all.numValidFaces() );
+        EXPECT_EQ( seq.numValidVerts(), (int)seq.getValidVerts().count() );
+        EXPECT_EQ( seq.numValidFaces(), (int)seq.getValidFaces().count() );
+        if ( findVacant )
+        {
+            EXPECT_TRUE( seqVacant.edges == allVacant.edges );
+            EXPECT_TRUE( seqVacant.verts == allVacant.verts );
+            EXPECT_TRUE( seqVacant.faces == allVacant.faces );
+        }
+    }
+}
+
 } //namespace MR

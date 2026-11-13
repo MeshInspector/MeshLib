@@ -1057,41 +1057,37 @@ auto MeshTopology::deleteFaces_( const FaceBitSet & fs, const UndirectedEdgeBitS
 
     assert( updateValids_ );
 
+    const auto fsValid = fs & validFaces_;
+    const auto numDeletedFaces = fsValid.count();
+    // if few faces are deleted, then only the elements around them change, and they are visited (in one thread) instead of
+    // passing over all vertices and edges (in parallel); the result is the same;
+    // in one thread this way is faster up to 1/16 of the faces at least, but with all threads the parallel passes
+    // were faster from about 1/32 on some meshes and machines, and 1/64 was faster on all measured ones
+    const bool few = numDeletedFaces * 64 < size_t( numValidFaces_ );
+
     vacant.verts.resize( vertSize(), true );
     vacant.verts -= validVerts_;
-    BitSetParallelFor( validVerts_, [&]( VertId v )
+
+    // given the first not-deleted edge in orgRing( v ) or invalid id if there is none, updates the vertex and returns true if it is deleted
+    auto updateVert = [&]( VertId v, EdgeId kept )
     {
-        for ( auto e : orgRing( *this, v ) )
-            if ( !vacant.edges.test( e ) )
-            {
-                // at least one edge incident to this vertex is not deleted
-                if ( vacant.edges.test( edgePerVertex_[v] ) )
-                    edgePerVertex_[v] = e;
-                return;
-            }
+        if ( kept )
+        {
+            if ( vacant.edges.test( edgePerVertex_[v] ) )
+                edgePerVertex_[v] = kept;
+            return false;
+        }
         validVerts_.reset( v );
         vacant.verts.set( v );
         edgePerVertex_[v] = EdgeId();
-    } );
-    numValidVerts_ = (int)validVerts_.count();
+        return true;
+    };
 
-    const auto fsValid = fs & validFaces_;
-    BitSetParallelFor( fsValid, [&]( FaceId f )
+    // updates the record of an edge that remains, assuming that the records of vacant edges are not changed yet
+    auto updateEdge = [&]( EdgeId e )
     {
-        edgePerFace_[f] = EdgeId();
-    } );
-    validFaces_ -= fsValid;
-    numValidFaces_ = (int)validFaces_.count();
-    vacant.faces.resize( faceSize(), true );
-    vacant.faces -= validFaces_;
-
-    // pass 1: update edges that will remain
-    ParallelFor( edges_, [&]( EdgeId e )
-    {
-        if ( vacant.edges.test( e ) )
-            return;
+        assert( !vacant.edges.test( e ) );
         assert( !oldLoneEdge.test( e ) );
-
         HalfEdgeRecord he = edges_[e];
         while ( vacant.edges.test( he.next ) )
             he.next = next( he.next );
@@ -1101,20 +1097,113 @@ auto MeshTopology::deleteFaces_( const FaceBitSet & fs, const UndirectedEdgeBitS
         if ( vacant.faces.test( he.left ) )
             he.left = FaceId{};
         edges_[e] = he;
-    } );
+    };
 
-    // pass 2: make new lone edges
+    auto makeLone = [&]( UndirectedEdgeId ue )
+    {
+        for ( EdgeId e : { EdgeId( ue ), EdgeId( ue ).sym() } )
+        {
+            HalfEdgeRecord he;
+            he.next = he.prev = e;
+            edges_[e] = he;
+        }
+    };
+
+    auto newLone = vacant.edges; // the edges that become lone in this call
+    newLone -= oldLoneEdge;
+    EdgeBitSet changed; // the remaining half-edges with possibly changed records, only if few faces are deleted
+    if ( few )
+    {
+        changed.resize( edgeSize() );
+        // marks the remaining edges in the ring of e0 and returns the first of them
+        auto markRing = [&]( EdgeId e0 )
+        {
+            EdgeId kept;
+            EdgeId x = e0;
+            do
+            {
+                if ( !vacant.edges.test( x ) )
+                {
+                    if ( !kept )
+                        kept = x;
+                    changed.set( x );
+                }
+                x = edges_[x].next;
+            } while ( x != e0 );
+            return kept;
+        };
+
+        // the rings around the ends of new lone edges, also of the ends without vertex
+        VertBitSet visited( vertSize() );
+        int numDeletedVerts = 0;
+        for ( auto ue : newLone )
+        {
+            for ( EdgeId e : { EdgeId( ue ), EdgeId( ue ).sym() } )
+            {
+                const VertId v = edges_[e].org;
+                if ( !v || !validVerts_.test( v ) )
+                {
+                    markRing( e );
+                    continue;
+                }
+                if ( visited.test_set( v ) )
+                    continue;
+                if ( updateVert( v, markRing( edgePerVertex_[v] ) ) )
+                    ++numDeletedVerts;
+            }
+        }
+        numValidVerts_ -= numDeletedVerts;
+
+        // the rings of deleted faces
+        for ( auto f : fsValid )
+            for ( auto e : leftRing( *this, f ) )
+                if ( !vacant.edges.test( e ) )
+                    changed.set( e );
+    }
+    else
+    {
+        BitSetParallelFor( validVerts_, [&]( VertId v )
+        {
+            EdgeId kept;
+            for ( auto e : orgRing( *this, v ) )
+                if ( !vacant.edges.test( e ) )
+                {
+                    kept = e;
+                    break;
+                }
+            updateVert( v, kept );
+        } );
+        numValidVerts_ = (int)validVerts_.count();
+    }
+
+    BitSetParallelFor( fsValid, [&]( FaceId f )
+    {
+        edgePerFace_[f] = EdgeId();
+    } );
+    validFaces_ -= fsValid;
+    numValidFaces_ -= int( numDeletedFaces );
+    vacant.faces.resize( faceSize(), true );
+    vacant.faces -= validFaces_;
+
+    if ( few )
+    {
+        // new lone edges keep their records till the next loop
+        for ( auto e : changed )
+            updateEdge( e );
+        for ( auto ue : newLone )
+            makeLone( ue );
+        return vacant;
+    }
+
+    // pass 1: update edges that will remain
     ParallelFor( edges_, [&]( EdgeId e )
     {
         if ( !vacant.edges.test( e ) )
-            return;
-        if ( oldLoneEdge.test( e ) )
-            return; // quick path for the edges that were already lone before
-
-        HalfEdgeRecord he;
-        he.next = he.prev = e;
-        edges_[e] = he;
+            updateEdge( e );
     } );
+
+    // pass 2: make new lone edges
+    BitSetParallelFor( newLone, makeLone );
 
     return vacant;
 }

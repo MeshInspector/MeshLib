@@ -321,7 +321,7 @@ TEST( MRMesh, DeleteFacesFewSameAsAll )
     // and two faces around an edge that starts in a ring without vertex
     FaceBitSet small( numFaces );
     UndirectedEdgeBitSet keep( sphere.undirectedEdgeSize() );
-    for ( FaceId f( 16000 ); f < FaceId( 16600 ); ++f )
+    for ( FaceId f( 16000 ); f < FaceId( 16300 ); ++f )
     {
         small.set( f );
         if ( int( f ) % 3 == 0 )
@@ -330,9 +330,9 @@ TEST( MRMesh, DeleteFacesFewSameAsAll )
     const auto noVertEdge = sphere.edgeWithLeft( 22000_f );
     small.set( sphere.left( noVertEdge ) );
     small.set( sphere.right( noVertEdge ) );
-    ASSERT_TRUE( small.count() * 16 < size_t( sphere.numValidFaces() ) - big.count() );
+    ASSERT_TRUE( small.count() * 64 < size_t( sphere.numValidFaces() ) - big.count() );
     ASSERT_TRUE( small.count() > numFaces / 128 ); // deleteFaces calls deleteFaces_ for it
-    ASSERT_TRUE( ( big | small ).count() * 16 >= size_t( sphere.numValidFaces() ) );
+    ASSERT_TRUE( ( big | small ).count() * 64 >= size_t( sphere.numValidFaces() ) );
 
     for ( bool findVacant : { false, true } )
     {

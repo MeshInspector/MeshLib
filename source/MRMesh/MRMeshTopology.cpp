@@ -1072,8 +1072,9 @@ auto MeshTopology::deleteFaces_( const FaceBitSet & fs, const UndirectedEdgeBitS
     const auto numDeletedFaces = fsValid.count();
     // if few faces are deleted, then only the elements around them change, and they are visited (in one thread) instead of
     // passing over all vertices and edges (in parallel); the result is the same;
-    // with 16 threads, deleting 1/17 of 2M or 8M faces was 1.5-1.7 times faster this way
-    const bool few = numDeletedFaces * 16 < size_t( numValidFaces_ );
+    // in one thread this way is faster up to 1/16 of the faces at least, but with all threads the parallel passes
+    // were faster from about 1/32 on some meshes and machines, and 1/64 was faster on all measured ones
+    const bool few = numDeletedFaces * 64 < size_t( numValidFaces_ );
 
     vacant.verts.resize( vertSize(), true );
     vacant.verts -= validVerts_;

@@ -463,6 +463,10 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     {
         const auto& object = cfg.getJsonValue( cTouchpadSettings );
         TouchpadParameters parameters;
+        if ( object.isMember( "gesturesEnabled" ) && object["gesturesEnabled"].isBool() )
+        {
+            parameters.gesturesEnabled = object["gesturesEnabled"].asBool();
+        }
         if ( object.isMember( "ignoreKineticMoves" ) && object["ignoreKineticMoves"].isBool() )
         {
             parameters.ignoreKineticMoves = object["ignoreKineticMoves"].asBool();
@@ -700,6 +704,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
 
     Json::Value touchpadParametersJson;
     const auto& touchpadParameters = viewer.touchpadController().getParameters();
+    touchpadParametersJson["gesturesEnabled"] = touchpadParameters.gesturesEnabled;
     touchpadParametersJson["ignoreKineticMoves"] = touchpadParameters.ignoreKineticMoves;
     touchpadParametersJson["cancellable"] = touchpadParameters.cancellable;
     touchpadParametersJson["swipeMode"] = (int)touchpadParameters.swipeMode;

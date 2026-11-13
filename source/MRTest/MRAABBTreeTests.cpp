@@ -18,6 +18,7 @@
 #include <iterator>
 #include <limits>
 #include <optional>
+#include <sstream>
 
 namespace MR
 {
@@ -318,6 +319,7 @@ TEST( MRMesh, AABBTreeLeafBoxesOfSpecialValues )
     const Mesh mesh = Mesh::fromTriangles( std::move( points ), t );
     const AABBTree tree( mesh );
     ASSERT_EQ( tree.leafTris().size(), t.size() );
+    int numDiffer = 0;
     for ( size_t n = 0; n < tree.leafTris().size(); ++n )
     {
         const auto & lt = tree.leafTris()[n];
@@ -325,9 +327,19 @@ TEST( MRMesh, AABBTreeLeafBoxesOfSpecialValues )
         for ( auto v : lt.verts )
             box.include( mesh.points[v] );
         const Box3f expected = box.insignificantlyExpanded();
+        const Box3f & actual = tree.leafBoxes()[n];
         // compares the bits, NaN included
-        EXPECT_EQ( std::memcmp( &expected, &tree.leafBoxes()[n], sizeof( Box3f ) ), 0 ) << "face " << int( lt.face );
+        if ( std::memcmp( &expected, &actual, sizeof( Box3f ) ) == 0 || ++numDiffer > 5 )
+            continue;
+        std::ostringstream s;
+        s << std::hexfloat << "face " << int( lt.face ) << ", vertices";
+        for ( auto v : lt.verts )
+            s << " (" << mesh.points[v].x << ' ' << mesh.points[v].y << ' ' << mesh.points[v].z << ')';
+        for ( const Box3f * b : { &expected, &actual } )
+            s << ( b == &expected ? "\n  expected" : "\n  actual  " ) << " (" << b->min.x << ' ' << b->min.y << ' ' << b->min.z << ")-(" << b->max.x << ' ' << b->max.y << ' ' << b->max.z << ')';
+        ADD_FAILURE() << s.str();
     }
+    EXPECT_EQ( numDiffer, 0 );
 }
 
 // a big mesh, whose top ranges are split in parallel, gives the same tree on one thread

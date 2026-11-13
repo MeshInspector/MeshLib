@@ -40,14 +40,15 @@ inline Box3f insignificantlyExpandedTriBox( const Vector3f & a, const Vector3f &
 #elif defined(__aarch64__) || defined(_M_ARM64)
     const auto load = []( const Vector3f & p ) { return vcombine_f32( vld1_f32( &p.x ), vld1_dup_f32( &p.z ) ); };
     const float32x4_t va = load( a ), vb = load( b ), vc = load( c );
-    // any NaN, quiet or signaling, in a, b or c makes the lane NaN and leads to the scalar code below
+    // any NaN, quiet or signaling, in a, b or c leads to the scalar code below, tested on the points themselves
+    const uint32x4_t notNan = vandq_u32( vandq_u32( vceqq_f32( va, va ), vceqq_f32( vb, vb ) ), vceqq_f32( vc, vc ) );
     const uint32x4_t lo = vreinterpretq_u32_f32( vminq_f32( vminq_f32( va, vb ), vc ) );
     const uint32x4_t hi = vreinterpretq_u32_f32( vmaxq_f32( vmaxq_f32( va, vb ), vc ) );
     const uint32x4_t one = vdupq_n_u32( 1 );
     const uint32x4_t absMask = vdupq_n_u32( 0x7fffffff );
     const uint32x4_t limit = vdupq_n_u32( 0x7f7fffffu - 1 );
     const auto fast = [&]( uint32x4_t x ) { return vcltq_u32( vsubq_u32( vandq_u32( x, absMask ), one ), limit ); };
-    if ( vminvq_u32( vandq_u32( fast( lo ), fast( hi ) ) ) != 0 )
+    if ( vminvq_u32( vandq_u32( notNan, vandq_u32( fast( lo ), fast( hi ) ) ) ) != 0 )
     {
         const auto step = [&]( uint32x4_t x ) { return vorrq_u32( vreinterpretq_u32_s32( vshrq_n_s32( vreinterpretq_s32_u32( x ), 31 ) ), one ); };
         float l[4], h[4];

@@ -548,8 +548,8 @@ TEST( MRMesh, RemeshKeepsSharpEdges )
 
 TEST( MRMesh, RemeshKeepsBoundary )
 {
-    // wavy square plate; an edge with one boundary end used to collapse in its inner end after the collapse in the boundary end failed,
-    // pulling the boundary inside the square
+    // wavy square plate; after the collapse of an edge in its boundary end failed, the edge used to collapse in its other end:
+    // in its inner end pulling the boundary inside the square, or in the neighbor of a corner cutting the corner
     const int n = 40;
     VertCoords points;
     for ( int j = 0; j <= n; ++j )
@@ -573,12 +573,17 @@ TEST( MRMesh, RemeshKeepsBoundary )
     {
         EXPECT_LT( mesh.topology.numValidFaces(), plate.topology.numValidFaces() / 4 );
         float maxDist = 0; // from the square's sides
+        float cornerDist[4] = { FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX }; // to the square's corners
         for ( auto v : getBoundaryVerts( mesh.topology ) )
         {
             const auto p = mesh.points[v];
             maxDist = std::max( maxDist, std::min( { p.x, 1 - p.x, p.y, 1 - p.y } ) );
+            for ( int i = 0; i < 4; ++i )
+                cornerDist[i] = std::min( cornerDist[i], std::hypot( p.x - float( i % 2 ), p.y - float( i / 2 ) ) );
         }
         EXPECT_LT( maxDist, 0.05f * len ); // up to 2 * len before
+        for ( float d : cornerDist )
+            EXPECT_LT( d, 0.05f * len );
     };
 
     Mesh mesh = plate;

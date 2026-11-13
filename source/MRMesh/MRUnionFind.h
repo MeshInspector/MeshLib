@@ -4,6 +4,7 @@
 #include "MRTimer.h"
 #include "MRId.h"
 #include <atomic>
+#include <limits>
 #include <utility>
 
 namespace MR
@@ -35,7 +36,9 @@ public:
     void reset( size_t size )
     {
         MR_TIMER;
-        // plain stores in a loop that the compiler vectorizes, instead of push_back with its capacity check per element
+        if constexpr ( sizeof( SizeType ) < sizeof( size_t ) )
+            assert( size <= size_t( std::numeric_limits<SizeType>::max() ) ); // otherwise I( i ) below would wrap
+        // resize without value-initialization: every element is written in the loop right below
         parents_.clear();
         parents_.resizeNoInit( size );
         I * const p = parents_.data();

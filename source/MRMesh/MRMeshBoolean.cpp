@@ -22,6 +22,9 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRMeshFillHole.h"
 #include "MRMeshFixer.h"
+#include "MRAABBTree.h"
+#include <limits>
+#include <optional>
 
 namespace MR
 {
@@ -148,11 +151,8 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
 BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation, const BooleanParameters& params /*= {} */ )
 {
     MR_TIMER;
-    // build the trees of the input meshes: important for many calls to Boolean for the same mesh to avoid tree construction on every call
-    tbb::task_group taskGroup;
-    taskGroup.run( [&] () { meshA.getAABBTree(); } );
-    meshB.getAABBTree();
-    taskGroup.wait();
+    // the trees of the whole input meshes are constructed in booleanImpl and cached in them (never temporary trees of their parts),
+    // which is important for many calls to Boolean for the same mesh to avoid tree construction on every call
 
     // the meshes are copied in booleanImpl only when their cuts are known, with the room the cuts need
     return booleanImpl( {}, {}, operation, params, { .originalMeshA = &meshA,.originalMeshB = &meshB }, true );
@@ -461,6 +461,87 @@ Contours3f findIntersectionContours( const Mesh& meshA, const Mesh& meshB, const
     return res;
 }
 
+/// finds the intersections of two meshes as findCollidingEdgeTrisPrecise does.
+/// The tree of a whole mesh takes more time than the rest of Boolean, and only the faces near the other mesh can intersect it.
+/// So if a mesh has no cached tree, the common part of the bounding boxes of the meshes is a small part of the box of this mesh,
+/// and few of its faces are there, then a temporary tree of only these faces is used;
+/// otherwise the tree of the whole mesh is taken or constructed and cached as usual.
+/// \param allowPartialTrees false if the meshes belong to the caller, who can call Boolean for them again:
+/// then the trees of the whole meshes are constructed and cached in them, so the next calls do not construct them
+static PreciseCollisionResult findIntersections( const Mesh& a, const Mesh& b, const ConvertToIntVector& conv, const AffineXf3f* rigidB2A,
+    bool allowPartialTrees )
+{
+    MR_TIMER;
+    if ( !allowPartialTrees )
+    {
+        tbb::task_group taskGroup;
+        taskGroup.run( [&] { a.getAABBTree(); } );
+        b.getAABBTree();
+        taskGroup.wait();
+    }
+    const AABBTree* aTree = a.getAABBTreeNotCreate();
+    const AABBTree* bTree = b.getAABBTreeNotCreate();
+    if ( aTree && bTree )
+        return findCollidingEdgeTrisPrecise( a, *aTree, b, *bTree, conv, rigidB2A );
+
+    // where the meshes can intersect, in the space of A; widened much more than the conversion in integers can move a point
+    const Box3f boxA = aTree ? aTree->getBoundingBox() : a.computeBoundingBox();
+    const Box3f boxB = b.computeBoundingBox( nullptr, rigidB2A );
+    if ( !boxA.valid() || !boxB.valid() )
+        return {};
+    Box3f common = boxA.intersection( boxB );
+    Box3f both = boxA;
+    both.include( boxB );
+    float maxAbs = 0;
+    for ( int i = 0; i < 3; ++i )
+        maxAbs = std::max( { maxAbs, std::abs( both.min[i] ), std::abs( both.max[i] ) } );
+    const Vector3f margin = Vector3f::diagonal( 1e-5f * maxAbs + std::numeric_limits<float>::min() );
+    common.min -= margin;
+    common.max += margin;
+    if ( !common.valid() )
+        return {}; // the boxes are apart
+
+    FaceBitSet aNear, bNear;
+    std::optional<AABBTree> aLocal, bLocal;
+    const auto findTree = [&common]( const Mesh& m, const Box3f& meshBox, const AffineXf3f* xf, FaceBitSet& nearFaces, std::optional<AABBTree>& local ) -> const AABBTree*
+    {
+        // if the common part takes much of the box of the mesh, then many of its faces are expected there,
+        // and looking for them would only add a pass over the mesh before the construction of the whole tree
+        const Vector3f meshSize = meshBox.size(), partSize = meshBox.intersection( common ).size();
+        float partOfBox = 1;
+        for ( int i = 0; i < 3; ++i )
+            if ( meshSize[i] > 0 )
+                partOfBox *= std::clamp( partSize[i] / meshSize[i], 0.0f, 1.0f );
+        if ( partOfBox > 0.25f )
+            return &m.getAABBTree();
+
+        const auto& validFaces = m.topology.getValidFaces();
+        nearFaces.resize( validFaces.size() );
+        BitSetParallelFor( validFaces, [&]( FaceId f )
+        {
+            Box3f box;
+            for ( VertId v : m.topology.getTriVerts( f ) )
+                box.include( xf ? ( *xf )( m.points[v] ) : m.points[v] );
+            if ( box.intersects( common ) )
+                nearFaces.set( f );
+        } );
+        if ( nearFaces.count() * 4 > size_t( m.topology.numValidFaces() ) )
+            return &m.getAABBTree();
+        local.emplace( MeshPart{ m, &nearFaces } );
+        return &*local;
+    };
+    tbb::task_group taskGroup;
+    if ( !aTree )
+        taskGroup.run( [&] { aTree = findTree( a, boxA, nullptr, aNear, aLocal ); } );
+    if ( !bTree )
+        bTree = findTree( b, boxB, rigidB2A, bNear, bLocal );
+    taskGroup.wait();
+    // a temporary tree comes with its faces as the region: an edge is checked once, from the triangle with the smaller index,
+    // unless the other triangle is outside the region, so without the region an edge would be missed
+    // if only its triangle with the greater index were in the tree
+    return findCollidingEdgeTrisPrecise( { a, aLocal ? &aNear : nullptr }, *aTree, { b, bLocal ? &bNear : nullptr }, *bTree, conv, rigidB2A );
+}
+
 BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params, BooleanInternalParameters intParams,
     bool copyOriginals )
 {
@@ -501,7 +582,8 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
 
     // find and order intersections
     {
-        const auto intersections = findCollidingEdgeTrisPrecise( srcA, srcB, converters.toInt, params.rigidB2A );
+        // the original meshes are the caller's, the others are consumed here and their trees could not be reused
+        const auto intersections = findIntersections( srcA, srcB, converters.toInt, params.rigidB2A, !copyOriginals );
         contours = orderIntersectionContours( srcA.topology, srcB.topology, intersections );
         if ( contours.empty() && !intersections.empty() )
             return { .errorString = "Boolean cannot order the intersections: a mesh has a face that is not a triangle" };

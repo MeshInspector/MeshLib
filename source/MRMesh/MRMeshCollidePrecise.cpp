@@ -248,6 +248,16 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
     return findCollidingEdgeTrisPrecise( a, aTree, b, bTree, boxesIntersect, conv, rigidB2A, anyIntersection );
 }
 
+PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const AABBTree & aTree, const MeshPart & b, const AABBTree & bTree,
+    ConvertToIntVector conv, const AffineXf3f * rigidB2A, bool anyIntersection )
+{
+    MR_TIMER;
+    if ( aTree.nodes().empty() || bTree.nodes().empty() )
+        return {};
+    const PreciseBoxesIntersection boxesIntersect( aTree, bTree, conv, rigidB2A );
+    return findCollidingEdgeTrisPrecise( a, aTree, b, bTree, boxesIntersect, conv, rigidB2A, anyIntersection );
+}
+
 std::vector<EdgeTri> findCollidingEdgeTrisPrecise( 
     const Mesh & a, const std::vector<EdgeId> & edgesA,
     const Mesh & b, const std::vector<FaceId> & facesB,

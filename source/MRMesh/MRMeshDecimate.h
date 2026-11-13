@@ -111,6 +111,8 @@ struct DecimateSettings
     bool touchNearBdEdges = true;
 
     /// touchBdVerts=true: allow moving and eliminating boundary vertices during edge collapses;
+    ///   if an edge collapses in one of its ends (optimizeVertexPos=false or the optimal position failed), an edge with one boundary vertex collapses in that vertex,
+    ///   and an edge with a boundary vertex collapses in its other end only if it is a hole edge (limited by maxBdShift);
     /// touchBdVerts=false: allow only collapsing an edge having only one boundary vertex in that vertex, so position and count of boundary vertices do not change;
     /// this setting is ignored if touchNearBdEdges=false
     bool touchBdVerts = true;

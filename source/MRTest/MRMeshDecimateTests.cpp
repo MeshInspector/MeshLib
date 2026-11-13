@@ -663,12 +663,13 @@ TEST( MRMesh, RemeshKeepsBoundary )
             for ( int i = 0; i < 4; ++i )
                 cornerDist[i] = std::min( cornerDist[i], std::hypot( p.x - float( i % 2 ), p.y - float( i / 2 ) ) );
         }
-        EXPECT_LT( maxDist, 0.05f * len ); // up to 2 * len before
-        for ( float d : cornerDist )
-            EXPECT_TRUE( !corners || d < 0.05f * len ) << d;
+        EXPECT_LT( maxDist, 0.05f * len ); // up to 2.5 * len before
+        if ( corners )
+            for ( float d : cornerDist )
+                EXPECT_LT( d, 0.05f * len );
     };
 
-    // a boundary edge can still collapse in its other end, cutting a corner, unless maxBdShift prohibits it
+    // a hole edge can still collapse in its other end, cutting a corner: ShortestEdgeFirst does not weigh the shift, only maxBdShift limits it
     for ( float maxBdShift : { FLT_MAX, 0.01f * len } )
     {
         SCOPED_TRACE( maxBdShift );

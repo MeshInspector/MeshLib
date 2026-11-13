@@ -10,7 +10,7 @@
 #include <MRMesh/MRMatrix3.h>
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRBuffer.h>
-#include <MRMesh/MRBitCast.h>
+#include <cmath>
 #include <gtest/gtest.h>
 #include <MRPch/MRTBB.h>
 #include <algorithm>
@@ -289,9 +289,10 @@ TEST(MRMesh, AABBTreeCopyDuringConstruction)
 // the leaf box of every triangle is the same as by Box::include and insignificantlyExpanded, also for zeros, denormals, extreme and non-finite coordinates
 TEST( MRMesh, AABBTreeLeafBoxesOfSpecialValues )
 {
+    // no signaling NaN: Box::include of it depends on the compiler (clang for Arm turns a comparison with a constant into fminnm, which quiets it)
     const float values[] = { 0.f, -0.f, std::numeric_limits<float>::denorm_min(), -std::numeric_limits<float>::denorm_min(), 1.f, -1.f,
         std::numeric_limits<float>::max(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity(),
-        std::numeric_limits<float>::quiet_NaN(), bit_cast<float>( 0x7f800001u ) }; // the last one is a signaling NaN
+        std::numeric_limits<float>::quiet_NaN() };
     constexpr int numValues = int( std::size( values ) );
     VertCoords points;
     Triangulation t;
@@ -303,6 +304,8 @@ TEST( MRMesh, AABBTreeLeafBoxesOfSpecialValues )
                     const float vs[3] = { values[i], values[j], values[k] };
                     if ( std::find( vs, vs + 3, values[8] ) != vs + 3 && std::find( vs, vs + 3, values[9] ) != vs + 3 )
                         continue; // +inf and -inf together make the center of the box NaN
+                    if ( std::isnan( vs[0] ) && std::isnan( vs[1] ) && std::isnan( vs[2] ) )
+                        continue; // an invalid box, which insignificantlyExpanded asserts against
                     const VertId v0( points.size() );
                     for ( int n = 0; n < 3; ++n )
                     {

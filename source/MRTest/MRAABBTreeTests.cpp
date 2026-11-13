@@ -10,11 +10,11 @@
 #include <MRMesh/MRMatrix3.h>
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRBuffer.h>
+#include <MRMesh/MRBitCast.h>
 #include <cmath>
 #include <gtest/gtest.h>
 #include <MRPch/MRTBB.h>
 #include <algorithm>
-#include <bit>
 #include <cstdint>
 #include <cstring>
 #include <iterator>
@@ -310,7 +310,7 @@ TEST( MRMesh, AABBTreeLeafBoxesOfSpecialValues )
                     const VertId v0( points.size() );
                     for ( int n = 0; n < 3; ++n )
                     {
-                        // nonzero other coordinates: a zero lane sends the triangle to the scalar code
+                        // ordinary other coordinates: only the tested one decides between the SIMD and the scalar code
                         Vector3f p{ float( n + 1 ), float( i + 1 ), float( j + 1 ) };
                         p[axis] = vs[n];
                         points.push_back( p );
@@ -399,8 +399,8 @@ std::uint64_t treeHash( const AABBTree & tree )
     {
         for ( int k = 0; k < 3; ++k )
         {
-            add( std::bit_cast<std::uint32_t>( b.min[k] ) );
-            add( std::bit_cast<std::uint32_t>( b.max[k] ) );
+            add( bit_cast<std::uint32_t>( b.min[k] ) );
+            add( bit_cast<std::uint32_t>( b.max[k] ) );
         }
     };
     for ( const auto & n : tree.nodes() )
@@ -423,14 +423,14 @@ std::uint64_t treeHash( const AABBTree & tree )
 } //anonymous namespace
 
 // the trees of meshes with exactly representable coordinates are pinned by their hashes, the same as the tree maker before ML#7479 gave:
-// small ranges, many equal centers, almost all centers in one bucket, the parallel splits
+// small ranges, many equal centers, almost all centers in one bucket (split again in parallel for 150000 triangles), the parallel splits
 TEST( MRMesh, AABBTreeGoldenHashes )
 {
     struct Case { int numTris, range; bool farOutlier; std::uint64_t hash; };
     const Case cases[] = {
         { 1000, 1 << 20, false, 0x34b0ae3e1963543dull },
         { 20000, 4, false, 0x35cd81ed6d39cd05ull },
-        { 50000, 1024, true, 0xe00a4505e6725ab6ull },
+        { 150000, 1024, true, 0xb4c853ba04bdc510ull },
         { 300000, 1 << 16, false, 0x0cc9a28f326dd6dcull }
     };
     for ( const auto & c : cases )
@@ -449,14 +449,14 @@ TEST( MRMesh, AABBTreeSameOnOneThread )
     {
         const auto & a = all.nodes()[n];
         const auto & b = one->nodes()[n];
-        EXPECT_TRUE( a.box == b.box && a.first == b.first && a.count == b.count ) << "node " << int( n );
+        ASSERT_TRUE( a.box == b.box && a.first == b.first && a.count == b.count ) << "node " << int( n );
     }
     ASSERT_EQ( all.leafTris().size(), one->leafTris().size() );
     for ( size_t i = 0; i < all.leafTris().size(); ++i )
     {
-        EXPECT_EQ( all.leafTris()[i].face, one->leafTris()[i].face );
-        EXPECT_EQ( all.leafTris()[i].verts, one->leafTris()[i].verts );
-        EXPECT_EQ( all.leafBoxes()[i], one->leafBoxes()[i] );
+        const auto & a = all.leafTris()[i];
+        const auto & b = one->leafTris()[i];
+        ASSERT_TRUE( a.face == b.face && a.verts == b.verts && all.leafBoxes()[i] == one->leafBoxes()[i] ) << "leaf " << i;
     }
 }
 

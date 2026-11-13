@@ -14,7 +14,8 @@ namespace MR
 {
 
 /// returns the same box as the empty box including a, b and c, insignificantly expanded, by SIMD instructions where available:
-/// if 0 < |x| < max in all coordinates, then nextDown and nextUp of x differ from it by one in the bits
+/// if |x| < max in all coordinates, then nextDown and nextUp of nonzero x differ from it by one in the bits,
+/// and of +-0 are -denorm_min and +denorm_min, which the steps below give for -0 in lo and +0 in hi
 inline Box3f insignificantlyExpandedTriBox( const Vector3f & a, const Vector3f & b, const Vector3f & c )
 {
 #if defined(__x86_64__) || defined(_M_X64)
@@ -29,12 +30,16 @@ inline Box3f insignificantlyExpandedTriBox( const Vector3f & a, const Vector3f &
     const __m128i signBit = _mm_set1_epi32( int( 0x80000000u ) ); // to compare unsigned integers as signed ones
     const __m128i limit = _mm_set1_epi32( int( ( 0x7f7fffffu - 1 ) ^ 0x80000000u ) );
     const auto fast = [&]( __m128i x ) { return _mm_cmplt_epi32( _mm_xor_si128( _mm_sub_epi32( _mm_and_si128( x, absMask ), one ), signBit ), limit ); };
-    if ( _mm_movemask_ps( _mm_castsi128_ps( _mm_and_si128( fast( lo ), fast( hi ) ) ) ) == 15 )
+    const auto zero = [&]( __m128i x ) { return _mm_cmpeq_epi32( _mm_and_si128( x, absMask ), _mm_setzero_si128() ); };
+    const __m128i zLo = zero( lo ), zHi = zero( hi );
+    if ( _mm_movemask_ps( _mm_castsi128_ps( _mm_and_si128( _mm_or_si128( fast( lo ), zLo ), _mm_or_si128( fast( hi ), zHi ) ) ) ) == 15 )
     {
+        const __m128i lo0 = _mm_or_si128( lo, _mm_and_si128( zLo, signBit ) );
+        const __m128i hi0 = _mm_andnot_si128( _mm_and_si128( zHi, signBit ), hi );
         // minus one for positive and plus one for negative lo, plus one for positive and minus one for negative hi
         alignas( 16 ) float l[4], h[4];
-        _mm_store_ps( l, _mm_castsi128_ps( _mm_sub_epi32( lo, _mm_or_si128( _mm_srai_epi32( lo, 31 ), one ) ) ) );
-        _mm_store_ps( h, _mm_castsi128_ps( _mm_add_epi32( hi, _mm_or_si128( _mm_srai_epi32( hi, 31 ), one ) ) ) );
+        _mm_store_ps( l, _mm_castsi128_ps( _mm_sub_epi32( lo0, _mm_or_si128( _mm_srai_epi32( lo0, 31 ), one ) ) ) );
+        _mm_store_ps( h, _mm_castsi128_ps( _mm_add_epi32( hi0, _mm_or_si128( _mm_srai_epi32( hi0, 31 ), one ) ) ) );
         return Box3f( Vector3f( l[0], l[1], l[2] ), Vector3f( h[0], h[1], h[2] ) );
     }
 #elif defined(__aarch64__) || defined(_M_ARM64)
@@ -48,12 +53,17 @@ inline Box3f insignificantlyExpandedTriBox( const Vector3f & a, const Vector3f &
     const uint32x4_t absMask = vdupq_n_u32( 0x7fffffff );
     const uint32x4_t limit = vdupq_n_u32( 0x7f7fffffu - 1 );
     const auto fast = [&]( uint32x4_t x ) { return vcltq_u32( vsubq_u32( vandq_u32( x, absMask ), one ), limit ); };
-    if ( vminvq_u32( vandq_u32( notNan, vandq_u32( fast( lo ), fast( hi ) ) ) ) != 0 )
+    const auto zero = [&]( uint32x4_t x ) { return vceqq_u32( vandq_u32( x, absMask ), vdupq_n_u32( 0 ) ); };
+    const uint32x4_t zLo = zero( lo ), zHi = zero( hi );
+    if ( vminvq_u32( vandq_u32( notNan, vandq_u32( vorrq_u32( fast( lo ), zLo ), vorrq_u32( fast( hi ), zHi ) ) ) ) != 0 )
     {
+        const uint32x4_t signBit = vdupq_n_u32( 0x80000000u );
+        const uint32x4_t lo0 = vorrq_u32( lo, vandq_u32( zLo, signBit ) );
+        const uint32x4_t hi0 = vbicq_u32( hi, vandq_u32( zHi, signBit ) );
         const auto step = [&]( uint32x4_t x ) { return vorrq_u32( vreinterpretq_u32_s32( vshrq_n_s32( vreinterpretq_s32_u32( x ), 31 ) ), one ); };
         float l[4], h[4];
-        vst1q_f32( l, vreinterpretq_f32_u32( vsubq_u32( lo, step( lo ) ) ) );
-        vst1q_f32( h, vreinterpretq_f32_u32( vaddq_u32( hi, step( hi ) ) ) );
+        vst1q_f32( l, vreinterpretq_f32_u32( vsubq_u32( lo0, step( lo0 ) ) ) );
+        vst1q_f32( h, vreinterpretq_f32_u32( vaddq_u32( hi0, step( hi0 ) ) ) );
         return Box3f( Vector3f( l[0], l[1], l[2] ), Vector3f( h[0], h[1], h[2] ) );
     }
 #elif defined(__wasm_simd128__)
@@ -66,12 +76,17 @@ inline Box3f insignificantlyExpandedTriBox( const Vector3f & a, const Vector3f &
     const v128_t absMask = wasm_i32x4_splat( 0x7fffffff );
     const v128_t limit = wasm_i32x4_splat( int( 0x7f7fffffu - 1 ) );
     const auto fast = [&]( v128_t x ) { return wasm_u32x4_lt( wasm_i32x4_sub( wasm_v128_and( x, absMask ), one ), limit ); };
-    if ( wasm_i32x4_all_true( wasm_v128_and( fast( lo ), fast( hi ) ) ) )
+    const auto zero = [&]( v128_t x ) { return wasm_i32x4_eq( wasm_v128_and( x, absMask ), wasm_i32x4_splat( 0 ) ); };
+    const v128_t zLo = zero( lo ), zHi = zero( hi );
+    if ( wasm_i32x4_all_true( wasm_v128_and( wasm_v128_or( fast( lo ), zLo ), wasm_v128_or( fast( hi ), zHi ) ) ) )
     {
+        const v128_t signBit = wasm_i32x4_splat( int( 0x80000000u ) );
+        const v128_t lo0 = wasm_v128_or( lo, wasm_v128_and( zLo, signBit ) );
+        const v128_t hi0 = wasm_v128_andnot( hi, wasm_v128_and( zHi, signBit ) );
         const auto step = [&]( v128_t x ) { return wasm_v128_or( wasm_i32x4_shr( x, 31 ), one ); };
         alignas( 16 ) float l[4], h[4];
-        wasm_v128_store( l, wasm_i32x4_sub( lo, step( lo ) ) );
-        wasm_v128_store( h, wasm_i32x4_add( hi, step( hi ) ) );
+        wasm_v128_store( l, wasm_i32x4_sub( lo0, step( lo0 ) ) );
+        wasm_v128_store( h, wasm_i32x4_add( hi0, step( hi0 ) ) );
         return Box3f( Vector3f( l[0], l[1], l[2] ), Vector3f( h[0], h[1], h[2] ) );
     }
 #endif

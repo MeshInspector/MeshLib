@@ -39,6 +39,13 @@ MRMESH_API Expected<Polyline3> fromPly( const std::filesystem::path& file, const
 /// important on Windows: in stream must be open in binary mode
 MRMESH_API Expected<Polyline3> fromPly( std::istream& in, const LinesLoadSettings& settings = {} );
 
+/// loads polyline from file in .DXF format: LINE, LWPOLYLINE, POLYLINE, CIRCLE and ARC entities of ENTITIES section;
+/// arcs (including bulges of polylines) are approximated by segments
+MRMESH_API Expected<Polyline3> fromDxf( const std::filesystem::path& file, const LinesLoadSettings& settings = {} );
+
+/// loads polyline from stream in .DXF format
+MRMESH_API Expected<Polyline3> fromDxf( std::istream& in, const LinesLoadSettings& settings = {} );
+
 /// loads polyline from file in the format detected from file extension
 MRMESH_API Expected<Polyline3> fromAnySupportedFormat( const std::filesystem::path& file, const LinesLoadSettings& settings = {} );
 

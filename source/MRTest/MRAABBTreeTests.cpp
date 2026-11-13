@@ -14,6 +14,8 @@
 #include <gtest/gtest.h>
 #include <MRPch/MRTBB.h>
 #include <algorithm>
+#include <bit>
+#include <cstdint>
 #include <cstring>
 #include <iterator>
 #include <limits>
@@ -303,14 +305,13 @@ TEST( MRMesh, AABBTreeLeafBoxesOfSpecialValues )
                 for ( int k = 0; k < numValues; ++k )
                 {
                     const float vs[3] = { values[i], values[j], values[k] };
-                    if ( std::find( vs, vs + 3, values[8] ) != vs + 3 && std::find( vs, vs + 3, values[9] ) != vs + 3 )
-                        continue; // +inf and -inf together make the center of the box NaN
                     if ( std::isnan( vs[0] ) && std::isnan( vs[1] ) && std::isnan( vs[2] ) )
                         continue; // an invalid box, which insignificantlyExpanded asserts against
                     const VertId v0( points.size() );
                     for ( int n = 0; n < 3; ++n )
                     {
-                        Vector3f p{ float( n ), float( i ), float( j ) };
+                        // nonzero other coordinates: a zero lane sends the triangle to the scalar code
+                        Vector3f p{ float( n + 1 ), float( i + 1 ), float( j + 1 ) };
                         p[axis] = vs[n];
                         points.push_back( p );
                     }
@@ -350,6 +351,90 @@ TEST( MRMesh, AABBTreeLeafBoxesOfSpecialValues )
         ADD_FAILURE() << s.str();
     }
     EXPECT_EQ( numDiffer, 0 );
+}
+
+namespace
+{
+
+/// a triangle soup with pseudo-random integer coordinates in [0, range): exactly representable, so the tree is the same on all platforms;
+/// farOutlier moves the first vertex far away, which puts almost all centers in one bucket
+Mesh makeIntegerSoup( int numTris, int range, bool farOutlier )
+{
+    VertCoords points;
+    Triangulation t;
+    std::uint32_t s = 1;
+    const auto next = [&]
+    {
+        s = s * 1664525u + 1013904223u;
+        return float( ( s >> 8 ) % std::uint32_t( range ) );
+    };
+    for ( int f = 0; f < numTris; ++f )
+    {
+        const VertId v0( points.size() );
+        for ( int n = 0; n < 3; ++n )
+        {
+            const float x = next(), y = next(), z = next();
+            points.push_back( { x, y, z } );
+        }
+        t.push_back( { v0, v0 + 1, v0 + 2 } );
+    }
+    if ( farOutlier )
+        points.front() = Vector3f::diagonal( 16777216.f );
+    return Mesh::fromTriangles( std::move( points ), t );
+}
+
+/// FNV-1a of the nodes, the leaf triangles and the leaf boxes of the tree
+std::uint64_t treeHash( const AABBTree & tree )
+{
+    std::uint64_t h = 14695981039346656037ull;
+    const auto add = [&h]( std::uint32_t x )
+    {
+        for ( int k = 0; k < 4; ++k )
+        {
+            h ^= ( x >> ( 8 * k ) ) & 0xff;
+            h *= 1099511628211ull;
+        }
+    };
+    const auto addBox = [&add]( const Box3f & b )
+    {
+        for ( int k = 0; k < 3; ++k )
+        {
+            add( std::bit_cast<std::uint32_t>( b.min[k] ) );
+            add( std::bit_cast<std::uint32_t>( b.max[k] ) );
+        }
+    };
+    for ( const auto & n : tree.nodes() )
+    {
+        addBox( n.box );
+        add( std::uint32_t( n.first ) );
+        add( std::uint32_t( n.count ) );
+    }
+    for ( const auto & lt : tree.leafTris() )
+    {
+        add( std::uint32_t( int( lt.face ) ) );
+        for ( auto v : lt.verts )
+            add( std::uint32_t( int( v ) ) );
+    }
+    for ( const auto & b : tree.leafBoxes() )
+        addBox( b );
+    return h;
+}
+
+} //anonymous namespace
+
+// the trees of meshes with exactly representable coordinates are pinned by their hashes, the same as the tree maker before ML#7479 gave:
+// small ranges, many equal centers, almost all centers in one bucket, the parallel splits
+TEST( MRMesh, AABBTreeGoldenHashes )
+{
+    struct Case { int numTris, range; bool farOutlier; std::uint64_t hash; };
+    const Case cases[] = {
+        { 1000, 1 << 20, false, 0x34b0ae3e1963543dull },
+        { 20000, 4, false, 0x35cd81ed6d39cd05ull },
+        { 50000, 1024, true, 0xe00a4505e6725ab6ull },
+        { 300000, 1 << 16, false, 0x0cc9a28f326dd6dcull }
+    };
+    for ( const auto & c : cases )
+        EXPECT_EQ( treeHash( AABBTree( makeIntegerSoup( c.numTris, c.range, c.farOutlier ) ) ), c.hash ) << c.numTris << " triangles";
 }
 
 // a big mesh, whose top ranges are split in parallel, gives the same tree on one thread

@@ -277,8 +277,10 @@ namespace
 bool splitByBuckets( TreeCenter * src, TreeCenter * dst, int num, int nth, int axis, float lo, float hi, int chunkSize, int depth )
 {
     constexpr int K = 256;
+    if ( !( hi > lo ) )
+        return false;
     const float scale = float( K ) / ( hi - lo );
-    if ( !( hi > lo ) || !std::isfinite( scale ) )
+    if ( !std::isfinite( scale ) )
         return false;
     // the buckets of the centers do not decrease along the axis
     const auto bucket = [lo, scale, axis]( const TreeCenter & x ) { const float t = ( x.c[axis] - lo ) * scale; return t < float( K ) ? int( t ) : K - 1; };

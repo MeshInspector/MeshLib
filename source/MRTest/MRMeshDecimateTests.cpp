@@ -3,6 +3,7 @@
 #include <MRMesh/MRCylinder.h>
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRCube.h>
+#include <MRMesh/MRTorus.h>
 #include <MRMesh/MREdgeIterator.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBuffer.h>
@@ -425,6 +426,87 @@ TEST( MRMesh, MeshDecimateOtherEnd )
     EXPECT_EQ( res.vertsDeleted, 1 );
     EXPECT_FALSE( mesh.topology.hasVert( 2_v ) );
     EXPECT_EQ( mesh.points[3_v], points[3_v] );
+}
+
+TEST( MRMesh, DecimateFixedBoundary )
+{
+    // half of a torus, whose two boundary circles shall stay unchanged
+    const Mesh mesh0 = []
+    {
+        Mesh m = makeTorus( 1.0f, 0.3f, 64, 16 );
+        FaceBitSet half( m.topology.faceSize() );
+        for ( auto f : m.topology.getValidFaces() )
+            if ( m.triCenter( f ).x < 0 )
+                half.set( f );
+        m.topology.deleteFaces( half );
+        return m;
+    }();
+    auto bdVerts = getBoundaryVerts( mesh0.topology );
+    const auto len = mesh0.averageEdgeLength();
+    auto expectFixed = [&]( const Mesh & mesh, const VertBitSet & fixed )
+    {
+        int changed = 0;
+        for ( auto v : fixed )
+            if ( !mesh.topology.hasVert( v ) || mesh.points[v] != mesh0.points[v] )
+                ++changed;
+        EXPECT_EQ( changed, 0 );
+    };
+
+    Mesh mesh = mesh0;
+    remesh( mesh, { .targetEdgeLen = 3 * len, .frozenBoundary = true } );
+    expectFixed( mesh, bdVerts );
+
+    // not-flippable edges near the boundary
+    mesh = mesh0;
+    auto notFlippable = getIncidentEdges( mesh0.topology, getIncidentFaces( mesh0.topology, bdVerts ) );
+    remesh( mesh, { .targetEdgeLen = 3 * len, .frozenBoundary = true, .notFlippable = &notFlippable } );
+    expectFixed( mesh, bdVerts );
+
+    // the boundary of the region is fixed as well
+    mesh = mesh0;
+    FaceBitSet region( mesh0.topology.faceSize() );
+    for ( auto f : mesh0.topology.getValidFaces() )
+        if ( mesh0.triCenter( f ).y > 0 )
+            region.set( f );
+    const auto regionBd = getBoundaryVerts( mesh0.topology, &region );
+    remesh( mesh, { .targetEdgeLen = 3 * len, .frozenBoundary = true, .region = &region } );
+    expectFixed( mesh, regionBd );
+
+    for ( auto [strategy, maxError] : { std::pair{ DecimateStrategy::MinimizeError, 0.01f }, std::pair{ DecimateStrategy::MinimizeError, FLT_MAX },
+        std::pair{ DecimateStrategy::ShortestEdgeFirst, 3 * len } } )
+        for ( bool touchNearBdEdges : { true, false } )
+            for ( int parts : { 1, 8 } )
+                for ( auto givenBd : { (VertBitSet*)nullptr, &bdVerts } )
+                {
+                    SCOPED_TRACE( testing::Message() << "strategy " << int( strategy ) << ", maxError " << maxError << ", touchNearBdEdges " << touchNearBdEdges
+                        << ", parts " << parts << ", bdVerts " << ( givenBd != nullptr ) );
+                    mesh = mesh0;
+                    const auto res = decimateMesh( mesh, { .strategy = strategy, .maxError = maxError, .maxDeletedFaces = mesh0.topology.numValidFaces() / 2,
+                        .touchNearBdEdges = touchNearBdEdges, .touchBdVerts = false, .bdVerts = givenBd, .subdivideParts = parts } );
+                    EXPECT_GT( res.vertsDeleted, 0 );
+                    expectFixed( mesh, bdVerts );
+                }
+
+    // adjustCollapse does not move a fixed vertex
+    mesh = mesh0;
+    decimateMesh( mesh, { .maxError = FLT_MAX, .maxDeletedFaces = mesh0.topology.numValidFaces() / 2, .touchBdVerts = false,
+        .adjustCollapse = []( UndirectedEdgeId, float &, Vector3f & pos ) { pos.z += 0.001f; } } );
+    expectFixed( mesh, bdVerts );
+
+    // a zero-length edge of a fixed vertex: a fan of 6 triangles around vertex 0, which coincides with boundary vertex 1;
+    // the triangle ( 1, 0, 6 ) is first to orient the edge from vertex 1
+    VertCoords fanPoints( 7 );
+    Triangulation fanTris{ { 1_v, 0_v, 6_v } };
+    for ( int i = 0; i < 6; ++i )
+    {
+        fanPoints[VertId( i + 1 )] = Vector3f( std::cos( i * PI_F / 3 ), std::sin( i * PI_F / 3 ), 0 );
+        if ( i < 5 )
+            fanTris.push_back( { 0_v, VertId( i + 1 ), VertId( i + 2 ) } );
+    }
+    fanPoints[0_v] = fanPoints[1_v];
+    Mesh fan = Mesh::fromTriangles( fanPoints, fanTris );
+    EXPECT_EQ( decimateMesh( fan, { .maxError = 1e-4f, .touchBdVerts = false } ).vertsDeleted, 1 );
+    EXPECT_TRUE( fan.topology.hasVert( 1_v ) );
 }
 
 TEST( MRMesh, DecimateTinyEdgeFixedVertex )

@@ -1076,4 +1076,38 @@ TEST( MRMesh, UniteManyMeshesNew2OldFaces )
     checkNew2OldFaces( *res, new2old, { &all } );
 }
 
+TEST( MRMesh, BooleanChainKeepsFarVertices )
+{
+    // every boolean rounds all vertices of its result to the integer grid of the operands' box;
+    // the next boolean with a different box must not move the vertices far from its cut
+    const auto subtractCube = [] ( const Mesh& a, const Vector3f& center, float size )
+    {
+        const auto b = makeCube( Vector3f::diagonal( size ), center - Vector3f::diagonal( size / 2 ) );
+        auto res = boolean( a, b, BooleanOperation::DifferenceAB );
+        EXPECT_TRUE( res.valid() );
+        return std::move( res.mesh );
+    };
+    const auto first = subtractCube( makeUVSphere( 1, 48, 48 ), { 0.9f, 0, 0 }, 0.5f );
+    const auto second = subtractCube( first, { 0, -0.9f, 0 }, 0.7f );
+
+    const auto less = [] ( const Vector3f& a, const Vector3f& b ) { return std::tie( a.x, a.y, a.z ) < std::tie( b.x, b.y, b.z ); };
+    std::vector<Vector3f> secondPoints;
+    for ( auto v : second.topology.getValidVerts() )
+        secondPoints.push_back( second.points[v] );
+    std::sort( secondPoints.begin(), secondPoints.end(), less );
+
+    int numFar = 0, numMoved = 0;
+    for ( auto v : first.topology.getValidVerts() )
+    {
+        const auto p = first.points[v];
+        if ( p.y <= -0.4f )
+            continue; // near the second cube
+        ++numFar;
+        if ( !std::binary_search( secondPoints.begin(), secondPoints.end(), p, less ) )
+            ++numMoved;
+    }
+    EXPECT_GT( numFar, 1000 );
+    EXPECT_EQ( numMoved, 0 );
+}
+
 } //namespace MR

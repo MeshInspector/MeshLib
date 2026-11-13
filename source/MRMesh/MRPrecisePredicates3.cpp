@@ -436,6 +436,25 @@ ConvertToFloatVector getToFloatConverter( const Box3d& box )
     return ConvertToFloatVector{ range, center };
 }
 
+CoordinateConverters getNestedCoordinateConverters( const Box3d& box )
+{
+    const auto center = box.center();
+    const auto bbSize = box.size();
+    const double maxDim = std::max( { bbSize[0], bbSize[1], bbSize[2] } );
+    if ( !( maxDim > 0 ) )
+        return { getToIntConverter( box ), getToFloatConverter( box ) };
+
+    // the same range as in getToIntConverter, but the step is rounded up to a power of two
+    const double step = std::exp2( std::ceil( std::log2( maxDim / cRangeIntMax ) ) );
+    const auto align = [step] ( double c )
+    {
+        const double n = std::round( c / step );
+        return std::abs( n ) < 0x1p52 ? n * step : c; // otherwise c is too far from zero to tell it from a multiple of step
+    };
+    const Vector3d origin( align( center.x ), align( center.y ), align( center.z ) );
+    return { ConvertToIntVector{ origin, 1 / step }, ConvertToFloatVector{ step, origin } };
+}
+
 Vector<Vector3i, VertId> computeIntCoords( const ConvertToIntVector& conv,
     const VertCoords& points, const VertBitSet* valid )
 {

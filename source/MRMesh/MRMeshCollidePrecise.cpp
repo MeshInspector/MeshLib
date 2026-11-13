@@ -631,20 +631,15 @@ CoordinateConverters getVectorConverters( const MeshPart& a, const MeshPart& b, 
     MR_TIMER;
     Box3d bb( a.mesh.computeBoundingBox( a.region ) );
     bb.include( Box3d( b.mesh.computeBoundingBox( b.region, rigidB2A ) ) );
-    CoordinateConverters res;
-    res.toInt = getToIntConverter( bb );
-    res.toFloat = getToFloatConverter( bb );
-    return res;
+    // nested grids: the next boolean in a chain does not move the vertices rounded by this one
+    return getNestedCoordinateConverters( bb );
 }
 
 CoordinateConverters getVectorConverters( const MeshPart& a )
 {
     MR_TIMER;
     Box3d bb( a.mesh.computeBoundingBox( a.region ) );
-    CoordinateConverters res;
-    res.toInt = getToIntConverter( bb );
-    res.toFloat = getToFloatConverter( bb );
-    return res;
+    return getNestedCoordinateConverters( bb );
 }
 
 } //namespace MR

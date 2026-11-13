@@ -156,7 +156,7 @@ public:
                    void getTriVerts( FaceId f, VertId & v0, VertId & v1, VertId & v2 ) const { getLeftTriVerts( edgeWithLeft( f ), v0, v1, v2 ); }
     MR_BIND_IGNORE void getTriVerts( FaceId f, VertId (&v)[3] ) const { getLeftTriVerts( edgeWithLeft( f ), v ); } // This one is not in the bindings because of the reference-to-array parameter.
                    void getTriVerts( FaceId f, ThreeVertIds & v ) const { getLeftTriVerts( edgeWithLeft( f ), v ); }
-    [[nodiscard]] ThreeVertIds getTriVerts( FaceId f ) const { return getLeftTriVerts( edgeWithLeft( f ) ); }
+    [[nodiscard]] MR_FORCE_INLINE ThreeVertIds getTriVerts( FaceId f ) const { return getLeftTriVerts( edgeWithLeft( f ) ); }
 
     /// return true if triangular face (f) has (v) as one of its vertices
     [[nodiscard]] bool isTriVert( FaceId f, VertId v ) const { auto vs = getTriVerts( f ); return v == vs[0] || v == vs[1] || v == vs[2]; }
@@ -173,7 +173,7 @@ public:
     MR_BIND_OVERLOAD_SUFFIX(outVerts)                void getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const;
     MR_BIND_IGNORE void getLeftTriVerts( EdgeId a, VertId (&v)[3] ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); } // This one is not in the bindings because of the reference-to-array parameter.
                    MR_BIND_OVERLOAD_SUFFIX(outArray) void getLeftTriVerts( EdgeId a, ThreeVertIds & v ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); }
-    MR_BIND_OVERLOAD_SUFFIX() [[nodiscard]] ThreeVertIds getLeftTriVerts( EdgeId a ) const { ThreeVertIds v; getLeftTriVerts( a, v[0], v[1], v[2] ); return v; }
+    MR_BIND_OVERLOAD_SUFFIX() [[nodiscard]] MR_FORCE_INLINE ThreeVertIds getLeftTriVerts( EdgeId a ) const { ThreeVertIds v; getLeftTriVerts( a, v[0], v[1], v[2] ); return v; }
 
     /// if given point is
     /// 1) in vertex, then invokes callback once with it;
@@ -645,7 +645,7 @@ private:
     bool updateValids_ = true; ///< if false, validVerts_, validFaces_, numValidVerts_, numValidFaces_ are not updated
 };
 
-inline void MeshTopology::getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const
+MR_FORCE_INLINE void MeshTopology::getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const
 {
     assert( isLeftTri( a ) );
     v0 = org( a );

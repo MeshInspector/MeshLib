@@ -486,6 +486,27 @@ TEST( MRMesh, DecimateFixedBoundary )
                     EXPECT_GT( res.vertsDeleted, 0 );
                     expectFixed( mesh, bdVerts );
                 }
+
+    // adjustCollapse does not move a fixed vertex
+    mesh = mesh0;
+    decimateMesh( mesh, { .maxError = FLT_MAX, .maxDeletedFaces = mesh0.topology.numValidFaces() / 2, .touchBdVerts = false,
+        .adjustCollapse = []( UndirectedEdgeId, float &, Vector3f & pos ) { pos.z += 0.001f; } } );
+    expectFixed( mesh, bdVerts );
+
+    // a zero-length edge of a fixed vertex: a fan of 6 triangles around vertex 0, which coincides with boundary vertex 1;
+    // the triangle ( 1, 0, 6 ) is first to orient the edge from vertex 1
+    VertCoords fanPoints( 7 );
+    Triangulation fanTris{ { 1_v, 0_v, 6_v } };
+    for ( int i = 0; i < 6; ++i )
+    {
+        fanPoints[VertId( i + 1 )] = Vector3f( std::cos( i * PI_F / 3 ), std::sin( i * PI_F / 3 ), 0 );
+        if ( i < 5 )
+            fanTris.push_back( { 0_v, VertId( i + 1 ), VertId( i + 2 ) } );
+    }
+    fanPoints[0_v] = fanPoints[1_v];
+    Mesh fan = Mesh::fromTriangles( fanPoints, fanTris );
+    EXPECT_EQ( decimateMesh( fan, { .maxError = 1e-4f, .touchBdVerts = false } ).vertsDeleted, 1 );
+    EXPECT_TRUE( fan.topology.hasVert( 1_v ) );
 }
 
 TEST( MRMesh, DecimateObjectMeshDataShortAttributes )

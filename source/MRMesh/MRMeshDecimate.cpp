@@ -480,7 +480,7 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, EdgeOp op,
 
     QuadraticForm3f qf;
     Vector3f pos;
-    bool bothBd = false;
+    bool bdO = false, bdD = false; // fixed ends
     if ( settings_.touchBdVerts // if boundary vertices can be moved ...
         || ( settings_.notFlippable && settings_.notFlippable->test( ue ) ) ) // ... or this is a not-flippable edge (if you do not want such collapses then exclude it from settings_.edgesToCollapse)
     {
@@ -488,12 +488,11 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, EdgeOp op,
     }
     else
     {
-        const bool bdO = pBdVerts_->test( o );
-        const bool bdD = pBdVerts_->test( d );
+        bdO = pBdVerts_->test( o );
+        bdD = pBdVerts_->test( d );
         if ( ( bdO || bdD ) && op == EdgeOp::CollapseOtherEnd )
             return {}; // only one end can be kept, and the collapse in it failed
-        bothBd = bdO && bdD;
-        if ( bothBd )
+        if ( bdO && bdD )
             qf.c = FLT_MAX;
         else if ( bdO )
             qf = sumAt( vo, po, vd, pd, pos = po );
@@ -510,7 +509,7 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, EdgeOp op,
         if ( earlyReturn( qf.c ) )
             return res;
     }
-    if ( bothBd )
+    if ( bdO && bdD )
         return {}; // both ends are fixed, so the edge can only be flipped
 
     assert( res && res->x.edgeOp != EdgeOp::Flip );
@@ -518,6 +517,8 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, EdgeOp op,
     {
         const auto pos0 = pos;
         settings_.adjustCollapse( ue, res->c, pos );
+        if ( bdO || bdD )
+            pos = pos0; // a fixed end keeps its position
         if ( res->c > maxErrorSq_ )
             return {};
         if ( outCollapseForm && pos != pos0 )
@@ -607,9 +608,9 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
     auto vd = topology.dest( edgeToCollapse );
     auto po = mesh_.points[vo];
     auto pd = mesh_.points[vd];
-    if ( collapsePos == pd )
+    if ( collapsePos == pd && ( po != pd || !pBdVerts_->test( vo ) ) )
     {
-        // reverse the edge to have its origin in remaining fixed vertex
+        // reverse the edge to have its origin in remaining fixed vertex (a zero-length edge is not reversed if its origin is fixed)
         edgeToCollapse = edgeToCollapse.sym();
         std::swap( vo, vd );
         std::swap( vl, vr );

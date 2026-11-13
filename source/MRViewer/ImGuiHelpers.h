@@ -305,6 +305,7 @@ MR_MAKE_FLAG_OPERATORS( PaletteChanges )
 /// can load and save palette preset.
 /// \param presetName stores the currently selected palette's preset name or empty string if the palette was edited by user
 /// \param fixZero if present shows checkbox to fix zero symmetrical palette
+/// \param unitSuffix if false, the range limits are shown without the length unit suffix (e.g. for curvature)
 /// \return mask of changes, if it has PaletteChanges::Texture bit - object requires texture update,
 /// if it has PaletteChanges::Ranges uv coordinates should be recalculated and updated in object
 MRVIEWER_API PaletteChanges Palette(
@@ -315,7 +316,8 @@ MRVIEWER_API PaletteChanges Palette(
     bool* fixZero = nullptr,
     float speed = 1.0f,
     float min = std::numeric_limits<float>::lowest(),
-    float max = std::numeric_limits<float>::max()
+    float max = std::numeric_limits<float>::max(),
+    bool unitSuffix = true
 );
 
 // Parameters for the `Plane( MR::PlaneWidget& ... )` function

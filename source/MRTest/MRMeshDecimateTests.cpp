@@ -425,6 +425,11 @@ TEST( MRMesh, MeshDecimateOtherEnd )
     EXPECT_EQ( res.vertsDeleted, 1 );
     EXPECT_FALSE( mesh.topology.hasVert( 2_v ) );
     EXPECT_EQ( mesh.points[3_v], points[3_v] );
+
+    // the retry is off: the step stays
+    Mesh mesh1 = Mesh::fromTriangles( points, t );
+    EXPECT_EQ( decimateMesh( mesh1, { .maxError = 0.03f, .stabilizer = 1e-5f, .collapseOtherEnd = false } ).vertsDeleted, 0 );
+    EXPECT_EQ( mesh1.points, points );
 }
 
 TEST( MRMesh, DecimateObjectMeshDataShortAttributes )

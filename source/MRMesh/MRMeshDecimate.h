@@ -83,6 +83,10 @@ struct DecimateSettings
     /// minimize local shape change, if false then the edge is collapsed in one of its vertices, which keeps its position
     bool optimizeVertexPos = true;
 
+    /// if true then an edge, which collapse in its end with the smaller error failed a geometric check, is tried once more with the collapse in its other end;
+    /// false restores the behavior of MeshLib 3.1, which removes or moves fewer vertices (including boundary ones if touchBdVerts=true)
+    bool collapseOtherEnd = true;
+
     /// Limit on the number of deleted vertices
     int maxDeletedVertices = INT_MAX;
 
@@ -297,6 +301,8 @@ struct RemeshSettings
     /// Maximal shift of a boundary during one edge collapse
     /// only makes sense if `frozenBoundary=false`
     float maxBdShift = FLT_MAX;
+    /// see DecimateSettings::collapseOtherEnd
+    bool collapseOtherEnd = true;
     /// This option in subdivision works best for natural surfaces, where all triangles are close to equilateral and have similar area,
     /// and no sharp edges in between
     bool useCurvature = false;

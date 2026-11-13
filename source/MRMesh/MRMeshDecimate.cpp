@@ -1066,10 +1066,12 @@ DecimateResult MeshDecimator::run()
             }
             if ( canCollapseRes.status != CollapseStatus::Ok )
             {
-                if ( topQE.x.edgeOp != EdgeOp::CollapseOtherEnd && geomFail_( canCollapseRes.status ) )
+                // after the optimal position try the end with smaller error, then the other end
+                const auto nextOp = topQE.x.edgeOp == EdgeOp::CollapseOptPos ? EdgeOp::CollapseEnd : EdgeOp::CollapseOtherEnd;
+                if ( topQE.x.edgeOp != EdgeOp::CollapseOtherEnd && ( nextOp != EdgeOp::CollapseOtherEnd || settings_.collapseOtherEnd )
+                    && geomFail_( canCollapseRes.status ) )
                 {
-                    // after the optimal position try the end with smaller error, then the other end
-                    addInQueue_( ue, topQE.x.edgeOp == EdgeOp::CollapseOptPos ? EdgeOp::CollapseEnd : EdgeOp::CollapseOtherEnd );
+                    addInQueue_( ue, nextOp );
                     continue;
                 }
                 if ( canCollapseRes.status != CollapseStatus::MultipleEdge )
@@ -1922,6 +1924,7 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
         decs.maxDeletedFaces = currNumTri - targetNumTri;
         decs.touchBdVerts = !settings.frozenBoundary;
         decs.maxBdShift = settings.maxBdShift;
+        decs.collapseOtherEnd = settings.collapseOtherEnd;
         decs.region = settings.region;
         decs.notFlippable = settings.notFlippable;
         decs.packMesh = settings.packMesh;

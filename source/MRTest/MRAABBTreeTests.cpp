@@ -323,9 +323,19 @@ TEST( MRMesh, AABBTreeLeafBoxesOfSpecialValues )
     for ( size_t n = 0; n < tree.leafTris().size(); ++n )
     {
         const auto & lt = tree.leafTris()[n];
+        // what Box::include gives, with NaN skipped explicitly: MSVC for arm64 compiles Box::include here with NaN kept
         Box3f box;
         for ( auto v : lt.verts )
-            box.include( mesh.points[v] );
+            for ( int k = 0; k < 3; ++k )
+            {
+                const float x = mesh.points[v][k];
+                if ( std::isnan( x ) )
+                    continue;
+                if ( x < box.min[k] )
+                    box.min[k] = x;
+                if ( box.max[k] < x )
+                    box.max[k] = x;
+            }
         const Box3f expected = box.insignificantlyExpanded();
         const Box3f & actual = tree.leafBoxes()[n];
         // compares the bits, NaN included

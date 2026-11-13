@@ -28,12 +28,12 @@ __device__ float triangleSolidAngle( const float3& p, const float3& tri0, const 
     return 2 * std::atan2( mx.x * ( my.y * mz.z - my.z * mz.y ) - mx.y * ( my.x * mz.z - my.z * mz.x ) + mx.z * ( my.x * mz.y - my.y * mz.x ), den );
 }
 
-__device__ void processPoint( const float3& q, float& out, const Dipole* dipoles,
+__device__ void processPoint( const float3& q, float& res, const Dipole* dipoles,
     const WideNode3* __restrict__ nodes, const LeafTri3* __restrict__ leafTris, const float3* __restrict__ meshPoints,
     float beta, int skipFace = -1 )
 {
     const float betaSq = beta * beta;
-    float res = 0; // not out: in chunked processing the output buffer still holds the previous chunk's values
+    res = 0; // in chunked processing the output buffer still holds the previous chunk's values
 
     // every level adds at most 3 nodes, and the tree of 2^31 triangles has 16 levels
     // only the nodes with not good enough approximation by their dipoles get in the stack
@@ -61,7 +61,7 @@ __device__ void processPoint( const float3& q, float& out, const Dipole* dipoles
         }
     }
     constexpr float INV_4PI = 1.0f / ( 4 * PI_F );
-    out = res * INV_4PI;
+    res *= INV_4PI;
 }
 
 __device__ float calcDistanceSq( const float3& pt,

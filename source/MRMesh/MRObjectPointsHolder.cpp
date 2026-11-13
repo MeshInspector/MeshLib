@@ -424,6 +424,7 @@ void ObjectPointsHolder::copyAllSolidColors( const ObjectPointsHolder& other )
 void ObjectPointsHolder::setDefaultSceneProperties_()
 {
     setDefaultColors_();
+    pointSize_ = SceneSettings::get( SceneSettings::FloatType::PointCloudPointSize );
 }
 
 void ObjectPointsHolder::updateRenderDiscretization_()

@@ -9,6 +9,7 @@
 #include "MRBitSetParallelFor.h"
 #include "MRRingIterator.h"
 #include "MRTriangleIntersection.h"
+#include <optional>
 
 namespace MR
 {
@@ -367,8 +368,10 @@ float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, const Affin
 
 float findMaxDistanceSq( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float maxDistanceSq )
 {
-    std::unique_ptr<AffineXf3f> rigidA2B = rigidB2A ? std::make_unique<AffineXf3f>( rigidB2A->inverse() ) : nullptr;
-    return std::max( findMaxDistanceSqOneWay( a, b, rigidB2A, maxDistanceSq ), findMaxDistanceSqOneWay( b, a, rigidA2B.get(), maxDistanceSq ) );
+    std::optional<AffineXf3f> rigidA2B;
+    if ( rigidB2A )
+        rigidA2B = rigidB2A->inverse();
+    return std::max( findMaxDistanceSqOneWay( a, b, rigidB2A, maxDistanceSq ), findMaxDistanceSqOneWay( b, a, rigidA2B ? &*rigidA2B : nullptr, maxDistanceSq ) );
 }
 
 } //namespace MR

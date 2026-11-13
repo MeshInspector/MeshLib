@@ -797,9 +797,9 @@ Expected<BooleanResultPoints> getBooleanPoints( const Mesh& meshA, const Mesh& m
         result.meshBVerts -= ( needInsidePartB ? destVertsB : orgVertsB );
 
         const auto bComponents = MeshComponents::getAllComponents(meshB);
-        std::unique_ptr<AffineXf3f> rigidA2B;
+        std::optional<AffineXf3f> rigidA2B;
         if ( rigidB2A )
-            rigidA2B = std::make_unique<AffineXf3f>( rigidB2A->inverse() );
+            rigidA2B = rigidB2A->inverse();
 
         for ( const auto& bComponent : bComponents )
         {
@@ -807,7 +807,7 @@ Expected<BooleanResultPoints> getBooleanPoints( const Mesh& meshA, const Mesh& m
             if ( bComponentVerts.intersects( result.meshBVerts ) )
                 continue;
 
-            const bool inside = isInside( MeshPart( meshB, &bComponent ), MeshPart( meshA ), rigidA2B.get() );
+            const bool inside = isInside( MeshPart( meshB, &bComponent ), MeshPart( meshA ), rigidA2B ? &*rigidA2B : nullptr );
 
             if ( needInsidePartB == inside  )
             {

@@ -630,8 +630,8 @@ TEST( MRMesh, RemeshKeepsSharpEdges )
 
 TEST( MRMesh, RemeshKeepsBoundary )
 {
-    // wavy square plate; after the collapse of an edge in its boundary end failed, the edge used to collapse in its other end:
-    // in its inner end pulling the boundary inside the square, or in the neighbor of a corner cutting the corner
+    // wavy square plate; an edge with one boundary end used to collapse in its inner end after the collapse in the boundary end failed,
+    // pulling the boundary inside the square
     const int n = 40;
     VertCoords points;
     for ( int j = 0; j <= n; ++j )
@@ -651,7 +651,7 @@ TEST( MRMesh, RemeshKeepsBoundary )
         }
     const Mesh plate = Mesh::fromTriangles( std::move( points ), t );
     const auto len = plate.averageEdgeLength();
-    auto check = [&]( const Mesh & mesh )
+    auto check = [&]( const Mesh & mesh, bool corners )
     {
         EXPECT_LT( mesh.topology.numValidFaces(), plate.topology.numValidFaces() / 4 );
         float maxDist = 0; // from the square's sides
@@ -665,16 +665,21 @@ TEST( MRMesh, RemeshKeepsBoundary )
         }
         EXPECT_LT( maxDist, 0.05f * len ); // up to 2 * len before
         for ( float d : cornerDist )
-            EXPECT_LT( d, 0.05f * len );
+            EXPECT_TRUE( !corners || d < 0.05f * len ) << d;
     };
 
-    Mesh mesh = plate;
-    remesh( mesh, { .targetEdgeLen = 3 * len } );
-    check( mesh );
+    // a boundary edge can still collapse in its other end, cutting a corner, unless maxBdShift prohibits it
+    for ( float maxBdShift : { FLT_MAX, 0.01f * len } )
+    {
+        SCOPED_TRACE( maxBdShift );
+        Mesh mesh = plate;
+        remesh( mesh, { .targetEdgeLen = 3 * len, .maxBdShift = maxBdShift } );
+        check( mesh, maxBdShift < FLT_MAX );
 
-    mesh = plate;
-    decimateMesh( mesh, { .strategy = DecimateStrategy::ShortestEdgeFirst, .maxError = 3 * len } );
-    check( mesh );
+        mesh = plate;
+        decimateMesh( mesh, { .strategy = DecimateStrategy::ShortestEdgeFirst, .maxError = 3 * len, .maxBdShift = maxBdShift } );
+        check( mesh, maxBdShift < FLT_MAX );
+    }
 }
 
 TEST( MRMesh, MeshDecimateNoFold )

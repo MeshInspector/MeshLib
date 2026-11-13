@@ -487,8 +487,8 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, EdgeOp op,
         const bool keepBd = settings_.touchBdVerts && op != EdgeOp::CollapseOptPos;
         const bool orgBd = keepBd && mesh_.topology.isBdVertex( o, settings_.region );
         const bool destBd = keepBd && mesh_.topology.isBdVertex( d, settings_.region );
-        if ( op == EdgeOp::CollapseOtherEnd && ( orgBd || destBd ) )
-            return {}; // not to pull the boundary inside or cut its corners
+        if ( op == EdgeOp::CollapseOtherEnd && ( orgBd || destBd ) && !mesh_.topology.isBdEdge( e ) )
+            return {}; // not to pull the boundary inside; the collapse of a boundary edge is limited by maxBdShift
         if ( orgBd != destBd )
             qf = sumAt( vo, po, vd, pd, pos = orgBd ? po : pd ); // only one end is on the boundary: the edge collapses in it
         else

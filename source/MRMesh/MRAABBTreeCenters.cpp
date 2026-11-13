@@ -2,11 +2,11 @@
 #include "MRBitCast.h"
 #include "MRNoDefInit.h"
 #include "MRParallelFor.h"
+#include "MRVector.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
-#include <vector>
 
 #if defined(__x86_64__) || defined(_M_X64)
 #include <emmintrin.h>
@@ -278,7 +278,7 @@ bool splitCentersByBuckets( const TreeCenter * src, TreeCenter * dst, int num, i
     const auto bucket = [lo, scale, axis]( const TreeCenter & x ) { const float t = ( x.c[axis] - lo ) * scale; return t < float( K ) ? int( t ) : K - 1; };
     const int mid = num / 2;
     const int numChunks = ( num + chunkSize - 1 ) / chunkSize;
-    std::vector<int> hists( size_t( numChunks ) * K );
+    Vector<int, size_t> hists( size_t( numChunks ) * K );
     ParallelFor( 0, numChunks, [&]( int ch )
     {
         // several counts for the processor to count several centers at once: neighbor centers are often in the same bucket
@@ -312,7 +312,7 @@ bool splitCentersByBuckets( const TreeCenter * src, TreeCenter * dst, int num, i
 
     // the first positions of each chunk's centers in the three parts of dst
     struct Pos { int l, m, g; };
-    std::vector<Pos> pos( numChunks );
+    Vector<Pos, int> pos( numChunks );
     Pos next{ 0, numLess, numLess + numMed };
     for ( int ch = 0; ch < numChunks; ++ch )
     {

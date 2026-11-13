@@ -116,6 +116,12 @@ IF(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 
   if(MRVIEWER_EXPERIMENTAL_WAYLAND_SUPPORT)
     target_compile_definitions(${PROJECT_NAME} PRIVATE MRVIEWER_EXPERIMENTAL_WAYLAND_SUPPORT)
+
+    include(WaylandHelpers)
+    mr_add_wayland_protocols(${PROJECT_NAME}
+      PROTOCOL_PATHS
+        "unstable/xdg-foreign/xdg-foreign-unstable-v2"
+    )
   endif()
 ENDIF()
 

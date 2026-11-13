@@ -42,6 +42,21 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Basic\MRFeatureAlignmentScene.cpp">
+      <Filter>Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="Basic\MRFeatureAlignmentController.cpp">
+      <Filter>Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="Basic\MRFeatureAlignment.cpp">
+      <Filter>Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="Basic\MRFeatureAlignmentReport.cpp">
+      <Filter>Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="Basic\MRFeatureAlignmentHistory.cpp">
+      <Filter>Basic</Filter>
+    </ClCompile>
     <ClCompile Include="Basic\MRMoveObjectByMouse.cpp">
       <Filter>Basic</Filter>
     </ClCompile>
@@ -102,6 +117,21 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
+    <ClInclude Include="Basic\MRFeatureAlignmentScene.h">
+      <Filter>Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="Basic\MRFeatureAlignmentController.h">
+      <Filter>Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="Basic\MRFeatureAlignment.h">
+      <Filter>Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="Basic\MRFeatureAlignmentLayout.h">
+      <Filter>Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="Basic\MRFeatureAlignmentReport.h">
+      <Filter>Basic</Filter>
+    </ClInclude>
     <ClInclude Include="Basic\MRMoveObjectByMouse.h">
       <Filter>Basic</Filter>
     </ClInclude>

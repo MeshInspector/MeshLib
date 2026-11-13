@@ -526,8 +526,12 @@ static PreciseCollisionResult findIntersections( const Mesh& a, const Mesh& b, c
     if ( !bTree )
         bTree = findTree( b, boxB, rigidB2A, bNear, bLocal );
     taskGroup.wait();
-    return findCollidingEdgeTrisPrecise( a, *aTree, b, *bTree, conv, rigidB2A );
+    // a temporary tree comes with its faces as the region: an edge is checked once, from the triangle with the smaller index,
+    // unless the other triangle is outside the region, so without the region an edge would be missed
+    // if only its triangle with the greater index were in the tree
+    return findCollidingEdgeTrisPrecise( { a, aLocal ? &aNear : nullptr }, *aTree, { b, bLocal ? &bNear : nullptr }, *bTree, conv, rigidB2A );
 }
+
 BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params, BooleanInternalParameters intParams,
     bool copyOriginals )
 {

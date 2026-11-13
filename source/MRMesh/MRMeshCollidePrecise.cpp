@@ -257,6 +257,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const A
     const PreciseBoxesIntersection boxesIntersect( aTree, bTree, conv, rigidB2A );
     return findCollidingEdgeTrisPrecise( a, aTree, b, bTree, boxesIntersect, conv, rigidB2A, anyIntersection );
 }
+
 std::vector<EdgeTri> findCollidingEdgeTrisPrecise( 
     const Mesh & a, const std::vector<EdgeId> & edgesA,
     const Mesh & b, const std::vector<FaceId> & facesB,

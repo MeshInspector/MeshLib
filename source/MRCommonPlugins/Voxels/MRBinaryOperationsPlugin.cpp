@@ -16,6 +16,7 @@
 #include "MRMesh/MRChangeObjectFields.h"
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRMesh/MRObjectsAccess.h"
+#include <algorithm>
 
 namespace MR
 {
@@ -93,8 +94,11 @@ void BinaryOperations::drawDialog( ImGuiContext*)
         }
     }
 
-    if ( UI::combo( _tr( "Operation" ), (int*)&operation_, Locale::translateAll( enabledOps_ ), true, Locale::translateAll( enabledOpsTooltips_ ) ) )
+    // the combo box lists only the enabled operations, so its index is not the value of Operation
+    int opIndex = int( std::find( enabledOpIds_.begin(), enabledOpIds_.end(), operation_ ) - enabledOpIds_.begin() );
+    if ( UI::combo( _tr( "Operation" ), &opIndex, Locale::translateAll( enabledOps_ ), true, Locale::translateAll( enabledOpsTooltips_ ) ) )
     {
+        operation_ = enabledOpIds_[opIndex];
         if ( previewMode_ )
             doOperation_( operation_, true );
     }
@@ -121,14 +125,13 @@ bool BinaryOperations::onEnable_()
         return false;
     }
 
-    std::vector<Operation> enabledOps;
     if ( obj1_->vdbVolume().data->getGridClass() == openvdb::GRID_LEVEL_SET )
     {
-        enabledOps = { Operation::Union, Operation::Intersection, Operation::Difference };
+        enabledOpIds_ = { Operation::Union, Operation::Intersection, Operation::Difference };
     }
     else
     {
-        enabledOps = {
+        enabledOpIds_ = {
             Operation::Max,
             Operation::Min,
             Operation::Sum,
@@ -137,10 +140,10 @@ bool BinaryOperations::onEnable_()
         };
     }
 
-    operation_ = enabledOps[0];
+    operation_ = enabledOpIds_[0];
     enabledOps_.clear();
     enabledOpsTooltips_.clear();
-    for ( Operation op : enabledOps )
+    for ( Operation op : enabledOpIds_ )
     {
         enabledOps_.push_back( operationNames[(int)op] );
         enabledOpsTooltips_.push_back( operationTooltips[(int)op] );
@@ -152,7 +155,7 @@ bool BinaryOperations::onEnable_()
 bool BinaryOperations::onDisable_()
 {
     conn1_.disconnect();
-    conn1_.disconnect();
+    conn2_.disconnect();
     obj1_->setVisualizeProperty( false, MeshVisualizePropertyType::OnlyOddFragments, ViewportMask::all() );
     obj2_->setVisualizeProperty( false, MeshVisualizePropertyType::OnlyOddFragments, ViewportMask::all() );
     obj1_.reset();

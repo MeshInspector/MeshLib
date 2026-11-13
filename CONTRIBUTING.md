@@ -1,3 +1,13 @@
+## Contributor License Agreement
+
+MeshLib is distributed under a [non-commercial license](./LICENSE) and under commercial licenses, so we can merge a pull request from outside the MeshInspector team only if its description contains this line, by which you accept our [Contributor License Agreement](./CLA.md):
+
+```
+I agree to the MeshLib Contributor License Agreement
+```
+
+A check in CI fails while the line is missing.
+
 ## Code style
 
 * Indentation is 4 spaces. Braces on a separate line.

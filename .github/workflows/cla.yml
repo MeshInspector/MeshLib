@@ -1,0 +1,20 @@
+name: CLA
+
+on:
+  # the workflow file is taken from master, so a pull request cannot change the check
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  cla:
+    # only pull requests from forks: the MeshInspector team pushes its branches to this repository
+    if: github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      # the description is only tested in the expression, it never reaches the shell
+      - if: ${{ !contains( github.event.pull_request.body, 'I agree to the MeshLib Contributor License Agreement' ) }}
+        run: |
+          echo "::error::Add the line 'I agree to the MeshLib Contributor License Agreement' to the pull request description, see https://github.com/MeshInspector/MeshLib/blob/master/CONTRIBUTING.md#contributor-license-agreement"
+          exit 1

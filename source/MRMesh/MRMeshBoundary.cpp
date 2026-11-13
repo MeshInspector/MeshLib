@@ -1,7 +1,10 @@
 #include "MRMeshBoundary.h"
 #include "MRMesh.h"
+#include "MREdgeIterator.h"
 #include "MRTriMath.h"
 #include "MRTimer.h"
+#include <algorithm>
+#include <array>
 
 namespace MR
 {
@@ -56,6 +59,33 @@ void straightenBoundary( Mesh & mesh, EdgeId bd, float minNeiNormalsDot, float m
         }
         e = e1;
     } while ( e != bd );
+}
+
+bool sameBoundary( const Mesh & a, const Mesh & b )
+{
+    MR_TIMER;
+
+    // coordinates of origin and destination of every boundary edge having the hole to the left, sorted
+    using Segm = std::array<float, 6>;
+    auto getSegms = []( const Mesh & m )
+    {
+        std::vector<Segm> res;
+        for ( EdgeId e : undirectedEdges( m.topology ) )
+        {
+            const bool hasLeft = m.topology.left( e ).valid();
+            if ( hasLeft == m.topology.right( e ).valid() )
+                continue; // inner or lone edge
+            if ( hasLeft )
+                e = e.sym();
+            const auto o = m.orgPnt( e );
+            const auto d = m.destPnt( e );
+            res.push_back( { o.x, o.y, o.z, d.x, d.y, d.z } );
+        }
+        std::sort( res.begin(), res.end() );
+        return res;
+    };
+
+    return getSegms( a ) == getSegms( b );
 }
 
 } //namespace MR

@@ -39,6 +39,8 @@
     <ClInclude Include="MRAABBTreeBase.h" />
     <ClInclude Include="MRAABBTreeBase.hpp" />
     <ClInclude Include="MRAABBTreeMaker.hpp" />
+    <ClInclude Include="MRAABBTreeCenters.hpp" />
+    <ClInclude Include="MRTriBox.hpp" />
     <ClInclude Include="MRAABBTreeObjects.h" />
     <ClInclude Include="MRAddNoise.h" />
     <ClInclude Include="MRAligningTransform.h" />
@@ -527,6 +529,7 @@
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
     <ClCompile Include="miniply.cpp" />
     <ClCompile Include="MRAABBTree.cpp" />
+    <ClCompile Include="MRAABBTreeCenters.cpp" />
     <ClCompile Include="MRAABBTreeObjects.cpp" />
     <ClCompile Include="MRAABBTreePoints.cpp" />
     <ClCompile Include="MRAABBTreePolyline.cpp" />

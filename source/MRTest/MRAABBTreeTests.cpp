@@ -10,9 +10,17 @@
 #include <MRMesh/MRMatrix3.h>
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRBuffer.h>
+#include <MRMesh/MRBitCast.h>
+#include <cmath>
 #include <gtest/gtest.h>
 #include <MRPch/MRTBB.h>
 #include <algorithm>
+#include <cstdint>
+#include <cstring>
+#include <iterator>
+#include <limits>
+#include <optional>
+#include <sstream>
 
 namespace MR
 {
@@ -279,6 +287,177 @@ TEST(MRMesh, AABBTreeCopyDuringConstruction)
     tasks.run( [&] { mesh.getAABBTree(); } ); // construct the tree
     tasks.run( [&] { Mesh( mesh ).getAABBTree(); } ); // copy the mesh, then construct the tree for it
     tasks.wait();
+}
+
+// the leaf box of every triangle is the same as by Box::include and insignificantlyExpanded, also for zeros, denormals, extreme and non-finite coordinates
+TEST( MRMesh, AABBTreeLeafBoxesOfSpecialValues )
+{
+    // no signaling NaN: Box::include of it depends on the compiler (clang for Arm turns a comparison with a constant into fminnm, which quiets it)
+    const float values[] = { 0.f, -0.f, std::numeric_limits<float>::denorm_min(), -std::numeric_limits<float>::denorm_min(), 1.f, -1.f,
+        std::numeric_limits<float>::max(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity(),
+        std::numeric_limits<float>::quiet_NaN() };
+    constexpr int numValues = int( std::size( values ) );
+    VertCoords points;
+    Triangulation t;
+    for ( int axis = 0; axis < 3; ++axis )
+        for ( int i = 0; i < numValues; ++i )
+            for ( int j = 0; j < numValues; ++j )
+                for ( int k = 0; k < numValues; ++k )
+                {
+                    const float vs[3] = { values[i], values[j], values[k] };
+                    if ( std::isnan( vs[0] ) && std::isnan( vs[1] ) && std::isnan( vs[2] ) )
+                        continue; // an invalid box, which insignificantlyExpanded asserts against
+                    const VertId v0( points.size() );
+                    for ( int n = 0; n < 3; ++n )
+                    {
+                        // ordinary other coordinates: only the tested one decides between the SIMD and the scalar code
+                        Vector3f p{ float( n + 1 ), float( i + 1 ), float( j + 1 ) };
+                        p[axis] = vs[n];
+                        points.push_back( p );
+                    }
+                    t.push_back( { v0, v0 + 1, v0 + 2 } );
+                }
+    const Mesh mesh = Mesh::fromTriangles( std::move( points ), t );
+    const AABBTree tree( mesh );
+    ASSERT_EQ( tree.leafTris().size(), t.size() );
+    int numDiffer = 0;
+    for ( size_t n = 0; n < tree.leafTris().size(); ++n )
+    {
+        const auto & lt = tree.leafTris()[n];
+        // what Box::include gives, with NaN skipped explicitly: MSVC for arm64 compiles Box::include here with NaN kept
+        Box3f box;
+        for ( auto v : lt.verts )
+            for ( int k = 0; k < 3; ++k )
+            {
+                const float x = mesh.points[v][k];
+                if ( std::isnan( x ) )
+                    continue;
+                if ( x < box.min[k] )
+                    box.min[k] = x;
+                if ( box.max[k] < x )
+                    box.max[k] = x;
+            }
+        const Box3f expected = box.insignificantlyExpanded();
+        const Box3f & actual = tree.leafBoxes()[n];
+        // compares the bits, NaN included
+        if ( std::memcmp( &expected, &actual, sizeof( Box3f ) ) == 0 || ++numDiffer > 5 )
+            continue;
+        std::ostringstream s;
+        s << std::hexfloat << "face " << int( lt.face ) << ", vertices";
+        for ( auto v : lt.verts )
+            s << " (" << mesh.points[v].x << ' ' << mesh.points[v].y << ' ' << mesh.points[v].z << ')';
+        for ( const Box3f * b : { &expected, &actual } )
+            s << ( b == &expected ? "\n  expected" : "\n  actual  " ) << " (" << b->min.x << ' ' << b->min.y << ' ' << b->min.z << ")-(" << b->max.x << ' ' << b->max.y << ' ' << b->max.z << ')';
+        ADD_FAILURE() << s.str();
+    }
+    EXPECT_EQ( numDiffer, 0 );
+}
+
+namespace
+{
+
+/// a triangle soup with pseudo-random integer coordinates in [0, range): exactly representable, so the tree is the same on all platforms;
+/// farOutlier moves the first vertex far away, which puts almost all centers in one bucket
+Mesh makeIntegerSoup( int numTris, int range, bool farOutlier )
+{
+    VertCoords points;
+    Triangulation t;
+    std::uint32_t s = 1;
+    const auto next = [&]
+    {
+        s = s * 1664525u + 1013904223u;
+        return float( ( s >> 8 ) % std::uint32_t( range ) );
+    };
+    for ( int f = 0; f < numTris; ++f )
+    {
+        const VertId v0( points.size() );
+        for ( int n = 0; n < 3; ++n )
+        {
+            const float x = next(), y = next(), z = next();
+            points.push_back( { x, y, z } );
+        }
+        t.push_back( { v0, v0 + 1, v0 + 2 } );
+    }
+    if ( farOutlier )
+        points.front() = Vector3f::diagonal( 16777216.f );
+    return Mesh::fromTriangles( std::move( points ), t );
+}
+
+/// FNV-1a of the nodes, the leaf triangles and the leaf boxes of the tree
+std::uint64_t treeHash( const AABBTree & tree )
+{
+    std::uint64_t h = 14695981039346656037ull;
+    const auto add = [&h]( std::uint32_t x )
+    {
+        for ( int k = 0; k < 4; ++k )
+        {
+            h ^= ( x >> ( 8 * k ) ) & 0xff;
+            h *= 1099511628211ull;
+        }
+    };
+    const auto addBox = [&add]( const Box3f & b )
+    {
+        for ( int k = 0; k < 3; ++k )
+        {
+            add( bit_cast<std::uint32_t>( b.min[k] ) );
+            add( bit_cast<std::uint32_t>( b.max[k] ) );
+        }
+    };
+    for ( const auto & n : tree.nodes() )
+    {
+        addBox( n.box );
+        add( std::uint32_t( n.first ) );
+        add( std::uint32_t( n.count ) );
+    }
+    for ( const auto & lt : tree.leafTris() )
+    {
+        add( std::uint32_t( int( lt.face ) ) );
+        for ( auto v : lt.verts )
+            add( std::uint32_t( int( v ) ) );
+    }
+    for ( const auto & b : tree.leafBoxes() )
+        addBox( b );
+    return h;
+}
+
+} //anonymous namespace
+
+// the trees of meshes with exactly representable coordinates are pinned by their hashes, the same as the tree maker before ML#7479 gave:
+// small ranges, many equal centers, almost all centers in one bucket (split again in parallel for 150000 triangles), the parallel splits
+TEST( MRMesh, AABBTreeGoldenHashes )
+{
+    struct Case { int numTris, range; bool farOutlier; std::uint64_t hash; };
+    const Case cases[] = {
+        { 1000, 1 << 20, false, 0x34b0ae3e1963543dull },
+        { 20000, 4, false, 0x35cd81ed6d39cd05ull },
+        { 150000, 1024, true, 0xb4c853ba04bdc510ull },
+        { 300000, 1 << 16, false, 0x0cc9a28f326dd6dcull }
+    };
+    for ( const auto & c : cases )
+        EXPECT_EQ( treeHash( AABBTree( makeIntegerSoup( c.numTris, c.range, c.farOutlier ) ) ), c.hash ) << c.numTris << " triangles";
+}
+
+// a big mesh, whose top ranges are split in parallel, gives the same tree on one thread
+TEST( MRMesh, AABBTreeSameOnOneThread )
+{
+    const Mesh mesh = makeUVSphere( 1.f, 400, 200 ); // 160000 triangles: at least 2^17 for the parallel splits
+    const AABBTree all( mesh );
+    std::optional<AABBTree> one;
+    tbb::task_arena( 1 ).execute( [&] { one.emplace( mesh ); } );
+    ASSERT_EQ( all.nodes().size(), one->nodes().size() );
+    for ( NodeId n( 0 ); n < all.nodes().size(); ++n )
+    {
+        const auto & a = all.nodes()[n];
+        const auto & b = one->nodes()[n];
+        ASSERT_TRUE( a.box == b.box && a.first == b.first && a.count == b.count ) << "node " << int( n );
+    }
+    ASSERT_EQ( all.leafTris().size(), one->leafTris().size() );
+    for ( size_t i = 0; i < all.leafTris().size(); ++i )
+    {
+        const auto & a = all.leafTris()[i];
+        const auto & b = one->leafTris()[i];
+        ASSERT_TRUE( a.face == b.face && a.verts == b.verts && all.leafBoxes()[i] == one->leafBoxes()[i] ) << "leaf " << i;
+    }
 }
 
 } //namespace MR

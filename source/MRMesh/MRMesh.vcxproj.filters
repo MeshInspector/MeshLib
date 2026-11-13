@@ -1173,6 +1173,12 @@
     <ClInclude Include="MRAABBTreeMaker.hpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
+    <ClInclude Include="MRAABBTreeCenters.hpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRTriBox.hpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
     <ClInclude Include="MRLevelOfDetails.h">
       <Filter>Source Files\Decimation</Filter>
     </ClInclude>
@@ -1578,6 +1584,9 @@
       <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRAABBTree.cpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAABBTreeCenters.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshDistance.cpp">

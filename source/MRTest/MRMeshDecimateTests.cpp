@@ -427,6 +427,33 @@ TEST( MRMesh, MeshDecimateOtherEnd )
     EXPECT_EQ( mesh.points[3_v], points[3_v] );
 }
 
+TEST( MRMesh, DecimateTinyEdgeFixedVertex )
+{
+    // tiny edge 0-1 cannot collapse, because both its ends are connected with vertex 3;
+    // so vertex 2 of degree 3 inside triangle 0-1-3 is deleted instead, unless it is fixed or its edges cannot be collapsed
+    const Mesh mesh0 = Mesh::fromTriangles( { { 0, 0, 0 }, { 0.01f, 0, 0 }, { 0.005f, 0.3f, 0 }, { 0.005f, 1, 0 }, { 0.005f, -1, 0 } },
+        { { 0_v, 1_v, 2_v }, { 1_v, 3_v, 2_v }, { 3_v, 0_v, 2_v }, { 1_v, 0_v, 4_v } } );
+    auto keeps2 = [&]( DecimateSettings settings )
+    {
+        Mesh mesh = mesh0;
+        settings.strategy = DecimateStrategy::ShortestEdgeFirst;
+        settings.maxError = 0.05f;
+        settings.tinyEdgeLength = 0.02f;
+        settings.optimizeVertexPos = false;
+        decimateMesh( mesh, settings );
+        return mesh.topology.hasVert( 2_v );
+    };
+    EXPECT_FALSE( keeps2( {} ) );
+
+    VertBitSet fixed( 5 );
+    fixed.set( 2_v );
+    EXPECT_TRUE( keeps2( { .touchBdVerts = false, .bdVerts = &fixed } ) );
+
+    UndirectedEdgeBitSet edges( mesh0.topology.undirectedEdgeSize() );
+    edges.set( mesh0.topology.findEdge( 0_v, 1_v ).undirected() );
+    EXPECT_TRUE( keeps2( { .edgesToCollapse = &edges } ) );
+}
+
 TEST( MRMesh, DecimateObjectMeshDataShortAttributes )
 {
     const Mesh original = makeSphere( { .numMeshVertices = 400 } );

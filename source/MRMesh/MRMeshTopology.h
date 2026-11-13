@@ -170,7 +170,7 @@ public:
 
     /// gets 3 vertices of the left face ( face-id may not exist, but the shape must be triangular)
     /// the vertices are returned in counter-clockwise order if look from mesh outside: v0 = org( a ), v1 = dest( a )
-    MR_BIND_OVERLOAD_SUFFIX(outVerts) MRMESH_API     void getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const;
+    MR_BIND_OVERLOAD_SUFFIX(outVerts)                void getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const;
     MR_BIND_IGNORE void getLeftTriVerts( EdgeId a, VertId (&v)[3] ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); } // This one is not in the bindings because of the reference-to-array parameter.
                    MR_BIND_OVERLOAD_SUFFIX(outArray) void getLeftTriVerts( EdgeId a, ThreeVertIds & v ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); }
     MR_BIND_OVERLOAD_SUFFIX() [[nodiscard]] ThreeVertIds getLeftTriVerts( EdgeId a ) const { ThreeVertIds v; getLeftTriVerts( a, v[0], v[1], v[2] ); return v; }
@@ -644,6 +644,17 @@ private:
 
     bool updateValids_ = true; ///< if false, validVerts_, validFaces_, numValidVerts_, numValidFaces_ are not updated
 };
+
+inline void MeshTopology::getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const
+{
+    assert( isLeftTri( a ) );
+    v0 = org( a );
+    EdgeId b = prev( a.sym() );
+    v1 = org( b );
+    // same as org( prev( b.sym() ) ), but reads only b's sibling record (typically in the same cache line as b's)
+    // instead of the record of the third edge, which is usually far away in memory
+    v2 = dest( b );
+}
 
 template <typename T>
 void MeshTopology::forEachVertex( const MeshTriPoint & p, T && callback ) const

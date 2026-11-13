@@ -6,6 +6,8 @@ on:
       release_tag:
         description: 'Tag to build Windows Release from'
         required: true
+  release:
+    types: [ published ]
 
 permissions:
   contents: write

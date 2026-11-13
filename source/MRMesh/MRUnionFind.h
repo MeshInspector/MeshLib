@@ -4,6 +4,7 @@
 #include "MRTimer.h"
 #include "MRId.h"
 #include <atomic>
+#include <limits>
 #include <utility>
 
 namespace MR
@@ -35,10 +36,14 @@ public:
     void reset( size_t size )
     {
         MR_TIMER;
+        if constexpr ( sizeof( SizeType ) < sizeof( size_t ) )
+            assert( size <= size_t( std::numeric_limits<SizeType>::max() ) ); // otherwise I( i ) below would wrap
+        // resize without value-initialization: every element is written in the loop right below
         parents_.clear();
-        parents_.reserve( size );
-        for ( I i{ size_t( 0 ) }; i < size; ++i )
-            parents_.push_back( i );
+        parents_.resizeNoInit( size );
+        I * const p = parents_.data();
+        for ( size_t i = 0; i < size; ++i )
+            p[i] = I( i );
     }
 
     /// adds new element in its own disjoint set, returns its identifier

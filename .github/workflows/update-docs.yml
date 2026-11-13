@@ -93,46 +93,48 @@ jobs:
           name: WasmBindingsDts
           path: MeshLib/scripts/npm/meshlib
 
-      - name: Download Rust bindings
+      # Their generated sources come from the generate-c-bindings job, which every caller runs.
+      - name: Download Rust and Java bindings
         uses: actions/download-artifact@v8
         continue-on-error: true
         with:
-          name: RustBindings
-          path: MeshLib/RustBindings
+          name: BindingsSources
+          path: MeshLib/BindingsSourcesTmp
 
-      - name: Download Java bindings
-        uses: actions/download-artifact@v8
-        continue-on-error: true
-        with:
-          name: JavaBindings
-          path: MeshLib/JavaBindings
+      - name: Prepare Rust and Java bindings folders
+        run: |
+          mv MeshLib/BindingsSourcesTmp/MeshLibRust/src MeshLib/RustBindings
+          mv MeshLib/BindingsSourcesTmp/MeshLibJava MeshLib/JavaBindings
 
       - name: Check for bindings
         id: check_bindings
+        env:
+          # A release must not skip its documentation silently.
+          FAIL: ${{ inputs.version != '' && 1 || 0 }}
         run: |
           if [ ! -d MeshLib/scripts/wheel/meshlib/meshlib ]; then
             echo "Failed to get Python stub files, aborting"
-            exit 0
+            exit $FAIL
           fi
           if [ ! -d MeshLib/Cbindings ]; then
             echo "Failed to get C bindings headers, aborting"
-            exit 0
+            exit $FAIL
           fi
           if [ ! -d MeshLib/CsharpBindings ]; then
             echo "Failed to get C# bindings, aborting"
-            exit 0
+            exit $FAIL
           fi
           if [ ! -f MeshLib/scripts/npm/meshlib/bindings.d.mts ]; then
             echo "Failed to get Wasm definitions, aborting"
-            exit 0
+            exit $FAIL
           fi
           if [ ! -f MeshLib/RustBindings/lib.rs ]; then
             echo "Failed to get Rust bindings, aborting"
-            exit 0
+            exit $FAIL
           fi
           if [ ! -d MeshLib/JavaBindings/src ]; then
             echo "Failed to get Java bindings, aborting"
-            exit 0
+            exit $FAIL
           fi
           echo "all_bindings=true" >> $GITHUB_OUTPUT
 

@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 
 #if defined(__x86_64__) || defined(_M_X64)
@@ -22,6 +23,7 @@ namespace MR
 Box3f includeCenters( Box3f box, const TreeCenter * d, int num )
 {
     // the lanes of a center are the bits of its index (ignored), x, y, z; two pairs of boxes for the processor to include two centers at once
+    static_assert( offsetof( TreeCenter, c ) == 4 );
 #if defined(__x86_64__) || defined(_M_X64)
     // min( v, box ) = v < box ? v : box skips a NaN in v as Box::include does
     __m128 lo0 = _mm_set_ps( box.min.z, box.min.y, box.min.x, 0 ), hi0 = _mm_set_ps( box.max.z, box.max.y, box.max.x, 0 );
@@ -29,32 +31,32 @@ Box3f includeCenters( Box3f box, const TreeCenter * d, int num )
     int i = 0;
     for ( ; i + 2 <= num; i += 2 )
     {
-        const __m128 a = _mm_loadu_ps( &d[i].c.x - 1 ), b = _mm_loadu_ps( &d[i + 1].c.x - 1 );
+        const __m128 a = _mm_loadu_ps( (const float *)( d + i ) ), b = _mm_loadu_ps( (const float *)( d + i + 1 ) );
         lo0 = _mm_min_ps( a, lo0 ); hi0 = _mm_max_ps( a, hi0 );
         lo1 = _mm_min_ps( b, lo1 ); hi1 = _mm_max_ps( b, hi1 );
     }
     if ( i < num )
     {
-        const __m128 a = _mm_loadu_ps( &d[i].c.x - 1 );
+        const __m128 a = _mm_loadu_ps( (const float *)( d + i ) );
         lo0 = _mm_min_ps( a, lo0 ); hi0 = _mm_max_ps( a, hi0 );
     }
     alignas( 16 ) float lo[4], hi[4];
     _mm_store_ps( lo, _mm_min_ps( lo0, lo1 ) );
     _mm_store_ps( hi, _mm_max_ps( hi0, hi1 ) );
 #elif defined(__aarch64__) || defined(_M_ARM64)
-    // minNum and maxNum skip a NaN as Box::include does
+    // minNum and maxNum skip a quiet NaN as Box::include does (computed centers are never signaling NaNs)
     float lo[4] = { 0, box.min.x, box.min.y, box.min.z }, hi[4] = { 0, box.max.x, box.max.y, box.max.z };
     float32x4_t lo0 = vld1q_f32( lo ), hi0 = vld1q_f32( hi ), lo1 = lo0, hi1 = hi0;
     int i = 0;
     for ( ; i + 2 <= num; i += 2 )
     {
-        const float32x4_t a = vld1q_f32( &d[i].c.x - 1 ), b = vld1q_f32( &d[i + 1].c.x - 1 );
+        const float32x4_t a = vld1q_f32( (const float *)( d + i ) ), b = vld1q_f32( (const float *)( d + i + 1 ) );
         lo0 = vminnmq_f32( lo0, a ); hi0 = vmaxnmq_f32( hi0, a );
         lo1 = vminnmq_f32( lo1, b ); hi1 = vmaxnmq_f32( hi1, b );
     }
     if ( i < num )
     {
-        const float32x4_t a = vld1q_f32( &d[i].c.x - 1 );
+        const float32x4_t a = vld1q_f32( (const float *)( d + i ) );
         lo0 = vminnmq_f32( lo0, a ); hi0 = vmaxnmq_f32( hi0, a );
     }
     vst1q_f32( lo, vminnmq_f32( lo0, lo1 ) );
@@ -66,13 +68,13 @@ Box3f includeCenters( Box3f box, const TreeCenter * d, int num )
     int i = 0;
     for ( ; i + 2 <= num; i += 2 )
     {
-        const v128_t a = wasm_v128_load( &d[i].c.x - 1 ), b = wasm_v128_load( &d[i + 1].c.x - 1 );
+        const v128_t a = wasm_v128_load( (const float *)( d + i ) ), b = wasm_v128_load( (const float *)( d + i + 1 ) );
         lo0 = wasm_f32x4_pmin( lo0, a ); hi0 = wasm_f32x4_pmax( hi0, a );
         lo1 = wasm_f32x4_pmin( lo1, b ); hi1 = wasm_f32x4_pmax( hi1, b );
     }
     if ( i < num )
     {
-        const v128_t a = wasm_v128_load( &d[i].c.x - 1 );
+        const v128_t a = wasm_v128_load( (const float *)( d + i ) );
         lo0 = wasm_f32x4_pmin( lo0, a ); hi0 = wasm_f32x4_pmax( hi0, a );
     }
     wasm_v128_store( lo, wasm_f32x4_pmin( lo0, lo1 ) );
@@ -147,7 +149,7 @@ TreeCenter * partition( TreeCenter * l, TreeCenter * r, const TreeCenter & p, Ce
         if ( nR == 0 )
             r -= B;
     }
-    // at most three blocks are left
+    // at most two blocks are left
     for ( TreeCenter * i = l; i != r; ++i )
     {
         const bool lt = less( *i, p );
@@ -268,7 +270,11 @@ void selectCenter( TreeCenter * first, TreeCenter * nth, TreeCenter * last, int 
     sortSmall( first, int( last - first ), axis );
 }
 
-bool splitCentersByBuckets( const TreeCenter * src, TreeCenter * dst, int num, int axis, float lo, float hi, int chunkSize )
+namespace
+{
+
+/// splitCentersByBuckets for the center of order nth; depth counts the buckets split again
+bool splitByBuckets( TreeCenter * src, TreeCenter * dst, int num, int nth, int axis, float lo, float hi, int chunkSize, int depth )
 {
     constexpr int K = 256;
     const float scale = float( K ) / ( hi - lo );
@@ -276,8 +282,7 @@ bool splitCentersByBuckets( const TreeCenter * src, TreeCenter * dst, int num, i
         return false;
     // the buckets of the centers do not decrease along the axis
     const auto bucket = [lo, scale, axis]( const TreeCenter & x ) { const float t = ( x.c[axis] - lo ) * scale; return t < float( K ) ? int( t ) : K - 1; };
-    const int mid = num / 2;
-    const int numChunks = ( num + chunkSize - 1 ) / chunkSize;
+    const int numChunks = 1 + ( num - 1 ) / chunkSize;
     Vector<int> hists( size_t( numChunks ) * K );
     ParallelFor( 0, numChunks, [&]( int ch )
     {
@@ -305,7 +310,7 @@ bool splitCentersByBuckets( const TreeCenter * src, TreeCenter * dst, int num, i
         numMed = 0;
         for ( int ch = 0; ch < numChunks; ++ch )
             numMed += hists[size_t( ch ) * K + mb];
-        if ( numLess + numMed > mid )
+        if ( numLess + numMed > nth )
             break;
         numLess += numMed;
     }
@@ -343,8 +348,43 @@ bool splitCentersByBuckets( const TreeCenter * src, TreeCenter * dst, int num, i
             pm += !isL & !isG;
         }
     } );
-    selectCenter( dst + numLess, dst + mid, dst + numLess + numMed, axis );
+
+    TreeCenter * const med = dst + numLess;
+    const int medNth = nth - numLess;
+    // a bucket with most of the centers (e.g. all but a far outlier) is split again by its own buckets, in parallel unlike selectCenter;
+    // the positions of the moved centers in src are free
+    if ( depth < 4 && numMed >= 1024 && numMed > num / 8 )
+    {
+        const int medChunks = 1 + ( numMed - 1 ) / chunkSize;
+        Vector<Box3f, int> boxes( medChunks );
+        ParallelFor( 0, medChunks, [&]( int ch )
+        {
+            const int b = ch * chunkSize;
+            boxes[ch] = includeCenters( Box3f(), med + b, std::min( numMed - b, chunkSize ) );
+        } );
+        Box3f box;
+        for ( const auto & b : boxes )
+            box.include( b );
+        TreeCenter * const tmp = src + numLess;
+        if ( splitByBuckets( med, tmp, numMed, medNth, axis, box.min[axis], box.max[axis], chunkSize, depth + 1 ) )
+        {
+            ParallelFor( 0, medChunks, [&]( int ch )
+            {
+                const int b = ch * chunkSize;
+                std::copy( tmp + b, tmp + std::min( numMed, b + chunkSize ), med + b );
+            } );
+            return true;
+        }
+    }
+    selectCenter( med, med + medNth, med + numMed, axis );
     return true;
+}
+
+} //anonymous namespace
+
+bool splitCentersByBuckets( TreeCenter * src, TreeCenter * dst, int num, int axis, float lo, float hi, int chunkSize )
+{
+    return splitByBuckets( src, dst, num, num / 2, axis, lo, hi, chunkSize, 0 );
 }
 
 } //namespace MR

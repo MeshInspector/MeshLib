@@ -56,6 +56,7 @@ Buffer<BoxedTri> makeBoxedTris( const MeshPart & mp, Buffer<TreeCenter> & center
         const FaceId f = packed ? FaceId( i ) : bt.tri.face;
         // topology.getTriVerts( f ) inlined
         const EdgeId a = topology.edgeWithLeft( f );
+        assert( topology.isLeftTri( a ) );
         const EdgeId b = topology.prev( a.sym() );
         bt.tri = { f, { topology.org( a ), topology.org( b ), topology.dest( b ) } };
         bt.box = wideTriBox( mp.mesh, bt.tri );
@@ -161,6 +162,7 @@ private:
         if ( num <= AABBTree::MaxLeafTris )
         {
             // the triangles of a leaf in the order of their indices
+            static_assert( AABBTree::MaxLeafTris <= 4, "the sorting network below is for up to 4 triangles" );
             TreeCenter * const leaf = data_( c.r );
             const auto cs = [leaf]( int x, int y ) { if ( leaf[y].i < leaf[x].i ) std::swap( leaf[x], leaf[y] ); };
             switch ( num )

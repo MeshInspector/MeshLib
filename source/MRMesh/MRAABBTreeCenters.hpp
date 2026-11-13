@@ -25,8 +25,9 @@ void selectCenter( TreeCenter * first, TreeCenter * nth, TreeCenter * last, int 
 
 /// places the centers src[0..num) to dst[0..num) so that the first num / 2 of them are the smaller ones along the axis, as selectCenter does in place:
 /// the centers are counted in buckets between lo and hi (their minimal and maximal coordinates), one pass moves the centers of the smaller buckets,
-/// of the median's bucket and of the bigger buckets to their parts of dst, and only the median's bucket is left to select in;
+/// of the median's bucket and of the bigger buckets to their parts of dst, and only the median's bucket is left to select in
+/// (or to split by its own buckets if it holds most of the centers); src is overwritten as scratch;
 /// the counting and the moving are done by chunks of chunkSize centers in parallel; returns false and writes nothing if the buckets cannot be made
-[[nodiscard]] bool splitCentersByBuckets( const TreeCenter * src, TreeCenter * dst, int num, int axis, float lo, float hi, int chunkSize );
+[[nodiscard]] bool splitCentersByBuckets( TreeCenter * src, TreeCenter * dst, int num, int axis, float lo, float hi, int chunkSize );
 
 } //namespace MR

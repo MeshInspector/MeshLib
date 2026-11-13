@@ -10,9 +10,14 @@
 #include <MRMesh/MRMatrix3.h>
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRBuffer.h>
+#include <MRMesh/MRBitCast.h>
 #include <gtest/gtest.h>
 #include <MRPch/MRTBB.h>
 #include <algorithm>
+#include <cstring>
+#include <iterator>
+#include <limits>
+#include <optional>
 
 namespace MR
 {
@@ -279,6 +284,70 @@ TEST(MRMesh, AABBTreeCopyDuringConstruction)
     tasks.run( [&] { mesh.getAABBTree(); } ); // construct the tree
     tasks.run( [&] { Mesh( mesh ).getAABBTree(); } ); // copy the mesh, then construct the tree for it
     tasks.wait();
+}
+
+// the leaf box of every triangle is the same as by Box::include and insignificantlyExpanded, also for zeros, denormals, extreme and non-finite coordinates
+TEST( MRMesh, AABBTreeLeafBoxesOfSpecialValues )
+{
+    const float values[] = { 0.f, -0.f, std::numeric_limits<float>::denorm_min(), -std::numeric_limits<float>::denorm_min(), 1.f, -1.f,
+        std::numeric_limits<float>::max(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity(),
+        std::numeric_limits<float>::quiet_NaN(), bit_cast<float>( 0x7f800001u ) }; // the last one is a signaling NaN
+    constexpr int numValues = int( std::size( values ) );
+    VertCoords points;
+    Triangulation t;
+    for ( int axis = 0; axis < 3; ++axis )
+        for ( int i = 0; i < numValues; ++i )
+            for ( int j = 0; j < numValues; ++j )
+                for ( int k = 0; k < numValues; ++k )
+                {
+                    const float vs[3] = { values[i], values[j], values[k] };
+                    if ( std::find( vs, vs + 3, values[8] ) != vs + 3 && std::find( vs, vs + 3, values[9] ) != vs + 3 )
+                        continue; // +inf and -inf together make the center of the box NaN
+                    const VertId v0( points.size() );
+                    for ( int n = 0; n < 3; ++n )
+                    {
+                        Vector3f p{ float( n ), float( i ), float( j ) };
+                        p[axis] = vs[n];
+                        points.push_back( p );
+                    }
+                    t.push_back( { v0, v0 + 1, v0 + 2 } );
+                }
+    const Mesh mesh = Mesh::fromTriangles( std::move( points ), t );
+    const AABBTree tree( mesh );
+    ASSERT_EQ( tree.leafTris().size(), t.size() );
+    for ( size_t n = 0; n < tree.leafTris().size(); ++n )
+    {
+        const auto & lt = tree.leafTris()[n];
+        Box3f box;
+        for ( auto v : lt.verts )
+            box.include( mesh.points[v] );
+        const Box3f expected = box.insignificantlyExpanded();
+        // compares the bits, NaN included
+        EXPECT_EQ( std::memcmp( &expected, &tree.leafBoxes()[n], sizeof( Box3f ) ), 0 ) << "face " << int( lt.face );
+    }
+}
+
+// a big mesh, whose top ranges are split in parallel, gives the same tree on one thread
+TEST( MRMesh, AABBTreeSameOnOneThread )
+{
+    const Mesh mesh = makeUVSphere( 1.f, 400, 200 ); // 160000 triangles: at least 2^17 for the parallel splits
+    const AABBTree all( mesh );
+    std::optional<AABBTree> one;
+    tbb::task_arena( 1 ).execute( [&] { one.emplace( mesh ); } );
+    ASSERT_EQ( all.nodes().size(), one->nodes().size() );
+    for ( NodeId n( 0 ); n < all.nodes().size(); ++n )
+    {
+        const auto & a = all.nodes()[n];
+        const auto & b = one->nodes()[n];
+        EXPECT_TRUE( a.box == b.box && a.first == b.first && a.count == b.count ) << "node " << int( n );
+    }
+    ASSERT_EQ( all.leafTris().size(), one->leafTris().size() );
+    for ( size_t i = 0; i < all.leafTris().size(); ++i )
+    {
+        EXPECT_EQ( all.leafTris()[i].face, one->leafTris()[i].face );
+        EXPECT_EQ( all.leafTris()[i].verts, one->leafTris()[i].verts );
+        EXPECT_EQ( all.leafBoxes()[i], one->leafBoxes()[i] );
+    }
 }
 
 } //namespace MR

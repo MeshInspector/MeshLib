@@ -19,7 +19,7 @@ inline Box3f insignificantlyExpandedTriBox( const Vector3f & a, const Vector3f &
 {
 #if defined(__x86_64__) || defined(_M_X64)
     // the lanes of a point: x, y, z, z
-    const auto load = []( const Vector3f & p ) { return _mm_movelh_ps( _mm_castpd_ps( _mm_load_sd( (const double *)&p.x ) ), _mm_load1_ps( &p.z ) ); };
+    const auto load = []( const Vector3f & p ) { return _mm_movelh_ps( _mm_castsi128_ps( _mm_loadl_epi64( (const __m128i *)&p.x ) ), _mm_load1_ps( &p.z ) ); };
     const __m128 va = load( a ), vb = load( b ), vc = load( c );
     // a NaN in b or c is skipped as by Box::include, and a NaN in a leads to the scalar code below
     const __m128i lo = _mm_castps_si128( _mm_min_ps( vc, _mm_min_ps( vb, va ) ) );
@@ -40,9 +40,9 @@ inline Box3f insignificantlyExpandedTriBox( const Vector3f & a, const Vector3f &
 #elif defined(__aarch64__) || defined(_M_ARM64)
     const auto load = []( const Vector3f & p ) { return vcombine_f32( vld1_f32( &p.x ), vld1_dup_f32( &p.z ) ); };
     const float32x4_t va = load( a ), vb = load( b ), vc = load( c );
-    // minNum and maxNum skip a NaN as Box::include does
-    const uint32x4_t lo = vreinterpretq_u32_f32( vminnmq_f32( vminnmq_f32( va, vb ), vc ) );
-    const uint32x4_t hi = vreinterpretq_u32_f32( vmaxnmq_f32( vmaxnmq_f32( va, vb ), vc ) );
+    // any NaN, quiet or signaling, in a, b or c makes the lane NaN and leads to the scalar code below
+    const uint32x4_t lo = vreinterpretq_u32_f32( vminq_f32( vminq_f32( va, vb ), vc ) );
+    const uint32x4_t hi = vreinterpretq_u32_f32( vmaxq_f32( vmaxq_f32( va, vb ), vc ) );
     const uint32x4_t one = vdupq_n_u32( 1 );
     const uint32x4_t absMask = vdupq_n_u32( 0x7fffffff );
     const uint32x4_t limit = vdupq_n_u32( 0x7f7fffffu - 1 );

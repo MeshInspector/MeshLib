@@ -1038,6 +1038,9 @@
     <ClInclude Include="MRPointToPointAligningTransform.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRFeatureAlignment.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
     <ClInclude Include="MRRigidXfRansac.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
@@ -2121,6 +2124,9 @@
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRPointToPointAligningTransform.cpp">
+      <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFeatureAlignment.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRRigidXfRansac.cpp">

@@ -546,6 +546,50 @@ TEST( MRMesh, RemeshKeepsSharpEdges )
     EXPECT_LT( maxDist, rs.targetEdgeLen );
 }
 
+TEST( MRMesh, RemeshKeepsBoundary )
+{
+    // wavy square plate; an edge with one boundary end used to collapse in its inner end after the collapse in the boundary end failed,
+    // pulling the boundary inside the square
+    const int n = 40;
+    VertCoords points;
+    for ( int j = 0; j <= n; ++j )
+        for ( int i = 0; i <= n; ++i )
+        {
+            const float x = float( i ) / n, y = float( j ) / n;
+            points.push_back( { x, y, 0.1f * std::sin( 3 * x + 2 * y ) } );
+        }
+    Triangulation t;
+    for ( int j = 0; j < n; ++j )
+        for ( int i = 0; i < n; ++i )
+        {
+            const VertId a( j * ( n + 1 ) + i ), b( a + 1 ), c( a + n + 1 ), d( c + 1 );
+            const bool odd = ( i + j ) % 2 != 0;
+            t.push_back( { a, b, odd ? d : c } );
+            t.push_back( { odd ? a : b, d, c } );
+        }
+    const Mesh plate = Mesh::fromTriangles( std::move( points ), t );
+    const auto len = plate.averageEdgeLength();
+    auto check = [&]( const Mesh & mesh )
+    {
+        EXPECT_LT( mesh.topology.numValidFaces(), plate.topology.numValidFaces() / 4 );
+        float maxDist = 0; // from the square's sides
+        for ( auto v : getBoundaryVerts( mesh.topology ) )
+        {
+            const auto p = mesh.points[v];
+            maxDist = std::max( maxDist, std::min( { p.x, 1 - p.x, p.y, 1 - p.y } ) );
+        }
+        EXPECT_LT( maxDist, 0.05f * len ); // up to 2 * len before
+    };
+
+    Mesh mesh = plate;
+    remesh( mesh, { .targetEdgeLen = 3 * len } );
+    check( mesh );
+
+    mesh = plate;
+    decimateMesh( mesh, { .strategy = DecimateStrategy::ShortestEdgeFirst, .maxError = 3 * len } );
+    check( mesh );
+}
+
 TEST( MRMesh, MeshDecimateNoFold )
 {
     // box [0,1]x[0,1]x[0,2] with tiny top triangle (c,a,b) at the corner (0,0,2);

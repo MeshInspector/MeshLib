@@ -483,7 +483,16 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, EdgeOp op,
     if ( settings_.touchBdVerts // if boundary vertices can be moved ...
         || ( settings_.notFlippable && settings_.notFlippable->test( ue ) ) ) // ... or this is a not-flippable edge (if you do not want such collapses then exclude it from settings_.edgesToCollapse)
     {
-        std::tie( qf, pos ) = sum( vo, po, vd, pd, op != EdgeOp::CollapseOptPos );
+        const bool bdO = op != EdgeOp::CollapseOptPos && mesh_.topology.isBdVertex( o, settings_.region );
+        if ( op != EdgeOp::CollapseOptPos && bdO != mesh_.topology.isBdVertex( d, settings_.region ) )
+        {
+            // only one end is on the boundary: the edge collapses in it, not to pull the boundary inside
+            if ( op == EdgeOp::CollapseOtherEnd )
+                return {};
+            qf = sumAt( vo, po, vd, pd, pos = bdO ? po : pd );
+        }
+        else
+            std::tie( qf, pos ) = sum( vo, po, vd, pd, op != EdgeOp::CollapseOptPos );
     }
     else
     {

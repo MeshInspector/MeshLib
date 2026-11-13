@@ -278,7 +278,7 @@ bool splitCentersByBuckets( const TreeCenter * src, TreeCenter * dst, int num, i
     const auto bucket = [lo, scale, axis]( const TreeCenter & x ) { const float t = ( x.c[axis] - lo ) * scale; return t < float( K ) ? int( t ) : K - 1; };
     const int mid = num / 2;
     const int numChunks = ( num + chunkSize - 1 ) / chunkSize;
-    Vector<int, size_t> hists( size_t( numChunks ) * K );
+    Vector<int> hists( size_t( numChunks ) * K );
     ParallelFor( 0, numChunks, [&]( int ch )
     {
         // several counts for the processor to count several centers at once: neighbor centers are often in the same bucket

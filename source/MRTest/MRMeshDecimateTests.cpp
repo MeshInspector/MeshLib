@@ -3,6 +3,7 @@
 #include <MRMesh/MRCylinder.h>
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRCube.h>
+#include <MRMesh/MRTorus.h>
 #include <MRMesh/MREdgeIterator.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBuffer.h>
@@ -425,6 +426,47 @@ TEST( MRMesh, MeshDecimateOtherEnd )
     EXPECT_EQ( res.vertsDeleted, 1 );
     EXPECT_FALSE( mesh.topology.hasVert( 2_v ) );
     EXPECT_EQ( mesh.points[3_v], points[3_v] );
+}
+
+TEST( MRMesh, DecimateFixedBoundary )
+{
+    // half of a torus, whose two boundary circles shall stay unchanged
+    const Mesh mesh0 = []
+    {
+        Mesh m = makeTorus( 1.0f, 0.3f, 64, 16 );
+        FaceBitSet half( m.topology.faceSize() );
+        for ( auto f : m.topology.getValidFaces() )
+            if ( m.triCenter( f ).x < 0 )
+                half.set( f );
+        m.topology.deleteFaces( half );
+        return m;
+    }();
+    auto bdVerts = getBoundaryVerts( mesh0.topology );
+    const auto len = mesh0.averageEdgeLength();
+    auto expectFixedBd = [&]( const Mesh & mesh )
+    {
+        int changed = 0;
+        for ( auto v : bdVerts )
+            if ( !mesh.topology.hasVert( v ) || !mesh.topology.isBdVertex( v ) || mesh.points[v] != mesh0.points[v] )
+                ++changed;
+        EXPECT_EQ( changed, 0 );
+    };
+
+    Mesh mesh = mesh0;
+    remesh( mesh, { .targetEdgeLen = 3 * len, .frozenBoundary = true } );
+    expectFixedBd( mesh );
+
+    for ( auto strategy : { DecimateStrategy::MinimizeError, DecimateStrategy::ShortestEdgeFirst } )
+        for ( int parts : { 1, 8 } )
+            for ( auto givenBd : { (VertBitSet*)nullptr, &bdVerts } )
+            {
+                SCOPED_TRACE( testing::Message() << "strategy " << int( strategy ) << ", parts " << parts << ", bdVerts " << ( givenBd != nullptr ) );
+                mesh = mesh0;
+                const auto res = decimateMesh( mesh, { .strategy = strategy, .maxError = strategy == DecimateStrategy::MinimizeError ? 0.01f : 3 * len,
+                    .touchBdVerts = false, .bdVerts = givenBd, .subdivideParts = parts } );
+                EXPECT_GT( res.vertsDeleted, 0 );
+                expectFixedBd( mesh );
+            }
 }
 
 TEST( MRMesh, DecimateObjectMeshDataShortAttributes )

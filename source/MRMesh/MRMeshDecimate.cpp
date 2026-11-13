@@ -480,6 +480,7 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, EdgeOp op,
 
     QuadraticForm3f qf;
     Vector3f pos;
+    bool bdO = false, bdD = false; // fixed ends
     if ( settings_.touchBdVerts // if boundary vertices can be moved ...
         || ( settings_.notFlippable && settings_.notFlippable->test( ue ) ) ) // ... or this is a not-flippable edge (if you do not want such collapses then exclude it from settings_.edgesToCollapse)
     {
@@ -487,17 +488,14 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, EdgeOp op,
     }
     else
     {
-        const bool bdO = pBdVerts_->test( o );
-        const bool bdD = pBdVerts_->test( d );
+        bdO = pBdVerts_->test( o );
+        bdD = pBdVerts_->test( d );
         if ( ( bdO || bdD ) && op == EdgeOp::CollapseOtherEnd )
             return {}; // only one end can be kept, and the collapse in it failed
-        if ( bdO )
-        {
-            if ( bdD )
-                qf.c = FLT_MAX;
-            else
-                qf = sumAt( vo, po, vd, pd, pos = po );
-        }
+        if ( bdO && bdD )
+            qf.c = FLT_MAX;
+        else if ( bdO )
+            qf = sumAt( vo, po, vd, pd, pos = po );
         else if ( bdD )
             qf = sumAt( vo, po, vd, pd, pos = pd );
         else
@@ -511,12 +509,16 @@ auto MeshDecimator::computeQueueElement_( UndirectedEdgeId ue, EdgeOp op,
         if ( earlyReturn( qf.c ) )
             return res;
     }
+    if ( bdO && bdD )
+        return {}; // both ends are fixed, so the edge can only be flipped
 
     assert( res && res->x.edgeOp != EdgeOp::Flip );
     if ( settings_.adjustCollapse )
     {
         const auto pos0 = pos;
         settings_.adjustCollapse( ue, res->c, pos );
+        if ( bdO || bdD )
+            pos = pos0; // a fixed end keeps its position
         if ( res->c > maxErrorSq_ )
             return {};
         if ( outCollapseForm && pos != pos0 )
@@ -606,9 +608,9 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
     auto vd = topology.dest( edgeToCollapse );
     auto po = mesh_.points[vo];
     auto pd = mesh_.points[vd];
-    if ( collapsePos == pd )
+    if ( collapsePos == pd && ( po != pd || !pBdVerts_->test( vo ) ) )
     {
-        // reverse the edge to have its origin in remaining fixed vertex
+        // reverse the edge to have its origin in remaining fixed vertex (a zero-length edge is not reversed if its origin is fixed)
         edgeToCollapse = edgeToCollapse.sym();
         std::swap( vo, vd );
         std::swap( vl, vr );
@@ -985,7 +987,7 @@ DecimateResult MeshDecimator::run()
     else
     {
         pBdVerts_ = &myBdVerts_;
-        if ( !settings_.touchNearBdEdges )
+        if ( !( settings_.touchNearBdEdges && settings_.touchBdVerts ) )
             myBdVerts_ = getBoundaryVerts( mesh_.topology, settings_.region );
     }
 
@@ -1346,7 +1348,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     } );
 
     // the range of parts of the faces around a vertex or a face:
-    // lo = -1 if it has a face outside of all parts (or a hole or a face outside of region if !touchNearBdEdges), so it is fixed till the final decimation,
+    // lo = -1 if it has a face outside of all parts (or a hole or a face outside of region, or it is in bdVerts, if boundary vertices are fixed), so it is fixed till the final decimation,
     // hi = INT_MAX if it has no region faces around, so it cannot be deleted
     struct PartRange
     {
@@ -1358,19 +1360,20 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     // vertices on the boundaries of parts
     tbb::enumerable_thread_specific<Vector<VertId>> threadBdVerts;
 
-    // bdVerts: vertices with incident (region) faces from several parts, and if !touchNearBdEdges also on hole or region boundaries;
+    // bdVerts: vertices with incident (region) faces from several parts, and if boundary vertices are fixed also on hole or region boundaries and settings.bdVerts;
     // one pass for all parts instead of a whole-mesh pass per part; writing different VertBitSets by v is race-free
+    const bool fixBd = !( settings.touchNearBdEdges && settings.touchBdVerts );
     BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
     {
         PartRange r;
-        bool outside = false, inRegion = false;
+        bool outside = fixBd && settings.bdVerts && settings.bdVerts->test( v ), inRegion = false;
         for ( auto e : orgRing( mesh.topology, v ) )
         {
             const auto f = mesh.topology.left( e );
             const bool fInRegion = f && ( !settings.region || settings.region->test( f ) );
             if ( fInRegion )
                 inRegion = true;
-            else if ( !settings.touchNearBdEdges )
+            else if ( fixBd )
                 outside = true;
             if ( !f )
                 continue;
@@ -1930,6 +1933,14 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
         decs.maxBdShift = settings.maxBdShift;
         decs.region = settings.region;
         decs.notFlippable = settings.notFlippable;
+        UndirectedEdgeBitSet edgesToCollapse;
+        if ( settings.frozenBoundary && settings.notFlippable )
+        {
+            // a not-flippable edge collapses even with fixed ends, so such edges near the boundary are not collapsed
+            edgesToCollapse = getIncidentEdges( mesh.topology, mesh.topology.getFaceIds( settings.region ) );
+            edgesToCollapse -= *settings.notFlippable & getIncidentEdges( mesh.topology, getBoundaryVerts( mesh.topology, settings.region ) );
+            decs.edgesToCollapse = &edgesToCollapse;
+        }
         decs.packMesh = settings.packMesh;
         decs.progressCallback = subprogress( settings.progressCallback, 0.5f, 0.95f );
         decs.preCollapse = settings.preCollapse;

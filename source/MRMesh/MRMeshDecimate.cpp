@@ -1926,6 +1926,14 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
         decs.maxBdShift = settings.maxBdShift;
         decs.region = settings.region;
         decs.notFlippable = settings.notFlippable;
+        UndirectedEdgeBitSet edgesToCollapse;
+        if ( settings.frozenBoundary && settings.notFlippable )
+        {
+            // a not-flippable edge collapses even with fixed ends, so such edges near the boundary are not collapsed
+            edgesToCollapse = getIncidentEdges( mesh.topology, mesh.topology.getFaceIds( settings.region ) );
+            edgesToCollapse -= *settings.notFlippable & getIncidentEdges( mesh.topology, getBoundaryVerts( mesh.topology, settings.region ) );
+            decs.edgesToCollapse = &edgesToCollapse;
+        }
         decs.packMesh = settings.packMesh;
         decs.progressCallback = subprogress( settings.progressCallback, 0.5f, 0.95f );
         decs.preCollapse = settings.preCollapse;

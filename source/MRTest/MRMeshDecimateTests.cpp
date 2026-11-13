@@ -443,30 +443,49 @@ TEST( MRMesh, DecimateFixedBoundary )
     }();
     auto bdVerts = getBoundaryVerts( mesh0.topology );
     const auto len = mesh0.averageEdgeLength();
-    auto expectFixedBd = [&]( const Mesh & mesh )
+    auto expectFixed = [&]( const Mesh & mesh, const VertBitSet & fixed )
     {
         int changed = 0;
-        for ( auto v : bdVerts )
-            if ( !mesh.topology.hasVert( v ) || !mesh.topology.isBdVertex( v ) || mesh.points[v] != mesh0.points[v] )
+        for ( auto v : fixed )
+            if ( !mesh.topology.hasVert( v ) || mesh.points[v] != mesh0.points[v] )
                 ++changed;
         EXPECT_EQ( changed, 0 );
     };
 
     Mesh mesh = mesh0;
     remesh( mesh, { .targetEdgeLen = 3 * len, .frozenBoundary = true } );
-    expectFixedBd( mesh );
+    expectFixed( mesh, bdVerts );
 
-    for ( auto strategy : { DecimateStrategy::MinimizeError, DecimateStrategy::ShortestEdgeFirst } )
-        for ( int parts : { 1, 8 } )
-            for ( auto givenBd : { (VertBitSet*)nullptr, &bdVerts } )
-            {
-                SCOPED_TRACE( testing::Message() << "strategy " << int( strategy ) << ", parts " << parts << ", bdVerts " << ( givenBd != nullptr ) );
-                mesh = mesh0;
-                const auto res = decimateMesh( mesh, { .strategy = strategy, .maxError = strategy == DecimateStrategy::MinimizeError ? 0.01f : 3 * len,
-                    .touchBdVerts = false, .bdVerts = givenBd, .subdivideParts = parts } );
-                EXPECT_GT( res.vertsDeleted, 0 );
-                expectFixedBd( mesh );
-            }
+    // not-flippable edges near the boundary
+    mesh = mesh0;
+    auto notFlippable = getIncidentEdges( mesh0.topology, getIncidentFaces( mesh0.topology, bdVerts ) );
+    remesh( mesh, { .targetEdgeLen = 3 * len, .frozenBoundary = true, .notFlippable = &notFlippable } );
+    expectFixed( mesh, bdVerts );
+
+    // the boundary of the region is fixed as well
+    mesh = mesh0;
+    FaceBitSet region( mesh0.topology.faceSize() );
+    for ( auto f : mesh0.topology.getValidFaces() )
+        if ( mesh0.triCenter( f ).y > 0 )
+            region.set( f );
+    const auto regionBd = getBoundaryVerts( mesh0.topology, &region );
+    remesh( mesh, { .targetEdgeLen = 3 * len, .frozenBoundary = true, .region = &region } );
+    expectFixed( mesh, regionBd );
+
+    for ( auto [strategy, maxError] : { std::pair{ DecimateStrategy::MinimizeError, 0.01f }, std::pair{ DecimateStrategy::MinimizeError, FLT_MAX },
+        std::pair{ DecimateStrategy::ShortestEdgeFirst, 3 * len } } )
+        for ( bool touchNearBdEdges : { true, false } )
+            for ( int parts : { 1, 8 } )
+                for ( auto givenBd : { (VertBitSet*)nullptr, &bdVerts } )
+                {
+                    SCOPED_TRACE( testing::Message() << "strategy " << int( strategy ) << ", maxError " << maxError << ", touchNearBdEdges " << touchNearBdEdges
+                        << ", parts " << parts << ", bdVerts " << ( givenBd != nullptr ) );
+                    mesh = mesh0;
+                    const auto res = decimateMesh( mesh, { .strategy = strategy, .maxError = maxError, .maxDeletedFaces = mesh0.topology.numValidFaces() / 2,
+                        .touchNearBdEdges = touchNearBdEdges, .touchBdVerts = false, .bdVerts = givenBd, .subdivideParts = parts } );
+                    EXPECT_GT( res.vertsDeleted, 0 );
+                    expectFixed( mesh, bdVerts );
+                }
 }
 
 TEST( MRMesh, DecimateObjectMeshDataShortAttributes )

@@ -46,7 +46,8 @@ fn main()
     let out_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap()).join("lib");
     copy_libs(&libs, &out_dir);
     println!("cargo:rustc-link-search=native={}", out_dir.display());
-    if let Some(profile_dir) = out_dir.ancestors().nth(4) // target/<profile>/build/meshlib-<hash>/out/lib
+    // target/<profile>/build/meshlib-<hash>/out/lib, or target/<profile>/build/meshlib/<hash>/out/lib since Cargo 1.100
+    if let Some(profile_dir) = out_dir.ancestors().find(|p| p.file_name() == Some("build".as_ref())).and_then(Path::parent)
     {
         copy_libs(&libs, profile_dir);
     }

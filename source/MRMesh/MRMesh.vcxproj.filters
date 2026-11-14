@@ -1637,6 +1637,9 @@
     <ClCompile Include="MRPointsLoad.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
+    <ClCompile Include="MRPointsLoadPcdPtx.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
     <ClCompile Include="MRPointsSave.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>

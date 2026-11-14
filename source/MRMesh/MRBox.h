@@ -11,6 +11,14 @@
 #include <limits>
 #include <type_traits>
 
+// MSVC for arm64 vectorizes the loops of Box::include into fmin/fmax, which return NaN of either argument, unlike v < lo ? v : lo
+// https://developercommunity.visualstudio.com/t/MSVC-ARM64-O2-vectorizer-emits-FMIN-wit/11182553
+#if defined( _MSC_VER ) && !defined( __clang__ ) && defined( _M_ARM64 )
+#define MR_BOX_NO_VECTOR __pragma( loop( no_vector ) )
+#else
+#define MR_BOX_NO_VECTOR
+#endif
+
 namespace MR
 {
 
@@ -122,6 +130,7 @@ public:
     /// minimally increases the box to include given point
     void include( const V & pt )
     {
+        MR_BOX_NO_VECTOR
         for ( int i = 0; i < elements; ++i )
         {
             const auto v = VTraits::getElem( i, pt );
@@ -135,6 +144,7 @@ public:
     /// minimally increases the box to include another box
     void include( const Box & b )
     {
+        MR_BOX_NO_VECTOR
         for ( int i = 0; i < elements; ++i )
         {
             const auto bLo = VTraits::getElem( i, b.min );

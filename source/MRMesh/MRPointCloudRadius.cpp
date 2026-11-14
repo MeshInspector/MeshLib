@@ -96,7 +96,7 @@ bool erodeRegion( const PointCloud& pointCloud, VertBitSet& region, float erosio
 
         findPointsInBall( pointCloud, { point, erosionSq }, [&] ( const PointsProjectionResult & found, const Vector3f&, Ball3f & )
         {
-            if ( region.test( found.vId ) )
+            if ( !region.test( found.vId ) )
             {
                 regionCopy.set( testVertex, false );
                 return Processing::Stop;

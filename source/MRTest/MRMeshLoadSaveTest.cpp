@@ -17,6 +17,7 @@
 #include <MRMesh/MRObjectPoints.h>
 #include <MRMesh/MRPointCloud.h>
 #include <MRMesh/MRPointsLoad.h>
+#include <MRMesh/MRObjectLoad.h>
 #include <MRMesh/MRObjectSave.h>
 #include <MRMesh/MRStringConvert.h>
 #include <MRMesh/MRUniqueTemporaryFolder.h>
@@ -271,6 +272,21 @@ TEST(MRMesh, SaveStlSolidColor)
     ASSERT_EQ( s.size(), 80 + 4 + 50 );
     EXPECT_EQ( s.substr( 0, 28 ), std::string( "MeshInspector.com COLOR=\x0A\x14\x1E\x28" ) );
     EXPECT_EQ( s.substr( 132, 2 ), std::string( "\x43\x84" ) ); // 0x8000 | 1 << 10 | 2 << 5 | 3
+
+    std::optional<Color> loadedColor;
+    std::istringstream in( s );
+    ASSERT_TRUE( MeshLoad::fromBinaryStl( in, { .solidColor = &loadedColor } ).has_value() );
+    EXPECT_EQ( loadedColor, Color( 10, 20, 30, 40 ) );
+
+    // the loaded object gets the color both selected and not
+    UniqueTemporaryFolder dir;
+    ASSERT_TRUE( MeshSave::toBinaryStl( mesh, dir / "model.stl", { .solidColor = Color( 10, 20, 30, 40 ) } ).has_value() );
+    auto obj = makeObjectFromMeshFile( dir / "model.stl" );
+    ASSERT_TRUE( obj.has_value() );
+    auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( obj->obj );
+    ASSERT_TRUE( objMesh );
+    EXPECT_EQ( objMesh->getFrontColor( true ), Color( 10, 20, 30, 40 ) );
+    EXPECT_EQ( objMesh->getFrontColor( false ), Color( 10, 20, 30, 40 ) );
 }
 
 TEST(MRMesh, StlLoadAsTriMesh)

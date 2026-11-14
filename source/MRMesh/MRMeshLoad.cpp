@@ -126,6 +126,17 @@ Expected<Mesh> loadASCIIStl( std::istream& in, const MeshLoadSettings& settings 
     return stlTriMeshToMesh( std::move( *triMesh ), settings );
 }
 
+// object color by Materialise Magics convention: "COLOR=" followed by red, green, blue, alpha bytes anywhere in the header
+static std::optional<Color> stlHeaderColor( std::string_view header )
+{
+    const std::string_view key = "COLOR=";
+    const auto n = header.find( key );
+    if ( n == std::string_view::npos || n + key.size() + 4 > header.size() )
+        return {};
+    const auto c = [&]( size_t i ) { return int( (unsigned char)header[n + key.size() + i] ); };
+    return Color( c( 0 ), c( 1 ), c( 2 ), c( 3 ) );
+}
+
 Expected<TriMesh> loadBinaryStlAsTriMesh( std::istream& in, const MeshLoadSettings& settings )
 {
     MR_TIMER;
@@ -133,6 +144,9 @@ Expected<TriMesh> loadBinaryStlAsTriMesh( std::istream& in, const MeshLoadSettin
     char header[81];
     in.read( header, 80 );
     header[80] = '\0';
+    if ( settings.solidColor )
+        if ( auto c = stlHeaderColor( std::string_view( header, 80 ) ) )
+            *settings.solidColor = c;
 
     std::uint32_t numTris;
     in.read( (char*)&numTris, 4 );

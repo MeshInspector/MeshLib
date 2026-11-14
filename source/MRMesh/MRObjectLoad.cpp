@@ -160,6 +160,7 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
         .uvCoords = &data.uvCoordinates,
         .normals = returnOnlyMesh ? nullptr : &normals,
         .texture = &data.texture,
+        .solidColor = &data.solidColor,
         .skippedFaceCount = &data.skippedFaceCount,
         .duplicatedVertexCount = &data.duplicatedVertexCount,
         .xf = &data.xf,
@@ -266,6 +267,12 @@ LoadedObject makeObjectMesh( std::string objName, LoadedMeshData data )
         objectMesh->setColoringType( ColoringType::VertsColorMap );
     else if ( hasFaceColors )
         objectMesh->setColoringType( ColoringType::PrimitivesColorMap );
+
+    if ( data.solidColor )
+    {
+        objectMesh->setFrontColor( *data.solidColor, true );
+        objectMesh->setFrontColor( *data.solidColor, false );
+    }
 
     warnings = makeWarningString( data.skippedFaceCount, data.duplicatedVertexCount, int( objectMesh->numHoles() ) ) + warnings;
 

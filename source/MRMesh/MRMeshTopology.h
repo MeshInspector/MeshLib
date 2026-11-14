@@ -9,7 +9,11 @@
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
 #include "MREnums.h"
+#include "MRMacros.h"
 #include <iosfwd>
+#if defined(_MSC_VER) && !defined(__clang__)
+#include <intrin.h> // MR_PREFETCH
+#endif
 
 namespace MR
 {
@@ -112,6 +116,9 @@ public:
 
     /// returns right face of half-edge
     [[nodiscard]] FaceId right( EdgeId he ) const { assert(he.valid()); return edges_[he.sym()].left; }
+
+    /// hints the processor to load the records of he and he.sym() (one cache line), e.g. some faces ahead in a loop reading them
+    MR_BIND_IGNORE void prefetchEdge( EdgeId he ) const { assert(he.valid()); MR_PREFETCH( &edges_[he] ); }
 
 
     /// sets new origin to the full origin ring including this edge;

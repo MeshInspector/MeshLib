@@ -274,7 +274,7 @@ namespace
 {
 
 /// splitCentersByBuckets for the center of order nth; depth counts the buckets split again
-bool splitByBuckets( TreeCenter * src, TreeCenter * dst, int num, int nth, int axis, float lo, float hi, int chunkSize, int depth )
+bool splitByBuckets( TreeCenter * src, TreeCenter * dst, int num, int nth, int axis, float lo, float hi, int chunkSize, int depth, Box3f * halfBoxes )
 {
     constexpr int K = 256;
     if ( !( hi > lo ) )
@@ -333,23 +333,42 @@ bool splitByBuckets( TreeCenter * src, TreeCenter * dst, int num, int nth, int a
         next.m += m;
         next.g += std::min( num - ch * chunkSize, chunkSize ) - l - m;
     }
+    // the boxes of the centers moved to the smaller and to the bigger parts, by chunks
+    Vector<Box3f, int> chunkBoxes( 2 * numChunks );
     ParallelFor( 0, numChunks, [&]( int ch )
     {
         TreeCenter * pl = dst + pos[ch].l;
         TreeCenter * pm = dst + pos[ch].m;
         TreeCenter * pg = dst + pos[ch].g;
-        for ( int i = ch * chunkSize, e = std::min( num, i + chunkSize ); i < e; ++i )
+        Box3f bl, bg;
+        // by blocks, to include the moved centers in the boxes while they are in the cache
+        constexpr int cBlock = 2048;
+        for ( int i = ch * chunkSize, e = std::min( num, i + chunkSize ); i < e; )
         {
-            const int b = bucket( src[i] );
-            const bool isL = b < mb, isG = b > mb;
-            TreeCenter * d = isL ? pl : pm;
-            d = isG ? pg : d;
-            *d = src[i];
-            pl += isL;
-            pg += isG;
-            pm += !isL & !isG;
+            TreeCenter * const pl0 = pl, * const pg0 = pg;
+            for ( const int be = std::min( e, i + cBlock ); i < be; ++i )
+            {
+                const int b = bucket( src[i] );
+                const bool isL = b < mb, isG = b > mb;
+                TreeCenter * d = isL ? pl : pm;
+                d = isG ? pg : d;
+                *d = src[i];
+                pl += isL;
+                pg += isG;
+                pm += !isL & !isG;
+            }
+            bl = includeCenters( bl, pl0, int( pl - pl0 ) );
+            bg = includeCenters( bg, pg0, int( pg - pg0 ) );
         }
+        chunkBoxes[2 * ch] = bl;
+        chunkBoxes[2 * ch + 1] = bg;
     } );
+    halfBoxes[0] = halfBoxes[1] = Box3f();
+    for ( int ch = 0; ch < numChunks; ++ch )
+    {
+        halfBoxes[0].include( chunkBoxes[2 * ch] );
+        halfBoxes[1].include( chunkBoxes[2 * ch + 1] );
+    }
 
     TreeCenter * const med = dst + numLess;
     const int medNth = nth - numLess;
@@ -368,25 +387,30 @@ bool splitByBuckets( TreeCenter * src, TreeCenter * dst, int num, int nth, int a
         for ( const auto & b : boxes )
             box.include( b );
         TreeCenter * const tmp = src + numLess;
-        if ( splitByBuckets( med, tmp, numMed, medNth, axis, box.min[axis], box.max[axis], chunkSize, depth + 1 ) )
+        Box3f medHalves[2];
+        if ( splitByBuckets( med, tmp, numMed, medNth, axis, box.min[axis], box.max[axis], chunkSize, depth + 1, medHalves ) )
         {
             ParallelFor( 0, medChunks, [&]( int ch )
             {
                 const int b = ch * chunkSize;
                 std::copy( tmp + b, tmp + std::min( numMed, b + chunkSize ), med + b );
             } );
+            halfBoxes[0].include( medHalves[0] );
+            halfBoxes[1].include( medHalves[1] );
             return true;
         }
     }
     selectCenter( med, med + medNth, med + numMed, axis );
+    halfBoxes[0] = includeCenters( halfBoxes[0], med, medNth );
+    halfBoxes[1] = includeCenters( halfBoxes[1], med + medNth, numMed - medNth );
     return true;
 }
 
 } //anonymous namespace
 
-bool splitCentersByBuckets( TreeCenter * src, TreeCenter * dst, int num, int axis, float lo, float hi, int chunkSize )
+bool splitCentersByBuckets( TreeCenter * src, TreeCenter * dst, int num, int axis, float lo, float hi, int chunkSize, Box3f * halfBoxes )
 {
-    return splitByBuckets( src, dst, num, num / 2, axis, lo, hi, chunkSize, 0 );
+    return splitByBuckets( src, dst, num, num / 2, axis, lo, hi, chunkSize, 0, halfBoxes );
 }
 
 } //namespace MR

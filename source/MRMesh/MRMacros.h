@@ -48,6 +48,16 @@
 #endif
 
 
+// MR_PREFETCH( p ) hints the processor to load the cache line of p for reading; MSVC needs <intrin.h> for it
+#if !defined(_MSC_VER) || defined(__clang__)
+#define MR_PREFETCH( p ) __builtin_prefetch( p )
+#elif defined(_M_ARM64)
+#define MR_PREFETCH( p ) __prefetch( p )
+#else
+#define MR_PREFETCH( p ) _mm_prefetch( (const char *)( p ), _MM_HINT_T0 )
+#endif
+
+
 // Here we define following macros:
 //   `MR[_THIS]_LIFETIMEBOUND[_NESTED]`
 //   `MR[_THIS]_LIFETIME_CAPTURE_BY[_NESTED](x)`

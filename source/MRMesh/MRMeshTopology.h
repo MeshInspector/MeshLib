@@ -9,11 +9,8 @@
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
 #include "MREnums.h"
-#include "MRMacros.h"
+#include "MRPrefetch.h"
 #include <iosfwd>
-#if defined(_MSC_VER) && !defined(__clang__)
-#include <intrin.h> // MR_PREFETCH
-#endif
 
 namespace MR
 {

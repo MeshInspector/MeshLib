@@ -5,6 +5,7 @@
 #include "MRTimer.h"
 #include "MRBuffer.h"
 #include "MRParallelFor.h"
+#include "MRPrefetch.h"
 #include "MRRegionBoundary.h"
 #include "MRAABBTreeCenters.hpp"
 #include "MRTriBox.hpp"

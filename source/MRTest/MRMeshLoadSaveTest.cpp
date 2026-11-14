@@ -263,14 +263,14 @@ TEST(MRMesh, SaveObjectTreeAsPoints)
 
 TEST(MRMesh, SaveStlSolidColor)
 {
-    // object color in the header and the flag to use it in every triangle, by Materialise Magics convention
+    // object color in the header by Materialise Magics convention, and in every triangle by both Magics and VisCAM conventions
     auto mesh = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 1, 0, 0 ), Vector3f( 0, 1, 0 ) }, { { 0_v, 1_v, 2_v } } );
     std::ostringstream out;
     ASSERT_TRUE( MeshSave::toBinaryStl( mesh, out, { .solidColor = Color( 10, 20, 30, 40 ) } ).has_value() );
     const auto s = out.str();
     ASSERT_EQ( s.size(), 80 + 4 + 50 );
     EXPECT_EQ( s.substr( 0, 28 ), std::string( "MeshInspector.com COLOR=\x0A\x14\x1E\x28" ) );
-    EXPECT_EQ( s.substr( 132, 2 ), std::string( "\x00\x80", 2 ) );
+    EXPECT_EQ( s.substr( 132, 2 ), std::string( "\x43\x84" ) ); // 0x8000 | 1 << 10 | 2 << 5 | 3
 }
 
 TEST(MRMesh, StlLoadAsTriMesh)

@@ -313,6 +313,9 @@ BinaryStlSaver::BinaryStlSaver( std::ostream & out, const SaveSettings & setting
         // object color by Materialise Magics convention
         const char color[] = { ' ', 'C', 'O', 'L', 'O', 'R', '=', char( c->r ), char( c->g ), char( c->b ), char( c->a ) };
         std::memcpy( header + 17, color, sizeof( color ) );
+        // bit 15 means "use object color" for Magics, and "valid color" with 5-bit red, green, blue for VisCAM/SolidView,
+        // so both conventions show the same color
+        triAttr_ = std::uint16_t( 0x8000 | ( ( c->r >> 3 ) << 10 ) | ( ( c->g >> 3 ) << 5 ) | ( c->b >> 3 ) );
     }
     out.write( header, 80 );
 
@@ -336,8 +339,7 @@ bool BinaryStlSaver::writeTri( const Triangle3f& tri )
     out_.write( (const char*)&ap, 12 );
     out_.write( (const char*)&bp, 12 );
     out_.write( (const char*)&cp, 12 );
-    const std::uint16_t attr = settings_.solidColor ? 0x8000 : 0; // in Magics convention: use object color
-    out_.write( ( const char* )&attr, 2 );
+    out_.write( ( const char* )&triAttr_, 2 );
     ++savedNumTris_;
     return (bool)out_;
 }

@@ -15,6 +15,7 @@ struct MeshLoadSettings
     VertUVCoords* uvCoords = nullptr;///< optional load artifact: per-vertex uv-coordinates
     VertNormals* normals = nullptr;  ///< optional load artifact: per-vertex normals
     MeshTexture* texture = nullptr;  ///< optional load artifact: texture image
+    std::optional<Color>* solidColor = nullptr; ///< optional load artifact: the color of whole object, if the format has it
     int* skippedFaceCount = nullptr; ///< optional output: counter of skipped faces during mesh creation
     int* duplicatedVertexCount = nullptr; ///< optional output: counter of duplicated vertices (that created for resolve non-manifold geometry)
     AffineXf3f* xf = nullptr;        ///< optional output: transform for the loaded mesh to improve precision of vertex coordinates

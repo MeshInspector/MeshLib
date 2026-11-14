@@ -17,6 +17,7 @@
 #include <MRMesh/MRObjectPoints.h>
 #include <MRMesh/MRPointCloud.h>
 #include <MRMesh/MRPointsLoad.h>
+#include <MRMesh/MRObjectLoad.h>
 #include <MRMesh/MRObjectSave.h>
 #include <MRMesh/MRStringConvert.h>
 #include <MRMesh/MRUniqueTemporaryFolder.h>
@@ -259,6 +260,33 @@ TEST(MRMesh, SaveObjectTreeAsPoints)
     EXPECT_EQ( loaded->points[1_v], Vector3f( 0, 1, 1 ) );
     EXPECT_EQ( loaded->points[2_v], Vector3f( 1, 0, 2 ) );
     EXPECT_EQ( loaded->points[3_v], Vector3f( 1, 1, 2 ) );
+}
+
+TEST(MRMesh, SaveStlSolidColor)
+{
+    // object color in the header by Materialise Magics convention, and in every triangle by both Magics and VisCAM conventions
+    auto mesh = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 1, 0, 0 ), Vector3f( 0, 1, 0 ) }, { { 0_v, 1_v, 2_v } } );
+    std::ostringstream out;
+    ASSERT_TRUE( MeshSave::toBinaryStl( mesh, out, { .solidColor = Color( 10, 20, 30, 40 ) } ).has_value() );
+    const auto s = out.str();
+    ASSERT_EQ( s.size(), 80 + 4 + 50 );
+    EXPECT_EQ( s.substr( 0, 28 ), std::string( "MeshInspector.com COLOR=\x0A\x14\x1E\x28" ) );
+    EXPECT_EQ( s.substr( 132, 2 ), std::string( "\x43\x84" ) ); // 0x8000 | 1 << 10 | 2 << 5 | 3
+
+    std::optional<Color> loadedColor;
+    std::istringstream in( s );
+    ASSERT_TRUE( MeshLoad::fromBinaryStl( in, { .solidColor = &loadedColor } ).has_value() );
+    EXPECT_EQ( loadedColor, Color( 10, 20, 30, 40 ) );
+
+    // the loaded object gets the color both selected and not
+    UniqueTemporaryFolder dir;
+    ASSERT_TRUE( MeshSave::toBinaryStl( mesh, dir / "model.stl", { .solidColor = Color( 10, 20, 30, 40 ) } ).has_value() );
+    auto obj = makeObjectFromMeshFile( dir / "model.stl" );
+    ASSERT_TRUE( obj.has_value() );
+    auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( obj->obj );
+    ASSERT_TRUE( objMesh );
+    EXPECT_EQ( objMesh->getFrontColor( true ), Color( 10, 20, 30, 40 ) );
+    EXPECT_EQ( objMesh->getFrontColor( false ), Color( 10, 20, 30, 40 ) );
 }
 
 TEST(MRMesh, StlLoadAsTriMesh)
@@ -578,6 +606,23 @@ TEST(MRMesh, LoadObjMtlNameWithSpaces)
     EXPECT_EQ( res->warnings, "" );
     ASSERT_EQ( res->objs.size(), 2 );
     EXPECT_EQ( frontColor( res->objs[0] ), Color::red() );
+}
+
+TEST(MRMesh, SaveObjSolidColor)
+{
+#ifdef __EMSCRIPTEN__
+    GTEST_SKIP() << ".mtl files are not saved in this build";
+#endif
+    // object color is saved in Kd of the material
+    UniqueTemporaryFolder dir;
+    auto mesh = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 1, 0, 0 ), Vector3f( 0, 1, 0 ) }, { { 0_v, 1_v, 2_v } } );
+    const Color solid( 255, 51, 0 );
+    ASSERT_TRUE( MeshSave::toObj( mesh, dir / "model.obj", { .materialName = "model", .solidColor = solid } ).has_value() );
+
+    auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
+    ASSERT_TRUE( res.has_value() );
+    ASSERT_EQ( res->objs.size(), 1 );
+    EXPECT_EQ( frontColor( res->objs[0] ), solid );
 }
 
 TEST(MRMesh, LoadObjWithTexture)

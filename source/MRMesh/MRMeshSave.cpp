@@ -12,6 +12,7 @@
 #include "MRImageSave.h"
 #include "MRSerializer.h"
 #include "MRTelemetry.h"
+#include <cstring>
 #include <fstream>
 
 namespace MR
@@ -122,18 +123,25 @@ Expected<void> toObj( const Mesh & mesh, const std::filesystem::path & file, con
 #ifndef __EMSCRIPTEN__
     // it is hard to handle several files output for browser, so for now it is under ifdef,
     // anyway later it may be reworked to save simple zip and taken out of ifdef
-    if ( settings.uvMap && settings.texture && !settings.texture->pixels.empty() )
+    const bool saveTexture = settings.uvMap && settings.texture && !settings.texture->pixels.empty();
+    if ( saveTexture || settings.solidColor )
     {
-        if ( auto pngSaver = ImageSave::getImageSaver( "*.png" ) )
+        auto mtlPath = file.parent_path() / asU8String( settings.materialName + ".mtl" );
+        std::ofstream ofMtl( mtlPath, std::ofstream::binary );
+        if ( ofMtl )
         {
-            auto mtlPath = file.parent_path() / asU8String( settings.materialName + ".mtl" );
-            std::ofstream ofMtl( mtlPath, std::ofstream::binary );
-            if ( ofMtl )
+            ofMtl << "newmtl Texture\n";
+            if ( settings.solidColor )
             {
-                ofMtl << "newmtl Texture\n";
-                if ( settings.texture && pngSaver( *settings.texture, file.parent_path() / asU8String( settings.materialName + ".png" ) ).has_value() )
-                    ofMtl << fmt::format( "map_Kd {}\n", settings.materialName + ".png" );
+                const auto c = Vector4f( *settings.solidColor );
+                ofMtl << fmt::format( "Kd {} {} {}\n", c.x, c.y, c.z );
+                if ( settings.solidColor->a != 255 )
+                    ofMtl << fmt::format( "d {}\n", c.w );
             }
+            if ( saveTexture )
+                if ( auto pngSaver = ImageSave::getImageSaver( "*.png" ) )
+                    if ( pngSaver( *settings.texture, file.parent_path() / asU8String( settings.materialName + ".png" ) ).has_value() )
+                        ofMtl << fmt::format( "map_Kd {}\n", settings.materialName + ".png" );
         }
     }
 #endif
@@ -147,8 +155,9 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
     out << "# MeshInspector.com\n";
     bool saveUV = settings.uvMap && !settings.uvMap->empty();
     bool saveColors = settings.colors && !settings.colors->empty();
+    const bool useMtl = saveUV || settings.solidColor;
 
-    if ( saveUV )
+    if ( useMtl )
         out << fmt::format( "mtllib {}.mtl\n", settings.materialName );
 
     const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
@@ -196,8 +205,9 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
             if ( settings.progress && !( numSaved & 0x3FF ) && !sb( float( numSaved ) / numPoints ) )
                 return unexpectedOperationCanceled();
         }
-        out << "usemtl Texture\n";
     }
+    if ( useMtl )
+        out << "usemtl Texture\n";
 
     sb = subprogress( settings.progress, saveUV ? 0.7f : 0.5f, 1.0f );
     const float facesNum = float( mesh.topology.edgePerFace().size() );
@@ -298,6 +308,15 @@ BinaryStlSaver::BinaryStlSaver( std::ostream & out, const SaveSettings & setting
     , settings_( settings )
 {
     char header[80] = "MeshInspector.com";
+    if ( const auto & c = settings.solidColor )
+    {
+        // object color by Materialise Magics convention
+        const char color[] = { ' ', 'C', 'O', 'L', 'O', 'R', '=', char( c->r ), char( c->g ), char( c->b ), char( c->a ) };
+        std::memcpy( header + 17, color, sizeof( color ) );
+        // bit 15 means "use object color" for Magics, and "valid color" with 5-bit red, green, blue for VisCAM/SolidView,
+        // so both conventions show the same color
+        triAttr_ = std::uint16_t( 0x8000 | ( ( c->r >> 3 ) << 10 ) | ( ( c->g >> 3 ) << 5 ) | ( c->b >> 3 ) );
+    }
     out.write( header, 80 );
 
     numTrisPos_ = out.tellp();
@@ -320,8 +339,7 @@ bool BinaryStlSaver::writeTri( const Triangle3f& tri )
     out_.write( (const char*)&ap, 12 );
     out_.write( (const char*)&bp, 12 );
     out_.write( (const char*)&cp, 12 );
-    std::uint16_t attr{ 0 };
-    out_.write( ( const char* )&attr, 2 );
+    out_.write( ( const char* )&triAttr_, 2 );
     ++savedNumTris_;
     return (bool)out_;
 }

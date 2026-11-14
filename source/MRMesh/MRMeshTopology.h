@@ -114,8 +114,8 @@ public:
     /// returns right face of half-edge
     [[nodiscard]] FaceId right( EdgeId he ) const { assert(he.valid()); return edges_[he.sym()].left; }
 
-    /// hints the processor to load the records of he and he.sym() (one cache line), e.g. some faces ahead in a loop reading them
-    MR_BIND_IGNORE void prefetchEdge( EdgeId he ) const { assert(he.valid()); MR_PREFETCH( &edges_[he] ); }
+    /// hints the processor to load the records of both half-edges of ue (one cache line), e.g. some faces ahead in a loop reading them
+    MR_BIND_IGNORE void prefetchEdge( UndirectedEdgeId ue ) const { assert(ue.valid()); MR_PREFETCH( &edges_[EdgeId( ue )] ); }
 
 
     /// sets new origin to the full origin ring including this edge;
@@ -611,6 +611,9 @@ private:
     /// data of every half-edge, align to put whole record in one cache line
     struct alignas( 16 ) HalfEdgeRecord
     {
+        /// edges_ start at a 32-byte boundary, so the records of e and e.sym() are in one cache line
+        static constexpr std::size_t cAllocAlignment = 32;
+
         EdgeId next; ///< next counter clock wise half-edge in the origin ring
         EdgeId prev; ///< next clock wise half-edge in the origin ring
         VertId org;  ///< vertex at the origin of the edge
@@ -623,7 +626,7 @@ private:
         HalfEdgeRecord() noexcept = default;
         explicit HalfEdgeRecord( NoInit ) noexcept : next( noInit ), prev( noInit ), org( noInit ), left( noInit ) {}
     };
-    static_assert( sizeof( HalfEdgeRecord ) == 16 );
+    static_assert( sizeof( HalfEdgeRecord ) == 16 && cAllocatorAlignment<HalfEdgeRecord> == 32 );
 
     /// translates all fields in the record for this edge given maps
     template<typename FM, typename VM, typename WEM>

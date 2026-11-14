@@ -26,21 +26,25 @@
 namespace MR
 {
 
-#ifdef MR_ALLOCATOR_IS_MIMALLOC
-// not mi_stl_allocator: its construct/destroy members stop std containers from memmove-copying and skipping trivial destructors
-template <typename T>
-struct MR_BIND_IGNORE AllocatorBase {};
-#else
-template <typename T>
-using AllocatorBase = std::allocator<T>;
-#endif
-
 /// the alignment of the memory Allocator<T> allocates: alignof( T ), or T::cAllocAlignment if T defines a greater one
 template <typename T, typename = void>
 inline constexpr std::size_t cAllocatorAlignment = alignof( T );
 template <typename T>
 inline constexpr std::size_t cAllocatorAlignment<T, std::void_t<decltype( T::cAllocAlignment )>> =
     T::cAllocAlignment > alignof( T ) ? T::cAllocAlignment : alignof( T );
+
+// not mi_stl_allocator: its construct/destroy members stop std containers from memmove-copying and skipping trivial destructors
+template <typename T>
+struct MR_BIND_IGNORE AllocatorNoBase {};
+
+#ifdef MR_ALLOCATOR_IS_MIMALLOC
+template <typename T>
+using AllocatorBase = AllocatorNoBase<T>;
+#else
+// not std::allocator for over-aligned T: containers would call its allocate_at_least instead of Allocator::allocate
+template <typename T>
+using AllocatorBase = std::conditional_t<( cAllocatorAlignment<T> > alignof( T ) ), AllocatorNoBase<T>, std::allocator<T>>;
+#endif
 
 /// allocator of MeshLib containers that benefit from mimalloc: mimalloc explicitly,
 /// std::allocator in Emscripten builds, where malloc is mimalloc already (-sMALLOC=mimalloc), and with MRMESH_NO_MIMALLOC;

@@ -81,6 +81,50 @@ Buffer<BoxedTri> makeBoxedTris( const MeshPart & mp, int numFaces, Buffer<TreeCe
     return boxedTris;
 }
 
+/// the triangles of t (all if region is nullptr) with their boxes, see makeBoxedTris above
+Buffer<BoxedTri> makeBoxedTris( const VertCoords & points, const Triangulation & t, const FaceBitSet * region, int numFaces,
+    Buffer<TreeCenter> & centers, Box3f & centersBox )
+{
+    Buffer<BoxedTri> boxedTris( numFaces );
+    centers = Buffer<TreeCenter>( numFaces );
+    const bool packed = numFaces == (int)t.size();
+    if ( !packed )
+    {
+        int n = 0;
+        for ( auto f : *region )
+            boxedTris[n++].tri.face = f;
+    }
+
+    const auto faceOf = [&] ( int i ) { return packed ? FaceId( i ) : boxedTris[i].tri.face; };
+    constexpr int cAhead = 4; // the points of a triangle are read cAhead triangles ahead
+    constexpr int cBlock = 1024; // the centers are included in their box by blocks, while in the cache
+    centersBox = tbb::parallel_reduce( tbb::blocked_range<int>( 0, numFaces ), Box3f(),
+        [&] ( const tbb::blocked_range<int> & range, Box3f box )
+    {
+        const int end = range.end();
+        for ( int b = range.begin(); b < end; b += cBlock )
+        {
+            for ( int i = b, be = std::min( end, b + cBlock ); i < be; ++i )
+            {
+                if ( i + cAhead < end )
+                    for ( auto v : t[faceOf( i + cAhead )] )
+                        MR_PREFETCH( &points[v] );
+                const FaceId f = faceOf( i );
+                const ThreeVertIds v = t[f];
+                // not bt.tri = { f, v }, which MSVC assembles on the stack and copies by one wider load, waiting for the stores
+                auto & bt = boxedTris[i];
+                bt.tri.face = f;
+                bt.tri.verts = v;
+                insignificantlyExpandedTriBoxAndCenter( points[v[0]], points[v[1]], points[v[2]], i, bt.box, centers[i] );
+            }
+            box = includeCenters( box, centers.data() + b, std::min( end, b + cBlock ) - b );
+        }
+        return box;
+    },
+        [] ( Box3f a, const Box3f & b ) { a.include( b ); return a; } );
+    return boxedTris;
+}
+
 /// splits each AABBTree node in two binary levels, each at the median of the triangle box centers
 /// along the largest extent of these centers; so the nodes at binary depth d have ( numTris >> d ) or ( numTris >> d ) + 1 triangles
 class AABBTreeWideMaker
@@ -278,12 +322,11 @@ private:
     std::array<int, 2> cnt_[64]; // by binary depth and the number of triangles minus ( numTris_ >> depth )
 };
 
-} // anonymous namespace
-
-AABBTree::AABBTree( const MeshPart & mp )
+/// makes the tree of numTris triangles given by makeBoxedTris( centers, centersBox )
+template <typename MakeBoxedTris>
+void makeTree( int numTris, const MakeBoxedTris & makeBoxedTris,
+    Vector<AABBTree::Node, NodeId> & nodes, Vector<AABBTree::LeafTri> & leafTris, Vector<Box3f> & leafBoxes )
 {
-    MR_TIMER;
-    const auto numTris = mp.region ? (int)mp.region->count() : mp.mesh.topology.numValidFaces();
     if ( numTris <= 0 )
         return;
     AABBTreeWideMaker maker( numTris );
@@ -291,9 +334,27 @@ AABBTree::AABBTree( const MeshPart & mp )
     Box3f centersBox;
     Buffer<BoxedTri> boxedTris;
     // the outputs are filled with their default values (by one thread) while the triangles are boxed
-    tbb::parallel_invoke( [&] { boxedTris = makeBoxedTris( mp, numTris, centers, centersBox ); },
-        [&] { nodes_.resize( maker.numNodes() ); leafTris_.resize( numTris ); leafBoxes_.resizeNoInit( numTris ); } );
-    maker.make( boxedTris, centers, centersBox, nodes_.data(), leafTris_.data(), leafBoxes_.data() );
+    tbb::parallel_invoke( [&] { boxedTris = makeBoxedTris( centers, centersBox ); },
+        [&] { nodes.resize( maker.numNodes() ); leafTris.resize( numTris ); leafBoxes.resizeNoInit( numTris ); } );
+    maker.make( boxedTris, centers, centersBox, nodes.data(), leafTris.data(), leafBoxes.data() );
+}
+
+} // anonymous namespace
+
+AABBTree::AABBTree( const MeshPart & mp )
+{
+    MR_TIMER;
+    const auto numTris = mp.region ? (int)mp.region->count() : mp.mesh.topology.numValidFaces();
+    makeTree( numTris, [&] ( Buffer<TreeCenter> & centers, Box3f & centersBox ) { return makeBoxedTris( mp, numTris, centers, centersBox ); },
+        nodes_, leafTris_, leafBoxes_ );
+}
+
+AABBTree::AABBTree( const VertCoords & points, const Triangulation & t, const FaceBitSet * region )
+{
+    MR_TIMER;
+    const auto numTris = region ? (int)region->count() : (int)t.size();
+    makeTree( numTris, [&] ( Buffer<TreeCenter> & centers, Box3f & centersBox ) { return makeBoxedTris( points, t, region, numTris, centers, centersBox ); },
+        nodes_, leafTris_, leafBoxes_ );
 }
 
 std::vector<NodeId> AABBTree::getSubtrees( int minNum ) const

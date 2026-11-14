@@ -49,6 +49,10 @@ public:
     /// creates tree for given mesh or its part
     [[nodiscard]] MRMESH_API explicit AABBTree( const MeshPart & mp );
 
+    /// creates tree for the triangles of t (all if region is nullptr) with the vertices in points, faster than from a mesh;
+    /// it is the tree of a mesh with these points and mesh.topology.getTriVerts( f ) == t[f] for all its triangles
+    [[nodiscard]] MRMESH_API AABBTree( const VertCoords & points, const Triangulation & t, const FaceBitSet * region = nullptr );
+
     AABBTree() = default;
     AABBTree( AABBTree && ) noexcept = default;
     AABBTree & operator =( AABBTree && ) noexcept = default;

@@ -137,6 +137,7 @@
     <ClCompile Include="MRObjectMeshTests.cpp" />
     <ClCompile Include="MRPointToPlaneAligningTransformTests.cpp" />
     <ClCompile Include="MRPointToPointAligningTransformTests.cpp" />
+    <ClCompile Include="MRFeatureAlignmentTests.cpp" />
     <ClCompile Include="MRPolyline2CollideTests.cpp" />
     <ClCompile Include="MRPolylineDecimateTests.cpp" />
     <ClCompile Include="MRPolylineSubdivideTests.cpp" />

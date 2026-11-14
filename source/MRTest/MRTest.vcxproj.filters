@@ -358,6 +358,9 @@
     <ClCompile Include="MRPointToPointAligningTransformTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRFeatureAlignmentTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRPolyline2CollideTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

@@ -249,6 +249,7 @@
     <ClInclude Include="MRPointObject.h" />
     <ClInclude Include="MRPointToPlaneAligningTransform.h" />
     <ClInclude Include="MRPointToPointAligningTransform.h" />
+    <ClInclude Include="MRFeatureAlignment.h" />
     <ClInclude Include="MRRigidXfRansac.h" />
     <ClInclude Include="MRPolyline.h" />
     <ClInclude Include="MRPolyline2Collide.h" />
@@ -677,6 +678,7 @@
     <ClCompile Include="MRPointsSave.cpp" />
     <ClCompile Include="MRPointToPlaneAligningTransform.cpp" />
     <ClCompile Include="MRPointToPointAligningTransform.cpp" />
+    <ClCompile Include="MRFeatureAlignment.cpp" />
     <ClCompile Include="MRRigidXfRansac.cpp" />
     <ClCompile Include="MRPolyline.cpp" />
     <ClCompile Include="MRPolyline2Collide.cpp" />

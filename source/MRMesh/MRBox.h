@@ -12,6 +12,7 @@
 #include <type_traits>
 
 // MSVC for arm64 vectorizes the loops of Box::include into fmin/fmax, which return NaN of either argument, unlike v < lo ? v : lo
+// https://developercommunity.visualstudio.com/t/MSVC-ARM64-O2-vectorizer-emits-FMIN-wit/11182553
 #if defined( _MSC_VER ) && !defined( __clang__ ) && defined( _M_ARM64 )
 #define MR_BOX_NO_VECTOR __pragma( loop( no_vector ) )
 #else

@@ -33,25 +33,14 @@ template <typename T>
 inline constexpr std::size_t cAllocatorAlignment<T, std::void_t<decltype( T::cAllocAlignment )>> =
     T::cAllocAlignment > alignof( T ) ? T::cAllocAlignment : alignof( T );
 
-// not mi_stl_allocator: its construct/destroy members stop std containers from memmove-copying and skipping trivial destructors
-template <typename T>
-struct MR_BIND_IGNORE AllocatorNoBase {};
-
-#ifdef MR_ALLOCATOR_IS_MIMALLOC
-template <typename T>
-using AllocatorBase = AllocatorNoBase<T>;
-#else
-// not std::allocator for over-aligned T: containers would call its allocate_at_least instead of Allocator::allocate
-template <typename T>
-using AllocatorBase = std::conditional_t<( cAllocatorAlignment<T> > alignof( T ) ), AllocatorNoBase<T>, std::allocator<T>>;
-#endif
-
 /// allocator of MeshLib containers that benefit from mimalloc: mimalloc explicitly,
 /// std::allocator in Emscripten builds, where malloc is mimalloc already (-sMALLOC=mimalloc), and with MRMESH_NO_MIMALLOC;
 /// a class rather than an alias, so that container types are spelled the same on all platforms (e.g. in the C bindings generated once);
-/// the bindings only see it as a template argument of containers
+/// the bindings only see it as a template argument of containers;
+/// not mi_stl_allocator: its construct/destroy members stop std containers from memmove-copying and skipping trivial destructors;
+/// not derived from std::allocator: containers would call its allocate_at_least instead of Allocator::allocate
 template <typename T>
-struct MR_BIND_IGNORE Allocator : AllocatorBase<T>
+struct MR_BIND_IGNORE Allocator
 {
     using value_type = T;
     template <typename U>
@@ -61,9 +50,9 @@ struct MR_BIND_IGNORE Allocator : AllocatorBase<T>
     template <typename U>
     Allocator( const Allocator<U> & ) noexcept {}
 
-#ifdef MR_ALLOCATOR_IS_MIMALLOC
     using propagate_on_container_move_assignment = std::true_type;
 
+#ifdef MR_ALLOCATOR_IS_MIMALLOC
     [[nodiscard]] T * allocate( std::size_t n )
     {
         if constexpr ( cAllocatorAlignment<T> > __STDCPP_DEFAULT_NEW_ALIGNMENT__ )
@@ -86,14 +75,14 @@ struct MR_BIND_IGNORE Allocator : AllocatorBase<T>
             return static_cast<T *>( ::operator new( n * sizeof( T ), std::align_val_t( cAllocatorAlignment<T> ) ) );
         }
         else
-            return AllocatorBase<T>::allocate( n );
+            return std::allocator<T>().allocate( n );
     }
     void deallocate( T * p, std::size_t n ) noexcept
     {
         if constexpr ( cAllocatorAlignment<T> > alignof( T ) )
             ::operator delete( p, std::align_val_t( cAllocatorAlignment<T> ) );
         else
-            AllocatorBase<T>::deallocate( p, n );
+            std::allocator<T>().deallocate( p, n );
     }
 #endif
     [[nodiscard]] Allocator select_on_container_copy_construction() const noexcept { return *this; }

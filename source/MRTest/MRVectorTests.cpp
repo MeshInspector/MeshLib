@@ -2,6 +2,7 @@
 #include <MRMesh/MRId.h>
 #include <gtest/gtest.h>
 #include <cstdint>
+#include <vector>
 
 namespace MR
 {
@@ -77,6 +78,10 @@ struct AlignedRec
     static constexpr std::size_t cAllocAlignment = 64;
     int a = 0;
 };
+
+struct LaterRec;
+struct LaterRecHolder { std::vector<LaterRec, Allocator<LaterRec>> v; }; // the allocator of an incomplete type
+struct LaterRec { int a = 0; };
 } //anonymous namespace
 
 TEST( MRMesh, VectorAllocAlignment )
@@ -100,6 +105,10 @@ TEST( MRMesh, VectorAllocAlignment )
     v.shrink_to_fit();
     v.resize( 3 );
     EXPECT_TRUE( aligned( v.data() ) );
+
+    LaterRecHolder h;
+    h.v.push_back( { 5 } );
+    EXPECT_EQ( h.v[0].a, 5 );
 }
 
 } //namespace MR

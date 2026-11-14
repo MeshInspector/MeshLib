@@ -59,10 +59,13 @@ Buffer<BoxedTri> makeBoxedTris( const VertCoords & points, bool packed, const Fa
             for ( int i = b, be = std::min( end, b + cBlock ); i < be; ++i )
             {
                 readAhead( faceOf, i, end );
-                auto & bt = boxedTris[i];
                 const FaceId f = faceOf( i );
-                bt.tri = { f, triVerts( f ) };
-                insignificantlyExpandedTriBoxAndCenter( points[bt.tri.verts[0]], points[bt.tri.verts[1]], points[bt.tri.verts[2]], i, bt.box, centers[i] );
+                const ThreeVertIds v = triVerts( f );
+                // not bt.tri = { f, v }, which MSVC assembles on the stack and copies by one wider load, waiting for the stores
+                auto & bt = boxedTris[i];
+                bt.tri.face = f;
+                bt.tri.verts = v;
+                insignificantlyExpandedTriBoxAndCenter( points[v[0]], points[v[1]], points[v[2]], i, bt.box, centers[i] );
             }
             box = includeCenters( box, centers.data() + b, std::min( end, b + cBlock ) - b );
         }

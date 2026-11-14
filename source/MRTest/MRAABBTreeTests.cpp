@@ -454,6 +454,18 @@ TEST( MRMesh, AABBTreeFromTriangulationRegion )
     EXPECT_TRUE( AABBTree( mesh.points, Triangulation{} ).nodes().empty() );
 }
 
+// Mesh::fromTriangles keeps the vertex order of the triangles, so the tree of the triangulation is the tree of the mesh made from it
+TEST( MRMesh, AABBTreeFromTriangulationOfNewMesh )
+{
+    for ( int n : { 32, 200 } ) // 4K triangles added one by one, and 160K triangles by the manifold build
+    {
+        const Mesh sphere = makeUVSphere( 1.f, 2 * n, n );
+        const Triangulation t = sphere.topology.getTriangulation();
+        const Mesh mesh = Mesh::fromTriangles( sphere.points, t );
+        EXPECT_EQ( treeHash( AABBTree( sphere.points, t ) ), treeHash( AABBTree( mesh ) ) ) << t.size() << " triangles";
+    }
+}
+
 // a big mesh, whose top ranges are split in parallel, gives the same tree on one thread
 TEST( MRMesh, AABBTreeSameOnOneThread )
 {

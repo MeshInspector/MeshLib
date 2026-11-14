@@ -9,6 +9,7 @@
 #include "MRRegionBoundary.h"
 #include "MRAABBTreeCenters.hpp"
 #include "MRTriBox.hpp"
+#include "MRTriMesh.h"
 #include <algorithm>
 #include <tbb/parallel_invoke.h>
 
@@ -81,10 +82,12 @@ Buffer<BoxedTri> makeBoxedTris( const MeshPart & mp, int numFaces, Buffer<TreeCe
     return boxedTris;
 }
 
-/// the triangles of t (all if region is nullptr) with their boxes, see makeBoxedTris above
-Buffer<BoxedTri> makeBoxedTris( const VertCoords & points, const Triangulation & t, const FaceBitSet * region, int numFaces,
+/// the triangles of tmesh (all if region is nullptr) with their boxes, see makeBoxedTris above
+Buffer<BoxedTri> makeBoxedTris( const TriMesh & tmesh, const FaceBitSet * region, int numFaces,
     Buffer<TreeCenter> & centers, Box3f & centersBox )
 {
+    const auto & points = tmesh.points;
+    const auto & t = tmesh.tris;
     Buffer<BoxedTri> boxedTris( numFaces );
     centers = Buffer<TreeCenter>( numFaces );
     const bool packed = numFaces == (int)t.size();
@@ -349,11 +352,11 @@ AABBTree::AABBTree( const MeshPart & mp )
         nodes_, leafTris_, leafBoxes_ );
 }
 
-AABBTree::AABBTree( const VertCoords & points, const Triangulation & t, const FaceBitSet * region )
+AABBTree::AABBTree( const TriMesh & tmesh, const FaceBitSet * region )
 {
     MR_TIMER;
-    const auto numTris = region ? (int)region->count() : (int)t.size();
-    makeTree( numTris, [&] ( Buffer<TreeCenter> & centers, Box3f & centersBox ) { return makeBoxedTris( points, t, region, numTris, centers, centersBox ); },
+    const auto numTris = region ? (int)region->count() : (int)tmesh.tris.size();
+    makeTree( numTris, [&] ( Buffer<TreeCenter> & centers, Box3f & centersBox ) { return makeBoxedTris( tmesh, region, numTris, centers, centersBox ); },
         nodes_, leafTris_, leafBoxes_ );
 }
 

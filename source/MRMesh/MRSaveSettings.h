@@ -51,8 +51,8 @@ struct SaveSettings
     /// units of input coordinates and transformation, to be serialized if the format supports it
     std::optional<LengthUnit> lengthUnit;
 
-    /// the color of whole object, ignored if per-vertex or per-primitive colors are saved;
-    /// currently it affects the saving in .3mf and .ply formats only (PLY stores it as the color of every vertex)
+    /// the color of whole object, saved only in the formats having object color:
+    /// .3mf (if neither per-vertex nor per-triangle colors are given), .obj (Kd in .mtl file), binary .stl (COLOR= in the header)
     std::optional<Color> solidColor;
 
     /// permit telemetry signal about saving

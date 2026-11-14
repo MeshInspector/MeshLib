@@ -17,7 +17,6 @@
 #include <MRMesh/MRObjectPoints.h>
 #include <MRMesh/MRPointCloud.h>
 #include <MRMesh/MRPointsLoad.h>
-#include <MRMesh/MRPointsSave.h>
 #include <MRMesh/MRObjectSave.h>
 #include <MRMesh/MRStringConvert.h>
 #include <MRMesh/MRUniqueTemporaryFolder.h>
@@ -213,40 +212,6 @@ TEST(MRMesh, LoadPlyDuplicatingNonManifoldVertices)
     EXPECT_EQ( loadedColors[7_v], colors[0_v] );
 }
 
-TEST(MRMesh, SavePlySolidColor)
-{
-    // PLY has no object color, so solidColor is saved as the color of every vertex unless other colors are given
-    const Color solid( 10, 20, 30 );
-    TriMesh triMesh;
-    triMesh.tris = Triangulation{ { 0_v, 1_v, 2_v } };
-    triMesh.points = { Vector3f( 0, 0, 0 ), Vector3f( 1, 0, 0 ), Vector3f( 0, 1, 0 ) };
-
-    std::ostringstream out;
-    ASSERT_TRUE( MeshSave::toPly( triMesh, out, { .solidColor = solid } ).has_value() );
-    VertColors loadedColors;
-    std::istringstream in( out.str() );
-    ASSERT_TRUE( MeshLoad::fromPly( in, { .colors = &loadedColors } ).has_value() );
-    EXPECT_EQ( loadedColors, VertColors( 3, solid ) );
-
-    const FaceColors faceColors( 1, Color( 40, 50, 60 ) );
-    std::ostringstream out2;
-    ASSERT_TRUE( MeshSave::toPly( triMesh, out2, { .primitiveColors = &faceColors, .solidColor = solid } ).has_value() );
-    VertColors loadedColors2;
-    std::istringstream in2( out2.str() );
-    ASSERT_TRUE( MeshLoad::fromPly( in2, { .colors = &loadedColors2 } ).has_value() );
-    EXPECT_TRUE( loadedColors2.empty() );
-
-    PointCloud cloud;
-    cloud.points = { Vector3f( 0, 0, 0 ), Vector3f( 1, 0, 0 ) };
-    cloud.validPoints.resize( 2, true );
-    std::ostringstream out3;
-    ASSERT_TRUE( PointsSave::toPly( cloud, out3, { .solidColor = solid } ).has_value() );
-    VertColors loadedColors3;
-    std::istringstream in3( out3.str() );
-    ASSERT_TRUE( PointsLoad::fromPly( in3, { .colors = &loadedColors3 } ).has_value() );
-    EXPECT_EQ( loadedColors3, VertColors( 2, solid ) );
-}
-
 TEST(MRMesh, LoadPlyPointCloud)
 {
     // PLY point cloud with a face element having zero faces must keep all its points
@@ -294,6 +259,18 @@ TEST(MRMesh, SaveObjectTreeAsPoints)
     EXPECT_EQ( loaded->points[1_v], Vector3f( 0, 1, 1 ) );
     EXPECT_EQ( loaded->points[2_v], Vector3f( 1, 0, 2 ) );
     EXPECT_EQ( loaded->points[3_v], Vector3f( 1, 1, 2 ) );
+}
+
+TEST(MRMesh, SaveStlSolidColor)
+{
+    // object color in the header and the flag to use it in every triangle, by Materialise Magics convention
+    auto mesh = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 1, 0, 0 ), Vector3f( 0, 1, 0 ) }, { { 0_v, 1_v, 2_v } } );
+    std::ostringstream out;
+    ASSERT_TRUE( MeshSave::toBinaryStl( mesh, out, { .solidColor = Color( 10, 20, 30, 40 ) } ).has_value() );
+    const auto s = out.str();
+    ASSERT_EQ( s.size(), 80 + 4 + 50 );
+    EXPECT_EQ( s.substr( 0, 28 ), std::string( "MeshInspector.com COLOR=\x0A\x14\x1E\x28" ) );
+    EXPECT_EQ( s.substr( 132, 2 ), std::string( "\x00\x80", 2 ) );
 }
 
 TEST(MRMesh, StlLoadAsTriMesh)
@@ -613,6 +590,23 @@ TEST(MRMesh, LoadObjMtlNameWithSpaces)
     EXPECT_EQ( res->warnings, "" );
     ASSERT_EQ( res->objs.size(), 2 );
     EXPECT_EQ( frontColor( res->objs[0] ), Color::red() );
+}
+
+TEST(MRMesh, SaveObjSolidColor)
+{
+#ifdef __EMSCRIPTEN__
+    GTEST_SKIP() << ".mtl files are not saved in this build";
+#endif
+    // object color is saved in Kd of the material
+    UniqueTemporaryFolder dir;
+    auto mesh = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 1, 0, 0 ), Vector3f( 0, 1, 0 ) }, { { 0_v, 1_v, 2_v } } );
+    const Color solid( 255, 51, 0 );
+    ASSERT_TRUE( MeshSave::toObj( mesh, dir / "model.obj", { .materialName = "model", .solidColor = solid } ).has_value() );
+
+    auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
+    ASSERT_TRUE( res.has_value() );
+    ASSERT_EQ( res->objs.size(), 1 );
+    EXPECT_EQ( frontColor( res->objs[0] ), solid );
 }
 
 TEST(MRMesh, LoadObjWithTexture)

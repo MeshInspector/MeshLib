@@ -29,6 +29,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Basic\MRCameraOrientationPlugin.cpp" />
+    <ClCompile Include="Basic\MRFeatureAlignmentScene.cpp" />
+    <ClCompile Include="Basic\MRFeatureAlignmentController.cpp" />
+    <ClCompile Include="Basic\MRFeatureAlignment.cpp" />
+    <ClCompile Include="Basic\MRFeatureAlignmentReport.cpp" />
+    <ClCompile Include="Basic\MRFeatureAlignmentHistory.cpp" />
     <ClCompile Include="Basic\MRMoveObjectByMouse.cpp" />
     <ClCompile Include="Basic\MRObjectInfo.cpp" />
     <ClCompile Include="Basic\MRShowGlobalBasis.cpp" />
@@ -51,6 +56,11 @@
   <ItemGroup>
     <ClInclude Include="exports.h" />
     <ClInclude Include="Basic\MRCameraOrientationPlugin.h" />
+    <ClInclude Include="Basic\MRFeatureAlignmentScene.h" />
+    <ClInclude Include="Basic\MRFeatureAlignmentController.h" />
+    <ClInclude Include="Basic\MRFeatureAlignment.h" />
+    <ClInclude Include="Basic\MRFeatureAlignmentLayout.h" />
+    <ClInclude Include="Basic\MRFeatureAlignmentReport.h" />
     <ClInclude Include="Basic\MRMoveObjectByMouse.h" />
     <ClInclude Include="Basic\MRWasmUnavailablePlugin.h" />
     <ClInclude Include="Basic\MRDrawViewportWidgetsItem.h" />

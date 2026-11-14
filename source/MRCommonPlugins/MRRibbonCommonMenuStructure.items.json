@@ -1,6 +1,11 @@
 {
   "Items": [
     {
+      "Name": "Feature Alignment",
+      "Tooltip": "Align existing fitted features. The higher part stays fixed; the lower part moves. Preview residuals before applying.",
+      "Icon": "\uf0b2"
+    },
+    {
       "Name": "Undo",
       "Tooltip": "Undo the last action.",
       "Icon": "\uF0E2",

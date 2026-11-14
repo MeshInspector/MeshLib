@@ -434,7 +434,24 @@ TEST( MRMesh, AABBTreeGoldenHashes )
         { 300000, 1 << 16, false, 0x0cc9a28f326dd6dcull }
     };
     for ( const auto & c : cases )
-        EXPECT_EQ( treeHash( AABBTree( makeIntegerSoup( c.numTris, c.range, c.farOutlier ) ) ), c.hash ) << c.numTris << " triangles";
+    {
+        const Mesh mesh = makeIntegerSoup( c.numTris, c.range, c.farOutlier );
+        EXPECT_EQ( treeHash( AABBTree( mesh ) ), c.hash ) << c.numTris << " triangles";
+        EXPECT_EQ( treeHash( AABBTree( mesh.points, mesh.topology.getTriangulation(), &mesh.topology.getValidFaces() ) ), c.hash )
+            << c.numTris << " triangles from the triangulation";
+    }
+}
+
+// the tree of a part of the triangles from the triangulation is the tree of that mesh part
+TEST( MRMesh, AABBTreeFromTriangulationRegion )
+{
+    const Mesh mesh = makeUVSphere( 1.f, 64, 32 );
+    FaceBitSet region( mesh.topology.faceSize() );
+    for ( FaceId f : mesh.topology.getValidFaces() )
+        region.set( f, f % 3 != 0 );
+    EXPECT_EQ( treeHash( AABBTree( mesh.points, mesh.topology.getTriangulation(), &region ) ), treeHash( AABBTree( { mesh, &region } ) ) );
+    EXPECT_TRUE( AABBTree( mesh.points, mesh.topology.getTriangulation(), &region ).leafTris().size() == region.count() );
+    EXPECT_TRUE( AABBTree( mesh.points, Triangulation{} ).nodes().empty() );
 }
 
 // a big mesh, whose top ranges are split in parallel, gives the same tree on one thread

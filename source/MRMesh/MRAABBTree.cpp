@@ -174,11 +174,11 @@ private:
         {
             const int chunkSize = parallelSplits_ && r.num >= cParallelSplitNum ? cChunk : r.num;
             Box3f halfBoxes[2];
-            if ( splitCentersByBuckets( data, data_( { r.first, r.num, !r.inScratch } ), r.num, axis, box.min[axis], box.max[axis], chunkSize, halfBoxes ) )
+            if ( splitCentersByBuckets( data, data_( { r.first, r.num, !r.inScratch, false, {} } ), r.num, axis, box.min[axis], box.max[axis], chunkSize, halfBoxes ) )
                 return { Range{ r.first, r.num / 2, !r.inScratch, true, halfBoxes[0] }, Range{ r.first + r.num / 2, r.num - r.num / 2, !r.inScratch, true, halfBoxes[1] } };
         }
         selectCenter( data, data + r.num / 2, data + r.num, axis );
-        return { Range{ r.first, r.num / 2, r.inScratch }, Range{ r.first + r.num / 2, r.num - r.num / 2, r.inScratch } };
+        return { Range{ r.first, r.num / 2, r.inScratch, false, {} }, Range{ r.first + r.num / 2, r.num - r.num / 2, r.inScratch, false, {} } };
     }
 
     // fills node n with its subtree, whose nodes below the children of n start from desc

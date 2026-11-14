@@ -371,6 +371,7 @@
     <ClInclude Include="MRPointsLoad.h" />
     <ClInclude Include="MRMultiScanLoad.h" />
     <ClInclude Include="MRPointsSave.h" />
+    <ClInclude Include="MRPolylineDistance.h" />
     <ClInclude Include="MRPolylineProject.h" />
     <ClInclude Include="MRPrecisePredicates3.h" />
     <ClInclude Include="MRPrecisePredicates3Poly.h" />
@@ -684,6 +685,7 @@
     <ClCompile Include="MRLinesLoad.cpp" />
     <ClCompile Include="MRPolylineComponents.cpp" />
     <ClCompile Include="MRPolylineDecimate.cpp" />
+    <ClCompile Include="MRPolylineDistance.cpp" />
     <ClCompile Include="MRPolylineProject.cpp" />
     <ClCompile Include="MRLinesSave.cpp" />
     <ClCompile Include="MRPolylineSubdivide.cpp" />

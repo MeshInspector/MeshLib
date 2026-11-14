@@ -390,6 +390,9 @@
     <ClInclude Include="MRLineSegm3.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRPolylineDistance.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
     <ClInclude Include="MRPolylineProject.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
@@ -1690,6 +1693,9 @@
     </ClCompile>
     <ClCompile Include="MRIOFormatsRegistry.cpp">
       <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPolylineDistance.cpp">
+      <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRPolylineProject.cpp">
       <Filter>Source Files\AABBTree</Filter>

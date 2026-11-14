@@ -32,23 +32,25 @@ struct BoxedTri
     explicit BoxedTri( NoInit ) noexcept : tri{ FaceId( noInit ), { VertId( noInit ), VertId( noInit ), VertId( noInit ) } }, box( noInit ) { }
 };
 
-/// the numFaces triangles (faces [0, numFaces) if packed, otherwise the faces of *faces) with their boxes,
-/// the doubled centers of these boxes, and the box of the centers;
-/// triVerts( f ) returns the vertices of face f, and readAhead( faceOf, i, end ) may start reading the data of the triangles after i
-template <typename TriVerts, typename ReadAhead>
-Buffer<BoxedTri> makeBoxedTris( const VertCoords & points, bool packed, const FaceBitSet * faces, int numFaces,
-    const TriVerts & triVerts, const ReadAhead & readAhead, Buffer<TreeCenter> & centers, Box3f & centersBox )
+/// the numFaces triangles with their boxes, the doubled centers of these boxes, and the box of the centers
+Buffer<BoxedTri> makeBoxedTris( const MeshPart & mp, int numFaces, Buffer<TreeCenter> & centers, Box3f & centersBox )
 {
     Buffer<BoxedTri> boxedTris( numFaces );
     centers = Buffer<TreeCenter>( numFaces );
+    const bool packed = numFaces == mp.mesh.topology.faceSize();
     if ( !packed )
     {
         int n = 0;
-        for ( auto f : *faces )
+        for ( auto f : mp.mesh.topology.getFaceIds( mp.region ) )
             boxedTris[n++].tri.face = f;
     }
 
+    const auto & topology = mp.mesh.topology;
+    const auto & points = mp.mesh.points;
     const auto faceOf = [&] ( int i ) { return packed ? FaceId( i ) : boxedTris[i].tri.face; };
+    // the records of a triangle are often far from the previous triangle's in memory, so they are read ahead:
+    // its first edge's 2 * cAhead triangles ahead, its next edge's cAhead triangles ahead, and its points cAhead / 4 triangles ahead
+    constexpr int cAhead = 16;
     constexpr int cBlock = 1024; // the centers are included in their box by blocks, while in the cache
     centersBox = tbb::parallel_reduce( tbb::blocked_range<int>( 0, numFaces ), Box3f(),
         [&] ( const tbb::blocked_range<int> & range, Box3f box )
@@ -58,9 +60,56 @@ Buffer<BoxedTri> makeBoxedTris( const VertCoords & points, bool packed, const Fa
         {
             for ( int i = b, be = std::min( end, b + cBlock ); i < be; ++i )
             {
-                readAhead( faceOf, i, end );
+                if ( i + 2 * cAhead < end )
+                    topology.prefetchEdge( topology.edgeWithLeft( faceOf( i + 2 * cAhead ) ) );
+                if ( i + cAhead < end )
+                    topology.prefetchEdge( topology.prev( topology.edgeWithLeft( faceOf( i + cAhead ) ).sym() ) );
+                if ( i + cAhead / 4 < end )
+                    for ( auto v : topology.getTriVerts( faceOf( i + cAhead / 4 ) ) )
+                        MR_PREFETCH( &points[v] );
+                auto & bt = boxedTris[i];
                 const FaceId f = faceOf( i );
-                const ThreeVertIds v = triVerts( f );
+                bt.tri = { f, topology.getTriVerts( f ) };
+                insignificantlyExpandedTriBoxAndCenter( points[bt.tri.verts[0]], points[bt.tri.verts[1]], points[bt.tri.verts[2]], i, bt.box, centers[i] );
+            }
+            box = includeCenters( box, centers.data() + b, std::min( end, b + cBlock ) - b );
+        }
+        return box;
+    },
+        [] ( Box3f a, const Box3f & b ) { a.include( b ); return a; } );
+    return boxedTris;
+}
+
+/// the triangles of t (all if region is nullptr) with their boxes, see makeBoxedTris above
+Buffer<BoxedTri> makeBoxedTris( const VertCoords & points, const Triangulation & t, const FaceBitSet * region, int numFaces,
+    Buffer<TreeCenter> & centers, Box3f & centersBox )
+{
+    Buffer<BoxedTri> boxedTris( numFaces );
+    centers = Buffer<TreeCenter>( numFaces );
+    const bool packed = numFaces == (int)t.size();
+    if ( !packed )
+    {
+        int n = 0;
+        for ( auto f : *region )
+            boxedTris[n++].tri.face = f;
+    }
+
+    const auto faceOf = [&] ( int i ) { return packed ? FaceId( i ) : boxedTris[i].tri.face; };
+    constexpr int cAhead = 4; // the points of a triangle are read cAhead triangles ahead
+    constexpr int cBlock = 1024; // the centers are included in their box by blocks, while in the cache
+    centersBox = tbb::parallel_reduce( tbb::blocked_range<int>( 0, numFaces ), Box3f(),
+        [&] ( const tbb::blocked_range<int> & range, Box3f box )
+    {
+        const int end = range.end();
+        for ( int b = range.begin(); b < end; b += cBlock )
+        {
+            for ( int i = b, be = std::min( end, b + cBlock ); i < be; ++i )
+            {
+                if ( i + cAhead < end )
+                    for ( auto v : t[faceOf( i + cAhead )] )
+                        MR_PREFETCH( &points[v] );
+                const FaceId f = faceOf( i );
+                const ThreeVertIds v = t[f];
                 // not bt.tri = { f, v }, which MSVC assembles on the stack and copies by one wider load, waiting for the stores
                 auto & bt = boxedTris[i];
                 bt.tri.face = f;
@@ -73,44 +122,6 @@ Buffer<BoxedTri> makeBoxedTris( const VertCoords & points, bool packed, const Fa
     },
         [] ( Box3f a, const Box3f & b ) { a.include( b ); return a; } );
     return boxedTris;
-}
-
-/// the triangles of the mesh part with their boxes, see makeBoxedTris above
-Buffer<BoxedTri> makeBoxedTris( const MeshPart & mp, int numFaces, Buffer<TreeCenter> & centers, Box3f & centersBox )
-{
-    const auto & topology = mp.mesh.topology;
-    const auto & points = mp.mesh.points;
-    // the records of a triangle are often far from the previous triangle's in memory, so they are read ahead:
-    // its first edge's 2 * cAhead triangles ahead, its next edge's cAhead triangles ahead, and its points cAhead / 4 triangles ahead
-    constexpr int cAhead = 16;
-    return makeBoxedTris( points, numFaces == topology.faceSize(), &topology.getFaceIds( mp.region ), numFaces,
-        [&] ( FaceId f ) { return topology.getTriVerts( f ); },
-        [&] ( const auto & faceOf, int i, int end )
-        {
-            if ( i + 2 * cAhead < end )
-                topology.prefetchEdge( topology.edgeWithLeft( faceOf( i + 2 * cAhead ) ) );
-            if ( i + cAhead < end )
-                topology.prefetchEdge( topology.prev( topology.edgeWithLeft( faceOf( i + cAhead ) ).sym() ) );
-            if ( i + cAhead / 4 < end )
-                for ( auto v : topology.getTriVerts( faceOf( i + cAhead / 4 ) ) )
-                    MR_PREFETCH( &points[v] );
-        }, centers, centersBox );
-}
-
-/// the triangles of the triangulation (all if region is nullptr) with their boxes, see makeBoxedTris above
-Buffer<BoxedTri> makeBoxedTris( const VertCoords & points, const Triangulation & t, const FaceBitSet * region, int numFaces,
-    Buffer<TreeCenter> & centers, Box3f & centersBox )
-{
-    // the points of a triangle are read cAhead triangles ahead
-    constexpr int cAhead = 4;
-    return makeBoxedTris( points, numFaces == (int)t.size(), region, numFaces,
-        [&] ( FaceId f ) { return t[f]; },
-        [&] ( const auto & faceOf, int i, int end )
-        {
-            if ( i + cAhead < end )
-                for ( auto v : t[faceOf( i + cAhead )] )
-                    MR_PREFETCH( &points[v] );
-        }, centers, centersBox );
 }
 
 /// splits each AABBTree node in two binary levels, each at the median of the triangle box centers

@@ -112,6 +112,12 @@ Expected<void> toOff( const Mesh& mesh, std::ostream& out, const SaveSettings & 
 }
 
 
+// several materials (Texture0, Texture1, ...) are saved in .obj instead of one (Texture)
+static bool hasManyTextures( const SaveSettings & settings )
+{
+    return settings.textures && settings.textures->size() > 1 && settings.texturePerFace && !settings.texturePerFace->empty();
+}
+
 Expected<void> toObj( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, int firstVertId )
 {
     // although .obj is a textual format, we open the file in binary mode to get exactly the same result on Windows and Linux
@@ -122,7 +128,23 @@ Expected<void> toObj( const Mesh & mesh, const std::filesystem::path & file, con
 #ifndef __EMSCRIPTEN__
     // it is hard to handle several files output for browser, so for now it is under ifdef,
     // anyway later it may be reworked to save simple zip and taken out of ifdef
-    if ( settings.uvMap && settings.texture && !settings.texture->pixels.empty() )
+    if ( settings.uvMap && hasManyTextures( settings ) )
+    {
+        if ( auto pngSaver = ImageSave::getImageSaver( "*.png" ) )
+        {
+            auto mtlPath = file.parent_path() / asU8String( settings.materialName + ".mtl" );
+            std::ofstream ofMtl( mtlPath, std::ofstream::binary );
+            for ( TextureId t{ 0 }; ofMtl && t < settings.textures->size(); ++t )
+            {
+                ofMtl << fmt::format( "newmtl Texture{}\n", int( t ) );
+                const auto& texture = ( *settings.textures )[t];
+                const auto textureName = fmt::format( "{}_{}.png", settings.materialName, int( t ) );
+                if ( !texture.pixels.empty() && pngSaver( texture, file.parent_path() / asU8String( textureName ) ).has_value() )
+                    ofMtl << fmt::format( "map_Kd {}\n", textureName );
+            }
+        }
+    }
+    else if ( settings.uvMap && settings.texture && !settings.texture->pixels.empty() )
     {
         if ( auto pngSaver = ImageSave::getImageSaver( "*.png" ) )
         {
@@ -196,19 +218,35 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
             if ( settings.progress && !( numSaved & 0x3FF ) && !sb( float( numSaved ) / numPoints ) )
                 return unexpectedOperationCanceled();
         }
-        out << "usemtl Texture\n";
     }
+    const bool manyTextures = saveUV && hasManyTextures( settings );
+    if ( saveUV && !manyTextures )
+        out << "usemtl Texture\n";
 
     sb = subprogress( settings.progress, saveUV ? 0.7f : 0.5f, 1.0f );
-    const float facesNum = float( mesh.topology.edgePerFace().size() );
-    size_t faceIndex = 0;
-    for ( const auto& e : mesh.topology.edgePerFace() )
+    const auto& edgePerFace = mesh.topology.edgePerFace();
+    const float facesNum = float( edgePerFace.size() );
+    TextureId curTexture;
+    for ( FaceId f{ 0 }; f < edgePerFace.size(); ++f )
     {
-        ++faceIndex;
+        const auto faceIndex = size_t( f ) + 1;
         if ( settings.progress && !( faceIndex & 0x3FF ) && !sb( faceIndex / facesNum ) )
             return unexpectedOperationCanceled();
+        const auto e = edgePerFace[f];
         if ( !e.valid() )
             continue;
+
+        if ( manyTextures )
+        {
+            auto texture = getAt( *settings.texturePerFace, f, TextureId( 0 ) );
+            if ( !texture.valid() || size_t( texture ) >= settings.textures->size() )
+                texture = TextureId( 0 );
+            if ( texture != curTexture )
+            {
+                curTexture = texture;
+                out << fmt::format( "usemtl Texture{}\n", int( texture ) );
+            }
+        }
 
         VertId a, b, c;
         mesh.topology.getLeftTriVerts( e, a, b, c );

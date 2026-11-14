@@ -42,6 +42,11 @@ struct SaveSettings
     /// optional texture to save with the geometry
     const MeshTexture * texture = nullptr;
 
+    /// optional several textures and the texture of each face;
+    /// if both are given and the format supports several textures (.OBJ), they are saved instead of \ref texture
+    const Vector<MeshTexture, TextureId> * textures = nullptr;
+    const TexturePerFace * texturePerFace = nullptr;
+
     /// the name of file (UTF8 encoded) without extension to save texture in some formats (e.g. .OBJ, .PLY)
     std::string materialName = "Default";
 

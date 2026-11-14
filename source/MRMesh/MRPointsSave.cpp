@@ -156,7 +156,8 @@ Expected<void> toPly( const PointCloud& cloud, std::ostream& out, const SaveSett
         "element vertex " << totalPoints << "\nproperty float x\nproperty float y\nproperty float z\n";
 
     const bool saveNormals = cloud.points.size() <= cloud.normals.size();
-    const bool saveColors = settings.colors && !settings.colors->empty();
+    const bool vertColors = settings.colors && !settings.colors->empty();
+    const bool saveColors = vertColors || settings.solidColor; // PLY has no object color, save it in every point
 
     if ( saveNormals )
         out << "property float nx\nproperty float ny\nproperty float nz\n";
@@ -189,7 +190,7 @@ Expected<void> toPly( const PointCloud& cloud, std::ostream& out, const SaveSett
         }
         if ( saveColors )
         {
-            const auto c = getAt( *settings.colors, v );
+            const auto c = vertColors ? getAt( *settings.colors, v ) : *settings.solidColor;
             PlyColor pc{ .r = c.r, .g = c.g, .b = c.b };
             out.write( ( const char* )&pc, 3 );
         }

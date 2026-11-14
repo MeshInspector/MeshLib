@@ -169,7 +169,8 @@ Expected<void> toPly( const Polyline3& polyline, std::ostream & out, const SaveS
     const VertRenumber vertRenumber( polyline.topology.getValidVerts(), settings.onlyValidPoints );
     const int numPoints = vertRenumber.sizeVerts();
     const VertId lastVertId = polyline.topology.lastValidVert();
-    bool saveColors = settings.colors && !settings.colors->empty();
+    const bool vertColors = settings.colors && !settings.colors->empty();
+    bool saveColors = vertColors || settings.solidColor; // PLY has no object color, save it in every vertex
 
     out << "ply\nformat binary_little_endian 1.0\ncomment MeshInspector.com\n"
         "element vertex " << numPoints << "\nproperty float x\nproperty float y\nproperty float z\n";
@@ -199,7 +200,7 @@ Expected<void> toPly( const Polyline3& polyline, std::ostream & out, const SaveS
         out.write( ( const char* )&p, 12 );
         if ( saveColors )
         {
-            const auto c = getAt( *settings.colors, i );
+            const auto c = vertColors ? getAt( *settings.colors, i ) : *settings.solidColor;
             PlyColor pc{ .r = c.r, .g = c.g, .b = c.b };
             out.write( ( const char* )&pc, 3 );
         }

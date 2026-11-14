@@ -468,8 +468,10 @@ static Expected<void> toPlyImpl( const MeshType & mesh, std::ostream & out, cons
 
     bool saveTexture = settings.texture && !settings.texture->pixels.empty();
     bool saveUV = settings.uvMap && !settings.uvMap->empty();
-    bool saveColors = settings.colors && !settings.colors->empty();
     bool saveFaceColors = settings.primitiveColors && !settings.primitiveColors->empty();
+    const bool vertColors = settings.colors && !settings.colors->empty();
+    const auto solidColor = saveFaceColors ? std::nullopt : settings.solidColor; // PLY has no object color, save it in every vertex
+    bool saveColors = vertColors || solidColor;
 
     out << "ply\nformat binary_little_endian 1.0\ncomment MeshInspector.com\n";
     if ( saveUV && saveTexture )
@@ -507,7 +509,7 @@ static Expected<void> toPlyImpl( const MeshType & mesh, std::ostream & out, cons
         out.write( ( const char* )&p, 12 );
         if ( saveColors )
         {
-            const auto c = getAt( *settings.colors, i );
+            const auto c = vertColors ? getAt( *settings.colors, i ) : *solidColor;
             PlyColor pc{ .r = c.r, .g = c.g, .b = c.b };
             out.write( ( const char* )&pc, 3 );
         }

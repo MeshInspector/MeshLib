@@ -4,7 +4,6 @@
 #include "MRPch/MRBindingMacros.h"
 #include <memory>
 #include <new>
-#include <type_traits>
 
 // mr_enable_mimalloc executables forward malloc to the same mimalloc; MRMESH_NO_MIMALLOC, see cmake/Modules/Mimalloc.cmake
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_MIMALLOC )
@@ -26,24 +25,13 @@
 namespace MR
 {
 
-/// the alignment of the memory Allocator<T> allocates: alignof( T ), or T::cAllocAlignment if T defines a greater one
-template <typename T, typename = void>
-inline constexpr std::size_t cAllocatorAlignment = alignof( T );
-template <typename T>
-inline constexpr std::size_t cAllocatorAlignment<T, std::void_t<decltype( T::cAllocAlignment )>> =
-    T::cAllocAlignment > alignof( T ) ? T::cAllocAlignment : alignof( T );
-
+#ifdef MR_ALLOCATOR_IS_MIMALLOC
 // not mi_stl_allocator: its construct/destroy members stop std containers from memmove-copying and skipping trivial destructors
 template <typename T>
-struct MR_BIND_IGNORE AllocatorNoBase {};
-
-#ifdef MR_ALLOCATOR_IS_MIMALLOC
-template <typename T>
-using AllocatorBase = AllocatorNoBase<T>;
+struct MR_BIND_IGNORE AllocatorBase {};
 #else
-// not std::allocator for over-aligned T: containers would call its allocate_at_least instead of Allocator::allocate
 template <typename T>
-using AllocatorBase = std::conditional_t<( cAllocatorAlignment<T> > alignof( T ) ), AllocatorNoBase<T>, std::allocator<T>>;
+using AllocatorBase = std::allocator<T>;
 #endif
 
 /// allocator of MeshLib containers that benefit from mimalloc: mimalloc explicitly,
@@ -66,35 +54,16 @@ struct MR_BIND_IGNORE Allocator : AllocatorBase<T>
 
     [[nodiscard]] T * allocate( std::size_t n )
     {
-        if constexpr ( cAllocatorAlignment<T> > __STDCPP_DEFAULT_NEW_ALIGNMENT__ )
+        if constexpr ( alignof( T ) > __STDCPP_DEFAULT_NEW_ALIGNMENT__ )
         {
             if ( n > std::size_t( -1 ) / sizeof( T ) )
                 throw std::bad_array_new_length();
-            return static_cast<T *>( mi_new_aligned( n * sizeof( T ), cAllocatorAlignment<T> ) );
+            return static_cast<T *>( mi_new_aligned( n * sizeof( T ), alignof( T ) ) );
         }
         else
             return static_cast<T *>( mi_new_n( n, sizeof( T ) ) );
     }
     void deallocate( T * p, std::size_t ) noexcept { mi_free( p ); }
-#else
-    [[nodiscard]] T * allocate( std::size_t n )
-    {
-        if constexpr ( cAllocatorAlignment<T> > alignof( T ) )
-        {
-            if ( n > std::size_t( -1 ) / sizeof( T ) )
-                throw std::bad_array_new_length();
-            return static_cast<T *>( ::operator new( n * sizeof( T ), std::align_val_t( cAllocatorAlignment<T> ) ) );
-        }
-        else
-            return AllocatorBase<T>::allocate( n );
-    }
-    void deallocate( T * p, std::size_t n ) noexcept
-    {
-        if constexpr ( cAllocatorAlignment<T> > alignof( T ) )
-            ::operator delete( p, std::align_val_t( cAllocatorAlignment<T> ) );
-        else
-            AllocatorBase<T>::deallocate( p, n );
-    }
 #endif
     [[nodiscard]] Allocator select_on_container_copy_construction() const noexcept { return *this; }
 };

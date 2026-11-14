@@ -1,7 +1,6 @@
 #include <MRMesh/MRVector.h>
 #include <MRMesh/MRId.h>
 #include <gtest/gtest.h>
-#include <cstdint>
 
 namespace MR
 {
@@ -68,38 +67,6 @@ TEST( MRMesh, VectorResizeNoInit )
     EXPECT_EQ( v.size(), 5 );
     for ( int i = 0; i < 5; ++i )
         EXPECT_EQ( v[VertId( i )], EdgeId( i ) );
-}
-
-namespace
-{
-struct AlignedRec
-{
-    static constexpr std::size_t cAllocAlignment = 64;
-    int a = 0;
-};
-} //anonymous namespace
-
-TEST( MRMesh, VectorAllocAlignment )
-{
-    using Rec = AlignedRec;
-    static_assert( cAllocatorAlignment<Rec> == 64 && cAllocatorAlignment<int> == alignof( int ) );
-    const auto aligned = [] ( const Rec * p ) { return reinterpret_cast<std::uintptr_t>( p ) % 64 == 0; };
-
-    Vector<Rec, VertId> v;
-    for ( int i = 0; i < 1000; ++i )
-    {
-        v.push_back( { i } );
-        EXPECT_TRUE( aligned( v.data() ) );
-    }
-    v.resize( 3'000'000 ); // a large block
-    EXPECT_TRUE( aligned( v.data() ) );
-    EXPECT_EQ( v[VertId( 999 )].a, 999 );
-    const auto copy = v;
-    EXPECT_TRUE( aligned( copy.data() ) );
-    v.clear();
-    v.shrink_to_fit();
-    v.resize( 3 );
-    EXPECT_TRUE( aligned( v.data() ) );
 }
 
 } //namespace MR

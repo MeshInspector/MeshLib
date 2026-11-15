@@ -1,6 +1,7 @@
 #include "MRFeatureAlignment.h"
 #include "MRPointToPointAligningTransform.h"
 #include "MRIntersection.h"
+#include "MRTriMath.h"
 #include "MRPlaneObject.h"
 #include "MRCircleObject.h"
 #include "MRCylinderObject.h"
@@ -10,13 +11,21 @@
 #include <algorithm>
 #include <cmath>
 #include <numbers>
+#include <string>
+#include <utility>
 
-namespace MR::FeatureAlignment::detail
+namespace MR::FeatureAlignment
+{
+namespace
 {
 constexpr double cEpsilon = 1e-10, cDegrees = 180. / std::numbers::pi;
 bool finite( Vector3d v )
 {
     return std::isfinite( v.x ) && std::isfinite( v.y ) && std::isfinite( v.z );
+}
+double stableLength( Vector3d v )
+{
+    return std::hypot( v.x, v.y, v.z );
 }
 bool normalize( Vector3d &v )
 {
@@ -32,41 +41,41 @@ Vector3d project( Vector3d v, Vector3d n )
 }
 Matrix3d shortestRotation( Vector3d a, Vector3d b )
 {
-    return Matrix3d::rotation( a, b );
+    const auto axis = cross( a, b );
+    const auto sine = stableLength( axis );
+    if ( sine == 0 )
+        return Matrix3d::rotation( a, b );
+    // Normalize before the native axis-angle helper squares the cross product.
+    return Matrix3d::rotation( axis / sine, std::atan2( sine, dot( a, b ) ) );
 }
 double angleDeg( Vector3d a, Vector3d b, bool unoriented = false )
 {
     a = a.normalized();
     b = b.normalized();
-    auto cosine = dot( a, b );
-    if ( unoriented )
-        cosine = std::abs( cosine );
-    return std::acos( std::clamp( cosine, -1., 1. ) ) * cDegrees;
+    const auto perpendicular = cross( a, b );
+    // Use the native atan2(cross magnitude, dot) angle formulation, with hypot
+    // so squaring a representable tiny cross component does not underflow.
+    const auto sine = stableLength( perpendicular );
+    const auto cosine = unoriented ? std::abs( dot( a, b ) ) : dot( a, b );
+    return std::atan2( sine, cosine ) * cDegrees;
 }
 Expected<double> spin( Vector3d a, Vector3d b, Vector3d n )
 {
     a = project( a, n );
     b = project( b, n );
     if ( !normalize( a ) || !normalize( b ) )
-        return unexpected( std::string( "The reference has no usable lever arm about the primary axis." ) );
-    // Symmetric pairs fix the centroid at zero: only the directed residual spin is fitted.
-    PointToPointAligningTransform aligning;
-    aligning.add( a, b );
-    aligning.add( -a, -b );
-    const auto rotation = aligning.findBestRigidXfFixedRotationAxis( n ).A;
-    const auto rotated = rotation * a;
-    return std::atan2( dot( n, cross( a, rotated ) ), dot( a, rotated ) );
+        return unexpected( std::string( _t( "The reference has no usable lever arm about the primary axis." ) ) );
+    return dihedralAngle( a, b, n );
 }
 Expected<void> valid( const Constraints &c )
 {
     const auto &s = c.settings;
     if ( !std::isfinite( s.offset ) || !std::isfinite( s.linearTolerance ) || !std::isfinite( s.angularToleranceDeg ) ||
          s.linearTolerance < 0 || s.angularToleranceDeg < 0 || s.angularToleranceDeg >= 90 )
-        return unexpected( std::string(
-            "Use finite settings, a nonnegative position tolerance, and an angle tolerance below 90 degrees." ) );
+        return unexpected( std::string( _t( "Use finite settings, a nonnegative position tolerance, and an angle tolerance below 90 degrees." ) ) );
     for ( const auto &pair : c.centers )
         if ( !finite( pair.moving ) || !finite( pair.fixed ) )
-            return unexpected( std::string( "Feature centers must be finite." ) );
+            return unexpected( std::string( _t( "Feature centers must be finite." ) ) );
     return {};
 }
 void rigidMetrics( Solution &r )
@@ -78,18 +87,18 @@ void rigidMetrics( Solution &r )
                 std::max( r.orthogonalityError,
                           std::abs( dot( r.delta.A.col( i ), r.delta.A.col( j ) ) - ( i == j ? 1. : 0. ) ) );
 }
-void measureCenters( const Constraints &c, Solution &r, Vector3d offset = {} )
+void measureCenterResiduals( const Constraints &c, Solution &r, Vector3d offset = {} )
 {
     for ( size_t i = 0; i < c.centers.size(); ++i )
     {
         const auto residual = r.delta( c.centers[i].moving ) - c.centers[i].fixed - offset;
         HoleResidual e;
         e.hasAxis = false;
-        e.position = residual.length();
-        e.rawCenterDistance = e.position;
+        e.position = stableLength( residual );
+        e.rawCenterDistance = stableLength( r.delta( c.centers[i].moving ) - c.centers[i].fixed );
         r.holes.push_back( e );
         if ( e.position > c.settings.linearTolerance )
-            r.conflicts.push_back( "Center " + std::to_string( i + 1 ) + " residual exceeds tolerance." );
+            r.conflicts.push_back( { DiagnosticCode::CenterPositionMismatch, int( i ) } );
     }
 }
 
@@ -98,14 +107,14 @@ struct Orientation
     Matrix3d rotation;
     double yaw = 0;
     int remaining = 3;
-    std::string source = "unconstrained";
+    RotationSource source = RotationSource::Unconstrained;
     bool spinLocked = false;
 };
 
 Expected<Solution> checkedSolution( Solution result, const Constraints &constraints )
 {
     if ( !isRigid( result.delta ) )
-        return unexpected( std::string( "Failed to produce or measure a finite rigid transform." ) );
+        return unexpected( std::string( _t( "Failed to produce or measure a finite rigid transform." ) ) );
     const auto finitePair = [&]( const Vector3d &moving, const Vector3d &fixed )
     {
         const auto transformed = result.delta( moving );
@@ -113,36 +122,33 @@ Expected<Solution> checkedSolution( Solution result, const Constraints &constrai
     };
     if ( constraints.settings.mode == PrimaryMode::Plane &&
          !finitePair( constraints.movingPlane.center, constraints.fixedPlane.center ) )
-        return unexpected( std::string( "Plane placement exceeds the supported numeric range." ) );
+        return unexpected( std::string( _t( "Plane placement exceeds the supported numeric range." ) ) );
     if ( constraints.settings.mode == PrimaryMode::Axis &&
          !finitePair( constraints.movingAxis.center, constraints.fixedAxis.center ) )
-        return unexpected( std::string( "Axis placement exceeds the supported numeric range." ) );
+        return unexpected( std::string( _t( "Axis placement exceeds the supported numeric range." ) ) );
     if ( constraints.settings.mode != PrimaryMode::Plane )
         for ( const auto &center : constraints.centers )
             if ( !finitePair( center.moving, center.fixed ) )
-                return unexpected( std::string( "Center placement exceeds the supported numeric range." ) );
+                return unexpected( std::string( _t( "Center placement exceeds the supported numeric range." ) ) );
     if ( constraints.settings.mode == PrimaryMode::Plane )
         for ( const auto &hole : constraints.holes )
             if ( !finitePair( hole.moving.center, hole.fixed.center ) )
-                return unexpected( std::string( "Hole placement exceeds the supported numeric range." ) );
+                return unexpected( std::string( _t( "Hole placement exceeds the supported numeric range." ) ) );
     for ( const double value :
           { result.primaryPositionError, result.primaryAngleErrorDeg, result.yawDeg, result.signedPlaneGap,
             result.planeOffsetError, result.normalErrorDeg, result.orthogonalityError, result.determinant } )
         if ( !std::isfinite( value ) )
-            return unexpected( std::string( "Alignment residuals exceed the supported numeric range." ) );
+            return unexpected( std::string( _t( "Alignment residuals exceed the supported numeric range." ) ) );
     if ( result.clockingErrorDeg && !std::isfinite( *result.clockingErrorDeg ) )
-        return unexpected( std::string( "Clocking residual exceeds the supported numeric range." ) );
+        return unexpected( std::string( _t( "Clocking residual exceeds the supported numeric range." ) ) );
     for ( const auto &hole : result.holes )
         for ( const double value : { hole.position, hole.inPlane, hole.axial, hole.axisAngleDeg, hole.radiusDifference,
                                      hole.rawCenterDistance } )
             if ( !std::isfinite( value ) )
-                return unexpected( std::string( "Locator residuals exceed the supported numeric range." ) );
+                return unexpected( std::string( _t( "Locator residuals exceed the supported numeric range." ) ) );
     return result;
 }
-} // namespace MR::FeatureAlignment::detail
 
-namespace MR::FeatureAlignment::detail
-{
 Expected<Constraints> preparedAxis( Constraints c )
 {
     auto good = valid( c );
@@ -150,16 +156,16 @@ Expected<Constraints> preparedAxis( Constraints c )
         return unexpected( good.error() );
     if ( !finite( c.movingAxis.center ) || !finite( c.fixedAxis.center ) || !normalize( c.movingAxis.direction ) ||
          !normalize( c.fixedAxis.direction ) )
-        return unexpected( std::string( "The primary axes need finite centers and nonzero directions." ) );
+        return unexpected( std::string( _t( "The primary axes need finite centers and nonzero directions." ) ) );
     if ( c.centers.size() > 2 )
-        return unexpected( std::string( "Use at most two additional center locators." ) );
+        return unexpected( std::string( _t( "Use at most two additional center locators." ) ) );
     if ( !c.settings.matchAxialCenters && c.centers.empty() && c.settings.offset != 0 )
-        return unexpected( std::string( "An axial offset requires matched primary centers or a center locator." ) );
+        return unexpected( std::string( _t( "An axial offset requires matched primary centers or a center locator." ) ) );
     const auto relation = c.settings.axisDirection;
     if ( relation != AxisDirection::Closest && relation != AxisDirection::Same && relation != AxisDirection::Opposing )
-        return unexpected( std::string( "Choose closest, same or opposing axis directions." ) );
-    if ( c.clocking && ( !normalize( c.clocking->first ) || !normalize( c.clocking->second ) ) )
-        return unexpected( std::string( "Clocking directions must be nonzero." ) );
+        return unexpected( std::string( _t( "Choose closest, same or opposing axis directions." ) ) );
+    if ( c.clocking && ( !normalize( c.clocking->moving ) || !normalize( c.clocking->fixed ) ) )
+        return unexpected( std::string( _t( "Clocking directions must be nonzero." ) ) );
     return c;
 }
 Vector3d directedTarget( const Constraints &c )
@@ -179,27 +185,27 @@ Solution measuredAxis( const Constraints &c, const AffineXf3d &delta )
     r.delta = delta;
     rigidMetrics( r );
     const auto displacement = delta( c.movingAxis.center ) - c.fixedAxis.center;
-    r.primaryPositionError = s.matchAxialCenters ? ( displacement - s.offset * n ).length()
-                             : s.coaxial         ? project( displacement, n ).length()
+    r.primaryPositionError = s.matchAxialCenters ? stableLength( displacement - s.offset * n )
+                             : s.coaxial         ? stableLength( project( displacement, n ) )
                                                  : 0.;
     r.primaryAngleErrorDeg =
         angleDeg( delta.A * c.movingAxis.direction, directedTarget( c ), s.axisDirection == AxisDirection::Closest );
     if ( r.primaryPositionError > s.linearTolerance )
-        r.conflicts.emplace_back( s.matchAxialCenters ? "Primary feature centers conflict with the locators."
-                                                      : "Primary axes are not coaxial within tolerance." );
+        r.conflicts.push_back( { s.matchAxialCenters ? DiagnosticCode::PrimaryCenterMismatch
+                                                 : DiagnosticCode::PrimaryAxisNotCoaxial } );
     if ( r.primaryAngleErrorDeg > s.angularToleranceDeg )
-        r.conflicts.emplace_back( "Primary axis angle exceeds tolerance." );
-    measureCenters( c, r, s.offset * n );
+        r.conflicts.push_back( { DiagnosticCode::PrimaryAxisAngleMismatch } );
+    measureCenterResiduals( c, r, s.offset * n );
     if ( c.clocking )
     {
-        auto a = project( delta.A * c.clocking->first, n ), b = project( c.clocking->second, n );
+        auto a = project( delta.A * c.clocking->moving, n ), b = project( c.clocking->fixed, n );
         if ( a.length() < cEpsilon || b.length() < cEpsilon )
-            r.conflicts.emplace_back( "Clocking direction is parallel to the primary axis." );
+            r.conflicts.push_back( { DiagnosticCode::ClockingParallelToPrimary } );
         else
         {
             r.clockingErrorDeg = angleDeg( a, b );
             if ( *r.clockingErrorDeg > s.angularToleranceDeg )
-                r.conflicts.emplace_back( "Clocking direction conflicts with the center locators." );
+                r.conflicts.push_back( { DiagnosticCode::ClockingConflict } );
         }
     }
     return r;
@@ -211,7 +217,7 @@ Expected<Orientation> orientAxis( const Constraints &c )
     const auto initial = shortestRotation( c.movingAxis.direction, directedTarget( c ) );
     double yaw = 0;
     bool spinLocked = false;
-    std::string source = "unconstrained";
+    RotationSource source = RotationSource::Unconstrained;
     Vector3d sourceOrigin = c.movingAxis.center, targetOrigin = c.fixedAxis.center;
     size_t first = 0;
     if ( !s.coaxial && !s.matchAxialCenters && !c.centers.empty() )
@@ -225,7 +231,7 @@ Expected<Orientation> orientAxis( const Constraints &c )
         const auto a = project( initial * ( c.centers[i].moving - sourceOrigin ), n ),
                    b = project( c.centers[i].fixed - targetOrigin, n );
         if ( !finite( a ) || !finite( b ) || !std::isfinite( a.length() ) || !std::isfinite( b.length() ) )
-            return unexpected( std::string( "Axis locator lever arms exceed the supported numeric range." ) );
+            return unexpected( std::string( _t( "Axis locator lever arms exceed the supported numeric range." ) ) );
         if ( a.length() > cEpsilon && b.length() > cEpsilon )
         {
             auto angle = spin( a, b, n );
@@ -233,18 +239,18 @@ Expected<Orientation> orientAxis( const Constraints &c )
                 return unexpected( angle.error() );
             yaw = *angle;
             spinLocked = true;
-            source = "off-axis center locator";
+            source = RotationSource::OffAxisCenterLocator;
             break;
         }
     }
     if ( !spinLocked && c.clocking )
     {
-        auto angle = spin( initial * c.clocking->first, c.clocking->second, n );
+        auto angle = spin( initial * c.clocking->moving, c.clocking->fixed, n );
         if ( !angle )
             return unexpected( angle.error() );
         yaw = *angle;
         spinLocked = true;
-        source = "directed reference";
+        source = RotationSource::DirectedReference;
     }
     const auto rotation = Matrix3d::rotation( n, yaw ) * initial;
     return Orientation{ rotation, yaw, 0, source, spinLocked };
@@ -258,25 +264,19 @@ void describeAxisMotion( Solution &result, const Constraints &c, const Orientati
     const auto &source = orientation.source;
     result.remainingDof = ( spinLocked ? 0 : 1 ) + ( positionLocked ? 0 : s.coaxial ? 1 : 3 );
     result.rotationSource = source;
-    if ( !spinLocked )
-        result.freeMotion = "Rotation about the primary axis remains free.";
-    if ( !positionLocked )
-        result.freeMotion += ( result.freeMotion.empty() ? "" : " " ) +
-                             std::string( s.coaxial ? "Sliding along the primary axis remains free."
-                                                    : "All three translations remain free." );
-    if ( result.remainingDof == 0 )
-        result.freeMotion = "Fully located by the selected references.";
+    result.freeMotion = positionLocked ? ( spinLocked ? FreeMotion::FullyConstrained : FreeMotion::PrimarySpin )
+                        : s.coaxial ? ( spinLocked ? FreeMotion::PrimarySlide : FreeMotion::PrimarySlideAndSpin )
+                                    : ( spinLocked ? FreeMotion::Translations : FreeMotion::TranslationsAndSpin );
     if ( result.remainingDof )
-        result.warnings.push_back( result.freeMotion );
+        result.warnings.push_back( { DiagnosticCode::Underconstrained } );
     if ( s.matchAxialCenters )
-        result.warnings.emplace_back(
-            "Axial placement uses fitted feature centers. For a cylinder rim, select its fitted circle." );
+        result.warnings.push_back( { DiagnosticCode::FittedAxialCenters } );
 }
 
 Expected<Solution> measureAxis( Constraints c, const AffineXf3d &delta )
 {
     if ( !isRigid( delta ) )
-        return unexpected( std::string( "The proposed transform is not rigid." ) );
+        return unexpected( std::string( _t( "The proposed transform is not rigid." ) ) );
     auto value = preparedAxis( std::move( c ) );
     if ( !value )
         return unexpected( value.error() );
@@ -303,29 +303,24 @@ Expected<Solution> solveAxis( Constraints c )
             return b;
         if ( !b )
             return a;
-        const auto score = [&]( const Solution &r )
+        const auto different = []( double x, double y )
         {
-            double value = std::pow( r.primaryPositionError / std::max( c.settings.linearTolerance, 1e-10 ), 2 ) +
-                           std::pow( r.primaryAngleErrorDeg / std::max( c.settings.angularToleranceDeg, 1e-10 ), 2 );
-            for ( const auto &h : r.holes )
-                value += std::pow( h.position / std::max( c.settings.linearTolerance, 1e-10 ), 2 );
-            if ( r.clockingErrorDeg )
-                value += std::pow( *r.clockingErrorDeg / std::max( c.settings.angularToleranceDeg, 1e-10 ), 2 );
-            return value;
+            return std::abs( x - y ) > cEpsilon * std::max( { 1., x, y } );
         };
+        const auto positionA = a->maximumPositionError(), positionB = b->maximumPositionError();
+        const auto angleA = a->maximumAngleError(), angleB = b->maximumAngleError();
+        // Compare geometry in separate units; acceptance thresholds never choose the placement.
         bool takeA;
-        if ( a->acceptable() != b->acceptable() )
-            takeA = a->acceptable();
-        else if ( std::abs( score( *a ) - score( *b ) ) > 1e-8 )
-            takeA = score( *a ) < score( *b );
+        if ( different( positionA, positionB ) )
+            takeA = positionA < positionB;
+        else if ( different( angleA, angleB ) )
+            takeA = angleA < angleB;
         else
             takeA =
                 a->delta.A.x.x + a->delta.A.y.y + a->delta.A.z.z >= b->delta.A.x.x + b->delta.A.y.y + b->delta.A.z.z;
         auto result = takeA ? *a : *b;
         if ( a->acceptable() && b->acceptable() && !c.centers.empty() )
-            result.warnings.emplace_back(
-                "Unoriented axes admit two direction choices. The closest rigid rotation was selected; use a directed "
-                "axis or another off-plane reference to disambiguate." );
+            result.warnings.push_back( { DiagnosticCode::AmbiguousAxisDirection } );
         return result;
     }
     const auto orientation = orientAxis( c );
@@ -355,30 +350,24 @@ Expected<Solution> solveAxis( Constraints c )
     result.yawDeg = orientation->yaw * cDegrees;
     return checkedSolution( std::move( result ), c );
 }
-} // namespace MR::FeatureAlignment::detail
 
-namespace MR::FeatureAlignment::detail
-{
 Expected<void> validateCenters( const Constraints &c )
 {
     auto good = valid( c );
     if ( !good )
         return good;
     if ( c.clocking )
-        return unexpected( std::string(
-            "Center-only mode uses additional center pairs. Choose axis/plane mode for a directed reference." ) );
+        return unexpected( std::string( _t( "Center-only mode uses additional center pairs. Choose axis/plane mode for a directed reference." ) ) );
     if ( c.centers.empty() || c.centers.size() > 3 )
-        return unexpected( std::string( "Choose one primary center pair and at most two additional center pairs." ) );
+        return unexpected( std::string( _t( "Choose one primary center pair and at most two additional center pairs." ) ) );
     if ( c.settings.offset != 0 )
-        return unexpected( std::string(
-            "Center-only alignment has no offset direction. Use zero offset or choose a plane/axis mode." ) );
+        return unexpected( std::string( _t( "Center-only alignment has no offset direction. Use zero offset or choose a plane/axis mode." ) ) );
     if ( c.centers.size() > 1 )
     {
         auto moving = c.centers[1].moving - c.centers[0].moving;
         auto fixed = c.centers[1].fixed - c.centers[0].fixed;
         if ( !normalize( moving ) || !normalize( fixed ) )
-            return unexpected( std::string(
-                "The second center needs a distinct, numerically representable baseline on both parts." ) );
+            return unexpected( std::string( _t( "The second center needs a distinct, numerically representable baseline on both parts." ) ) );
     }
     return {};
 }
@@ -388,7 +377,7 @@ Solution measuredCenters( const Constraints &c, const AffineXf3d &delta )
     result.mode = PrimaryMode::Centers;
     result.delta = delta;
     rigidMetrics( result );
-    measureCenters( c, result );
+    measureCenterResiduals( c, result );
     result.primaryPositionError = result.holes.front().position;
     return result;
 }
@@ -396,20 +385,20 @@ Expected<Orientation> orientCenters( const Constraints &c )
 {
     Matrix3d rotation;
     int remaining = 3;
-    std::string source = "unconstrained";
+    RotationSource source = RotationSource::Unconstrained;
     if ( c.centers.size() > 1 )
     {
         const auto moving = ( c.centers[1].moving - c.centers[0].moving ).normalized(),
                    fixed = ( c.centers[1].fixed - c.centers[0].fixed ).normalized();
         rotation = shortestRotation( moving, fixed );
         remaining = 1;
-        source = "second center";
+        source = RotationSource::SecondCenter;
         if ( c.centers.size() > 2 )
         {
             const auto a = project( rotation * ( c.centers[2].moving - c.centers[0].moving ), fixed ),
                        b = project( c.centers[2].fixed - c.centers[0].fixed, fixed );
             if ( !finite( a ) || !finite( b ) || !std::isfinite( a.length() ) || !std::isfinite( b.length() ) )
-                return unexpected( std::string( "Center locator lever arms exceed the supported numeric range." ) );
+                return unexpected( std::string( _t( "Center locator lever arms exceed the supported numeric range." ) ) );
             if ( a.length() > cEpsilon && b.length() > cEpsilon )
             {
                 auto yaw = spin( a, b, fixed );
@@ -417,7 +406,7 @@ Expected<Orientation> orientCenters( const Constraints &c )
                     return unexpected( yaw.error() );
                 rotation = Matrix3d::rotation( fixed, *yaw ) * rotation;
                 remaining = 0;
-                source = "third center";
+                source = RotationSource::ThirdCenter;
             }
         }
     }
@@ -430,14 +419,13 @@ void describeCenterMotion( Solution &result, const Constraints &c, const Orienta
     const auto &source = orientation.source;
     result.remainingDof = remaining;
     result.rotationSource = source;
-    result.freeMotion = remaining == 3   ? "All three rotations about the matched primary center remain free."
-                        : remaining == 1 ? "Rotation about the line through the first two centers remains free."
-                                         : "Fully located by the selected references.";
+    result.freeMotion = remaining == 3 ? FreeMotion::Rotations
+                        : remaining == 1 ? FreeMotion::BaselineSpin
+                                         : FreeMotion::FullyConstrained;
     if ( remaining )
-        result.warnings.push_back( result.freeMotion );
+        result.warnings.push_back( { DiagnosticCode::Underconstrained } );
     if ( c.centers.size() == 3 && remaining )
-        result.warnings.emplace_back(
-            "The three centers are collinear. Choose a noncollinear third center to set rotation." );
+        result.warnings.push_back( { DiagnosticCode::CollinearCenters } );
 }
 
 Expected<Solution> measureCenters( Constraints c, const AffineXf3d &delta )
@@ -446,7 +434,7 @@ Expected<Solution> measureCenters( Constraints c, const AffineXf3d &delta )
     if ( !good )
         return unexpected( good.error() );
     if ( !isRigid( delta ) )
-        return unexpected( std::string( "The proposed transform is not rigid." ) );
+        return unexpected( std::string( _t( "The proposed transform is not rigid." ) ) );
     const auto orientation = orientCenters( c );
     if ( !orientation )
         return unexpected( orientation.error() );
@@ -467,10 +455,7 @@ Expected<Solution> solveCenters( Constraints c )
     describeCenterMotion( result, c, *orientation );
     return checkedSolution( std::move( result ), c );
 }
-} // namespace MR::FeatureAlignment::detail
 
-namespace MR::FeatureAlignment::detail
-{
 struct PreparedPlane
 {
     Constraints c;
@@ -481,33 +466,32 @@ Expected<PreparedPlane> preparePlane( Constraints c )
 {
     auto &s = c.settings;
     if ( s.normals != NormalRelation::Opposing && s.normals != NormalRelation::Same )
-        return unexpected( std::string( "Choose same or opposing plane normals." ) );
+        return unexpected( std::string( _t( "Choose same or opposing plane normals." ) ) );
     if ( s.holeMode != HoleMode::Centers && s.holeMode != HoleMode::Axes )
-        return unexpected( std::string( "Choose hole centers or axes." ) );
-    if ( !std::isfinite( s.offset ) || !std::isfinite( s.linearTolerance ) || !std::isfinite( s.angularToleranceDeg ) ||
-         s.linearTolerance < 0 || s.angularToleranceDeg < 0 || s.angularToleranceDeg >= 90 )
-        return unexpected( std::string(
-            "Use finite settings, a nonnegative position tolerance, and an angle tolerance below 90 degrees." ) );
+        return unexpected( std::string( _t( "Choose hole centers or axes." ) ) );
+    const auto good = valid( c );
+    if ( !good )
+        return unexpected( good.error() );
     if ( !finite( c.movingPlane.center ) || !finite( c.fixedPlane.center ) || !normalize( c.movingPlane.normal ) ||
          !normalize( c.fixedPlane.normal ) )
-        return unexpected( std::string( "The fitted planes need finite centers and nonzero normals." ) );
+        return unexpected( std::string( _t( "The fitted planes need finite centers and nonzero normals." ) ) );
     if ( c.holes.size() > 2 )
-        return unexpected( std::string( "Use one primary hole and at most one second hole." ) );
+        return unexpected( std::string( _t( "Use one primary hole and at most one second hole." ) ) );
     for ( auto &pair : c.holes )
         for ( auto *h : { &pair.moving, &pair.fixed } )
         {
             if ( !finite( h->center ) || !normalize( h->axis ) || !std::isfinite( h->radius ) || h->radius <= cEpsilon )
-                return unexpected( std::string( "A hole has an invalid center, axis or radius." ) );
+                return unexpected( std::string( _t( "A hole has an invalid center, axis or radius." ) ) );
             if ( h->kind != HoleKind::Circle && h->kind != HoleKind::Cylinder )
-                return unexpected( std::string( "Holes must be fitted circles or cylinders." ) );
+                return unexpected( std::string( _t( "Holes must be fitted circles or cylinders." ) ) );
         }
     if ( c.clocking )
     {
-        if ( !normalize( c.clocking->first ) || !normalize( c.clocking->second ) ||
-             project( c.clocking->first, c.movingPlane.normal ).length() < cEpsilon ||
-             project( c.clocking->second, c.fixedPlane.normal ).length() < cEpsilon )
+        if ( !normalize( c.clocking->moving ) || !normalize( c.clocking->fixed ) ||
+             project( c.clocking->moving, c.movingPlane.normal ).length() < cEpsilon ||
+             project( c.clocking->fixed, c.fixedPlane.normal ).length() < cEpsilon )
             return unexpected(
-                std::string( "The clocking reference must have a nonzero direction within the mating plane." ) );
+                std::string( _t( "The clocking reference must have a nonzero direction within the mating plane." ) ) );
     }
     PreparedPlane p;
     p.c = std::move( c );
@@ -517,9 +501,9 @@ Expected<PreparedPlane> preparePlane( Constraints c )
         const auto point = intersection( Plane3d::fromDirAndPt( normal, center ), Line3d{ h.center, h.axis }, 1e-6 );
         if ( !point )
             return unexpected(
-                std::string( "A hole axis is nearly parallel to the mating plane; its intersection is unstable." ) );
+                std::string( _t( "A hole axis is nearly parallel to the mating plane; its intersection is unstable." ) ) );
         if ( !finite( *point ) )
-            return unexpected( std::string( "Hole-plane intersection exceeds the supported numeric range." ) );
+            return unexpected( std::string( _t( "Hole-plane intersection exceeds the supported numeric range." ) ) );
         return *point;
     };
     for ( const auto &pair : p.c.holes )
@@ -555,34 +539,40 @@ Solution measuredPlane( const PreparedPlane &p, const AffineXf3d &delta )
     r.primaryPositionError = std::abs( r.planeOffsetError );
     r.primaryAngleErrorDeg = r.normalErrorDeg;
     if ( std::abs( r.planeOffsetError ) > s.linearTolerance || r.normalErrorDeg > s.angularToleranceDeg )
-        r.conflicts.emplace_back( "Plane seating residual exceeds tolerance." );
+        r.conflicts.push_back( { DiagnosticCode::PlaneSeatingMismatch } );
     for ( size_t i = 0; i < c.holes.size(); ++i )
     {
         const auto &pair = c.holes[i];
         const auto difference = delta( p.anchors[i].first ) - p.anchors[i].second;
         HoleResidual e;
-        e.inPlane = project( difference, n ).length();
+        e.inPlane = stableLength( project( difference, n ) );
         // Plane seating owns depth. Hole locators constrain only motion in that plane.
         e.position = e.inPlane;
         e.axial = dot( difference, n );
         e.axisAngleDeg = angleDeg( delta.A * pair.moving.axis, pair.fixed.axis, true );
         e.angleConstrained = s.holeMode == HoleMode::Axes;
         e.radiusDifference = pair.moving.radius - pair.fixed.radius;
-        e.rawCenterDistance = ( delta( pair.moving.center ) - pair.fixed.center ).length();
+        e.rawCenterDistance = stableLength( delta( pair.moving.center ) - pair.fixed.center );
         r.holes.push_back( e );
-        const auto label = "Hole " + std::to_string( i + 1 );
         if ( e.position > s.linearTolerance )
-            r.conflicts.push_back( label + ": in-plane mismatch exceeds Position tolerance." );
+            r.conflicts.push_back( { DiagnosticCode::HolePositionMismatch, int( i ) } );
         if ( s.holeMode == HoleMode::Axes && e.axisAngleDeg > s.angularToleranceDeg )
-            r.conflicts.push_back( label + ": axis angle exceeds Angle tolerance." );
+            r.conflicts.push_back( { DiagnosticCode::HoleAxisAngleMismatch, int( i ) } );
         if ( std::abs( e.radiusDifference ) > s.linearTolerance )
-            r.warnings.push_back( label + " radii differ. Review fitted features and clearance." );
+            r.warnings.push_back( { DiagnosticCode::HoleRadiusMismatch, int( i ) } );
     }
     if ( c.clocking )
     {
-        r.clockingErrorDeg = angleDeg( project( delta.A * c.clocking->first, n ), project( c.clocking->second, n ) );
-        if ( *r.clockingErrorDeg > s.angularToleranceDeg )
-            r.conflicts.emplace_back( "Clocking reference conflicts with the primary constraints." );
+        const auto a = project( delta.A * c.clocking->moving, n );
+        const auto b = project( c.clocking->fixed, n );
+        if ( a.length() < cEpsilon || b.length() < cEpsilon )
+            r.conflicts.push_back( { DiagnosticCode::ClockingParallelToPrimary } );
+        else
+        {
+            r.clockingErrorDeg = angleDeg( a, b );
+            if ( *r.clockingErrorDeg > s.angularToleranceDeg )
+                r.conflicts.push_back( { DiagnosticCode::ClockingConflict } );
+        }
     }
     return r;
 }
@@ -592,7 +582,7 @@ Expected<Orientation> orientPlane( const PreparedPlane &p )
     const auto r0 = shortestRotation( p.c.movingPlane.normal, double( int( p.c.settings.normals ) ) * n );
     double yaw = 0;
     int remaining = 3;
-    std::string source = "unconstrained";
+    RotationSource source = RotationSource::Unconstrained;
     if ( p.anchors.size() == 2 )
     {
         auto angle =
@@ -601,16 +591,16 @@ Expected<Orientation> orientPlane( const PreparedPlane &p )
             return unexpected( angle.error() );
         yaw = *angle;
         remaining = 0;
-        source = "second hole";
+        source = RotationSource::SecondHole;
     }
     else if ( p.c.clocking )
     {
-        auto angle = spin( r0 * p.c.clocking->first, p.c.clocking->second, n );
+        auto angle = spin( r0 * p.c.clocking->moving, p.c.clocking->fixed, n );
         if ( !angle )
             return unexpected( angle.error() );
         yaw = *angle;
         remaining = p.anchors.empty() ? 2 : 0;
-        source = "directed reference";
+        source = RotationSource::DirectedReference;
     }
     else if ( !p.c.holes.empty() && p.c.settings.holeMode == HoleMode::Axes )
     {
@@ -618,16 +608,16 @@ Expected<Orientation> orientPlane( const PreparedPlane &p )
         auto b = p.c.holes[0].fixed.axis;
         if ( dot( a, n ) * dot( b, n ) < 0 )
             b = -b;
-        const auto stableTilt =
-            std::sin( std::min( 89., std::max( 1., 5 * p.c.settings.angularToleranceDeg ) ) / cDegrees );
-        if ( project( a, n ).length() > stableTilt && project( b, n ).length() > stableTilt )
+        // Even a small oblique axis determines spin when its projection is numerically usable.
+        // Use the same geometric precision floor as spin(), independent of residual tolerance.
+        if ( project( a, n ).length() > cEpsilon && project( b, n ).length() > cEpsilon )
         {
             auto angle = spin( a, b, n );
             if ( !angle )
                 return unexpected( angle.error() );
             yaw = *angle;
             remaining = 0;
-            source = "oblique primary axis";
+            source = RotationSource::ObliquePrimaryAxis;
         }
         else
             remaining = 1;
@@ -645,31 +635,26 @@ void describePlaneMotion( Solution &r, const PreparedPlane &p, const Orientation
     const auto &n = p.c.fixedPlane.normal;
     r.remainingDof = remaining;
     r.rotationSource = source;
-    r.freeMotion = remaining == 3   ? "Two in-plane translations and rotation about the plane normal remain free."
-                   : remaining == 2 ? "Two in-plane translations remain free."
-                   : remaining == 1 ? "Rotation about the plane normal remains free."
-                                    : "Fully located by the selected references.";
-    if ( !r.acceptable() && remaining == 0 )
-        r.freeMotion = "No motion remains, but the selected measurements conflict.";
+    r.freeMotion = remaining == 3 ? FreeMotion::PlaneTranslationsAndSpin
+                   : remaining == 2 ? FreeMotion::PlaneTranslations
+                   : remaining == 1 ? FreeMotion::PrimarySpin
+                                    : FreeMotion::FullyConstrained;
     if ( !p.anchors.empty() && p.c.settings.holeMode == HoleMode::Centers )
-        r.warnings.emplace_back( "Hole centers locate within the mating plane; depth is set by the plane gap." );
+        r.warnings.push_back( { DiagnosticCode::PlaneCentersProjected } );
     if ( p.c.settings.balanceHoles && p.anchors.size() == 2 )
-        r.warnings.emplace_back( "Balanced fit shares in-plane mismatch between both hole pairs." );
-    if ( source == "oblique primary axis" )
-        r.warnings.emplace_back( "Oblique hole axis sets rotation. A second hole gives a more stable reference." );
+        r.warnings.push_back( { DiagnosticCode::BalancedHoleFit } );
+    if ( source == RotationSource::ObliquePrimaryAxis )
+        r.warnings.push_back( { DiagnosticCode::ObliqueHoleAxis } );
     if ( remaining )
-        r.warnings.emplace_back(
-            std::to_string( remaining ) +
-            " degrees of freedom remain; free placement follows the shortest-rotation convention." );
+        r.warnings.push_back( { DiagnosticCode::Underconstrained } );
     if ( dot( p.c.movingPlane.normal, double( int( p.c.settings.normals ) ) * n ) < -1 + 1e-9 && remaining )
-        r.warnings.emplace_back(
-            "Opposite fitted normals require a convention for the rotation axis. Clocking is not measured." );
+        r.warnings.push_back( { DiagnosticCode::OppositePlaneNormalsConvention } );
 }
 
 Expected<Solution> measurePlane( Constraints c, const AffineXf3d &delta )
 {
     if ( !isRigid( delta ) )
-        return unexpected( std::string( "The proposed transform contains scale, shear or reflection." ) );
+        return unexpected( std::string( _t( "The proposed transform contains scale, shear or reflection." ) ) );
     auto p = preparePlane( std::move( c ) );
     if ( !p )
         return unexpected( p.error() );
@@ -711,19 +696,166 @@ Expected<Solution> solvePlane( Constraints c )
     r.yawDeg = orientation->yaw * cDegrees;
     return checkedSolution( std::move( r ), p.c );
 }
-} // namespace MR::FeatureAlignment::detail
 
-namespace MR::FeatureAlignment
+using FeaturePtr = std::shared_ptr<const FeatureObject>;
+
+Expected<AffineXf3d> parentWorld( const FeaturePtr &feature )
 {
+    // The feature's own scale controls its displayed dimensions, so check only its ancestors.
+    // Its getters already include the feature's own local transform.
+    auto featureViews = feature->xfsForAllViewports();
+    if ( featureViews.reset() )
+        return unexpected( std::string( _t( "Per-viewport feature transforms are unsupported." ) ) );
+    for ( const auto *current = feature->parent(); current; current = current->parent() )
+    {
+        if ( !isRigid( AffineXf3d( current->xf() ) ) )
+            return unexpected( std::string( _t( "Feature ancestors must have rigid transforms; scale, shear and mirror are unsupported." ) ) );
+        auto ancestorViews = current->xfsForAllViewports();
+        if ( ancestorViews.reset() )
+            return unexpected( std::string( _t( "Per-viewport ancestor transforms are unsupported." ) ) );
+    }
+    return feature->parent() ? AffineXf3d( feature->parent()->worldXf() ) : AffineXf3d{};
+}
+
+Expected<Plane> readPlane( const FeaturePtr &feature )
+{
+    const auto *plane = dynamic_cast<const PlaneObject *>( feature.get() );
+    if ( !plane )
+        return unexpected( std::string( _t( "Choose an existing fitted plane on each side." ) ) );
+    if ( !std::isfinite( plane->getSizeX() ) || !std::isfinite( plane->getSizeY() ) || plane->getSizeX() <= cEpsilon ||
+         plane->getSizeY() <= cEpsilon )
+        return unexpected( std::string( _t( "A fitted plane has invalid display extent." ) ) );
+    const auto parent = parentWorld( feature );
+    if ( !parent )
+        return unexpected( parent.error() );
+    Plane result{ ( *parent )( Vector3d( plane->getCenter() ) ), parent->A * Vector3d( plane->getNormal() ) };
+    if ( !finite( result.center ) || !normalize( result.normal ) )
+        return unexpected( std::string( _t( "A fitted plane has an invalid center or normal." ) ) );
+    return result;
+}
+
+Expected<Hole> readHole( const FeaturePtr &feature )
+{
+    const auto parent = parentWorld( feature );
+    if ( !parent )
+        return unexpected( parent.error() );
+    Hole result;
+    if ( const auto *circle = dynamic_cast<const CircleObject *>( feature.get() ) )
+    {
+        result.center = ( *parent )( Vector3d( circle->getCenter() ) );
+        result.axis = parent->A * Vector3d( circle->getNormal() );
+        result.radius = circle->getRadius();
+        result.kind = HoleKind::Circle;
+    }
+    else if ( const auto *cylinder = dynamic_cast<const CylinderObject *>( feature.get() ) )
+    {
+        if ( !std::isfinite( cylinder->getLength() ) || cylinder->getLength() <= cEpsilon )
+            return unexpected( std::string( _t( "A fitted cylinder has invalid length." ) ) );
+        result.center = ( *parent )( Vector3d( cylinder->getCenter() ) );
+        result.axis = parent->A * Vector3d( cylinder->getDirection() );
+        result.radius = cylinder->getRadius();
+        result.kind = HoleKind::Cylinder;
+    }
+    else
+        return unexpected( std::string( _t( "Choose an existing fitted circle or cylinder." ) ) );
+    if ( !finite( result.center ) || !normalize( result.axis ) || !std::isfinite( result.radius ) ||
+         result.radius <= cEpsilon )
+        return unexpected( std::string( _t( "A fitted hole has an invalid center, axis or radius." ) ) );
+    return result;
+}
+
+Expected<Vector3d> readDirection( const FeaturePtr &feature )
+{
+    if ( dynamic_cast<const PlaneObject *>( feature.get() ) )
+    {
+        const auto plane = readPlane( feature );
+        if ( !plane )
+            return unexpected( plane.error() );
+        return plane->normal;
+    }
+    if ( const auto *line = dynamic_cast<const LineObject *>( feature.get() ) )
+    {
+        const auto parent = parentWorld( feature );
+        if ( !parent )
+            return unexpected( parent.error() );
+        auto direction = parent->A * Vector3d( line->getDirection() );
+        if ( !std::isfinite( line->getLength() ) || line->getLength() <= cEpsilon || !normalize( direction ) )
+            return unexpected( std::string( _t( "A fitted line has invalid length or direction." ) ) );
+        return direction;
+    }
+    const auto hole = readHole( feature );
+    if ( !hole )
+        return unexpected( hole.error() );
+    return hole->axis;
+}
+
+Expected<Vector3d> readCenter( const FeaturePtr &feature )
+{
+    const auto parent = parentWorld( feature );
+    if ( !parent )
+        return unexpected( parent.error() );
+    Vector3d result;
+    if ( const auto *point = dynamic_cast<const PointObject *>( feature.get() ) )
+        result = ( *parent )( Vector3d( point->getPoint() ) );
+    else if ( const auto *sphere = dynamic_cast<const SphereObject *>( feature.get() ) )
+    {
+        if ( !std::isfinite( sphere->getRadius() ) || sphere->getRadius() <= cEpsilon )
+            return unexpected( std::string( _t( "A fitted sphere has an invalid radius." ) ) );
+        result = ( *parent )( Vector3d( sphere->getCenter() ) );
+    }
+    else
+    {
+        const auto hole = readHole( feature );
+        if ( !hole )
+            return unexpected( hole.error() );
+        result = hole->center;
+    }
+    if ( !finite( result ) )
+        return unexpected( std::string( _t( "A fitted feature has an invalid center." ) ) );
+    return result;
+}
+
+Expected<Axis> readAxis( const FeaturePtr &feature )
+{
+    const auto direction = readDirection( feature );
+    if ( !direction )
+        return unexpected( direction.error() );
+    if ( const auto *line = dynamic_cast<const LineObject *>( feature.get() ) )
+    {
+        const auto parent = parentWorld( feature );
+        if ( !parent )
+            return unexpected( parent.error() );
+        const auto center = ( *parent )( Vector3d( line->getCenter() ) );
+        if ( !finite( center ) )
+            return unexpected( std::string( _t( "A fitted line has an invalid center." ) ) );
+        return Axis{ center, *direction };
+    }
+    const auto center = readCenter( feature );
+    if ( !center )
+        return unexpected( center.error() );
+    return Axis{ *center, *direction };
+}
+
+Expected<void> validatePair( const FeaturePair &pair, bool required = false )
+{
+    if ( bool( pair.moving ) != bool( pair.fixed ) || ( required && !pair.moving ) )
+        return unexpected( std::string( _t( "Choose both sides of each feature pair, or leave an optional pair empty." ) ) );
+    if ( pair.moving && pair.moving == pair.fixed )
+        return unexpected( std::string( _t( "Moving and fixed references must be distinct features." ) ) );
+    return {};
+}
+} // namespace
+
 bool isRigid( const AffineXf3d &xf, double tolerance )
 {
-    if ( !std::isfinite( tolerance ) || tolerance < 0 || !detail::finite( xf.b ) || !detail::finite( xf.A.x ) ||
-         !detail::finite( xf.A.y ) || !detail::finite( xf.A.z ) )
+    if ( !std::isfinite( tolerance ) || tolerance < 0 || !finite( xf.b ) || !finite( xf.A.x ) ||
+         !finite( xf.A.y ) || !finite( xf.A.z ) )
         return false;
-    Solution result;
-    result.delta = xf;
-    detail::rigidMetrics( result );
-    return result.orthogonalityError <= tolerance && std::abs( result.determinant - 1 ) <= tolerance;
+    for ( int i = 0; i < 3; ++i )
+        for ( int j = 0; j < 3; ++j )
+            if ( !( std::abs( dot( xf.A.col( i ), xf.A.col( j ) ) - ( i == j ? 1. : 0. ) ) <= tolerance ) )
+                return false;
+    return std::abs( xf.A.det() - 1 ) <= tolerance;
 }
 double Solution::maximumPositionError() const
 {
@@ -747,205 +879,50 @@ Expected<Solution> solve( Constraints c )
     switch ( c.settings.mode )
     {
     case PrimaryMode::Plane:
-        return detail::solvePlane( std::move( c ) );
+        return solvePlane( std::move( c ) );
     case PrimaryMode::Axis:
-        return detail::solveAxis( std::move( c ) );
+        return solveAxis( std::move( c ) );
     case PrimaryMode::Centers:
-        return detail::solveCenters( std::move( c ) );
+        return solveCenters( std::move( c ) );
     }
-    return unexpected( std::string( "Choose plane, axis or center alignment." ) );
+    return unexpected( std::string( _t( "Choose plane, axis or center alignment." ) ) );
 }
 Expected<Solution> measure( Constraints c, const AffineXf3d &delta )
 {
     switch ( c.settings.mode )
     {
     case PrimaryMode::Plane:
-        return detail::measurePlane( std::move( c ), delta );
+        return measurePlane( std::move( c ), delta );
     case PrimaryMode::Axis:
-        return detail::measureAxis( std::move( c ), delta );
+        return measureAxis( std::move( c ), delta );
     case PrimaryMode::Centers:
-        return detail::measureCenters( std::move( c ), delta );
+        return measureCenters( std::move( c ), delta );
     }
-    return unexpected( std::string( "Choose plane, axis or center alignment." ) );
-}
-} // namespace MR::FeatureAlignment
-
-namespace MR::FeatureAlignment::detail
-{
-using FeaturePtr = std::shared_ptr<const FeatureObject>;
-
-Expected<AffineXf3d> parentWorld( const FeaturePtr &feature )
-{
-    // The feature's own scale controls its displayed dimensions, so check only its ancestors.
-    // Its getters already include the feature's own local transform.
-    auto featureViews = feature->xfsForAllViewports();
-    if ( featureViews.reset() )
-        return unexpected( std::string( "Per-viewport feature transforms are unsupported." ) );
-    for ( const auto *current = feature->parent(); current; current = current->parent() )
-    {
-        if ( !isRigid( AffineXf3d( current->xf() ) ) )
-            return unexpected( std::string(
-                "Feature ancestors must have rigid transforms; scale, shear and mirror are unsupported." ) );
-        auto ancestorViews = current->xfsForAllViewports();
-        if ( ancestorViews.reset() )
-            return unexpected( std::string( "Per-viewport ancestor transforms are unsupported." ) );
-    }
-    return feature->parent() ? AffineXf3d( feature->parent()->worldXf() ) : AffineXf3d{};
+    return unexpected( std::string( _t( "Choose plane, axis or center alignment." ) ) );
 }
 
-Expected<Plane> readPlane( const FeaturePtr &feature )
-{
-    const auto *plane = dynamic_cast<const PlaneObject *>( feature.get() );
-    if ( !plane )
-        return unexpected( std::string( "Choose an existing fitted plane on each side." ) );
-    if ( !std::isfinite( plane->getSizeX() ) || !std::isfinite( plane->getSizeY() ) || plane->getSizeX() <= cEpsilon ||
-         plane->getSizeY() <= cEpsilon )
-        return unexpected( std::string( "A fitted plane has invalid display extent." ) );
-    const auto parent = parentWorld( feature );
-    if ( !parent )
-        return unexpected( parent.error() );
-    Plane result{ ( *parent )( Vector3d( plane->getCenter() ) ), parent->A * Vector3d( plane->getNormal() ) };
-    if ( !finite( result.center ) || !normalize( result.normal ) )
-        return unexpected( std::string( "A fitted plane has an invalid center or normal." ) );
-    return result;
-}
-
-Expected<Hole> readHole( const FeaturePtr &feature )
-{
-    const auto parent = parentWorld( feature );
-    if ( !parent )
-        return unexpected( parent.error() );
-    Hole result;
-    if ( const auto *circle = dynamic_cast<const CircleObject *>( feature.get() ) )
-    {
-        result.center = ( *parent )( Vector3d( circle->getCenter() ) );
-        result.axis = parent->A * Vector3d( circle->getNormal() );
-        result.radius = circle->getRadius();
-        result.kind = HoleKind::Circle;
-    }
-    else if ( const auto *cylinder = dynamic_cast<const CylinderObject *>( feature.get() ) )
-    {
-        if ( !std::isfinite( cylinder->getLength() ) || cylinder->getLength() <= cEpsilon )
-            return unexpected( std::string( "A fitted cylinder has invalid length." ) );
-        result.center = ( *parent )( Vector3d( cylinder->getCenter() ) );
-        result.axis = parent->A * Vector3d( cylinder->getDirection() );
-        result.radius = cylinder->getRadius();
-        result.kind = HoleKind::Cylinder;
-    }
-    else
-        return unexpected( std::string( "Choose an existing fitted circle or cylinder." ) );
-    if ( !finite( result.center ) || !normalize( result.axis ) || !std::isfinite( result.radius ) ||
-         result.radius <= cEpsilon )
-        return unexpected( std::string( "A fitted hole has an invalid center, axis or radius." ) );
-    return result;
-}
-
-Expected<Vector3d> readDirection( const FeaturePtr &feature )
-{
-    if ( dynamic_cast<const PlaneObject *>( feature.get() ) )
-    {
-        const auto plane = readPlane( feature );
-        if ( !plane )
-            return unexpected( plane.error() );
-        return plane->normal;
-    }
-    if ( const auto *line = dynamic_cast<const LineObject *>( feature.get() ) )
-    {
-        const auto parent = parentWorld( feature );
-        if ( !parent )
-            return unexpected( parent.error() );
-        auto direction = parent->A * Vector3d( line->getDirection() );
-        if ( !std::isfinite( line->getLength() ) || line->getLength() <= cEpsilon || !normalize( direction ) )
-            return unexpected( std::string( "A fitted line has invalid length or direction." ) );
-        return direction;
-    }
-    const auto hole = readHole( feature );
-    if ( !hole )
-        return unexpected( hole.error() );
-    return hole->axis;
-}
-
-Expected<Vector3d> readCenter( const FeaturePtr &feature )
-{
-    const auto parent = parentWorld( feature );
-    if ( !parent )
-        return unexpected( parent.error() );
-    Vector3d result;
-    if ( const auto *point = dynamic_cast<const PointObject *>( feature.get() ) )
-        result = ( *parent )( Vector3d( point->getPoint() ) );
-    else if ( const auto *sphere = dynamic_cast<const SphereObject *>( feature.get() ) )
-    {
-        if ( !std::isfinite( sphere->getRadius() ) || sphere->getRadius() <= cEpsilon )
-            return unexpected( std::string( "A fitted sphere has an invalid radius." ) );
-        result = ( *parent )( Vector3d( sphere->getCenter() ) );
-    }
-    else
-    {
-        const auto hole = readHole( feature );
-        if ( !hole )
-            return unexpected( hole.error() );
-        result = hole->center;
-    }
-    if ( !finite( result ) )
-        return unexpected( std::string( "A fitted feature has an invalid center." ) );
-    return result;
-}
-
-Expected<Axis> readAxis( const FeaturePtr &feature )
-{
-    const auto direction = readDirection( feature );
-    if ( !direction )
-        return unexpected( direction.error() );
-    if ( const auto *line = dynamic_cast<const LineObject *>( feature.get() ) )
-    {
-        const auto parent = parentWorld( feature );
-        if ( !parent )
-            return unexpected( parent.error() );
-        const auto center = ( *parent )( Vector3d( line->getCenter() ) );
-        if ( !finite( center ) )
-            return unexpected( std::string( "A fitted line has an invalid center." ) );
-        return Axis{ center, *direction };
-    }
-    const auto center = readCenter( feature );
-    if ( !center )
-        return unexpected( center.error() );
-    return Axis{ *center, *direction };
-}
-
-Expected<void> validatePair( const FeaturePair &pair, bool required = false )
-{
-    if ( bool( pair.moving ) != bool( pair.fixed ) || ( required && !pair.moving ) )
-        return unexpected( std::string( "Choose both sides of each feature pair, or leave an optional pair empty." ) );
-    if ( pair.moving && pair.moving == pair.fixed )
-        return unexpected( std::string( "Moving and fixed references must be distinct features." ) );
-    return {};
-}
-} // namespace MR::FeatureAlignment::detail
-
-namespace MR::FeatureAlignment
-{
 Expected<Constraints> readConstraints( const FeatureReferences &references, const Settings &settings )
 {
     for ( const auto *pair :
           { &references.primary, &references.locators[0], &references.locators[1], &references.clocking } )
     {
-        const auto valid = detail::validatePair( *pair, pair == &references.primary );
+        const auto valid = validatePair( *pair, pair == &references.primary );
         if ( !valid )
             return unexpected( valid.error() );
     }
     if ( references.locators[1].moving &&
          ( !references.locators[0].moving || references.locators[0].moving == references.locators[1].moving ||
            references.locators[0].fixed == references.locators[1].fixed ) )
-        return unexpected( std::string( "The second locator must be a distinct pair after the first locator." ) );
+        return unexpected( std::string( _t( "The second locator must be a distinct pair after the first locator." ) ) );
     Constraints result;
     result.settings = settings;
-    const auto valid = detail::valid( result );
-    if ( !valid )
-        return unexpected( valid.error() );
+    const auto good = valid( result );
+    if ( !good )
+        return unexpected( good.error() );
     if ( settings.mode == PrimaryMode::Plane )
     {
-        const auto moving = detail::readPlane( references.primary.moving );
-        const auto fixed = detail::readPlane( references.primary.fixed );
+        const auto moving = readPlane( references.primary.moving );
+        const auto fixed = readPlane( references.primary.fixed );
         if ( !moving )
             return unexpected( moving.error() );
         if ( !fixed )
@@ -955,8 +932,8 @@ Expected<Constraints> readConstraints( const FeatureReferences &references, cons
     }
     else if ( settings.mode == PrimaryMode::Axis )
     {
-        const auto moving = detail::readAxis( references.primary.moving );
-        const auto fixed = detail::readAxis( references.primary.fixed );
+        const auto moving = readAxis( references.primary.moving );
+        const auto fixed = readAxis( references.primary.fixed );
         if ( !moving )
             return unexpected( moving.error() );
         if ( !fixed )
@@ -966,8 +943,8 @@ Expected<Constraints> readConstraints( const FeatureReferences &references, cons
     }
     else if ( settings.mode == PrimaryMode::Centers )
     {
-        const auto moving = detail::readCenter( references.primary.moving );
-        const auto fixed = detail::readCenter( references.primary.fixed );
+        const auto moving = readCenter( references.primary.moving );
+        const auto fixed = readCenter( references.primary.fixed );
         if ( !moving )
             return unexpected( moving.error() );
         if ( !fixed )
@@ -975,17 +952,17 @@ Expected<Constraints> readConstraints( const FeatureReferences &references, cons
         result.centers.push_back( { *moving, *fixed } );
     }
     else
-        return unexpected( std::string( "Choose plane, axis or center alignment." ) );
+        return unexpected( std::string( _t( "Choose plane, axis or center alignment." ) ) );
     for ( const auto &pair : references.locators )
     {
         if ( !pair.moving )
             continue;
         if ( pair.moving == references.primary.moving || pair.fixed == references.primary.fixed )
-            return unexpected( std::string( "A locator must be distinct from the primary feature." ) );
+            return unexpected( std::string( _t( "A locator must be distinct from the primary feature." ) ) );
         if ( settings.mode == PrimaryMode::Plane )
         {
-            const auto moving = detail::readHole( pair.moving );
-            const auto fixed = detail::readHole( pair.fixed );
+            const auto moving = readHole( pair.moving );
+            const auto fixed = readHole( pair.fixed );
             if ( !moving )
                 return unexpected( moving.error() );
             if ( !fixed )
@@ -994,8 +971,8 @@ Expected<Constraints> readConstraints( const FeatureReferences &references, cons
         }
         else
         {
-            const auto moving = detail::readCenter( pair.moving );
-            const auto fixed = detail::readCenter( pair.fixed );
+            const auto moving = readCenter( pair.moving );
+            const auto fixed = readCenter( pair.fixed );
             if ( !moving )
                 return unexpected( moving.error() );
             if ( !fixed )
@@ -1007,9 +984,9 @@ Expected<Constraints> readConstraints( const FeatureReferences &references, cons
     {
         if ( settings.mode == PrimaryMode::Centers )
             return unexpected(
-                std::string( "Center alignment uses additional center pairs instead of directed references." ) );
-        const auto moving = detail::readDirection( references.clocking.moving );
-        const auto fixed = detail::readDirection( references.clocking.fixed );
+                std::string( _t( "Center alignment uses additional center pairs instead of directed references." ) ) );
+        const auto moving = readDirection( references.clocking.moving );
+        const auto fixed = readDirection( references.clocking.fixed );
         if ( !moving )
             return unexpected( moving.error() );
         if ( !fixed )
@@ -1019,11 +996,4 @@ Expected<Constraints> readConstraints( const FeatureReferences &references, cons
     return result;
 }
 
-Expected<Solution> solve( const FeatureReferences &references, const Settings &settings )
-{
-    const auto constraints = readConstraints( references, settings );
-    if ( !constraints )
-        return unexpected( constraints.error() );
-    return solve( *constraints );
-}
 } // namespace MR::FeatureAlignment

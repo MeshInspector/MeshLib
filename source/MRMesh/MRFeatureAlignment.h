@@ -6,8 +6,6 @@
 #include <array>
 #include <memory>
 #include <optional>
-#include <utility>
-#include <string>
 #include <vector>
 
 namespace MR::FeatureAlignment
@@ -41,6 +39,8 @@ enum class MRMESH_CLASS PrimaryMode
 };
 enum class MRMESH_CLASS AxisDirection
 {
+    /// Minimize the largest controlled position residual, then angular residual, over both signs.
+    /// Numerical ties choose the smaller rotation; acceptance tolerances do not affect this choice.
     Closest = 0,
     Same = 1,
     Opposing = -1
@@ -59,6 +59,10 @@ struct MRMESH_CLASS Axis
 struct MRMESH_CLASS CenterPair
 {
     Vector3d moving, fixed; ///< Corresponding centers in the common input frame.
+};
+struct MRMESH_CLASS DirectionPair
+{
+    Vector3d moving, fixed; ///< Corresponding directed references in the common input frame.
 };
 struct MRMESH_CLASS Hole
 {
@@ -87,7 +91,7 @@ struct MRMESH_CLASS Settings
     double offset{ 0 };
     double linearTolerance{ 1.0 };     ///< Nonnegative residual tolerance in input scene length units.
     double angularToleranceDeg{ 5.0 }; ///< Nonnegative angular tolerance in degrees, strictly below 90.
-    bool operator==( const Settings & ) const = default;
+    MRMESH_API bool operator==( const Settings & ) const = default;
 };
 /// All values must be expressed in the same coordinate frame.
 /// Plane mode owns tilt and gap; locators control tangent placement and residual spin only.
@@ -100,7 +104,7 @@ struct MRMESH_CLASS Constraints
     std::vector<CenterPair> centers;
     std::vector<HolePair> holes; ///< Plane mode: primary hole followed by at most one second hole.
     /// Moving/fixed directed references; projected about the primary normal/axis. Unsupported in center mode.
-    std::optional<std::pair<Vector3d, Vector3d>> clocking;
+    std::optional<DirectionPair> clocking;
     Settings settings; ///< Constraint policy and residual tolerances.
 };
 struct MRMESH_CLASS HoleResidual
@@ -114,14 +118,72 @@ struct MRMESH_CLASS HoleResidual
     double radiusDifference{};  ///< Moving minus fixed radius in input length units; diagnostic only.
     double rawCenterDistance{}; ///< Full fitted-center distance, independent of projected/intersected locators.
 };
+/// Reference determining residual spin after the primary constraint is satisfied.
+enum class MRMESH_CLASS RotationSource
+{
+    Unconstrained,
+    OffAxisCenterLocator,
+    DirectedReference,
+    SecondCenter,
+    ThirdCenter,
+    SecondHole,
+    ObliquePrimaryAxis
+};
+/// Constraint-rank classification, independent of residual conflicts and presentation wording.
+enum class MRMESH_CLASS FreeMotion
+{
+    Unspecified,              ///< Default for a result not yet populated by solve or measure.
+    FullyConstrained,
+    PlaneTranslationsAndSpin, ///< Two tangent translations and spin about the plane normal.
+    PlaneTranslations,        ///< Two tangent translations.
+    PrimarySpin,              ///< Spin about the primary plane normal or axis.
+    PrimarySlide,             ///< Translation along the primary axis.
+    PrimarySlideAndSpin,
+    Translations,             ///< All three translations.
+    TranslationsAndSpin,      ///< All three translations and spin about the primary axis.
+    Rotations,                ///< All three rotations about the matched primary center.
+    BaselineSpin              ///< Spin about the line through the first two centers.
+};
+/// Stable reasons for tolerance conflicts and informational warnings; callers supply presentation wording.
+enum class MRMESH_CLASS DiagnosticCode
+{
+    Unspecified,
+    CenterPositionMismatch,
+    PrimaryCenterMismatch,
+    PrimaryAxisNotCoaxial,
+    PrimaryAxisAngleMismatch,
+    ClockingParallelToPrimary,
+    ClockingConflict,
+    PlaneSeatingMismatch,
+    HolePositionMismatch,
+    HoleAxisAngleMismatch,
+    HoleRadiusMismatch,
+    Underconstrained,
+    FittedAxialCenters,
+    AmbiguousAxisDirection,
+    CollinearCenters,
+    PlaneCentersProjected,
+    BalancedHoleFit,
+    ObliqueHoleAxis,
+    OppositePlaneNormalsConvention
+};
+struct MRMESH_CLASS Diagnostic
+{
+    DiagnosticCode code{ DiagnosticCode::Unspecified };
+    /// Zero-based input index for CenterPositionMismatch (Constraints::centers) and
+    /// HolePositionMismatch, HoleAxisAngleMismatch, HoleRadiusMismatch (Constraints::holes).
+    /// All other codes use -1; applicable metrics are in the corresponding Solution::holes entry.
+    int index{ -1 };
+    MRMESH_API bool operator==( const Diagnostic & ) const = default;
+};
 /// Placement and measured residuals. An incompatible measurement produces a valid solution
 /// with conflicts, while invalid input produces an unexpected error instead.
 struct MRMESH_CLASS Solution
 {
     AffineXf3d delta;      ///< Maps moving input coordinates into the fixed input frame.
     int remainingDof{ 3 }; ///< Unconstrained rigid degrees of freedom, independent of residual conflicts.
-    std::string rotationSource{ "unconstrained" }; ///< Reference determining residual rotation, if any.
-    std::string freeMotion;                 ///< Constraint-rank description; populated by both solve and measure.
+    RotationSource rotationSource{ RotationSource::Unconstrained }; ///< Reference determining residual rotation, if any.
+    FreeMotion freeMotion{ FreeMotion::Unspecified };                 ///< Constraint-rank description; populated by both solve and measure.
     PrimaryMode mode{ PrimaryMode::Plane }; ///< Active primary mode.
     double primaryPositionError{};          ///< Controlled primary position residual in input length units.
     double primaryAngleErrorDeg{};          ///< Controlled primary direction residual in degrees.
@@ -133,9 +195,9 @@ struct MRMESH_CLASS Solution
     double determinant{ 1 };                ///< Rotation determinant; a successful API result is finite and rigid.
     std::optional<double> clockingErrorDeg; ///< Directed projected-reference residual in degrees.
     std::vector<HoleResidual> holes;        ///< One entry per active hole or center pair, in input order.
-    std::vector<std::string> conflicts, warnings; ///< Tolerance failures versus informational diagnostics.
+    std::vector<Diagnostic> conflicts, warnings; ///< Tolerance failures versus informational diagnostics.
     /// True when all controlled residuals meet tolerance. Invalid numeric results are returned as errors.
-    [[nodiscard]] bool acceptable() const
+    [[nodiscard]] MRMESH_API bool acceptable() const
     {
         return conflicts.empty();
     }
@@ -177,8 +239,6 @@ struct MRMESH_CLASS FeatureReferences
 /// References retain their objects, but the result contains copied geometry only.
 [[nodiscard]] MRMESH_API Expected<Constraints> readConstraints( const FeatureReferences &references,
                                                                 const Settings &settings = {} );
-/// Reads and solves without modifying any feature, parent, or scene object.
-[[nodiscard]] MRMESH_API Expected<Solution> solve( const FeatureReferences &references, const Settings &settings = {} );
 /// \}
 
 } // namespace MR::FeatureAlignment

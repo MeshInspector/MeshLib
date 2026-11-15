@@ -59,8 +59,8 @@ inline const ThreeVertIds & getTriVerts( const TriMeshPart & part, FaceId f ) { 
 template<typename MeshType>
 Triangle3f getTriPoints( const MeshType & mesh, FaceId f )
 {
-    const auto & vs = getTriVerts( mesh, f );
-    return { mesh.points[vs[0]], mesh.points[vs[1]], mesh.points[vs[2]] };
+    const auto [a, b, c] = getTriVerts( mesh, f );
+    return { mesh.points[a], mesh.points[b], mesh.points[c] };
 }
 
 } //namespace MR::detail

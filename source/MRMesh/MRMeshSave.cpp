@@ -107,8 +107,8 @@ static Expected<void> toOffImpl( const MeshType & mesh, std::ostream & out, cons
         if ( !hasFace( mesh, f ) )
             continue;
 
-        const auto & vs = getTriVerts( mesh, f );
-        out << fmt::format( "3 {} {} {}\n", vertRenumber( vs[0] ), vertRenumber( vs[1] ), vertRenumber( vs[2] ) );
+        const auto [a, b, c] = getTriVerts( mesh, f );
+        out << fmt::format( "3 {} {} {}\n", vertRenumber( a ), vertRenumber( b ), vertRenumber( c ) );
     }
 
     if ( !out )
@@ -249,8 +249,8 @@ static Expected<void> toObjImpl( const MeshType & mesh, std::ostream & out, cons
         if ( !hasFace( mesh, f ) )
             continue;
 
-        const auto & vs = getTriVerts( mesh, f );
-        Vector3i values( vertRenumber( vs[0] ) + firstVertId, vertRenumber( vs[1] ) + firstVertId, vertRenumber( vs[2] ) + firstVertId );
+        const auto [a, b, c] = getTriVerts( mesh, f );
+        Vector3i values( vertRenumber( a ) + firstVertId, vertRenumber( b ) + firstVertId, vertRenumber( c ) + firstVertId );
         if ( saveUV )
             out << fmt::format( "f {}/{} {}/{} {}/{}\n",
                 values.x, values.x,
@@ -315,12 +315,12 @@ static FaceBitSet getNotDegenTris( const MeshType & mesh )
     FaceBitSet notDegenTris = validFaces( mesh );
     BitSetParallelFor( notDegenTris, [&]( FaceId f )
     {
-        const auto & vs = getTriVerts( mesh, f );
-        assert( vs[0].valid() && vs[1].valid() && vs[2].valid() );
+        const auto [a, b, c] = getTriVerts( mesh, f );
+        assert( a.valid() && b.valid() && c.valid() );
 
-        const Vector3f& ap = mesh.points[vs[0]];
-        const Vector3f& bp = mesh.points[vs[1]];
-        const Vector3f& cp = mesh.points[vs[2]];
+        const Vector3f& ap = mesh.points[a];
+        const Vector3f& bp = mesh.points[b];
+        const Vector3f& cp = mesh.points[c];
         if ( ap == bp || bp == cp || cp == ap )
             notDegenTris.reset( f );
     } );
@@ -470,8 +470,8 @@ static Expected<void> toAsciiStlImpl( const MeshType & mesh, std::ostream & out,
     int trisIndex = 0;
     for ( auto f : notDegenTris )
     {
-        const auto & vs = getTriVerts( mesh, f );
-        assert( vs[0].valid() && vs[1].valid() && vs[2].valid() );
+        const auto [a, b, c] = getTriVerts( mesh, f );
+        assert( a.valid() && b.valid() && c.valid() );
         auto saveVertex = [&]( auto && ap, auto && bp, auto && cp )
         {
             const auto normal = cross( bp - ap, cp - ap ).normalized();
@@ -481,11 +481,11 @@ static Expected<void> toAsciiStlImpl( const MeshType & mesh, std::ostream & out,
                 out << fmt::format( "vertex {} {} {}\n", p.x, p.y, p.z );
         };
         if ( settings.xf )
-            saveVertex( applyDouble( settings.xf, mesh.points[vs[0]] ),
-                        applyDouble( settings.xf, mesh.points[vs[1]] ),
-                        applyDouble( settings.xf, mesh.points[vs[2]] ) );
+            saveVertex( applyDouble( settings.xf, mesh.points[a] ),
+                        applyDouble( settings.xf, mesh.points[b] ),
+                        applyDouble( settings.xf, mesh.points[c] ) );
         else
-            saveVertex( mesh.points[vs[0]], mesh.points[vs[1]], mesh.points[vs[2]] );
+            saveVertex( mesh.points[a], mesh.points[b], mesh.points[c] );
         out << "endloop\n";
         out << "endfacet\n";
         if ( settings.progress && !( trisIndex & 0x3FF ) && !settings.progress( trisIndex / trisNum ) )

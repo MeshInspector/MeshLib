@@ -55,6 +55,9 @@ Expected<void> toMrmesh( const Mesh & mesh, std::ostream & out, const SaveSettin
 }
 
 template<typename MeshType>
+static Expected<void> toOffImpl( const MeshType & mesh, std::ostream & out, const SaveSettings & settings );
+
+template<typename MeshType>
 static Expected<void> toOffImpl( const MeshType & mesh, const std::filesystem::path & file, const SaveSettings & settings )
 {
     // although .off is a textual format, we open the file in binary mode to get exactly the same result on Windows and Linux
@@ -62,7 +65,7 @@ static Expected<void> toOffImpl( const MeshType & mesh, const std::filesystem::p
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toOff( mesh, out, settings );
+    return toOffImpl( mesh, out, settings );
 }
 
 template<typename MeshType>
@@ -125,15 +128,18 @@ Expected<void> toOff( const Mesh & mesh, std::ostream & out, const SaveSettings 
     return toOffImpl( mesh, out, settings );
 }
 
-Expected<void> toOff( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
+Expected<void> toOff( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, const FaceBitSet * region )
 {
-    return toOffImpl( mesh, file, settings );
+    return region ? toOffImpl( TriMeshPart( mesh, *region ), file, settings ) : toOffImpl( mesh, file, settings );
 }
 
-Expected<void> toOff( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings )
+Expected<void> toOff( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings, const FaceBitSet * region )
 {
-    return toOffImpl( mesh, out, settings );
+    return region ? toOffImpl( TriMeshPart( mesh, *region ), out, settings ) : toOffImpl( mesh, out, settings );
 }
+
+template<typename MeshType>
+static Expected<void> toObjImpl( const MeshType & mesh, std::ostream & out, const SaveSettings & settings, int firstVertId );
 
 template<typename MeshType>
 static Expected<void> toObjImpl( const MeshType & mesh, const std::filesystem::path & file, const SaveSettings & settings, int firstVertId )
@@ -168,7 +174,7 @@ static Expected<void> toObjImpl( const MeshType & mesh, const std::filesystem::p
         }
     }
 #endif
-    return toObj( mesh, out, settings, firstVertId );
+    return toObjImpl( mesh, out, settings, firstVertId );
 }
 
 template<typename MeshType>
@@ -282,24 +288,24 @@ Expected<void> toObj( const Mesh& mesh, std::ostream& out, const SaveSettings& s
     return toObjImpl( mesh, out, settings, 1 );
 }
 
-Expected<void> toObj( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, int firstVertId )
+Expected<void> toObj( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, int firstVertId, const FaceBitSet * region )
 {
-    return toObjImpl( mesh, file, settings, firstVertId );
+    return region ? toObjImpl( TriMeshPart( mesh, *region ), file, settings, firstVertId ) : toObjImpl( mesh, file, settings, firstVertId );
 }
 
-Expected<void> toObj( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings, int firstVertId )
+Expected<void> toObj( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings, int firstVertId, const FaceBitSet * region )
 {
-    return toObjImpl( mesh, out, settings, firstVertId );
+    return region ? toObjImpl( TriMeshPart( mesh, *region ), out, settings, firstVertId ) : toObjImpl( mesh, out, settings, firstVertId );
 }
 
-Expected<void> toObj( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
+Expected<void> toObj( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, const FaceBitSet * region )
 {
-    return toObjImpl( mesh, file, settings, 1 );
+    return region ? toObjImpl( TriMeshPart( mesh, *region ), file, settings, 1 ) : toObjImpl( mesh, file, settings, 1 );
 }
 
-Expected<void> toObj( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings )
+Expected<void> toObj( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings, const FaceBitSet * region )
 {
-    return toObjImpl( mesh, out, settings, 1 );
+    return region ? toObjImpl( TriMeshPart( mesh, *region ), out, settings, 1 ) : toObjImpl( mesh, out, settings, 1 );
 }
 
 template<typename MeshType>
@@ -322,13 +328,16 @@ static FaceBitSet getNotDegenTris( const MeshType & mesh )
 }
 
 template<typename MeshType>
+static Expected<void> toBinaryStlImpl( const MeshType & mesh, std::ostream & out, const SaveSettings & settings );
+
+template<typename MeshType>
 static Expected<void> toBinaryStlImpl( const MeshType & mesh, const std::filesystem::path & file, const SaveSettings & settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toBinaryStl( mesh, out, settings );
+    return toBinaryStlImpl( mesh, out, settings );
 }
 
 template<typename MeshType>
@@ -367,14 +376,14 @@ Expected<void> toBinaryStl( const Mesh & mesh, std::ostream & out, const SaveSet
     return toBinaryStlImpl( mesh, out, settings );
 }
 
-Expected<void> toBinaryStl( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
+Expected<void> toBinaryStl( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, const FaceBitSet * region )
 {
-    return toBinaryStlImpl( mesh, file, settings );
+    return region ? toBinaryStlImpl( TriMeshPart( mesh, *region ), file, settings ) : toBinaryStlImpl( mesh, file, settings );
 }
 
-Expected<void> toBinaryStl( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings )
+Expected<void> toBinaryStl( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings, const FaceBitSet * region )
 {
-    return toBinaryStlImpl( mesh, out, settings );
+    return region ? toBinaryStlImpl( TriMeshPart( mesh, *region ), out, settings ) : toBinaryStlImpl( mesh, out, settings );
 }
 
 BinaryStlSaver::BinaryStlSaver( std::ostream & out, const SaveSettings & settings, std::uint32_t expectedNumTris )
@@ -437,13 +446,16 @@ BinaryStlSaver::~BinaryStlSaver()
 }
 
 template<typename MeshType>
+static Expected<void> toAsciiStlImpl( const MeshType & mesh, std::ostream & out, const SaveSettings & settings );
+
+template<typename MeshType>
 static Expected<void> toAsciiStlImpl( const MeshType & mesh, const std::filesystem::path & file, const SaveSettings & settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toAsciiStl( mesh, out, settings );
+    return toAsciiStlImpl( mesh, out, settings );
 }
 
 template<typename MeshType>
@@ -499,14 +511,14 @@ Expected<void> toAsciiStl( const Mesh & mesh, std::ostream & out, const SaveSett
     return toAsciiStlImpl( mesh, out, settings );
 }
 
-Expected<void> toAsciiStl( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
+Expected<void> toAsciiStl( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, const FaceBitSet * region )
 {
-    return toAsciiStlImpl( mesh, file, settings );
+    return region ? toAsciiStlImpl( TriMeshPart( mesh, *region ), file, settings ) : toAsciiStlImpl( mesh, file, settings );
 }
 
-Expected<void> toAsciiStl( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings )
+Expected<void> toAsciiStl( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings, const FaceBitSet * region )
 {
-    return toAsciiStlImpl( mesh, out, settings );
+    return region ? toAsciiStlImpl( TriMeshPart( mesh, *region ), out, settings ) : toAsciiStlImpl( mesh, out, settings );
 }
 
 template<typename MeshType>
@@ -651,14 +663,14 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
     return toPlyImpl( mesh, out, settings );
 }
 
-Expected<void> toPly( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
+Expected<void> toPly( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, const FaceBitSet * region )
 {
-    return toPlyImpl( mesh, file, settings );
+    return region ? toPlyImpl( TriMeshPart( mesh, *region ), file, settings ) : toPlyImpl( mesh, file, settings );
 }
 
-Expected<void> toPly( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings )
+Expected<void> toPly( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings, const FaceBitSet * region )
 {
-    return toPlyImpl( mesh, out, settings );
+    return region ? toPlyImpl( TriMeshPart( mesh, *region ), out, settings ) : toPlyImpl( mesh, out, settings );
 }
 
 static void telemetryLogSize( const Mesh& mesh )

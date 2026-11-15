@@ -53,6 +53,33 @@ inline FaceBitSet validFaces( const TriMesh & mesh ) { return FaceBitSet( mesh.t
 inline ThreeVertIds getTriVerts( const Mesh & mesh, FaceId f ) { return mesh.topology.getTriVerts( f ); }
 inline const ThreeVertIds & getTriVerts( const TriMesh & mesh, FaceId f ) { return mesh.tris[f]; }
 
+/// TriMesh with a region of triangles: only the triangles of the region and their vertices are valid
+struct TriMeshPart
+{
+    const TriMesh & mesh;
+    const VertCoords & points;
+    const FaceBitSet & region;
+    VertBitSet regionVerts;
+
+    TriMeshPart( const TriMesh & m, const FaceBitSet & r ) : mesh( m ), points( m.points ), region( r ), regionVerts( m.points.size() )
+    {
+        assert( region.find_last() < (int)mesh.tris.size() );
+        for ( FaceId f : region )
+            for ( VertId v : mesh.tris[f] )
+                regionVerts.set( v );
+    }
+};
+
+inline VertRenumber getVertRenumber( const TriMeshPart & part, bool packValidOnly ) { return VertRenumber( part.regionVerts, packValidOnly ); }
+inline VertId lastValidVert( const TriMeshPart & part ) { return part.regionVerts.find_last(); }
+inline bool hasVert( const TriMeshPart & part, VertId v ) { return part.regionVerts.test( v ); }
+inline const VertBitSet & validVerts( const TriMeshPart & part ) { return part.regionVerts; }
+inline FaceId lastValidFace( const TriMeshPart & part ) { return part.region.find_last(); }
+inline int numValidFaces( const TriMeshPart & part ) { return (int)part.region.count(); }
+inline bool hasFace( const TriMeshPart & part, FaceId f ) { return part.region.test( f ); }
+inline const FaceBitSet & validFaces( const TriMeshPart & part ) { return part.region; }
+inline const ThreeVertIds & getTriVerts( const TriMeshPart & part, FaceId f ) { return part.mesh.tris[f]; }
+
 template<typename MeshType>
 Triangle3f getTriPoints( const MeshType & mesh, FaceId f )
 {

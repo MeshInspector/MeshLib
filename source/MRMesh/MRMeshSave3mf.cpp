@@ -62,13 +62,16 @@ Vector<int, I> makePalette( const Vector<Color, I>& colors, const TypedBitSet<I>
 } // anonymous namespace
 
 template<typename MeshType>
+static Expected<void> toModel3mfImpl( const MeshType & mesh, std::ostream & out, const SaveSettings & settings );
+
+template<typename MeshType>
 static Expected<void> toModel3mfImpl( const MeshType & mesh, const std::filesystem::path & file, const SaveSettings & settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toModel3mf( mesh, out, settings );
+    return toModel3mfImpl( mesh, out, settings );
 }
 
 template<typename MeshType>
@@ -261,7 +264,7 @@ R"(<?xml version="1.0" encoding="utf-8"?>
 
         auto settings1 = settings;
         settings1.progress = subprogress( settings.progress, 0.0f, 0.9f );
-        if ( auto maybeDone = toModel3mf( mesh, dir3D / "3dmodel.model", settings1 ); !maybeDone )
+        if ( auto maybeDone = toModel3mfImpl( mesh, dir3D / "3dmodel.model", settings1 ); !maybeDone )
             return unexpected( std::move( maybeDone.error() ) );
     }
 
@@ -278,14 +281,14 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
     return toModel3mfImpl( mesh, out, settings );
 }
 
-Expected<void> toModel3mf( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
+Expected<void> toModel3mf( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, const FaceBitSet * region )
 {
-    return toModel3mfImpl( mesh, file, settings );
+    return region ? toModel3mfImpl( TriMeshPart( mesh, *region ), file, settings ) : toModel3mfImpl( mesh, file, settings );
 }
 
-Expected<void> toModel3mf( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings )
+Expected<void> toModel3mf( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings, const FaceBitSet * region )
 {
-    return toModel3mfImpl( mesh, out, settings );
+    return region ? toModel3mfImpl( TriMeshPart( mesh, *region ), out, settings ) : toModel3mfImpl( mesh, out, settings );
 }
 
 Expected<void> to3mf( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
@@ -293,9 +296,9 @@ Expected<void> to3mf( const Mesh & mesh, const std::filesystem::path & file, con
     return to3mfImpl( mesh, file, settings );
 }
 
-Expected<void> to3mf( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
+Expected<void> to3mf( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, const FaceBitSet * region )
 {
-    return to3mfImpl( mesh, file, settings );
+    return region ? to3mfImpl( TriMeshPart( mesh, *region ), file, settings ) : to3mfImpl( mesh, file, settings );
 }
 
 MR_ADD_MESH_SAVER( IOFilter( "3D Manufacturing model (.model)", "*.model" ), toModel3mf, {} )

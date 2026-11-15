@@ -31,9 +31,10 @@ MRMESH_API Expected<void> toOff( const Mesh & mesh, std::ostream & out,
                                                   const SaveSettings & settings = {} );
 
 /// saves in .off file;
-/// all vertices and triangles of TriMesh are always saved independently of SaveSettings::onlyValidPoints and SaveSettings::packPrimitives
-MRMESH_API Expected<void> toOff( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );
-MRMESH_API Expected<void> toOff( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
+/// if region is given, only its triangles and their vertices are valid as in Mesh, otherwise all vertices and triangles of TriMesh are valid;
+/// region must not have bits beyond TriMesh::tris
+MRMESH_API Expected<void> toOff( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {}, const FaceBitSet * region = nullptr );
+MRMESH_API Expected<void> toOff( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings = {}, const FaceBitSet * region = nullptr );
 
 /// saves in .obj file
 /// \param firstVertId is the index of first mesh vertex in the output file (if this object is not the first there)
@@ -45,19 +46,21 @@ MRMESH_API Expected<void> toObj( const Mesh & mesh, const std::filesystem::path 
 MRMESH_API Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
 
 /// saves in .obj file;
-/// all vertices and triangles of TriMesh are always saved independently of SaveSettings::onlyValidPoints and SaveSettings::packPrimitives
+/// if region is given, only its triangles and their vertices are valid as in Mesh, otherwise all vertices and triangles of TriMesh are valid;
+/// region must not have bits beyond TriMesh::tris
 /// \param firstVertId is the index of first mesh vertex in the output file (if this object is not the first there)
-MRMESH_API Expected<void> toObj( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, int firstVertId );
-MRMESH_API Expected<void> toObj( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings, int firstVertId );
-MRMESH_API Expected<void> toObj( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );
-MRMESH_API Expected<void> toObj( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
+MRMESH_API Expected<void> toObj( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, int firstVertId, const FaceBitSet * region = nullptr );
+MRMESH_API Expected<void> toObj( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings, int firstVertId, const FaceBitSet * region = nullptr );
+MRMESH_API Expected<void> toObj( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {}, const FaceBitSet * region = nullptr );
+MRMESH_API Expected<void> toObj( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings = {}, const FaceBitSet * region = nullptr );
 
 /// saves in binary .stl file;
 /// SaveSettings::onlyValidPoints = false is ignored
 MRMESH_API Expected<void> toBinaryStl( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );
 MRMESH_API Expected<void> toBinaryStl( const Mesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
-MRMESH_API Expected<void> toBinaryStl( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );
-MRMESH_API Expected<void> toBinaryStl( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
+/// if region is given, only its triangles are saved; region must not have bits beyond TriMesh::tris
+MRMESH_API Expected<void> toBinaryStl( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {}, const FaceBitSet * region = nullptr );
+MRMESH_API Expected<void> toBinaryStl( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings = {}, const FaceBitSet * region = nullptr );
 
 /// saver in binary .stl format that can write triangles one by one not knowing their number beforehand
 class BinaryStlSaver
@@ -92,33 +95,37 @@ private:
 /// SaveSettings::onlyValidPoints = false is ignored
 MRMESH_API Expected<void> toAsciiStl( const Mesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
 MRMESH_API Expected<void> toAsciiStl( const Mesh & mesh, std::ostream& out, const SaveSettings & settings = {} );
-MRMESH_API Expected<void> toAsciiStl( const TriMesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
-MRMESH_API Expected<void> toAsciiStl( const TriMesh & mesh, std::ostream& out, const SaveSettings & settings = {} );
+/// if region is given, only its triangles are saved; region must not have bits beyond TriMesh::tris
+MRMESH_API Expected<void> toAsciiStl( const TriMesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {}, const FaceBitSet * region = nullptr );
+MRMESH_API Expected<void> toAsciiStl( const TriMesh & mesh, std::ostream& out, const SaveSettings & settings = {}, const FaceBitSet * region = nullptr );
 
 /// saves in .ply file
 MRMESH_API Expected<void> toPly( const Mesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
 MRMESH_API Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
 
-/// saves in .ply file; all vertices and triangles of TriMesh are always saved
-/// independently of SaveSettings::onlyValidPoints and SaveSettings::packPrimitives
-MRMESH_API Expected<void> toPly( const TriMesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
-MRMESH_API Expected<void> toPly( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
+/// saves in .ply file;
+/// if region is given, only its triangles and their vertices are valid as in Mesh, otherwise all vertices and triangles of TriMesh are valid;
+/// region must not have bits beyond TriMesh::tris
+MRMESH_API Expected<void> toPly( const TriMesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {}, const FaceBitSet * region = nullptr );
+MRMESH_API Expected<void> toPly( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings = {}, const FaceBitSet * region = nullptr );
 
 /// saves in 3mf .model file
 MRMESH_API Expected<void> toModel3mf( const Mesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
 MRMESH_API Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
 
 /// saves in 3mf .model file;
-/// all vertices and triangles of TriMesh are always saved independently of SaveSettings::onlyValidPoints and SaveSettings::packPrimitives
-MRMESH_API Expected<void> toModel3mf( const TriMesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
-MRMESH_API Expected<void> toModel3mf( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
+/// if region is given, only its triangles and their vertices are valid as in Mesh, otherwise all vertices and triangles of TriMesh are valid;
+/// region must not have bits beyond TriMesh::tris
+MRMESH_API Expected<void> toModel3mf( const TriMesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {}, const FaceBitSet * region = nullptr );
+MRMESH_API Expected<void> toModel3mf( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings = {}, const FaceBitSet * region = nullptr );
 
 /// saves in .3mf file
 MRMESH_API Expected<void> to3mf( const Mesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
 
 /// saves in .3mf file;
-/// all vertices and triangles of TriMesh are always saved independently of SaveSettings::onlyValidPoints and SaveSettings::packPrimitives
-MRMESH_API Expected<void> to3mf( const TriMesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
+/// if region is given, only its triangles and their vertices are valid as in Mesh, otherwise all vertices and triangles of TriMesh are valid;
+/// region must not have bits beyond TriMesh::tris
+MRMESH_API Expected<void> to3mf( const TriMesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {}, const FaceBitSet * region = nullptr );
 
 /// detects the format from file extension and save mesh to it
 MR_BIND_OVERLOAD_SUFFIX() MRMESH_API Expected<void> toAnySupportedFormat( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );

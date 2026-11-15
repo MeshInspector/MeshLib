@@ -70,6 +70,7 @@ private:
     std::streamoff numTrisPos_ = 0; ///< the location in the stream where the number of triangles is stored
     std::uint32_t headNumTris_ = 0;  ///< what was written in the header
     std::uint32_t savedNumTris_ = 0; ///< how many triangles were actually written in the stream
+    std::uint16_t triAttr_ = 0;      ///< attribute bytes of every triangle
 };
 
 /// saves in textual .stl file;

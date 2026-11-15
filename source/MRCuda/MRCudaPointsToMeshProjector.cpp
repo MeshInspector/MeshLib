@@ -1,5 +1,4 @@
 #include "MRCudaPointsToMeshProjector.h"
-#include "MRCudaAABBTree.hpp"
 #include "MRCudaPointsToMeshProjector.cuh"
 
 #include "MRCudaBasic.h"
@@ -20,7 +19,8 @@ namespace Cuda
 struct MeshProjectorData
 {
     DynamicArray<float3> cudaMeshPoints;
-    MeshTreeBuffers tree;
+    DynamicArray<WideNode3> cudaNodes;
+    DynamicArray<LeafTri3> cudaLeafTris;
 };
 
 PointsToMeshProjector::PointsToMeshProjector()
@@ -37,8 +37,14 @@ void PointsToMeshProjector::updateMeshData( const MR::Mesh* mesh )
     }
     MR_TIMER;
 
-    meshData_->cudaMeshPoints.fromVector( mesh->points );
-    meshData_->tree.fromTree( mesh->getAABBTree() );
+    const AABBTree& tree = mesh->getAABBTree();
+    const auto& nodes = tree.nodes();
+    const auto& meshPoints = mesh->points;
+
+
+    meshData_->cudaMeshPoints.fromVector( meshPoints );
+    meshData_->cudaNodes.fromVector( nodes );
+    meshData_->cudaLeafTris.fromVector( tree.leafTris() );
 
     mesh_ = mesh;
 }
@@ -103,7 +109,7 @@ void PointsToMeshProjector::findProjections(
     {
         cudaPoints.copyFrom( points.data() + offset, size );
 
-        meshProjectionKernel( cudaPoints.data(), meshData_->tree.data(), meshData_->cudaMeshPoints.data(), cudaResult.data(), cudaXf, cudaRefXf, upDistLimitSq, loDistLimitSq, size );
+        meshProjectionKernel( cudaPoints.data(), meshData_->cudaNodes.data(), meshData_->cudaMeshPoints.data(), meshData_->cudaLeafTris.data(), cudaResult.data(), cudaXf, cudaRefXf, upDistLimitSq, loDistLimitSq, size );
         CUDA_EXEC( cudaGetLastError() );
 
         cudaResult.copyTo( res.data() + offset, size );

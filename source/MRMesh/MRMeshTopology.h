@@ -9,6 +9,7 @@
 #include "MRProgressCallback.h"
 #include "MRExpected.h"
 #include "MREnums.h"
+#include "MRPrefetch.h"
 #include <iosfwd>
 
 namespace MR
@@ -113,6 +114,9 @@ public:
     /// returns right face of half-edge
     [[nodiscard]] FaceId right( EdgeId he ) const { assert(he.valid()); return edges_[he.sym()].left; }
 
+    /// hints the processor to load the records of both half-edges of ue, e.g. some faces ahead in a loop reading them
+    MR_BIND_IGNORE void prefetchEdge( UndirectedEdgeId ue ) const { assert(ue.valid()); MR_PREFETCH( &edges_[EdgeId( ue )] ); }
+
 
     /// sets new origin to the full origin ring including this edge;
     /// edgePerVertex_ table is updated accordingly
@@ -156,7 +160,7 @@ public:
                    void getTriVerts( FaceId f, VertId & v0, VertId & v1, VertId & v2 ) const { getLeftTriVerts( edgeWithLeft( f ), v0, v1, v2 ); }
     MR_BIND_IGNORE void getTriVerts( FaceId f, VertId (&v)[3] ) const { getLeftTriVerts( edgeWithLeft( f ), v ); } // This one is not in the bindings because of the reference-to-array parameter.
                    void getTriVerts( FaceId f, ThreeVertIds & v ) const { getLeftTriVerts( edgeWithLeft( f ), v ); }
-    [[nodiscard]] ThreeVertIds getTriVerts( FaceId f ) const { return getLeftTriVerts( edgeWithLeft( f ) ); }
+    [[nodiscard]] MR_FORCE_INLINE ThreeVertIds getTriVerts( FaceId f ) const { return getLeftTriVerts( edgeWithLeft( f ) ); }
 
     /// return true if triangular face (f) has (v) as one of its vertices
     [[nodiscard]] bool isTriVert( FaceId f, VertId v ) const { auto vs = getTriVerts( f ); return v == vs[0] || v == vs[1] || v == vs[2]; }
@@ -170,10 +174,10 @@ public:
 
     /// gets 3 vertices of the left face ( face-id may not exist, but the shape must be triangular)
     /// the vertices are returned in counter-clockwise order if look from mesh outside: v0 = org( a ), v1 = dest( a )
-    MR_BIND_OVERLOAD_SUFFIX(outVerts) MRMESH_API     void getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const;
+    MR_BIND_OVERLOAD_SUFFIX(outVerts)                void getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const;
     MR_BIND_IGNORE void getLeftTriVerts( EdgeId a, VertId (&v)[3] ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); } // This one is not in the bindings because of the reference-to-array parameter.
                    MR_BIND_OVERLOAD_SUFFIX(outArray) void getLeftTriVerts( EdgeId a, ThreeVertIds & v ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); }
-    MR_BIND_OVERLOAD_SUFFIX() [[nodiscard]] ThreeVertIds getLeftTriVerts( EdgeId a ) const { ThreeVertIds v; getLeftTriVerts( a, v[0], v[1], v[2] ); return v; }
+    MR_BIND_OVERLOAD_SUFFIX() [[nodiscard]] MR_FORCE_INLINE ThreeVertIds getLeftTriVerts( EdgeId a ) const { ThreeVertIds v; getLeftTriVerts( a, v[0], v[1], v[2] ); return v; }
 
     /// if given point is
     /// 1) in vertex, then invokes callback once with it;
@@ -276,12 +280,17 @@ public:
     /// deletes the face, also deletes its edges and vertices if they were not shared by other faces and not in \p keepEdges
     MRMESH_API void deleteFace( FaceId f, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
+    /// deletes the given faces, also deletes their edges and vertices if they were not shared by other faces and not in \p keepEdges;
+    /// unlike \ref deleteFacesFindVacant, the edges that had no left and no right face before the call are not touched;
+    /// few faces (up to 64 or 1/128 of all faces, whichever is larger) are deleted one by one, without a pass over all mesh elements
+    MRMESH_API void deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
+
     /// deletes from this topology:
-    /// 1) all the gives faces,
+    /// 1) all the given faces,
     /// 2) all the vertices, which had incident only deleted faces and no edges from \p keepEdges,
-    /// 3) make lone all the edges, which had to the left/right only deleted faces except for the edges from \p keepEdges;
-    /// return bit sets of all vacant elements in this topology after deletion
-    MRMESH_API VacantElements deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
+    /// 3) make lone all the edges, which had to the left/right only deleted faces or no faces at all (unlike \ref deleteFaces), except for the edges from \p keepEdges;
+    /// return bit sets of all vacant elements in this topology after deletion; it takes a pass over the whole mesh for any number of faces
+    MRMESH_API VacantElements deleteFacesFindVacant( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
     /// deletes the given valid faces (in parallel), keeping all their edges and vertices, which get no face on that side
     MRMESH_API void deleteFacesKeepEdges( const FaceBitSet & fs );
@@ -584,6 +593,9 @@ private:
     MRMESH_API void computeAllFromEdges_();
 
 private:
+    /// parallel deletion of the given faces, which makes lone the edges without left and right faces only if (keepFaceless) is false
+    VacantElements deleteFaces_( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges, bool keepFaceless );
+
     /// sets new origin to the full origin ring including this edge, without updating edgePerVertex_ table
     void setOrg_( EdgeId a, VertId v );
 
@@ -636,6 +648,17 @@ private:
 
     bool updateValids_ = true; ///< if false, validVerts_, validFaces_, numValidVerts_, numValidFaces_ are not updated
 };
+
+MR_FORCE_INLINE void MeshTopology::getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const
+{
+    assert( isLeftTri( a ) );
+    v0 = org( a );
+    EdgeId b = prev( a.sym() );
+    v1 = org( b );
+    // same as org( prev( b.sym() ) ), but reads only b's sibling record (typically in the same cache line as b's)
+    // instead of the record of the third edge, which is usually far away in memory
+    v2 = dest( b );
+}
 
 template <typename T>
 void MeshTopology::forEachVertex( const MeshTriPoint & p, T && callback ) const

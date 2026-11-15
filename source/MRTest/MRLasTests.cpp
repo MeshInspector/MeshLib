@@ -2,8 +2,10 @@
 #ifndef MRIOEXTRAS_NO_LAS
 #include <MRMesh/MRColor.h>
 #include <MRMesh/MRPointCloud.h>
+#include <MRMesh/MRUniqueTemporaryFolder.h>
 #include <gtest/gtest.h>
 
+#include <filesystem>
 #include <sstream>
 
 namespace MR
@@ -82,6 +84,27 @@ TEST( MRIOExtras, LasPointsOnly )
         for ( auto v : cloud.validPoints )
             EXPECT_NEAR( ( loaded->points[v] - cloud.points[v] ).length(), 0.f, 1e-4f );
     }
+}
+
+// a file with symbols outside of any single code page in its name must be opened on Windows as well
+TEST( MRIOExtras, LasUnicodeFileName )
+{
+    VertColors colors;
+    const auto cloud = makeCloud( 100, colors );
+
+    UniqueTemporaryFolder folder;
+    ASSERT_TRUE( bool( folder ) );
+    const auto path = folder / std::filesystem::path( u8"\u0442\u0435\u0441\u0442 \u6587\u4ef6 \u00e9.las" );
+    const auto saved = PointsSave::toLas( cloud, path );
+    ASSERT_TRUE( saved ) << saved.error();
+
+    const auto loaded = PointsLoad::fromLas( path );
+    ASSERT_TRUE( loaded ) << loaded.error();
+    EXPECT_EQ( loaded->points.size(), cloud.points.size() );
+
+    const auto absent = PointsLoad::fromLas( folder / "absent.las" );
+    ASSERT_FALSE( absent );
+    EXPECT_TRUE( absent.error().starts_with( "Cannot open file for reading" ) ) << absent.error();
 }
 
 } // namespace MR

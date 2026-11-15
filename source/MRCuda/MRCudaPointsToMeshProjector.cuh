@@ -18,7 +18,7 @@ struct MeshProjectionResult
 
 // calls mesh projection kernel for each point in parallel
 void meshProjectionKernel( const float3* points,
-                           const MeshTree& tree, const float3* meshPoints,
+                           const WideNode3* nodes, const float3* meshPoints, const LeafTri3* leafTris,
                            MeshProjectionResult* resVec, const Matrix4 xf, const Matrix4 refXf, float upDistLimitSq, float loDistLimitSq, size_t size );
 
 }

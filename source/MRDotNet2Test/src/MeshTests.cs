@@ -316,7 +316,7 @@ namespace MRTest
             var projRes = findProjection(p, mesh);
             Assert.That(projRes.distSq, Is.EqualTo(7.529f).Within(1e-3));
 
-            // the point is on an edge of two triangles, and either of them can be returned
+            // the closest point is shared by several triangles, and which of them is returned depends on the search order and rounding
             Assert.That(projRes.proj.point.x, Is.EqualTo(0.310).Within(1e-3));
             Assert.That(projRes.proj.point.y, Is.EqualTo(0.507).Within(1e-3));
             Assert.That(projRes.proj.point.z, Is.EqualTo(0.803).Within(1e-3));
@@ -331,7 +331,7 @@ namespace MRTest
             var xf = AffineXf3f.translation(Vector3f.diagonal(1.0f));
             projRes = findProjection(p, mesh, float.MaxValue, xf);
 
-            Assert.That(mesh.topology.left(projRes.mtp.e).id, Is.EqualTo(projRes.proj.face.id)); // on an edge of two triangles too
+            Assert.That(mesh.topology.left(projRes.mtp.e).id, Is.EqualTo(projRes.proj.face.id));
             Assert.That(projRes.proj.point.x, Is.EqualTo(1.000).Within(1e-3));
             Assert.That(projRes.proj.point.y, Is.EqualTo(1.439).Within(1e-3));
             Assert.That(projRes.proj.point.z, Is.EqualTo(1.895).Within(1e-3));

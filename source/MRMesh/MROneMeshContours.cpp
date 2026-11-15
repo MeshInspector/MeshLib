@@ -572,18 +572,15 @@ void getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const
         inOffsets[j + 1] = inOffsets[j] + n;
         outOffsets[j + 1] = outOffsets[j] + n + ( terminals.empty() ? 0 : int( terminals[j][0].valid() ) + int( terminals[j][1].valid() ) );
     }
-    // resizeNoInit touches no element but still takes a step per element, so the outputs are sized concurrently
-    tbb::task_group sizing;
     for ( auto out : { outA, outB } )
         if ( out )
-            sizing.run( [out, &outOffsets] { out->intersections.resizeNoInit( outOffsets.back() ); } ); // every element is written below
+            out->intersections.resizeNoInit( outOffsets.back() ); // every element is written below
     if ( outPtsA )
     {
         outPtsA->resize( contours.size() );
         for ( int j = 0; j < contours.size(); ++j )
             resizeNoInit( ( *outPtsA )[j], outOffsets[j + 1] - outOffsets[j] );
     }
-    sizing.wait();
 
     BitSet closed( contours.size() );
     parallelForContourPieces( inOffsets, [&] ( int j, int k0, int k1 )

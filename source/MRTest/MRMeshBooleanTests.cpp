@@ -5,7 +5,6 @@
 #include <MRMesh/MRTorus.h>
 #include <MRMesh/MRCube.h>
 #include <MRMesh/MRBox.h>
-#include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRMatrix3.h>
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRRegionBoundary.h>
@@ -952,7 +951,7 @@ TEST( MRMesh, SubdivideLoneContoursUpdatesAABBTree )
         EXPECT_EQ( meshA.topology.numValidFaces(), numFaces + 2 * int( loneFaces.count() ) );
         const auto * tree = meshA.getAABBTreeNotCreate();
         ASSERT_TRUE( tree );
-        EXPECT_EQ( tree->numLeaves(), size_t( meshA.topology.numValidFaces() ) );
+        EXPECT_EQ( tree->leafTris().size(), size_t( meshA.topology.numValidFaces() ) );
 
         // same intersections as with a new tree
         Mesh rebuiltA = meshA;

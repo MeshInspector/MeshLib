@@ -1,5 +1,4 @@
 #include "MRCudaFastWindingNumber.h"
-#include "MRCudaAABBTree.hpp"
 #include "MRCudaFastWindingNumber.cuh"
 
 #include "MRCudaBasic.h"
@@ -22,18 +21,24 @@ namespace MR
 namespace Cuda
 {
 
+static_assert( sizeof( WideNode3 ) == sizeof( AABBTree::Node ) );
+static_assert( sizeof( LeafTri3 ) == sizeof( AABBTree::LeafTri ) );
+
+
 struct FastWindingNumberDataBuffers
 {
     DynamicArray<Dipole> dipoles;
     DynamicArray<float3> cudaMeshPoints;
-    MeshTreeBuffers tree;
+    DynamicArray<WideNode3> cudaNodes;
+    DynamicArray<LeafTri3> cudaLeafTris;
     DynamicArray<FaceToThreeVerts> cudaFaces;
 
     [[nodiscard]] FastWindingNumberData toData() const
     {
         return {
             .dipoles = dipoles.data(),
-            .tree = tree.data(),
+            .nodes = cudaNodes.data(),
+        .leafTris = cudaLeafTris.data(),
             .meshPoints = cudaMeshPoints.data(),
             .faces = cudaFaces.data(),
         };
@@ -72,7 +77,9 @@ Expected<void> FastWindingNumber::prepareData_( ProgressCallback cb )
     if ( !reportProgress( cb, 0.5f ) )
         return unexpectedOperationCanceled();
 
-    CUDA_LOGE_RETURN_UNEXPECTED( data->tree.fromTree( tree ) );
+    const auto& nodes = tree.nodes();
+    CUDA_LOGE_RETURN_UNEXPECTED( data->cudaNodes.fromVector( nodes ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( data->cudaLeafTris.fromVector( tree.leafTris() ) );
     if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
 

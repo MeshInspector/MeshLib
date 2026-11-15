@@ -372,6 +372,15 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth )
         UI::setTooltipIfHovered( _tr( "Allow tool windows to be moved outside the main window. To apply the changes, need to restart the application." ) );
     }
 
+    if ( viewer->getLaunchParams().splashWindow )
+    {
+        auto& config = Config::instance();
+        bool value = config.getBool( cShowSplashScreenKey, true );
+        if ( UI::checkbox( _tr( "Show Splash Screen" ), &value ) )
+            config.setBool( cShowSplashScreenKey, value );
+        UI::setTooltipIfHovered( _tr( "Show the splash screen while the application is starting." ) );
+    }
+
     if ( UI::button( _tr( "Toolbar Customize" ), Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu )
         ribbonMenu->openToolbarCustomize();
 

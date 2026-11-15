@@ -186,7 +186,7 @@ TEST(MRMesh, AddPartByMaskOnVacantElements)
     // mesh2 has the first cube component deleted
     Mesh mesh2 = mesh1;
     EXPECT_EQ( mesh1, mesh2 );
-    auto vacant = mesh2.deleteFaces( fs );
+    auto vacant = mesh2.deleteFacesFindVacant( fs );
     EXPECT_EQ( vacant.faces, fs );
     EXPECT_EQ( vacant.edges.count(), cube.topology.computeNotLoneUndirectedEdges() );
     EXPECT_EQ( vacant.verts.count(), cube.topology.numValidVerts() );

@@ -12,6 +12,7 @@
 #include "MRImageSave.h"
 #include "MRSerializer.h"
 #include "MRTelemetry.h"
+#include <cstring>
 #include <fstream>
 
 namespace MR
@@ -118,6 +119,17 @@ static bool hasManyTextures( const SaveSettings & settings )
     return settings.textures && settings.textures->size() > 1 && settings.texturePerFace && !settings.texturePerFace->empty();
 }
 
+// writes the solid color (if any) in the current material of .mtl file
+static void writeMtlSolidColor( std::ostream & ofMtl, const SaveSettings & settings )
+{
+    if ( !settings.solidColor )
+        return;
+    const auto c = Vector4f( *settings.solidColor );
+    ofMtl << fmt::format( "Kd {} {} {}\n", c.x, c.y, c.z );
+    if ( settings.solidColor->a != 255 )
+        ofMtl << fmt::format( "d {}\n", c.w );
+}
+
 Expected<void> toObj( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, int firstVertId )
 {
     // although .obj is a textual format, we open the file in binary mode to get exactly the same result on Windows and Linux
@@ -128,6 +140,7 @@ Expected<void> toObj( const Mesh & mesh, const std::filesystem::path & file, con
 #ifndef __EMSCRIPTEN__
     // it is hard to handle several files output for browser, so for now it is under ifdef,
     // anyway later it may be reworked to save simple zip and taken out of ifdef
+    const bool saveTexture = settings.uvMap && settings.texture && !settings.texture->pixels.empty();
     if ( settings.uvMap && hasManyTextures( settings ) )
     {
         if ( auto pngSaver = ImageSave::getImageSaver( "*.png" ) )
@@ -137,6 +150,7 @@ Expected<void> toObj( const Mesh & mesh, const std::filesystem::path & file, con
             for ( TextureId t{ 0 }; ofMtl && t < settings.textures->size(); ++t )
             {
                 ofMtl << fmt::format( "newmtl Texture{}\n", int( t ) );
+                writeMtlSolidColor( ofMtl, settings );
                 const auto& texture = ( *settings.textures )[t];
                 const auto textureName = fmt::format( "{}_{}.png", settings.materialName, int( t ) );
                 if ( !texture.pixels.empty() && pngSaver( texture, file.parent_path() / asU8String( textureName ) ).has_value() )
@@ -144,18 +158,18 @@ Expected<void> toObj( const Mesh & mesh, const std::filesystem::path & file, con
             }
         }
     }
-    else if ( settings.uvMap && settings.texture && !settings.texture->pixels.empty() )
+    else if ( saveTexture || settings.solidColor )
     {
-        if ( auto pngSaver = ImageSave::getImageSaver( "*.png" ) )
+        auto mtlPath = file.parent_path() / asU8String( settings.materialName + ".mtl" );
+        std::ofstream ofMtl( mtlPath, std::ofstream::binary );
+        if ( ofMtl )
         {
-            auto mtlPath = file.parent_path() / asU8String( settings.materialName + ".mtl" );
-            std::ofstream ofMtl( mtlPath, std::ofstream::binary );
-            if ( ofMtl )
-            {
-                ofMtl << "newmtl Texture\n";
-                if ( settings.texture && pngSaver( *settings.texture, file.parent_path() / asU8String( settings.materialName + ".png" ) ).has_value() )
-                    ofMtl << fmt::format( "map_Kd {}\n", settings.materialName + ".png" );
-            }
+            ofMtl << "newmtl Texture\n";
+            writeMtlSolidColor( ofMtl, settings );
+            if ( saveTexture )
+                if ( auto pngSaver = ImageSave::getImageSaver( "*.png" ) )
+                    if ( pngSaver( *settings.texture, file.parent_path() / asU8String( settings.materialName + ".png" ) ).has_value() )
+                        ofMtl << fmt::format( "map_Kd {}\n", settings.materialName + ".png" );
         }
     }
 #endif
@@ -169,8 +183,9 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
     out << "# MeshInspector.com\n";
     bool saveUV = settings.uvMap && !settings.uvMap->empty();
     bool saveColors = settings.colors && !settings.colors->empty();
+    const bool useMtl = saveUV || settings.solidColor;
 
-    if ( saveUV )
+    if ( useMtl )
         out << fmt::format( "mtllib {}.mtl\n", settings.materialName );
 
     const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
@@ -220,7 +235,7 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
         }
     }
     const bool manyTextures = saveUV && hasManyTextures( settings );
-    if ( saveUV && !manyTextures )
+    if ( useMtl && !manyTextures )
         out << "usemtl Texture\n";
 
     sb = subprogress( settings.progress, saveUV ? 0.7f : 0.5f, 1.0f );
@@ -336,6 +351,15 @@ BinaryStlSaver::BinaryStlSaver( std::ostream & out, const SaveSettings & setting
     , settings_( settings )
 {
     char header[80] = "MeshInspector.com";
+    if ( const auto & c = settings.solidColor )
+    {
+        // object color by Materialise Magics convention
+        const char color[] = { ' ', 'C', 'O', 'L', 'O', 'R', '=', char( c->r ), char( c->g ), char( c->b ), char( c->a ) };
+        std::memcpy( header + 17, color, sizeof( color ) );
+        // bit 15 means "use object color" for Magics, and "valid color" with 5-bit red, green, blue for VisCAM/SolidView,
+        // so both conventions show the same color
+        triAttr_ = std::uint16_t( 0x8000 | ( ( c->r >> 3 ) << 10 ) | ( ( c->g >> 3 ) << 5 ) | ( c->b >> 3 ) );
+    }
     out.write( header, 80 );
 
     numTrisPos_ = out.tellp();
@@ -358,8 +382,7 @@ bool BinaryStlSaver::writeTri( const Triangle3f& tri )
     out_.write( (const char*)&ap, 12 );
     out_.write( (const char*)&bp, 12 );
     out_.write( (const char*)&cp, 12 );
-    std::uint16_t attr{ 0 };
-    out_.write( ( const char* )&attr, 2 );
+    out_.write( ( const char* )&triAttr_, 2 );
     ++savedNumTris_;
     return (bool)out_;
 }

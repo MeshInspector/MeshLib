@@ -39,6 +39,8 @@
     <ClInclude Include="MRAABBTreeBase.h" />
     <ClInclude Include="MRAABBTreeBase.hpp" />
     <ClInclude Include="MRAABBTreeMaker.hpp" />
+    <ClInclude Include="MRAABBTreeCenters.hpp" />
+    <ClInclude Include="MRTriBox.hpp" />
     <ClInclude Include="MRAABBTreeObjects.h" />
     <ClInclude Include="MRAddNoise.h" />
     <ClInclude Include="MRAligningTransform.h" />
@@ -265,7 +267,6 @@
     <ClInclude Include="MRPrimitiveMapsComposition.h" />
     <ClInclude Include="MRPriorityQueue.h" />
     <ClInclude Include="MRPrism.h" />
-    <ClInclude Include="MRProcessSelfTreeSubtasks.h" />
     <ClInclude Include="MRProgressReadWrite.h" />
     <ClInclude Include="MRProtectedRun.h" />
     <ClInclude Include="MRRadiusCompensation.h" />
@@ -315,6 +316,7 @@
     <ClInclude Include="MRMeshToPointCloud.h" />
     <ClInclude Include="miniply.h" />
     <ClInclude Include="MRAABBTree.h" />
+    <ClInclude Include="MRAABBTreeTraversal.hpp" />
     <ClInclude Include="MRBitSetParallelFor.h" />
     <ClInclude Include="MRClosestPointInTriangle.h" />
     <ClInclude Include="MRArrow.h" />
@@ -469,6 +471,7 @@
     <ClInclude Include="MRBestFitPolynomial.h" />
     <ClInclude Include="MRMeta.h" />
     <ClInclude Include="MRMacros.h" />
+    <ClInclude Include="MRPrefetch.h" />
     <ClInclude Include="MRCanonicalTypedefs.h" />
     <ClInclude Include="MRProjectionMeshAttribute.h" />
     <ClInclude Include="MRUniqueTemporaryFolder.h" />
@@ -527,6 +530,7 @@
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
     <ClCompile Include="miniply.cpp" />
     <ClCompile Include="MRAABBTree.cpp" />
+    <ClCompile Include="MRAABBTreeCenters.cpp" />
     <ClCompile Include="MRAABBTreeObjects.cpp" />
     <ClCompile Include="MRAABBTreePoints.cpp" />
     <ClCompile Include="MRAABBTreePolyline.cpp" />

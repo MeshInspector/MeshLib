@@ -1,5 +1,5 @@
 #include "MRMeshSave.h"
-#include "MRMeshSaveHelpers.h"
+#include "MRMeshOrTriMesh.h"
 #include "MRIOFormatsRegistry.h"
 #include "MRIOFilters.h"
 #include "MRStringConvert.h"
@@ -86,7 +86,7 @@ static Expected<void> toModel3mfImpl( const MeshType & mesh, std::ostream & out,
         "  <resources>\n";
 
 
-    const auto vertRenumber = getVertRenumber( mesh, settings );
+    const auto vertRenumber = getVertRenumber( mesh, settings.onlyValidPoints );
     const int numPoints = vertRenumber.sizeVerts();
     const VertId lastVertId = lastValidVert( mesh );
 

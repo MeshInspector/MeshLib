@@ -5,14 +5,15 @@
 #include "MRSaveSettings.h"
 #include "MRBitSet.h"
 
-/// helpers allowing to save Mesh and TriMesh by the same code;
+/// accessors allowing the same template code to work with both Mesh and TriMesh;
 /// all vertices and triangles of TriMesh are always valid
 namespace MR::detail
 {
 
-inline VertRenumber getVertRenumber( const Mesh & mesh, const SaveSettings & settings )
+/// maps valid vertices to packed sequential indices (if packValidOnly = true) or keeps the same indices
+inline VertRenumber getVertRenumber( const Mesh & mesh, bool packValidOnly )
 {
-    return VertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
+    return VertRenumber( mesh.topology.getValidVerts(), packValidOnly );
 }
 
 /// identity vertex renumbering for TriMesh
@@ -23,7 +24,7 @@ struct NoRenumber
     int operator()( VertId v ) const { assert( v ); return (int)v; }
 };
 
-inline NoRenumber getVertRenumber( const TriMesh & mesh, const SaveSettings & )
+inline NoRenumber getVertRenumber( const TriMesh & mesh, bool )
 {
     return { .numVerts = (int)mesh.points.size() };
 }

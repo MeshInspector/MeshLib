@@ -1,5 +1,5 @@
 #include "MRMeshSave.h"
-#include "MRMeshSaveHelpers.h"
+#include "MRMeshOrTriMesh.h"
 #include "MRIOFormatsRegistry.h"
 #include "MRMesh.h"
 #include "MRTriMesh.h"
@@ -70,7 +70,7 @@ static Expected<void> toOffImpl( const MeshType & mesh, std::ostream & out, cons
 {
     MR_TIMER;
 
-    const auto vertRenumber = getVertRenumber( mesh, settings );
+    const auto vertRenumber = getVertRenumber( mesh, settings.onlyValidPoints );
     const int numPoints = vertRenumber.sizeVerts();
     const VertId lastVertId = lastValidVert( mesh );
     const int numPolygons = numValidFaces( mesh );
@@ -184,7 +184,7 @@ static Expected<void> toObjImpl( const MeshType & mesh, std::ostream & out, cons
     if ( useMtl )
         out << fmt::format( "mtllib {}.mtl\n", settings.materialName );
 
-    const auto vertRenumber = getVertRenumber( mesh, settings );
+    const auto vertRenumber = getVertRenumber( mesh, settings.onlyValidPoints );
     const int numPoints = vertRenumber.sizeVerts();
 
     int numSaved = 0;
@@ -536,7 +536,7 @@ static Expected<void> toPlyImpl( const MeshType & mesh, std::ostream & out, cons
 {
     MR_TIMER;
 
-    const auto vertRenumber = getVertRenumber( mesh, settings );
+    const auto vertRenumber = getVertRenumber( mesh, settings.onlyValidPoints );
     const int numPoints = vertRenumber.sizeVerts();
     const VertId lastVertId = lastValidVert( mesh );
 

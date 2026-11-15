@@ -2,7 +2,7 @@
 #include "MRTriMesh.h"
 #include "MRTimer.h"
 
-namespace MR::detail
+namespace MR
 {
 
 TriMeshPart::TriMeshPart( const TriMesh & m, const FaceBitSet & r ) : tris( m.tris ), points( m.points ), region( r ), regionVerts( m.points.size() )
@@ -14,4 +14,4 @@ TriMeshPart::TriMeshPart( const TriMesh & m, const FaceBitSet & r ) : tris( m.tr
             regionVerts.set( v );
 }
 
-} //namespace MR::detail
+} //namespace MR

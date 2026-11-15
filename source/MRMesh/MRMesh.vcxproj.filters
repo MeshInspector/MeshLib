@@ -1224,6 +1224,9 @@
     <ClInclude Include="MRMacros.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MRPrefetch.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
     <ClInclude Include="MRStacktrace.h">
       <Filter>Source Files\System</Filter>
     </ClInclude>

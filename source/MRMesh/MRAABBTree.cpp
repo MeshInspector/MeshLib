@@ -5,6 +5,7 @@
 #include "MRTimer.h"
 #include "MRBuffer.h"
 #include "MRParallelFor.h"
+#include "MRPrefetch.h"
 #include "MRRegionBoundary.h"
 #include "MRAABBTreeCenters.hpp"
 #include "MRTriBox.hpp"
@@ -32,13 +33,9 @@ struct BoxedTri
     explicit BoxedTri( NoInit ) noexcept : tri{ FaceId( noInit ), { VertId( noInit ), VertId( noInit ), VertId( noInit ) } }, box( noInit ) { }
 };
 
-/// the triangles with their boxes, and the doubled centers of these boxes
-Buffer<BoxedTri> makeBoxedTris( const MeshPart & mp, Buffer<TreeCenter> & centers )
+/// the numFaces triangles with their boxes, the doubled centers of these boxes, and the box of the centers
+Buffer<BoxedTri> makeBoxedTris( const MeshPart & mp, int numFaces, Buffer<TreeCenter> & centers, Box3f & centersBox )
 {
-    const auto numFaces = mp.region ? (int)mp.region->count() : mp.mesh.topology.numValidFaces();
-    if ( numFaces <= 0 )
-        return {};
-
     Buffer<BoxedTri> boxedTris( numFaces );
     centers = Buffer<TreeCenter>( numFaces );
     const bool packed = numFaces == mp.mesh.topology.faceSize();
@@ -50,14 +47,37 @@ Buffer<BoxedTri> makeBoxedTris( const MeshPart & mp, Buffer<TreeCenter> & center
     }
 
     const auto & topology = mp.mesh.topology;
-    ParallelFor( 0, numFaces, [&] ( int i )
+    const auto & points = mp.mesh.points;
+    const auto faceOf = [&] ( int i ) { return packed ? FaceId( i ) : boxedTris[i].tri.face; };
+    // the records of a triangle are often far from the previous triangle's in memory, so they are read ahead:
+    // its first edge's 2 * cAhead triangles ahead, its next edge's cAhead triangles ahead, and its points cAhead / 4 triangles ahead
+    constexpr int cAhead = 16;
+    constexpr int cBlock = 1024; // the centers are included in their box by blocks, while in the cache
+    centersBox = tbb::parallel_reduce( tbb::blocked_range<int>( 0, numFaces ), Box3f(),
+        [&] ( const tbb::blocked_range<int> & range, Box3f box )
     {
-        auto & bt = boxedTris[i];
-        const FaceId f = packed ? FaceId( i ) : bt.tri.face;
-        bt.tri = { f, topology.getTriVerts( f ) };
-        bt.box = wideTriBox( mp.mesh, bt.tri );
-        centers[i] = TreeCenter( i, bt.box.min + bt.box.max );
-    } );
+        const int end = range.end();
+        for ( int b = range.begin(); b < end; b += cBlock )
+        {
+            for ( int i = b, be = std::min( end, b + cBlock ); i < be; ++i )
+            {
+                if ( i + 2 * cAhead < end )
+                    topology.prefetchEdge( topology.edgeWithLeft( faceOf( i + 2 * cAhead ) ) );
+                if ( i + cAhead < end )
+                    topology.prefetchEdge( topology.prev( topology.edgeWithLeft( faceOf( i + cAhead ) ).sym() ) );
+                if ( i + cAhead / 4 < end )
+                    for ( auto v : topology.getTriVerts( faceOf( i + cAhead / 4 ) ) )
+                        MR_PREFETCH( &points[v] );
+                auto & bt = boxedTris[i];
+                const FaceId f = faceOf( i );
+                bt.tri = { f, topology.getTriVerts( f ) };
+                insignificantlyExpandedTriBoxAndCenter( points[bt.tri.verts[0]], points[bt.tri.verts[1]], points[bt.tri.verts[2]], i, bt.box, centers[i] );
+            }
+            box = includeCenters( box, centers.data() + b, std::min( end, b + cBlock ) - b );
+        }
+        return box;
+    },
+        [] ( Box3f a, const Box3f & b ) { a.include( b ); return a; } );
     return boxedTris;
 }
 
@@ -68,29 +88,42 @@ class AABBTreeWideMaker
 public:
     using Node = AABBTree::Node;
 
-    /// fills nodes, and the triangles and their boxes in leaf order
-    AABBTreeWideMaker( const Buffer<BoxedTri> & boxedTris, Buffer<TreeCenter> & centers,
-        Vector<Node, NodeId> & nodes, Vector<AABBTree::LeafTri> & leafTris, Vector<Box3f> & leafBoxes )
-        : boxedTris_( boxedTris ), centers_( centers ), nodes_( nodes ), leafTris_( leafTris ), leafBoxes_( leafBoxes )
+    /// counts the nodes of the tree of numTris triangles
+    explicit AABBTreeWideMaker( int numTris ) : numTris_( numTris )
     {
-        numTris_ = (int)boxedTris_.size();
         for ( auto & c : cnt_ )
             c = { -1, -1 };
-        nodes_.resize( countNodes_( 0, numTris_ ) );
+        totalNodes_ = countNodes_( 0, numTris_ );
+    }
+
+    [[nodiscard]] int numNodes() const { return totalNodes_; }
+
+    /// fills nodes, and the triangles and their boxes in leaf order (all of the sizes for numTris)
+    void make( const Buffer<BoxedTri> & boxedTris, Buffer<TreeCenter> & centers, const Box3f & centersBox,
+        Node * nodes, AABBTree::LeafTri * leafTris, Box3f * leafBoxes )
+    {
+        assert( (int)boxedTris.size() == numTris_ && (int)centers.size() == numTris_ );
+        boxedTris_ = boxedTris.data();
+        centers_ = centers.data();
+        nodes_ = nodes;
+        leafTris_ = leafTris;
+        leafBoxes_ = leafBoxes;
         parallelSplits_ = numTris_ >= cParallelSplitNum
             && tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) > 1
             && tbb::this_task_arena::max_concurrency() > 1;
         if ( numTris_ >= cBucketSplitNum )
             scratch_ = Buffer<TreeCenter>( numTris_ );
-        make_( NodeId( 0 ), NodeId( 1 ), { 0, { 0, numTris_, false } } );
+        make_( NodeId( 0 ), NodeId( 1 ), { 0, { 0, numTris_, false, true, centersBox } } );
     }
 
 private:
-    /// centers [first, first + num) either in centers_ or at the same positions in scratch_
+    /// centers [first, first + num) either in centers_ or at the same positions in scratch_, and the box of them if known
     struct Range
     {
         int first, num;
         bool inScratch;
+        bool hasBox = false;
+        Box3f box;
     };
     struct Child
     {
@@ -98,7 +131,7 @@ private:
         Range r;
     };
 
-    TreeCenter * data_( const Range & r ) const { return ( r.inScratch ? scratch_.data() : centers_.data() ) + r.first; }
+    TreeCenter * data_( const Range & r ) const { return ( r.inScratch ? scratch_.data() : centers_ ) + r.first; }
 
     // the number of nodes in the subtree of a node at binary depth d with num triangles
     int countNodes_( int d, int num )
@@ -131,29 +164,28 @@ private:
             []( Box3f a, const Box3f & b ) { a.include( b ); return a; } );
     }
 
-    // [first, first + num / 2) get the smaller centers along the largest extent of the centers; ties are ordered by index
-    void split_( Range & r )
+    // [first, first + num / 2) get the smaller centers along the largest extent of the centers (ties are ordered by index); returns the two halves
+    std::array<Range, 2> split_( const Range & r )
     {
-        const auto box = centersBox_( r );
+        const auto box = r.hasBox ? r.box : centersBox_( r );
         const auto sz = box.size();
         const int axis = sz.x >= sz.y ? ( sz.x >= sz.z ? 0 : 2 ) : ( sz.y >= sz.z ? 1 : 2 );
         TreeCenter * const data = data_( r );
         if ( r.num >= cBucketSplitNum )
         {
             const int chunkSize = parallelSplits_ && r.num >= cParallelSplitNum ? cChunk : r.num;
-            if ( splitCentersByBuckets( data, data_( { r.first, r.num, !r.inScratch } ), r.num, axis, box.min[axis], box.max[axis], chunkSize ) )
-            {
-                r.inScratch = !r.inScratch;
-                return;
-            }
+            Box3f halfBoxes[2];
+            if ( splitCentersByBuckets( data, data_( { r.first, r.num, !r.inScratch, false, {} } ), r.num, axis, box.min[axis], box.max[axis], chunkSize, halfBoxes ) )
+                return { Range{ r.first, r.num / 2, !r.inScratch, true, halfBoxes[0] }, Range{ r.first + r.num / 2, r.num - r.num / 2, !r.inScratch, true, halfBoxes[1] } };
         }
         selectCenter( data, data + r.num / 2, data + r.num, axis );
+        return { Range{ r.first, r.num / 2, r.inScratch, false, {} }, Range{ r.first + r.num / 2, r.num - r.num / 2, r.inScratch, false, {} } };
     }
 
     // fills node n with its subtree, whose nodes below the children of n start from desc
     void make_( NodeId n, NodeId desc, Child c )
     {
-        auto & node = nodes_[n];
+        auto & node = nodes_[int( n )];
         const int first = c.r.first, num = c.r.num;
         if ( num <= AABBTree::MaxLeafTris )
         {
@@ -182,24 +214,24 @@ private:
             return;
         }
 
-        split_( c.r );
-        Child halves[2] = { { c.depth + 1, { first, num / 2, c.r.inScratch } }, { c.depth + 1, { first + num / 2, num - num / 2, c.r.inScratch } } };
+        const auto halves = split_( c.r );
+        std::array<Range, 2> quarters[2];
         const bool parallel = num >= 4096;
         if ( parallel )
-            tbb::parallel_invoke( [&] { split_( halves[0].r ); }, [&] { split_( halves[1].r ); } );
+            tbb::parallel_invoke( [&] { quarters[0] = split_( halves[0] ); }, [&] { quarters[1] = split_( halves[1] ); } );
         Child ch[AABBTree::MaxChildren];
         int k = 0;
-        for ( auto & h : halves )
+        for ( int j = 0; j < 2; ++j )
         {
-            if ( h.r.num <= AABBTree::MaxLeafTris )
+            if ( halves[j].num <= AABBTree::MaxLeafTris )
             {
-                ch[k++] = h;
+                ch[k++] = { c.depth + 1, halves[j] };
                 continue;
             }
             if ( !parallel )
-                split_( h.r );
-            ch[k++] = { c.depth + 2, { h.r.first, h.r.num / 2, h.r.inScratch } };
-            ch[k++] = { c.depth + 2, { h.r.first + h.r.num / 2, h.r.num - h.r.num / 2, h.r.inScratch } };
+                quarters[j] = split_( halves[j] );
+            ch[k++] = { c.depth + 2, quarters[j][0] };
+            ch[k++] = { c.depth + 2, quarters[j][1] };
         }
         node.first = int( desc );
         node.count = k;
@@ -227,21 +259,22 @@ private:
 
         Box3f box;
         for ( int j = 0; j < k; ++j )
-            box.include( nodes_[desc + j].box );
+            box.include( nodes_[int( desc ) + j].box );
         node.box = box;
     }
 
-    const Buffer<BoxedTri> & boxedTris_;
-    Buffer<TreeCenter> & centers_;
+    const BoxedTri * boxedTris_ = nullptr;
+    TreeCenter * centers_ = nullptr;
     Buffer<TreeCenter> scratch_; // the centers of a range move between centers_ and scratch_ by each split of the range by buckets
     static constexpr int cBucketSplitNum = 1024; // smaller ranges are split by selectCenter
     static constexpr int cParallelSplitNum = 1 << 17;
     static constexpr int cChunk = 1 << 14; // the centers counted and moved by one thread in a parallel split
     bool parallelSplits_ = false; // on one thread the parallel split only adds passes over the range
-    Vector<Node, NodeId> & nodes_;
-    Vector<AABBTree::LeafTri> & leafTris_;
-    Vector<Box3f> & leafBoxes_;
+    Node * nodes_ = nullptr;
+    AABBTree::LeafTri * leafTris_ = nullptr;
+    Box3f * leafBoxes_ = nullptr;
     int numTris_ = 0;
+    int totalNodes_ = 0;
     std::array<int, 2> cnt_[64]; // by binary depth and the number of triangles minus ( numTris_ >> depth )
 };
 
@@ -250,13 +283,17 @@ private:
 AABBTree::AABBTree( const MeshPart & mp )
 {
     MR_TIMER;
-    Buffer<TreeCenter> centers;
-    auto boxedTris = makeBoxedTris( mp, centers );
-    if ( boxedTris.size() == 0 )
+    const auto numTris = mp.region ? (int)mp.region->count() : mp.mesh.topology.numValidFaces();
+    if ( numTris <= 0 )
         return;
-    leafTris_.resize( boxedTris.size() );
-    leafBoxes_.resizeNoInit( boxedTris.size() );
-    AABBTreeWideMaker maker( boxedTris, centers, nodes_, leafTris_, leafBoxes_ );
+    AABBTreeWideMaker maker( numTris );
+    Buffer<TreeCenter> centers;
+    Box3f centersBox;
+    Buffer<BoxedTri> boxedTris;
+    // the outputs are filled with their default values (by one thread) while the triangles are boxed
+    tbb::parallel_invoke( [&] { boxedTris = makeBoxedTris( mp, numTris, centers, centersBox ); },
+        [&] { nodes_.resize( maker.numNodes() ); leafTris_.resize( numTris ); leafBoxes_.resizeNoInit( numTris ); } );
+    maker.make( boxedTris, centers, centersBox, nodes_.data(), leafTris_.data(), leafBoxes_.data() );
 }
 
 std::vector<NodeId> AABBTree::getSubtrees( int minNum ) const

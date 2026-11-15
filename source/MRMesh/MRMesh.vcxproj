@@ -471,6 +471,7 @@
     <ClInclude Include="MRBestFitPolynomial.h" />
     <ClInclude Include="MRMeta.h" />
     <ClInclude Include="MRMacros.h" />
+    <ClInclude Include="MRPrefetch.h" />
     <ClInclude Include="MRCanonicalTypedefs.h" />
     <ClInclude Include="MRProjectionMeshAttribute.h" />
     <ClInclude Include="MRUniqueTemporaryFolder.h" />

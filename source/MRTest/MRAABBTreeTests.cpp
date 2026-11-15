@@ -11,6 +11,7 @@
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRBuffer.h>
 #include <MRMesh/MRBitCast.h>
+#include <MRMesh/MRTriMesh.h>
 #include <cmath>
 #include <gtest/gtest.h>
 #include <MRPch/MRTBB.h>
@@ -434,7 +435,37 @@ TEST( MRMesh, AABBTreeGoldenHashes )
         { 300000, 1 << 16, false, 0x0cc9a28f326dd6dcull }
     };
     for ( const auto & c : cases )
-        EXPECT_EQ( treeHash( AABBTree( makeIntegerSoup( c.numTris, c.range, c.farOutlier ) ) ), c.hash ) << c.numTris << " triangles";
+    {
+        const Mesh mesh = makeIntegerSoup( c.numTris, c.range, c.farOutlier );
+        EXPECT_EQ( treeHash( AABBTree( mesh ) ), c.hash ) << c.numTris << " triangles";
+        EXPECT_EQ( treeHash( AABBTree( TriMesh{ mesh.topology.getTriangulation(), mesh.points }, &mesh.topology.getValidFaces() ) ), c.hash )
+            << c.numTris << " triangles from the triangulation";
+    }
+}
+
+// the tree of a part of the triangles from the triangulation is the tree of that mesh part
+TEST( MRMesh, AABBTreeFromTriangulationRegion )
+{
+    const Mesh mesh = makeUVSphere( 1.f, 64, 32 );
+    FaceBitSet region( mesh.topology.faceSize() );
+    for ( FaceId f : mesh.topology.getValidFaces() )
+        region.set( f, f % 3 != 0 );
+    const TriMesh tmesh{ mesh.topology.getTriangulation(), mesh.points };
+    EXPECT_EQ( treeHash( AABBTree( tmesh, &region ) ), treeHash( AABBTree( { mesh, &region } ) ) );
+    EXPECT_TRUE( AABBTree( tmesh, &region ).leafTris().size() == region.count() );
+    EXPECT_TRUE( AABBTree( TriMesh{ {}, mesh.points } ).nodes().empty() );
+}
+
+// Mesh::fromTriangles keeps the vertex order of the triangles, so the tree of the triangulation is the tree of the mesh made from it
+TEST( MRMesh, AABBTreeFromTriangulationOfNewMesh )
+{
+    for ( int n : { 32, 200 } ) // 4K triangles added one by one, and 160K triangles by the manifold build
+    {
+        const Mesh sphere = makeUVSphere( 1.f, 2 * n, n );
+        const TriMesh tmesh{ sphere.topology.getTriangulation(), sphere.points };
+        const Mesh mesh = Mesh::fromTriangles( tmesh.points, tmesh.tris );
+        EXPECT_EQ( treeHash( AABBTree( tmesh ) ), treeHash( AABBTree( mesh ) ) ) << tmesh.tris.size() << " triangles";
+    }
 }
 
 // a big mesh, whose top ranges are split in parallel, gives the same tree on one thread

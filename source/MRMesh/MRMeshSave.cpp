@@ -119,6 +119,7 @@ static bool hasManyTextures( const SaveSettings & settings )
     return settings.textures && settings.textures->size() > 1 && settings.texturePerFace && !settings.texturePerFace->empty();
 }
 
+#ifndef __EMSCRIPTEN__ // .mtl files are not written there
 // writes the solid color (if any) in the current material of .mtl file
 static void writeMtlSolidColor( std::ostream & ofMtl, const SaveSettings & settings )
 {
@@ -129,6 +130,7 @@ static void writeMtlSolidColor( std::ostream & ofMtl, const SaveSettings & setti
     if ( settings.solidColor->a != 255 )
         ofMtl << fmt::format( "d {}\n", c.w );
 }
+#endif
 
 Expected<void> toObj( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, int firstVertId )
 {

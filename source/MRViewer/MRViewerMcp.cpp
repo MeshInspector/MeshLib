@@ -14,6 +14,8 @@
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRVector3.h"
 #include "MRPch/MRFmt.h"
+#include "MRPch/MRSpdlog.h"
+#include "MRPch/MRWinapi.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRFitData.h"
 #include "MRViewer/MRMcpCommon.h"
@@ -26,6 +28,7 @@
 
 #include <array>
 #include <cctype>
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -429,14 +432,64 @@ static nlohmann::json mcpViewerSendKeyboardEvent( const nlohmann::json& args )
     return inputResult( waitFramesAfterInput() );
 }
 
+// `viewer_shutdown` with `kill`: how long the main thread has to start the shutdown, and then to finish exiting
+constexpr std::chrono::seconds cKillStartTimeout{ 5 };
+constexpr std::chrono::seconds cKillExitTimeout{ 30 };
+// the delay before terminating the process right away, so that the tool's response reaches the client
+constexpr std::chrono::milliseconds cKillResponseDelay{ 500 };
+
+// Ends this process at once from any thread, saving and destroying nothing, so a stuck main thread cannot prevent it.
+[[noreturn]] static void terminateThisProcess()
+{
+#ifdef _WIN32
+    // unlike `std::_Exit()`, this also skips the DLL detach notifications, which could wait for a lock the stuck thread holds
+    TerminateProcess( GetCurrentProcess(), EXIT_FAILURE );
+#endif
+    std::_Exit( EXIT_FAILURE );
+}
+
+// Calls `terminateThisProcess()` after `delay` unless the process exits by itself before that.
+static void terminateThisProcessAfter( std::chrono::milliseconds delay )
+{
+    std::thread( [delay]
+    {
+        std::this_thread::sleep_for( delay );
+        terminateThisProcess(); // no logging here: on a normal exit that got stuck, the logger may be destroyed already
+    } ).detach();
+}
+
 static nlohmann::json mcpViewerShutdown( const nlohmann::json& args )
 {
-    const bool force = args.value( "force", false );
-    runOnMainThread( [&]
+    const bool kill = args.value( "kill", false );
+    const bool force = kill || args.value( "force", false );
+    if ( !kill )
     {
-        MR::getViewerInstance().stopEventLoop( 0, !force );
-    } );
-    return nlohmann::json::object();
+        runOnMainThread( [&]
+        {
+            MR::getViewerInstance().stopEventLoop( 0, !force );
+        } );
+        return nlohmann::json::object();
+    }
+
+    try
+    {
+        CommandLoop::runCommandFromGUIThread( []
+        {
+            MR::getViewerInstance().stopEventLoop( 0, false );
+        }, cKillStartTimeout );
+    }
+    catch ( const std::exception& e )
+    {
+        // usually a `CommandLoop::StartTimeout`: the main thread is stuck, nothing else can stop the process
+        spdlog::warn( "MCP viewer_shutdown: terminating the process, the main thread did not take the shutdown: {}", e.what() );
+        spdlog::default_logger()->flush();
+        terminateThisProcessAfter( cKillResponseDelay );
+        return nlohmann::json::object( { { "killed", true } } );
+    }
+    // the main thread is closing the viewer; that can still get stuck, e.g. waiting for a Python thread that never ends
+    spdlog::info( "MCP viewer_shutdown: the process is terminated if it has not exited in {} seconds", cKillExitTimeout.count() );
+    terminateThisProcessAfter( cKillExitTimeout );
+    return nlohmann::json::object( { { "killed", false } } );
 }
 
 MR_ON_INIT{
@@ -604,9 +657,16 @@ MR_ON_INIT{
                 "says `not started`, the gateway's `launch` tool can bring MeshInspector back up. "
                 "If the scene has unsaved changes, an `Application Close` modal is raised instead of exiting; "
                 "check `ui_listEntries` for the modal and dismiss it with the `Cancel` / `Don't Save` / `Save` buttons. "
-                "Pass `force: true` to discard unsaved changes and exit without the modal.",
-        /*input_schema*/Schema::Object{}.addMemberOpt( "force", Schema::Bool{} ),
-        /*output_schema*/Schema::Object{},
+                "Pass `force: true` to discard unsaved changes and exit without the modal. "
+                "`kill: true` is the last resort when the main thread is stuck, i.e. `ui_progressStatus` keeps reporting "
+                "`busy` with a growing `busyFor` and `active` false (no operation in progress): it implies `force`, and the process is terminated if the "
+                "main thread does not start the shutdown within 5 seconds, or if exiting then takes over 30 seconds. "
+                "A terminated process saves nothing, not even the settings. `killed` is true when it is being terminated "
+                "right away; in all cases wait until the gateway's `status` says `not started` before `launch`.",
+        /*input_schema*/Schema::Object{}
+            .addMemberOpt( "force", Schema::Bool{} )
+            .addMemberOpt( "kill",  Schema::Bool{} ),
+        /*output_schema*/Schema::Object{}.addMemberOpt( "killed", Schema::Bool{} ),
         /*func*/mcpViewerShutdown
     );
 }; // MR_ON_INIT

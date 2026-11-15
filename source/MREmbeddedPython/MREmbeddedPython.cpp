@@ -287,10 +287,7 @@ void EmbeddedPython::ensureInterpreterThreadIsRunning_()
         {
             std::unique_lock guard( cvMutex_ );
 
-            // `init_()` gives this thread the GIL. Between the scripts this thread waits for the next one with the GIL released,
-            // keeping only its thread state here: holding the GIL while idle would stop the Python threads started by a script
-            // until the next script, and block forever the GUI thread when such a thread passes a Python callable to it
-            // (`mrviewerpy.runFromGUIThread()`), since running that callable needs the GIL.
+            // set while waiting for the next script with the GIL released, so the Python threads scripts started keep running
             PyThreadState* idleThreadState = nullptr;
 
             while ( true )

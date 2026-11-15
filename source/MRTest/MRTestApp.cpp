@@ -97,14 +97,13 @@ int main( int argc, char** argv )
             else
                 spdlog::error( "Embedded python run failed" );
 
-            // A thread started by one script must run while the interpreter waits for the next one, i.e. the interpreter
-            // thread must not hold the GIL while idle. The thread binds `sys` and `time` itself: the globals are cleared after a script.
+            // a thread started by one script must run before the next one: the idle interpreter must not hold the GIL
             if ( ok )
             {
                 spdlog::info( "Checking that embedded python releases the GIL between scripts" );
                 ok = MR::EmbeddedPython::runString(
                     "import sys, threading, time\n"
-                    "def mark( sys=sys, time=time ):\n"
+                    "def mark( sys=sys, time=time ):\n" // bound now: the globals are cleared after the script
                     "    time.sleep( 0.02 )\n"
                     "    sys.mrRanWhileIdleAt = time.monotonic()\n"
                     "threading.Thread( target=mark, daemon=True ).start()\n" );

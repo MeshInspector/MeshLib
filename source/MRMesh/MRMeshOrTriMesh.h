@@ -2,6 +2,7 @@
 
 #include "MRMesh.h"
 #include "MRTriMesh.h"
+#include "MRTriMeshPart.h"
 #include "MRSaveSettings.h"
 #include "MRBitSet.h"
 
@@ -52,23 +53,6 @@ inline FaceBitSet validFaces( const TriMesh & mesh ) { return FaceBitSet( mesh.t
 
 inline ThreeVertIds getTriVerts( const Mesh & mesh, FaceId f ) { return mesh.topology.getTriVerts( f ); }
 inline const ThreeVertIds & getTriVerts( const TriMesh & mesh, FaceId f ) { return mesh.tris[f]; }
-
-/// TriMesh with a region of triangles: only the triangles of the region and their vertices are valid
-struct TriMeshPart
-{
-    const Triangulation & tris;
-    const VertCoords & points;
-    const FaceBitSet & region;
-    VertBitSet regionVerts;
-
-    TriMeshPart( const TriMesh & m, const FaceBitSet & r ) : tris( m.tris ), points( m.points ), region( r ), regionVerts( m.points.size() )
-    {
-        assert( region.find_last() < (int)tris.size() );
-        for ( FaceId f : region )
-            for ( VertId v : tris[f] )
-                regionVerts.set( v );
-    }
-};
 
 inline VertRenumber getVertRenumber( const TriMeshPart & part, bool packValidOnly ) { return VertRenumber( part.regionVerts, packValidOnly ); }
 inline VertId lastValidVert( const TriMeshPart & part ) { return part.regionVerts.find_last(); }

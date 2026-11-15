@@ -309,6 +309,7 @@
     <ClInclude Include="MRCameraPointsTriangulation.h" />
     <ClInclude Include="MRTimeRecord.h" />
     <ClInclude Include="MRTriMesh.h" />
+    <ClInclude Include="MRTriMeshPart.h" />
     <ClInclude Include="MRTripleFaceIntersections.h" />
     <ClInclude Include="MRTunnelDetector.h" />
     <ClInclude Include="MRMeshDirMax.h" />
@@ -774,6 +775,7 @@
     <ClCompile Include="MRMeshNormals.cpp" />
     <ClCompile Include="MRMeshRelax.cpp" />
     <ClCompile Include="MRMeshSave.cpp" />
+    <ClCompile Include="MRTriMeshPart.cpp" />
     <ClCompile Include="MRMeshSubdivide.cpp" />
     <ClCompile Include="MRMeshTopology.cpp" />
     <ClCompile Include="MRMeshBuilder.cpp" />

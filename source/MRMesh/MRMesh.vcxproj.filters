@@ -1131,6 +1131,9 @@
     <ClInclude Include="MRTriMesh.h">
       <Filter>Source Files\Mesh</Filter>
     </ClInclude>
+    <ClInclude Include="MRTriMeshPart.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
     <ClInclude Include="MRAddNoise.h">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
@@ -1555,6 +1558,9 @@
     </ClCompile>
     <ClCompile Include="MRMeshSave.cpp">
       <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRTriMeshPart.cpp">
+      <Filter>Source Files\Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshLoad.cpp">
       <Filter>Source Files\IO</Filter>

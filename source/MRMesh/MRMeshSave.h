@@ -30,6 +30,11 @@ MRMESH_API Expected<void> toOff( const Mesh & mesh, const std::filesystem::path 
 MRMESH_API Expected<void> toOff( const Mesh & mesh, std::ostream & out,
                                                   const SaveSettings & settings = {} );
 
+/// saves in .off file;
+/// all vertices and triangles of TriMesh are always saved independently of SaveSettings::onlyValidPoints and SaveSettings::packPrimitives
+MRMESH_API Expected<void> toOff( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );
+MRMESH_API Expected<void> toOff( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
+
 /// saves in .obj file
 /// \param firstVertId is the index of first mesh vertex in the output file (if this object is not the first there)
 MRMESH_API Expected<void> toObj( const Mesh & mesh, const std::filesystem::path & file,
@@ -39,10 +44,20 @@ MRMESH_API Expected<void> toObj( const Mesh & mesh, std::ostream & out,
 MRMESH_API Expected<void> toObj( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );
 MRMESH_API Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
 
+/// saves in .obj file;
+/// all vertices and triangles of TriMesh are always saved independently of SaveSettings::onlyValidPoints and SaveSettings::packPrimitives
+/// \param firstVertId is the index of first mesh vertex in the output file (if this object is not the first there)
+MRMESH_API Expected<void> toObj( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, int firstVertId );
+MRMESH_API Expected<void> toObj( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings, int firstVertId );
+MRMESH_API Expected<void> toObj( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );
+MRMESH_API Expected<void> toObj( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
+
 /// saves in binary .stl file;
 /// SaveSettings::onlyValidPoints = false is ignored
 MRMESH_API Expected<void> toBinaryStl( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );
 MRMESH_API Expected<void> toBinaryStl( const Mesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
+MRMESH_API Expected<void> toBinaryStl( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );
+MRMESH_API Expected<void> toBinaryStl( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
 
 /// saver in binary .stl format that can write triangles one by one not knowing their number beforehand
 class BinaryStlSaver
@@ -77,6 +92,8 @@ private:
 /// SaveSettings::onlyValidPoints = false is ignored
 MRMESH_API Expected<void> toAsciiStl( const Mesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
 MRMESH_API Expected<void> toAsciiStl( const Mesh & mesh, std::ostream& out, const SaveSettings & settings = {} );
+MRMESH_API Expected<void> toAsciiStl( const TriMesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
+MRMESH_API Expected<void> toAsciiStl( const TriMesh & mesh, std::ostream& out, const SaveSettings & settings = {} );
 
 /// saves in .ply file
 MRMESH_API Expected<void> toPly( const Mesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
@@ -91,8 +108,17 @@ MRMESH_API Expected<void> toPly( const TriMesh & mesh, std::ostream & out, const
 MRMESH_API Expected<void> toModel3mf( const Mesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
 MRMESH_API Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
 
+/// saves in 3mf .model file;
+/// all vertices and triangles of TriMesh are always saved independently of SaveSettings::onlyValidPoints and SaveSettings::packPrimitives
+MRMESH_API Expected<void> toModel3mf( const TriMesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
+MRMESH_API Expected<void> toModel3mf( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
+
 /// saves in .3mf file
 MRMESH_API Expected<void> to3mf( const Mesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
+
+/// saves in .3mf file;
+/// all vertices and triangles of TriMesh are always saved independently of SaveSettings::onlyValidPoints and SaveSettings::packPrimitives
+MRMESH_API Expected<void> to3mf( const TriMesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
 
 /// detects the format from file extension and save mesh to it
 MR_BIND_OVERLOAD_SUFFIX() MRMESH_API Expected<void> toAnySupportedFormat( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings = {} );

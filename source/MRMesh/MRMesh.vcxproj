@@ -419,6 +419,7 @@
     <ClInclude Include="MRMeshNormals.h" />
     <ClInclude Include="MRMeshRelax.h" />
     <ClInclude Include="MRMeshSave.h" />
+    <ClInclude Include="MRMeshSaveHelpers.h" />
     <ClInclude Include="MRMeshSubdivide.h" />
     <ClInclude Include="MRProgressCallback.h" />
     <ClInclude Include="MRParallelProgressReporter.h" />

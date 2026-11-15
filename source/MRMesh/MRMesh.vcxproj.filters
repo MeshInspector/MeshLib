@@ -180,6 +180,9 @@
     <ClInclude Include="MRMeshSave.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshSaveHelpers.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
     <ClInclude Include="MRMeshLoad.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>

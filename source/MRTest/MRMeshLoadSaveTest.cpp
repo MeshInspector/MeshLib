@@ -4,6 +4,8 @@
 #include <MRMesh/MRMeshLoadObj.h>
 #include <MRMesh/MRMeshSave.h>
 #include <MRMesh/MRMesh.h>
+#include <MRMesh/MRAffineXf3.h>
+#include <MRMesh/MRMatrix3.h>
 #include <MRMesh/MRTriMesh.h>
 #include <MRMesh/MRBitCast.h>
 #include <MRMesh/MRBox.h>
@@ -170,6 +172,54 @@ TEST(MRMesh, TriMeshSavePly)
     EXPECT_EQ( loadRes->points.size(), 5 );
     EXPECT_EQ( loadRes->topology.numValidVerts(), 5 );
     EXPECT_EQ( loadRes->topology.numValidFaces(), 6 );
+}
+
+TEST(MRMesh, TriMeshSaveAllFormats)
+{
+    TriMesh triMesh;
+    triMesh.tris = Triangulation{
+        { 0_v, 1_v, 2_v },
+        { 0_v, 2_v, 3_v },
+        { 0_v, 3_v, 4_v },
+        { 0_v, 4_v, 1_v },
+        { 1_v, 3_v, 2_v },
+        { 1_v, 4_v, 3_v }
+    };
+    triMesh.points.emplace_back( 0.f, 0.f, 1.f );
+    triMesh.points.emplace_back( 1.f, 0.f, 0.f );
+    triMesh.points.emplace_back( 0.f, 1.f, 0.f );
+    triMesh.points.emplace_back( -1.f, 0.f, 0.f );
+    triMesh.points.emplace_back( 0.f, -1.f, 0.f );
+    const auto mesh = Mesh::fromTriMesh( TriMesh( triMesh ) );
+
+    VertColors colors;
+    for ( int i = 0; i < 5; ++i )
+        colors.push_back( Color( 50 * i, 0, 0 ) );
+    const AffineXf3d xf( Matrix3d::scale( 2.0 ), Vector3d( 1, 2, 3 ) );
+    const SaveSettings settings{ .colors = &colors, .xf = &xf };
+
+    // the same bytes must be saved for TriMesh and for equivalent Mesh
+    auto check = [&]( auto saver, const char * name )
+    {
+        SCOPED_TRACE( name );
+        std::ostringstream outTriMesh, outMesh;
+        EXPECT_TRUE( saver( triMesh, outTriMesh, settings ).has_value() );
+        EXPECT_TRUE( saver( mesh, outMesh, settings ).has_value() );
+        EXPECT_FALSE( outTriMesh.str().empty() );
+        EXPECT_EQ( outTriMesh.str(), outMesh.str() );
+    };
+    check( []( const auto & m, std::ostream & out, const SaveSettings & s ) { return MeshSave::toOff( m, out, s ); }, "off" );
+    check( []( const auto & m, std::ostream & out, const SaveSettings & s ) { return MeshSave::toObj( m, out, s ); }, "obj" );
+    check( []( const auto & m, std::ostream & out, const SaveSettings & s ) { return MeshSave::toObj( m, out, s, 10 ); }, "obj firstVertId" );
+    check( []( const auto & m, std::ostream & out, const SaveSettings & s ) { return MeshSave::toBinaryStl( m, out, s ); }, "binary stl" );
+    check( []( const auto & m, std::ostream & out, const SaveSettings & s ) { return MeshSave::toAsciiStl( m, out, s ); }, "ascii stl" );
+    check( []( const auto & m, std::ostream & out, const SaveSettings & s ) { return MeshSave::toPly( m, out, s ); }, "ply" );
+    check( []( const auto & m, std::ostream & out, const SaveSettings & s ) { return MeshSave::toModel3mf( m, out, s ); }, "model" );
+
+    UniqueTemporaryFolder dir;
+    ASSERT_TRUE( dir );
+    EXPECT_TRUE( MeshSave::to3mf( triMesh, dir / "tri.3mf" ).has_value() );
+    EXPECT_GT( std::filesystem::file_size( dir / "tri.3mf" ), 0 );
 }
 
 TEST(MRMesh, LoadPlyDuplicatingNonManifoldVertices)

@@ -1,4 +1,5 @@
 #include "MRMeshSave.h"
+#include "MRMeshSaveHelpers.h"
 #include "MRIOFormatsRegistry.h"
 #include "MRIOFilters.h"
 #include "MRStringConvert.h"
@@ -14,6 +15,8 @@ namespace MR
 
 namespace MeshSave
 {
+
+using namespace MR::detail;
 
 namespace
 {
@@ -58,7 +61,8 @@ Vector<int, I> makePalette( const Vector<Color, I>& colors, const TypedBitSet<I>
 
 } // anonymous namespace
 
-Expected<void> toModel3mf( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
+template<typename MeshType>
+static Expected<void> toModel3mfImpl( const MeshType & mesh, const std::filesystem::path & file, const SaveSettings & settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -67,7 +71,8 @@ Expected<void> toModel3mf( const Mesh & mesh, const std::filesystem::path & file
     return toModel3mf( mesh, out, settings );
 }
 
-Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSettings & settings )
+template<typename MeshType>
+static Expected<void> toModel3mfImpl( const MeshType & mesh, std::ostream & out, const SaveSettings & settings )
 {
     MR_TIMER;
 
@@ -81,9 +86,9 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
         "  <resources>\n";
 
 
-    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
+    const auto vertRenumber = getVertRenumber( mesh, settings );
     const int numPoints = vertRenumber.sizeVerts();
-    const VertId lastVertId = mesh.topology.lastValidVert();
+    const VertId lastVertId = lastValidVert( mesh );
 
     bool saveColors = settings.colors && !settings.colors->empty();
     bool savePrimColors = settings.primitiveColors && !settings.primitiveColors->empty();
@@ -92,12 +97,12 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
     Vector<int, FaceId> facePalette;
     if ( saveColors )
     {
-        vertPalette = makePalette( *settings.colors, mesh.topology.getValidVerts(), out );
+        vertPalette = makePalette( *settings.colors, validVerts( mesh ), out );
         out << "    <object id=\"2\" type=\"model\">\n";
     }
     else if ( savePrimColors )
     {
-        facePalette = makePalette( *settings.primitiveColors, mesh.topology.getValidFaces(), out );
+        facePalette = makePalette( *settings.primitiveColors, validFaces( mesh ), out );
         out << "    <object id=\"2\" type=\"model\">\n";
     }
     else if ( settings.solidColor )
@@ -121,7 +126,7 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
     int numSaved = 0;
     for ( VertId i{ 0 }; i <= lastVertId; ++i )
     {
-        if ( settings.onlyValidPoints && !mesh.topology.hasVert( i ) )
+        if ( settings.onlyValidPoints && !hasVert( mesh, i ) )
             continue;
         const Vector3f& p = mesh.points[i];
         out << fmt::format( "          <vertex x=\"{}\" y=\"{}\" z=\"{}\" />\n", p.x, p.y, p.z );
@@ -134,18 +139,18 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
         "        </vertices>\n"
         "        <triangles>\n";
 
-    const auto fLast = mesh.topology.lastValidFace();
-    const auto numSaveFaces = settings.packPrimitives ? mesh.topology.numValidFaces() : int( fLast + 1 );
+    const auto fLast = lastValidFace( mesh );
+    const auto numSaveFaces = settings.packPrimitives ? numValidFaces( mesh ) : int( fLast + 1 );
 
     // write triangles
     int savedFaces = 0;
     for ( FaceId f{0}; f <= fLast; ++f )
     {
-        VertId vs[3] = {};
+        ThreeVertIds vs = {};
         int v[3] = {};
-        if ( mesh.topology.hasFace( f ) )
+        if ( hasFace( mesh, f ) )
         {
-            mesh.topology.getTriVerts( f, vs );
+            vs = getTriVerts( mesh, f );
             for ( int i = 0; i < 3; ++i )
                 v[i] = vertRenumber( vs[i] );
         }
@@ -201,7 +206,8 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
     return {};
 }
 
-Expected<void> to3mf( const Mesh & mesh, const std::filesystem::path& file, const SaveSettings & settings )
+template<typename MeshType>
+static Expected<void> to3mfImpl( const MeshType & mesh, const std::filesystem::path& file, const SaveSettings & settings )
 {
     MR_TIMER;
     if ( file.empty() )
@@ -260,6 +266,36 @@ R"(<?xml version="1.0" encoding="utf-8"?>
     }
 
     return compressZip( file, scenePath, { .cb = subprogress( settings.progress, 0.9f, 1.0f ) } );
+}
+
+Expected<void> toModel3mf( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
+{
+    return toModel3mfImpl( mesh, file, settings );
+}
+
+Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSettings & settings )
+{
+    return toModel3mfImpl( mesh, out, settings );
+}
+
+Expected<void> toModel3mf( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
+{
+    return toModel3mfImpl( mesh, file, settings );
+}
+
+Expected<void> toModel3mf( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings )
+{
+    return toModel3mfImpl( mesh, out, settings );
+}
+
+Expected<void> to3mf( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
+{
+    return to3mfImpl( mesh, file, settings );
+}
+
+Expected<void> to3mf( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
+{
+    return to3mfImpl( mesh, file, settings );
 }
 
 MR_ADD_MESH_SAVER( IOFilter( "3D Manufacturing model (.model)", "*.model" ), toModel3mf, {} )

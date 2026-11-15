@@ -7,6 +7,18 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRFeatureAlignmentTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFeatureAlignmentToolTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\MRCommonPlugins\Basic\MRFeatureAlignmentScene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\MRCommonPlugins\Basic\MRFeatureAlignmentController.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRNormalDenoisingTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

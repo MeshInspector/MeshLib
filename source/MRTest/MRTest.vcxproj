@@ -19,6 +19,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRFeatureAlignmentTests.cpp" />
+    <ClCompile Include="MRFeatureAlignmentToolTests.cpp" />
+    <ClCompile Include="..\MRCommonPlugins\Basic\MRFeatureAlignmentScene.cpp" />
+    <ClCompile Include="..\MRCommonPlugins\Basic\MRFeatureAlignmentController.cpp" />
     <ClCompile Include="MRAABBTreeTests.cpp" />
     <ClCompile Include="MRAABBTreePointsTests.cpp" />
     <ClCompile Include="MRAlphaShapeTests.cpp" />

@@ -1,90 +1,67 @@
 #pragma once
 #include "MRFeatureAlignmentScene.h"
 #include <boost/signals2/connection.hpp>
+#include <unordered_set>
+
+namespace MR
+{
+class HistoryStore;
+class CombinedHistoryAction;
+} // namespace MR
 
 namespace MR::FeatureAlignmentTool
 {
-class TransformHistory
-{
-public:
-    virtual ~TransformHistory() = default;
-    virtual Expected<void> commit( const ObjectPtr &object, const AffineXf3f &local, const std::string &label ) = 0;
-    Expected<void> commitPreview( const ObjectPtr &object, const AffineXf3f &before, const AffineXf3f &target,
-                                  const std::string &label );
-};
-class ViewerTransformHistory : public TransformHistory
-{
-public:
-    Expected<void> commit( const ObjectPtr &, const AffineXf3f &, const std::string & ) override;
-};
 class Controller
 {
 public:
-    Controller( ObjectPtr root, TransformHistory &history );
+    struct ViewState
+    {
+        Catalog entries;
+        // Reference, Floating, in that order.
+        std::array<Catalog, 2> primaryFeatures, locatorFeatures, clockingFeatures;
+        bool canPreview{}, canApply{}, stalePreview{}, canSwapRoles{};
+        std::string setupError;
+    };
+    explicit Controller( ObjectPtr root );
     ~Controller();
-    const ObjectPtr &root() const
-    {
-        return root_;
-    }
-    const Selection &selection() const
-    {
-        return selection_;
-    }
-    const Settings &settings() const
-    {
-        return settings_;
-    }
+    const ObjectPtr &root() const { return root_; }
+    const Selection &selection() const { return selection_; }
+    const Settings &settings() const { return settings_; }
+    const std::optional<Solution> &result() const { return result_; }
+    const ViewState &viewState();
+    void refresh();
     Expected<void> configure( Selection selection, Settings settings );
+    Expected<void> swapRoles();
     Expected<void> invalidate( bool abandonChangedPreview = false );
-    Expected<Solution> preview( bool show = false );
+    Expected<Solution> preview();
     Expected<void> apply();
-    Expected<void> restore();
     bool canApply() const;
-    bool canRestore() const;
     bool stalePreview() const;
-    bool previewDisplayed() const
-    {
-        return preview_ && preview_->displayed;
-    }
-    bool hasPreview() const
-    {
-        return bool( preview_ );
-    }
-    const std::optional<Solution> &result() const
-    {
-        return result_;
-    }
+    bool hasPreview() const { return bool( preview_ ); }
 
 private:
-    void watchGeometry_();
-    Expected<void> cancelPreview_( bool abandonChangedPreview = false );
-    bool canCancelPreview_() const;
+    void watchSelected_();
+    void watchHistory_();
+    void selectedChanged_();
+    Expected<void> cancelPreview_( bool abandonChangedPreview, CombinedHistoryAction *pendingGroup = nullptr );
+    Expected<void> validateSwap_( const Catalog &entries ) const;
     ObjectPtr root_;
-    TransformHistory &history_;
     Selection selection_;
     Settings settings_;
+    ViewState viewState_;
+    bool viewDirty_{ true }, previewChanged_{}, changingPose_{};
     struct Preview
     {
-        SceneStamp scene;
-        AffineXf3f target;
-        uint64_t geometryRevision{};
         ObjectPtr moving;
         const Object *parent{};
-        AffineXf3f before;
-        bool displayed{};
-        std::vector<NodeStamp> subtree;
-    };
-    struct Restore
-    {
-        SceneStamp scene;
-        ObjectPtr moving;
-        AffineXf3f before;
-        uint64_t geometryRevision{};
+        AffineXf3f before, target;
+        std::unordered_set<ObjectPtr> members;
     };
     std::optional<Preview> preview_;
-    std::optional<Restore> restore_;
     std::optional<Solution> result_;
-    std::shared_ptr<uint64_t> geometryRevision_{ std::make_shared<uint64_t>( 0 ) };
+    std::vector<ObjectPtr> watchedObjects_;
     std::vector<boost::signals2::scoped_connection> connections_;
+    HistoryStore *history_{};
+    boost::signals2::scoped_connection historyConnection_;
 };
 } // namespace MR::FeatureAlignmentTool

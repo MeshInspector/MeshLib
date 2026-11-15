@@ -1,11 +1,10 @@
 #include "MRFeatureAlignment.h"
-#include "MRFeatureAlignmentReport.h"
 #include <MRViewer/MRUIStyle.h>
+#include <MRViewer/MRColorTheme.h>
 #include <MRViewer/MRRibbonRegisterItem.h>
 #include <MRViewer/MRI18n.h>
-#include <MRViewer/MRUITestEngine.h>
+#include <MRViewer/MRHistoryStore.h>
 #include <MRMesh/MRSceneRoot.h>
-#include <json/json.h>
 #include <algorithm>
 #include <numbers>
 
@@ -16,22 +15,23 @@ namespace
 using namespace FeatureAlignmentTool;
 ImVec4 roleColor( bool moving )
 {
-    const auto bg = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
-    const bool dark = bg.x + bg.y + bg.z < 1.5f;
-    return moving ? ( dark ? ImVec4( .45f, .72f, 1, 1 ) : ImVec4( .08f, .32f, .68f, 1 ) )
-                  : ( dark ? ImVec4( .35f, .82f, .61f, 1 ) : ImVec4( .04f, .40f, .25f, 1 ) );
+    const auto type = moving ? ColorTheme::ViewportColorsType::AxisZ : ColorTheme::ViewportColorsType::AxisY;
+    return ImGui::ColorConvertU32ToFloat4( ColorTheme::getViewportColor( type ).getUInt32() );
+}
+ImVec4 errorColor()
+{
+    return ImGui::ColorConvertU32ToFloat4(
+        ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::AxisX ).getUInt32() );
 }
 void beginToleranceField( bool failed )
 {
     if ( !failed )
         return;
-    const auto bg = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
-    const bool dark = bg.x + bg.y + bg.z < 1.5f;
-    const ImVec4 fill = dark ? ImVec4( .42f, .12f, .10f, 1 ) : ImVec4( 1, .82f, .78f, 1 );
-    ImGui::PushStyleColor( ImGuiCol_FrameBg, fill );
-    ImGui::PushStyleColor( ImGuiCol_FrameBgHovered, fill );
-    ImGui::PushStyleColor( ImGuiCol_FrameBgActive, fill );
-    ImGui::PushStyleColor( ImGuiCol_Border, ImVec4( 1, .35f, .25f, 1 ) );
+    const auto fill = ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::AxisX ).scaledAlpha( .18f );
+    ImGui::PushStyleColor( ImGuiCol_FrameBg, fill.getUInt32() );
+    ImGui::PushStyleColor( ImGuiCol_FrameBgHovered, fill.getUInt32() );
+    ImGui::PushStyleColor( ImGuiCol_FrameBgActive, fill.getUInt32() );
+    ImGui::PushStyleColor( ImGuiCol_Border, errorColor() );
     ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 1.f );
 }
 void endToleranceField( bool failed )
@@ -41,6 +41,129 @@ void endToleranceField( bool failed )
         ImGui::PopStyleVar();
         ImGui::PopStyleColor( 4 );
     }
+}
+std::string rotationSourceText( FeatureAlignment::RotationSource source )
+{
+    using FeatureAlignment::RotationSource;
+    switch ( source )
+    {
+    case RotationSource::Unconstrained:
+        return s_tr( "No rotation reference" );
+    case RotationSource::OffAxisCenterLocator:
+        return s_tr( "Off-axis center locator" );
+    case RotationSource::DirectedReference:
+        return s_tr( "Directed reference" );
+    case RotationSource::SecondCenter:
+        return s_tr( "Second center pair" );
+    case RotationSource::ThirdCenter:
+        return s_tr( "Third center pair" );
+    case RotationSource::SecondHole:
+        return s_tr( "Second hole pair" );
+    case RotationSource::ObliquePrimaryAxis:
+        return s_tr( "Oblique hole axis" );
+    }
+    return s_tr( "No rotation reference" );
+}
+std::string freeMotionText( const Solution &result )
+{
+    using FeatureAlignment::FreeMotion;
+    switch ( result.freeMotion )
+    {
+    case FreeMotion::Unspecified:
+        return s_tr( "Preview to inspect the remaining motion." );
+    case FreeMotion::FullyConstrained:
+        return result.acceptable() ? s_tr( "Fully located by the selected references." )
+                                   : s_tr( "No motion remains, but the selected measurements conflict." );
+    case FreeMotion::PlaneTranslationsAndSpin:
+        return s_tr( "Two in-plane translations and rotation about the plane normal remain free." );
+    case FreeMotion::PlaneTranslations:
+        return s_tr( "Two in-plane translations remain free." );
+    case FreeMotion::PrimarySpin:
+        return result.mode == PrimaryMode::Plane ? s_tr( "Rotation about the plane normal remains free." )
+                                                : s_tr( "Rotation about the primary axis remains free." );
+    case FreeMotion::PrimarySlide:
+        return s_tr( "Sliding along the primary axis remains free." );
+    case FreeMotion::PrimarySlideAndSpin:
+        return s_tr( "Sliding and rotation about the primary axis remain free." );
+    case FreeMotion::Translations:
+        return s_tr( "All three translations remain free." );
+    case FreeMotion::TranslationsAndSpin:
+        return s_tr( "All three translations and rotation about the primary axis remain free." );
+    case FreeMotion::Rotations:
+        return s_tr( "All three rotations about the matched primary center remain free." );
+    case FreeMotion::BaselineSpin:
+        return s_tr( "Rotation about the line through the first two centers remains free." );
+    }
+    return s_tr( "Review the selected references." );
+}
+void drawDiagnostic( const FeatureAlignment::Diagnostic &diagnostic, const Solution &result )
+{
+    using FeatureAlignment::DiagnosticCode;
+    const int number = diagnostic.index + 1;
+    switch ( diagnostic.code )
+    {
+    case DiagnosticCode::CenterPositionMismatch:
+        ImGui::TextWrapped( result.mode == PrimaryMode::Centers
+                                ? _tr( "Center %d residual exceeds Position tolerance." )
+                                : _tr( "Locator %d residual exceeds Position tolerance." ), number );
+        return;
+    case DiagnosticCode::PrimaryCenterMismatch:
+        ImGui::TextWrapped( "%s", _tr( "Primary feature centers conflict with the locators." ) );
+        return;
+    case DiagnosticCode::PrimaryAxisNotCoaxial:
+        ImGui::TextWrapped( "%s", _tr( "Primary axes are not coaxial within Position tolerance." ) );
+        return;
+    case DiagnosticCode::PrimaryAxisAngleMismatch:
+        ImGui::TextWrapped( "%s", _tr( "Primary axis angle exceeds Angle tolerance." ) );
+        return;
+    case DiagnosticCode::ClockingParallelToPrimary:
+        ImGui::TextWrapped( "%s", result.mode == PrimaryMode::Plane
+                                     ? _tr( "Clocking direction is parallel to the plane normal." )
+                                     : _tr( "Clocking direction is parallel to the primary axis." ) );
+        return;
+    case DiagnosticCode::ClockingConflict:
+        ImGui::TextWrapped( "%s", _tr( "Clocking reference exceeds Angle tolerance." ) );
+        return;
+    case DiagnosticCode::PlaneSeatingMismatch:
+        ImGui::TextWrapped( "%s", _tr( "Plane seating exceeds Position or Angle tolerance." ) );
+        return;
+    case DiagnosticCode::HolePositionMismatch:
+        ImGui::TextWrapped( _tr( "Hole %d in-plane mismatch exceeds Position tolerance." ), number );
+        return;
+    case DiagnosticCode::HoleAxisAngleMismatch:
+        ImGui::TextWrapped( _tr( "Hole %d axis angle exceeds Angle tolerance." ), number );
+        return;
+    case DiagnosticCode::HoleRadiusMismatch:
+        ImGui::TextWrapped( _tr( "Hole %d radii differ. Review the fitted features and clearance." ), number );
+        return;
+    case DiagnosticCode::Underconstrained:
+        ImGui::TextWrapped( _tr( "%d degrees of freedom remain. Add a reference if needed." ), result.remainingDof );
+        return;
+    case DiagnosticCode::FittedAxialCenters:
+        ImGui::TextWrapped( "%s", _tr( "Axial placement uses fitted feature centers. Select a rim circle to locate a cylinder edge." ) );
+        return;
+    case DiagnosticCode::AmbiguousAxisDirection:
+        ImGui::TextWrapped( "%s", _tr( "Unoriented axes admit two direction choices. Use Same or Opposing to choose explicitly." ) );
+        return;
+    case DiagnosticCode::CollinearCenters:
+        ImGui::TextWrapped( "%s", _tr( "The centers are collinear. A noncollinear third pair can set rotation." ) );
+        return;
+    case DiagnosticCode::PlaneCentersProjected:
+        ImGui::TextWrapped( "%s", _tr( "Hole centers locate within the mating plane; the plane gap sets depth." ) );
+        return;
+    case DiagnosticCode::BalancedHoleFit:
+        ImGui::TextWrapped( "%s", _tr( "Balanced fit shares in-plane mismatch between both hole pairs." ) );
+        return;
+    case DiagnosticCode::ObliqueHoleAxis:
+        ImGui::TextWrapped( "%s", _tr( "An oblique hole axis sets rotation. A second hole can provide a steadier reference." ) );
+        return;
+    case DiagnosticCode::OppositePlaneNormalsConvention:
+        ImGui::TextWrapped( "%s", _tr( "Opposite normals use a rotation-axis convention. Add a clocking reference to set rotation." ) );
+        return;
+    case DiagnosticCode::Unspecified:
+        break;
+    }
+    ImGui::TextWrapped( "%s", _tr( "Review the selected references and tolerances." ) );
 }
 bool choose( const char *label, ObjectPtr &value, const Catalog &options, bool moving, bool optional )
 {
@@ -63,11 +186,15 @@ bool choose( const char *label, ObjectPtr &value, const Catalog &options, bool m
             changed = true;
         }
         for ( const auto &e : options )
+        {
+            ImGui::PushID( e.object.get() );
             if ( UI::comboElem( e.path.c_str(), e.object == value ) )
             {
                 value = e.object;
                 changed = true;
             }
+            ImGui::PopID();
+        }
         UI::endCombo();
     }
     ImGui::PopStyleColor();
@@ -108,23 +235,50 @@ void defaultPrimary( const Catalog &entries, Selection &s, bool moving, PrimaryM
 }
 } // namespace
 FeatureAlignmentPlugin::FeatureAlignmentPlugin() : StatePlugin( "Feature Alignment", StatePluginTabs::Basic ) {}
-std::string FeatureAlignmentPlugin::isAvailable( const std::vector<std::shared_ptr<const Object>> & ) const
+std::string FeatureAlignmentPlugin::isAvailable( const std::vector<std::shared_ptr<const Object>> &selectedObjects ) const
 {
     using namespace FeatureAlignmentTool;
     if ( isActive() )
-        return {};
-    const auto entries = catalog( SceneRoot::getSharedPtr() );
-    auto roles = selectedHierarchyRoles( entries );
-    if ( !roles )
-        return "Select two parts, or fitted features on two different parts.";
-    Selection selection;
-    selection.fixed = roles->fixed;
-    selection.moving = roles->moving;
-    for ( auto mode : { PrimaryMode::Plane, PrimaryMode::Axis, PrimaryMode::Centers } )
-        if ( !features( entries, selection, false, primaryPredicate( mode ) ).empty() &&
-             !features( entries, selection, true, primaryPredicate( mode ) ).empty() )
-            return {};
-    return "Both selected parts need compatible existing fitted features.";
+        return shouldClose_() ? s_tr( "The scene or selected parts changed. Reopen Feature Alignment." )
+                              : std::string{};
+    const auto &root = SceneRoot::getSharedPtr();
+    auto *history = HistoryStore::getViewerInstance();
+    if ( history != availabilityHistory_ || ( history && !availabilityHistoryConnection_.connected() ) )
+    {
+        availabilityHistoryConnection_.disconnect();
+        availabilityHistory_ = history;
+        availabilityDirty_ = true;
+        if ( history )
+            availabilityHistoryConnection_ = history->changedSignal.connect(
+                [this]( HistoryStore &, HistoryStore::ChangeType, std::shared_ptr<HistoryAction> )
+                { availabilityDirty_ = true; } );
+    }
+    const bool sameSelection = availabilitySelection_.size() == selectedObjects.size() &&
+        std::equal( availabilitySelection_.begin(), availabilitySelection_.end(), selectedObjects.begin(),
+            []( const auto &cached, const auto &object ) { return cached.lock() == object; } );
+    if ( availabilityRoot_.lock() != root || !sameSelection )
+    {
+        availabilityRoot_ = root;
+        availabilitySelection_.clear();
+        for ( const auto &object : selectedObjects )
+            availabilitySelection_.push_back( object );
+        availabilityDirty_ = true;
+    }
+    if ( availabilityDirty_ )
+    {
+        const auto roles = selectedHierarchyRoles( root, selectedObjects );
+        availabilityError_ = !roles ? _t( "Select two parts, or fitted features on two different parts." )
+                           : !haveCompatiblePrimaryFeatures( *roles )
+                               ? _t( "Both selected parts need compatible existing fitted features." ) : nullptr;
+        availabilityDirty_ = false;
+    }
+    return availabilityError_ ? s_tr( availabilityError_ ) : std::string{};
+}
+void FeatureAlignmentPlugin::updateSelection( const std::vector<std::shared_ptr<const Object>> & )
+{
+    availabilityDirty_ = true;
+    if ( controller_ )
+        controller_->refresh();
 }
 bool FeatureAlignmentPlugin::onEnable_()
 {
@@ -133,9 +287,7 @@ bool FeatureAlignmentPlugin::onEnable_()
     auto roles = selectedHierarchyRoles( entries );
     if ( !roles )
         return false;
-    if ( !controller_ || controller_->root() != SceneRoot::getSharedPtr() )
-        controller_ = std::make_unique<Controller>( SceneRoot::getSharedPtr(), history_ );
-    auto settings = controller_->settings();
+    auto settings = settings_;
     Selection selection;
     selection.fixed = roles->fixed;
     selection.moving = roles->moving;
@@ -166,8 +318,10 @@ bool FeatureAlignmentPlugin::onEnable_()
         settings.offset = 0;
     defaultPrimary( entries, selection, false, settings.mode );
     defaultPrimary( entries, selection, true, settings.mode );
-    if ( auto configured = controller_->configure( std::move( selection ), settings ); !configured )
+    auto controller = std::make_unique<Controller>( SceneRoot::getSharedPtr() );
+    if ( auto configured = controller->configure( std::move( selection ), settings ); !configured )
         return false;
+    controller_ = std::move( controller );
     secondHole_ = false;
     diagnostics_ = false;
     message_.clear();
@@ -177,67 +331,52 @@ bool FeatureAlignmentPlugin::onEnable_()
 bool FeatureAlignmentPlugin::onDisable_()
 {
     if ( controller_ )
+    {
+        settings_ = controller_->settings();
         if ( auto canceled = controller_->invalidate( true ); !canceled )
         {
             error_ = true;
-            message_ = canceled.error();
+            message_ = s_tr( canceled.error() );
             return false;
         }
+    }
+    controller_.reset();
     return true;
+}
+bool FeatureAlignmentPlugin::shouldClose_() const
+{
+    if ( !controller_ )
+        return false;
+    const auto &root = SceneRoot::getSharedPtr();
+    const auto &selection = controller_->selection();
+    return controller_->root() != root || !FeatureAlignmentTool::below( selection.fixed.get(), root.get() ) ||
+           !FeatureAlignmentTool::below( selection.moving.get(), root.get() );
 }
 void FeatureAlignmentPlugin::drawDialog( ImGuiContext * )
 {
     using namespace FeatureAlignmentTool;
-    const float scale = UI::scale();
-    const auto *viewport = ImGui::GetMainViewport();
-    const Vector2f workPosition{ viewport->WorkPos.x, viewport->WorkPos.y };
-    const Vector2f workSize{ viewport->WorkSize.x, viewport->WorkSize.y };
+    if ( shouldClose_() )
     {
-        const UI::TestEngine::TreeGuard tree( name() );
-        if ( auto value = UI::TestEngine::createValueTentative<float>( "Window width" ) )
-            panelSize_.x = *value;
-        if ( auto value = UI::TestEngine::createValueTentative<float>( "Window height" ) )
-            panelSize_.y = *value;
+        (void)enable( false );
+        return;
     }
-    const auto minimum = fitPanelBounds( workPosition, { 380 * scale, 320 * scale }, workPosition, workSize, 8 * scale,
-                                         { 380 * scale, 320 * scale } )
-                             .size;
-    const auto maximum = fitPanelBounds( workPosition, workSize, workPosition, workSize, 8 * scale ).size;
-    const auto desired = fitPanelBounds( workPosition, panelSize_ * scale, workPosition, workSize, 8 * scale, minimum );
-    // Keep this assembly tool in the application's viewport. The generic saved
-    // dialog allocator can retain an off-screen position after monitor/DPI changes.
-    ImGui::SetNextWindowViewport( viewport->ID );
-    ImGui::SetNextWindowSizeConstraints( { minimum.x, minimum.y }, { maximum.x, maximum.y } );
-    ImVec2 changedSize{ desired.size.x, desired.size.y };
-    if ( !ImGuiBeginWindow_( { .width = desired.size.x,
-                               .height = desired.size.y,
-                               .allowScrollbar = false,
+    const float scale = UI::scale();
+    ImVec2 changedSize{ panelSize_.x * scale, panelSize_.y * scale };
+    if ( !ImGuiBeginWindow_( { .width = changedSize.x,
+                               .height = changedSize.y,
                                .flags = 0,
                                .changedSize = &changedSize } ) )
         return;
     panelSize_ = Vector2f{ changedSize.x, changedSize.y } / scale;
-    const auto pos = ImGui::GetWindowPos();
-    const auto size = ImGui::GetWindowSize();
-    const auto bounds =
-        fitPanelBounds( { pos.x, pos.y }, { size.x, size.y }, workPosition, workSize, 8 * scale, minimum );
-    if ( bounds.position != Vector2f{ pos.x, pos.y } )
-        ImGui::SetWindowPos( { bounds.position.x, bounds.position.y } );
-    layout_.window = bounds;
-    layout_.viewport = { workPosition, workSize };
-    // Automation uses the same size state as native border/corner dragging.
-    (void)UI::TestEngine::createValue( "Window width", panelSize_.x, minimum.x / scale, maximum.x / scale );
-    (void)UI::TestEngine::createValue( "Window height", panelSize_.y, minimum.y / scale, maximum.y / scale );
-    const auto entries = catalog( controller_->root() );
+    const auto &view = controller_->viewState();
+    const auto &entries = view.entries;
     auto selection = controller_->selection();
     auto settings = controller_->settings();
     bool changed = false;
     if ( selection.movingLocators[1] || selection.fixedLocators[1] )
         secondHole_ = true;
     const float actionHeight = 32 * scale;
-    const auto bodyStart = ImGui::GetCursorScreenPos();
-    const float footerTop = ImGui::GetWindowPos().y + ImGui::GetWindowSize().y - ImGui::GetStyle().WindowPadding.y -
-                            actionHeight - 12 * scale;
-    if ( ImGui::BeginChild( "Setup and results", { 0, std::max( 1.f, footerTop - bodyStart.y - 16 * scale ) } ) )
+    if ( ImGui::BeginChild( "Setup and results", { 0, -( actionHeight + ImGui::GetStyle().ItemSpacing.y ) } ) )
     {
         int mode = int( settings.mode );
         ImGui::SetNextItemWidth( 185 * scale );
@@ -249,8 +388,34 @@ void FeatureAlignmentPlugin::drawDialog( ImGuiContext * )
                 settings.offset = 0;
             defaultPrimary( entries, selection, false, settings.mode );
             defaultPrimary( entries, selection, true, settings.mode );
-            changed = true;
+            auto configured = controller_->configure( selection, settings );
+            message_ = configured ? std::string() : s_tr( configured.error() );
+            error_ = !configured;
+            selection = controller_->selection();
+            settings = controller_->settings();
+            secondHole_ = bool( selection.fixedLocators[1] || selection.movingLocators[1] );
+            (void)controller_->viewState();
         }
+        ImGui::SameLine();
+        if ( UI::button( _tr( "Swap" ), view.canSwapRoles ) )
+        {
+            auto swapped = controller_->swapRoles();
+            error_ = !swapped;
+            message_ = swapped ? s_tr( "Roles exchanged. Preview again before applying." ) : s_tr( swapped.error() );
+            selection = controller_->selection();
+            settings = controller_->settings();
+            secondHole_ = bool( selection.fixedLocators[1] || selection.movingLocators[1] );
+            if ( swapped )
+                diagnostics_ = false;
+            scrollToResult_ = false;
+            changed = false;
+            (void)controller_->viewState();
+        }
+        UI::setTooltipIfHovered(
+            view.canSwapRoles
+                ? _tr( "Exchange roles and their features. Gap and axial offset follow the new Reference object's direction." )
+                : _tr( "Swap needs separate part branches and a Preview that can be safely canceled. "
+                       "Gap and axial offset follow the new Reference object's direction." ) );
         if ( ImGui::BeginTable( "Part roles", 2, ImGuiTableFlags_SizingStretchSame ) )
         {
             float roleHeight = 0;
@@ -258,7 +423,7 @@ void FeatureAlignmentPlugin::drawDialog( ImGuiContext * )
                                                        2 * ImGui::GetStyle().WindowPadding.x - 12 * scale );
             for ( const auto &part : { selection.fixed, selection.moving } )
             {
-                const auto name = part ? part->name() : std::string( "Not available" );
+                const auto name = part ? part->name() : s_tr( "Not available" );
                 roleHeight = std::max( roleHeight, ImGui::CalcTextSize( name.c_str(), nullptr, false, nameWidth ).y +
                                                        2 * ImGui::GetStyle().WindowPadding.y );
             }
@@ -266,69 +431,61 @@ void FeatureAlignmentPlugin::drawDialog( ImGuiContext * )
             {
                 ImGui::TableNextColumn();
                 ImGui::TextColored( roleColor( moving ), "%s",
-                                    moving ? _tr( "Floating obj" ) : _tr( "Reference obj" ) );
-                ImGui::PushStyleColor( ImGuiCol_ChildBg, ImVec4( 0, 0, 0, 1 ) );
+                                    moving ? _tr( "Floating object" ) : _tr( "Reference object" ) );
+                ImGui::PushStyleColor( ImGuiCol_ChildBg,
+                                       ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::FrameBackground ).getUInt32() );
                 ImGui::PushStyleColor( ImGuiCol_Border, roleColor( moving ) );
                 ImGui::PushStyleVar( ImGuiStyleVar_ChildRounding, 4 * scale );
                 const auto &part = moving ? selection.moving : selection.fixed;
-                const auto name = part ? part->name() : std::string( "Not available" );
-                std::string path;
-                for ( const auto &entry : entries )
-                    if ( entry.object == part )
-                        path = entry.path;
+                const auto name = part ? part->name() : s_tr( "Not available" );
                 if ( ImGui::BeginChild( moving ? "Floating role" : "Reference role", { 0, roleHeight },
                                         ImGuiChildFlags_Borders, ImGuiWindowFlags_NoScrollbar ) )
                 {
                     ImGui::PushStyleColor( ImGuiCol_Text, roleColor( moving ) );
                     ImGui::TextWrapped( "%s", name.c_str() );
                     ImGui::PopStyleColor();
-                    UI::setTooltipIfHovered( path );
                 }
                 ImGui::EndChild();
                 ImGui::PopStyleVar();
                 ImGui::PopStyleColor( 2 );
-                (void)UI::TestEngine::createValue( moving ? "##Moving part" : "##Fixed reference", path, true,
-                                                   std::nullopt,
-                                                   { .disabledReason = "Assigned from scene selection" } );
             }
             ImGui::EndTable();
         }
         UI::separator();
-        const auto locatorPredicate = settings.mode == PrimaryMode::Plane ? isHole : isCenter;
         if ( ImGui::BeginTable( "Features", 3, ImGuiTableFlags_SizingStretchProp ) )
         {
             ImGui::TableSetupColumn( "Reference", ImGuiTableColumnFlags_WidthFixed, 58 * scale );
-            ImGui::TableSetupColumn( "Reference obj", ImGuiTableColumnFlags_WidthStretch );
-            ImGui::TableSetupColumn( "Floating obj", ImGuiTableColumnFlags_WidthStretch );
+            ImGui::TableSetupColumn( "Reference object", ImGuiTableColumnFlags_WidthStretch );
+            ImGui::TableSetupColumn( "Floating object", ImGuiTableColumnFlags_WidthStretch );
             const auto row = [&]( const char *title, const char *fixedLabel, const char *movingLabel, ObjectPtr &a,
-                                  ObjectPtr &b, Predicate eligible, bool optional )
+                                  ObjectPtr &b, const std::array<Catalog, 2> &options, bool optional )
             {
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
                 ImGui::AlignTextToFramePadding();
                 ImGui::TextUnformatted( title );
                 ImGui::TableNextColumn();
-                changed |= choose( fixedLabel, a, features( entries, selection, false, eligible ), false, optional );
+                changed |= choose( fixedLabel, a, options[0], false, optional );
                 ImGui::TableNextColumn();
-                changed |= choose( movingLabel, b, features( entries, selection, true, eligible ), true, optional );
+                changed |= choose( movingLabel, b, options[1], true, optional );
             };
             const auto primaryLabel = settings.mode == PrimaryMode::Plane  ? s_tr( "Plane" )
                                       : settings.mode == PrimaryMode::Axis ? s_tr( "Axis" )
                                                                            : s_tr( "Center 1" );
             row( primaryLabel.c_str(), "##Fixed primary", "##Moving primary", selection.fixedPrimary,
-                 selection.movingPrimary, primaryPredicate( settings.mode ), false );
+                 selection.movingPrimary, view.primaryFeatures, false );
             const auto firstLabel = settings.mode == PrimaryMode::Plane  ? s_tr( "Hole 1" )
                                     : settings.mode == PrimaryMode::Axis ? s_tr( "Locator 1" )
                                                                          : s_tr( "Center 2" );
             row( firstLabel.c_str(), "##Fixed locator 1", "##Moving locator 1", selection.fixedLocators[0],
-                 selection.movingLocators[0], locatorPredicate, true );
+                 selection.movingLocators[0], view.locatorFeatures, true );
             if ( secondHole_ )
             {
                 const auto secondLabel = settings.mode == PrimaryMode::Plane  ? s_tr( "Hole 2" )
                                          : settings.mode == PrimaryMode::Axis ? s_tr( "Locator 2" )
                                                                               : s_tr( "Center 3" );
                 row( secondLabel.c_str(), "##Fixed locator 2", "##Moving locator 2", selection.fixedLocators[1],
-                     selection.movingLocators[1], locatorPredicate, true );
+                     selection.movingLocators[1], view.locatorFeatures, true );
             }
             ImGui::EndTable();
         }
@@ -396,7 +553,7 @@ void FeatureAlignmentPlugin::drawDialog( ImGuiContext * )
                                            "axial placement must refer to a cylinder edge." ) );
         }
         const auto *last =
-            controller_->result() && !changed && !controller_->stalePreview() ? &*controller_->result() : nullptr;
+            controller_->result() && !changed && !view.stalePreview ? &*controller_->result() : nullptr;
         const bool positionFailed = last && last->maximumPositionError() > settings.linearTolerance;
         const bool angleFailed = last && last->maximumAngleError() > settings.angularToleranceDeg;
         beginToleranceField( positionFailed );
@@ -414,7 +571,7 @@ void FeatureAlignmentPlugin::drawDialog( ImGuiContext * )
         {
             const auto measured = valueToString<LengthUnit>( last->maximumPositionError() );
             const auto allowed = valueToString<LengthUnit>( settings.linearTolerance );
-            ImGui::TextColored( ImVec4( 1, .45f, .35f, 1 ), _tr( "Measured %s; allowed %s" ), measured.c_str(),
+            ImGui::TextColored( errorColor(), _tr( "Measured %s; allowed %s" ), measured.c_str(),
                                 allowed.c_str() );
         }
         if ( settings.mode != PrimaryMode::Centers )
@@ -439,7 +596,7 @@ void FeatureAlignmentPlugin::drawDialog( ImGuiContext * )
             {
                 const auto measured = valueToString<AngleUnit>( last->maximumAngleError() * std::numbers::pi / 180. );
                 const auto allowed = valueToString<AngleUnit>( angle );
-                ImGui::TextColored( ImVec4( 1, .45f, .35f, 1 ), _tr( "Measured %s; allowed %s" ), measured.c_str(),
+                ImGui::TextColored( errorColor(), _tr( "Measured %s; allowed %s" ), measured.c_str(),
                                     allowed.c_str() );
             }
         }
@@ -450,10 +607,7 @@ void FeatureAlignmentPlugin::drawDialog( ImGuiContext * )
         else
             UI::transparentTextWrapped( _tr( "Suggested start: %s / %s. Adjust for your scans." ),
                                         defaultPosition.c_str(), defaultAngle.c_str() );
-        if ( auto value = UI::TestEngine::createValueTentative<bool>( "Advanced" ) )
-            ImGui::SetNextItemOpen( *value, ImGuiCond_Always );
         advanced_ = ImGui::CollapsingHeader( _tr( "Advanced" ) );
-        (void)UI::TestEngine::createValue( "Advanced", advanced_, false, true );
         if ( advanced_ )
         {
             if ( settings.mode == PrimaryMode::Axis )
@@ -465,10 +619,10 @@ void FeatureAlignmentPlugin::drawDialog( ImGuiContext * )
                 {
                     ImGui::TableNextColumn();
                     changed |= choose( "##Fixed clocking", selection.fixedClock,
-                                       features( entries, selection, false, isDirection ), false, true );
+                                       view.clockingFeatures[0], false, true );
                     ImGui::TableNextColumn();
                     changed |= choose( "##Moving clocking", selection.movingClock,
-                                       features( entries, selection, true, isDirection ), true, true );
+                                       view.clockingFeatures[1], true, true );
                     ImGui::EndTable();
                 }
             }
@@ -476,33 +630,30 @@ void FeatureAlignmentPlugin::drawDialog( ImGuiContext * )
         if ( changed )
         {
             auto configured = controller_->configure( selection, settings );
-            message_ = configured ? std::string() : configured.error();
+            message_ = configured ? std::string() : s_tr( configured.error() );
             error_ = !configured;
+            (void)controller_->viewState();
         }
         UI::separator();
-        if ( controller_->stalePreview() )
+        if ( view.stalePreview )
             UI::notificationFrame( NotificationType::Warning,
                                    s_tr( "The scene or tree order changed after Preview. Preview again." ) );
         if ( const auto &result = controller_->result() )
         {
             const auto &r = *result;
-            const auto heading = !r.acceptable()                   ? s_tr( "Outside tolerance" )
-                                 : controller_->previewDisplayed() ? s_tr( "Preview displayed" )
-                                 : controller_->canRestore()       ? s_tr( "Placement applied" )
-                                 : controller_->hasPreview()       ? s_tr( "Preview checked" )
-                                                                   : s_tr( "Previous placement result" );
-            ImGui::TextColored( r.acceptable() ? roleColor( false ) : ImVec4( 1, .45f, .35f, 1 ), "%s",
+            const auto heading = !r.acceptable()             ? s_tr( "Outside tolerance" )
+                                 : controller_->hasPreview() ? s_tr( "Preview displayed" )
+                                                             : s_tr( "Placement result" );
+            ImGui::TextColored( r.acceptable() ? roleColor( false ) : errorColor(), "%s",
                                 heading.c_str() );
-            ImGui::TextWrapped( "%s", r.freeMotion.c_str() );
+            ImGui::TextWrapped( "%s", freeMotionText( r ).c_str() );
             const auto residual = valueToString<LengthUnit>( r.maximumPositionError() );
             ImGui::Text( _tr( "Max constrained residual: %s" ), residual.c_str() );
-            if ( auto value = UI::TestEngine::createValueTentative<bool>( "Diagnostics" ) )
-                diagnostics_ = *value;
             ImGui::SetNextItemOpen( diagnostics_, ImGuiCond_Always );
             diagnostics_ = ImGui::CollapsingHeader( _tr( "Diagnostics" ) );
-            (void)UI::TestEngine::createValue( "Diagnostics", diagnostics_, false, true );
             if ( diagnostics_ )
             {
+                ImGui::Text( _tr( "Rotation set by: %s" ), rotationSourceText( r.rotationSource ).c_str() );
                 if ( r.mode != PrimaryMode::Centers )
                 {
                     const auto angle = valueToString<AngleUnit>( r.primaryAngleErrorDeg * std::numbers::pi / 180. );
@@ -516,12 +667,15 @@ void FeatureAlignmentPlugin::drawDialog( ImGuiContext * )
                     else
                         ImGui::Text( _tr( "Locator %d: %s" ), int( i + 1 ), position.c_str() );
                 }
+                ImGui::PushStyleColor( ImGuiCol_Text, errorColor() );
                 for ( const auto &conflict : r.conflicts )
-                    ImGui::TextWrapped( "%s", conflict.c_str() );
+                    drawDiagnostic( conflict, r );
+                ImGui::PopStyleColor();
+                ImGui::PushStyleColor( ImGuiCol_Text,
+                                       ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::TextDisabled ).getUInt32() );
                 for ( const auto &warning : r.warnings )
-                    UI::transparentTextWrapped( "%s", warning.c_str() );
-                if ( UI::button( _tr( "Copy report" ) ) )
-                    ImGui::SetClipboardText( reportJson( *controller_ ).c_str() );
+                    drawDiagnostic( warning, r );
+                ImGui::PopStyleColor();
             }
         }
         if ( !message_.empty() )
@@ -533,9 +687,8 @@ void FeatureAlignmentPlugin::drawDialog( ImGuiContext * )
         }
         else if ( !controller_->result() )
         {
-            auto ready = readConstraints( controller_->root(), controller_->selection(), controller_->settings() );
-            UI::transparentTextWrapped( "%s", ready ? _tr( "Ready to preview. Reference obj stays fixed." )
-                                                    : ready.error().c_str() );
+            UI::transparentTextWrapped( "%s", view.canPreview ? _tr( "Ready to preview. Reference object stays fixed." )
+                                                              : _tr( view.setupError ) );
         }
         if ( scrollToResult_ )
         {
@@ -544,69 +697,23 @@ void FeatureAlignmentPlugin::drawDialog( ImGuiContext * )
         }
     }
     ImGui::EndChild();
-    // Use the application's own automation surface, including in production.
-    // Native widget diagnostics and clipboard reports cannot change the placement.
-    (void)UI::TestEngine::createValue( "Report JSON", reportJson( *controller_ ), true, std::nullopt,
-                                       { .disabledReason = "Read-only alignment report" } );
-    ImGui::SetCursorScreenPos( { bodyStart.x, footerTop - 8 * scale } );
-    ImGui::Separator();
-    // UI::separator includes extra vertical padding. Anchor the button row
-    // explicitly so the native custom-window clip cannot cut its lower edge.
-    ImGui::SetCursorScreenPos( { bodyStart.x, footerTop } );
-    // Keep actions visible while setup/results scroll. The footer never depends
-    // on result length, advanced options, label wrapping or native UI scaling.
-    const auto width = ( ImGui::GetContentRegionAvail().x - 2 * ImGui::GetStyle().ItemSpacing.x ) / 3;
-    const bool ready =
-        bool( readConstraints( controller_->root(), controller_->selection(), controller_->settings() ) );
-    const auto clipMin = ImGui::GetWindowDrawList()->GetClipRectMin();
-    const auto clipMax = ImGui::GetWindowDrawList()->GetClipRectMax();
-    const auto actionVisible = [&]()
+    const bool ready = view.canPreview;
+    if ( UI::button( _tr( "Preview" ), ready, { 0, actionHeight } ) )
     {
-        const auto a = ImGui::GetItemRectMin(), b = ImGui::GetItemRectMax();
-        return a.x >= clipMin.x && a.y >= clipMin.y && b.x <= clipMax.x && b.y <= clipMax.y;
-    };
-    if ( UI::button( _tr( "Preview" ), ready, { width, actionHeight } ) )
-    {
-        auto result = controller_->preview( true );
+        auto result = controller_->preview();
         error_ = !result;
-        message_ = result ? s_tr( "Temporary pose. Apply to keep it; Restore to cancel." ) : result.error();
+        message_ = result ? s_tr( "Temporary pose. Apply to keep it; changing the setup or closing cancels it." )
+                          : s_tr( result.error() );
         scrollToResult_ = true;
     }
-    layout_.actionsInsideClip = actionVisible();
     ImGui::SameLine();
-    if ( UI::button( _tr( "Apply" ), controller_->canApply(), { width, actionHeight } ) )
+    if ( UI::button( _tr( "Apply" ), view.canApply, { 0, actionHeight } ) )
     {
         auto result = controller_->apply();
         error_ = !result;
-        message_ = result ? s_tr( "Applied to Floating obj. Native Undo is available." ) : result.error();
+        message_ = result ? s_tr( "Applied to Floating object. Native Undo is available." ) : s_tr( result.error() );
         scrollToResult_ = true;
     }
-    layout_.actionsInsideClip &= actionVisible();
-    ImGui::SameLine();
-    if ( UI::button( _tr( "Restore" ), controller_->canRestore(), { width, actionHeight } ) )
-    {
-        auto result = controller_->restore();
-        error_ = !result;
-        message_ = result ? s_tr( "Original placement restored." ) : result.error();
-        scrollToResult_ = true;
-    }
-    layout_.actionsInsideClip &= actionVisible();
-    Json::Value layout;
-    layout["resize_enabled"] = true;
-    layout["actions_inside_clip"] = layout_.actionsInsideClip;
-    layout["ui_scale"] = scale;
-    for ( int i = 0; i < 2; ++i )
-    {
-        layout["window_position"].append( bounds.position[i] );
-        layout["window_size"].append( size[i] );
-        layout["logical_size"].append( panelSize_[i] );
-        layout["minimum_size"].append( minimum[i] );
-        layout["maximum_size"].append( maximum[i] );
-        layout["viewport_position"].append( workPosition[i] );
-        layout["viewport_size"].append( workSize[i] );
-    }
-    (void)UI::TestEngine::createValue( "Panel layout", Json::writeString( Json::StreamWriterBuilder{}, layout ), true,
-                                       std::nullopt, { .disabledReason = "Read-only panel layout" } );
     ImGui::EndCustomStatePlugin();
 }
 MR_REGISTER_RIBBON_ITEM( FeatureAlignmentPlugin )

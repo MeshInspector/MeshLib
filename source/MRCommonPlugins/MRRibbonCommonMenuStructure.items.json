@@ -2,7 +2,7 @@
   "Items": [
     {
       "Name": "Feature Alignment",
-      "Tooltip": "Align existing fitted features. The higher part stays fixed; the lower part moves. Preview residuals before applying.",
+      "Tooltip": "Align existing fitted planes, axes or centers. Keep the Reference object fixed and preview the Floating object before applying.",
       "Icon": "\uf0b2"
     },
     {

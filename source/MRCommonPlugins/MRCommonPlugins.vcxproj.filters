@@ -51,12 +51,6 @@
     <ClCompile Include="Basic\MRFeatureAlignment.cpp">
       <Filter>Basic</Filter>
     </ClCompile>
-    <ClCompile Include="Basic\MRFeatureAlignmentReport.cpp">
-      <Filter>Basic</Filter>
-    </ClCompile>
-    <ClCompile Include="Basic\MRFeatureAlignmentHistory.cpp">
-      <Filter>Basic</Filter>
-    </ClCompile>
     <ClCompile Include="Basic\MRMoveObjectByMouse.cpp">
       <Filter>Basic</Filter>
     </ClCompile>
@@ -124,12 +118,6 @@
       <Filter>Basic</Filter>
     </ClInclude>
     <ClInclude Include="Basic\MRFeatureAlignment.h">
-      <Filter>Basic</Filter>
-    </ClInclude>
-    <ClInclude Include="Basic\MRFeatureAlignmentLayout.h">
-      <Filter>Basic</Filter>
-    </ClInclude>
-    <ClInclude Include="Basic\MRFeatureAlignmentReport.h">
       <Filter>Basic</Filter>
     </ClInclude>
     <ClInclude Include="Basic\MRMoveObjectByMouse.h">

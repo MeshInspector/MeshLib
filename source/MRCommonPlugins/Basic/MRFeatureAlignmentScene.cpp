@@ -23,11 +23,16 @@ bool supportedModel( const Object *object )
 }
 bool hasPartGeometry( const ObjectPtr &object )
 {
-    if ( supportedModel( object.get() ) )
-        return true;
-    for ( const auto &child : object->children() )
-        if ( hasPartGeometry( child ) )
+    std::vector<ObjectPtr> pending{ object };
+    while ( !pending.empty() )
+    {
+        auto current = std::move( pending.back() );
+        pending.pop_back();
+        if ( supportedModel( current.get() ) )
             return true;
+        for ( const auto &child : current->children() )
+            pending.push_back( child );
+    }
     return false;
 }
 Expected<void> rigidAncestry( const Object *object )
@@ -35,24 +40,18 @@ Expected<void> rigidAncestry( const Object *object )
     for ( auto *current = object; current; current = current->parent() )
     {
         if ( !FeatureAlignment::isRigid( AffineXf3d( current->xf() ) ) )
-            return unexpected( std::string( "Physical parts and their ancestors must have rigid transforms. Scale, "
-                                            "shear and mirror are unsupported." ) );
+            return unexpected( std::string( _t( "Physical parts and their ancestors must have rigid transforms. Scale, "
+                                            "shear and mirror are unsupported." ) ) );
         auto views = current->xfsForAllViewports();
         if ( views.reset() )
-            return unexpected( std::string(
-                "Per-viewport transforms are unsupported. Use the same part position in all viewports." ) );
+            return unexpected( std::string( _t( "Per-viewport transforms are unsupported. Use the same part position in all viewports." ) ) );
     }
     return {};
 }
 } // namespace
 bool below( const Object *object, const Object *ancestor )
 {
-    if ( !ancestor )
-        return false;
-    for ( auto *current = object; current; current = current->parent() )
-        if ( current == ancestor )
-            return true;
-    return false;
+    return object && ancestor && ( object == ancestor || object->isAncestor( ancestor ) );
 }
 bool isHole( const ObjectPtr &object )
 {
@@ -79,40 +78,52 @@ bool isDirection( const ObjectPtr &object )
 Catalog catalog( const ObjectPtr &root )
 {
     Catalog result;
-    const auto visit = [&]( const auto &self, const ObjectPtr &object, const std::string &path ) -> void
+    struct Frame
     {
-        result.push_back(
-            { object, path,
-              object != root && !std::dynamic_pointer_cast<FeatureObject>( object ) && hasPartGeometry( object ) } );
+        ObjectPtr object;
+        size_t index{}, child{};
+        bool geometry{};
         std::map<std::string, int> total, seen;
+    };
+    std::vector<Frame> pending;
+    const auto push = [&]( const ObjectPtr &object, std::string path )
+    {
+        Frame frame;
+        frame.object = object;
+        frame.index = result.size();
+        frame.geometry = supportedModel( object.get() );
         for ( const auto &child : object->children() )
-            ++total[child->name()];
-        for ( const auto &child : object->children() )
-        {
-            auto label = child->name();
-            const auto ordinal = ++seen[label];
-            if ( total[label] > 1 )
-                label += " [" + std::to_string( ordinal ) + "]";
-            self( self, child, path.empty() ? label : path + " / " + label );
-        }
+            ++frame.total[child->name()];
+        result.push_back( { object, std::move( path ), false } );
+        pending.push_back( std::move( frame ) );
     };
     if ( root )
-        visit( visit, root, {} );
-    return result;
-}
-Expected<ObjectPtr> oneSelectedPart( const Catalog &entries )
-{
-    ObjectPtr selected;
-    for ( const auto &e : entries )
-        if ( e.part && e.object->isSelected() )
+        push( root, {} );
+    while ( !pending.empty() )
+    {
+        auto &frame = pending.back();
+        const auto &children = frame.object->children();
+        if ( frame.child < children.size() )
         {
-            if ( selected )
-                return unexpected( std::string( "Select exactly one part for this role. Click order is not used." ) );
-            selected = e.object;
+            auto child = children[frame.child++];
+            auto label = child->name();
+            const auto ordinal = ++frame.seen[label];
+            if ( frame.total[label] > 1 )
+                label += " [" + std::to_string( ordinal ) + "]";
+            const auto &parentPath = result[frame.index].path;
+            push( child, parentPath.empty() ? label : parentPath + " / " + label );
         }
-    if ( !selected )
-        return unexpected( std::string( "Select one mesh or assembly in the scene tree, then choose its role." ) );
-    return selected;
+        else
+        {
+            const bool geometry = frame.geometry;
+            result[frame.index].part = frame.object != root &&
+                !std::dynamic_pointer_cast<FeatureObject>( frame.object ) && geometry;
+            pending.pop_back();
+            if ( !pending.empty() )
+                pending.back().geometry = pending.back().geometry || geometry;
+        }
+    }
+    return result;
 }
 Expected<OrderedRoles> hierarchyRoles( const Catalog &entries, const ObjectPtr &first, const ObjectPtr &second )
 {
@@ -121,7 +132,7 @@ Expected<OrderedRoles> hierarchyRoles( const Catalog &entries, const ObjectPtr &
     const auto b =
         std::find_if( entries.begin(), entries.end(), [&]( const auto &e ) { return e.object == second && e.part; } );
     if ( a == entries.end() || b == entries.end() || a == b )
-        return unexpected( std::string( "Choose two different mesh parts or assemblies from this scene." ) );
+        return unexpected( std::string( _t( "Choose two different mesh parts or assemblies from this scene." ) ) );
     return a < b ? OrderedRoles{ first, second } : OrderedRoles{ second, first };
 }
 Expected<OrderedRoles> selectedHierarchyRoles( const Catalog &entries )
@@ -150,30 +161,121 @@ Expected<OrderedRoles> selectedHierarchyRoles( const Catalog &entries )
             }
     }
     if ( selected.size() != 2 )
-        return unexpected( std::string( "Select exactly two parts, or features belonging to exactly two mesh parts. "
-                                        "The higher part stays fixed." ) );
+        return unexpected( std::string( _t( "Select exactly two parts, or features belonging to exactly two mesh parts. "
+                                        "The higher part stays fixed." ) ) );
     return hierarchyRoles( entries, selected[0], selected[1] );
+}
+Expected<OrderedRoles> selectedHierarchyRoles( const ObjectPtr &root,
+    const std::vector<std::shared_ptr<const Object>> &selection )
+{
+    const auto ancestors = [&]( const Object *object )
+    {
+        std::vector<const Object *> path;
+        for ( auto *node = object; node; node = node->parent() )
+        {
+            path.push_back( node );
+            if ( node == root.get() )
+            {
+                std::reverse( path.begin(), path.end() );
+                return path;
+            }
+            const auto *parent = node->parent();
+            if ( !parent || std::none_of( parent->constChildren().begin(), parent->constChildren().end(),
+                    [&]( const auto &child ) { return child.get() == node; } ) )
+                break;
+        }
+        return std::vector<const Object *>{};
+    };
+    std::vector<ObjectPtr> parts;
+    const auto add = [&]( const ObjectPtr &object )
+    {
+        if ( std::find( parts.begin(), parts.end(), object ) == parts.end() )
+            parts.push_back( object );
+    };
+    for ( const auto &object : selection )
+        if ( object && object.get() != root.get() && !ancestors( object.get() ).empty() &&
+             !std::dynamic_pointer_cast<const FeatureObject>( object ) &&
+             hasPartGeometry( std::const_pointer_cast<Object>( object ) ) )
+            add( std::const_pointer_cast<Object>( object ) );
+    if ( parts.empty() )
+        for ( const auto &object : selection )
+            if ( object && std::dynamic_pointer_cast<const FeatureObject>( object ) &&
+                 !ancestors( object.get() ).empty() )
+                for ( auto *parent = object->parent(); parent; parent = parent->parent() )
+                    if ( supportedModel( parent ) )
+                    {
+                        if ( parent != root.get() )
+                            add( parent->getSharedPtr() );
+                        break;
+                    }
+    if ( parts.size() != 2 )
+        return unexpected( std::string( _t( "Select exactly two parts, or features belonging to exactly two mesh parts. "
+                                        "The higher part stays fixed." ) ) );
+    const auto first = ancestors( parts[0].get() ), second = ancestors( parts[1].get() );
+    size_t common = 0;
+    while ( common < first.size() && common < second.size() && first[common] == second[common] )
+        ++common;
+    if ( common == first.size() )
+        return OrderedRoles{ parts[0], parts[1] };
+    if ( common == second.size() )
+        return OrderedRoles{ parts[1], parts[0] };
+    for ( const auto &child : first[common - 1]->constChildren() )
+    {
+        if ( child.get() == first[common] )
+            return OrderedRoles{ parts[0], parts[1] };
+        if ( child.get() == second[common] )
+            return OrderedRoles{ parts[1], parts[0] };
+    }
+    return unexpected( std::string( _t( "Choose two different mesh parts or assemblies from this scene." ) ) );
+}
+bool haveCompatiblePrimaryFeatures( const OrderedRoles &roles )
+{
+    const auto featureMask = [&]( const ObjectPtr &owner, bool fixed )
+    {
+        unsigned mask = 0;
+        const auto visit = [&]( const auto &self, const ObjectPtr &object ) -> void
+        {
+            if ( fixed && object == roles.moving )
+                return;
+            if ( isPlane( object ) ) mask |= 1u;
+            if ( isAxis( object ) ) mask |= 2u;
+            if ( isCenter( object ) ) mask |= 4u;
+            for ( const auto &child : object->children() )
+                self( self, child );
+        };
+        if ( owner )
+            visit( visit, owner );
+        return mask;
+    };
+    return ( featureMask( roles.fixed, true ) & featureMask( roles.moving, false ) ) != 0;
 }
 Expected<Constraints> readConstraints( const ObjectPtr &root, const Selection &s, const Settings &settings )
 {
-    const auto entries = catalog( root );
+    return readConstraints( root, catalog( root ), s, settings );
+}
+Expected<Constraints> readConstraints( const ObjectPtr &root, const Catalog &entries,
+    const Selection &s, const Settings &settings )
+{
     const auto present = [&]( const ObjectPtr &object )
     {
         return object &&
                std::any_of( entries.begin(), entries.end(), [&]( const auto &e ) { return e.object == object; } );
     };
     if ( !present( s.moving ) || !present( s.fixed ) || s.moving == root || s.fixed == root || s.moving == s.fixed )
-        return unexpected( std::string( "Choose different moving and fixed parts." ) );
-    if ( !hasPartGeometry( s.moving ) || !hasPartGeometry( s.fixed ) ||
-         std::dynamic_pointer_cast<FeatureObject>( s.moving ) || std::dynamic_pointer_cast<FeatureObject>( s.fixed ) )
-        return unexpected( std::string( "Part roles must refer to meshes or assemblies, not fitted features." ) );
+        return unexpected( std::string( _t( "Choose different moving and fixed parts." ) ) );
+    const auto isPart = [&]( const ObjectPtr &object )
+    {
+        return std::any_of( entries.begin(), entries.end(), [&]( const auto &e ) { return e.object == object && e.part; } );
+    };
+    if ( !isPart( s.moving ) || !isPart( s.fixed ) )
+        return unexpected( std::string( _t( "Part roles must refer to meshes or assemblies, not fitted features." ) ) );
     auto ordered = hierarchyRoles( entries, s.fixed, s.moving );
-    if ( !ordered || ordered->fixed != s.fixed )
+    if ( !ordered || ( !s.explicitRoles && ordered->fixed != s.fixed ) )
         return unexpected(
-            std::string( "The higher part in the scene tree must stay fixed; only the lower part can move." ) );
+            std::string( _t( "Scene-tree order changed. Reopen Feature Alignment or swap the assigned objects." ) ) );
     if ( below( s.fixed.get(), s.moving.get() ) )
         return unexpected(
-            std::string( "The moving assembly contains the fixed part. Choose a smaller moving branch." ) );
+            std::string( _t( "The moving assembly contains the fixed part. Choose a smaller moving branch." ) ) );
     for ( const auto &part : { s.moving, s.fixed } )
     {
         auto rigid = rigidAncestry( part.get() );
@@ -188,76 +290,28 @@ Expected<Constraints> readConstraints( const ObjectPtr &root, const Selection &s
                ( moving || !below( feature.get(), s.moving.get() ) );
     };
     if ( !owner( s.movingPrimary, true ) || !owner( s.fixedPrimary, false ) )
-        return unexpected( std::string( "Choose a primary feature belonging to each role. The fixed feature cannot "
-                                        "belong to the moving branch." ) );
+        return unexpected( std::string( _t( "Choose a primary feature belonging to each role. The fixed feature cannot "
+                                        "belong to the moving branch." ) ) );
     FeatureAlignment::FeatureReferences references;
     references.primary = { std::dynamic_pointer_cast<const FeatureObject>( s.movingPrimary ),
                            std::dynamic_pointer_cast<const FeatureObject>( s.fixedPrimary ) };
     for ( int i = 0; i < 2; ++i )
     {
-        if ( bool( s.movingLocators[i] ) != bool( s.fixedLocators[i] ) )
-            return unexpected( std::string( "Choose both sides of locator " ) + std::to_string( i + 1 ) +
-                               " or leave both empty." );
-        if ( !s.movingLocators[i] )
-            continue;
-        if ( i == 1 && ( !s.movingLocators[0] || s.movingLocators[1] == s.movingLocators[0] ||
-                         s.fixedLocators[1] == s.fixedLocators[0] ) )
-            return unexpected( std::string( "The second locator must be a different pair after the first locator." ) );
-        if ( !owner( s.movingLocators[i], true ) || !owner( s.fixedLocators[i], false ) )
-            return unexpected( std::string( "A locator does not belong to its assigned part." ) );
+        if ( ( s.movingLocators[i] && !owner( s.movingLocators[i], true ) ) ||
+             ( s.fixedLocators[i] && !owner( s.fixedLocators[i], false ) ) )
+            return unexpected( std::string( _t( "A locator does not belong to its assigned part." ) ) );
         references.locators[i] = { std::dynamic_pointer_cast<const FeatureObject>( s.movingLocators[i] ),
                                    std::dynamic_pointer_cast<const FeatureObject>( s.fixedLocators[i] ) };
-        if ( !references.locators[i].moving || !references.locators[i].fixed )
-            return unexpected( std::string( "Locators must be existing fitted features." ) );
+        if ( ( s.movingLocators[i] && !references.locators[i].moving ) ||
+             ( s.fixedLocators[i] && !references.locators[i].fixed ) )
+            return unexpected( std::string( _t( "Locators must be existing fitted features." ) ) );
     }
-    if ( bool( s.movingClock ) != bool( s.fixedClock ) )
-        return unexpected( std::string( "Choose both clocking references or leave both empty." ) );
-    if ( s.movingClock )
-    {
-        if ( !owner( s.movingClock, true ) || !owner( s.fixedClock, false ) )
-            return unexpected( std::string( "A clocking reference does not belong to its assigned part." ) );
-        references.clocking = { std::dynamic_pointer_cast<const FeatureObject>( s.movingClock ),
-                                std::dynamic_pointer_cast<const FeatureObject>( s.fixedClock ) };
-        if ( !references.clocking.moving || !references.clocking.fixed )
-            return unexpected( std::string( "Clocking references must be existing fitted features." ) );
-    }
+    if ( ( s.movingClock && !owner( s.movingClock, true ) ) || ( s.fixedClock && !owner( s.fixedClock, false ) ) )
+        return unexpected( std::string( _t( "A clocking reference does not belong to its assigned part." ) ) );
+    references.clocking = { std::dynamic_pointer_cast<const FeatureObject>( s.movingClock ),
+                            std::dynamic_pointer_cast<const FeatureObject>( s.fixedClock ) };
+    if ( ( s.movingClock && !references.clocking.moving ) || ( s.fixedClock && !references.clocking.fixed ) )
+        return unexpected( std::string( _t( "Clocking references must be existing fitted features." ) ) );
     return FeatureAlignment::readConstraints( references, settings );
-}
-
-Expected<SceneStamp> stamp( const ObjectPtr &root )
-{
-    SceneStamp result;
-    for ( const auto &e : catalog( root ) )
-    {
-        auto views = e.object->xfsForAllViewports();
-        if ( views.reset() )
-            return unexpected( std::string( "Per-viewport transforms are unsupported." ) );
-        const void *token = nullptr;
-        if ( const auto mesh = std::dynamic_pointer_cast<ObjectMesh>( e.object ) )
-            token = mesh->meshPtr();
-        else if ( const auto points = std::dynamic_pointer_cast<ObjectPoints>( e.object ) )
-            token = points->pointCloudPtr();
-        else if ( const auto lines = std::dynamic_pointer_cast<ObjectLines>( e.object ) )
-            token = lines->polylinePtr();
-        result.nodes.push_back( { e.object, e.object->parent(), e.object->xf(), token, e.object->name() } );
-    }
-    return result;
-}
-Expected<bool> SceneStamp::matches( const ObjectPtr &root ) const
-{
-    auto current = stamp( root );
-    if ( !current )
-        return unexpected( current.error() );
-    if ( current->nodes.size() != nodes.size() )
-        return false;
-    for ( size_t i = 0; i < nodes.size(); ++i )
-    {
-        const auto &a = nodes[i];
-        const auto &b = current->nodes[i];
-        if ( a.object != b.object || a.parent != b.parent || a.local != b.local || a.modelToken != b.modelToken ||
-             a.name != b.name )
-            return false;
-    }
-    return true;
 }
 } // namespace MR::FeatureAlignmentTool

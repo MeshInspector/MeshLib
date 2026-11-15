@@ -8,6 +8,10 @@ IF((EMSCRIPTEN AND NOT MR_EMSCRIPTEN_MIMALLOC) OR (NOT EMSCRIPTEN AND MRMESH_NO_
 ENDIF()
 
 add_executable(${PROJECT_NAME} ${SOURCES})
+target_sources(${PROJECT_NAME} PRIVATE
+  ../MRCommonPlugins/Basic/MRFeatureAlignmentScene.cpp
+  ../MRCommonPlugins/Basic/MRFeatureAlignmentController.cpp
+)
 
 find_package(GTest REQUIRED)
 IF(NOT EMSCRIPTEN)

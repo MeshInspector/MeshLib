@@ -3,20 +3,15 @@
 #include <MRMesh/MRObject.h>
 #include <array>
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace MR::FeatureAlignmentTool
 {
-using FeatureAlignment::Axis;
 using FeatureAlignment::AxisDirection;
-using FeatureAlignment::CenterPair;
 using FeatureAlignment::Constraints;
-using FeatureAlignment::Hole;
-using FeatureAlignment::HoleKind;
 using FeatureAlignment::HoleMode;
-using FeatureAlignment::HolePair;
-using FeatureAlignment::HoleResidual;
 using FeatureAlignment::NormalRelation;
-using FeatureAlignment::Plane;
 using FeatureAlignment::PrimaryMode;
 using FeatureAlignment::Settings;
 using FeatureAlignment::Solution;
@@ -37,6 +32,10 @@ struct OrderedRoles
 // The scene-tree preorder is authoritative: upper stays fixed, lower moves.
 Expected<OrderedRoles> hierarchyRoles( const Catalog &entries, const ObjectPtr &first, const ObjectPtr &second );
 Expected<OrderedRoles> selectedHierarchyRoles( const Catalog &entries );
+// Uses the supplied selection, without cataloging unrelated scene branches.
+Expected<OrderedRoles> selectedHierarchyRoles( const ObjectPtr &root,
+    const std::vector<std::shared_ptr<const Object>> &selected );
+bool haveCompatiblePrimaryFeatures( const OrderedRoles &roles );
 bool below( const Object *object, const Object *ancestor );
 bool isHole( const ObjectPtr &object );
 bool isPlane( const ObjectPtr &object );
@@ -48,21 +47,10 @@ struct Selection
     ObjectPtr moving, fixed, movingPrimary, fixedPrimary;
     std::array<ObjectPtr, 2> movingLocators, fixedLocators;
     ObjectPtr movingClock, fixedClock;
+    bool explicitRoles{};
 };
 Expected<Constraints> readConstraints( const ObjectPtr &root, const Selection &selection, const Settings &settings );
-Expected<ObjectPtr> oneSelectedPart( const Catalog &catalog );
-struct NodeStamp
-{
-    ObjectPtr object;
-    const Object *parent{};
-    AffineXf3f local;
-    const void *modelToken{};
-    std::string name;
-};
-struct SceneStamp
-{
-    std::vector<NodeStamp> nodes;
-    Expected<bool> matches( const ObjectPtr &root ) const;
-};
-Expected<SceneStamp> stamp( const ObjectPtr &root );
+// Internal UI reuse only; mutating controller operations use the fresh-root overload.
+Expected<Constraints> readConstraints( const ObjectPtr &root, const Catalog &entries,
+    const Selection &selection, const Settings &settings );
 } // namespace MR::FeatureAlignmentTool

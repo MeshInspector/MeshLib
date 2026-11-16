@@ -122,6 +122,30 @@ inline int bits( M m ) { return int( m.v[0] ) | int( m.v[1] ) << 1 | int( m.v[2]
 
 #endif
 
+/// copies src to 16-byte aligned dst of a size multiple of 16 bytes, bypassing the caches where possible (non-temporal stores):
+/// for large arrays written once, it saves reading the destination lines first; call streamFence() before other threads read them
+template <typename T>
+inline void streamCopy( T & dst, const T & src )
+{
+    static_assert( sizeof( T ) % 16 == 0 && alignof( T ) >= 16 );
+#if defined(MR_SIMD4_SSE)
+    const float * s = reinterpret_cast<const float *>( &src );
+    float * d = reinterpret_cast<float *>( &dst );
+    for ( size_t i = 0; i < sizeof( T ) / 4; i += 4 )
+        _mm_stream_ps( d + i, _mm_load_ps( s + i ) );
+#else
+    dst = src;
+#endif
+}
+
+/// makes the non-temporal stores of this thread visible to other threads
+inline void streamFence()
+{
+#if defined(MR_SIMD4_SSE)
+    _mm_sfence();
+#endif
+}
+
 /// the index of the lowest set bit of a non-zero 4-bit mask
 inline int lowestBit( int m ) { return ( m & 1 ) ? 0 : ( m & 2 ) ? 1 : ( m & 4 ) ? 2 : 3; }
 

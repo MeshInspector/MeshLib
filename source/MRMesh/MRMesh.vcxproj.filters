@@ -1559,6 +1559,9 @@
     <ClCompile Include="MRMeshSave.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
+    <ClCompile Include="MRTriMesh.cpp">
+      <Filter>Source Files\Mesh</Filter>
+    </ClCompile>
     <ClCompile Include="MRTriMeshPart.cpp">
       <Filter>Source Files\Mesh</Filter>
     </ClCompile>

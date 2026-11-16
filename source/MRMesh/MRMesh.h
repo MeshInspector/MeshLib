@@ -45,6 +45,15 @@ struct [[nodiscard]] Mesh
         const MeshBuilder::BuildSettings & settings = {},
         const MeshBuilder::BetterDupContinuation & betterCont = {} );
 
+    /// construct mesh from TriMesh representation;
+    /// unlike simple fromTriMesh() it tries to resolve non-manifold vertices by creating duplicate vertices;
+    /// `betterCont` (if given) selects the best triangle among several possible continuations during the duplication
+    [[nodiscard]] MRMESH_API static Mesh fromTriMeshDuplicatingNonManifoldVertices(
+        TriMesh && triMesh, ///< points of triMesh will be moved in the result
+        std::vector<MeshBuilder::VertDuplication> * dups = nullptr,
+        const MeshBuilder::BuildSettings & settings = {},
+        const MeshBuilder::BetterDupContinuation & betterCont = {} );
+
     /// construct mesh from vertex coordinates and construct mesh topology from face soup,
     /// where each face can have arbitrary degree (not only triangles);
     /// all non-triangular faces will be automatically subdivided on triangles

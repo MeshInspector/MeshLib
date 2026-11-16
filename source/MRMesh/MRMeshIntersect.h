@@ -53,6 +53,18 @@ struct MeshIntersectionResult
     double rayStart = 0.0, double rayEnd = DBL_MAX, const IntersectionPrecomputes<double>* prec = nullptr, bool closestIntersect = true,
     const FacePredicate & validFaces = {} );
 
+/// Same as rayMeshIntersect above, but for the triangles of given tree (only from \p region if given), e.g. AABBTree( tmesh ),
+/// with \p points the coordinates of their vertices; tp of the result is relative to the vertices of the triangle in the tree
+[[nodiscard]] MRMESH_API MeshIntersectionResult rayMeshIntersect( const VertCoords & points, const AABBTree & tree, const Line3f& line,
+    float rayStart = 0.0f, float rayEnd = FLT_MAX, const IntersectionPrecomputes<float>* prec = nullptr, bool closestIntersect = true,
+    const FacePredicate & validFaces = {}, const FaceBitSet * region = nullptr );
+
+/// Same as rayMeshIntersect above in double-precision, but for the triangles of given tree (only from \p region if given), e.g. AABBTree( tmesh ),
+/// with \p points the coordinates of their vertices; tp of the result is relative to the vertices of the triangle in the tree
+[[nodiscard]] MRMESH_API MeshIntersectionResult rayMeshIntersect( const VertCoords & points, const AABBTree & tree, const Line3d& line,
+    double rayStart = 0.0, double rayEnd = DBL_MAX, const IntersectionPrecomputes<double>* prec = nullptr, bool closestIntersect = true,
+    const FacePredicate & validFaces = {}, const FaceBitSet * region = nullptr );
+
 struct MultiRayMeshIntersectResult
 {
     // outputs (each one if optional) for every ray:
@@ -76,6 +88,19 @@ MRMESH_API void multiRayMeshIntersect(
     float rayStart = 0.0f, float rayEnd = FLT_MAX,
     bool closestIntersect = true, ///< whether to search for the closest intersection to ray origin (line param=0), or any intersection
     const FacePredicate & validFaces = {} ///< if given then all faces for which false is returned will be skipped
+);
+
+/// Same as multiRayMeshIntersect above, but for the triangles of given tree (only from \p region if given), e.g. AABBTree( tmesh ),
+/// with \p points the coordinates of their vertices
+MRMESH_API void multiRayMeshIntersect(
+    const VertCoords & points, const AABBTree & tree,
+    const std::vector<Vector3f>& origins,
+    const std::vector<Vector3f>& dirs,
+    const MultiRayMeshIntersectResult& result,
+    float rayStart = 0.0f, float rayEnd = FLT_MAX,
+    bool closestIntersect = true,
+    const FacePredicate & validFaces = {},
+    const FaceBitSet * region = nullptr
 );
 
 struct MultiMeshIntersectionResult : MeshIntersectionResult
@@ -115,6 +140,15 @@ MRMESH_API void rayMeshIntersectAll( const MeshPart& meshPart, const Line3f& lin
 MRMESH_API void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& line, MeshIntersectionCallback callback,
     double rayStart = 0.0, double rayEnd = DBL_MAX, const IntersectionPrecomputes<double>* prec = nullptr );
 
+/// Same as \ref rayMeshIntersectAllF, but for the triangles of given tree (only from \p region if given), e.g. AABBTree( tmesh ),
+/// with \p points the coordinates of their vertices
+MRMESH_API void rayMeshIntersectAll( const VertCoords & points, const AABBTree & tree, const Line3f& line, MeshIntersectionCallback callback,
+    float rayStart = 0.0f, float rayEnd = FLT_MAX, const IntersectionPrecomputes<float>* prec = nullptr, const FaceBitSet * region = nullptr );
+/// Same as \ref rayMeshIntersectAllF in double precision, but for the triangles of given tree (only from \p region if given), e.g. AABBTree( tmesh ),
+/// with \p points the coordinates of their vertices
+MRMESH_API void rayMeshIntersectAll( const VertCoords & points, const AABBTree & tree, const Line3d& line, MeshIntersectionCallback callback,
+    double rayStart = 0.0, double rayEnd = DBL_MAX, const IntersectionPrecomputes<double>* prec = nullptr, const FaceBitSet * region = nullptr );
+
 /// this callback is envoked for each encountered ray-mesh intersection,
 /// fromFront is true if the ray crosses the triangle from its front side (where the triangle's normal points) to its back,
 /// i.e. enters a closed mesh with outward normals;
@@ -125,6 +159,10 @@ using MeshIntersectionWithSideCallback = std::function<bool( const MeshIntersect
 /// every infinite ray has the same number of crossings from front and from back
 MRMESH_API void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& line, MeshIntersectionWithSideCallback callback,
     double rayStart = 0.0, double rayEnd = DBL_MAX, const IntersectionPrecomputes<double>* prec = nullptr );
+/// Same as above, but for the triangles of given tree (only from \p region if given), e.g. AABBTree( tmesh ),
+/// with \p points the coordinates of their vertices
+MRMESH_API void rayMeshIntersectAll( const VertCoords & points, const AABBTree & tree, const Line3d& line, MeshIntersectionWithSideCallback callback,
+    double rayStart = 0.0, double rayEnd = DBL_MAX, const IntersectionPrecomputes<double>* prec = nullptr, const FaceBitSet * region = nullptr );
 
 /// given mesh part and arbitrary plane, outputs
 /// \param fs  triangles from boxes crossed or touched by the plane
@@ -135,6 +173,13 @@ MRMESH_API void planeMeshIntersect( const MeshPart& meshPart, const Plane3f & pl
     FaceBitSet * fs, UndirectedEdgeBitSet * ues, VertBitSet * vs,
     std::vector<FaceId> * fsVec = nullptr );
 
+/// given the tree of triangles (only from \p region if given), e.g. AABBTree( tmesh ), and arbitrary plane, outputs
+/// \param fs  triangles from boxes crossed or touched by the plane (resized if necessary)
+/// \param vs  vertices of these triangles (resized if necessary)
+/// \param fsVec triangles from boxes crossed or touched by the plane in unspecified order
+MRMESH_API void planeMeshIntersect( const AABBTree & tree, const Plane3f & plane,
+    FaceBitSet * fs, VertBitSet * vs, std::vector<FaceId> * fsVec = nullptr, const FaceBitSet * region = nullptr );
+
 /// given mesh part and plane z=zLevel, outputs
 /// \param fs  triangles crossed or touched by the plane
 /// \param ues edges of these triangles
@@ -143,6 +188,13 @@ MRMESH_API void planeMeshIntersect( const MeshPart& meshPart, const Plane3f & pl
 MRMESH_API void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
     FaceBitSet * fs, UndirectedEdgeBitSet * ues, VertBitSet * vs,
     std::vector<FaceId> * fsVec = nullptr );
+
+/// given the tree of triangles (only from \p region if given), e.g. AABBTree( tmesh ), and plane z=zLevel, outputs
+/// \param fs  triangles crossed or touched by the plane (resized if necessary)
+/// \param vs  vertices of these triangles (resized if necessary)
+/// \param fsVec triangles crossed or touched by the plane in unspecified order
+MRMESH_API void xyPlaneMeshIntersect( const AABBTree & tree, float zLevel,
+    FaceBitSet * fs, VertBitSet * vs, std::vector<FaceId> * fsVec = nullptr, const FaceBitSet * region = nullptr );
 
 /// \}
 

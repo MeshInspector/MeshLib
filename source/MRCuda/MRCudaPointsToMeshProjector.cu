@@ -93,7 +93,7 @@ __global__ void kernel( const float3* points,
                         res.distSq = distSq;
                         res.proj.point = closestPointRes.proj;
                         res.proj.faceId = lt.face;
-                        res.tp = MeshTriPoint{ -1, closestPointRes.bary.x, closestPointRes.bary.y };
+                        res.tp = TriPoint{ closestPointRes.bary.x, closestPointRes.bary.y };
                         if ( distSq <= loDistLimitSq )
                         {
                             stop = true;

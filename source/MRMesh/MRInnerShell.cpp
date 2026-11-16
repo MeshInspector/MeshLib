@@ -30,7 +30,7 @@ ShellVertexInfo classifyShellVert( const MeshPart & mp, const Vector3f & shellPo
         return res;
     }
 
-    res.projOnBd = projRes.mtp.isBd( mp.mesh.topology, mp.region );
+    res.projOnBd = projRes.mtp( mp.mesh.topology ).isBd( mp.mesh.topology, mp.region );
 
     const bool outside = mp.mesh.isOutsideByProjNorm( shellPoint, projRes, mp.region );
     res.rightSide = outside == ( settings.side == Side::Positive );

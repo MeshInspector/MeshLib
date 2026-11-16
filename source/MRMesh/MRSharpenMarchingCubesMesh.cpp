@@ -166,7 +166,7 @@ void sharpenMarchingCubesMesh( const MeshPart& ref, Mesh& vox, Vector<VoxelId, F
         if ( !rp.valid() )
         {
             const auto proj = findProjection( vox.points[v], ref );
-            rp = proj.mtp;
+            rp = proj.mtp( ref.mesh.topology );
             refPt = proj.proj.point;
         }
 

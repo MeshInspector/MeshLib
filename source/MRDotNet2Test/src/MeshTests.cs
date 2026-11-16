@@ -322,8 +322,9 @@ namespace MRTest
             Assert.That(projRes.proj.point.z, Is.EqualTo(0.803).Within(1e-3));
 
             // which edge of the triangle represents the point differs with FMA instructions (clang-cl on arm64)
-            Assert.That(mesh.topology.left(projRes.mtp.e).id, Is.EqualTo(projRes.proj.face.id));
-            var mtpPoint = mesh.triPoint(projRes.mtp);
+            var mtp = projRes.mtp(mesh.topology);
+            Assert.That(mesh.topology.left(mtp.e).id, Is.EqualTo(projRes.proj.face.id));
+            var mtpPoint = mesh.triPoint(mtp);
             Assert.That(mtpPoint.x, Is.EqualTo(0.310).Within(1e-3));
             Assert.That(mtpPoint.y, Is.EqualTo(0.507).Within(1e-3));
             Assert.That(mtpPoint.z, Is.EqualTo(0.803).Within(1e-3));
@@ -331,12 +332,13 @@ namespace MRTest
             var xf = AffineXf3f.translation(Vector3f.diagonal(1.0f));
             projRes = findProjection(p, mesh, float.MaxValue, xf);
 
-            Assert.That(mesh.topology.left(projRes.mtp.e).id, Is.EqualTo(projRes.proj.face.id));
+            mtp = projRes.mtp(mesh.topology);
+            Assert.That(mesh.topology.left(mtp.e).id, Is.EqualTo(projRes.proj.face.id));
             Assert.That(projRes.proj.point.x, Is.EqualTo(1.000).Within(1e-3));
             Assert.That(projRes.proj.point.y, Is.EqualTo(1.439).Within(1e-3));
             Assert.That(projRes.proj.point.z, Is.EqualTo(1.895).Within(1e-3));
 
-            mtpPoint = mesh.triPoint(projRes.mtp); // in mesh space, before xf
+            mtpPoint = mesh.triPoint(mtp); // in mesh space, before xf
             Assert.That(mtpPoint.x, Is.EqualTo(0.000).Within(1e-3));
             Assert.That(mtpPoint.y, Is.EqualTo(0.439).Within(1e-3));
             Assert.That(mtpPoint.z, Is.EqualTo(0.895).Within(1e-3));

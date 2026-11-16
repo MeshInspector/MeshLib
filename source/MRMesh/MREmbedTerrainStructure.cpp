@@ -239,7 +239,7 @@ Expected<TerrainEmbedder::MappedMeshContours> TerrainEmbedder::prepareTerrainCut
         const auto& startPoint = mc.contour[index];
         if ( mc.intBitSet.test( VertId( index ) ) )
         {
-            mtps[i] = findProjection( startPoint, result_ ).mtp;
+            mtps[i] = findProjection( startPoint, result_ ).mtp( result_.topology );
             return;
         }
         auto line =

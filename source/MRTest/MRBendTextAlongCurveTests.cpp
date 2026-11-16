@@ -45,8 +45,8 @@ TEST( MRMesh, BendTextAlongCurve )
     EXPECT_GT( maybeText->topology.numValidFaces(), 0 );
 
     GeodesicPath path;
-    path.start = findProjection( { 0, 0, 1 }, sphere ).mtp;
-    path.end = findProjection( { 0, 0, -1 }, sphere ).mtp;
+    path.start = findProjection( { 0, 0, 1 }, sphere ).mtp( sphere.topology );
+    path.end = findProjection( { 0, 0, -1 }, sphere ).mtp( sphere.topology );
     auto maybePath = computeGeodesicPath( sphere, path.start, path.end );
     EXPECT_TRUE( maybePath.has_value() );
     EXPECT_GT( maybePath->size(), 0 );

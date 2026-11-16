@@ -115,13 +115,18 @@ InSphere findInSphereImpl( const Mesh& mesh, const MeshPoint & m, const InSphere
         return true;
     };
 
-    // returns any face incident to given vertex
-    auto getIncidentFace = [&mesh]( VertId d )
+    // sets the face and barycentric coordinates of res.oppositeTouchPoint located in given vertex
+    auto setTouchInVertex = [&]( VertId d )
     {
         for ( auto ei : orgRing( mesh.topology, d ) )
+        {
             if ( auto l = mesh.topology.left( ei ) )
-                return l;
-        return FaceId{};
+            {
+                res.oppositeTouchPoint.proj.face = l;
+                res.oppositeTouchPoint.tp = MeshTriPoint( ei, {} ).canonical( mesh.topology ).bary;
+                return;
+            }
+        }
     };
 
     // optimization: if the point is in vertex (or on edge), check all neighbor points as candidates
@@ -130,13 +135,9 @@ InSphere findInSphereImpl( const Mesh& mesh, const MeshPoint & m, const InSphere
         for ( auto e : orgRing( mesh.topology, v ) )
         {
             const auto d = mesh.topology.dest( e );
-            MeshProjectionResult candidate
-            {
-                .proj = { .point = mesh.points[d] }, // delay face setting till candidate is actually selected
-                .mtp = MeshTriPoint( e.sym(), { 0, 0 } )
-            };
-            if ( processCandidate( candidate ) )
-                res.oppositeTouchPoint.proj.face = getIncidentFace( d );
+            // delay face setting till candidate is actually selected
+            if ( processCandidate( { .proj = { .point = mesh.points[d] } } ) )
+                setTouchInVertex( d );
         }
     }
     else if ( auto oe = m.triPoint.onEdge( mesh.topology ) )
@@ -146,25 +147,15 @@ InSphere findInSphereImpl( const Mesh& mesh, const MeshPoint & m, const InSphere
         {
             const auto ne = mesh.topology.next( e );
             const auto d = mesh.topology.dest( ne );
-            MeshProjectionResult candidate
-            {
-                .proj = { .point = mesh.points[d] }, // delay face setting till candidate is actually selected
-                .mtp = MeshTriPoint( ne.sym(), { 0, 0 } )
-            };
-            if ( processCandidate( candidate ) )
-                res.oppositeTouchPoint.proj.face = getIncidentFace( d );
+            if ( processCandidate( { .proj = { .point = mesh.points[d] } } ) )
+                setTouchInVertex( d );
         }
         if ( auto r = mesh.topology.right( e ) )
         {
             const auto pe = mesh.topology.prev( e );
             const auto d = mesh.topology.dest( pe );
-            MeshProjectionResult candidate
-            {
-                .proj = { .point = mesh.points[d] }, // delay face setting till candidate is actually selected
-                .mtp = MeshTriPoint( pe.sym(), { 0, 0 } )
-            };
-            if ( processCandidate( candidate ) )
-                res.oppositeTouchPoint.proj.face = getIncidentFace( d );
+            if ( processCandidate( { .proj = { .point = mesh.points[d] } } ) )
+                setTouchInVertex( d );
         }
     }
     // otherwise if the point is inside a triangle, then its 3 vertices cannot touch sphere with the center located on a normal direction
@@ -175,7 +166,7 @@ InSphere findInSphereImpl( const Mesh& mesh, const MeshPoint & m, const InSphere
         res.center = 0.5f * ( isec.proj.point + m.pt );
         assert( isec.distanceAlongLine >= 0 );
         res.radius = 0.5f * isec.distanceAlongLine;
-        res.oppositeTouchPoint = MeshProjectionResult{ .proj = isec.proj, .mtp = isec.mtp, .distSq = sqr( res.radius ) };
+        res.oppositeTouchPoint = MeshProjectionResult{ .proj = isec.proj, .tp = isec.mtp.canonical( mesh.topology ).bary, .distSq = sqr( res.radius ) };
     }
 
     findTrisInBall( mesh, Ball3f{ res.center, res.oppositeTouchPoint.distSq },
@@ -196,8 +187,7 @@ InSphere findInSphereImpl( const Mesh& mesh, const MeshPoint & m, const InSphere
                     preRadius = res.radius;
                     const auto [projD, baryD] = closestPointInTriangle( Vector3d( res.center ), Vector3d( a ), Vector3d( b ), Vector3d( c ) );
                     candidate.proj.point = Vector3f( projD );
-                    assert( candidate.mtp.e == mesh.topology.edgeWithLeft( candidate.proj.face ) );
-                    candidate.mtp.bary = TriPointf( baryD );
+                    candidate.tp = TriPointf( baryD );
                     candidate.distSq = ( candidate.proj.point - res.center ).lengthSq();
                     if ( !processCandidate( candidate ) )
                         break;

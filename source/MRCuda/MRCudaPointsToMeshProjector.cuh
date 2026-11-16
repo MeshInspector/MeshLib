@@ -12,7 +12,7 @@ namespace Cuda
 struct MeshProjectionResult
 {
     PointOnFace proj;
-    MeshTriPoint tp;
+    TriPoint tp;
     float distSq;
 };
 

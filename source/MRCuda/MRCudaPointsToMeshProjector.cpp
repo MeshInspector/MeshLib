@@ -7,7 +7,7 @@
 #include "MRMesh/MRChunkIterator.h"
 #include "MRMesh/MRMatrix3Decompose.h"
 #include "MRMesh/MRMesh.h"
-#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRMeshProject.h"
 #include "MRMesh/MRTimer.h"
 
 namespace MR
@@ -15,6 +15,8 @@ namespace MR
 
 namespace Cuda
 {
+
+static_assert( sizeof( MR::MeshProjectionResult ) == sizeof( MeshProjectionResult ) );
 
 struct MeshProjectorData
 {
@@ -114,14 +116,6 @@ void PointsToMeshProjector::findProjections(
 
         cudaResult.copyTo( res.data() + offset, size );
     }
-
-    ParallelFor( res, [&] ( size_t i )
-    {
-        if ( res[i].proj.face )
-            res[i].mtp.e = mesh_->topology.edgeWithLeft( res[i].proj.face );
-        else
-            assert( !res[i].mtp.e );
-    } );
 }
 
 size_t PointsToMeshProjector::projectionsHeapBytes( size_t numProjections ) const

@@ -11,6 +11,13 @@
 namespace MR
 {
 
+MeshTriPoint MeshProjectionResult::mtp( const MeshTopology & topology ) const
+{
+    if ( !proj.valid() )
+        return {};
+    return { topology.edgeWithLeft( proj.face ), tp };
+}
+
 MeshProjectionTransforms createProjectionTransforms( AffineXf3f& storageXf, const AffineXf3f* pointXf, const AffineXf3f* treeXf )
 {
     MeshProjectionTransforms res;
@@ -100,7 +107,7 @@ MeshProjectionResult findProjectionWide( const Vector3f & pt, const MeshPart & m
                 if ( validProjections && !validProjections( MeshProjectionResult
                     {
                         .proj = PointOnFace{ lt.face, p },
-                        .mtp = MeshTriPoint{ mp.mesh.topology.edgeWithLeft( lt.face ), TriPointf( baryD ) },
+                        .tp = TriPointf( baryD ),
                         .distSq = d
                     } ) )
                     continue;
@@ -162,7 +169,7 @@ MeshProjectionResult findProjectionWide( const Vector3f & pt, const MeshPart & m
     if ( face )
     {
         res.proj = PointOnFace{ face, proj };
-        res.mtp = MeshTriPoint{ mp.mesh.topology.edgeWithLeft( face ), bary };
+        res.tp = bary;
         res.distSq = distSq;
     }
     return res;
@@ -276,7 +283,7 @@ void findTrisInBall( const MeshPart & mp, const Ball3f& ball, const FoundTriCall
         const MeshProjectionResult candidate
         {
             .proj = PointOnFace{ lt.face, proj },
-            .mtp = MeshTriPoint{ mp.mesh.topology.edgeWithLeft( lt.face ), TriPointf( baryD ) },
+            .tp = TriPointf( baryD ),
             .distSq = distSq
         };
         return foundCallback( candidate, b );
@@ -294,7 +301,7 @@ std::optional<SignedDistanceToMeshResult> findSignedDistance( const Vector3f & p
     }
     res = SignedDistanceToMeshResult();
     res->proj = projRes.proj;
-    res->mtp = projRes.mtp;
+    res->mtp = projRes.mtp( mp.mesh.topology );
     res->dist = mp.mesh.signedDistance( pt, projRes, mp.region );
     return res;
 }

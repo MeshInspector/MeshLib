@@ -53,35 +53,35 @@ std::vector<MeshTriPoint> projectSplineAsMTP( const Mesh& mesh, const MarkedCont
     ParallelFor( size_t( 0 ), numMarks, [&]( size_t seq )
     {
         const auto i0 = markSeqToPos[seq];
-        const auto p0 = mesh.projectPoint( spline.contour[i0] );
-        res[i0] = p0.mtp;
+        const auto p0 = mesh.projectPoint( spline.contour[i0] ).mtp( mesh.topology );
+        res[i0] = p0;
         if ( seq + 1 >= numMarks )
             return; // last point
 
         const auto i1 = markSeqToPos[seq + 1];
         if ( i0 + 1 == i1 )
             return; // zero not-control points in between
-        const auto p1 = mesh.projectPoint( spline.contour[i1] );
+        const auto p1 = mesh.projectPoint( spline.contour[i1] ).mtp( mesh.topology );
 
-        auto maybeSurfPath = computeGeodesicPath( mesh, p0.mtp, p1.mtp );
+        auto maybeSurfPath = computeGeodesicPath( mesh, p0, p1 );
         assert( maybeSurfPath );
         if ( !maybeSurfPath )
             return;
 
-        const GeodesicPath geoPath{ .start = p0.mtp, .mids = std::move( *maybeSurfPath ), .end = p1.mtp };
+        const GeodesicPath geoPath{ .start = p0, .mids = std::move( *maybeSurfPath ), .end = p1 };
         const auto geoPathAsContour = geodesicPathToContour3f( mesh, geoPath );
         const auto geoPathLen = calcLength( geoPathAsContour );
         const auto midPointId = findContourPointByLength( geoPathAsContour, geoPathLen / 2 );
         // note that geoPath[midPointId] is not exactly in the center of the path, and approximated distances are not symmetric
         const auto surfDist = computeSurfaceDistances( mesh, std::vector<MeshTriPoint>{ geoPath[midPointId] },
-            std::vector<MeshTriPoint>{ p0.mtp, p1.mtp } );
+            std::vector<MeshTriPoint>{ p0, p1 } );
         const auto range = std::max( 
-            p0.mtp.interpolate( mesh.topology, surfDist ),
-            p1.mtp.interpolate( mesh.topology, surfDist ) );
+            p0.interpolate( mesh.topology, surfDist ),
+            p1.interpolate( mesh.topology, surfDist ) );
         const auto regionBetweenMarks = facesWithinRange( mesh.topology, surfDist, range );
         assert( regionBetweenMarks.any() );
         for ( auto i = i0 + 1; i < i1; ++i )
-            res[i] = mesh.projectPoint( spline.contour[i], FLT_MAX, &regionBetweenMarks ).mtp;
+            res[i] = mesh.projectPoint( spline.contour[i], FLT_MAX, &regionBetweenMarks ).mtp( mesh.topology );
     } );
 
     return res;

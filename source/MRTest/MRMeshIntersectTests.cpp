@@ -8,6 +8,7 @@
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRIntersectionPrecomputes.h>
 #include <MRMesh/MRTriangleIntersection.h>
+#include <algorithm>
 #include <cmath>
 
 namespace MR
@@ -157,7 +158,8 @@ TEST( MRMesh, MeshIntersectAsBruteForce )
             }
             ++numHits;
             ASSERT_TRUE( hit );
-            EXPECT_EQ( hit.distanceAlongLine, bestT );
+            // equal on x64; on ARM64 the compilers contract the scalar rayTriangleIntersect into fused multiply-adds, unlike the SIMD code
+            EXPECT_NEAR( hit.distanceAlongLine, bestT, 1e-5f * std::max( 1.0f, bestT ) );
             EXPECT_TRUE( !reg || reg->test( hit.proj.face ) );
             const auto anyHit = rayMeshIntersect( { mesh, reg }, line, 0.0f, FLT_MAX, nullptr, false );
             EXPECT_TRUE( anyHit );

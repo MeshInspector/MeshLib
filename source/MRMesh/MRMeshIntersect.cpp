@@ -27,13 +27,11 @@ MeshTriPoint MeshIntersectionResult::mtp( const MeshTopology & topology ) const
     return { topology.edgeWithLeft( proj.face ), tp };
 }
 
-// Filtered: the mesh part has a region or validFaces is given, otherwise the leaves skip their checks
+// Filtered: region or validFaces is given, otherwise the leaves skip their checks
 template<typename T, bool Filtered>
-MeshIntersectionResult meshRayIntersectT_( const MeshPart& meshPart, const Line3<T>& line,
+MeshIntersectionResult meshRayIntersectT_( const VertCoords & points, const AABBTree & tree, const FaceBitSet * region, const Line3<T>& line,
     T rayStart, T rayEnd, const IntersectionPrecomputes<T>& prec, bool closestIntersect, const FacePredicate & validFaces )
 {
-    const auto& m = meshPart.mesh;
-    const auto& tree = m.getAABBTree();
     const auto& nodes = tree.nodes();
     MeshIntersectionResult res;
     if( nodes.empty() )
@@ -71,12 +69,12 @@ MeshIntersectionResult meshRayIntersectT_( const MeshPart& meshPart, const Line3
                     const auto & lt = tree.leafTris()[i];
                     if constexpr ( Filtered )
                     {
-                        if ( ( meshPart.region && !meshPart.region->test( lt.face ) ) || ( validFaces && !validFaces( lt.face ) ) )
+                        if ( ( region && !region->test( lt.face ) ) || ( validFaces && !validFaces( lt.face ) ) )
                             continue;
                     }
-                    const Vector3<T> vA = Vector3<T>( m.points[lt.verts[0]] ) - line.p;
-                    const Vector3<T> vB = Vector3<T>( m.points[lt.verts[1]] ) - line.p;
-                    const Vector3<T> vC = Vector3<T>( m.points[lt.verts[2]] ) - line.p;
+                    const Vector3<T> vA = Vector3<T>( points[lt.verts[0]] ) - line.p;
+                    const Vector3<T> vB = Vector3<T>( points[lt.verts[1]] ) - line.p;
+                    const Vector3<T> vC = Vector3<T>( points[lt.verts[2]] ) - line.p;
                     const auto triIsect = rayTriangleIntersect( vA, vB, vC, prec );
                     if ( !triIsect )
                         continue;
@@ -180,14 +178,13 @@ Vector3f invDirOf( const IntersectionPrecomputes<float>& prec )
 } // anonymous namespace
 
 /// the float version of meshRayIntersectT_ over the SIMD layout of the tree: tests all children of a node and all triangles of a leaf at once;
-/// visits the nodes and the triangles in the same order and computes the same values as meshRayIntersectT_, so it finds the same intersection
+/// visits the nodes and the triangles in the same order and computes the same values as meshRayIntersectT_, so it finds the same intersection;
+/// the coordinates of the triangles are taken from the tree (the same as the points it was made or updated for)
 template<bool Filtered>
-MeshIntersectionResult meshRayIntersectSimd_( const MeshPart& meshPart, const Line3f& line,
+MeshIntersectionResult meshRayIntersectSimd_( const AABBTree & tree, const FaceBitSet * region, const Line3f& line,
     float rayStart, float rayEnd, const IntersectionPrecomputes<float>& prec, bool closestIntersect, const FacePredicate & validFaces )
 {
     using namespace Simd4;
-    const auto& m = meshPart.mesh;
-    const auto& tree = m.getAABBTree();
     MeshIntersectionResult res;
     if ( tree.nodes().empty() )
         return res;
@@ -276,7 +273,7 @@ MeshIntersectionResult meshRayIntersectSimd_( const MeshPart& meshPart, const Li
                         if constexpr ( Filtered )
                         {
                             const auto f = leafTris[leaf.first + i].face;
-                            if ( ( meshPart.region && !meshPart.region->test( f ) ) || ( validFaces && !validFaces( f ) ) )
+                            if ( ( region && !region->test( f ) ) || ( validFaces && !validFaces( f ) ) )
                                 continue;
                         }
                         const float ti = ts[i];
@@ -365,49 +362,60 @@ MeshIntersectionResult meshRayIntersectSimd_( const MeshPart& meshPart, const Li
 }
 
 template<typename T>
-MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<T>& line,
+MeshIntersectionResult meshRayIntersect_( const VertCoords & points, const AABBTree & tree, const FaceBitSet * region, const Line3<T>& line,
     T rayStart, T rayEnd, const IntersectionPrecomputes<T>& prec, bool closestIntersect, const FacePredicate & validFaces )
 {
     if constexpr ( std::is_same_v<T, float> )
     {
-        if ( meshPart.region || validFaces )
-            return meshRayIntersectSimd_<true>( meshPart, line, rayStart, rayEnd, prec, closestIntersect, validFaces );
-        return meshRayIntersectSimd_<false>( meshPart, line, rayStart, rayEnd, prec, closestIntersect, validFaces );
+        if ( region || validFaces )
+            return meshRayIntersectSimd_<true>( tree, region, line, rayStart, rayEnd, prec, closestIntersect, validFaces );
+        return meshRayIntersectSimd_<false>( tree, region, line, rayStart, rayEnd, prec, closestIntersect, validFaces );
     }
     else
     {
-        if ( meshPart.region || validFaces )
-            return meshRayIntersectT_<T, true>( meshPart, line, rayStart, rayEnd, prec, closestIntersect, validFaces );
-        return meshRayIntersectT_<T, false>( meshPart, line, rayStart, rayEnd, prec, closestIntersect, validFaces );
+        if ( region || validFaces )
+            return meshRayIntersectT_<T, true>( points, tree, region, line, rayStart, rayEnd, prec, closestIntersect, validFaces );
+        return meshRayIntersectT_<T, false>( points, tree, region, line, rayStart, rayEnd, prec, closestIntersect, validFaces );
+    }
+}
+
+template<typename T>
+MeshIntersectionResult rayMeshIntersect_( const VertCoords & points, const AABBTree & tree, const FaceBitSet * region, const Line3<T>& line,
+    T rayStart, T rayEnd, const IntersectionPrecomputes<T>* prec, bool closestIntersect, const FacePredicate & validFaces )
+{
+    if( prec )
+    {
+        return meshRayIntersect_<T>( points, tree, region, line, rayStart, rayEnd, *prec, closestIntersect, validFaces );
+    }
+    else
+    {
+        const IntersectionPrecomputes<T> precNew( line.d );
+        return meshRayIntersect_<T>( points, tree, region, line, rayStart, rayEnd, precNew, closestIntersect, validFaces );
     }
 }
 
 MeshIntersectionResult rayMeshIntersect( const MeshPart& meshPart, const Line3f& line,
     float rayStart, float rayEnd, const IntersectionPrecomputes<float>* prec, bool closestIntersect, const FacePredicate & validFaces )
 {
-    if( prec )
-    {
-        return meshRayIntersect_<float>( meshPart, line, rayStart, rayEnd, *prec, closestIntersect, validFaces );
-    }
-    else
-    {
-        const IntersectionPrecomputes<float> precNew( line.d );
-        return meshRayIntersect_<float>( meshPart, line, rayStart, rayEnd, precNew, closestIntersect, validFaces );
-    }
+    return rayMeshIntersect_( meshPart.mesh.points, meshPart.mesh.getAABBTree(), meshPart.region, line, rayStart, rayEnd, prec, closestIntersect, validFaces );
 }
 
 MeshIntersectionResult rayMeshIntersect( const MeshPart& meshPart, const Line3d& line,
     double rayStart, double rayEnd, const IntersectionPrecomputes<double>* prec, bool closestIntersect, const FacePredicate & validFaces )
 {
-    if( prec )
-    {
-        return meshRayIntersect_<double>( meshPart, line, rayStart, rayEnd, *prec, closestIntersect, validFaces );
-    }
-    else
-    {
-        const IntersectionPrecomputes<double> precNew( line.d );
-        return meshRayIntersect_<double>( meshPart, line, rayStart, rayEnd, precNew, closestIntersect, validFaces );
-    }
+    return rayMeshIntersect_( meshPart.mesh.points, meshPart.mesh.getAABBTree(), meshPart.region, line, rayStart, rayEnd, prec, closestIntersect, validFaces );
+}
+
+MeshIntersectionResult rayMeshIntersect( const VertCoords & points, const AABBTree & tree, const Line3f& line,
+    float rayStart, float rayEnd, const IntersectionPrecomputes<float>* prec, bool closestIntersect, const FacePredicate & validFaces, const FaceBitSet * region )
+{
+    return rayMeshIntersect_( points, tree, region, line, rayStart, rayEnd, prec, closestIntersect, validFaces );
+}
+
+MeshIntersectionResult rayMeshIntersect( const VertCoords & points, const AABBTree & tree, const Line3d& line,
+    double rayStart, double rayEnd, const IntersectionPrecomputes<double>* prec, bool closestIntersect, const FacePredicate & validFaces, const FaceBitSet * region )
+{
+    return rayMeshIntersect_( points, tree, region, line, rayStart, rayEnd, prec, closestIntersect, validFaces );
 }
 
 void multiRayMeshIntersect(
@@ -418,6 +426,20 @@ void multiRayMeshIntersect(
     float rayStart, float rayEnd,
     bool closestIntersect,
     const FacePredicate & validFaces
+)
+{
+    multiRayMeshIntersect( meshPart.mesh.points, meshPart.mesh.getAABBTree(), origins, dirs, result, rayStart, rayEnd, closestIntersect, validFaces, meshPart.region );
+}
+
+void multiRayMeshIntersect(
+    const VertCoords & points, const AABBTree & tree,
+    const std::vector<Vector3f>& origins,
+    const std::vector<Vector3f>& dirs,
+    const MultiRayMeshIntersectResult& result,
+    float rayStart, float rayEnd,
+    bool closestIntersect,
+    const FacePredicate & validFaces,
+    const FaceBitSet * region
 )
 {
     MR_TIMER;
@@ -451,11 +473,9 @@ void multiRayMeshIntersect(
         result.isectPts->resize( sz, Vector3f( cQuietNan, cQuietNan, cQuietNan ) );
     }
 
-    meshPart.mesh.getAABBTree(); // prepare tree before parallel region
-
     auto processRay = [&]( size_t i )
     {
-        auto res = rayMeshIntersect( meshPart, Line3f( origins[i], dirs[i] ), rayStart, rayEnd, nullptr, closestIntersect, validFaces );
+        auto res = rayMeshIntersect_<float>( points, tree, region, Line3f( origins[i], dirs[i] ), rayStart, rayEnd, nullptr, closestIntersect, validFaces );
         if ( !res )
             return;
         if ( result.intersectingRays )
@@ -491,7 +511,7 @@ MultiMeshIntersectionResult rayMultiMeshAnyIntersect_( const std::vector<Line3Me
             myPrec = { lm.line.d };
             prec = &myPrec;
         }
-        if ( auto r = meshRayIntersect_( { *lm.mesh, lm.region }, lm.line, rayStart, rayEnd, *prec, false, {} ) )
+        if ( auto r = meshRayIntersect_( lm.mesh->points, lm.mesh->getAABBTree(), lm.region, lm.line, rayStart, rayEnd, *prec, false, {} ) )
         {
             res = MultiMeshIntersectionResult{ r };
             break;
@@ -513,7 +533,7 @@ MultiMeshIntersectionResult rayMultiMeshAnyIntersect( const std::vector<Line3dMe
 }
 
 template<typename T, typename F>
-void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && callback,
+void rayMeshIntersectAll_( const VertCoords & points, const AABBTree & tree, const FaceBitSet * region, const Line3<T>& line, F && callback,
     T rayStart /*= 0.0f*/, T rayEnd /*= FLT_MAX */, const IntersectionPrecomputes<T>& prec )
 {
     // the side of a crossing is computed only if the callback takes it
@@ -525,8 +545,6 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
             return callback( found );
     };
 
-    const auto& m = meshPart.mesh;
-    const auto& tree = m.getAABBTree();
     const auto& nodes = tree.nodes();
     if( nodes.empty() )
         return;
@@ -577,7 +595,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
         dP = line( s );
         eP = line( e );
         pvc[3].pt = convToInt( dP );
-        pvc[3].id = VertId( m.topology.vertSize() );
+        pvc[3].id = VertId( points.size() ); // after all vertices
         pvc[4].pt = convToInt( eP );
         pvc[4].id = pvc[3].id + 1;
         invDirLenSq = 1 / line.d.lengthSq();
@@ -593,7 +611,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
             {
                 const auto & lt = tree.leafTris()[i];
                 const auto face = lt.face;
-                if ( meshPart.region && !meshPart.region->test( face ) )
+                if ( region && !region->test( face ) )
                     continue;
                 for ( int j = 0; j < 3; ++j )
                     pvc[j].id = lt.verts[j];
@@ -604,7 +622,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
                     if ( !rayBoxIntersect( Box3d( tree.leafBox( i ) ).expanded( Vector3d::diagonal( boxExpansion ) ), rayOrigin, bs, be, prec ) )
                         continue;
                     for ( int j = 0; j < 3; ++j )
-                        pvc[j].pt = convToInt( m.points[pvc[j].id] );
+                        pvc[j].pt = convToInt( points[pvc[j].id] );
                     if ( const auto isect = doTriangleSegmentIntersect( pvc ) )
                     {
                         MeshIntersectionResult found;
@@ -615,7 +633,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
                         // the segment is already limited by [rayStart, rayEnd], so the hit is reported without checking its distance,
                         // which is computed from the rounded point and can be slightly outside of the range
                         found.distanceAlongLine = float( dot( Vector3d( found.proj.point ) - line.p, line.d ) * invDirLenSq );
-                        found.tp = TriPointf( found.proj.point, m.points[pvc[0].id], m.points[pvc[1].id], m.points[pvc[2].id] );
+                        found.tp = TriPointf( found.proj.point, points[pvc[0].id], points[pvc[1].id], points[pvc[2].id] );
                         // segment start pvc[3] is behind the triangle if dIsLeftFromABC
                         if ( !report( found, [&] { return !isect.dIsLeftFromABC; } ) )
                             return;
@@ -627,9 +645,9 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
                     T bs = rayStart, be = rayEnd;
                     if ( !rayBoxIntersect( tree.leafBox( i ), rayOrigin, bs, be, prec ) )
                         continue;
-                    const Vector3<T> vA = Vector3<T>( m.points[pvc[0].id] ) - line.p;
-                    const Vector3<T> vB = Vector3<T>( m.points[pvc[1].id] ) - line.p;
-                    const Vector3<T> vC = Vector3<T>( m.points[pvc[2].id] ) - line.p;
+                    const Vector3<T> vA = Vector3<T>( points[pvc[0].id] ) - line.p;
+                    const Vector3<T> vB = Vector3<T>( points[pvc[1].id] ) - line.p;
+                    const Vector3<T> vC = Vector3<T>( points[pvc[2].id] ) - line.p;
                     const auto triIsect = rayTriangleIntersect( vA, vB, vC, prec );
                     if ( triIsect && triIsect->t < rayEnd && triIsect->t > rayStart )
                     {
@@ -657,55 +675,58 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
     }
 }
 
-void rayMeshIntersectAll( const MeshPart& meshPart, const Line3f& line, MeshIntersectionCallback callback,
-    float rayStart, float rayEnd, const IntersectionPrecomputes<float>* prec )
+template<typename T, typename F>
+void rayMeshIntersectAllPrec_( const VertCoords & points, const AABBTree & tree, const FaceBitSet * region, const Line3<T>& line, const F & callback,
+    T rayStart, T rayEnd, const IntersectionPrecomputes<T>* prec )
 {
     assert( callback );
     if ( !callback )
         return;
     if( prec )
     {
-        return rayMeshIntersectAll_<float>( meshPart, line, callback, rayStart, rayEnd, *prec );
+        return rayMeshIntersectAll_<T>( points, tree, region, line, callback, rayStart, rayEnd, *prec );
     }
     else
     {
-        const IntersectionPrecomputes<float> precNew( line.d );
-        return rayMeshIntersectAll_<float>( meshPart, line, callback, rayStart, rayEnd, precNew );
+        const IntersectionPrecomputes<T> precNew( line.d );
+        return rayMeshIntersectAll_<T>( points, tree, region, line, callback, rayStart, rayEnd, precNew );
     }
+}
+
+void rayMeshIntersectAll( const MeshPart& meshPart, const Line3f& line, MeshIntersectionCallback callback,
+    float rayStart, float rayEnd, const IntersectionPrecomputes<float>* prec )
+{
+    rayMeshIntersectAllPrec_( meshPart.mesh.points, meshPart.mesh.getAABBTree(), meshPart.region, line, callback, rayStart, rayEnd, prec );
 }
 
 void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& line, MeshIntersectionCallback callback,
     double rayStart, double rayEnd, const IntersectionPrecomputes<double>* prec )
 {
-    assert( callback );
-    if ( !callback )
-        return;
-    if( prec )
-    {
-        return rayMeshIntersectAll_<double>( meshPart, line, callback, rayStart, rayEnd, *prec );
-    }
-    else
-    {
-        const IntersectionPrecomputes<double> precNew( line.d );
-        return rayMeshIntersectAll_<double>( meshPart, line, callback, rayStart, rayEnd, precNew );
-    }
+    rayMeshIntersectAllPrec_( meshPart.mesh.points, meshPart.mesh.getAABBTree(), meshPart.region, line, callback, rayStart, rayEnd, prec );
 }
 
 void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& line, MeshIntersectionWithSideCallback callback,
     double rayStart, double rayEnd, const IntersectionPrecomputes<double>* prec )
 {
-    assert( callback );
-    if ( !callback )
-        return;
-    if( prec )
-    {
-        return rayMeshIntersectAll_<double>( meshPart, line, callback, rayStart, rayEnd, *prec );
-    }
-    else
-    {
-        const IntersectionPrecomputes<double> precNew( line.d );
-        return rayMeshIntersectAll_<double>( meshPart, line, callback, rayStart, rayEnd, precNew );
-    }
+    rayMeshIntersectAllPrec_( meshPart.mesh.points, meshPart.mesh.getAABBTree(), meshPart.region, line, callback, rayStart, rayEnd, prec );
+}
+
+void rayMeshIntersectAll( const VertCoords & points, const AABBTree & tree, const Line3f& line, MeshIntersectionCallback callback,
+    float rayStart, float rayEnd, const IntersectionPrecomputes<float>* prec, const FaceBitSet * region )
+{
+    rayMeshIntersectAllPrec_( points, tree, region, line, callback, rayStart, rayEnd, prec );
+}
+
+void rayMeshIntersectAll( const VertCoords & points, const AABBTree & tree, const Line3d& line, MeshIntersectionCallback callback,
+    double rayStart, double rayEnd, const IntersectionPrecomputes<double>* prec, const FaceBitSet * region )
+{
+    rayMeshIntersectAllPrec_( points, tree, region, line, callback, rayStart, rayEnd, prec );
+}
+
+void rayMeshIntersectAll( const VertCoords & points, const AABBTree & tree, const Line3d& line, MeshIntersectionWithSideCallback callback,
+    double rayStart, double rayEnd, const IntersectionPrecomputes<double>* prec, const FaceBitSet * region )
+{
+    rayMeshIntersectAllPrec_( points, tree, region, line, callback, rayStart, rayEnd, prec );
 }
 
 namespace
@@ -749,30 +770,76 @@ void boxedMeshIntersect( const MeshPart& meshPart, BoxOk && boxOk,
     } );
 }
 
+// adds to the outputs the triangles of the tree (only from region if given), which boxes pass boxOk
+template <typename BoxOk>
+void boxedTreeIntersect( const AABBTree & tree, const FaceBitSet * region, BoxOk && boxOk,
+    FaceBitSet * fs, VertBitSet * vs, std::vector<FaceId> * fsVec )
+{
+    assert( fs || vs || fsVec );
+    forWideTris( tree, boxOk, boxOk, [&]( int i )
+    {
+        const auto & lt = tree.leafTris()[i];
+        if ( region && !region->test( lt.face ) )
+            return Processing::Continue;
+        if ( fs )
+            fs->autoResizeSet( lt.face );
+        if ( fsVec )
+            fsVec->push_back( lt.face );
+        if ( vs )
+            for ( auto v : lt.verts )
+                vs->autoResizeSet( v );
+        return Processing::Continue;
+    } );
+}
+
+auto planeBoxOk( const Plane3f & plane )
+{
+    auto minCorner = Box3f::getMinBoxCorner( plane.n );
+    auto maxCorner = minCorner;
+    for ( auto & v : maxCorner )
+        v = !v;
+    return [&plane, minCorner, maxCorner]( const Box3f & box )
+    {
+        return dot( plane.n, box.corner( minCorner ) ) <= plane.d && dot( plane.n, box.corner( maxCorner ) ) >= plane.d;
+    };
+}
+
+auto xyPlaneBoxOk( float zLevel )
+{
+    return [zLevel]( const Box3f & box )
+    {
+        return box.min.z <= zLevel && box.max.z >= zLevel;
+    };
+}
+
 } // anonymous namespace
 
 void planeMeshIntersect( const MeshPart& meshPart, const Plane3f & plane,
     FaceBitSet * fs, UndirectedEdgeBitSet * ues, VertBitSet * vs, std::vector<FaceId> * fsVec )
 {
     MR_TIMER;
-    auto minCorner = Box3f::getMinBoxCorner( plane.n );
-    auto maxCorner = minCorner;
-    for ( auto & v : maxCorner )
-        v = !v;
-    boxedMeshIntersect( meshPart, [&]( const Box3f & box )
-    {
-        return dot( plane.n, box.corner( minCorner ) ) <= plane.d && dot( plane.n, box.corner( maxCorner ) ) >= plane.d;
-    }, fs, ues, vs, fsVec );
+    boxedMeshIntersect( meshPart, planeBoxOk( plane ), fs, ues, vs, fsVec );
+}
+
+void planeMeshIntersect( const AABBTree & tree, const Plane3f & plane,
+    FaceBitSet * fs, VertBitSet * vs, std::vector<FaceId> * fsVec, const FaceBitSet * region )
+{
+    MR_TIMER;
+    boxedTreeIntersect( tree, region, planeBoxOk( plane ), fs, vs, fsVec );
 }
 
 void xyPlaneMeshIntersect( const MeshPart& meshPart, float zLevel,
     FaceBitSet * fs, UndirectedEdgeBitSet * ues, VertBitSet * vs, std::vector<FaceId> * fsVec )
 {
     MR_TIMER;
-    boxedMeshIntersect( meshPart, [zLevel]( const Box3f & box )
-    {
-        return box.min.z <= zLevel && box.max.z >= zLevel;
-    }, fs, ues, vs, fsVec );
+    boxedMeshIntersect( meshPart, xyPlaneBoxOk( zLevel ), fs, ues, vs, fsVec );
+}
+
+void xyPlaneMeshIntersect( const AABBTree & tree, float zLevel,
+    FaceBitSet * fs, VertBitSet * vs, std::vector<FaceId> * fsVec, const FaceBitSet * region )
+{
+    MR_TIMER;
+    boxedTreeIntersect( tree, region, xyPlaneBoxOk( zLevel ), fs, vs, fsVec );
 }
 
 } //namespace MR

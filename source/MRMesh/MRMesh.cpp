@@ -173,7 +173,7 @@ MeshEdgePoint Mesh::toEdgePoint( VertId v ) const
 
 bool Mesh::isOutsideByProjNorm( const Vector3f & pt, const MeshProjectionResult & proj, const FaceBitSet * region ) const
 {
-    return dot( proj.proj.point - pt, pseudonormal( proj.mtp, region ) ) <= 0;
+    return dot( proj.proj.point - pt, pseudonormal( proj.mtp( topology ), region ) ) <= 0;
 }
 
 Plane3f Mesh::getPlane3f( FaceId f ) const

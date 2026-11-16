@@ -1762,7 +1762,7 @@ Expected<FaceBitSet> cutMeshByContours( Mesh& mesh, const Contours3f& contours, 
         ParallelFor( surfaceLine, [&] ( size_t i )
         {
             auto proj = findProjection( xf( contour[i] ), mesh );
-            surfaceLine[i] = proj.mtp;
+            surfaceLine[i] = proj.mtp( mesh.topology );
         } );
         maybeOneMeshContours[ic] = surfaceLineToMeshContour( mesh, surfaceLine );
     } );

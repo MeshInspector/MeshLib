@@ -461,8 +461,11 @@ bool isNonIntersectingInsidePrecise( const Mesh& a, FaceId aFace, const MeshPart
     if ( xfA )
         aPoint = ( *xfA )( aPoint );
     const auto proj = findProjection( aPoint, b, FLT_MAX, xfB );
-    if ( !proj || proj.mtp.isBd( b.mesh.topology, b.region ) )
-        return false; //no projection on b at all, or beyond its boundary
+    if ( !proj )
+        return false; //no projection on b at all
+    const auto projMtp = proj.mtp( b.mesh.topology );
+    if ( projMtp.isBd( b.mesh.topology, b.region ) )
+        return false; //projection beyond the boundary of b
 
     PreciseVertCoords probe;
     probe.id = VertId( int( aVert ) + aVertShift );
@@ -472,7 +475,7 @@ bool isNonIntersectingInsidePrecise( const Mesh& a, FaceId aFace, const MeshPart
     // the plane of one triangle decides only if the projection is strictly inside that triangle;
     // otherwise the probe point is in the normal cone of the edge or the vertex it projects on,
     // where the planes of the incident faces can disagree about the side the probe point is on
-    if ( auto bVert = proj.mtp.inVertex( btopo ) )
+    if ( auto bVert = projMtp.inVertex( btopo ) )
     {
         std::optional<bool> behind;
         for ( EdgeId e : orgRing( btopo, bVert ) )
@@ -499,7 +502,7 @@ bool isNonIntersectingInsidePrecise( const Mesh& a, FaceId aFace, const MeshPart
         if ( behind )
             return *behind;
     }
-    else if ( auto bEdgePoint = proj.mtp.onEdge( btopo ) )
+    else if ( auto bEdgePoint = projMtp.onEdge( btopo ) )
     {
         const auto l = btopo.left( bEdgePoint.e );
         const auto r = btopo.right( bEdgePoint.e );

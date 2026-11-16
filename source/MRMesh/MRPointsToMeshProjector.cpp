@@ -63,7 +63,7 @@ VertScalars findSignedDistances(
             if ( validTestPoints && !validTestPoints->test( v ) )
                 return;
             const auto& mpResV = mpRes[v.get()];
-            if ( mpResV.mtp.e )
+            if ( mpResV.valid() )
                 res[v] = refMesh.signedDistance( testToRefXf( testPoints[v] ), mpResV );
             else
                 res[v] = std::sqrt( mpResV.distSq );
@@ -78,7 +78,7 @@ VertScalars findSignedDistances(
                 return;
             const auto pt = testToRefXf( testPoints[v] );
             const auto mpResV = findProjection( pt, refMesh, params.upDistLimitSq, nullptr, params.loDistLimitSq );
-            if ( mpResV.mtp.e )
+            if ( mpResV.valid() )
                 res[v] = refMesh.signedDistance( pt, mpResV );
             else
                 res[v] = std::sqrt( mpResV.distSq );

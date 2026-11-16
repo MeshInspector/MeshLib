@@ -264,8 +264,9 @@ TEST( MRMesh, AABBTreeFlippedOrientation )
         {
             const auto proj = findProjection( pt, mesh );
             ASSERT_TRUE( proj.proj.face );
-            EXPECT_EQ( mesh.topology.left( proj.mtp.e ), proj.proj.face );
-            EXPECT_LT( ( mesh.triPoint( proj.mtp ) - proj.proj.point ).length(), 1e-5f );
+            const auto mtp = proj.mtp( mesh.topology );
+            EXPECT_EQ( mesh.topology.left( mtp.e ), proj.proj.face );
+            EXPECT_LT( ( mesh.triPoint( mtp ) - proj.proj.point ).length(), 1e-5f );
             const auto hit = rayMeshIntersect( mesh, Line3f( pt, Vector3f( 0.0f, 0.0f, -1.0f ) ) );
             ASSERT_TRUE( hit.proj.face );
             EXPECT_EQ( mesh.topology.left( hit.mtp.e ), hit.proj.face );

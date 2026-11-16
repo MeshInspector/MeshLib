@@ -134,7 +134,7 @@ TEST( MRMesh, ClosedContourWithEmptyWrapAroundPath )
 
     std::vector<MeshTriPoint> mtps;
     for ( auto p : { Vector3f( 1.5f, 0.9f, 0 ), Vector3f( 1.5f, 2.5f, 0 ), Vector3f( 3.5f, 2.5f, 0 ), Vector3f( 3.5f, 0.9f, 0 ), Vector3f( 1.5f, 1, 0 ) } )
-        mtps.push_back( mesh.projectPoint( p ).mtp );
+        mtps.push_back( mesh.projectPoint( p ).mtp( mesh.topology ) );
     mtps.push_back( mtps.front() );
 
     auto contour = surfaceLineToMeshContour( mesh, mtps );
@@ -151,7 +151,7 @@ TEST( MRMesh, ClosedContourWithEmptyWrapAroundPath )
     // the first point takes over the last intersection of the path to the last point, and must still be the contour start
     mtps.clear();
     for ( auto p : { Vector3f( 1.5f, 0.9f, 0 ), Vector3f( 1.5f, 2.5f, 0 ), Vector3f( 3.5f, 2.5f, 0 ), Vector3f( 3.5f, 1.5f, 0 ), Vector3f( 1.5f, 1, 0 ) } )
-        mtps.push_back( mesh.projectPoint( p ).mtp );
+        mtps.push_back( mesh.projectPoint( p ).mtp( mesh.topology ) );
     mtps.push_back( mtps.front() );
     std::vector<int> pivots;
     contour = surfaceLineToMeshContour( mesh, mtps, SearchPathSettings{}, &pivots );
@@ -231,7 +231,7 @@ TEST( MRMesh, ClosedContourAlongBoundaryEdge )
 
     std::vector<MeshTriPoint> mtps;
     for ( auto p : { Vector3f( 0, 0.8f, 0 ), Vector3f( 0, 0, 0.005f ), Vector3f( 0, 0.7f, 0 ), Vector3f( 1.3f, 0.2f, 0.36f ) } )
-        mtps.push_back( mesh.projectPoint( p ).mtp );
+        mtps.push_back( mesh.projectPoint( p ).mtp( mesh.topology ) );
     mtps.push_back( mtps.front() );
 
     auto contour = surfaceLineToMeshContour( mesh, mtps );
@@ -274,7 +274,7 @@ TEST( MRMesh, CutMeshContourTurnsBackOnBoundary )
     ASSERT_NE( mtpV.onEdge( mesh.topology ).e.undirected(), wv.undirected() );
     const MeshTriPoint mtpW = mesh.toTriPoint( w );
     const MeshTriPoint nearV( MeshEdgePoint( wv, 0.9f ) );
-    const MeshTriPoint inside = findProjection( Vector3f( 1.3f, 1.6f, 0.0f ), mesh ).mtp;
+    const MeshTriPoint inside = findProjection( Vector3f( 1.3f, 1.6f, 0.0f ), mesh ).mtp( mesh.topology );
 
     auto contour = surfaceLineToMeshContour( mesh, { mtpW, mtpV, nearV, inside, mtpW } );
     ASSERT_TRUE( contour.has_value() );
@@ -322,8 +322,8 @@ TEST( MRMesh, ContourThroughBoundaryCorner )
     ASSERT_TRUE( topology.isBdEdge( topology.findEdge( c, a ) ) );
     const MeshTriPoint mtpA = mesh.toTriPoint( a );
     const MeshTriPoint onCB( MeshEdgePoint( cb, 0.5f ) );
-    const MeshTriPoint before = findProjection( Vector3f( 1.6f, 0.3f, 0.0f ), mesh ).mtp;
-    const MeshTriPoint after = findProjection( Vector3f( 0.3f, 1.5f, 0.0f ), mesh ).mtp;
+    const MeshTriPoint before = findProjection( Vector3f( 1.6f, 0.3f, 0.0f ), mesh ).mtp( mesh.topology );
+    const MeshTriPoint after = findProjection( Vector3f( 0.3f, 1.5f, 0.0f ), mesh ).mtp( mesh.topology );
     const MeshTriPoint cOnOtherEdge = mesh.toTriPoint( c );
     ASSERT_NE( cOnOtherEdge.onEdge( topology ).e.undirected(), cb.undirected() );
     // C stored so that onEdge() gives C-B: the cleanup of duplicates drops C as a second point on the edge of the next point,
@@ -385,8 +385,8 @@ TEST( MRMesh, ContourTouchesBoundaryAtEarTip )
     mesh.topology = MeshBuilder::fromTriangles( t );
     const auto e01 = mesh.topology.findEdge( 0_v, 1_v ), e04 = mesh.topology.findEdge( 0_v, 4_v );
     ASSERT_TRUE( mesh.topology.isBdEdge( e01 ) && mesh.topology.isBdEdge( e04 ) );
-    const MeshTriPoint inEar = findProjection( Vector3f( 0.3f, 0.3f, 0.0f ), mesh ).mtp;
-    const MeshTriPoint inside = findProjection( Vector3f( 1.5f, 1.6f, 0.0f ), mesh ).mtp;
+    const MeshTriPoint inEar = findProjection( Vector3f( 0.3f, 0.3f, 0.0f ), mesh ).mtp( mesh.topology );
+    const MeshTriPoint inside = findProjection( Vector3f( 1.5f, 1.6f, 0.0f ), mesh ).mtp( mesh.topology );
 
     // three closed contours, each touches a boundary edge of E and returns into the ear face:
     // 1. V4 -> point on E-1 -> inside the ear face;
@@ -1232,7 +1232,7 @@ TEST( MRMesh, SurfaceOffsetWithInvalidTrailingVerts )
 
     std::vector<MeshTriPoint> mtps;
     for ( auto p : { Vector3f( 1.3f, 1.4f, 0 ), Vector3f( 3.6f, 1.2f, 0 ), Vector3f( 3.7f, 3.4f, 0 ), Vector3f( 1.2f, 3.6f, 0 ) } )
-        mtps.push_back( mesh.projectPoint( p ).mtp );
+        mtps.push_back( mesh.projectPoint( p ).mtp( mesh.topology ) );
     mtps.push_back( mtps.front() );
 
     auto expected = offsetSurfaceLineToMeshContours( mesh, mtps, 0.3f );
@@ -1320,7 +1320,7 @@ TEST( MRMesh, SurfaceOffsetAlongOpenBorder )
     for ( int i = 0; i < 90; ++i )
     {
         const float angle = 2 * PI_F * float( i ) / 90;
-        mtps.push_back( mesh.projectPoint( 8.2f * Vector3f( std::cos( angle ), std::sin( angle ), 0.0f ) ).mtp );
+        mtps.push_back( mesh.projectPoint( 8.2f * Vector3f( std::cos( angle ), std::sin( angle ), 0.0f ) ).mtp( mesh.topology ) );
         if ( mtps.back().isBd( mesh.topology ) )
             ++numOnBorder;
     }

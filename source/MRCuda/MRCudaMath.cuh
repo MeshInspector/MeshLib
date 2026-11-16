@@ -178,6 +178,13 @@ struct MeshTriPoint
     float b;
 };
 
+// GPU analog of CPU TriPointf struct
+struct TriPoint
+{
+    float a;
+    float b;
+};
+
 struct MeshIntersectionResult
 {
     PointOnFace proj;

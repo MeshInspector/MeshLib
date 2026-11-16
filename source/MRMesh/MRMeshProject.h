@@ -19,8 +19,8 @@ struct MeshProjectionResult
     /// the closest point on mesh, transformed by xf if it is given
     PointOnFace proj;
 
-    /// its barycentric representation
-    MeshTriPoint mtp;
+    /// barycentric coordinates of proj relative to the vertices of proj.face in the order of MeshTopology::getTriVerts( proj.face )
+    TriPointf tp;
 
     /// squared distance from original projected point to proj
     float distSq = 0;
@@ -28,6 +28,9 @@ struct MeshProjectionResult
     /// check for validity, otherwise the projection was not found
     [[nodiscard]] bool valid() const { return proj.valid(); }
     [[nodiscard]] explicit operator bool() const { return proj.valid(); }
+
+    /// returns the closest point on mesh as MeshTriPoint relative to topology.edgeWithLeft( proj.face ), or invalid MeshTriPoint if the projection was not found
+    [[nodiscard]] MRMESH_API MeshTriPoint mtp( const MeshTopology & topology ) const;
 };
 
 struct MeshProjectionTransforms

@@ -19,7 +19,7 @@ def test_aligned_text_mesh():
     sphere = mrmesh.makeSphere(mrmesh.SphereParams())
     params = mrmesh.TextAlignParams()
     # find representatice point on mesh
-    params.startPoint = mrmesh.findProjection(mrmesh.Vector3f(0, 0, 1), sphere).mtp
+    params.startPoint = mrmesh.findProjection(mrmesh.Vector3f(0, 0, 1), sphere).mtp(sphere.topology)
     params.direction = mrmesh.Vector3f(1, 0, 0)
     params.text = "Hello World"
     params.fontHeight = 0.02

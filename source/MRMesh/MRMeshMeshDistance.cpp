@@ -157,10 +157,10 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
             bBary = bestTd.bBary( bestBv );
         }
         res.a.proj.point = aPt;
-        res.a.mtp = MeshTriPoint( a.mesh.topology.edgeWithLeft( res.a.proj.face ), aBary );
+        res.a.tp = aBary;
         res.a.distSq = res.distSq;
         res.b.proj.point = rigidB2A ? rigidB2A->inverse()( bPt ) : bPt;
-        res.b.mtp = MeshTriPoint( b.mesh.topology.edgeWithLeft( res.b.proj.face ), bBary );
+        res.b.tp = bBary;
         res.b.distSq = res.distSq;
     }
 
@@ -208,7 +208,7 @@ InternalZoneWithProjections findSignedDistanceOneWay( const MeshPart & a, const 
             const auto distance = test.mesh.signedDistance( point, projectRes );
             if ( distance > 0.0f )
                 return;
-            res.projectons[id] = std::make_pair( projectRes.mtp, distance );
+            res.projectons[id] = std::make_pair( projectRes.mtp( test.mesh.topology ), distance );
 
             for ( EdgeId e : orgRing( ref.mesh.topology, id ) )
             {
@@ -286,13 +286,13 @@ MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshP
     {
         for ( auto e : orgRing( mesh.topology, bestV ) )
             if ( auto f = mesh.topology.left( e ) )
-                return { .proj = { f, mesh.points[bestV] }, .mtp = { e, {} }, .distSq = sqr( bestDist ) };
+                return { .proj = { f, mesh.points[bestV] }, .tp = MeshTriPoint( e, {} ).canonical( mesh.topology ).bary, .distSq = sqr( bestDist ) };
         return {};
     };
     // the projection of the vertex on the other mesh
     auto otherProj = [&]( const Mesh& mesh, const MeshTriPoint& mtp ) -> MeshProjectionResult
     {
-        return { .proj = { mesh.topology.left( mtp.e ), mesh.triPoint( mtp ) }, .mtp = mtp, .distSq = sqr( bestDist ) };
+        return { .proj = { mesh.topology.left( mtp.e ), mesh.triPoint( mtp ) }, .tp = mtp.canonical( mesh.topology ).bary, .distSq = sqr( bestDist ) };
     };
     if ( bestInB )
         return { otherProj( a.mesh, zoneAndDistancesBA.projectons[bestV].first ), vertProj( b.mesh ), status, bestDist };

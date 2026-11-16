@@ -389,7 +389,9 @@ TEST(MRMesh, LoadAsTriMeshAllFormats)
         EXPECT_EQ( loadedTriMesh->points.size(), 7 );
         EXPECT_EQ( loadedTriMesh->tris.size(), 6 );
         if ( format.hasColors )
+        {
             EXPECT_EQ( loadedColors, colors );
+        }
 
         VertColors meshColors;
         int dupCount = 0;
@@ -408,7 +410,7 @@ TEST(MRMesh, LoadAsTriMeshAllFormats)
         }
 
         // the same from a file
-        const auto path = folder / ( "trimesh" + format.ext );
+        const auto path = folder / fmt::format( "trimesh{}", format.ext );
         {
             std::ofstream f( path, std::ios::binary );
             f << format.data;
@@ -467,9 +469,9 @@ TEST(MRMesh, LoadOffPolygonsAsTriMesh)
         off += fmt::format( "{} {} {}\n", p.x, p.y, p.z );
     for ( const auto & f : faces )
     {
-        off += std::to_string( f.lastVertex - f.firstVertex );
+        off += fmt::format( "{}", f.lastVertex - f.firstVertex );
         for ( int i = f.firstVertex; i < f.lastVertex; ++i )
-            off += " " + std::to_string( verts[i] );
+            off += fmt::format( " {}", int( verts[i] ) );
         off += "\n";
     }
 

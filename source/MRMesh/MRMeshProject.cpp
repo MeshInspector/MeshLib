@@ -74,8 +74,18 @@ MeshProjectionResult findProjectionWide( const Vector3f & pt, const MeshPart & m
     };
 
     // the transformation is applied to the triangles in double-precision: in float, the rounding of transformed coordinates
-    // distorts the shape of small triangles far from the origin, and the projections of far points on them become very inaccurate
-    [[maybe_unused]] const AffineXf3d xfd = !Plain && xf ? AffineXf3d( *xf ) : AffineXf3d{};
+    // distorts the shape of small triangles far from the origin, and the projections of far points on them become very inaccurate;
+    // in Plain mode there is no transformation, and xfd is an empty object
+    [[maybe_unused]] const auto xfd = [&]
+    {
+        if constexpr ( Plain )
+        {
+            struct NoXf {};
+            return NoXf{};
+        }
+        else
+            return xf ? AffineXf3d( *xf ) : AffineXf3d{};
+    }();
 
     // returns true if the search can stop
     auto processLeaf = [&]( const AABBTree::Node & node )

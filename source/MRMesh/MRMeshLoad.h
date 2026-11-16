@@ -111,12 +111,30 @@ MRMESH_API Expected<Mesh> fromOff( const std::filesystem::path& file, const Mesh
 /// important on Windows: in stream must be open in binary mode
 MRMESH_API Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings = {} );
 
+/// loads mesh as TriMesh (without building topology, so no vertex is duplicated) from file in textual or binary .OFF format;
+/// settings.skippedFaceCount and settings.duplicatedVertexCount are not used
+MRMESH_API Expected<TriMesh> fromOffAsTriMesh( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
+
+/// loads mesh as TriMesh (without building topology, so no vertex is duplicated) from stream in textual or binary .OFF format;
+/// important on Windows: in stream must be open in binary mode;
+/// settings.skippedFaceCount and settings.duplicatedVertexCount are not used
+MRMESH_API Expected<TriMesh> fromOffAsTriMesh( std::istream& in, const MeshLoadSettings& settings = {} );
+
 /// loads mesh from file in .OBJ format
 MRMESH_API Expected<Mesh> fromObj( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
 
 /// loads mesh from stream in .OBJ format;
 /// important on Windows: in stream must be open in binary mode
 MRMESH_API Expected<Mesh> fromObj( std::istream& in, const MeshLoadSettings& settings = {} );
+
+/// loads mesh as TriMesh (without building topology, so no vertex is duplicated) from file in .OBJ format;
+/// settings.skippedFaceCount and settings.duplicatedVertexCount are not used
+MRMESH_API Expected<TriMesh> fromObjAsTriMesh( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
+
+/// loads mesh as TriMesh (without building topology, so no vertex is duplicated) from stream in .OBJ format;
+/// important on Windows: in stream must be open in binary mode;
+/// settings.skippedFaceCount and settings.duplicatedVertexCount are not used
+MRMESH_API Expected<TriMesh> fromObjAsTriMesh( std::istream& in, const MeshLoadSettings& settings = {} );
 
 /// loads mesh from file in any .STL format: both binary and ASCII
 MRMESH_API Expected<Mesh> fromAnyStl( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
@@ -125,6 +143,15 @@ MRMESH_API Expected<Mesh> fromAnyStl( const std::filesystem::path& file, const M
 /// important on Windows: in stream must be open in binary mode
 MRMESH_API Expected<Mesh> fromAnyStl( std::istream& in, const MeshLoadSettings& settings = {} );
 
+/// loads mesh as TriMesh (without building topology, so no vertex is duplicated) from file in any .STL format: both binary and ASCII;
+/// settings.skippedFaceCount and settings.duplicatedVertexCount are not used
+MRMESH_API Expected<TriMesh> fromAnyStlAsTriMesh( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
+
+/// loads mesh as TriMesh (without building topology, so no vertex is duplicated) from stream in any .STL format: both binary and ASCII;
+/// important on Windows: in stream must be open in binary mode;
+/// settings.skippedFaceCount and settings.duplicatedVertexCount are not used
+MRMESH_API Expected<TriMesh> fromAnyStlAsTriMesh( std::istream& in, const MeshLoadSettings& settings = {} );
+
 /// loads mesh from file in binary .STL format
 MRMESH_API Expected<Mesh> fromBinaryStl( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
 
@@ -132,11 +159,28 @@ MRMESH_API Expected<Mesh> fromBinaryStl( const std::filesystem::path& file, cons
 /// important on Windows: in stream must be open in binary mode
 MRMESH_API Expected<Mesh> fromBinaryStl( std::istream& in, const MeshLoadSettings& settings = {} );
 
+/// loads mesh as TriMesh (without building topology, so no vertex is duplicated) from file in binary .STL format;
+/// settings.skippedFaceCount and settings.duplicatedVertexCount are not used
+MRMESH_API Expected<TriMesh> fromBinaryStlAsTriMesh( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
+
+/// loads mesh as TriMesh (without building topology, so no vertex is duplicated) from stream in binary .STL format;
+/// important on Windows: in stream must be open in binary mode;
+/// settings.skippedFaceCount and settings.duplicatedVertexCount are not used
+MRMESH_API Expected<TriMesh> fromBinaryStlAsTriMesh( std::istream& in, const MeshLoadSettings& settings = {} );
+
 /// loads mesh from file in textual .STL format
 MRMESH_API Expected<Mesh> fromASCIIStl( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
 
 /// loads mesh from stream in textual .STL format
 MRMESH_API Expected<Mesh> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings = {} );
+
+/// loads mesh as TriMesh (without building topology, so no vertex is duplicated) from file in textual .STL format;
+/// settings.skippedFaceCount and settings.duplicatedVertexCount are not used
+MRMESH_API Expected<TriMesh> fromASCIIStlAsTriMesh( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
+
+/// loads mesh as TriMesh (without building topology, so no vertex is duplicated) from stream in textual .STL format;
+/// settings.skippedFaceCount and settings.duplicatedVertexCount are not used
+MRMESH_API Expected<TriMesh> fromASCIIStlAsTriMesh( std::istream& in, const MeshLoadSettings& settings = {} );
 
 /// loads mesh from file in .PLY format;
 MRMESH_API Expected<Mesh> fromPly( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
@@ -145,11 +189,28 @@ MRMESH_API Expected<Mesh> fromPly( const std::filesystem::path& file, const Mesh
 /// important on Windows: in stream must be open in binary mode
 MRMESH_API Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& settings = {} );
 
+/// loads mesh as TriMesh (without building topology, so no vertex is duplicated) from file in .PLY format;
+/// settings.skippedFaceCount and settings.duplicatedVertexCount are not used
+MRMESH_API Expected<TriMesh> fromPlyAsTriMesh( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
+
+/// loads mesh as TriMesh (without building topology, so no vertex is duplicated) from stream in .PLY format;
+/// important on Windows: in stream must be open in binary mode;
+/// settings.skippedFaceCount and settings.duplicatedVertexCount are not used
+MRMESH_API Expected<TriMesh> fromPlyAsTriMesh( std::istream& in, const MeshLoadSettings& settings = {} );
+
 /// loads mesh from file in .DXF format;
 MRMESH_API Expected<Mesh> fromDxf( const std::filesystem::path& path, const MeshLoadSettings& settings = {} );
 
 /// loads mesh from stream in .DXF format;
 MRMESH_API Expected<Mesh> fromDxf( std::istream& in, const MeshLoadSettings& settings = {} );
+
+/// loads mesh as TriMesh (without building topology, so no vertex is duplicated) from file in .DXF format;
+/// settings.skippedFaceCount and settings.duplicatedVertexCount are not used
+MRMESH_API Expected<TriMesh> fromDxfAsTriMesh( const std::filesystem::path& path, const MeshLoadSettings& settings = {} );
+
+/// loads mesh as TriMesh (without building topology, so no vertex is duplicated) from stream in .DXF format;
+/// settings.skippedFaceCount and settings.duplicatedVertexCount are not used
+MRMESH_API Expected<TriMesh> fromDxfAsTriMesh( std::istream& in, const MeshLoadSettings& settings = {} );
 
 /// loads mesh from file in the format detected from file extension
 MR_BIND_OVERLOAD_SUFFIX() MRMESH_API Expected<Mesh> fromAnySupportedFormat( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );

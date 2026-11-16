@@ -3,6 +3,10 @@
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMeshLoadObj.h>
 #include <MRMesh/MRMeshSave.h>
+#include <MRMesh/MRMeshBuilder.h>
+#include <MRMesh/MRMeshTexture.h>
+#include <MRMesh/MRTextureColors.h>
+#include <MRMesh/MRConstants.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRMatrix3.h>
@@ -24,7 +28,9 @@
 #include <MRMesh/MRStringConvert.h>
 #include <MRMesh/MRUniqueTemporaryFolder.h>
 #include <MRMesh/MRphmap.h>
+#include <MRPch/MRFmt.h>
 #include <gtest/gtest.h>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -306,6 +312,229 @@ TEST(MRMesh, LoadPlyPointCloud)
     ASSERT_TRUE( loadRes.has_value() );
     EXPECT_EQ( loadRes->points.size(), 2 );
     EXPECT_EQ( loadRes->topology.numValidFaces(), 0 );
+}
+
+TEST(MRMesh, LoadAsTriMeshAllFormats)
+{
+    // two closed triangle fans sharing only the central vertex #0
+    TriMesh triMesh;
+    triMesh.tris = Triangulation{
+        { 0_v, 1_v, 2_v },
+        { 0_v, 2_v, 3_v },
+        { 0_v, 3_v, 1_v },
+        { 0_v, 4_v, 5_v },
+        { 0_v, 5_v, 6_v },
+        { 0_v, 6_v, 4_v }
+    };
+    triMesh.points.emplace_back( 0.f, 0.f, 0.f );
+    triMesh.points.emplace_back( 1.f, 0.f, 0.f );
+    triMesh.points.emplace_back( 0.f, 1.f, 0.f );
+    triMesh.points.emplace_back( 0.f, 0.f, 1.f );
+    triMesh.points.emplace_back( -1.f, 0.f, 0.f );
+    triMesh.points.emplace_back( 0.f, -1.f, 0.f );
+    triMesh.points.emplace_back( 0.f, 0.f, -1.f );
+
+    VertColors colors;
+    for ( int i = 0; i < 7; ++i )
+        colors.push_back( Color( 10 * i, 0, 0 ) );
+
+    std::string dxf = "0\nSECTION\n2\nENTITIES\n";
+    for ( const auto & t : triMesh.tris )
+    {
+        dxf += "0\n3DFACE\n8\n0\n";
+        for ( int i = 0; i < 4; ++i )
+            for ( int c = 0; c < 3; ++c )
+                dxf += fmt::format( "{}\n{}\n", 10 * ( c + 1 ) + i, triMesh.points[t[std::min( i, 2 )]][c] );
+    }
+    dxf += "0\nENDSEC\n0\nEOF\n";
+
+    using TriMeshLoader = Expected<TriMesh>( * )( std::istream &, const MeshLoadSettings & );
+    using MeshLoader = Expected<Mesh>( * )( std::istream &, const MeshLoadSettings & );
+    struct Format
+    {
+        std::string ext;
+        std::string data;
+        TriMeshLoader loadTriMesh;
+        MeshLoader loadMesh;
+        bool hasColors = false;
+    };
+    auto save = [&] ( auto saver )
+    {
+        std::ostringstream out;
+        EXPECT_TRUE( saver( out ).has_value() );
+        return out.str();
+    };
+    const std::vector<Format> formats =
+    {
+        { ".off", save( [&] ( std::ostream & out ) { return MeshSave::toOff( triMesh, out ); } ), MeshLoad::fromOffAsTriMesh, MeshLoad::fromOff },
+        { ".obj", save( [&] ( std::ostream & out ) { return MeshSave::toObj( triMesh, out, { .colors = &colors } ); } ), MeshLoad::fromObjAsTriMesh, MeshLoad::fromObj, true },
+        { ".stl", save( [&] ( std::ostream & out ) { return MeshSave::toBinaryStl( triMesh, out ); } ), MeshLoad::fromBinaryStlAsTriMesh, MeshLoad::fromBinaryStl },
+        { ".stl", save( [&] ( std::ostream & out ) { return MeshSave::toBinaryStl( triMesh, out ); } ), MeshLoad::fromAnyStlAsTriMesh, MeshLoad::fromAnyStl },
+        { ".stl", save( [&] ( std::ostream & out ) { return MeshSave::toAsciiStl( triMesh, out ); } ), MeshLoad::fromASCIIStlAsTriMesh, MeshLoad::fromASCIIStl },
+        { ".stl", save( [&] ( std::ostream & out ) { return MeshSave::toAsciiStl( triMesh, out ); } ), MeshLoad::fromAnyStlAsTriMesh, MeshLoad::fromAnyStl },
+        { ".ply", save( [&] ( std::ostream & out ) { return MeshSave::toPly( triMesh, out, { .colors = &colors } ); } ), MeshLoad::fromPlyAsTriMesh, MeshLoad::fromPly, true },
+        { ".dxf", dxf, MeshLoad::fromDxfAsTriMesh, MeshLoad::fromDxf },
+    };
+
+    UniqueTemporaryFolder folder;
+    ASSERT_TRUE( folder );
+    for ( const auto & format : formats )
+    {
+        SCOPED_TRACE( format.ext );
+        VertColors loadedColors;
+        std::istringstream triIn( format.data );
+        auto loadedTriMesh = format.loadTriMesh( triIn, { .colors = &loadedColors } );
+        ASSERT_TRUE( loadedTriMesh.has_value() ) << loadedTriMesh.error();
+        // no vertex is duplicated
+        EXPECT_EQ( loadedTriMesh->points.size(), 7 );
+        EXPECT_EQ( loadedTriMesh->tris.size(), 6 );
+        if ( format.hasColors )
+            EXPECT_EQ( loadedColors, colors );
+
+        VertColors meshColors;
+        int dupCount = 0;
+        std::istringstream meshIn( format.data );
+        auto loadedMesh = format.loadMesh( meshIn, { .colors = &meshColors, .duplicatedVertexCount = &dupCount } );
+        ASSERT_TRUE( loadedMesh.has_value() ) << loadedMesh.error();
+        EXPECT_EQ( dupCount, 1 );
+        EXPECT_EQ( loadedMesh->points.size(), 8 );
+        EXPECT_EQ( loadedMesh->topology.numValidFaces(), 6 );
+        auto expectedMesh = Mesh::fromTriMeshDuplicatingNonManifoldVertices( TriMesh( *loadedTriMesh ) );
+        EXPECT_TRUE( *loadedMesh == expectedMesh );
+        if ( format.hasColors )
+        {
+            ASSERT_EQ( meshColors.size(), 8 );
+            EXPECT_EQ( meshColors[7_v], colors[0_v] );
+        }
+
+        // the same from a file
+        const auto path = folder / ( "trimesh" + format.ext );
+        {
+            std::ofstream f( path, std::ios::binary );
+            f << format.data;
+        }
+        std::istringstream again( format.data );
+        auto fromStream = format.loadTriMesh( again, {} );
+        ASSERT_TRUE( fromStream.has_value() );
+        auto fromFile = format.ext == ".off" ? MeshLoad::fromOffAsTriMesh( path )
+            : format.ext == ".obj" ? MeshLoad::fromObjAsTriMesh( path )
+            : format.ext == ".stl" ? MeshLoad::fromAnyStlAsTriMesh( path )
+            : format.ext == ".ply" ? MeshLoad::fromPlyAsTriMesh( path )
+            : MeshLoad::fromDxfAsTriMesh( path );
+        ASSERT_TRUE( fromFile.has_value() ) << fromFile.error();
+        EXPECT_EQ( fromFile->points, fromStream->points );
+        EXPECT_EQ( fromFile->tris, fromStream->tris );
+    }
+
+    EXPECT_FALSE( MeshLoad::fromBinaryStlAsTriMesh( folder / "trimesh.stl" ).has_value() ); // the last .stl file is ASCII
+    EXPECT_TRUE( MeshLoad::fromASCIIStlAsTriMesh( folder / "trimesh.stl" ).has_value() );
+}
+
+TEST(MRMesh, LoadOffPolygonsAsTriMesh)
+{
+    // a triangle, a quad, a non-convex pentagon and a 20-gon (filled by the swept line) on a plane,
+    // then a quad with a repeated vertex, which is triangulated by a fan
+    VertCoords points;
+    std::vector<VertId> verts;
+    Vector<MeshBuilder::VertSpan, FaceId> faces;
+    auto addPolygon = [&] ( std::vector<Vector3f> ps )
+    {
+        const int first = (int)verts.size();
+        for ( const auto & p : ps )
+        {
+            verts.push_back( points.endId() );
+            points.push_back( p );
+        }
+        faces.push_back( { first, (int)verts.size() } );
+    };
+    addPolygon( { { 0, 0, 0 }, { 1, 0, 0 }, { 0, 1, 0 } } );
+    addPolygon( { { 2, 0, 0 }, { 3, 0, 0 }, { 3.2f, 1, 0 }, { 2, 1.1f, 0 } } );
+    addPolygon( { { 4, 0, 0 }, { 6, 0, 0 }, { 6, 2, 0 }, { 5.2f, 0.3f, 0 }, { 4, 2, 0 } } );
+    std::vector<Vector3f> star;
+    for ( int i = 0; i < 20; ++i )
+    {
+        const float a = 2 * PI_F * i / 20, r = i % 2 ? 1.0f : 0.4f;
+        star.push_back( { 10 + r * std::cos( a ), r * std::sin( a ), 0 } );
+    }
+    addPolygon( star );
+    const int firstBad = (int)verts.size();
+    for ( int v : { 0, 1, 0, 2 } )
+        verts.push_back( VertId( v ) );
+    faces.push_back( { firstBad, (int)verts.size() } );
+
+    std::string off = fmt::format( "OFF\n{} {} 0\n", points.size(), faces.size() );
+    for ( const auto & p : points )
+        off += fmt::format( "{} {} {}\n", p.x, p.y, p.z );
+    for ( const auto & f : faces )
+    {
+        off += std::to_string( f.lastVertex - f.firstVertex );
+        for ( int i = f.firstVertex; i < f.lastVertex; ++i )
+            off += " " + std::to_string( verts[i] );
+        off += "\n";
+    }
+
+    std::istringstream triIn( off );
+    auto triMesh = MeshLoad::fromOffAsTriMesh( triIn );
+    ASSERT_TRUE( triMesh.has_value() ) << triMesh.error();
+    EXPECT_EQ( triMesh->points.size(), points.size() );
+    EXPECT_EQ( triMesh->tris.size(), 1 + 2 + 3 + 18 + 2 );
+
+    // the same triangles as by filling the polygonal faces of the mesh
+    auto sortedTris = [] ( const Mesh & mesh )
+    {
+        std::vector<std::array<int, 3>> res;
+        for ( auto f : mesh.topology.getValidFaces() )
+        {
+            auto [a, b, c] = mesh.topology.getTriVerts( f );
+            while ( a > b || a > c )
+            {
+                std::swap( a, b );
+                std::swap( b, c );
+            }
+            res.push_back( { int( a ), int( b ), int( c ) } );
+        }
+        std::sort( res.begin(), res.end() );
+        return res;
+    };
+    int skipped = 0;
+    std::istringstream meshIn( off );
+    auto mesh = MeshLoad::fromOff( meshIn, { .skippedFaceCount = &skipped } );
+    ASSERT_TRUE( mesh.has_value() ) << mesh.error();
+    EXPECT_EQ( skipped, 2 ); // degenerate triangles of the fan of the polygon with repeated vertex
+    EXPECT_EQ( sortedTris( *mesh ), sortedTris( Mesh::fromFaceSoup( triMesh->points, verts, faces ) ) );
+}
+
+TEST(MRMesh, TriMeshTextureColors)
+{
+    TriMesh triMesh;
+    triMesh.tris = Triangulation{ { 0_v, 1_v, 2_v }, { 0_v, 2_v, 3_v }, { 0_v, 3_v, 1_v }, { 1_v, 3_v, 2_v } };
+    triMesh.points = VertCoords{ { 0.f, 0.f, 0.f }, { 1.f, 0.f, 0.f }, { 0.f, 1.f, 0.f }, { 0.f, 0.f, 1.f } };
+    const auto mesh = Mesh::fromTriMesh( TriMesh( triMesh ) );
+
+    const VertUVCoords uvs{ { 0.1f, 0.1f }, { 0.9f, 0.1f }, { 0.1f, 0.9f }, { 0.9f, 0.9f } };
+    TriCornerUVCoords cornerUVs;
+    for ( const auto & t : triMesh.tris )
+        cornerUVs.push_back( { uvs[t[0]], uvs[t[1]], uvs[t[2]] } );
+
+    auto triMeshUVs = findVertexUVs( triMesh.tris, cornerUVs );
+    ASSERT_TRUE( triMeshUVs.has_value() );
+    EXPECT_EQ( *triMeshUVs, uvs );
+    EXPECT_EQ( *triMeshUVs, findVertexUVs( mesh.topology, cornerUVs ) );
+
+    MeshTexture tex;
+    tex.resolution = { 2, 2 };
+    tex.pixels = { Color( 255, 0, 0 ), Color( 0, 255, 0 ), Color( 0, 0, 255 ), Color( 255, 255, 255 ) };
+    tex.filter = FilterType::Linear;
+    const auto triMeshColors = sampleVertexColors( triMesh, tex, cornerUVs );
+    const auto meshColors = sampleVertexColors( mesh, tex, cornerUVs );
+    ASSERT_EQ( triMeshColors.size(), meshColors.size() );
+    for ( auto v = 0_v; v < meshColors.endId(); ++v )
+        for ( int c = 0; c < 4; ++c )
+            EXPECT_NEAR( triMeshColors[v][c], meshColors[v][c], 1 );
+
+    cornerUVs[1_f][0] = { 0.5f, 0.5f };
+    EXPECT_FALSE( findVertexUVs( triMesh.tris, cornerUVs ).has_value() );
+    EXPECT_FALSE( findVertexUVs( mesh.topology, cornerUVs ).has_value() );
 }
 
 TEST(MRMesh, SaveObjectTreeAsPoints)

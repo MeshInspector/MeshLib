@@ -1,5 +1,6 @@
 #include "MRTextureColors.h"
 #include "MRMesh.h"
+#include "MRTriMesh.h"
 #include "MRMeshTexture.h"
 #include "MRColor.h"
 #include "MRTimer.h"
@@ -67,6 +68,36 @@ std::optional<VertUVCoords> findVertexUVs( const MeshTopology& topology, const T
     return res;
 }
 
+std::optional<VertUVCoords> findVertexUVs( const Triangulation& tris, const TriCornerUVCoords& triCornerUvCoords )
+{
+    MR_TIMER;
+    assert( triCornerUvCoords.size() >= tris.size() );
+    VertUVCoords res;
+    VertBitSet hasUV;
+    for ( FaceId f( 0 ); f < tris.endId(); ++f )
+    {
+        for ( int i = 0; i < 3; ++i )
+        {
+            const auto v = tris[f][i];
+            if ( !v )
+                continue;
+            const auto& uv = triCornerUvCoords[f][i];
+            if ( v >= res.endId() )
+            {
+                res.resizeNoInit( size_t( v ) + 1 );
+                hasUV.resize( size_t( v ) + 1 );
+            }
+            if ( !hasUV.test_set( v ) )
+                res[v] = uv;
+            else if ( res[v] != uv )
+                return std::nullopt;
+        }
+    }
+    if ( !hasUV.all() )
+        return std::nullopt;
+    return res;
+}
+
 Color sampleVertexColor( const Mesh& mesh, VertId v, const MeshTexture& tex, const TriCornerUVCoords& triCornerUvCoords )
 {
     Vector4f sumWC;
@@ -96,6 +127,48 @@ VertColors sampleVertexColors( const Mesh& mesh, const MeshTexture& tex, const T
     BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
     {
         res[v] = sampleVertexColor( mesh, v, tex, triCornerUvCoords );
+    } );
+    return res;
+}
+
+VertColors sampleVertexColors( const TriMesh& mesh, const MeshTexture& tex, const TriCornerUVCoords& triCornerUvCoords )
+{
+    MR_TIMER;
+    // angle-weighted colors in triangle corners
+    struct Corner
+    {
+        Vector4f wc;
+        float w = 0;
+    };
+    Vector<std::array<Corner, 3>, FaceId> corners( mesh.tris.size() );
+    ParallelFor( corners, [&]( FaceId f )
+    {
+        const auto& vs = mesh.tris[f];
+        for ( int i = 0; i < 3; ++i )
+        {
+            const auto& p = mesh.points[vs[i]];
+            const auto angle = MR::angle( mesh.points[vs[( i + 1 ) % 3]] - p, mesh.points[vs[( i + 2 ) % 3]] - p );
+            corners[f][i] = { angle * Vector4f( tex.sample( tex.filter, triCornerUvCoords[f][i] ) ), angle };
+        }
+    } );
+
+    Vector<Corner, VertId> sums( mesh.points.size() );
+    for ( FaceId f( 0 ); f < corners.endId(); ++f )
+    {
+        for ( int i = 0; i < 3; ++i )
+        {
+            auto& s = sums[mesh.tris[f][i]];
+            s.wc += corners[f][i].wc;
+            s.w += corners[f][i].w;
+        }
+    }
+
+    VertColors res;
+    res.resizeNoInit( mesh.points.size() );
+    ParallelFor( res, [&]( VertId v )
+    {
+        const auto& s = sums[v];
+        res[v] = s.w > 0 ? Color( s.wc / s.w ) : Color{};
     } );
     return res;
 }

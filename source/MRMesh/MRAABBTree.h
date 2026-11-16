@@ -154,6 +154,14 @@ public:
     /// the bounding box of the triangle in slot i of leafTris()
     [[nodiscard]] Box3f leafBox( int i ) const { return leafBoxes_[i / MaxLeafTris].get( i % MaxLeafTris ); }
 
+    /// the coordinates of vertex v (in the order of LeafTri::verts) of the triangle in slot i of leafTris(), the same as the points of the mesh
+    [[nodiscard]] Vector3f leafPoint( int i, int v ) const
+    {
+        const auto & c = simdLeaves_[i / MaxLeafTris].coord[v];
+        const int k = i % MaxLeafTris;
+        return { c[0][k], c[1][k], c[2][k] };
+    }
+
     /// the number of triangles in given leaf
     [[nodiscard]] int numLeafTris( int leaf ) const
     {

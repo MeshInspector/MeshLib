@@ -5,6 +5,7 @@
 #include "MRAABBTreePoints.h"
 #include "MRMesh.h"
 #include "MRInplaceStack.h"
+#include "MRSimd4.hpp"
 #include "MRPolyline.h"
 #include "MRPointCloud.h"
 
@@ -157,6 +158,8 @@ VertId findDirMaxWide( const Vector3f & dir, const MeshPart & mp, const AABBTree
         float furthestBoxProj;
     };
     const auto maxCorner = Box3f::getMaxBoxCorner( dir );
+    // the rows of the coordinates of the corner in AABBTree::SimdBoxes
+    const int cornerRow[3] = { maxCorner.x ? 3 : 0, maxCorner.y ? 4 : 1, maxCorner.z ? 5 : 2 };
     float furthestProj = -FLT_MAX;
     // every level adds at most MaxChildren - 1 tasks, and the tree has at most MaxDepth levels
     InplaceStack<SubTask, 64> subtasks;
@@ -188,11 +191,18 @@ VertId findDirMaxWide( const Vector3f & dir, const MeshPart & mp, const AABBTree
         }
         // add the child with larger projection on line last to descend there first
         const auto & node = tree.simdNodes()[s.ref];
+        // the projections of the corners of all children at once, the same as dot( dir, box.corner( maxCorner ) )
+        alignas( 16 ) float projs[AABBTree::MaxChildren];
+        {
+            using namespace Simd4;
+            store( projs, add( add( mul( set1( dir.x ), load( node.box[cornerRow[0]] ) ), mul( set1( dir.y ), load( node.box[cornerRow[1]] ) ) ),
+                mul( set1( dir.z ), load( node.box[cornerRow[2]] ) ) ) );
+        }
         SubTask ch[AABBTree::MaxChildren];
         int numCh = 0;
         for ( int i = 0; i < AABBTree::MaxChildren && node.child[i]; ++i )
         {
-            const float proj = dot( dir, node.get( i ).corner( maxCorner ) );
+            const float proj = projs[i];
             if ( !( proj > furthestProj ) )
                 continue;
             int k = numCh++;

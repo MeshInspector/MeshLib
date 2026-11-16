@@ -9,6 +9,7 @@
 #include "MRSimd4.hpp"
 #include "MRVector.h"
 #include <atomic>
+#include <concepts>
 #include <cstdint>
 
 namespace MR
@@ -148,9 +149,22 @@ bool forWideLeafTris( const AABBTree & aTree, const AABBTree & bTree, const Wide
     {
         if ( !self && !triNode( i, s.b ) )
             continue;
-        for ( int j = self ? i + 1 : bFirst; j < bEnd; ++j )
-            if ( tris( i, j ) && !onTris( i, j ) )
-                return false;
+        if constexpr ( requires { { tris( i, s.b ) } -> std::convertible_to<int>; } )
+        {
+            // tris( i, bLeaf ) tests the box of triangle i with the boxes of all triangles of leaf s.b at once
+            int m = tris( i, s.b ) & ( ( 1 << ( bEnd - bFirst ) ) - 1 );
+            if ( self )
+                m &= ~0 << ( i - aFirst + 1 );
+            for ( ; m; m &= m - 1 )
+                if ( !onTris( i, bFirst + Simd4::lowestBit( m ) ) )
+                    return false;
+        }
+        else
+        {
+            for ( int j = self ? i + 1 : bFirst; j < bEnd; ++j )
+                if ( tris( i, j ) && !onTris( i, j ) )
+                    return false;
+        }
     }
     return true;
 }

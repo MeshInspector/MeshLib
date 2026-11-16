@@ -80,7 +80,22 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
         }
     };
     auto triNodeIntersect = [&]( int i, const WideNode & bn ) { return aTree.leafBox( i ).intersects( bNodeBox( bn ) ); };
-    auto trisIntersect = [&]( int i, int j ) { return aTree.leafBox( i ).intersects( bLeafBox( j ) ); };
+    auto trisIntersect = WideBoxTest
+    {
+        [&]( int i, int j ) { return aTree.leafBox( i ).intersects( bLeafBox( j ) ); },
+        // all triangles of leaf b at once, the transformed boxes one by one
+        [&]( int i, const WideNode & bn )
+        {
+            const auto aBox = aTree.leafBox( i );
+            if ( !rigidB2A )
+                return simdBoxesIntersect( bTree.leafBoxes()[~bn.ref], aBox );
+            int m = 0;
+            for ( int j = 0, bFirst = ~bn.ref * AABBTree::MaxLeafTris; j < AABBTree::MaxLeafTris && bTree.leafTris()[bFirst + j].face; ++j )
+                if ( aBox.intersects( bLeafBox( bFirst + j ) ) )
+                    m |= 1 << j;
+            return m;
+        }
+    };
     auto inRegions = [&]( int i, int j )
     {
         return ( !a.region || a.region->test( aTree.leafTris()[i].face ) ) && ( !b.region || b.region->test( bTree.leafTris()[j].face ) );
@@ -333,7 +348,11 @@ Expected<bool> findSelfCollidingTriangles(
                     continue;
                 if ( !forWideLeafTris<true>( tree, tree, s,
                     [&tree]( int i, const WideNode & n ) { return tree.leafBox( i ).intersects( n.box ); },
-                    [&tree]( int i, int j ) { return tree.leafBox( i ).intersects( tree.leafBox( j ) ); },
+                    WideBoxTest
+                    {
+                        [&tree]( int i, int j ) { return tree.leafBox( i ).intersects( tree.leafBox( j ) ); },
+                        [&tree]( int i, const WideNode & bn ) { return simdBoxesIntersect( tree.leafBoxes()[~bn.ref], tree.leafBox( i ) ); }
+                    },
                     onTris ) )
                 {
                     mySubtasks.clear();

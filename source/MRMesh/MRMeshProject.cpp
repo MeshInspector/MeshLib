@@ -299,26 +299,22 @@ void forLeafTrisInBall( const AABBTree & tree, const FaceBitSet * region, Ball3f
 
         // first go in the nodes located closer to ball's center (in case the ball will shrink and the others will be away)
         const auto & node = tree.simdNodes()[s.ref];
-        SubTask ch[AABBTree::MaxChildren];
-        float chDistSq[AABBTree::MaxChildren];
+        // the distances to all children at once, the same as Box3f::getDistanceSq( ball.center )
+        alignas( 16 ) float d[AABBTree::MaxChildren];
+        Simd4::store( d, Simd4::boxDistSq( node.box, Simd4::set1( ball.center.x ), Simd4::set1( ball.center.y ), Simd4::set1( ball.center.z ) ) );
+        int ch[AABBTree::MaxChildren];
         int numCh = 0;
         for ( int i = 0; i < AABBTree::MaxChildren && node.child[i]; ++i )
         {
-            const auto box = node.get( i );
-            const float distSq = box.getDistanceSq( ball.center );
-            if ( !( distSq < ball.radiusSq ) )
+            if ( !( d[i] < ball.radiusSq ) )
                 continue;
             int k = numCh++;
-            for ( ; k > 0 && chDistSq[k - 1] < distSq; --k )
-            {
+            for ( ; k > 0 && d[ch[k - 1]] < d[i]; --k )
                 ch[k] = ch[k - 1];
-                chDistSq[k] = chDistSq[k - 1];
-            }
-            ch[k] = { node.child[i], box };
-            chDistSq[k] = distSq;
+            ch[k] = i;
         }
-        for ( int i = 0; i < numCh; ++i )
-            subtasks.push( ch[i] );
+        for ( int k = 0; k < numCh; ++k )
+            subtasks.push( { node.child[ch[k]], node.get( ch[k] ) } );
     }
 }
 

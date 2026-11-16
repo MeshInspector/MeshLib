@@ -10,6 +10,7 @@
 #include "MRVector.h"
 #include <atomic>
 #include <concepts>
+#include <utility>
 #include <cstdint>
 
 namespace MR
@@ -220,13 +221,21 @@ private:
 };
 
 /// a test of boxes from given functions: one for a box, test( box ) -> bool, and one for four boxes at once, test( simdBoxes ) -> bit mask of passed ones
-template<typename... Fs>
-struct WideBoxTest : Fs...
+/// (the functions are members and not bases: deriving from a lambda with tail padding is warned about by MSVC for its ABI)
+template<typename F1, typename F2>
+struct WideBoxTest
 {
-    using Fs::operator()...;
+    F1 f1;
+    F2 f2;
+
+    template<typename... A> requires std::invocable<const F1 &, A...>
+    decltype(auto) operator()( A &&... a ) const { return f1( std::forward<A>( a )... ); }
+
+    template<typename... A> requires ( !std::invocable<const F1 &, A...> && std::invocable<const F2 &, A...> )
+    decltype(auto) operator()( A &&... a ) const { return f2( std::forward<A>( a )... ); }
 };
-template<typename... Fs>
-WideBoxTest( Fs... ) -> WideBoxTest<Fs...>;
+template<typename F1, typename F2>
+WideBoxTest( F1, F2 ) -> WideBoxTest<F1, F2>;
 
 /// the squared distances between box b and four boxes, computed exactly as Box3f::getDistanceSq( b ) of each of them; infinite for empty boxes
 inline Simd4::F boxBoxDistSq( const AABBTree::SimdBoxes & sb, const Box3f & b )

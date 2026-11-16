@@ -302,6 +302,9 @@ TEST( MRMesh, AABBTreeFlippedOrientation )
             const auto hitMtp = hit.mtp( mesh.topology );
             EXPECT_EQ( mesh.topology.left( hitMtp.e ), hit.proj.face );
             EXPECT_LT( ( mesh.triPoint( hitMtp ) - hit.proj.point ).length(), 1e-5f );
+            const auto sd = findSignedDistance( pt, mesh );
+            ASSERT_TRUE( sd );
+            EXPECT_EQ( sd->mtp( mesh.topology ), mtp );
         }
     };
     mesh.flipOrientation(); // the tree is updated, not rebuilt

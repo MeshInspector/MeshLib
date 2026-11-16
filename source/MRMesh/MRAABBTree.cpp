@@ -349,8 +349,9 @@ AABBTree::AABBTree( const MeshPart & mp )
 {
     MR_TIMER;
     const auto numTris = mp.region ? (int)mp.region->count() : mp.mesh.topology.numValidFaces();
+    Vector<Box3f> leafBoxes; // only for the construction
     makeTree( numTris, [&] ( Buffer<TreeCenter> & centers, Box3f & centersBox ) { return makeBoxedTris( mp, numTris, centers, centersBox ); },
-        nodes_, leafTris_, leafBoxes_ );
+        nodes_, leafTris_, leafBoxes );
     makeSimd_( mp.mesh.points );
 }
 
@@ -358,8 +359,9 @@ AABBTree::AABBTree( const TriMesh & tmesh, const FaceBitSet * region )
 {
     MR_TIMER;
     const auto numTris = region ? (int)region->count() : (int)tmesh.tris.size();
+    Vector<Box3f> leafBoxes; // only for the construction
     makeTree( numTris, [&] ( Buffer<TreeCenter> & centers, Box3f & centersBox ) { return makeBoxedTris( tmesh, region, numTris, centers, centersBox ); },
-        nodes_, leafTris_, leafBoxes_ );
+        nodes_, leafTris_, leafBoxes );
     makeSimd_( tmesh.points );
 }
 
@@ -369,10 +371,11 @@ void AABBTree::makeSimd_( const VertCoords & points )
     simdNodes_.clear();
     simdLeaves_.clear();
     simdRefs_.clear();
+    leafSlots_.clear();
     if ( nodes_.empty() )
         return;
 
-    // the internal nodes and the leaves keep the order of nodes_
+    // the internal nodes and the leaves keep the order of the nodes
     auto & ref = simdRefs_;
     ref.resize( nodes_.size() );
     int numInternal = 0, numLeaves = 0;
@@ -380,6 +383,7 @@ void AABBTree::makeSimd_( const VertCoords & points )
         ref[i] = nodes_[i].leaf() ? ~numLeaves++ : numInternal++;
     simdNodes_.resize( numInternal );
     simdLeaves_.resize( numLeaves );
+    leafSlots_.resize( leafTris_.size() );
 
     constexpr float inf = std::numeric_limits<float>::infinity();
     constexpr float nan = std::numeric_limits<float>::quiet_NaN();
@@ -388,12 +392,15 @@ void AABBTree::makeSimd_( const VertCoords & points )
         const auto & node = nodes_[n];
         if ( node.leaf() )
         {
-            auto & leaf = simdLeaves_[~ref[n]];
+            const int l = ~ref[n];
+            auto & leaf = simdLeaves_[l];
             leaf.first = node.first;
             leaf.count = node.numLeafTris();
             for ( int i = 0; i < MaxLeafTris; ++i )
             {
                 const bool used = i < leaf.count;
+                if ( used )
+                    leafSlots_[node.first + i] = 4 * l + i;
                 for ( int v = 0; v < 3; ++v )
                 {
                     const auto p = used ? points[leafTris_[node.first + i].verts[v]] : Vector3f::diagonal( nan );
@@ -416,6 +423,26 @@ void AABBTree::makeSimd_( const VertCoords & points )
             }
         }
     } );
+}
+
+Box3f AABBTree::leafBox( int i ) const
+{
+    const int s = leafSlots_[i];
+    const auto & c = simdLeaves_[s >> 2].coord;
+    const int k = s & 3;
+    return insignificantlyExpandedTriBox(
+        Vector3f( c[0][0][k], c[0][1][k], c[0][2][k] ),
+        Vector3f( c[1][0][k], c[1][1][k], c[1][2][k] ),
+        Vector3f( c[2][0][k], c[2][1][k], c[2][2][k] ) );
+}
+
+Vector<Box3f> AABBTree::computeLeafBoxes() const
+{
+    MR_TIMER;
+    Vector<Box3f> res;
+    res.resizeNoInit( leafTris_.size() );
+    ParallelFor( res, [&]( size_t i ) { res[i] = leafBox( int( i ) ); } );
+    return res;
 }
 
 std::vector<NodeId> AABBTree::getSubtrees( int minNum ) const
@@ -555,6 +582,8 @@ void AABBTree::flipOrientation( const FaceBitSet * region )
 
 void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
 {
+    // the boxes of the triangles are computed from the SIMD layout before its update
+    auto leafBoxes = computeLeafBoxes();
     MR_TIMER;
     if ( nodes_.empty() )
         return;
@@ -574,7 +603,7 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
         {
             if ( changedVerts && !changedFaces.test( leafTris_[i].face ) )
                 continue;
-            leafBoxes_[i] = wideTriBox( mesh, leafTris_[i] );
+            leafBoxes[i] = wideTriBox( mesh, leafTris_[i] );
             changed = true;
         }
         if ( !changed )
@@ -582,7 +611,7 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
         changedNodes.set( n );
         Box3f box;
         for ( int i = node.first, end = node.first + node.numLeafTris(); i < end; ++i )
-            box.include( leafBoxes_[i] );
+            box.include( leafBoxes[i] );
         node.box = box;
     } );
 
@@ -608,6 +637,8 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
 
 void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
 {
+    // the boxes of the triangles are computed from the SIMD layout before its update
+    auto leafBoxes = computeLeafBoxes();
     MR_TIMER;
     if ( new2Old.empty() )
         return;
@@ -634,7 +665,7 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
             if ( !splitFaces.test( lt.face ) )
                 continue;
             lt.verts = mesh.topology.getTriVerts( lt.face );
-            leafBoxes_[i] = wideTriBox( mesh, lt );
+            leafBoxes[i] = wideTriBox( mesh, lt );
             const auto it = std::lower_bound( oldFaces.begin(), oldFaces.end(), lt.face );
             assert( it != oldFaces.end() && *it == lt.face );
             leafOfOld[it - oldFaces.begin()] = n;
@@ -697,7 +728,7 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
             {
                 const auto f = leafNew[k].second;
                 leafTris_.push_back( { f, mesh.topology.getTriVerts( f ) } );
-                leafBoxes_.push_back( wideTriBox( mesh, leafTris_.back() ) );
+                leafBoxes.push_back( wideTriBox( mesh, leafTris_.back() ) );
             }
             nl.count = -num;
             leaves.push_back( nl );
@@ -714,7 +745,7 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
         if ( node.leaf() )
         {
             for ( int i = node.first, end = node.first + node.numLeafTris(); i < end; ++i )
-                box.include( leafBoxes_[i] );
+                box.include( leafBoxes[i] );
         }
         else
         {

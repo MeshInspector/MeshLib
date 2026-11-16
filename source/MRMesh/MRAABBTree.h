@@ -55,7 +55,8 @@ struct MR_BIND_IGNORE AABBTreeSimdLeaf
 };
 
 /// bounding volume hierarchy of mesh triangles with up to 4 children per node and up to 4 triangles per leaf;
-/// the children of a node are stored contiguously, and every leaf keeps the vertices and the boxes of its triangles
+/// the children of a node are stored contiguously, every leaf keeps the vertices of its triangles;
+/// the boxes of the nodes and the coordinates of the triangles are kept in SIMD layout (simdNodes(), simdLeaves())
 class AABBTree
 {
 public:
@@ -84,11 +85,17 @@ public:
     /// returns the bounding box of the whole tree (empty for an empty tree)
     [[nodiscard]] Box3f getBoundingBox() const { return nodes_.empty() ? Box3f{} : nodes_.front().box; }
 
+    /// returns the bounding box of given node
+    [[nodiscard]] const Box3f & box( NodeId n ) const { return nodes_[n].box; }
+
     /// triangles of all leaves, the triangles of each leaf are contiguous
     [[nodiscard]] const Vector<LeafTri> & leafTris() const { return leafTris_; }
 
-    /// the bounding boxes of the triangles in the order of leafTris(), slightly expanded for robust searches
-    [[nodiscard]] const Vector<Box3f> & leafBoxes() const { return leafBoxes_; }
+    /// the bounding box of the triangle at given position in leafTris(), slightly expanded for robust searches
+    [[nodiscard]] MRMESH_API Box3f leafBox( int i ) const;
+
+    /// the bounding boxes of the triangles of all leaves in the order of leafTris(), as leafBox( i )
+    [[nodiscard]] MRMESH_API Vector<Box3f> computeLeafBoxes() const;
 
     using SimdNode = AABBTreeSimdNode;
     using SimdLeaf = AABBTreeSimdLeaf;
@@ -106,7 +113,7 @@ public:
     [[nodiscard]] int simdRef( NodeId n ) const { return simdRefs_[n]; }
 
     /// returns the amount of memory this object occupies on heap
-    [[nodiscard]] size_t heapBytes() const { return nodes_.heapBytes() + leafTris_.heapBytes() + leafBoxes_.heapBytes()
+    [[nodiscard]] size_t heapBytes() const { return nodes_.heapBytes() + leafTris_.heapBytes() + leafSlots_.heapBytes()
         + simdNodes_.capacity() * sizeof( SimdNode ) + simdLeaves_.capacity() * sizeof( SimdLeaf ) + simdRefs_.heapBytes(); }
 
     /// returns at least given number of top-level not-intersecting subtrees, union of which contain all tree leaves
@@ -151,12 +158,12 @@ private:
 
     Vector<Node, NodeId> nodes_;
     Vector<LeafTri> leafTris_;
-    Vector<Box3f> leafBoxes_;
     std::vector<SimdNode> simdNodes_;
     std::vector<SimdLeaf> simdLeaves_;
     Vector<int, NodeId> simdRefs_; ///< simdRef() for every node
+    Vector<int> leafSlots_; ///< for every triangle in leafTris_: 4 * (the index of its leaf in simdLeaves_) + (its slot there)
 
-    /// fills simdNodes_ and simdLeaves_ from nodes_ and the vertex coordinates of the mesh
+    /// fills the SIMD layout from nodes_, leafTris_ and the vertex coordinates of the mesh
     void makeSimd_( const VertCoords & points );
 };
 

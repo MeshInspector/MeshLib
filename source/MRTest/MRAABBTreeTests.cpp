@@ -98,7 +98,8 @@ static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
 {
     const auto & nodes = tree.nodes();
     EXPECT_EQ( tree.leafTris().size(), size_t( mesh.topology.numValidFaces() ) );
-    ASSERT_EQ( tree.leafBoxes().size(), tree.leafTris().size() );
+    const auto leafBoxes = tree.computeLeafBoxes();
+    ASSERT_EQ( leafBoxes.size(), tree.leafTris().size() );
     FaceBitSet faces( mesh.topology.faceSize() );
     for ( NodeId n( 0 ); n < nodes.size(); ++n )
     {
@@ -113,8 +114,8 @@ static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
                 EXPECT_FALSE( faces.test_set( lt.face ) );
                 EXPECT_EQ( lt.verts, mesh.topology.getTriVerts( lt.face ) );
                 for ( auto v : lt.verts )
-                    EXPECT_TRUE( tree.leafBoxes()[i].contains( mesh.points[v] ) );
-                EXPECT_TRUE( node.box.contains( tree.leafBoxes()[i] ) );
+                    EXPECT_TRUE( leafBoxes[i].contains( mesh.points[v] ) );
+                EXPECT_TRUE( tree.box( n ).contains( leafBoxes[i] ) );
             }
         }
         else
@@ -123,7 +124,7 @@ static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
             {
                 const NodeId c( node.first + i );
                 ASSERT_TRUE( c > n && c < nodes.size() );
-                EXPECT_TRUE( node.box.contains( nodes[c].box ) );
+                EXPECT_TRUE( tree.box( n ).contains( tree.box( c ) ) );
             }
         }
     }
@@ -165,8 +166,8 @@ static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
                 EXPECT_EQ( sn.child[i], ref[node.first + i] );
             for ( int c = 0; c < 3; ++c )
             {
-                EXPECT_EQ( sn.box[c][i], used ? nodes[NodeId( node.first + i )].box.min[c] : std::numeric_limits<float>::infinity() );
-                EXPECT_EQ( sn.box[c + 3][i], used ? nodes[NodeId( node.first + i )].box.max[c] : -std::numeric_limits<float>::infinity() );
+                EXPECT_EQ( sn.box[c][i], used ? tree.box( NodeId( node.first + i ) ).min[c] : std::numeric_limits<float>::infinity() );
+                EXPECT_EQ( sn.box[c + 3][i], used ? tree.box( NodeId( node.first + i ) ).max[c] : -std::numeric_limits<float>::infinity() );
             }
         }
     }
@@ -416,7 +417,7 @@ TEST( MRMesh, AABBTreeLeafBoxesOfSpecialValues )
                     box.max[k] = x;
             }
         const Box3f expected = box.insignificantlyExpanded();
-        const Box3f & actual = tree.leafBoxes()[n];
+        const Box3f actual = tree.leafBox( int( n ) );
         // compares the bits, NaN included
         if ( std::memcmp( &expected, &actual, sizeof( Box3f ) ) == 0 || ++numDiffer > 5 )
             continue;
@@ -481,9 +482,10 @@ std::uint64_t treeHash( const AABBTree & tree )
             add( bit_cast<std::uint32_t>( b.max[k] ) );
         }
     };
-    for ( const auto & n : tree.nodes() )
+    for ( NodeId i( 0 ); i < tree.nodes().size(); ++i )
     {
-        addBox( n.box );
+        const auto & n = tree.nodes()[i];
+        addBox( tree.box( i ) );
         add( std::uint32_t( n.first ) );
         add( std::uint32_t( n.count ) );
     }
@@ -493,7 +495,7 @@ std::uint64_t treeHash( const AABBTree & tree )
         for ( auto v : lt.verts )
             add( std::uint32_t( int( v ) ) );
     }
-    for ( const auto & b : tree.leafBoxes() )
+    for ( const auto & b : tree.computeLeafBoxes() )
         addBox( b );
     return h;
 }
@@ -557,14 +559,14 @@ TEST( MRMesh, AABBTreeSameOnOneThread )
     {
         const auto & a = all.nodes()[n];
         const auto & b = one->nodes()[n];
-        ASSERT_TRUE( a.box == b.box && a.first == b.first && a.count == b.count ) << "node " << int( n );
+        ASSERT_TRUE( all.box( n ) == one->box( n ) && a.first == b.first && a.count == b.count ) << "node " << int( n );
     }
     ASSERT_EQ( all.leafTris().size(), one->leafTris().size() );
     for ( size_t i = 0; i < all.leafTris().size(); ++i )
     {
         const auto & a = all.leafTris()[i];
         const auto & b = one->leafTris()[i];
-        ASSERT_TRUE( a.face == b.face && a.verts == b.verts && all.leafBoxes()[i] == one->leafBoxes()[i] ) << "leaf " << i;
+        ASSERT_TRUE( a.face == b.face && a.verts == b.verts && all.leafBox( int( i ) ) == one->leafBox( int( i ) ) ) << "leaf " << i;
     }
 }
 

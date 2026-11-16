@@ -41,15 +41,14 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
     if ( rigidB2A )
     {
         bNodeBoxes.emplace( bTree.nodes().size(), *rigidB2A );
-        bLeafBoxes.emplace( bTree.leafBoxes().size(), *rigidB2A );
+        bLeafBoxes.emplace( bTree.leafTris().size(), *rigidB2A );
     }
-    auto bNodeBox = [&]( NodeId n ) { return bNodeBoxes ? bNodeBoxes->get( n, bTree.nodes()[n].box ) : bTree.nodes()[n].box; };
-    auto bLeafBox = [&]( int i ) { return bLeafBoxes ? bLeafBoxes->get( i, bTree.leafBoxes()[i] ) : bTree.leafBoxes()[i]; };
+    auto bNodeBox = [&]( NodeId n ) { return bNodeBoxes ? bNodeBoxes->get( n, bTree.box( n ) ) : bTree.box( n ); };
     auto nodesIntersect = WideIntersect
     {
         [&]( NodeId an, NodeId bn )
         {
-            return ( !a.region || aNodes.test( an ) ) && ( !b.region || bNodes.test( bn ) ) && aTree.nodes()[an].box.intersects( bNodeBox( bn ) );
+            return ( !a.region || aNodes.test( an ) ) && ( !b.region || bNodes.test( bn ) ) && aTree.box( an ).intersects( bNodeBox( bn ) );
         },
         // the same test of all children of a node at once
         [&]( bool aSide, NodeId parent, NodeId other )
@@ -65,13 +64,13 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
             if ( !aSide && rigidB2A )
             {
                 // the transformed boxes of the children of b
-                const auto & aBox = aTree.nodes()[other].box;
+                const auto aBox = aTree.box( other );
                 for ( int i = 0; i < pn.count; ++i )
                     if ( aBox.intersects( bNodeBox( NodeId( pn.first + i ) ) ) )
                         m |= 1 << i;
             }
             else
-                m = childBoxesIntersect( tree, parent, aSide ? bNodeBox( other ) : aTree.nodes()[other].box );
+                m = childBoxesIntersect( tree, parent, aSide ? bNodeBox( other ) : aTree.box( other ) );
             if ( parentRegion )
                 for ( int k = m; k; k &= k - 1 )
                     if ( const int i = Simd4::lowestBit( k ); !regionNodes.test( NodeId( pn.first + i ) ) )
@@ -79,8 +78,8 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
             return m;
         }
     };
-    auto triNodeIntersect = [&]( int i, NodeId bn ) { return aTree.leafBoxes()[i].intersects( bNodeBox( bn ) ); };
-    auto trisIntersect = [&]( int i, int j ) { return aTree.leafBoxes()[i].intersects( bLeafBox( j ) ); };
+    auto triNodeIntersect = [&]( int, const Box3f & iBox, NodeId bn ) { return iBox.intersects( bNodeBox( bn ) ); };
+    auto trisIntersect = [&]( int, int j, const Box3f & iBox, const Box3f & jBox ) { return iBox.intersects( bLeafBoxes ? bLeafBoxes->get( j, jBox ) : jBox ); };
     auto inRegions = [&]( int i, int j )
     {
         return ( !a.region || a.region->test( aTree.leafTris()[i].face ) ) && ( !b.region || b.region->test( bTree.leafTris()[j].face ) );
@@ -220,9 +219,9 @@ Expected<bool> findSelfCollidingTriangles(
 
     auto nodesIntersect = WideIntersect
     {
-        [&tree]( NodeId x, NodeId y ) { return tree.nodes()[x].box.intersects( tree.nodes()[y].box ); },
+        [&tree]( NodeId x, NodeId y ) { return tree.box( x ).intersects( tree.box( y ) ); },
         // the same test of all children of a node at once
-        [&tree]( bool, NodeId parent, NodeId other ) { return childBoxesIntersect( tree, parent, tree.nodes()[other].box ); }
+        [&tree]( bool, NodeId parent, NodeId other ) { return childBoxesIntersect( tree, parent, tree.box( other ) ); }
     };
     auto split = [&]( const WideNodePair & s, auto && push ) { return splitSelfWidePair( tree, s, nodesIntersect, push ); };
     // 8 levels -> at most 4^8 subtasks
@@ -335,8 +334,8 @@ Expected<bool> findSelfCollidingTriangles(
                 if ( split( s, [&mySubtasks]( const WideNodePair & c ) { mySubtasks.push_back( c ); } ) )
                     continue;
                 if ( !forWideLeafTris<true>( tree, tree, s,
-                    [&tree]( int i, NodeId n ) { return tree.leafBoxes()[i].intersects( tree.nodes()[n].box ); },
-                    [&tree]( int i, int j ) { return tree.leafBoxes()[i].intersects( tree.leafBoxes()[j] ); },
+                    [&tree]( int, const Box3f & iBox, NodeId n ) { return iBox.intersects( tree.box( n ) ); },
+                    WideTriBoxesIntersect{},
                     onTris ) )
                 {
                     mySubtasks.clear();

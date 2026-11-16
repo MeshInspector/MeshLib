@@ -73,7 +73,7 @@ void calcDipoles( Dipoles& dipoles, const AABBTree& tree, const Mesh& mesh )
         auto & d = dipoles[i];
         if ( d.area > 0 )
             d.pos /= d.area;
-        d.rr = distToFarthestCornerSq( nodes[i].box, d.pos );
+        d.rr = distToFarthestCornerSq( tree.box( i ), d.pos );
     } );
 }
 

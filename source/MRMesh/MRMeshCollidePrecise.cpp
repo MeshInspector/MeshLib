@@ -43,17 +43,17 @@ public:
         if ( xf )
         {
             bNodeBoxes_.emplace( bTree.nodes().size(), *xf );
-            bLeafBoxes_.emplace( bTree.leafBoxes().size(), *xf );
+            bLeafBoxes_.emplace( bTree.leafTris().size(), *xf );
         }
     }
 
-    bool nodes( NodeId a, NodeId b ) const { return test_( aTree_.nodes()[a].box, bNodeBox_( b ) ); }
-    bool triNode( int a, NodeId b ) const { return test_( aTree_.leafBoxes()[a], bNodeBox_( b ) ); }
-    bool tris( int a, int b ) const { return test_( aTree_.leafBoxes()[a], bLeafBoxes_ ? bLeafBoxes_->get( b, bTree_.leafBoxes()[b] ) : bTree_.leafBoxes()[b] ); }
+    bool nodes( NodeId a, NodeId b ) const { return test_( aTree_.box( a ), bNodeBox_( b ) ); }
+    bool triNode( const Box3f & aBox, NodeId b ) const { return test_( aBox, bNodeBox_( b ) ); }
+    bool tris( int b, const Box3f & aBox, const Box3f & bBox ) const { return test_( aBox, bLeafBoxes_ ? bLeafBoxes_->get( b, bBox ) : bBox ); }
 
 private:
     bool test_( const Box3f & a, const Box3f & b ) const { return preciseBoxesIntersect( a, b, conv_, minGap_ ); }
-    Box3f bNodeBox_( NodeId b ) const { return bNodeBoxes_ ? bNodeBoxes_->get( b, bTree_.nodes()[b].box ) : bTree_.nodes()[b].box; }
+    Box3f bNodeBox_( NodeId b ) const { return bNodeBoxes_ ? bNodeBoxes_->get( b, bTree_.box( b ) ) : bTree_.box( b ); }
 
     const AABBTree & aTree_;
     const AABBTree & bTree_;
@@ -200,8 +200,8 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const A
             if ( split( s, [&mySubtasks]( const WideNodePair & c ) { mySubtasks.push_back( c ); } ) )
                 continue;
             const bool goOn = forWideLeafTris( aTree, bTree, s,
-                [&boxesIntersect]( int i, NodeId n ) { return boxesIntersect.triNode( i, n ); },
-                [&boxesIntersect]( int i, int j ) { return boxesIntersect.tris( i, j ); },
+                [&boxesIntersect]( int, const Box3f & iBox, NodeId n ) { return boxesIntersect.triNode( iBox, n ); },
+                [&boxesIntersect]( int, int j, const Box3f & iBox, const Box3f & jBox ) { return boxesIntersect.tris( j, iBox, jBox ); },
                 [&]( int i, int j )
                 {
                     const auto & at = aTree.leafTris()[i];
@@ -440,13 +440,12 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
     if ( rigidB2A )
     {
         xfNodeBoxes.resizeNoInit( tree.nodes().size() );
-        ParallelFor( xfNodeBoxes, [&]( NodeId i ) { xfNodeBoxes[i] = transformed( tree.nodes()[i].box, *rigidB2A ); } );
-        xfLeafBoxes.resizeNoInit( tree.leafBoxes().size() );
-        ParallelFor( xfLeafBoxes, [&]( size_t i ) { xfLeafBoxes[i] = transformed( tree.leafBoxes()[i], *rigidB2A ); } );
+        ParallelFor( xfNodeBoxes, [&]( NodeId i ) { xfNodeBoxes[i] = transformed( tree.box( i ), *rigidB2A ); } );
+        xfLeafBoxes.resizeNoInit( tree.leafTris().size() );
+        ParallelFor( xfLeafBoxes, [&]( size_t i ) { xfLeafBoxes[i] = transformed( tree.leafBox( int( i ) ), *rigidB2A ); } );
     }
     const double minGap = 2 / conv.invRange;
-    auto nodeBox = [&]( NodeId n ) -> const Box3f & { return rigidB2A ? xfNodeBoxes[n] : tree.nodes()[n].box; };
-    auto leafBox = [&]( int i ) -> const Box3f & { return rigidB2A ? xfLeafBoxes[i] : tree.leafBoxes()[i]; };
+    auto nodeBox = [&]( NodeId n ) { return rigidB2A ? xfNodeBoxes[n] : tree.box( n ); };
     auto nodesIntersect = [&]( NodeId x, NodeId y ) { return preciseBoxesIntersect( nodeBox( x ), nodeBox( y ), conv, minGap ); };
     auto split = [&]( const WideNodePair & s, auto && push ) { return splitSelfWidePair( tree, s, nodesIntersect, push ); };
     // 8 levels -> at most 4^8 = 2^16 subtasks
@@ -586,8 +585,8 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
                 if ( split( s, [&mySubtasks]( const WideNodePair & c ) { mySubtasks.push_back( c ); } ) )
                     continue;
                 const bool goOn = forWideLeafTris<true>( tree, tree, s,
-                    [&]( int i, NodeId n ) { return preciseBoxesIntersect( leafBox( i ), nodeBox( n ), conv, minGap ); },
-                    [&]( int i, int j ) { return preciseBoxesIntersect( leafBox( i ), leafBox( j ), conv, minGap ); },
+                    [&]( int i, const Box3f & iBox, NodeId n ) { return preciseBoxesIntersect( rigidB2A ? xfLeafBoxes[i] : iBox, nodeBox( n ), conv, minGap ); },
+                    [&]( int i, int j, const Box3f & iBox, const Box3f & jBox ) { return preciseBoxesIntersect( rigidB2A ? xfLeafBoxes[i] : iBox, rigidB2A ? xfLeafBoxes[j] : jBox, conv, minGap ); },
                     [&]( int i, int j )
                     {
                         const auto & lt = tree.leafTris()[i];

@@ -46,7 +46,7 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
     auto bBox = [&]( const Box3f & box ) { return rigidB2A ? transformed( box, *rigidB2A ) : box; };
     auto getSubTask = [&]( NodeId an, NodeId bn )
     {
-        return SubTask { an, bn, aTree.nodes()[an].box.getDistanceSq( bBox( bTree.nodes()[bn].box ) ) };
+        return SubTask { an, bn, aTree.box( an ).getDistanceSq( bBox( bTree.box( bn ) ) ) };
     };
 
     if ( ( !a.region || aNodes.test( NodeId( 0 ) ) ) && ( !b.region || bNodes.test( NodeId( 0 ) ) ) )
@@ -71,7 +71,7 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
             for ( int j = 0; j < bNode.numLeafTris(); ++j )
             {
                 const auto & bt = bTree.leafTris()[bNode.first + j];
-                bBoxes[j] = bBox( bTree.leafBoxes()[bNode.first + j] );
+                bBoxes[j] = bBox( bTree.leafBox( bNode.first + j ) );
                 for ( int k = 0; k < 3; ++k )
                     bTris[j][k] = rigidB2A ? ( *rigidB2A )( b.mesh.points[bt.verts[k]] ) : b.mesh.points[bt.verts[k]];
             }
@@ -80,7 +80,7 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
                 const auto & at = aTree.leafTris()[i];
                 if ( a.region && !a.region->test( at.face ) )
                     continue;
-                const auto & aBox = aTree.leafBoxes()[i];
+                const auto aBox = aTree.leafBox( i );
                 const Triangle3f av{ a.mesh.points[at.verts[0]], a.mesh.points[at.verts[1]], a.mesh.points[at.verts[2]] };
                 for ( int j = 0; j < bNode.numLeafTris(); ++j )
                 {
@@ -116,7 +116,7 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
                 ch[k] = ch[k - 1];
             ch[k] = t;
         };
-        if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
+        if ( !aNode.leaf() && ( bNode.leaf() || aTree.box( s.a ).volume() >= bTree.box( s.b ).volume() ) )
         {
             for ( int i = 0; i < aNode.count; ++i )
                 if ( const NodeId c( aNode.first + i ); !a.region || aNodes.test( c ) )

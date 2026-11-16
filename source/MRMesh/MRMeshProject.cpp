@@ -320,7 +320,7 @@ void findBoxedTrisInBall( const MeshPart & mp, Ball3f ball, const FoundBoxedTriC
     const auto & tree = mp.mesh.getAABBTree();
     forLeafTrisInBall( mp, ball, [&]( int i, Ball3f & b )
     {
-        if ( !( tree.leafBoxes()[i].getDistanceSq( b.center ) < b.radiusSq ) )
+        if ( !( tree.leafBox( i ).getDistanceSq( b.center ) < b.radiusSq ) )
             return Processing::Continue;
         return foundCallback( tree.leafTris()[i].face, b );
     } );

@@ -39,14 +39,7 @@ MeshIntersectionResult meshRayIntersectT_( const MeshPart& meshPart, const Line3
     if( nodes.empty() )
         return res;
 
-    // the float version takes the stored box by reference: a copy of it before rayBoxIntersect costs 20% of the time
-    auto nodeBox = [&]( NodeId n ) -> decltype(auto)
-    {
-        if constexpr ( std::is_same_v<T, float> )
-            return ( nodes[n].box );
-        else
-            return Box3<T>( nodes[n].box );
-    };
+    auto nodeBox = [&]( NodeId n ) { return Box3<T>( tree.box( n ) ); };
 
     RayOrigin<T> rayOrigin{ line.p };
     T s = rayStart, e = rayEnd;
@@ -549,18 +542,19 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
     [[maybe_unused]] T boxExpansion = 0;
     if constexpr ( std::is_same_v<T, double> )
     {
-        const Box3d rootBox( nodes[NodeId( 0 )].box );
+        const Box3d rootBox( tree.getBoundingBox() );
         convToInt = getToIntConverter( rootBox );
         convToFloat = getToFloatConverter( rootBox );
         boxExpansion = 2 * convToFloat.range;
     }
     // the float version takes the stored box by reference, avoiding a copy
+    // the float version takes the stored box by reference, avoiding a copy
     auto nodeBox = [&] ( NodeId n ) -> decltype(auto)
     {
         if constexpr ( std::is_same_v<T, double> )
-            return Box3d( nodes[n].box ).expanded( Vector3d::diagonal( boxExpansion ) );
+            return Box3d( tree.box( n ) ).expanded( Vector3d::diagonal( boxExpansion ) );
         else
-            return ( nodes[n].box );
+            return tree.box( n );
     };
 
     RayOrigin<T> rayOrigin{ line.p };
@@ -607,7 +601,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
                 {
                     // double version (more precise); a triangle outside its expanded box cannot be crossed in integer coordinates
                     T bs = rayStart, be = rayEnd;
-                    if ( !rayBoxIntersect( Box3d( tree.leafBoxes()[i] ).expanded( Vector3d::diagonal( boxExpansion ) ), rayOrigin, bs, be, prec ) )
+                    if ( !rayBoxIntersect( Box3d( tree.leafBox( i ) ).expanded( Vector3d::diagonal( boxExpansion ) ), rayOrigin, bs, be, prec ) )
                         continue;
                     for ( int j = 0; j < 3; ++j )
                         pvc[j].pt = convToInt( m.points[pvc[j].id] );
@@ -631,7 +625,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
                 {
                     // float version (faster); the box of the triangle rejects the near-miss hits of the float triangle test
                     T bs = rayStart, be = rayEnd;
-                    if ( !rayBoxIntersect( tree.leafBoxes()[i], rayOrigin, bs, be, prec ) )
+                    if ( !rayBoxIntersect( tree.leafBox( i ), rayOrigin, bs, be, prec ) )
                         continue;
                     const Vector3<T> vA = Vector3<T>( m.points[pvc[0].id] ) - line.p;
                     const Vector3<T> vB = Vector3<T>( m.points[pvc[1].id] ) - line.p;

@@ -10,6 +10,7 @@
 #include "MRVector.h"
 #include <atomic>
 #include <cstdint>
+#include <optional>
 
 namespace MR
 {
@@ -53,7 +54,7 @@ bool splitWidePair( const AABBTree & aTree, const AABBTree & bTree, const WideNo
     const auto & an = aTree.nodes()[s.a];
     const auto & bn = bTree.nodes()[s.b];
     constexpr bool hasChildren = requires { intersect.children( true, s.a, s.b ); };
-    if ( !an.leaf() && ( bn.leaf() || an.box.volume() >= bn.box.volume() ) )
+    if ( !an.leaf() && ( bn.leaf() || aTree.box( s.a ).volume() >= bTree.box( s.b ).volume() ) )
     {
         if constexpr ( hasChildren )
         {
@@ -115,8 +116,47 @@ bool splitSelfWidePair( const AABBTree & tree, const WideNodePair & s, Intersect
     return true;
 }
 
+/// the boxes of the triangles of given leaf in SoA order ( lo[c][i], hi[c][i] ), computed at once from the SIMD layout:
+/// each contains tree.leafBox( i ) of its triangle (expanded by about two units in the last place more), so they can replace
+/// these boxes in the tests, which only select the candidates for precise tests; empty (NaN) in unused slots
+struct WideLeafTriBoxes
+{
+    alignas( 16 ) float lo[3][4];
+    alignas( 16 ) float hi[3][4];
+
+    WideLeafTriBoxes( const AABBTree & tree, NodeId leafNode )
+    {
+        using namespace Simd4;
+        const auto & leaf = tree.simdLeaves()[~tree.simdRef( leafNode )];
+        const F k = set1( 2.4e-7f ), tiny = set1( 1e-37f );
+        for ( int c = 0; c < 3; ++c )
+        {
+            const F a = load( leaf.coord[0][c] ), b = load( leaf.coord[1][c] ), cc = load( leaf.coord[2][c] );
+            const F l = min( min( a, b ), cc ), h = max( max( a, b ), cc );
+            store( lo[c], sub( sub( l, mul( abs( l ), k ) ), tiny ) );
+            store( hi[c], add( add( h, mul( abs( h ), k ) ), tiny ) );
+        }
+    }
+
+    Box3f box( int i ) const { return Box3f( { lo[0][i], lo[1][i], lo[2][i] }, { hi[0][i], hi[1][i], hi[2][i] } ); }
+
+    /// the mask of the boxes intersecting box i of other (as Box3f::intersects)
+    int intersecting( const WideLeafTriBoxes & other, int i ) const
+    {
+        using namespace Simd4;
+        M ok = andm( le( load( lo[0] ), set1( other.hi[0][i] ) ), le( set1( other.lo[0][i] ), load( hi[0] ) ) );
+        ok = andm( ok, andm( le( load( lo[1] ), set1( other.hi[1][i] ) ), le( set1( other.lo[1][i] ), load( hi[1] ) ) ) );
+        ok = andm( ok, andm( le( load( lo[2] ), set1( other.hi[2][i] ) ), le( set1( other.lo[2][i] ), load( hi[2] ) ) ) );
+        return bits( ok );
+    }
+};
+
+/// given as tris to forWideLeafTris, tests the boxes of two triangles by their intersection, all boxes of the other leaf at once
+struct WideTriBoxesIntersect {};
+
 /// calls onTris( i, j ) for the triangles (indices in leafTris()) of leaves s.a and s.b, whose boxes intersect:
-/// triNode( i, bNode ) tests the box of triangle i with the box of leaf s.b, and tris( i, j ) the boxes of two triangles;
+/// triNode( i, iBox, bNode ) tests the box of triangle i (iBox contains aTree.leafBox( i ), see wideLeafTriBoxes) with the box of leaf s.b,
+/// and tris( i, j, iBox, jBox ) the boxes of two triangles (jBox contains bTree.leafBox( j ));
 /// in the traversal of one tree with itself (Self), a leaf paired with itself gives each pair of its triangles once, i < j;
 /// stops and returns false as soon as onTris returns false
 template<bool Self = false, typename TriNode, typename Tris, typename OnTris>
@@ -126,15 +166,32 @@ bool forWideLeafTris( const AABBTree & aTree, const AABBTree & bTree, const Wide
     const auto & bn = bTree.nodes()[s.b];
     assert( an.leaf() && bn.leaf() );
     const bool self = Self && s.a == s.b;
-    const int aEnd = an.first + an.numLeafTris();
-    const int bEnd = bn.first + bn.numLeafTris();
-    for ( int i = an.first; i < aEnd; ++i )
+    const int aNum = an.numLeafTris();
+    const int bNum = bn.numLeafTris();
+    // the boxes of the triangles of both leaves, computed once
+    const WideLeafTriBoxes aBoxes( aTree, s.a );
+    const std::optional<WideLeafTriBoxes> bBoxesOpt = self ? std::nullopt : std::optional<WideLeafTriBoxes>( std::in_place, bTree, s.b );
+    const WideLeafTriBoxes & bBoxes = self ? aBoxes : *bBoxesOpt;
+    for ( int i = 0; i < aNum; ++i )
     {
-        if ( !self && !triNode( i, s.b ) )
+        const auto iBox = aBoxes.box( i );
+        if ( !self && !triNode( an.first + i, iBox, s.b ) )
             continue;
-        for ( int j = self ? i + 1 : bn.first; j < bEnd; ++j )
-            if ( tris( i, j ) && !onTris( i, j ) )
-                return false;
+        if constexpr ( std::is_same_v<std::decay_t<Tris>, WideTriBoxesIntersect> )
+        {
+            int m = bBoxes.intersecting( aBoxes, i ) & ( ( 1 << bNum ) - 1 );
+            if ( self )
+                m &= ~0 << ( i + 1 );
+            for ( ; m; m &= m - 1 )
+                if ( const int j = Simd4::lowestBit( m ); !onTris( an.first + i, bn.first + j ) )
+                    return false;
+        }
+        else
+        {
+            for ( int j = self ? i + 1 : 0; j < bNum; ++j )
+                if ( tris( an.first + i, bn.first + j, iBox, bBoxes.box( j ) ) && !onTris( an.first + i, bn.first + j ) )
+                    return false;
+        }
     }
     return true;
 }
@@ -196,7 +253,7 @@ template<typename NodeOk, typename TriOk, typename OnTri>
 void forWideTris( const AABBTree & tree, NodeOk && nodeOk, TriOk && triOk, OnTri && onTri )
 {
     const auto & nodes = tree.nodes();
-    if ( nodes.empty() || !nodeOk( nodes.front().box ) )
+    if ( nodes.empty() || !nodeOk( tree.getBoundingBox() ) )
         return;
     // every level adds at most MaxChildren - 1 nodes, and the tree of 2^31 triangles has 16 levels
     InplaceStack<NoInitNodeId, 64> subtasks;
@@ -208,12 +265,12 @@ void forWideTris( const AABBTree & tree, NodeOk && nodeOk, TriOk && triOk, OnTri
         if ( node.leaf() )
         {
             for ( int i = node.first, end = node.first + node.numLeafTris(); i < end; ++i )
-                if ( triOk( tree.leafBoxes()[i] ) && onTri( i ) == Processing::Stop )
+                if ( triOk( tree.leafBox( i ) ) && onTri( i ) == Processing::Stop )
                     return;
             continue;
         }
         for ( int i = node.count - 1; i >= 0; --i )
-            if ( const NodeId c( node.first + i ); nodeOk( nodes[c].box ) )
+            if ( const NodeId c( node.first + i ); nodeOk( tree.box( c ) ) )
                 subtasks.push( c );
     }
 }

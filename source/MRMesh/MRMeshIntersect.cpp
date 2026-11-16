@@ -519,20 +519,6 @@ void rayMeshIntersectAll( const VertCoords & points, const AABBTree & tree, cons
 namespace
 {
 
-// calls onTri( leafTri ) for the triangles of the tree (only from region if given), which boxes pass boxOk
-template <typename BoxOk, typename OnTri>
-void boxedTreeIntersect( const AABBTree & tree, const FaceBitSet * region, BoxOk && boxOk, OnTri && onTri )
-{
-    forWideTris( tree, boxOk, boxOk, [&]( int i )
-    {
-        const auto & lt = tree.leafTris()[i];
-        if ( region && !region->test( lt.face ) )
-            return Processing::Continue;
-        onTri( lt );
-        return Processing::Continue;
-    } );
-}
-
 // adds to the outputs the triangles of the mesh part, which boxes pass boxOk
 template <typename BoxOk>
 void boxedMeshIntersect( const MeshPart& meshPart, BoxOk && boxOk,
@@ -540,14 +526,18 @@ void boxedMeshIntersect( const MeshPart& meshPart, BoxOk && boxOk,
 {
     assert( fs || ues || vs || fsVec );
     const auto& m = meshPart.mesh;
+    const auto& tree = m.getAABBTree();
 
     assert( !fs  || fs->size()  >= m.topology.faceSize() );
     assert( !ues || ues->size() >= m.topology.undirectedEdgeSize() );
     assert( !vs  || vs->size()  >= m.topology.vertSize() );
 
-    boxedTreeIntersect( m.getAABBTree(), meshPart.region, boxOk, [&]( const AABBTree::LeafTri & lt )
+    forWideTris( tree, boxOk, boxOk, [&]( int i )
     {
+        const auto & lt = tree.leafTris()[i];
         const auto face = lt.face;
+        if ( meshPart.region && !meshPart.region->test( face ) )
+            return Processing::Continue;
         if ( fs )
             fs->set( face );
         if ( fsVec )
@@ -563,6 +553,7 @@ void boxedMeshIntersect( const MeshPart& meshPart, BoxOk && boxOk,
             ues->set( e1 );
             ues->set( e2 );
         }
+        return Processing::Continue;
     } );
 }
 
@@ -572,8 +563,11 @@ void boxedTreeIntersect( const AABBTree & tree, const FaceBitSet * region, BoxOk
     FaceBitSet * fs, VertBitSet * vs, std::vector<FaceId> * fsVec )
 {
     assert( fs || vs || fsVec );
-    boxedTreeIntersect( tree, region, boxOk, [&]( const AABBTree::LeafTri & lt )
+    forWideTris( tree, boxOk, boxOk, [&]( int i )
     {
+        const auto & lt = tree.leafTris()[i];
+        if ( region && !region->test( lt.face ) )
+            return Processing::Continue;
         if ( fs )
             fs->autoResizeSet( lt.face );
         if ( fsVec )
@@ -581,6 +575,7 @@ void boxedTreeIntersect( const AABBTree & tree, const FaceBitSet * region, BoxOk
         if ( vs )
             for ( auto v : lt.verts )
                 vs->autoResizeSet( v );
+        return Processing::Continue;
     } );
 }
 

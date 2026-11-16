@@ -10,6 +10,8 @@ namespace MR
 namespace Cuda
 {
 
+static_assert( sizeof( MR::MeshIntersectionResult ) == sizeof( MeshIntersectionResult ) );
+
 static std::vector<IntersectionPrecomputes> calcPrecs( const std::vector<MR::SkyPatch>& skyPatches )
 {
     std::vector<IntersectionPrecomputes> precs;

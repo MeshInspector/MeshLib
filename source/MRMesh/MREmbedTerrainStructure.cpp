@@ -253,7 +253,7 @@ Expected<TerrainEmbedder::MappedMeshContours> TerrainEmbedder::prepareTerrainCut
                 canceled = true;
             return;
         }
-        mtps[i] = interRes.mtp;
+        mtps[i] = interRes.mtp( result_.topology );
     } );
 
     if ( canceled )
@@ -286,7 +286,7 @@ Expected<TerrainEmbedder::MappedMeshContours> TerrainEmbedder::prepareTerrainCut
                 auto interRes = rayMeshIntersect( result_, line, -FLT_MAX, FLT_MAX );
                 if ( !interRes )
                     return unexpected( "Cannot resolve bow ties on embedded structure wall" );
-                noBowtiesMtp[j] = interRes.mtp;
+                noBowtiesMtp[j] = interRes.mtp( result_.topology );
             }
         }
     }

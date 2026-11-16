@@ -166,7 +166,7 @@ InSphere findInSphereImpl( const Mesh& mesh, const MeshPoint & m, const InSphere
         res.center = 0.5f * ( isec.proj.point + m.pt );
         assert( isec.distanceAlongLine >= 0 );
         res.radius = 0.5f * isec.distanceAlongLine;
-        res.oppositeTouchPoint = MeshProjectionResult{ .proj = isec.proj, .tp = isec.mtp.canonical( mesh.topology ).bary, .distSq = sqr( res.radius ) };
+        res.oppositeTouchPoint = MeshProjectionResult{ .proj = isec.proj, .tp = isec.tp, .distSq = sqr( res.radius ) };
     }
 
     findTrisInBall( mesh, Ball3f{ res.center, res.oppositeTouchPoint.distSq },

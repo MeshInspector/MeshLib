@@ -179,7 +179,7 @@ jobs:
           set EMBREE_CC_ARGS=
           set "LLVM_BIN=${{ env.VC_PATH }}\VC\Tools\Llvm\ARM64\bin"
           set "LLVM_BIN=%LLVM_BIN:\=/%"
-          if "${{ matrix.arch }}"=="arm64" set EMBREE_CC_ARGS=-DCMAKE_C_COMPILER="%LLVM_BIN%/clang.exe" -DCMAKE_CXX_COMPILER="%LLVM_BIN%/clang++.exe" -DCOMPILER_HAS_SYCL_SUPPORT=OFF
+          if "${{ matrix.arch }}"=="arm64" set EMBREE_CC_ARGS=-DCMAKE_C_COMPILER="%LLVM_BIN%/clang.exe" -DCMAKE_CXX_COMPILER="%LLVM_BIN%/clang++.exe" -DCOMPILER_HAS_SYCL_SUPPORT=OFF -DEMBREE_IGNORE_CMAKE_CXX_FLAGS=OFF
           echo %EMBREE_CC_ARGS%
           cmake -S embree-src -B embree-build -GNinja %EMBREE_OPTIONS% %EMBREE_CC_ARGS% -DCMAKE_PREFIX_PATH=C:/vcpkg/installed/${{ env.TRIPLET }} -DCMAKE_INSTALL_PREFIX=%CD%\embree-install || exit /b 1
           cmake --build embree-build || exit /b 1

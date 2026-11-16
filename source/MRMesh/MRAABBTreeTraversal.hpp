@@ -119,7 +119,7 @@ bool splitSelfWidePair( const AABBTree & tree, const WideNodePair & s, Intersect
         if constexpr ( requires { intersect.children( true, s.a, s.b ); } )
         {
             // the children after ci, whose boxes intersect the box of ci
-            for ( int m = intersect.children( true, s.a, ci ) & ( ~0 << ( i + 1 ) ); m; m &= m - 1 )
+            for ( int m = intersect.children( true, s.a, ci ) & int( ~0u << ( i + 1 ) ); m; m &= m - 1 )
                 push( WideNodePair{ ci, childWideNode( sn, Simd4::lowestBit( m ) ) } );
         }
         else
@@ -154,7 +154,7 @@ bool forWideLeafTris( const AABBTree & aTree, const AABBTree & bTree, const Wide
             // tris( i, bLeaf ) tests the box of triangle i with the boxes of all triangles of leaf s.b at once
             int m = tris( i, s.b ) & ( ( 1 << ( bEnd - bFirst ) ) - 1 );
             if ( self )
-                m &= ~0 << ( i - aFirst + 1 );
+                m &= int( ~0u << ( i - aFirst + 1 ) );
             for ( ; m; m &= m - 1 )
                 if ( !onTris( i, bFirst + Simd4::lowestBit( m ) ) )
                     return false;

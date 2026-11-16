@@ -20,7 +20,9 @@ public:
     virtual ~IPointsToMeshProjector() = default;
     /// Updates all data related to the referencing mesh
     virtual void updateMeshData( const Mesh* mesh ) = 0;
-    /// Computes the closest point on mesh to each of given points
+    /// Computes the closest point on mesh to each of given points;
+    /// result[i].distSq is the squared distance in world space (after worldXf and worldRefXf),
+    /// and result[i].proj.point is in the space of the reference mesh (before worldRefXf), whether worldRefXf is rigid or not
     virtual void findProjections( std::vector<MeshProjectionResult>& result, const VertCoords& points,
                                   const AffineXf3f* worldXf = nullptr, const AffineXf3f* worldRefXf = nullptr,
                                   float upDistLimitSq = FLT_MAX, float loDistLimitSq = 0.0f ) = 0;
@@ -48,7 +50,8 @@ struct MeshProjectionParameters
 
 /// Computes signed distances from given test points to the closest point on the reference mesh:
 /// positive value - outside reference mesh, negative - inside reference mesh;
-/// this method can return wrong sign if the closest point is located on self-intersecting part of the mesh
+/// this method can return wrong sign if the closest point is located on self-intersecting part of the mesh;
+/// the distances are measured in world space (after params.xf and params.refXf), with or without projector
 MR_BIND_OVERLOAD_SUFFIX(points) [[nodiscard]] MRMESH_API VertScalars findSignedDistances(
     const Mesh& refMesh, ///< the distances to this mesh will be returned
     const VertCoords & testPoints, const VertBitSet * validTestPoints = {}, ///< the distances from these points will be returned
@@ -77,7 +80,7 @@ public:
     /// <param name="result">vector pf projections</param>
     /// <param name="points">vector of points to project</param>
     /// <param name="objXf">transform applied to points</param>
-    /// <param name="refObjXf">transform applied to referencing mesh</param>
+    /// <param name="refObjXf">transform applied to referencing mesh; returned proj.point are in the space of the referencing mesh before this transform</param>
     /// <param name="upDistLimitSq">maximal squared distance from point to mesh</param>
     /// <param name="loDistLimitSq">minimal squared distance from point to mesh</param>
     MRMESH_API virtual void findProjections( std::vector<MeshProjectionResult>& result, const VertCoords& points,

@@ -1,4 +1,6 @@
 #include "MRAABBTree.h"
+#include <tbb/parallel_for.h>
+#include "MRSimd4.hpp"
 #include "MRInplaceStack.h"
 #include "MRBitSetParallelFor.h"
 #include "MRMesh.h"
@@ -378,42 +380,78 @@ void AABBTree::makeSimd_( const VertCoords & points )
     int numInternal = 0, numLeaves = 0;
     for ( NodeId i( 0 ); i < nodes_.size(); ++i )
         ref[i] = nodes_[i].leaf() ? ~numLeaves++ : numInternal++;
-    simdNodes_.resize( numInternal );
-    simdLeaves_.resize( numLeaves );
+    // the pages are touched first by the parallel filling below
+    resizeNoInit( simdNodes_, numInternal );
+    resizeNoInit( simdLeaves_, numLeaves );
 
     constexpr float inf = std::numeric_limits<float>::infinity();
     constexpr float nan = std::numeric_limits<float>::quiet_NaN();
-    ParallelFor( nodes_, [&]( NodeId n )
+    // every node is assembled in registers and written by non-temporal stores (the arrays are larger than caches)
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, nodes_.size(), 1024 ), [&]( const tbb::blocked_range<size_t> & range )
     {
-        const auto & node = nodes_[n];
-        if ( node.leaf() )
+        for ( size_t ni = range.begin(); ni < range.end(); ++ni )
         {
-            auto & leaf = simdLeaves_[~ref[n]];
-            leaf.first = node.first;
-            leaf.count = node.numLeafTris();
+            const NodeId n( ni );
+            const auto & node = nodes_[n];
+            if ( node.leaf() )
+            {
+                SimdLeaf leaf( noInit );
+                leaf.first = node.first;
+                leaf.count = node.numLeafTris();
+                for ( int i = 0; i < MaxLeafTris; ++i )
+                {
+                    const bool used = i < leaf.count;
+                    for ( int v = 0; v < 3; ++v )
+                    {
+                        const auto p = used ? points[leafTris_[node.first + i].verts[v]] : Vector3f::diagonal( nan );
+                        for ( int c = 0; c < 3; ++c )
+                            leaf.coord[v][c][i] = p[c];
+                    }
+                }
+                Simd4::streamCopy( simdLeaves_[~ref[n]], leaf );
+                continue;
+            }
+            SimdNode sn( noInit );
+            for ( int i = 0; i < MaxChildren; ++i )
+            {
+                const bool used = i < node.count;
+                const NodeId child( node.first + i );
+                sn.child[i] = used ? ref[child] : 0;
+                for ( int c = 0; c < 3; ++c )
+                {
+                    sn.box[c][i] = used ? nodes_[child].box.min[c] : inf;
+                    sn.box[c + 3][i] = used ? nodes_[child].box.max[c] : -inf;
+                }
+            }
+            Simd4::streamCopy( simdNodes_[ref[n]], sn );
+        }
+        Simd4::streamFence();
+    } );
+}
+
+void AABBTree::rewriteSimdLeaves_( const VertCoords & points )
+{
+    MR_TIMER;
+    constexpr float nan = std::numeric_limits<float>::quiet_NaN();
+    // the leaves in the order of the array, each assembled in registers and written by non-temporal stores
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, simdLeaves_.size() ), [&]( const tbb::blocked_range<size_t> & range )
+    {
+        for ( size_t l = range.begin(); l < range.end(); ++l )
+        {
+            SimdLeaf leaf( noInit );
+            leaf.first = simdLeaves_[l].first;
+            leaf.count = simdLeaves_[l].count;
             for ( int i = 0; i < MaxLeafTris; ++i )
             {
                 const bool used = i < leaf.count;
                 for ( int v = 0; v < 3; ++v )
                 {
-                    const auto p = used ? points[leafTris_[node.first + i].verts[v]] : Vector3f::diagonal( nan );
+                    const auto p = used ? points[leafTris_[leaf.first + i].verts[v]] : Vector3f::diagonal( nan );
                     for ( int c = 0; c < 3; ++c )
                         leaf.coord[v][c][i] = p[c];
                 }
             }
-            return;
-        }
-        auto & sn = simdNodes_[ref[n]];
-        for ( int i = 0; i < MaxChildren; ++i )
-        {
-            const bool used = i < node.count;
-            const NodeId child( node.first + i );
-            sn.child[i] = used ? ref[child] : 0;
-            for ( int c = 0; c < 3; ++c )
-            {
-                sn.box[c][i] = used ? nodes_[child].box.min[c] : inf;
-                sn.box[c + 3][i] = used ? nodes_[child].box.max[c] : -inf;
-            }
+            simdLeaves_[l] = leaf;
         }
     } );
 }
@@ -579,6 +617,23 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
         }
         if ( !changed )
             return;
+        // the coordinates of the changed triangles in SIMD layout (all leaves are rewritten below if all vertices changed)
+        if ( changedVerts )
+        {
+            auto & leaf = simdLeaves_[~simdRefs_[n]];
+            for ( int k = 0; k < leaf.count; ++k )
+            {
+                const auto & lt = leafTris_[node.first + k];
+                if ( !changedFaces.test( lt.face ) )
+                    continue;
+                for ( int v = 0; v < 3; ++v )
+                {
+                    const auto & p = mesh.points[lt.verts[v]];
+                    for ( int c = 0; c < 3; ++c )
+                        leaf.coord[v][c][k] = p[c];
+                }
+            }
+        }
         changedNodes.set( n );
         Box3f box;
         for ( int i = node.first, end = node.first + node.numLeafTris(); i < end; ++i )
@@ -603,7 +658,26 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
             box.include( nodes_[NodeId( node.first + i )].box );
         node.box = box;
     }
-    makeSimd_( mesh.points );
+
+    // the changed boxes of children in SIMD layout
+    BitSetParallelFor( changedNodes, [&]( NodeId n )
+    {
+        const auto & node = nodes_[n];
+        if ( node.leaf() )
+            return;
+        auto & sn = simdNodes_[simdRefs_[n]];
+        for ( int i = 0; i < node.count; ++i )
+        {
+            const auto & cb = nodes_[NodeId( node.first + i )].box;
+            for ( int c = 0; c < 3; ++c )
+            {
+                sn.box[c][i] = cb.min[c];
+                sn.box[c + 3][i] = cb.max[c];
+            }
+        }
+    } );
+    if ( !changedVerts )
+        rewriteSimdLeaves_( mesh.points );
 }
 
 void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )

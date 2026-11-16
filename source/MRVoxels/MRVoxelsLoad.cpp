@@ -228,7 +228,7 @@ Expected<std::vector<MR::FloatGrid>> gridsFromVdb( std::istream& in, const Progr
     {
         openvdb::initialize();
 #ifdef OPENVDB_USE_DELAYED_LOADING
-        // delayed-loaded leaves read the background value of the grids below, which are destroyed after copying
+        // delayed loading would read the leaves later through a pointer to the background of `grids`, which are destroyed after copying
         openvdb::io::Stream stream( in, false );
 #else
         openvdb::io::Stream stream( in );

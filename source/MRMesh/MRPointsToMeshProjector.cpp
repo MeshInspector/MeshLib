@@ -9,6 +9,25 @@
 namespace MR
 {
 
+namespace
+{
+
+/// finds the projection of point on mesh with transformations from createProjectionTransforms;
+/// returns distSq in world space and proj.point in the space of the mesh
+MeshProjectionResult projectToRefSpace( const Vector3f & point, const Mesh & mesh, const MeshProjectionTransforms & xfs, float upDistLimitSq, float loDistLimitSq )
+{
+    auto res = findProjection( xfs.rigidXfPoint ? ( *xfs.rigidXfPoint )( point ) : point, mesh, upDistLimitSq, xfs.nonRigidXfTree, loDistLimitSq );
+    if ( xfs.nonRigidXfTree && res.valid() )
+    {
+        // return the point in the space of the mesh as in case of rigid transformation (which is applied to the point instead)
+        const auto [v0, v1, v2] = mesh.topology.getTriVerts( res.proj.face );
+        res.proj.point = res.tp.interpolate( mesh.points[v0], mesh.points[v1], mesh.points[v2] );
+    }
+    return res;
+}
+
+} // anonymous namespace
+
 void PointsToMeshProjector::updateMeshData( const Mesh* mesh )
 {
     mesh_ = mesh;
@@ -27,7 +46,7 @@ void PointsToMeshProjector::findProjections( std::vector<MeshProjectionResult>& 
 
     ParallelFor( points, [&] ( size_t i )
     {
-        result[i] = findProjection( simplifiedXfs.rigidXfPoint ? ( *simplifiedXfs.rigidXfPoint )( points[VertId( i )] ) : points[VertId( i )], *mesh_, upDistLimitSq, simplifiedXfs.nonRigidXfTree, loDistLimitSq );
+        result[i] = projectToRefSpace( points[VertId( i )], *mesh_, simplifiedXfs, upDistLimitSq, loDistLimitSq );
     } );
 }
 
@@ -71,15 +90,16 @@ VertScalars findSignedDistances(
     }
     else
     {
-        // no projector is given, use fully CPU computation
+        // no projector is given, use fully CPU computation with the same transformations as in PointsToMeshProjector
+        AffineXf3f storageXf;
+        const auto xfs = createProjectionTransforms( storageXf, params.xf, params.refXf );
         ParallelFor( 0_v, testPoints.endId(), [&] ( VertId v )
         {
             if ( validTestPoints && !validTestPoints->test( v ) )
                 return;
-            const auto pt = testToRefXf( testPoints[v] );
-            const auto mpResV = findProjection( pt, refMesh, params.upDistLimitSq, nullptr, params.loDistLimitSq );
+            const auto mpResV = projectToRefSpace( testPoints[v], refMesh, xfs, params.upDistLimitSq, params.loDistLimitSq );
             if ( mpResV.valid() )
-                res[v] = refMesh.signedDistance( pt, mpResV );
+                res[v] = refMesh.signedDistance( testToRefXf( testPoints[v] ), mpResV );
             else
                 res[v] = std::sqrt( mpResV.distSq );
         } );

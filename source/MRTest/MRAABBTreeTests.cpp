@@ -137,7 +137,9 @@ static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
     ASSERT_EQ( tree.simdNodes().size(), size_t( numInternal ) );
     ASSERT_EQ( tree.simdLeaves().size(), size_t( numLeaves ) );
     if ( !nodes.empty() )
+    {
         EXPECT_EQ( tree.simdRoot(), ref[0] );
+    }
     for ( NodeId n( 0 ); n < nodes.size(); ++n )
     {
         const auto & node = nodes[n];
@@ -151,9 +153,13 @@ static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
                     for ( int c = 0; c < 3; ++c )
                     {
                         if ( i < leaf.count )
+                        {
                             EXPECT_EQ( leaf.coord[v][c][i], mesh.points[tree.leafTris()[node.first + i].verts[v]][c] );
+                        }
                         else
+                        {
                             EXPECT_TRUE( std::isnan( leaf.coord[v][c][i] ) );
+                        }
                     }
             continue;
         }
@@ -162,7 +168,9 @@ static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
         {
             const bool used = i < node.count;
             if ( used )
+            {
                 EXPECT_EQ( sn.child[i], ref[node.first + i] );
+            }
             for ( int c = 0; c < 3; ++c )
             {
                 EXPECT_EQ( sn.box[c][i], used ? nodes[NodeId( node.first + i )].box.min[c] : std::numeric_limits<float>::infinity() );

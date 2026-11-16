@@ -164,6 +164,10 @@ jobs:
       - name: Clone Embree
         shell: bash
         run: git clone -q --depth 1 -b ${EMBREE_TAG} https://github.com/RenderKit/embree.git embree-src
+      - name: Patch Embree for Windows ARM64 (its GNU config hardcodes C++11, too old for the MSVC STL)
+        if: ${{ matrix.arch == 'arm64' }}
+        shell: bash
+        run: sed -i 's/-std=c++11/-std=c++17/' embree-src/common/cmake/gnu.cmake && grep -n "std=c++" embree-src/common/cmake/gnu.cmake
       - name: Build
         shell: cmd
         env:

@@ -92,6 +92,15 @@ Mesh Mesh::fromTrianglesDuplicatingNonManifoldVertices(
     return res;
 }
 
+Mesh Mesh::fromTriMeshDuplicatingNonManifoldVertices(
+    TriMesh && triMesh,
+    std::vector<MeshBuilder::VertDuplication> * dups,
+    const MeshBuilder::BuildSettings & settings,
+    const MeshBuilder::BetterDupContinuation & betterCont )
+{
+    return fromTrianglesDuplicatingNonManifoldVertices( std::move( triMesh.points ), triMesh.tris, dups, settings, betterCont );
+}
+
 Mesh Mesh::fromFaceSoup(
     VertCoords vertexCoordinates,
     const std::vector<VertId> & verts, const Vector<MeshBuilder::VertSpan, FaceId> & faces,

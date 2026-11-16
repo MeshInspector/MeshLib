@@ -775,6 +775,7 @@
     <ClCompile Include="MRMeshNormals.cpp" />
     <ClCompile Include="MRMeshRelax.cpp" />
     <ClCompile Include="MRMeshSave.cpp" />
+    <ClCompile Include="MRTriMesh.cpp" />
     <ClCompile Include="MRTriMeshPart.cpp" />
     <ClCompile Include="MRMeshSubdivide.cpp" />
     <ClCompile Include="MRMeshTopology.cpp" />

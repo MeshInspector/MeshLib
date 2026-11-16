@@ -538,6 +538,7 @@ TEST( MRMesh, ProjectionToTriMesh )
     const AABBTree tree( tmesh, &region );
     const MeshPart mp( mesh, &region );
     const AABBTree mpTree( mp ); // the same tree, so the same one of equally close projections is found
+    const AABBTree fullTree( tmesh ); // the same as mesh.getAABBTree(), searched with region
     const auto xf = AffineXf3f::translation( { 0.1f, 0.2f, 0.3f } );
 
     auto same = []( const MeshProjectionResult & a, const MeshProjectionResult & b )
@@ -555,20 +556,27 @@ TEST( MRMesh, ProjectionToTriMesh )
     {
         EXPECT_TRUE( same( findProjection( pt, tmesh.points, tree ), findProjectionSubtree( pt, mp, mpTree ) ) );
         EXPECT_TRUE( same( findProjection( pt, tmesh.points, tree, FLT_MAX, &xf ), findProjectionSubtree( pt, mp, mpTree, FLT_MAX, &xf ) ) );
+        EXPECT_TRUE( same( findProjection( pt, tmesh.points, fullTree, FLT_MAX, nullptr, 0, {}, {}, &region ), findProjection( pt, mp ) ) );
+        EXPECT_TRUE( same( findProjection( pt, tmesh.points, fullTree, FLT_MAX, &xf, 0, {}, {}, &region ), findProjection( pt, mp, FLT_MAX, &xf ) ) );
 
         const Ball3f ball{ pt, 0.25f }; // radius 0.5
         const auto a = collect( [&]( auto cb ) { findTrisInBall( tmesh.points, tree, ball, cb ); } );
         const auto b = collect( [&]( auto cb ) { findTrisInBall( mp, ball, cb ); } );
+        const auto c = collect( [&]( auto cb ) { findTrisInBall( tmesh.points, fullTree, ball, cb, {}, &region ); } );
         ASSERT_EQ( a.size(), b.size() );
+        ASSERT_EQ( c.size(), b.size() );
         for ( size_t i = 0; i < a.size(); ++i )
-            EXPECT_TRUE( same( a[i], b[i] ) );
+            EXPECT_TRUE( same( a[i], b[i] ) && same( c[i], b[i] ) );
 
-        std::vector<FaceId> boxedA, boxedB;
+        std::vector<FaceId> boxedA, boxedB, boxedC;
         findBoxedTrisInBall( tree, ball, [&]( FaceId f, Ball3f & ) { boxedA.push_back( f ); return Processing::Continue; } );
         findBoxedTrisInBall( mp, ball, [&]( FaceId f, Ball3f & ) { boxedB.push_back( f ); return Processing::Continue; } );
+        findBoxedTrisInBall( fullTree, ball, [&]( FaceId f, Ball3f & ) { boxedC.push_back( f ); return Processing::Continue; }, &region );
         std::sort( boxedA.begin(), boxedA.end() );
         std::sort( boxedB.begin(), boxedB.end() );
+        std::sort( boxedC.begin(), boxedC.end() );
         EXPECT_EQ( boxedA, boxedB );
+        EXPECT_EQ( boxedC, boxedB );
         EXPECT_FALSE( a.empty() || boxedA.empty() );
     }
 

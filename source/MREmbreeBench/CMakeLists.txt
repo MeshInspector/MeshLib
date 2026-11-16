@@ -1,0 +1,18 @@
+cmake_minimum_required(VERSION 3.16)
+project(MREmbreeBench CXX)
+
+# Embree sources are cloned next to this file by the workflow (or pass EMBREE_SOURCE_DIR)
+set(EMBREE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/embree" CACHE PATH "Embree source tree")
+set(EMBREE_ISPC_SUPPORT OFF CACHE BOOL "" FORCE)
+set(EMBREE_TUTORIALS OFF CACHE BOOL "" FORCE)
+set(EMBREE_STATIC_LIB ON CACHE BOOL "" FORCE)
+set(EMBREE_TASKING_SYSTEM TBB CACHE STRING "" FORCE)
+foreach(g CURVE GRID POINT SUBDIVISION USER INSTANCE INSTANCE_ARRAY QUAD)
+  set(EMBREE_GEOMETRY_${g} OFF CACHE BOOL "" FORCE)
+endforeach()
+set(EMBREE_ZIP_MODE OFF CACHE BOOL "" FORCE)
+add_subdirectory(${EMBREE_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/embree EXCLUDE_FROM_ALL)
+
+add_executable(${PROJECT_NAME} MREmbreeBench.cpp)
+target_link_libraries(${PROJECT_NAME} PRIVATE MRMesh embree TBB::tbb)
+target_include_directories(${PROJECT_NAME} PRIVATE ${EMBREE_SOURCE_DIR}/include)

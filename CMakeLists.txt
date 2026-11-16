@@ -260,6 +260,11 @@ endif()
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRPch ./MRPch)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
 
+option(MR_EMBREE_BENCH "Build the MeshLib vs Embree ray benchmark" OFF)
+IF(MR_EMBREE_BENCH)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/MREmbreeBench ./MREmbreeBench)
+ENDIF()
+
 IF(MESHLIB_BUILD_EXTRA_IO_FORMATS)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRIOExtras ./MRIOExtras)
 ENDIF()

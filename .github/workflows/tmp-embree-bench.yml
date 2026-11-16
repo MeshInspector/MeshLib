@@ -1,0 +1,166 @@
+name: tmp Embree vs MeshLib ray benchmark
+
+on:
+  push:
+    branches: [ tmp-embree-bench ]
+  workflow_dispatch:
+
+env:
+  EMBREE_TAG: v4.4.1
+  VCPKG_VERSION: '2026.10.16'
+  BENCH_ARGS: '5 1000000'
+  MR_BENCH_CMAKE_OPTIONS: >-
+    -DMR_EMBREE_BENCH=ON -DBUILD_TESTING=OFF -DMR_CXX_STANDARD=23
+    -DMESHLIB_BUILD_MRVIEWER=OFF -DMESHLIB_BUILD_MESHVIEWER=OFF -DMESHLIB_BUILD_PYTHON_MODULES=OFF
+    -DMESHLIB_BUILD_MESHCONV=OFF -DMESHLIB_BUILD_SYMBOLMESH=OFF -DMESHLIB_BUILD_VOXELS=OFF
+    -DMESHLIB_BUILD_EXTRA_IO_FORMATS=OFF -DMESHLIB_BUILD_MCP=OFF -DMESHLIB_BUILD_MRCUDA=OFF
+    -DMESHLIB_BUILD_GENERATED_C_BINDINGS=OFF
+
+jobs:
+  linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x64, runner: ubuntu-latest, image: meshlib-ubuntu24 }
+          - { arch: arm64, runner: ubuntu-24.04-arm, image: meshlib-ubuntu24-arm64 }
+    name: linux-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    container:
+      image: ghcr.io/meshinspector/${{ matrix.image }}:latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    env:
+      MESHLIB_THIRDPARTY_ROOT_DIR: /usr/local/lib/MeshLib
+    steps:
+      - uses: actions/checkout@v7
+      - name: Clone Embree
+        run: git clone -q --depth 1 -b ${EMBREE_TAG} https://github.com/RenderKit/embree.git source/MREmbreeBench/embree
+      - name: Build
+        run: ./scripts/build_source.sh
+        env:
+          MESHLIB_BUILD_RELEASE: 'ON'
+          MESHLIB_BUILD_DEBUG: 'OFF'
+          CMAKE_C_COMPILER: /usr/bin/gcc-13
+          CMAKE_CXX_COMPILER: /usr/bin/g++-13
+          MR_CMAKE_OPTIONS: ${{ env.MR_BENCH_CMAKE_OPTIONS }}
+          MR_CMAKE_BUILD_OPTIONS: --target MREmbreeBench
+      - name: Machine
+        run: lscpu; nproc; free -g
+      - name: Benchmark
+        run: |
+          exe=$(find build/Release -name MREmbreeBench -type f -perm -u+x | head -1)
+          "$exe" ${BENCH_ARGS} | tee bench-linux-${{ matrix.arch }}.txt
+      - uses: actions/upload-artifact@v7
+        with:
+          name: bench-linux-${{ matrix.arch }}
+          path: bench-*.txt
+
+  macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x64, runner: macos-15-intel }
+          - { arch: arm64, runner: macos-15 }
+    name: macos-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+      VCPKG_TRIPLET: ${{ matrix.arch }}-osx-meshlib
+    steps:
+      - name: Disable Spotlight indexing
+        continue-on-error: true
+        run: sudo mdutil -a -i off
+      - uses: actions/checkout@v7
+      - name: Checkout third-party submodules
+        run: bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_macos.sh --vcpkg
+      - name: Set up vcpkg
+        uses: ./.github/actions/setup-vcpkg-macos
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+          HOMEBREW_NO_INSTALL_UPGRADE: '1'
+        with:
+          vcpkg-version: ${{ env.VCPKG_VERSION }}
+          vcpkg-triplet: ${{ env.VCPKG_TRIPLET }}
+          c-compiler: /usr/bin/clang
+          cxx-compiler: /usr/bin/clang++
+          toolchain: xcode16.4
+          internal-build: 'false'
+          vcpkg-root: /usr/local/share/vcpkg
+      - name: Clone Embree
+        run: git clone -q --depth 1 -b ${EMBREE_TAG} https://github.com/RenderKit/embree.git source/MREmbreeBench/embree
+      - name: Build
+        run: ./scripts/build_source.sh
+        env:
+          MESHLIB_BUILD_RELEASE: 'ON'
+          MESHLIB_BUILD_DEBUG: 'OFF'
+          MESHLIB_USE_VCPKG: 'ON'
+          VCPKG_MANIFEST_MODE: 'ON'
+          CMAKE_CXX_COMPILER: /usr/bin/clang++
+          MR_CMAKE_OPTIONS: ${{ env.MR_BENCH_CMAKE_OPTIONS }}
+          MR_CMAKE_BUILD_OPTIONS: --target MREmbreeBench
+      - name: Machine
+        run: sysctl -n machdep.cpu.brand_string; sysctl -n hw.physicalcpu hw.logicalcpu hw.memsize
+      - name: Benchmark
+        run: |
+          exe=$(find build/Release -name MREmbreeBench -type f -perm -u+x | head -1)
+          "$exe" ${BENCH_ARGS} | tee bench-macos-${{ matrix.arch }}.txt
+      - uses: actions/upload-artifact@v7
+        with:
+          name: bench-macos-${{ matrix.arch }}
+          path: bench-*.txt
+
+  windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x64, runner: windows-2025, triplet: x64-windows-meshlib, vsargs: '-arch=amd64 -host_arch=amd64' }
+          - { arch: arm64, runner: windows-11-arm, triplet: arm64-windows-meshlib, vsargs: '-arch=arm64 -host_arch=arm64' }
+    name: windows-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - name: Locate Visual Studio
+        uses: ./.github/actions/locate-visual-studio
+      - name: Checkout third-party submodules
+        shell: bash
+        run: bash scripts/retry.sh --timeout 300 -- powershell scripts/clone_submodules_windows.ps1
+      - name: Set up vcpkg
+        uses: ./.github/actions/setup-vcpkg-windows
+        with:
+          vcpkg-version: ${{ env.VCPKG_VERSION }}
+          vcpkg-triplet: ${{ matrix.triplet }}
+          internal-build: 'false'
+      - name: Clone Embree
+        shell: bash
+        run: git clone -q --depth 1 -b ${EMBREE_TAG} https://github.com/RenderKit/embree.git source/MREmbreeBench/embree
+      - name: Build
+        shell: cmd
+        env:
+          VCPKG_ROOT: C:\vcpkg
+        run: |
+          call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" ${{ matrix.vsargs }} || exit /b 1
+          cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=Release -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} %MR_BENCH_CMAKE_OPTIONS% || exit /b 1
+          cmake --build source\TempOutput -j --target MREmbreeBench || exit /b 1
+      - name: Machine
+        shell: pwsh
+        run: Get-CimInstance Win32_Processor | Format-List Name,NumberOfCores,NumberOfLogicalProcessors; (Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory
+      - name: Benchmark
+        shell: bash
+        run: |
+          exe=$(find source/TempOutput -name MREmbreeBench.exe | head -1)
+          export PATH="$(dirname "$exe"):/c/vcpkg/installed/${{ matrix.triplet }}/bin:$PATH"
+          "$exe" ${BENCH_ARGS} | tee bench-windows-${{ matrix.arch }}.txt
+      - uses: actions/upload-artifact@v7
+        with:
+          name: bench-windows-${{ matrix.arch }}
+          path: bench-*.txt

@@ -172,6 +172,7 @@
     <ClCompile Include="MRUIQualityControl.cpp" />
     <ClCompile Include="MRItemEnabledPerViewport.cpp" />
     <ClCompile Include="MRFileDialogPortal.cpp" />
+    <ClCompile Include="MRWaylandHelpers.cpp" />
     <ClCompile Include="MRWin32MessageHandler.cpp" />
     <ClCompile Include="MRI18n.cpp" />
     <ClCompile Include="MRUITestEngineControl.cpp" />
@@ -359,6 +360,7 @@
     <ClInclude Include="MRItemEnabledPerViewport.h" />
     <ClInclude Include="MRWebResponseCallback.h" />
     <ClInclude Include="MRFileDialogPortal.h" />
+    <ClInclude Include="MRWaylandHelpers.h" />
     <ClInclude Include="MRWin32MessageHandler.h" />
     <ClInclude Include="MRI18n.h" />
     <ClInclude Include="MRLocaleMacos.h" />

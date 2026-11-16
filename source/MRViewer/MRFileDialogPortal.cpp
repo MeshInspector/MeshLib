@@ -2,6 +2,7 @@
 #if !defined( _WIN32 ) && !defined( MRVIEWER_NO_XDG_DESKTOP_PORTAL )
 #include "MRGladGlfw.h"
 #include "MRViewer.h"
+#include "MRWaylandHelpers.h"
 
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRString.h"
@@ -32,21 +33,6 @@ DBusConnection* getConnection()
         return conn;
     } ();
     return sConn;
-}
-
-std::string getWindowId( GLFWwindow* window )
-{
-    // https://flatpak.github.io/xdg-desktop-portal/docs/window-identifiers.html
-    switch ( MR::getWindowSystem() )
-    {
-    case MR::WindowSystem::X11:
-        return fmt::format( "x11:{:08x}", glfwGetX11Window( window ) );
-    case MR::WindowSystem::Wayland:
-        // TODO: Wayland support
-        // https://gitlab.freedesktop.org/wayland/wayland-protocols/-/blob/main/unstable/xdg-foreign/xdg-foreign-unstable-v2.xml
-    default:
-        return "";
-    }
 }
 
 void dbusAppend( DBusMessageIter& iter, std::byte value )
@@ -434,7 +420,7 @@ bool isPortalFileDialogSupported()
     return sIsSupported;
 }
 
-std::vector<std::filesystem::path> runPortalFileDialog( const MR::FileDialog::Parameters& params )
+static std::vector<std::filesystem::path> runPortalFileDialog( const MR::FileDialog::Parameters& params, const std::string& parentWindowId )
 {
     auto* conn = getConnection();
     if ( !conn )
@@ -442,8 +428,6 @@ std::vector<std::filesystem::path> runPortalFileDialog( const MR::FileDialog::Pa
 
     // https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.FileChooser.html
     auto* callMsg = dbus_message_new_method_call( cPortalServiceName, cPortalObjectPath, cFileChooserInterface, params.saveDialog ? "SaveFile" : "OpenFile" );
-
-    const auto parentWindowId = getWindowId( getViewerInstance().window );
 
     const auto* title = params.multiselect ? "Open Files" : "Open File";
     if ( params.folderDialog )
@@ -526,6 +510,26 @@ std::vector<std::filesystem::path> runPortalFileDialog( const MR::FileDialog::Pa
         results.emplace_back( path );
     }
     return results;
+}
+
+std::vector<std::filesystem::path> runPortalFileDialog( const MR::FileDialog::Parameters& params )
+{
+    auto* window = getViewerInstance().window;
+    // https://flatpak.github.io/xdg-desktop-portal/docs/window-identifiers.html
+    switch ( getWindowSystem() )
+    {
+    case WindowSystem::X11:
+        return runPortalFileDialog( params, fmt::format( "x11:{:08x}", glfwGetX11Window( window ) ) );
+#ifdef MRVIEWER_EXPERIMENTAL_WAYLAND_SUPPORT
+    case WindowSystem::Wayland:
+    {
+        const WaylandExportedToplevel exported( window );
+        return runPortalFileDialog( params, exported.handle.empty() ? "" : "wayland:" + exported.handle );
+    }
+#endif
+    default:
+        return runPortalFileDialog( params, {} );
+    }
 }
 
 } // namespace MR::detail

@@ -535,6 +535,9 @@
     <ClCompile Include="MRFileDialogPortal.cpp">
       <Filter>CustomOpenDialog</Filter>
     </ClCompile>
+    <ClCompile Include="MRWaylandHelpers.cpp">
+      <Filter>Viewer</Filter>
+    </ClCompile>
     <ClCompile Include="MRWin32MessageHandler.cpp">
       <Filter>UserInputs</Filter>
     </ClCompile>
@@ -1051,6 +1054,9 @@
     </ClInclude>
     <ClInclude Include="MRFileDialogPortal.h">
       <Filter>CustomOpenDialog</Filter>
+    </ClInclude>
+    <ClInclude Include="MRWaylandHelpers.h">
+      <Filter>Viewer</Filter>
     </ClInclude>
     <ClInclude Include="MRFileDialogCocoa.h">
       <Filter>CustomOpenDialog</Filter>

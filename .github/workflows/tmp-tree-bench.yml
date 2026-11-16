@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [ macos-13, macos-15-intel ]
+        runner: [ macos-15-intel ]
     name: ${{ matrix.runner }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 240
@@ -35,13 +35,13 @@ jobs:
           git -C pr fetch -q --depth 1 origin ${BASE_SHA}
           git -C pr worktree add -q --detach ../base ${BASE_SHA}
       - name: Machine
-        run: sw_vers; xcodebuild -version; sysctl -n machdep.cpu.brand_string; sysctl -n hw.physicalcpu hw.logicalcpu hw.memsize
+        run: sw_vers; xcodebuild -version || true; sysctl -n machdep.cpu.brand_string; sysctl -n hw.physicalcpu hw.logicalcpu hw.memsize
       - name: Homebrew dependencies
         env:
           HOMEBREW_NO_AUTO_UPDATE: '1'
           HOMEBREW_NO_INSTALL_UPGRADE: '1'
           HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: '1'
-        run: brew install boost eigen fmt jsoncpp parallel-hashmap spdlog tbb tl-expected zlib-ng libzip pkgconf ninja
+        run: brew install boost eigen fmt jsoncpp parallel-hashmap spdlog tbb tl-expected zlib-ng libzip pkgconf ninja googletest
       - name: Build master and PR
         run: |
           for t in base pr; do

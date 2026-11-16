@@ -9,6 +9,7 @@
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRBitSet.h"
+#include "MRSoaRayTree.h"
 #include <embree4/rtcore.h>
 #include <tbb/global_control.h>
 #include <tbb/parallel_for.h>
@@ -236,6 +237,30 @@ void mlAny( const Mesh& mesh, const Rays& rs, std::vector<uint8_t>& hit )
     } );
 }
 
+void soaClosest( const SoaProto::Tree& tree, const Rays& rs, Hits& h )
+{
+    const size_t n = rs.org.size();
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, n, kGrain ), [&]( const tbb::blocked_range<size_t>& r )
+    {
+        for ( size_t i = r.begin(); i < r.end(); ++i )
+        {
+            const auto res = SoaProto::intersect<true>( tree, rs.org[i], rs.dir[i] );
+            h.t[i] = res.face >= 0 ? res.t : std::numeric_limits<float>::infinity();
+            h.face[i] = res.face;
+        }
+    } );
+}
+
+void soaAny( const SoaProto::Tree& tree, const Rays& rs, std::vector<uint8_t>& hit )
+{
+    const size_t n = rs.org.size();
+    tbb::parallel_for( tbb::blocked_range<size_t>( 0, n, kGrain ), [&]( const tbb::blocked_range<size_t>& r )
+    {
+        for ( size_t i = r.begin(); i < r.end(); ++i )
+            hit[i] = SoaProto::intersect<false>( tree, rs.org[i], rs.dir[i] ).face >= 0;
+    } );
+}
+
 void emClosest1( RTCScene scene, const Rays& rs, Hits& h )
 {
     const size_t n = rs.org.size();
@@ -399,6 +424,13 @@ int main( int argc, char** argv )
             if ( threads == hw )
                 out( "tree_MB", mlMB, emMB );
 
+            // SoA prototype: converted from MeshLib's tree (not timed above), self-contained for rays
+            std::optional<SoaProto::Tree> soa;
+            const double soaConv = bestOf( reps, [&] { soa.reset(); soa.emplace( mesh ); } );
+            out( "soa_convert_ms", soaConv * 1e3, emBuild * 1e3 );
+            if ( threads == hw )
+                out( "soa_tree_MB", soa->heapBytes() / 1048576.0, emMB );
+
             for ( const Rays& rs : { makeCoherent( box, nRays ), makeRandom( box, nRays, 12345 ), makeToward( mesh, box, nRays, 777 ) } )
             {
                 const size_t n = rs.org.size();
@@ -411,6 +443,10 @@ int main( int argc, char** argv )
                 const double tEm8 = bestOf( qreps, [&] { emClosest8( scene, rs, he8 ); } );
                 const double tMlAny = bestOf( qreps, [&] { mlAny( mesh, rs, am ); } );
                 const double tEmAny = bestOf( qreps, [&] { emAny( scene, rs, ae ); } );
+                Hits hs = hm;
+                std::vector<uint8_t> as( n );
+                const double tSoa = bestOf( qreps, [&] { soaClosest( *soa, rs, hs ); } );
+                const double tSoaAny = bestOf( qreps, [&] { soaAny( *soa, rs, as ); } );
                 Hits hmm{ std::vector<float>( n ), {} };
                 const double tMlMulti = threads == hw ? bestOf( qreps, [&] { mlMulti( mesh, rs, hmm ); } ) : 0;
 
@@ -418,6 +454,9 @@ int main( int argc, char** argv )
                 out( ( p + "closest1_Mrays_s" ).c_str(), mr / tMl, mr / tEm1 );
                 out( ( p + "closest_packet8_Mrays_s" ).c_str(), mr / tMl, mr / tEm8 );
                 out( ( p + "any_Mrays_s" ).c_str(), mr / tMlAny, mr / tEmAny );
+                // meshlib column = SoA prototype
+                out( ( p + "soa_closest1_Mrays_s" ).c_str(), mr / tSoa, mr / tEm1 );
+                out( ( p + "soa_any_Mrays_s" ).c_str(), mr / tSoaAny, mr / tEmAny );
                 if ( threads == hw )
                     out( ( p + "multiRay_vs_closest1_Mrays_s" ).c_str(), mr / tMlMulti, mr / tEm1 );
 
@@ -435,6 +474,13 @@ int main( int argc, char** argv )
                                  "any-hit ml=%zu mismatches=%zu;embree 1 vs 8 differ=%zu\n",
                         c.name.c_str(), rs.name.c_str(), g.hitsA, g.hitsB, g.onlyOne, g.sameFace, g.maxRelDiff, g.farApart,
                         g.aFarther, g.bFarther, anyHitsM, anyDiff, g8.onlyOne + g8.farApart );
+                    std::fflush( stdout );
+                    auto gs = compare( hm, hs, box.diagonal() );
+                    size_t anySoaDiff = 0;
+                    for ( size_t i = 0; i < n; ++i )
+                        anySoaDiff += am[i] != as[i];
+                    std::printf( "CHECKSOA;%s;%s;hits ml=%zu soa=%zu;only-one-hits=%zu;same-face=%zu;max|dt|/diag=%.2g;dt>1e-4=%zu;any-hit mismatches=%zu\n",
+                        c.name.c_str(), rs.name.c_str(), gs.hitsA, gs.hitsB, gs.onlyOne, gs.sameFace, gs.maxRelDiff, gs.farApart, anySoaDiff );
                     std::fflush( stdout );
                 }
             }

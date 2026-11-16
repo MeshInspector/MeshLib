@@ -5,6 +5,10 @@
 #include <MRMesh/MRLine3.h>
 #include <MRMesh/MRCube.h>
 #include <MRMesh/MREdgeIterator.h>
+#include <MRMesh/MRBitSet.h>
+#include <MRMesh/MRIntersectionPrecomputes.h>
+#include <MRMesh/MRTriangleIntersection.h>
+#include <cmath>
 
 namespace MR
 {
@@ -111,6 +115,55 @@ TEST( MRMesh, MeshIntersectNearlyCoplanarRay )
     const auto hit = rayMeshIntersect( mesh, Line3f( c + Vector3f( 0, 1, 0 ), Vector3f::minusY() ) );
     ASSERT_TRUE( hit );
     EXPECT_NEAR( hit.distanceAlongLine, 1.0f, 1e-6f );
+}
+
+// the closest intersection found with the tree is the closest one among all triangles
+TEST( MRMesh, MeshIntersectAsBruteForce )
+{
+    const Mesh mesh = makeSphere( { .radius = 1.0f, .numMeshVertices = 2000 } );
+    FaceBitSet region( mesh.topology.faceSize() );
+    for ( auto f : mesh.topology.getValidFaces() )
+        if ( int( f ) % 3 != 0 )
+            region.set( f );
+
+    const FaceBitSet * regions[] = { nullptr, &region };
+    for ( const FaceBitSet * reg : regions )
+    {
+        int numHits = 0;
+        for ( int i = 0; i < 2000; ++i )
+        {
+            // origins inside and outside of the sphere, some directions along the axes
+            const Vector3f org( std::sin( i * 0.37f ) * 1.5f, std::cos( i * 0.53f ) * 1.5f, std::sin( i * 0.71f + 1 ) * 1.5f );
+            Vector3f dir( std::cos( i * 1.13f ), std::sin( i * 0.97f ), std::cos( i * 0.29f + 2 ) );
+            if ( i % 10 == 0 )
+                dir[i % 3] = 0;
+            const Line3f line( org, dir );
+            const IntersectionPrecomputes<float> prec( dir );
+            float bestT = FLT_MAX;
+            for ( auto f : mesh.topology.getValidFaces() )
+            {
+                if ( reg && !reg->test( f ) )
+                    continue;
+                const auto [a, b, c] = mesh.topology.getTriVerts( f );
+                const auto isect = rayTriangleIntersect( mesh.points[a] - org, mesh.points[b] - org, mesh.points[c] - org, prec );
+                if ( isect && isect->t > 0 && isect->t < bestT )
+                    bestT = isect->t;
+            }
+            const auto hit = rayMeshIntersect( { mesh, reg }, line );
+            if ( bestT == FLT_MAX )
+            {
+                EXPECT_FALSE( hit );
+                continue;
+            }
+            ++numHits;
+            ASSERT_TRUE( hit );
+            EXPECT_EQ( hit.distanceAlongLine, bestT );
+            EXPECT_TRUE( !reg || reg->test( hit.proj.face ) );
+            const auto anyHit = rayMeshIntersect( { mesh, reg }, line, 0.0f, FLT_MAX, nullptr, false );
+            EXPECT_TRUE( anyHit );
+        }
+        EXPECT_GT( numHits, 200 );
+    }
 }
 
 } //namespace MR

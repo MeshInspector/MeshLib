@@ -11,6 +11,7 @@
 #include "MRTriBox.hpp"
 #include "MRTriMesh.h"
 #include <algorithm>
+#include <limits>
 #include <tbb/parallel_invoke.h>
 
 namespace MR
@@ -350,6 +351,7 @@ AABBTree::AABBTree( const MeshPart & mp )
     const auto numTris = mp.region ? (int)mp.region->count() : mp.mesh.topology.numValidFaces();
     makeTree( numTris, [&] ( Buffer<TreeCenter> & centers, Box3f & centersBox ) { return makeBoxedTris( mp, numTris, centers, centersBox ); },
         nodes_, leafTris_, leafBoxes_ );
+    makeSimd_( mp.mesh.points );
 }
 
 AABBTree::AABBTree( const TriMesh & tmesh, const FaceBitSet * region )
@@ -358,6 +360,60 @@ AABBTree::AABBTree( const TriMesh & tmesh, const FaceBitSet * region )
     const auto numTris = region ? (int)region->count() : (int)tmesh.tris.size();
     makeTree( numTris, [&] ( Buffer<TreeCenter> & centers, Box3f & centersBox ) { return makeBoxedTris( tmesh, region, numTris, centers, centersBox ); },
         nodes_, leafTris_, leafBoxes_ );
+    makeSimd_( tmesh.points );
+}
+
+void AABBTree::makeSimd_( const VertCoords & points )
+{
+    MR_TIMER;
+    simdNodes_.clear();
+    simdLeaves_.clear();
+    if ( nodes_.empty() )
+        return;
+
+    // the internal nodes and the leaves keep the order of nodes_
+    std::vector<int> ref( nodes_.size() );
+    int numInternal = 0, numLeaves = 0;
+    for ( size_t i = 0; i < nodes_.size(); ++i )
+        ref[i] = nodes_[NodeId( i )].leaf() ? ~numLeaves++ : numInternal++;
+    simdNodes_.resize( numInternal );
+    simdLeaves_.resize( numLeaves );
+
+    constexpr float inf = std::numeric_limits<float>::infinity();
+    constexpr float nan = std::numeric_limits<float>::quiet_NaN();
+    ParallelFor( nodes_, [&]( NodeId n )
+    {
+        const auto & node = nodes_[n];
+        if ( node.leaf() )
+        {
+            auto & leaf = simdLeaves_[~ref[n]];
+            leaf.first = node.first;
+            leaf.count = node.numLeafTris();
+            for ( int i = 0; i < MaxLeafTris; ++i )
+            {
+                const bool used = i < leaf.count;
+                for ( int v = 0; v < 3; ++v )
+                {
+                    const auto p = used ? points[leafTris_[node.first + i].verts[v]] : Vector3f::diagonal( nan );
+                    for ( int c = 0; c < 3; ++c )
+                        leaf.coord[v][c][i] = p[c];
+                }
+            }
+            return;
+        }
+        auto & sn = simdNodes_[ref[n]];
+        for ( int i = 0; i < MaxChildren; ++i )
+        {
+            const bool used = i < node.count;
+            const NodeId child( node.first + i );
+            sn.child[i] = used ? ref[child] : 0;
+            for ( int c = 0; c < 3; ++c )
+            {
+                sn.box[c][i] = used ? nodes_[child].box.min[c] : inf;
+                sn.box[c + 3][i] = used ? nodes_[child].box.max[c] : -inf;
+            }
+        }
+    } );
 }
 
 std::vector<NodeId> AABBTree::getSubtrees( int minNum ) const
@@ -482,6 +538,17 @@ void AABBTree::flipOrientation( const FaceBitSet * region )
         if ( !region || region->test( lt.face ) )
             std::swap( lt.verts[0], lt.verts[1] );
     } );
+    ParallelFor( simdLeaves_, [&]( size_t l )
+    {
+        auto & leaf = simdLeaves_[l];
+        for ( int i = 0; i < leaf.count; ++i )
+        {
+            if ( region && !region->test( leafTris_[leaf.first + i].face ) )
+                continue;
+            for ( int c = 0; c < 3; ++c )
+                std::swap( leaf.coord[0][c][i], leaf.coord[1][c][i] );
+        }
+    } );
 }
 
 void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
@@ -534,6 +601,7 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
             box.include( nodes_[NodeId( node.first + i )].box );
         node.box = box;
     }
+    makeSimd_( mesh.points );
 }
 
 void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
@@ -687,7 +755,9 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
         for ( const auto & lt : leafTris_ )
             faces.set( lt.face );
         *this = AABBTree( MeshPart{ mesh, &faces } );
+        return;
     }
+    makeSimd_( mesh.points );
 }
 
 } //namespace MR

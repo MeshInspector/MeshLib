@@ -128,6 +128,48 @@ static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
         }
     }
     EXPECT_EQ( faces.count(), size_t( mesh.topology.numValidFaces() ) );
+
+    // the SIMD layout is the same tree: the internal nodes and the leaves in the order of nodes()
+    int numInternal = 0, numLeaves = 0;
+    std::vector<int> ref( nodes.size() );
+    for ( NodeId n( 0 ); n < nodes.size(); ++n )
+        ref[n] = nodes[n].leaf() ? ~numLeaves++ : numInternal++;
+    ASSERT_EQ( tree.simdNodes().size(), size_t( numInternal ) );
+    ASSERT_EQ( tree.simdLeaves().size(), size_t( numLeaves ) );
+    if ( !nodes.empty() )
+        EXPECT_EQ( tree.simdRoot(), ref[0] );
+    for ( NodeId n( 0 ); n < nodes.size(); ++n )
+    {
+        const auto & node = nodes[n];
+        if ( node.leaf() )
+        {
+            const auto & leaf = tree.simdLeaves()[~ref[n]];
+            EXPECT_EQ( leaf.first, node.first );
+            EXPECT_EQ( leaf.count, node.numLeafTris() );
+            for ( int i = 0; i < AABBTree::MaxLeafTris; ++i )
+                for ( int v = 0; v < 3; ++v )
+                    for ( int c = 0; c < 3; ++c )
+                    {
+                        if ( i < leaf.count )
+                            EXPECT_EQ( leaf.coord[v][c][i], mesh.points[tree.leafTris()[node.first + i].verts[v]][c] );
+                        else
+                            EXPECT_TRUE( std::isnan( leaf.coord[v][c][i] ) );
+                    }
+            continue;
+        }
+        const auto & sn = tree.simdNodes()[ref[n]];
+        for ( int i = 0; i < AABBTree::MaxChildren; ++i )
+        {
+            const bool used = i < node.count;
+            if ( used )
+                EXPECT_EQ( sn.child[i], ref[node.first + i] );
+            for ( int c = 0; c < 3; ++c )
+            {
+                EXPECT_EQ( sn.box[c][i], used ? nodes[NodeId( node.first + i )].box.min[c] : std::numeric_limits<float>::infinity() );
+                EXPECT_EQ( sn.box[c + 3][i], used ? nodes[NodeId( node.first + i )].box.max[c] : -std::numeric_limits<float>::infinity() );
+            }
+        }
+    }
 }
 
 // expects the same projections of some points on both meshes

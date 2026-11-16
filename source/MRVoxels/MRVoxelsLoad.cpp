@@ -227,7 +227,12 @@ Expected<std::vector<MR::FloatGrid>> gridsFromVdb( std::istream& in, const Progr
     openvdb::GridPtrVecPtr grids;
     {
         openvdb::initialize();
+#ifdef OPENVDB_USE_DELAYED_LOADING
+        // delayed-loaded leaves read the background value of the grids below, which are destroyed after copying
+        openvdb::io::Stream stream( in, false );
+#else
         openvdb::io::Stream stream( in );
+#endif
         grids = stream.getGrids();
     }
 

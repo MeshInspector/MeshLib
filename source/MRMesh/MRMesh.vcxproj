@@ -318,6 +318,7 @@
     <ClInclude Include="miniply.h" />
     <ClInclude Include="MRAABBTree.h" />
     <ClInclude Include="MRAABBTreeTraversal.hpp" />
+    <ClInclude Include="MRSimd4.hpp" />
     <ClInclude Include="MRBitSetParallelFor.h" />
     <ClInclude Include="MRClosestPointInTriangle.h" />
     <ClInclude Include="MRArrow.h" />

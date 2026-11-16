@@ -4,6 +4,8 @@
 #include <MRMesh/MRMeshLoadObj.h>
 #include <MRMesh/MRMeshSave.h>
 #include <MRMesh/MRMesh.h>
+#include <MRMesh/MRAffineXf3.h>
+#include <MRMesh/MRMatrix3.h>
 #include <MRMesh/MRTriMesh.h>
 #include <MRMesh/MRBitCast.h>
 #include <MRMesh/MRBox.h>
@@ -170,6 +172,76 @@ TEST(MRMesh, TriMeshSavePly)
     EXPECT_EQ( loadRes->points.size(), 5 );
     EXPECT_EQ( loadRes->topology.numValidVerts(), 5 );
     EXPECT_EQ( loadRes->topology.numValidFaces(), 6 );
+}
+
+TEST(MRMesh, TriMeshSaveAllFormats)
+{
+    TriMesh triMesh;
+    triMesh.tris = Triangulation{
+        { 0_v, 1_v, 2_v },
+        { 0_v, 2_v, 3_v },
+        { 0_v, 3_v, 4_v },
+        { 0_v, 4_v, 1_v },
+        { 1_v, 3_v, 2_v },
+        { 1_v, 4_v, 3_v }
+    };
+    triMesh.points.emplace_back( 0.f, 0.f, 1.f );
+    triMesh.points.emplace_back( 1.f, 0.f, 0.f );
+    triMesh.points.emplace_back( 0.f, 1.f, 0.f );
+    triMesh.points.emplace_back( -1.f, 0.f, 0.f );
+    triMesh.points.emplace_back( 0.f, -1.f, 0.f );
+    const auto mesh = Mesh::fromTriMesh( TriMesh( triMesh ) );
+
+    VertColors colors;
+    for ( int i = 0; i < 5; ++i )
+        colors.push_back( Color( 50 * i, 0, 0 ) );
+    const AffineXf3d xf( Matrix3d::scale( 2.0 ), Vector3d( 1, 2, 3 ) );
+    const SaveSettings settings{ .colors = &colors, .xf = &xf };
+
+    // TriMesh region and the Mesh with all other triangles deleted, which also deletes vertex #4
+    const FaceBitSet region = FaceBitSet( 6 ).set( 0_f ).set( 1_f ).set( 4_f );
+    auto meshPart = mesh;
+    meshPart.deleteFaces( FaceBitSet( 6, true ) - region );
+    ASSERT_EQ( meshPart.topology.numValidVerts(), 4 );
+
+    // the same bytes must be saved for TriMesh and for equivalent Mesh
+    auto check = [&]( auto saver, const char * name )
+    {
+        SCOPED_TRACE( name );
+        for ( bool onlyValidPoints : { true, false } )
+        {
+            for ( bool packPrimitives : { true, false } )
+            {
+                auto s = settings;
+                s.onlyValidPoints = onlyValidPoints;
+                s.packPrimitives = packPrimitives;
+                std::ostringstream outTriMesh, outMesh, outTriMeshRegion, outMeshPart;
+                EXPECT_TRUE( saver( triMesh, outTriMesh, s ).has_value() );
+                EXPECT_TRUE( saver( mesh, outMesh, s ).has_value() );
+                EXPECT_FALSE( outTriMesh.str().empty() );
+                EXPECT_EQ( outTriMesh.str(), outMesh.str() );
+
+                EXPECT_TRUE( saver( triMesh, outTriMeshRegion, s, &region ).has_value() );
+                EXPECT_TRUE( saver( meshPart, outMeshPart, s ).has_value() );
+                EXPECT_EQ( outTriMeshRegion.str(), outMeshPart.str() );
+                EXPECT_NE( outTriMeshRegion.str(), outTriMesh.str() );
+            }
+        }
+    };
+    check( []( const auto & m, std::ostream & out, const SaveSettings & s, auto... r ) { return MeshSave::toOff( m, out, s, r... ); }, "off" );
+    check( []( const auto & m, std::ostream & out, const SaveSettings & s, auto... r ) { return MeshSave::toObj( m, out, s, r... ); }, "obj" );
+    check( []( const auto & m, std::ostream & out, const SaveSettings & s, auto... r ) { return MeshSave::toObj( m, out, s, 10, r... ); }, "obj firstVertId" );
+    check( []( const auto & m, std::ostream & out, const SaveSettings & s, auto... r ) { return MeshSave::toBinaryStl( m, out, s, r... ); }, "binary stl" );
+    check( []( const auto & m, std::ostream & out, const SaveSettings & s, auto... r ) { return MeshSave::toAsciiStl( m, out, s, r... ); }, "ascii stl" );
+    check( []( const auto & m, std::ostream & out, const SaveSettings & s, auto... r ) { return MeshSave::toPly( m, out, s, r... ); }, "ply" );
+    check( []( const auto & m, std::ostream & out, const SaveSettings & s, auto... r ) { return MeshSave::toModel3mf( m, out, s, r... ); }, "model" );
+
+    UniqueTemporaryFolder dir;
+    ASSERT_TRUE( dir );
+    EXPECT_TRUE( MeshSave::to3mf( triMesh, dir / "tri.3mf" ).has_value() );
+    EXPECT_GT( std::filesystem::file_size( dir / "tri.3mf" ), 0 );
+    EXPECT_TRUE( MeshSave::to3mf( triMesh, dir / "region.3mf", {}, &region ).has_value() );
+    EXPECT_GT( std::filesystem::file_size( dir / "region.3mf" ), 0 );
 }
 
 TEST(MRMesh, LoadPlyDuplicatingNonManifoldVertices)

@@ -667,6 +667,7 @@ struct GridSettings;
 struct FillHoleParams;
 struct FillHoleNicelySettings;
 struct TriMesh;
+struct TriMeshPart;
 
 MR_CANONICAL_TYPEDEFS( ( template <typename T> struct ), MRMESH_CLASS MeshRegion,
     ( MeshPart, MeshRegion<FaceTag> )

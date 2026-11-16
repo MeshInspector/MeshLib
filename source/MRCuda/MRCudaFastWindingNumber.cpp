@@ -21,7 +21,7 @@ namespace MR
 namespace Cuda
 {
 
-static_assert( sizeof( WideNode3 ) == sizeof( AABBTree::Node ) );
+static_assert( sizeof( WideNode3 ) == sizeof( AABBTreeWideNode ) );
 static_assert( sizeof( LeafTri3 ) == sizeof( AABBTree::LeafTri ) );
 
 
@@ -77,13 +77,19 @@ Expected<void> FastWindingNumber::prepareData_( ProgressCallback cb )
     if ( !reportProgress( cb, 0.5f ) )
         return unexpectedOperationCanceled();
 
-    const auto& nodes = tree.nodes();
+    const auto flat = makeFlatAABBTree( tree );
+    const auto& nodes = flat.nodes;
     CUDA_LOGE_RETURN_UNEXPECTED( data->cudaNodes.fromVector( nodes ) );
-    CUDA_LOGE_RETURN_UNEXPECTED( data->cudaLeafTris.fromVector( tree.leafTris() ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( data->cudaLeafTris.fromVector( flat.leafTris ) );
     if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
 
-    CUDA_LOGE_RETURN_UNEXPECTED( data->dipoles.fromVector( mesh_.getDipoles() ) );
+    // the dipoles in the order of the flat nodes
+    const auto & treeDipoles = mesh_.getDipoles();
+    Dipoles dipoles( flat.nodes.size() );
+    for ( NodeId n( 0 ); n < dipoles.size(); ++n )
+        dipoles[n] = treeDipoles[flat.treeNodeIds[n]];
+    CUDA_LOGE_RETURN_UNEXPECTED( data->dipoles.fromVector( dipoles ) );
     if ( !reportProgress( cb, 1.0f ) )
         return unexpectedOperationCanceled();
 

@@ -553,7 +553,7 @@ MeshProjectionResult Mesh::projectPoint( const Vector3f& point, float maxDistSq,
 const AABBTree & Mesh::getAABBTree() const
 {
     const auto & res = AABBTreeOwner_.getOrCreate( [this]{ return AABBTree( *this ); } );
-    assert( res.leafTris().size() == topology.numValidFaces() );
+    assert( res.numTris() == topology.numValidFaces() );
     return res;
 }
 
@@ -573,7 +573,7 @@ const Dipoles & Mesh::getDipoles() const
         [this, &tree] {
             return calcDipoles( tree, *this );
         } );
-    assert( res.size() == tree.nodes().size() );
+    assert( res.size() == tree.numNodes() );
     return res;
 }
 
@@ -589,7 +589,7 @@ void Mesh::updateCaches( const VertBitSet * changedVerts )
 {
     AABBTreeOwner_.update( [&]( AABBTree & tree )
     {
-        assert( tree.leafTris().size() == topology.numValidFaces() );
+        assert( tree.numTris() == topology.numValidFaces() );
         tree.refit( *this, changedVerts );
     } );
     AABBTreePointsOwner_.update( [&]( AABBTreePoints & tree )
@@ -607,7 +607,7 @@ void Mesh::updateCachesAfterSplits( const FaceHashMap & new2Old )
     AABBTreeOwner_.update( [&]( AABBTree & tree )
     {
         tree.addSplitFaces( *this, new2Old );
-        assert( tree.leafTris().size() == topology.numValidFaces() );
+        assert( tree.numTris() == topology.numValidFaces() );
     } );
     AABBTreePointsOwner_.reset(); // new vertices appeared
     dipolesOwner_.reset();

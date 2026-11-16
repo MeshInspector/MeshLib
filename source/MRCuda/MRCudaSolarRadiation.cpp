@@ -48,7 +48,8 @@ BitSet findSkyRays( const Mesh& terrain, const VertCoords& samples, const VertBi
     MR_TIMER;
 
     const AABBTree& tree = terrain.getAABBTree();
-    const auto& nodes = tree.nodes();
+    const auto flat = makeFlatAABBTree( tree );
+    const auto& nodes = flat.nodes;
 
     CUDA_EXEC( cudaSetDevice( 0 ) );
 
@@ -56,7 +57,7 @@ BitSet findSkyRays( const Mesh& terrain, const VertCoords& samples, const VertBi
     cudaNodes.fromVector( nodes );
 
     DynamicArray<float3> cudaMeshPoints( terrain.points );
-    DynamicArray<LeafTri3> cudaLeafTris( tree.leafTris() );
+    DynamicArray<LeafTri3> cudaLeafTris( flat.leafTris );
     DynamicArray<float3> cudaSamples( samples );
 
     std::vector<uint64_t> blocks;
@@ -90,7 +91,8 @@ VertScalars  computeSkyViewFactor( const Mesh& terrain,
     MR_TIMER;
 
     const AABBTree& tree = terrain.getAABBTree();
-    const auto& nodes = tree.nodes();
+    const auto flat = makeFlatAABBTree( tree );
+    const auto& nodes = flat.nodes;
 
     CUDA_EXEC( cudaSetDevice( 0 ) );
 
@@ -98,7 +100,7 @@ VertScalars  computeSkyViewFactor( const Mesh& terrain,
     cudaNodes.fromVector( nodes );
 
     DynamicArray<float3> cudaMeshPoints( terrain.points );
-    DynamicArray<LeafTri3> cudaLeafTris( tree.leafTris() );
+    DynamicArray<LeafTri3> cudaLeafTris( flat.leafTris );
     DynamicArray<float3> cudaSamples( samples );
 
     DynamicArray<uint64_t> cudaValidSamples( validSamples.bits() );

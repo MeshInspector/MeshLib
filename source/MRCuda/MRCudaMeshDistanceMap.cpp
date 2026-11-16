@@ -46,7 +46,8 @@ Expected<DistanceMap> computeDistanceMap( const MR::Mesh& mesh, const MR::MeshTo
         return unexpectedOperationCanceled();
 
     const AABBTree& tree = mesh.getAABBTree();
-    const auto& nodes = tree.nodes();
+    const auto flat = makeFlatAABBTree( tree );
+    const auto& nodes = flat.nodes;
     const auto& meshPoints = mesh.points;
 
 
@@ -57,7 +58,7 @@ Expected<DistanceMap> computeDistanceMap( const MR::Mesh& mesh, const MR::MeshTo
     CUDA_LOGE_RETURN_UNEXPECTED( cudaNodes.fromVector( nodes ) );
 
     DynamicArray<LeafTri3> cudaLeafTris;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaLeafTris.fromVector( tree.leafTris() ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaLeafTris.fromVector( flat.leafTris ) );
 
     MeshToDistanceMapParams cudaParams {
         .xRange = { params.xRange.x, params.xRange.y, params.xRange.z },
@@ -127,13 +128,12 @@ Expected<DistanceMap> computeDistanceMap( const MR::Mesh& mesh, const MR::MeshTo
 size_t computeDistanceMapHeapBytes( const MR::Mesh& mesh, const MR::MeshToDistanceMapParams& params, bool needOutSamples /*= false */ )
 {
     const AABBTree& tree = mesh.getAABBTree();
-    const auto& nodes = tree.nodes();
     const auto& meshPoints = mesh.points;
     constexpr size_t cMinRowCount = 10;
     size_t size = cMinRowCount * params.resolution.y;
     return
-        nodes.size() * sizeof( Cuda::WideNode3 ) +
-        tree.leafTris().size() * sizeof( Cuda::LeafTri3 ) +
+        tree.numNodes() * sizeof( Cuda::WideNode3 ) +
+        tree.numTris() * sizeof( Cuda::LeafTri3 ) +
         meshPoints.size() * sizeof( float3 ) +
 
         size * sizeof( float ) +

@@ -14,21 +14,36 @@
 namespace MR
 {
 
+/// a node of AABBTree in a traversal: its reference as in AABBTree::SimdNode::child and its box
+struct WideNode
+{
+    int ref;
+    Box3f box;
+    [[nodiscard]] bool leaf() const { return ref < 0; }
+};
+
+/// the root of not-empty tree in a traversal
+inline WideNode rootWideNode( const AABBTree & tree ) { return { tree.rootRef(), tree.getBoundingBox() }; }
+
+/// i-th child of an internal node in a traversal
+inline WideNode childWideNode( const AABBTree::SimdNode & sn, int i ) { return { sn.child[i], sn.get( i ) }; }
+
+/// the number of the children of an internal node
+inline int numChildren( const AABBTree::SimdNode & sn ) { return 1 + ( sn.child[1] != 0 ) + ( sn.child[2] != 0 ) + ( sn.child[3] != 0 ); }
+
 /// a pair of nodes of two AABBTree (or of one tree) in their simultaneous traversal
 struct WideNodePair
 {
-    NodeId a, b;
+    WideNode a, b;
 };
 
-/// returns the bit mask of the children of not-leaf node parent (bit i for child parent.first + i), whose boxes intersect given box
-/// (as Box3f::intersects) by one SIMD test of all children
-inline int childBoxesIntersect( const AABBTree & tree, NodeId parent, const Box3f & box )
+/// returns the bit mask of the four boxes (bit i for box i), which intersect given box (as Box3f::intersects) by one SIMD test
+inline int simdBoxesIntersect( const AABBTree::SimdBoxes & sb, const Box3f & box )
 {
     using namespace Simd4;
-    const auto & sn = tree.simdNodes()[tree.simdRef( parent )];
-    M ok = andm( le( load( sn.box[0] ), set1( box.max.x ) ), le( set1( box.min.x ), load( sn.box[3] ) ) );
-    ok = andm( ok, andm( le( load( sn.box[1] ), set1( box.max.y ) ), le( set1( box.min.y ), load( sn.box[4] ) ) ) );
-    ok = andm( ok, andm( le( load( sn.box[2] ), set1( box.max.z ) ), le( set1( box.min.z ), load( sn.box[5] ) ) ) );
+    M ok = andm( le( load( sb.box[0] ), set1( box.max.x ) ), le( set1( box.min.x ), load( sb.box[3] ) ) );
+    ok = andm( ok, andm( le( load( sb.box[1] ), set1( box.max.y ) ), le( set1( box.min.y ), load( sb.box[4] ) ) ) );
+    ok = andm( ok, andm( le( load( sb.box[2] ), set1( box.max.z ) ), le( set1( box.min.z ), load( sb.box[5] ) ) ) );
     return bits( ok ); // unused slots have empty boxes
 }
 
@@ -40,7 +55,7 @@ struct WideIntersect
 {
     Pair pair;
     Children children;
-    bool operator()( NodeId a, NodeId b ) const { return pair( a, b ); }
+    bool operator()( const WideNode & a, const WideNode & b ) const { return pair( a, b ); }
 };
 template<typename Pair, typename Children>
 WideIntersect( Pair, Children ) -> WideIntersect<Pair, Children>;
@@ -50,35 +65,35 @@ WideIntersect( Pair, Children ) -> WideIntersect<Pair, Children>;
 template<typename Intersect, typename Push>
 bool splitWidePair( const AABBTree & aTree, const AABBTree & bTree, const WideNodePair & s, Intersect && intersect, Push && push )
 {
-    const auto & an = aTree.nodes()[s.a];
-    const auto & bn = bTree.nodes()[s.b];
     constexpr bool hasChildren = requires { intersect.children( true, s.a, s.b ); };
-    if ( !an.leaf() && ( bn.leaf() || an.box.volume() >= bn.box.volume() ) )
+    if ( !s.a.leaf() && ( s.b.leaf() || s.a.box.volume() >= s.b.box.volume() ) )
     {
+        const auto & sn = aTree.simdNodes()[s.a.ref];
         if constexpr ( hasChildren )
         {
             for ( int m = intersect.children( true, s.a, s.b ); m; m &= m - 1 )
-                push( WideNodePair{ NodeId( an.first + Simd4::lowestBit( m ) ), s.b } );
+                push( WideNodePair{ childWideNode( sn, Simd4::lowestBit( m ) ), s.b } );
         }
         else
         {
-            for ( int i = 0; i < an.count; ++i )
-                if ( const NodeId c( an.first + i ); intersect( c, s.b ) )
+            for ( int i = 0; i < AABBTree::MaxChildren && sn.child[i]; ++i )
+                if ( const auto c = childWideNode( sn, i ); intersect( c, s.b ) )
                     push( WideNodePair{ c, s.b } );
         }
         return true;
     }
-    if ( !bn.leaf() )
+    if ( !s.b.leaf() )
     {
+        const auto & sn = bTree.simdNodes()[s.b.ref];
         if constexpr ( hasChildren )
         {
             for ( int m = intersect.children( false, s.b, s.a ); m; m &= m - 1 )
-                push( WideNodePair{ s.a, NodeId( bn.first + Simd4::lowestBit( m ) ) } );
+                push( WideNodePair{ s.a, childWideNode( sn, Simd4::lowestBit( m ) ) } );
         }
         else
         {
-            for ( int i = 0; i < bn.count; ++i )
-                if ( const NodeId c( bn.first + i ); intersect( s.a, c ) )
+            for ( int i = 0; i < AABBTree::MaxChildren && sn.child[i]; ++i )
+                if ( const auto c = childWideNode( sn, i ); intersect( s.a, c ) )
                     push( WideNodePair{ s.a, c } );
         }
         return true;
@@ -90,49 +105,50 @@ bool splitWidePair( const AABBTree & aTree, const AABBTree & bTree, const WideNo
 template<typename Intersect, typename Push>
 bool splitSelfWidePair( const AABBTree & tree, const WideNodePair & s, Intersect && intersect, Push && push )
 {
-    if ( s.a != s.b )
+    if ( s.a.ref != s.b.ref )
         return splitWidePair( tree, tree, s, intersect, push );
-    const auto & n = tree.nodes()[s.a];
-    if ( n.leaf() )
+    if ( s.a.leaf() )
         return false;
-    for ( int i = 0; i < n.count; ++i )
+    const auto & sn = tree.simdNodes()[s.a.ref];
+    const int count = numChildren( sn );
+    for ( int i = 0; i < count; ++i )
     {
-        const NodeId ci( n.first + i );
+        const auto ci = childWideNode( sn, i );
         push( WideNodePair{ ci, ci } );
         if constexpr ( requires { intersect.children( true, s.a, s.b ); } )
         {
             // the children after ci, whose boxes intersect the box of ci
             for ( int m = intersect.children( true, s.a, ci ) & ( ~0 << ( i + 1 ) ); m; m &= m - 1 )
-                push( WideNodePair{ ci, NodeId( n.first + Simd4::lowestBit( m ) ) } );
+                push( WideNodePair{ ci, childWideNode( sn, Simd4::lowestBit( m ) ) } );
         }
         else
         {
-            for ( int j = i + 1; j < n.count; ++j )
-                if ( const NodeId cj( n.first + j ); intersect( ci, cj ) )
+            for ( int j = i + 1; j < count; ++j )
+                if ( const auto cj = childWideNode( sn, j ); intersect( ci, cj ) )
                     push( WideNodePair{ ci, cj } );
         }
     }
     return true;
 }
 
-/// calls onTris( i, j ) for the triangles (indices in leafTris()) of leaves s.a and s.b, whose boxes intersect:
+/// calls onTris( i, j ) for the triangles (slots in leafTris()) of leaves s.a and s.b, whose boxes intersect:
 /// triNode( i, bNode ) tests the box of triangle i with the box of leaf s.b, and tris( i, j ) the boxes of two triangles;
 /// in the traversal of one tree with itself (Self), a leaf paired with itself gives each pair of its triangles once, i < j;
 /// stops and returns false as soon as onTris returns false
 template<bool Self = false, typename TriNode, typename Tris, typename OnTris>
 bool forWideLeafTris( const AABBTree & aTree, const AABBTree & bTree, const WideNodePair & s, TriNode && triNode, Tris && tris, OnTris && onTris )
 {
-    const auto & an = aTree.nodes()[s.a];
-    const auto & bn = bTree.nodes()[s.b];
-    assert( an.leaf() && bn.leaf() );
-    const bool self = Self && s.a == s.b;
-    const int aEnd = an.first + an.numLeafTris();
-    const int bEnd = bn.first + bn.numLeafTris();
-    for ( int i = an.first; i < aEnd; ++i )
+    assert( s.a.leaf() && s.b.leaf() );
+    const bool self = Self && s.a.ref == s.b.ref;
+    const int aFirst = ~s.a.ref * AABBTree::MaxLeafTris;
+    const int bFirst = ~s.b.ref * AABBTree::MaxLeafTris;
+    const int aEnd = aFirst + aTree.numLeafTris( ~s.a.ref );
+    const int bEnd = bFirst + bTree.numLeafTris( ~s.b.ref );
+    for ( int i = aFirst; i < aEnd; ++i )
     {
         if ( !self && !triNode( i, s.b ) )
             continue;
-        for ( int j = self ? i + 1 : bn.first; j < bEnd; ++j )
+        for ( int j = self ? i + 1 : bFirst; j < bEnd; ++j )
             if ( tris( i, j ) && !onTris( i, j ) )
                 return false;
     }
@@ -190,31 +206,38 @@ private:
 };
 
 /// visits depth-first the nodes with boxes passing nodeOk( box ), children in their order, and calls onTri( i )
-/// for the triangles (indices in leafTris()) of the visited leaves with boxes passing triOk( box );
+/// for the triangles (slots in leafTris()) of the visited leaves with boxes passing triOk( box );
 /// stops as soon as onTri returns Processing::Stop
 template<typename NodeOk, typename TriOk, typename OnTri>
 void forWideTris( const AABBTree & tree, NodeOk && nodeOk, TriOk && triOk, OnTri && onTri )
 {
-    const auto & nodes = tree.nodes();
-    if ( nodes.empty() || !nodeOk( nodes.front().box ) )
+    if ( tree.empty() || !nodeOk( tree.getBoundingBox() ) )
         return;
-    // every level adds at most MaxChildren - 1 nodes, and the tree of 2^31 triangles has 16 levels
-    InplaceStack<NoInitNodeId, 64> subtasks;
-    subtasks.push( NodeId( 0 ) );
+    const auto & leafTris = tree.leafTris();
+    // every level adds at most MaxChildren - 1 nodes, and the tree has at most MaxDepth levels
+    InplaceStack<int, 64> subtasks;
+    subtasks.push( tree.rootRef() );
     while ( !subtasks.empty() )
     {
-        const auto & node = nodes[subtasks.top()];
+        const int r = subtasks.top();
         subtasks.pop();
-        if ( node.leaf() )
+        if ( r < 0 )
         {
-            for ( int i = node.first, end = node.first + node.numLeafTris(); i < end; ++i )
-                if ( triOk( tree.leafBoxes()[i] ) && onTri( i ) == Processing::Stop )
+            const auto & boxes = tree.leafBoxes()[~r];
+            for ( int i = 0; i < AABBTree::MaxLeafTris; ++i )
+            {
+                const int t = ~r * AABBTree::MaxLeafTris + i;
+                if ( !leafTris[t].face )
+                    break;
+                if ( triOk( boxes.get( i ) ) && onTri( t ) == Processing::Stop )
                     return;
+            }
             continue;
         }
-        for ( int i = node.count - 1; i >= 0; --i )
-            if ( const NodeId c( node.first + i ); nodeOk( nodes[c].box ) )
-                subtasks.push( c );
+        const auto & sn = tree.simdNodes()[r];
+        for ( int i = AABBTree::MaxChildren - 1; i >= 0; --i )
+            if ( sn.child[i] && nodeOk( sn.get( i ) ) )
+                subtasks.push( sn.child[i] );
     }
 }
 

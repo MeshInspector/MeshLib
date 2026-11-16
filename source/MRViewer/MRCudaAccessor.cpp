@@ -153,7 +153,7 @@ size_t CudaAccessor::fastWindingNumberMeshMemory( const Mesh& mesh )
     const size_t treeNodesSize = 2 * numFaces / 3 + 1; // AABBTree has at most 2 nodes per 3 triangles (leaves of 2 and 3 when halving 5)
     size_t memoryAmount = treeNodesSize * sizeof( Dipole );
     memoryAmount += mesh.points.size() * sizeof( Vector3f );
-    memoryAmount += treeNodesSize * sizeof( AABBTree::Node );
+    memoryAmount += treeNodesSize * sizeof( AABBTreeWideNode );
     memoryAmount += numFaces * sizeof( AABBTree::LeafTri );
     memoryAmount += mesh.topology.faceSize() * sizeof( Vector3i );
     return memoryAmount;

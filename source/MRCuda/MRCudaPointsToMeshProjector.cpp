@@ -40,13 +40,14 @@ void PointsToMeshProjector::updateMeshData( const MR::Mesh* mesh )
     MR_TIMER;
 
     const AABBTree& tree = mesh->getAABBTree();
-    const auto& nodes = tree.nodes();
+    const auto flat = makeFlatAABBTree( tree );
+    const auto& nodes = flat.nodes;
     const auto& meshPoints = mesh->points;
 
 
     meshData_->cudaMeshPoints.fromVector( meshPoints );
     meshData_->cudaNodes.fromVector( nodes );
-    meshData_->cudaLeafTris.fromVector( tree.leafTris() );
+    meshData_->cudaLeafTris.fromVector( flat.leafTris );
 
     mesh_ = mesh;
 }

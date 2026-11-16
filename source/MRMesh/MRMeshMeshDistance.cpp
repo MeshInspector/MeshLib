@@ -1,5 +1,5 @@
 #include "MRMeshMeshDistance.h"
-#include "MRAABBTree.h"
+#include "MRAABBTreeTraversal.hpp"
 #include "MRInplaceStack.h"
 #include "MRMesh.h"
 #include "MRTriDist.h"
@@ -23,7 +23,7 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
 
     MeshMeshDistanceResult res;
     res.distSq = upDistLimitSq;
-    if ( aTree.nodes().empty() || bTree.nodes().empty() )
+    if ( aTree.empty() || bTree.empty() )
     {
         assert( false );
         return res;
@@ -37,20 +37,20 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
 
     struct SubTask
     {
-        NoInitNodeId a, b;
+        WideNode a, b;
         float distSq;
     };
     // every split adds at most MaxChildren - 1 tasks, and two trees of 2^31 triangles have 32 levels together
     InplaceStack<SubTask, 128> subtasks;
 
     auto bBox = [&]( const Box3f & box ) { return rigidB2A ? transformed( box, *rigidB2A ) : box; };
-    auto getSubTask = [&]( NodeId an, NodeId bn )
+    auto getSubTask = [&]( const WideNode & an, const WideNode & bn )
     {
-        return SubTask { an, bn, aTree.nodes()[an].box.getDistanceSq( bBox( bTree.nodes()[bn].box ) ) };
+        return SubTask { an, bn, an.box.getDistanceSq( bBox( bn.box ) ) };
     };
 
     if ( ( !a.region || aNodes.test( NodeId( 0 ) ) ) && ( !b.region || bNodes.test( NodeId( 0 ) ) ) )
-        subtasks.push( getSubTask( NodeId( 0 ), NodeId( 0 ) ) );
+        subtasks.push( getSubTask( rootWideNode( aTree ), rootWideNode( bTree ) ) );
     // the closest triangles found so far, their points are computed at the end
     TriTriDistanceResultf bestTd;
     Triangle3f bestAv, bestBv;
@@ -62,29 +62,30 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
         if ( !( s.distSq < res.distSq ) )
             continue;
 
-        const auto& aNode = aTree.nodes()[s.a];
-        const auto& bNode = bTree.nodes()[s.b];
-        if ( aNode.leaf() && bNode.leaf() )
+        if ( s.a.leaf() && s.b.leaf() )
         {
+            const int aFirst = ~s.a.ref * AABBTree::MaxLeafTris;
+            const int bFirst = ~s.b.ref * AABBTree::MaxLeafTris;
+            const int bNum = bTree.numLeafTris( ~s.b.ref );
             Box3f bBoxes[AABBTree::MaxLeafTris];
             Triangle3f bTris[AABBTree::MaxLeafTris];
-            for ( int j = 0; j < bNode.numLeafTris(); ++j )
+            for ( int j = 0; j < bNum; ++j )
             {
-                const auto & bt = bTree.leafTris()[bNode.first + j];
-                bBoxes[j] = bBox( bTree.leafBoxes()[bNode.first + j] );
+                const auto & bt = bTree.leafTris()[bFirst + j];
+                bBoxes[j] = bBox( bTree.leafBox( bFirst + j ) );
                 for ( int k = 0; k < 3; ++k )
                     bTris[j][k] = rigidB2A ? ( *rigidB2A )( b.mesh.points[bt.verts[k]] ) : b.mesh.points[bt.verts[k]];
             }
-            for ( int i = aNode.first, aEnd = aNode.first + aNode.numLeafTris(); i < aEnd; ++i )
+            for ( int i = aFirst, aEnd = aFirst + aTree.numLeafTris( ~s.a.ref ); i < aEnd; ++i )
             {
                 const auto & at = aTree.leafTris()[i];
                 if ( a.region && !a.region->test( at.face ) )
                     continue;
-                const auto & aBox = aTree.leafBoxes()[i];
+                const auto aBox = aTree.leafBox( i );
                 const Triangle3f av{ a.mesh.points[at.verts[0]], a.mesh.points[at.verts[1]], a.mesh.points[at.verts[2]] };
-                for ( int j = 0; j < bNode.numLeafTris(); ++j )
+                for ( int j = 0; j < bNum; ++j )
                 {
-                    const auto bFace = bTree.leafTris()[bNode.first + j].face;
+                    const auto bFace = bTree.leafTris()[bFirst + j].face;
                     if ( b.region && !b.region->test( bFace ) )
                         continue;
                     if ( !( aBox.getDistanceSq( bBoxes[j] ) < res.distSq ) )
@@ -116,18 +117,20 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
                 ch[k] = ch[k - 1];
             ch[k] = t;
         };
-        if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
+        if ( !s.a.leaf() && ( s.b.leaf() || s.a.box.volume() >= s.b.box.volume() ) )
         {
-            for ( int i = 0; i < aNode.count; ++i )
-                if ( const NodeId c( aNode.first + i ); !a.region || aNodes.test( c ) )
-                    add( getSubTask( c, s.b ) );
+            const auto & sn = aTree.simdNodes()[s.a.ref];
+            for ( int i = 0; i < AABBTree::MaxChildren && sn.child[i]; ++i )
+                if ( !a.region || aNodes.test( aTree.nodeId( sn.child[i] ) ) )
+                    add( getSubTask( childWideNode( sn, i ), s.b ) );
         }
         else
         {
-            assert( !bNode.leaf() );
-            for ( int i = 0; i < bNode.count; ++i )
-                if ( const NodeId c( bNode.first + i ); !b.region || bNodes.test( c ) )
-                    add( getSubTask( s.a, c ) );
+            assert( !s.b.leaf() );
+            const auto & sn = bTree.simdNodes()[s.b.ref];
+            for ( int i = 0; i < AABBTree::MaxChildren && sn.child[i]; ++i )
+                if ( !b.region || bNodes.test( bTree.nodeId( sn.child[i] ) ) )
+                    add( getSubTask( s.a, childWideNode( sn, i ) ) );
         }
         for ( int i = 0; i < numCh; ++i )
             subtasks.push( ch[i] );

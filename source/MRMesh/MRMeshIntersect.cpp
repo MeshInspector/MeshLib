@@ -32,28 +32,19 @@ template<typename T, bool Filtered>
 MeshIntersectionResult meshRayIntersectT_( const VertCoords & points, const AABBTree & tree, const FaceBitSet * region, const Line3<T>& line,
     T rayStart, T rayEnd, const IntersectionPrecomputes<T>& prec, bool closestIntersect, const FacePredicate & validFaces )
 {
-    const auto& nodes = tree.nodes();
     MeshIntersectionResult res;
-    if( nodes.empty() )
+    if( tree.empty() )
         return res;
-
-    // the float version takes the stored box by reference: a copy of it before rayBoxIntersect costs 20% of the time
-    auto nodeBox = [&]( NodeId n ) -> decltype(auto)
-    {
-        if constexpr ( std::is_same_v<T, float> )
-            return ( nodes[n].box );
-        else
-            return Box3<T>( nodes[n].box );
-    };
+    const auto & leafTris = tree.leafTris();
 
     RayOrigin<T> rayOrigin{ line.p };
     T s = rayStart, e = rayEnd;
-    if( !rayBoxIntersect( nodeBox( NodeId( 0 ) ), rayOrigin, s, e, prec ) )
+    if( !rayBoxIntersect( Box3<T>( tree.getBoundingBox() ), rayOrigin, s, e, prec ) )
         return res;
 
     struct SubTask
     {
-        NoInitNodeId n;
+        int ref; // as in AABBTree::SimdNode::child
         T start;
     };
     // every level adds at most MaxChildren - 1 tasks, and the tree of 2^31 triangles has 16 levels
@@ -62,18 +53,17 @@ MeshIntersectionResult meshRayIntersectT_( const VertCoords & points, const AABB
     float distance = 0;
     TriPointf triP;
     // the node to visit next is not pushed in the stack
-    SubTask st{ NodeId( 0 ), rayStart };
+    SubTask st{ tree.rootRef(), rayStart };
     for (;;)
     {
         if ( st.start < rayEnd )
         {
-            const auto & node = nodes[st.n];
-            if ( node.leaf() )
+            if ( st.ref < 0 )
             {
                 bool stop = false;
-                for ( int i = node.first, end = node.first + node.numLeafTris(); i < end; ++i )
+                for ( int i = ~st.ref * AABBTree::MaxLeafTris, end = i + AABBTree::MaxLeafTris; i < end && leafTris[i].face; ++i )
                 {
-                    const auto & lt = tree.leafTris()[i];
+                    const auto & lt = leafTris[i];
                     if constexpr ( Filtered )
                     {
                         if ( ( region && !region->test( lt.face ) ) || ( validFaces && !validFaces( lt.face ) ) )
@@ -120,18 +110,18 @@ MeshIntersectionResult meshRayIntersectT_( const VertCoords & points, const AABB
             else
             {
                 // the children crossed by the ray ordered by the entry, the one entered last first
+                const auto & node = tree.simdNodes()[st.ref];
                 SubTask ch[AABBTree::MaxChildren];
                 int numCh = 0;
-                for ( int i = 0; i < node.count; ++i )
+                for ( int i = 0; i < AABBTree::MaxChildren && node.child[i]; ++i )
                 {
-                    const NodeId n( node.first + i );
                     T cs = rayStart, ce = rayEnd;
-                    if ( !rayBoxIntersect( nodeBox( n ), rayOrigin, cs, ce, prec ) )
+                    if ( !rayBoxIntersect( Box3<T>( node.get( i ) ), rayOrigin, cs, ce, prec ) )
                         continue;
                     int k = numCh++;
                     for ( ; k > 0 && ch[k - 1].start < cs; --k )
                         ch[k] = ch[k - 1];
-                    ch[k] = { n, cs };
+                    ch[k] = { node.child[i], cs };
                 }
                 if ( numCh > 0 )
                 {
@@ -193,7 +183,7 @@ MeshIntersectionResult meshRayIntersectSimd_( const AABBTree & tree, const FaceB
 {
     using namespace Simd4;
     MeshIntersectionResult res;
-    if ( tree.nodes().empty() )
+    if ( tree.empty() )
         return res;
     const auto& simdNodes = tree.simdNodes();
     const auto& simdLeaves = tree.simdLeaves();
@@ -236,7 +226,7 @@ MeshIntersectionResult meshRayIntersectSimd_( const AABBTree & tree, const FaceB
     float distance = 0;
     TriPointf triP;
     // the node to visit next is not pushed in the stack
-    SubTask st{ tree.simdRoot(), rayStart };
+    SubTask st{ tree.rootRef(), rayStart };
     for (;;)
     {
         if ( st.start < rayEnd )
@@ -279,7 +269,7 @@ MeshIntersectionResult meshRayIntersectSimd_( const AABBTree & tree, const FaceB
                         const int i = lowestBit( hits );
                         if constexpr ( Filtered )
                         {
-                            const auto f = leafTris[leaf.first + i].face;
+                            const auto f = leafTris[~st.ref * AABBTree::MaxLeafTris + i].face;
                             if ( ( region && !region->test( f ) ) || ( validFaces && !validFaces( f ) ) )
                                 continue;
                         }
@@ -287,7 +277,7 @@ MeshIntersectionResult meshRayIntersectSimd_( const AABBTree & tree, const FaceB
                         if ( !( ti < rayEnd && ti > rayStart ) )
                             continue;
                         distance = ti;
-                        face = leafTris[leaf.first + i].face;
+                        face = leafTris[~st.ref * AABBTree::MaxLeafTris + i].face;
                         triP = TriPointf( vs[i] * ids[i], ws[i] * ids[i] );
                         if ( ti == 0 )
                         {
@@ -552,9 +542,9 @@ void rayMeshIntersectAll_( const VertCoords & points, const AABBTree & tree, con
             return callback( found );
     };
 
-    const auto& nodes = tree.nodes();
-    if( nodes.empty() )
+    if( tree.empty() )
         return;
+    const auto & leafTris = tree.leafTris();
 
     // the double version decides every intersection precisely in integer coordinates of the segment's ends and triangle's vertices;
     // rounding to integers can bring a vertex and a point of the segment closer by one integer step,
@@ -567,30 +557,29 @@ void rayMeshIntersectAll_( const VertCoords & points, const AABBTree & tree, con
     [[maybe_unused]] T boxExpansion = 0;
     if constexpr ( std::is_same_v<T, double> )
     {
-        const Box3d rootBox( nodes[NodeId( 0 )].box );
+        const Box3d rootBox( tree.getBoundingBox() );
         convToInt = getToIntConverter( rootBox );
         convToFloat = getToFloatConverter( rootBox );
         boxExpansion = 2 * convToFloat.range;
     }
-    // the float version takes the stored box by reference, avoiding a copy
-    auto nodeBox = [&] ( NodeId n ) -> decltype(auto)
+    auto nodeBox = [&] ( const Box3f & box )
     {
         if constexpr ( std::is_same_v<T, double> )
-            return Box3d( nodes[n].box ).expanded( Vector3d::diagonal( boxExpansion ) );
+            return Box3d( box ).expanded( Vector3d::diagonal( boxExpansion ) );
         else
-            return ( nodes[n].box );
+            return box;
     };
 
     RayOrigin<T> rayOrigin{ line.p };
     T s = rayStart, e = rayEnd;
-    if( !rayBoxIntersect( nodeBox( NodeId( 0 ) ), rayOrigin, s, e, prec ) )
+    if( !rayBoxIntersect( nodeBox( tree.getBoundingBox() ), rayOrigin, s, e, prec ) )
     {
         return;
     }
 
-    // every level adds at most MaxChildren - 1 nodes, and the tree of 2^31 triangles has 16 levels
-    InplaceStack<NoInitNodeId, 64> subtasks;
-    subtasks.push( NodeId( 0 ) );
+    // every level adds at most MaxChildren - 1 nodes, and the tree has at most MaxDepth levels
+    InplaceStack<int, 64> subtasks;
+    subtasks.push( tree.rootRef() );
     Vector3d dP, eP;
     [[maybe_unused]] double invDirLenSq = 0;
     std::array<PreciseVertCoords, 5> pvc;
@@ -609,13 +598,16 @@ void rayMeshIntersectAll_( const VertCoords & points, const AABBTree & tree, con
 
     while( !subtasks.empty() )
     {
-        const auto& node = nodes[subtasks.top()];
+        const int r = subtasks.top();
         subtasks.pop();
-        if( node.leaf() )
+        if( r < 0 )
         {
-            for ( int i = node.first, end = node.first + node.numLeafTris(); i < end; ++i )
+            const auto & leafBoxes = tree.leafBoxes()[~r];
+            for ( int k = 0; k < AABBTree::MaxLeafTris; ++k )
             {
-                const auto & lt = tree.leafTris()[i];
+                const auto & lt = leafTris[~r * AABBTree::MaxLeafTris + k];
+                if ( !lt.face )
+                    break;
                 const auto face = lt.face;
                 if ( region && !region->test( face ) )
                     continue;
@@ -625,7 +617,7 @@ void rayMeshIntersectAll_( const VertCoords & points, const AABBTree & tree, con
                 {
                     // double version (more precise); a triangle outside its expanded box cannot be crossed in integer coordinates
                     T bs = rayStart, be = rayEnd;
-                    if ( !rayBoxIntersect( Box3d( tree.leafBoxes()[i] ).expanded( Vector3d::diagonal( boxExpansion ) ), rayOrigin, bs, be, prec ) )
+                    if ( !rayBoxIntersect( Box3d( leafBoxes.get( k ) ).expanded( Vector3d::diagonal( boxExpansion ) ), rayOrigin, bs, be, prec ) )
                         continue;
                     for ( int j = 0; j < 3; ++j )
                         pvc[j].pt = convToInt( points[pvc[j].id] );
@@ -649,7 +641,7 @@ void rayMeshIntersectAll_( const VertCoords & points, const AABBTree & tree, con
                 {
                     // float version (faster); the box of the triangle rejects the near-miss hits of the float triangle test
                     T bs = rayStart, be = rayEnd;
-                    if ( !rayBoxIntersect( tree.leafBoxes()[i], rayOrigin, bs, be, prec ) )
+                    if ( !rayBoxIntersect( leafBoxes.get( k ), rayOrigin, bs, be, prec ) )
                         continue;
                     const Vector3<T> vA = Vector3<T>( points[pvc[0].id] ) - line.p;
                     const Vector3<T> vB = Vector3<T>( points[pvc[1].id] ) - line.p;
@@ -670,12 +662,12 @@ void rayMeshIntersectAll_( const VertCoords & points, const AABBTree & tree, con
         }
         else
         {
-            for ( int i = 0; i < node.count; ++i )
+            const auto & node = tree.simdNodes()[r];
+            for ( int i = 0; i < AABBTree::MaxChildren && node.child[i]; ++i )
             {
-                const NodeId n( node.first + i );
                 s = rayStart, e = rayEnd;
-                if( rayBoxIntersect( nodeBox( n ), rayOrigin, s, e, prec ) )
-                    subtasks.push( n );
+                if( rayBoxIntersect( nodeBox( node.get( i ) ), rayOrigin, s, e, prec ) )
+                    subtasks.push( node.child[i] );
             }
         }
     }

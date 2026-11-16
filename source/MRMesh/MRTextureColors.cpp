@@ -8,6 +8,9 @@
 #include "MRVector2.h"
 #include "MRBitSetParallelFor.h"
 #include "MRParallelFor.h"
+#include "MRPch/MRTBB.h"
+
+#include <atomic>
 
 namespace MR
 {
@@ -72,28 +75,50 @@ std::optional<VertUVCoords> findVertexUVs( const Triangulation& tris, const TriC
 {
     MR_TIMER;
     assert( triCornerUvCoords.size() >= tris.size() );
+    const int maxVert = tbb::parallel_reduce( tbb::blocked_range<size_t>( 0, tris.size() ), -1,
+        [&] ( const tbb::blocked_range<size_t>& range, int m )
+        {
+            for ( size_t i = range.begin(); i < range.end(); ++i )
+                for ( auto v : tris[FaceId( i )] )
+                    m = std::max( m, int( v ) );
+            return m;
+        },
+        [] ( int a, int b ) { return std::max( a, b ); } );
+
+    // 1 + some triangle of each vertex, 0 for the vertex without triangles
+    std::vector<std::atomic<int>> vertTri( maxVert + 1 );
+    ParallelFor( tris, [&] ( FaceId f )
+    {
+        for ( auto v : tris[f] )
+            if ( v )
+                vertTri[v].store( int( f ) + 1, std::memory_order_relaxed );
+    } );
+
     VertUVCoords res;
-    VertBitSet hasUV;
-    for ( FaceId f( 0 ); f < tris.endId(); ++f )
+    res.resizeNoInit( vertTri.size() );
+    tbb::task_group_context ctx;
+    ParallelFor( 0_v, res.endId(), [&] ( VertId v )
+    {
+        const int t = vertTri[v].load( std::memory_order_relaxed );
+        if ( t == 0 )
+        {
+            ctx.cancel_group_execution();
+            return;
+        }
+        const FaceId f( t - 1 );
+        res[v] = getUV( v, tris[f], triCornerUvCoords[f] );
+    }, ctx );
+    if ( ctx.is_group_execution_cancelled() )
+        return std::nullopt;
+
+    // all triangles of each vertex must have the same uv-coordinates in it
+    ParallelFor( tris, [&] ( FaceId f )
     {
         for ( int i = 0; i < 3; ++i )
-        {
-            const auto v = tris[f][i];
-            if ( !v )
-                continue;
-            const auto& uv = triCornerUvCoords[f][i];
-            if ( v >= res.endId() )
-            {
-                res.resizeNoInit( size_t( v ) + 1 );
-                hasUV.resize( size_t( v ) + 1 );
-            }
-            if ( !hasUV.test_set( v ) )
-                res[v] = uv;
-            else if ( res[v] != uv )
-                return std::nullopt;
-        }
-    }
-    if ( !hasUV.all() )
+            if ( const auto v = tris[f][i]; v && triCornerUvCoords[f][i] != res[v] )
+                ctx.cancel_group_execution();
+    }, ctx );
+    if ( ctx.is_group_execution_cancelled() )
         return std::nullopt;
     return res;
 }

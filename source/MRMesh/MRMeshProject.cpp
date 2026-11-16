@@ -2,6 +2,7 @@
 #include "MRAABBTree.h"
 #include "MRAABBTreeTraversal.hpp"
 #include "MRMesh.h"
+#include "MRTriMesh.h"
 #include "MRClosestPointInTriangle.h"
 #include "MRBall.h"
 #include "MRInplaceStack.h"
@@ -48,7 +49,7 @@ namespace
 
 // Plain: no transformation, region, validFaces or validProjections, so the hot loops skip their checks
 template <bool Plain>
-MeshProjectionResult findProjectionWide( const Vector3f & pt, const MeshPart & mp, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
+MeshProjectionResult findProjectionWide( const Vector3f & pt, const VertCoords & points, const FaceBitSet * region, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
     const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections )
 {
     MeshProjectionResult res;
@@ -100,14 +101,14 @@ MeshProjectionResult findProjectionWide( const Vector3f & pt, const MeshPart & m
         for ( int i = node.first, end = node.first + node.numLeafTris(); i < end; ++i )
         {
             const auto & lt = tree.leafTris()[i];
-            Vector3d a( mp.mesh.points[lt.verts[0]] );
-            Vector3d b( mp.mesh.points[lt.verts[1]] );
-            Vector3d c( mp.mesh.points[lt.verts[2]] );
+            Vector3d a( points[lt.verts[0]] );
+            Vector3d b( points[lt.verts[1]] );
+            Vector3d c( points[lt.verts[2]] );
             if constexpr ( !Plain )
             {
                 if ( validFaces && !validFaces( lt.face ) )
                     continue;
-                if ( mp.region && !mp.region->test( lt.face ) )
+                if ( region && !region->test( lt.face ) )
                     continue;
                 if ( xf )
                 {
@@ -208,19 +209,26 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
     const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections )
 {
     if ( !xf && !mp.region && !validFaces && !validProjections )
-        return findProjectionWide<true>( pt, mp, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
-    return findProjectionWide<false>( pt, mp, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
+        return findProjectionWide<true>( pt, mp.mesh.points, nullptr, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
+    return findProjectionWide<false>( pt, mp.mesh.points, mp.region, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
+}
+
+MeshProjectionResult findProjection( const Vector3f & pt, const TriMesh & tmesh, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
+    const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections )
+{
+    if ( !xf && !validFaces && !validProjections )
+        return findProjectionWide<true>( pt, tmesh.points, nullptr, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
+    return findProjectionWide<false>( pt, tmesh.points, nullptr, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
 }
 
 namespace
 {
 
-// calls onTri( i, ball ) for the triangles (indices in leafTris()) of mp in the leaves with boxes in the ball, closer subtrees first;
+// calls onTri( i, ball ) for the triangles (indices in leafTris()) of the tree (only from region if given) in the leaves with boxes in the ball, closer subtrees first;
 // onTri can shrink the ball or stop the search
 template <typename F>
-void forLeafTrisInBall( const MeshPart & mp, Ball3f & ball, F && onTri )
+void forLeafTrisInBall( const AABBTree & tree, const FaceBitSet * region, Ball3f & ball, F && onTri )
 {
-    const auto & tree = mp.mesh.getAABBTree();
     const auto & nodes = tree.nodes();
     if ( nodes.empty() )
         return;
@@ -239,7 +247,7 @@ void forLeafTrisInBall( const MeshPart & mp, Ball3f & ball, F && onTri )
         {
             for ( int i = node.first, end = node.first + node.numLeafTris(); i < end; ++i )
             {
-                if ( mp.region && !mp.region->test( tree.leafTris()[i].face ) )
+                if ( region && !region->test( tree.leafTris()[i].face ) )
                     continue;
                 if ( onTri( i, ball ) == Processing::Stop )
                     return;
@@ -271,12 +279,9 @@ void forLeafTrisInBall( const MeshPart & mp, Ball3f & ball, F && onTri )
     }
 }
 
-} // anonymous namespace
-
-void findBoxedTrisInBall( const MeshPart & mp, Ball3f ball, const FoundBoxedTriCallback& foundCallback )
+void boxedTrisInBall( const AABBTree & tree, const FaceBitSet * region, Ball3f ball, const FoundBoxedTriCallback& foundCallback )
 {
-    const auto & tree = mp.mesh.getAABBTree();
-    forLeafTrisInBall( mp, ball, [&]( int i, Ball3f & b )
+    forLeafTrisInBall( tree, region, ball, [&]( int i, Ball3f & b )
     {
         if ( !( tree.leafBoxes()[i].getDistanceSq( b.center ) < b.radiusSq ) )
             return Processing::Continue;
@@ -284,19 +289,18 @@ void findBoxedTrisInBall( const MeshPart & mp, Ball3f ball, const FoundBoxedTriC
     } );
 }
 
-void findTrisInBall( const MeshPart & mp, const Ball3f& ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces )
+void trisInBall( const VertCoords & points, const AABBTree & tree, const FaceBitSet * region, const Ball3f& ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces )
 {
     Ball3f myBall = ball;
-    const auto & tree = mp.mesh.getAABBTree();
-    forLeafTrisInBall( mp, myBall, [&]( int i, Ball3f & b )
+    forLeafTrisInBall( tree, region, myBall, [&]( int i, Ball3f & b )
     {
         const auto & lt = tree.leafTris()[i];
         if ( validFaces && !validFaces( lt.face ) )
             return Processing::Continue;
 
         // compute the closest point in double-precision, because float might be not enough
-        const auto [projD, baryD] = closestPointInTriangle( Vector3d( b.center ), Vector3d( mp.mesh.points[lt.verts[0]] ),
-            Vector3d( mp.mesh.points[lt.verts[1]] ), Vector3d( mp.mesh.points[lt.verts[2]] ) );
+        const auto [projD, baryD] = closestPointInTriangle( Vector3d( b.center ), Vector3d( points[lt.verts[0]] ),
+            Vector3d( points[lt.verts[1]] ), Vector3d( points[lt.verts[2]] ) );
         const Vector3f proj( projD );
         const float distSq = ( proj - b.center ).lengthSq();
         if ( !( distSq < b.radiusSq ) )
@@ -309,6 +313,28 @@ void findTrisInBall( const MeshPart & mp, const Ball3f& ball, const FoundTriCall
         };
         return foundCallback( candidate, b );
     } );
+}
+
+} // anonymous namespace
+
+void findBoxedTrisInBall( const MeshPart & mp, Ball3f ball, const FoundBoxedTriCallback& foundCallback )
+{
+    boxedTrisInBall( mp.mesh.getAABBTree(), mp.region, ball, foundCallback );
+}
+
+void findBoxedTrisInBall( const TriMesh &, const AABBTree & tree, Ball3f ball, const FoundBoxedTriCallback& foundCallback )
+{
+    boxedTrisInBall( tree, nullptr, ball, foundCallback );
+}
+
+void findTrisInBall( const MeshPart & mp, const Ball3f& ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces )
+{
+    trisInBall( mp.mesh.points, mp.mesh.getAABBTree(), mp.region, ball, foundCallback, validFaces );
+}
+
+void findTrisInBall( const TriMesh & tmesh, const AABBTree & tree, const Ball3f& ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces )
+{
+    trisInBall( tmesh.points, tree, nullptr, ball, foundCallback, validFaces );
 }
 
 std::optional<SignedDistanceToMeshResult> findSignedDistance( const Vector3f & pt, const MeshPart & mp,

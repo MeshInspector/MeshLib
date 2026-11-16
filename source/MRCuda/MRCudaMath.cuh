@@ -188,7 +188,7 @@ struct TriPoint
 struct MeshIntersectionResult
 {
     PointOnFace proj;
-    MeshTriPoint tp;
+    TriPoint tp;
     float distanceAlongLine = 0;
 };
 

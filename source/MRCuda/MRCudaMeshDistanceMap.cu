@@ -30,7 +30,7 @@ __global__ void kernel( const WideNode3* nodes, const float3* meshPoints, const 
     {
         res[index] = interRes.distanceAlongLine - shift;
         if ( outSamples )
-            outSamples[index] = interRes.tp;
+            outSamples[index] = MeshTriPoint{ -1, interRes.tp.a, interRes.tp.b };
     }
 }
 

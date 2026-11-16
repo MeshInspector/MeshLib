@@ -1811,7 +1811,7 @@ Expected<std::vector<MR::EdgePath>> cutMeshByProjection( Mesh& mesh, const Conto
                     error = "Some contour points have missed the mesh";
                 return;
             }
-            mtps[j] = intRes.mtp;
+            mtps[j] = intRes.mtp( mesh.topology );
         } );
         if ( ctx.is_group_execution_cancelled() )
             return; // do not continue if projecting failed

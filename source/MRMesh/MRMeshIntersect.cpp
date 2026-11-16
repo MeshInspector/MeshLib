@@ -19,6 +19,13 @@
 namespace MR
 {
 
+MeshTriPoint MeshIntersectionResult::mtp( const MeshTopology & topology ) const
+{
+    if ( !proj.valid() )
+        return {};
+    return { topology.edgeWithLeft( proj.face ), tp };
+}
+
 // Filtered: the mesh part has a region or validFaces is given, otherwise the leaves skip their checks
 template<typename T, bool Filtered>
 MeshIntersectionResult meshRayIntersectT_( const MeshPart& meshPart, const Line3<T>& line,
@@ -148,7 +155,7 @@ MeshIntersectionResult meshRayIntersectT_( const MeshPart& meshPart, const Line3
         res.proj.face = face;
         res.distanceAlongLine = distance;
         res.proj.point = Vector3f( line.p + res.distanceAlongLine * line.d );
-        res.mtp = MeshTriPoint( m.topology.edgeWithLeft( res.proj.face ), triP );
+        res.tp = triP;
     }
     return res;
 }
@@ -245,7 +252,7 @@ void multiRayMeshIntersect(
         if ( result.isectFaces )
             (*result.isectFaces)[i] = res.proj.face;
         if ( result.isectBary )
-            (*result.isectBary)[i] = res.mtp.bary;
+            (*result.isectBary)[i] = res.tp;
         if ( result.isectPts )
             (*result.isectPts)[i] = res.proj.point;
     };
@@ -394,7 +401,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
                         // the segment is already limited by [rayStart, rayEnd], so the hit is reported without checking its distance,
                         // which is computed from the rounded point and can be slightly outside of the range
                         found.distanceAlongLine = float( dot( Vector3d( found.proj.point ) - line.p, line.d ) * invDirLenSq );
-                        found.mtp = MeshTriPoint( m.topology.edgeWithLeft( face ), TriPointf( found.proj.point, m.points[pvc[0].id], m.points[pvc[1].id], m.points[pvc[2].id] ) );
+                        found.tp = TriPointf( found.proj.point, m.points[pvc[0].id], m.points[pvc[1].id], m.points[pvc[2].id] );
                         // segment start pvc[3] is behind the triangle if dIsLeftFromABC
                         if ( !report( found, [&] { return !isect.dIsLeftFromABC; } ) )
                             return;
@@ -415,7 +422,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
                         MeshIntersectionResult found;
                         found.proj.face = face;
                         found.proj.point = Vector3f( line( triIsect->t ) );
-                        found.mtp = MeshTriPoint( m.topology.edgeWithLeft( face ), triIsect->bary );
+                        found.tp = triIsect->bary;
                         found.distanceAlongLine = float( triIsect->t );
                         if ( !report( found, [&] { return dot( cross( vB - vA, vC - vA ), line.d ) < 0; } ) )
                             return;

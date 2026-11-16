@@ -21,6 +21,7 @@ __global__ void kernel( const float3* points,
     MeshProjectionResult res;
     res.distSq = upDistLimitSq;
     res.proj.faceId = -1;
+    int resLeaf = -1; // the index in leafTris of the found triangle
     struct SubTask
     {
         int n;
@@ -100,6 +101,7 @@ __global__ void kernel( const float3* points,
                         res.distSq = distSq;
                         res.proj.point = closestPointRes.proj;
                         res.proj.faceId = lt.face;
+                        resLeaf = i;
                         res.tp = TriPoint{ closestPointRes.bary.x, closestPointRes.bary.y };
                         if ( distSq <= loDistLimitSq )
                         {
@@ -116,6 +118,13 @@ __global__ void kernel( const float3* points,
             break;
         s = subtasks.top();
         subtasks.pop();
+    }
+    if ( !refXf.isIdentity && resLeaf >= 0 )
+    {
+        // return the point in the space of the reference mesh as in case of rigid refXf (which is applied to the points instead)
+        const auto& lt = leafTris[resLeaf];
+        const float3 a = meshPoints[lt.verts[0]];
+        res.proj.point = a + ( meshPoints[lt.verts[1]] - a ) * res.tp.a + ( meshPoints[lt.verts[2]] - a ) * res.tp.b;
     }
     resVec[index] = res;
 }

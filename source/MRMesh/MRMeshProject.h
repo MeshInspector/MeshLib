@@ -80,6 +80,27 @@ MRMESH_API MeshProjectionTransforms createProjectionTransforms( AffineXf3f& stor
     const FacePredicate & validFaces = {},
     const std::function<bool(const MeshProjectionResult&)> & validProjections = {} );
 
+/**
+ * \brief computes the closest point on the triangles of the given tree to given point;
+ * the result's tp is relative to the vertices of the triangle in the tree (in the order of tmesh.tris[proj.face] for AABBTree( tmesh ))
+ * \param points the coordinates of the vertices of the tree's triangles
+ * \param tree the tree of a mesh or its part, e.g. AABBTree( tmesh, region )
+ * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger then the function exits returning upDistLimitSq and no valid point
+ * \param xf mesh-to-point transformation, if not specified then identity transformation is assumed
+ * \param loDistLimitSq low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
+ * \param validFaces if provided then only faces from there will be considered as projections
+ * \param validProjections if provided then only projections passed this test can be returned
+ * \param region if provided then only the triangles from there are searched; building the tree only from them is faster
+ */
+[[nodiscard]] MRMESH_API MeshProjectionResult findProjection( const Vector3f & pt,
+    const VertCoords & points, const AABBTree & tree,
+    float upDistLimitSq = FLT_MAX,
+    const AffineXf3f * xf = nullptr,
+    float loDistLimitSq = 0,
+    const FacePredicate & validFaces = {},
+    const std::function<bool(const MeshProjectionResult&)> & validProjections = {},
+    const FaceBitSet * region = nullptr );
+
 /// this callback is invoked on every triangle with bounding box at least partially in the ball (the triangle itself can be fully out of ball),
 /// and allows changing (shrinking only) the ball
 using FoundBoxedTriCallback = std::function<Processing( FaceId found, Ball3f & ball )>;
@@ -89,12 +110,22 @@ using FoundBoxedTriCallback = std::function<Processing( FaceId found, Ball3f & b
 /// the ball during enumeration can shrink (new ball is always within the previous one) but never expand
 MRMESH_API void findBoxedTrisInBall( const MeshPart & mp, Ball3f ball, const FoundBoxedTriCallback& foundCallback );
 
+/// enumerates all triangles in the tree (only from region if given) with bounding boxes at least partially in the ball until callback returns Stop;
+/// the ball during enumeration can shrink (new ball is always within the previous one) but never expand
+MRMESH_API void findBoxedTrisInBall( const AABBTree & tree, Ball3f ball, const FoundBoxedTriCallback& foundCallback, const FaceBitSet * region = nullptr );
+
 /// this callback is invoked on every triangle at least partially in the ball, and allows changing (shrinking only) the ball
 using FoundTriCallback = std::function<Processing( const MeshProjectionResult & found, Ball3f & ball )>;
 
 /// enumerates all triangles within the ball until callback returns Stop;
 /// the ball during enumeration can shrink (new ball is always within the previous one) but never expand
 MRMESH_API void findTrisInBall( const MeshPart & mp, const Ball3f& ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces = {} );
+
+/// enumerates all triangles in the tree (only from region if given) within the ball until callback returns Stop, points are the coordinates of their vertices;
+/// found.tp is relative to the vertices of the triangle in the tree (in the order of tmesh.tris[found.proj.face] for AABBTree( tmesh ));
+/// the ball during enumeration can shrink (new ball is always within the previous one) but never expand
+MRMESH_API void findTrisInBall( const VertCoords & points, const AABBTree & tree, const Ball3f& ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces = {},
+    const FaceBitSet * region = nullptr );
 
 struct SignedDistanceToMeshResult
 {

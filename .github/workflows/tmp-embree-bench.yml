@@ -140,14 +140,14 @@ jobs:
       fail-fast: false
       matrix:
         arch: ${{ inputs.only_win_arm64 && fromJSON('["arm64"]') || fromJSON('["x64","arm64"]') }}
-        include:
-          - { arch: x64, runner: windows-2025, triplet: x64-windows-meshlib, vsargs: '-arch=amd64 -host_arch=amd64' }
-          - { arch: arm64, runner: windows-11-arm, triplet: arm64-windows-meshlib, vsargs: '-arch=arm64 -host_arch=arm64' }
     name: windows-${{ matrix.arch }}
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ matrix.arch == 'arm64' && 'windows-11-arm' || 'windows-2025' }}
     timeout-minutes: 120
     permissions:
       contents: read
+    env:
+      TRIPLET: ${{ matrix.arch }}-windows-meshlib
+      VSARGS: ${{ matrix.arch == 'arm64' && '-arch=arm64 -host_arch=arm64' || '-arch=amd64 -host_arch=amd64' }}
     steps:
       - uses: actions/checkout@v7
       - name: Locate Visual Studio
@@ -159,7 +159,7 @@ jobs:
         uses: ./.github/actions/setup-vcpkg-windows
         with:
           vcpkg-version: ${{ env.VCPKG_VERSION }}
-          vcpkg-triplet: ${{ matrix.triplet }}
+          vcpkg-triplet: ${{ env.TRIPLET }}
           internal-build: 'false'
       - name: Clone Embree
         shell: bash
@@ -169,19 +169,19 @@ jobs:
         env:
           VCPKG_ROOT: C:\vcpkg
         run: |
-          call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" ${{ matrix.vsargs }} || exit /b 1
+          call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" %VSARGS% || exit /b 1
           rem Embree has no MSVC/clang-cl code path for ARM64 (x86 intrinsics and -msse2); its GNU-style config has one,
           rem so build it there with the GNU-frontend clang that ships with VS (MSVC ABI, C API only crosses the boundary)
           set EMBREE_CC_ARGS=
           set "LLVM_BIN=${{ env.VC_PATH }}\VC\Tools\Llvm\ARM64\bin"
           set "LLVM_BIN=%LLVM_BIN:\=/%"
-          if "${{ matrix.arch }}"=="arm64" set EMBREE_CC_ARGS=-DCMAKE_C_COMPILER="%LLVM_BIN%/clang.exe" -DCMAKE_CXX_COMPILER="%LLVM_BIN%/clang++.exe"
+          if "${{ matrix.arch }}"=="arm64" set EMBREE_CC_ARGS=-DCMAKE_C_COMPILER="%LLVM_BIN%/clang.exe" -DCMAKE_CXX_COMPILER="%LLVM_BIN%/clang++.exe" -DCOMPILER_HAS_SYCL_SUPPORT=OFF
           echo %EMBREE_CC_ARGS%
-          cmake -S embree-src -B embree-build -GNinja %EMBREE_OPTIONS% %EMBREE_CC_ARGS% -DCMAKE_PREFIX_PATH=C:/vcpkg/installed/${{ matrix.triplet }} -DCMAKE_INSTALL_PREFIX=%CD%\embree-install || exit /b 1
+          cmake -S embree-src -B embree-build -GNinja %EMBREE_OPTIONS% %EMBREE_CC_ARGS% -DCMAKE_PREFIX_PATH=C:/vcpkg/installed/${{ env.TRIPLET }} -DCMAKE_INSTALL_PREFIX=%CD%\embree-install || exit /b 1
           cmake --build embree-build || exit /b 1
           cmake --install embree-build || exit /b 1
           for /d %%d in (embree-install\lib\cmake\embree-*) do set EMBREE_DIR=%CD%\%%d
-          cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=Release -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} %MR_BENCH_CMAKE_OPTIONS% -Dembree_DIR=%EMBREE_DIR% || exit /b 1
+          cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=Release -DVCPKG_TARGET_TRIPLET=${{ env.TRIPLET }} %MR_BENCH_CMAKE_OPTIONS% -Dembree_DIR=%EMBREE_DIR% || exit /b 1
           cmake --build source\TempOutput -j --target MREmbreeBench || exit /b 1
       - name: Machine
         shell: pwsh
@@ -190,7 +190,7 @@ jobs:
         shell: bash
         run: |
           exe=$(find source/TempOutput -name MREmbreeBench.exe | head -1)
-          export PATH="$(dirname "$exe"):$PWD/embree-install/bin:/c/vcpkg/installed/${{ matrix.triplet }}/bin:$PATH"
+          export PATH="$(dirname "$exe"):$PWD/embree-install/bin:/c/vcpkg/installed/${{ env.TRIPLET }}/bin:$PATH"
           "$exe" ${BENCH_ARGS} | tee bench-windows-${{ matrix.arch }}.txt
       - uses: actions/upload-artifact@v7
         with:

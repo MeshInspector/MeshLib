@@ -57,16 +57,17 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh_project )
         const auto res = findSignedDistance( pt, *mp );
         if ( !res )
             return SignedMeshProjectionResultVal( emscripten::val::null() );
+        const MeshTriPoint rmtp = res->mtp( mp->topology );
 
         emscripten::val proj = emscripten::val::object();
         proj.set( "face", (int)res->proj.face );
         proj.set( "point", res->proj.point );
 
         emscripten::val bary = emscripten::val::object();
-        bary.set( "a", res->mtp.bary.a );
-        bary.set( "b", res->mtp.bary.b );
+        bary.set( "a", rmtp.bary.a );
+        bary.set( "b", rmtp.bary.b );
         emscripten::val mtp = emscripten::val::object();
-        mtp.set( "e", (int)res->mtp.e );
+        mtp.set( "e", (int)rmtp.e );
         mtp.set( "bary", bary );
 
         emscripten::val out = emscripten::val::object();

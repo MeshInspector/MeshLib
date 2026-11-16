@@ -401,7 +401,7 @@ bool isNonIntersectingInside( const Mesh& a, FaceId aFace, const MeshPart& b, co
 
     auto sd = findSignedDistance( aPoint, b );
     // a point projecting on the boundary of b is beyond the edge of an open surface, so it is outside whatever side it is on
-    return sd && sd->dist < 0 && !sd->mtp.isBd( b.mesh.topology, b.region );
+    return sd && sd->dist < 0 && !sd->mtp( b.mesh.topology ).isBd( b.mesh.topology, b.region );
 }
 
 namespace

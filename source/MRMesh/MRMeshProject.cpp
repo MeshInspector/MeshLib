@@ -18,6 +18,13 @@ MeshTriPoint MeshProjectionResult::mtp( const MeshTopology & topology ) const
     return { topology.edgeWithLeft( proj.face ), tp };
 }
 
+MeshTriPoint SignedDistanceToMeshResult::mtp( const MeshTopology & topology ) const
+{
+    if ( !proj.valid() )
+        return {};
+    return { topology.edgeWithLeft( proj.face ), tp };
+}
+
 MeshProjectionTransforms createProjectionTransforms( AffineXf3f& storageXf, const AffineXf3f* pointXf, const AffineXf3f* treeXf )
 {
     MeshProjectionTransforms res;
@@ -301,7 +308,7 @@ std::optional<SignedDistanceToMeshResult> findSignedDistance( const Vector3f & p
     }
     res = SignedDistanceToMeshResult();
     res->proj = projRes.proj;
-    res->mtp = projRes.mtp( mp.mesh.topology );
+    res->tp = projRes.tp;
     res->dist = mp.mesh.signedDistance( pt, projRes, mp.region );
     return res;
 }

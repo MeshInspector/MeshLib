@@ -100,10 +100,13 @@ struct SignedDistanceToMeshResult
 {
     /// the closest point on mesh
     PointOnFace proj;
-    /// its barycentric representation
-    MeshTriPoint mtp;
+    /// barycentric coordinates of proj relative to the vertices of proj.face in the order of MeshTopology::getTriVerts( proj.face )
+    TriPointf tp;
     /// distance from pt to proj (positive - outside, negative - inside the mesh)
     float dist = 0;
+
+    /// returns the closest point on mesh as MeshTriPoint relative to topology.edgeWithLeft( proj.face ), or invalid MeshTriPoint if proj.face is invalid
+    [[nodiscard]] MRMESH_API MeshTriPoint mtp( const MeshTopology & topology ) const;
 };
 
 /**

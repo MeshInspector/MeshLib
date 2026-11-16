@@ -8,6 +8,9 @@ on:
       only_win_arm64:
         type: boolean
         default: false
+      only_win_x64:
+        type: boolean
+        default: false
 
 env:
   EMBREE_TAG: v4.4.1
@@ -26,7 +29,7 @@ env:
 
 jobs:
   linux:
-    if: ${{ !inputs.only_win_arm64 }}
+    if: ${{ !inputs.only_win_arm64 && !inputs.only_win_x64 }}
     strategy:
       fail-fast: false
       matrix:
@@ -72,7 +75,7 @@ jobs:
           path: bench-*.txt
 
   macos:
-    if: ${{ !inputs.only_win_arm64 }}
+    if: ${{ !inputs.only_win_arm64 && !inputs.only_win_x64 }}
     strategy:
       fail-fast: false
       matrix:
@@ -139,10 +142,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: ${{ inputs.only_win_arm64 && fromJSON('["arm64"]') || fromJSON('["x64","arm64"]') }}
+        arch: ${{ inputs.only_win_arm64 && fromJSON('["arm64"]') || inputs.only_win_x64 && fromJSON('["x64"]') || fromJSON('["x64","arm64"]') }}
     name: windows-${{ matrix.arch }}
     runs-on: ${{ matrix.arch == 'arm64' && 'windows-11-arm' || 'windows-2025' }}
-    timeout-minutes: 120
+    timeout-minutes: 330
     permissions:
       contents: read
     env:

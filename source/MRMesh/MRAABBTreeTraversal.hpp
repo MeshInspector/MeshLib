@@ -154,13 +154,39 @@ struct WideLeafTriBoxes
 /// given as tris to forWideLeafTris, tests the boxes of two triangles by their intersection, all boxes of the other leaf at once
 struct WideTriBoxesIntersect {};
 
+/// the boxes of the last leaves of each side in forWideLeafTris: consecutive pairs of leaves often share one of them;
+/// shall live during one traversal of unchanged trees
+class WideLeafTriBoxesCache
+{
+public:
+    const WideLeafTriBoxes & get( bool aSide, const AABBTree & tree, NodeId leaf )
+    {
+        auto & e = entries_[aSide ? 0 : 1];
+        if ( !e.boxes || e.leaf != leaf )
+        {
+            e.leaf = leaf;
+            e.boxes.emplace( tree, leaf );
+        }
+        return *e.boxes;
+    }
+
+private:
+    struct Entry
+    {
+        NodeId leaf;
+        std::optional<WideLeafTriBoxes> boxes;
+    };
+    Entry entries_[2];
+};
+
 /// calls onTris( i, j ) for the triangles (indices in leafTris()) of leaves s.a and s.b, whose boxes intersect:
 /// triNode( i, iBox, bNode ) tests the box of triangle i (iBox contains aTree.leafBox( i ), see wideLeafTriBoxes) with the box of leaf s.b,
 /// and tris( i, j, iBox, jBox ) the boxes of two triangles (jBox contains bTree.leafBox( j ));
 /// in the traversal of one tree with itself (Self), a leaf paired with itself gives each pair of its triangles once, i < j;
 /// stops and returns false as soon as onTris returns false
 template<bool Self = false, typename TriNode, typename Tris, typename OnTris>
-bool forWideLeafTris( const AABBTree & aTree, const AABBTree & bTree, const WideNodePair & s, TriNode && triNode, Tris && tris, OnTris && onTris )
+bool forWideLeafTris( const AABBTree & aTree, const AABBTree & bTree, const WideNodePair & s, TriNode && triNode, Tris && tris, OnTris && onTris,
+    WideLeafTriBoxesCache * cache = nullptr )
 {
     const auto & an = aTree.nodes()[s.a];
     const auto & bn = bTree.nodes()[s.b];
@@ -169,9 +195,9 @@ bool forWideLeafTris( const AABBTree & aTree, const AABBTree & bTree, const Wide
     const int aNum = an.numLeafTris();
     const int bNum = bn.numLeafTris();
     // the boxes of the triangles of both leaves, computed once
-    const WideLeafTriBoxes aBoxes( aTree, s.a );
-    const std::optional<WideLeafTriBoxes> bBoxesOpt = self ? std::nullopt : std::optional<WideLeafTriBoxes>( std::in_place, bTree, s.b );
-    const WideLeafTriBoxes & bBoxes = self ? aBoxes : *bBoxesOpt;
+    std::optional<WideLeafTriBoxes> aOwn, bOwn;
+    const WideLeafTriBoxes & aBoxes = cache ? cache->get( true, aTree, s.a ) : aOwn.emplace( aTree, s.a );
+    const WideLeafTriBoxes & bBoxes = self ? aBoxes : cache ? cache->get( false, bTree, s.b ) : bOwn.emplace( bTree, s.b );
     for ( int i = 0; i < aNum; ++i )
     {
         const auto iBox = aBoxes.box( i );

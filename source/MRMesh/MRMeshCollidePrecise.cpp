@@ -107,12 +107,14 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const A
         TriData tris[AABBTree::MaxLeafTris];
     };
     const int aVertsSize = (int)a.mesh.topology.vertSize();
-    auto fillTri = [&]( TriData & td, const MeshPart & mp, const AABBTree::LeafTri & lt, bool isB )
+    // the coordinates of the vertices are read from the tree, near the boxes of the triangles
+    auto fillTri = [&]( TriData & td, const MeshPart & mp, const AABBTree & tree, int i, bool isB )
     {
+        const auto & lt = tree.leafTris()[i];
         for ( int j = 0; j < 3; ++j )
         {
             const auto v = lt.verts[j];
-            const auto pt = mp.mesh.points[v];
+            const auto pt = tree.leafTriVert( i, j );
             td.vc[j].pt = conv( isB && rigidB2A ? (*rigidB2A)( pt ) : pt );
             td.vc[j].id = isB ? v + aVertsSize : v;
         }
@@ -135,7 +137,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const A
         auto & td = ld.tris[k];
         if ( !( ld.ready & ( 1 << k ) ) )
         {
-            fillTri( td, mp, tree.leafTris()[i], isB );
+            fillTri( td, mp, tree, i, isB );
             ld.ready |= 1 << k;
         }
         return td;
@@ -467,8 +469,11 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
         return l < r;
     };
 
-    auto checkTwoTris = [&] ( const AABBTree::LeafTri & lt, const AABBTree::LeafTri & rt, std::vector<EdgeTri>& res )
+    // the coordinates of the vertices are read from the tree, near the boxes of the triangles
+    auto checkTwoTris = [&] ( int li, int ri, std::vector<EdgeTri>& res )
     {
+        const auto & lt = tree.leafTris()[li];
+        const auto & rt = tree.leafTris()[ri];
         const FaceId lTri = lt.face;
         const FaceId rTri = rt.face;
         PreciseVertCoords lvc[3], rvc[3];
@@ -498,11 +503,11 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
 
         for ( int j = 0; j < 3; ++j )
         {
-            const auto& lf = mp.mesh.points[lvc[j].id];
+            const auto lf = tree.leafTriVert( li, j );
             lvc[j].pt = conv( rigidB2A ? ( *rigidB2A )( lf ) : lf );
             lvc[j].id += aVertsSize;
 
-            const auto rf = mp.mesh.points[rvc[j].id];
+            const auto rf = tree.leafTriVert( ri, j );
             rvc[j].pt = conv( rigidB2A ? ( *rigidB2A )( rf ) : rf );
             rvc[j].id += aVertsSize;
         }
@@ -572,6 +577,7 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
         [&] ( const tbb::blocked_range<size_t>& range )
     {
         Vector<WideNodePair> mySubtasks;
+        WideLeafTriBoxesCache leafBoxesCache;
         for ( auto is = range.begin(); is < range.end(); ++is )
         {
             if ( anyIntersection && !keepGoing.load( std::memory_order_relaxed ) )
@@ -595,9 +601,9 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
                         const auto & rt = tree.leafTris()[j];
                         if ( mp.region && !mp.region->test( rt.face ) )
                             return true;
-                        checkTwoTris( lt, rt, myRes );
+                        checkTwoTris( i, j, myRes );
                         return !anyIntersection || myRes.empty();
-                    } );
+                    }, &leafBoxesCache );
                 if ( !goOn )
                 {
                     keepGoing.store( false, std::memory_order_relaxed );

@@ -91,6 +91,16 @@ public:
     /// triangles of all leaves, the triangles of each leaf are contiguous
     [[nodiscard]] const Vector<LeafTri> & leafTris() const { return leafTris_; }
 
+    /// the coordinates of vertex v (in the order of LeafTri::verts) of the triangle at given position in leafTris(),
+    /// the same as the mesh's points at the time of construction or last update, read from the SIMD leaf
+    [[nodiscard]] Vector3f leafTriVert( int i, int v ) const
+    {
+        const int s = leafSlots_[i];
+        const auto & c = simdLeaves_[s >> 2].coord[v];
+        const int k = s & 3;
+        return { c[0][k], c[1][k], c[2][k] };
+    }
+
     /// the bounding box of the triangle at given position in leafTris(), slightly expanded for robust searches
     [[nodiscard]] MRMESH_API Box3f leafBox( int i ) const;
 

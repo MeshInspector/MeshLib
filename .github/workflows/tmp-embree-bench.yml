@@ -18,7 +18,7 @@ env:
     -DMESHLIB_BUILD_MRVIEWER=OFF -DMESHLIB_BUILD_MESHVIEWER=OFF -DMESHLIB_BUILD_PYTHON_MODULES=OFF
     -DMESHLIB_BUILD_MESHCONV=OFF -DMESHLIB_BUILD_SYMBOLMESH=OFF -DMESHLIB_BUILD_VOXELS=OFF
     -DMESHLIB_BUILD_EXTRA_IO_FORMATS=OFF -DMESHLIB_BUILD_MCP=OFF -DMESHLIB_BUILD_MRCUDA=OFF
-    -DMESHLIB_BUILD_GENERATED_C_BINDINGS=OFF
+    -DMESHLIB_BUILD_GENERATED_C_BINDINGS=OFF -DCMAKE_INSTALL_INCLUDEDIR=include -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_INSTALL_BINDIR=bin -DCMAKE_INSTALL_DATAROOTDIR=share
 
 jobs:
   linux:
@@ -163,7 +163,14 @@ jobs:
           VCPKG_ROOT: C:\vcpkg
         run: |
           call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" ${{ matrix.vsargs }} || exit /b 1
-          cmake -S embree-src -B embree-build -GNinja %EMBREE_OPTIONS% -DCMAKE_PREFIX_PATH=C:/vcpkg/installed/${{ matrix.triplet }} -DCMAKE_INSTALL_PREFIX=%CD%\embree-install || exit /b 1
+          rem Embree has no MSVC code path for ARM64 (it includes immintrin.h): build it with clang-cl there
+          set EMBREE_CC_ARGS=
+          set EMBREE_CC=
+          if exist "C:\Program Files\LLVM\bin\clang-cl.exe" set "EMBREE_CC=C:/Program Files/LLVM/bin/clang-cl.exe"
+          if exist "${{ env.VC_PATH }}\VC\Tools\Llvm\ARM64\bin\clang-cl.exe" set "EMBREE_CC=${{ env.VC_PATH }}\VC\Tools\Llvm\ARM64\bin\clang-cl.exe"
+          echo clang-cl: "%EMBREE_CC%"
+          if "${{ matrix.arch }}"=="arm64" set EMBREE_CC_ARGS=-DCMAKE_C_COMPILER="%EMBREE_CC%" -DCMAKE_CXX_COMPILER="%EMBREE_CC%"
+          cmake -S embree-src -B embree-build -GNinja %EMBREE_OPTIONS% %EMBREE_CC_ARGS% -DCMAKE_PREFIX_PATH=C:/vcpkg/installed/${{ matrix.triplet }} -DCMAKE_INSTALL_PREFIX=%CD%\embree-install || exit /b 1
           cmake --build embree-build || exit /b 1
           cmake --install embree-build || exit /b 1
           for /d %%d in (embree-install\lib\cmake\embree-*) do set EMBREE_DIR=%CD%\%%d

@@ -1,6 +1,7 @@
 #include <MRMesh/MRAABBTree.h>
 #include <MRMesh/MRAABBTreeMaker.h>
 #include <MRMesh/MRMeshProject.h>
+#include <MRMesh/MRClosestPointInTriangle.h>
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshCollide.h>
@@ -50,6 +51,35 @@ TEST(MRMesh, ProjectionToEmptyMesh)
     Vector3f p( 1.f, 2.f, 3.f );
     bool hasProjection = Mesh{}.projectPoint( p ).valid();
     EXPECT_FALSE( hasProjection );
+}
+
+// small triangle far from the origin, non-rigid transformation and a projected point far from the triangle:
+// the projection must be computed relative to the precisely transformed triangle
+TEST( MRMesh, ProjectionNonRigidXfFarSmallTriangle )
+{
+    const Vector3f a( 1000.f, 1000.f, 1000.f );
+    const Mesh mesh = Mesh::fromTriangles( { a, a + Vector3f( 0.01f, 0.f, 0.f ), a + Vector3f( 0.f, 0.01f, 0.003f ) }, { { 0_v, 1_v, 2_v } } );
+    const AffineXf3f xf( Matrix3f::rotation( Vector3f( 1, 2, 3 ).normalized(), 0.7f ) * Matrix3f::scale( 1.3f, 0.8f, 1.1f ), Vector3f( -30.f, 70.f, 20.f ) );
+    const AffineXf3d xfd( xf );
+
+    // the exactly transformed triangle in double
+    const auto [v0, v1, v2] = mesh.topology.getTriVerts( 0_f );
+    const Vector3d da = xfd( Vector3d( mesh.points[v0] ) ), db = xfd( Vector3d( mesh.points[v1] ) ), dc = xfd( Vector3d( mesh.points[v2] ) );
+    const Vector3d n = cross( db - da, dc - da ).normalized();
+    for ( float dist : { 1.f, -1.f, 3.f } )
+    {
+        for ( TriPointd tp : { TriPointd( 0.2, 0.3 ), TriPointd( 0.6, 0.1 ), TriPointd( 0.1, 0.8 ) } )
+        {
+            const Vector3f pt( tp.interpolate( da, db, dc ) + double( dist ) * n );
+            // exact projection of the (rounded) point on the exactly transformed triangle
+            const auto [exactProj, exactTp] = closestPointInTriangle( Vector3d( pt ), da, db, dc );
+            const auto proj = findProjection( pt, mesh, FLT_MAX, &xf );
+            ASSERT_TRUE( proj.valid() );
+            EXPECT_NEAR( proj.tp.a, exactTp.a, 1e-4 );
+            EXPECT_NEAR( proj.tp.b, exactTp.b, 1e-4 );
+            EXPECT_NEAR( std::sqrt( proj.distSq ), ( exactProj - Vector3d( pt ) ).length(), 1e-3 );
+        }
+    }
 }
 
 // the cached tree of a mesh without triangles: refit and winding numbers (asserted in Debug before)

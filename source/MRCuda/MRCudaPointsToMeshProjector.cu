@@ -74,20 +74,27 @@ __global__ void kernel( const float3* points,
                 for ( int i = node.first, e = node.first + node.numLeafTris(); i < e; ++i )
                 {
                     const auto& lt = leafTris[i];
-                    float3 a = meshPoints[lt.verts[0]];
-                    float3 b = meshPoints[lt.verts[1]];
-                    float3 c = meshPoints[lt.verts[2]];
+                    const float3 a = meshPoints[lt.verts[0]];
+                    const float3 b = meshPoints[lt.verts[1]];
+                    const float3 c = meshPoints[lt.verts[2]];
 
-                    if ( !refXf.isIdentity )
+                    ClosestPointRes closestPointRes;
+                    float distSq;
+                    if ( refXf.isIdentity )
                     {
-                        a = refXf.transform( a );
-                        b = refXf.transform( b );
-                        c = refXf.transform( c );
+                        closestPointRes = closestPointInTriangle( pt, a, b, c );
+                        distSq = lengthSq( closestPointRes.proj - pt );
                     }
-
-                    const auto closestPointRes = closestPointInTriangle( pt, a, b, c );
-
-                    float distSq = lengthSq( closestPointRes.proj - pt );
+                    else
+                    {
+                        // transform only the first vertex as a point and the edges as vectors, and search relative to the first vertex:
+                        // transforming all three vertices in float distorts the shape of small triangles far from the origin,
+                        // and the projections of far points on them become very inaccurate
+                        const float3 ta = refXf.transform( a );
+                        closestPointRes = closestPointInTriangle( pt - ta, float3{ 0, 0, 0 }, refXf.transformVector( b - a ), refXf.transformVector( c - a ) );
+                        distSq = lengthSq( closestPointRes.proj - ( pt - ta ) );
+                        closestPointRes.proj = closestPointRes.proj + ta;
+                    }
                     if ( distSq < res.distSq )
                     {
                         res.distSq = distSq;

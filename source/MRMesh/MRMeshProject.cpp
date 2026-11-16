@@ -73,15 +73,29 @@ MeshProjectionResult findProjectionWide( const Vector3f & pt, const MeshPart & m
         return box.getDistanceSq( pt );
     };
 
+    // the transformation is applied to the triangles in double-precision: in float, the rounding of transformed coordinates
+    // distorts the shape of small triangles far from the origin, and the projections of far points on them become very inaccurate;
+    // in Plain mode there is no transformation, and xfd is an empty object
+    [[maybe_unused]] const auto xfd = [&]
+    {
+        if constexpr ( Plain )
+        {
+            struct NoXf {};
+            return NoXf{};
+        }
+        else
+            return xf ? AffineXf3d( *xf ) : AffineXf3d{};
+    }();
+
     // returns true if the search can stop
     auto processLeaf = [&]( const AABBTree::Node & node )
     {
         for ( int i = node.first, end = node.first + node.numLeafTris(); i < end; ++i )
         {
             const auto & lt = tree.leafTris()[i];
-            Vector3f a = mp.mesh.points[lt.verts[0]];
-            Vector3f b = mp.mesh.points[lt.verts[1]];
-            Vector3f c = mp.mesh.points[lt.verts[2]];
+            Vector3d a( mp.mesh.points[lt.verts[0]] );
+            Vector3d b( mp.mesh.points[lt.verts[1]] );
+            Vector3d c( mp.mesh.points[lt.verts[2]] );
             if constexpr ( !Plain )
             {
                 if ( validFaces && !validFaces( lt.face ) )
@@ -90,14 +104,14 @@ MeshProjectionResult findProjectionWide( const Vector3f & pt, const MeshPart & m
                     continue;
                 if ( xf )
                 {
-                    a = (*xf)( a );
-                    b = (*xf)( b );
-                    c = (*xf)( c );
+                    a = xfd( a );
+                    b = xfd( b );
+                    c = xfd( c );
                 }
             }
 
             // compute the closest point in double-precision, because float might be not enough
-            const auto [projD, baryD] = closestPointInTriangle( Vector3d( pt ), Vector3d( a ), Vector3d( b ), Vector3d( c ) );
+            const auto [projD, baryD] = closestPointInTriangle( Vector3d( pt ), a, b, c );
             const Vector3f p( projD );
             const float d = ( p - pt ).lengthSq();
             if ( !( d < distSq ) )

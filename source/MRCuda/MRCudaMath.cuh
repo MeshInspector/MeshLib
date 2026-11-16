@@ -216,6 +216,11 @@ struct Matrix4
         res = res + b;
         return res;
     }
+    /// application of only the linear part of the transformation to a vector (without the shift)
+    __device__ float3 transformVector( const float3& v ) const
+    {
+        return { dot( x, v ), dot( y, v ), dot( z, v ) };
+    }
     /// application of the transformation to a box
     __device__ Box3 transform( const Box3& box ) const
     {

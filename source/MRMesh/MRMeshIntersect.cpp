@@ -15,6 +15,7 @@
 #include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
 #include "MRSimd4.hpp"
+#include <optional>
 #include <type_traits>
 
 namespace MR
@@ -172,6 +173,56 @@ Vector3f invDirOf( const IntersectionPrecomputes<float>& prec )
 #endif
 }
 
+/// the intersections of a ray with the (up to) four triangles of a leaf of AABBTree by one SIMD test, computed exactly as rayTriangleIntersect
+struct SimdRayTris
+{
+    int kx, ky, kz;
+    Simd4::F okx, oky, okz, Sx, Sy, Sz;
+
+    SimdRayTris( const Line3f & line, const IntersectionPrecomputes<float> & prec )
+        : kx( prec.idxX ), ky( prec.idxY ), kz( prec.maxDimIdxZ ),
+        okx( Simd4::set1( line.p[kx] ) ), oky( Simd4::set1( line.p[ky] ) ), okz( Simd4::set1( line.p[kz] ) ),
+        Sx( Simd4::set1( prec.Sx ) ), Sy( Simd4::set1( prec.Sy ) ), Sz( Simd4::set1( prec.Sz ) )
+    {
+    }
+
+    /// returns the bit mask of the crossed triangles, and fills for them the parameter t along the ray, V, W and 1/det of rayTriangleIntersect
+    int test( const AABBTree::SimdLeaf & leaf, float ( &ts )[4], float ( &vs )[4], float ( &ws )[4], float ( &ids )[4] ) const
+    {
+        using namespace Simd4;
+        const F epsilon = set1( std::numeric_limits<float>::epsilon() );
+        const F zero = set1( 0.0f );
+        const F aZ = sub( load( leaf.coord[0][kz] ), okz );
+        const F bZ = sub( load( leaf.coord[1][kz] ), okz );
+        const F cZ = sub( load( leaf.coord[2][kz] ), okz );
+        const F Ax = sub( sub( load( leaf.coord[0][kx] ), okx ), mul( Sx, aZ ) );
+        const F Ay = sub( sub( load( leaf.coord[0][ky] ), oky ), mul( Sy, aZ ) );
+        const F Bx = sub( sub( load( leaf.coord[1][kx] ), okx ), mul( Sx, bZ ) );
+        const F By = sub( sub( load( leaf.coord[1][ky] ), oky ), mul( Sy, bZ ) );
+        const F Cx = sub( sub( load( leaf.coord[2][kx] ), okx ), mul( Sx, cZ ) );
+        const F Cy = sub( sub( load( leaf.coord[2][ky] ), oky ), mul( Sy, cZ ) );
+        const F eps = mul( mul( epsilon, max( max( abs( Ax ), abs( Bx ) ), abs( Cx ) ) ), max( max( abs( Ay ), abs( By ) ), abs( Cy ) ) );
+        const F U = sub( mul( Cx, By ), mul( Cy, Bx ) );
+        const F V = sub( mul( Ax, Cy ), mul( Ay, Cx ) );
+        const F W = sub( mul( Bx, Ay ), mul( By, Ax ) );
+        const F negEps = sub( zero, eps );
+        const M someNeg = orm( orm( lt( U, negEps ), lt( V, negEps ) ), lt( W, negEps ) );
+        const M somePos = orm( orm( gt( U, eps ), gt( V, eps ) ), gt( W, eps ) );
+        const F det = add( add( U, V ), W );
+        // the unused slots have NaN coordinates, so neither someNeg nor somePos
+        const int hits = bits( andm( xorm( someNeg, somePos ), ne( det, zero ) ) );
+        if ( hits )
+        {
+            const F invDet = div( set1( 1.0f ), det );
+            store( ts, mul( add( add( mul( U, mul( Sz, aZ ) ), mul( V, mul( Sz, bZ ) ) ), mul( W, mul( Sz, cZ ) ) ), invDet ) );
+            store( vs, V );
+            store( ws, W );
+            store( ids, invDet );
+        }
+        return hits;
+    }
+};
+
 } // anonymous namespace
 
 /// the float version of meshRayIntersectT_ over the SIMD layout of the tree: tests all children of a node and all triangles of a leaf at once;
@@ -209,11 +260,7 @@ MeshIntersectionResult meshRayIntersectSimd_( const AABBTree & tree, const FaceB
     const F idx = set1( invDir.x ), idy = set1( invDir.y ), idz = set1( invDir.z );
 
     // ray-triangles: the same sheared coordinates as in rayTriangleIntersect
-    const int kx = prec.idxX, ky = prec.idxY, kz = prec.maxDimIdxZ;
-    const F okx = set1( line.p[kx] ), oky = set1( line.p[ky] ), okz = set1( line.p[kz] );
-    const F Sx = set1( prec.Sx ), Sy = set1( prec.Sy ), Sz = set1( prec.Sz );
-    const F epsilon = set1( std::numeric_limits<float>::epsilon() );
-    const F zero = set1( 0.0f );
+    const SimdRayTris rayTris( line, prec );
 
     struct SubTask
     {
@@ -233,36 +280,11 @@ MeshIntersectionResult meshRayIntersectSimd_( const AABBTree & tree, const FaceB
         {
             if ( st.ref < 0 )
             {
-                const auto & leaf = simdLeaves[~st.ref];
-                const F aZ = sub( load( leaf.coord[0][kz] ), okz );
-                const F bZ = sub( load( leaf.coord[1][kz] ), okz );
-                const F cZ = sub( load( leaf.coord[2][kz] ), okz );
-                const F Ax = sub( sub( load( leaf.coord[0][kx] ), okx ), mul( Sx, aZ ) );
-                const F Ay = sub( sub( load( leaf.coord[0][ky] ), oky ), mul( Sy, aZ ) );
-                const F Bx = sub( sub( load( leaf.coord[1][kx] ), okx ), mul( Sx, bZ ) );
-                const F By = sub( sub( load( leaf.coord[1][ky] ), oky ), mul( Sy, bZ ) );
-                const F Cx = sub( sub( load( leaf.coord[2][kx] ), okx ), mul( Sx, cZ ) );
-                const F Cy = sub( sub( load( leaf.coord[2][ky] ), oky ), mul( Sy, cZ ) );
-                const F eps = mul( mul( epsilon, max( max( abs( Ax ), abs( Bx ) ), abs( Cx ) ) ), max( max( abs( Ay ), abs( By ) ), abs( Cy ) ) );
-                const F U = sub( mul( Cx, By ), mul( Cy, Bx ) );
-                const F V = sub( mul( Ax, Cy ), mul( Ay, Cx ) );
-                const F W = sub( mul( Bx, Ay ), mul( By, Ax ) );
-                const F negEps = sub( zero, eps );
-                const M someNeg = orm( orm( lt( U, negEps ), lt( V, negEps ) ), lt( W, negEps ) );
-                const M somePos = orm( orm( gt( U, eps ), gt( V, eps ) ), gt( W, eps ) );
-                const F det = add( add( U, V ), W );
-                // the unused slots have NaN coordinates, so neither someNeg nor somePos
-                int hits = bits( andm( xorm( someNeg, somePos ), ne( det, zero ) ) );
+                alignas( 16 ) float ts[4], vs[4], ws[4], ids[4];
+                int hits = rayTris.test( simdLeaves[~st.ref], ts, vs, ws, ids );
                 bool stop = false;
                 if ( hits )
                 {
-                    const F invDet = div( set1( 1.0f ), det );
-                    const F t = mul( add( add( mul( U, mul( Sz, aZ ) ), mul( V, mul( Sz, bZ ) ) ), mul( W, mul( Sz, cZ ) ) ), invDet );
-                    alignas( 16 ) float ts[4], vs[4], ws[4], ids[4];
-                    store( ts, t );
-                    store( vs, V );
-                    store( ws, W );
-                    store( ids, invDet );
                     // the triangles in their order, as rayStart and rayEnd change after each intersection
                     for ( ; hits; hits &= hits - 1 )
                     {
@@ -610,6 +632,10 @@ void rayMeshIntersectAll_( const VertCoords & points, const AABBTree & tree, con
             return 0;
     }();
 
+    [[maybe_unused]] std::optional<SimdRayTris> simdRayTris;
+    if constexpr ( std::is_same_v<T, float> )
+        simdRayTris.emplace( line, prec );
+
     // every level adds at most MaxChildren - 1 nodes, and the tree has at most MaxDepth levels
     InplaceStack<int, 64> subtasks;
     subtasks.push( tree.rootRef() );
@@ -636,9 +662,17 @@ void rayMeshIntersectAll_( const VertCoords & points, const AABBTree & tree, con
         if( r < 0 )
         {
             const auto & leafBoxes = tree.leafBoxes()[~r];
+            // the float version tests all triangles of the leaf at once, and with their boxes rejects the near-miss hits
             [[maybe_unused]] int crossedTris = 0;
+            [[maybe_unused]] alignas( 16 ) float ts[4], vs[4], ws[4], ids[4];
             if constexpr ( std::is_same_v<T, float> )
+            {
                 crossedTris = simdCrossed( leafBoxes );
+                if ( crossedTris )
+                    crossedTris &= simdRayTris->test( tree.simdLeaves()[~r], ts, vs, ws, ids );
+                if ( !crossedTris )
+                    continue;
+            }
             for ( int k = 0; k < AABBTree::MaxLeafTris; ++k )
             {
                 const auto & lt = leafTris[~r * AABBTree::MaxLeafTris + k];
@@ -675,21 +709,25 @@ void rayMeshIntersectAll_( const VertCoords & points, const AABBTree & tree, con
                 }
                 else
                 {
-                    // float version (faster); the box of the triangle rejects the near-miss hits of the float triangle test
+                    // float version (faster): the triangle and its box are crossed, the coordinates are taken from the tree
                     if ( !( crossedTris & ( 1 << k ) ) )
                         continue;
-                    const Vector3<T> vA = Vector3<T>( points[pvc[0].id] ) - line.p;
-                    const Vector3<T> vB = Vector3<T>( points[pvc[1].id] ) - line.p;
-                    const Vector3<T> vC = Vector3<T>( points[pvc[2].id] ) - line.p;
-                    const auto triIsect = rayTriangleIntersect( vA, vB, vC, prec );
-                    if ( triIsect && triIsect->t < rayEnd && triIsect->t > rayStart )
+                    const float t = ts[k];
+                    if ( t < rayEnd && t > rayStart )
                     {
                         MeshIntersectionResult found;
                         found.proj.face = face;
-                        found.proj.point = Vector3f( line( triIsect->t ) );
-                        found.tp = triIsect->bary;
-                        found.distanceAlongLine = float( triIsect->t );
-                        if ( !report( found, [&] { return dot( cross( vB - vA, vC - vA ), line.d ) < 0; } ) )
+                        found.proj.point = Vector3f( line( t ) );
+                        found.tp = TriPointf( vs[k] * ids[k], ws[k] * ids[k] );
+                        found.distanceAlongLine = t;
+                        const int slot = ~r * AABBTree::MaxLeafTris + k;
+                        if ( !report( found, [&]
+                        {
+                            const Vector3f vA = tree.leafPoint( slot, 0 ) - line.p;
+                            const Vector3f vB = tree.leafPoint( slot, 1 ) - line.p;
+                            const Vector3f vC = tree.leafPoint( slot, 2 ) - line.p;
+                            return dot( cross( vB - vA, vC - vA ), line.d ) < 0;
+                        } ) )
                             return;
                     }
                 }

@@ -123,6 +123,32 @@ Rays makeRandom( const Box3f& box, int n, uint64_t seed )
     return rs;
 }
 
+// origins uniform in the bounding box enlarged twice, each ray aimed at a random mesh vertex (nearly all hit)
+Rays makeToward( const Mesh& mesh, const Box3f& box, int n, uint64_t seed )
+{
+    Rays rs{ "toward", {}, {}, false };
+    Rng r{ seed };
+    const Vector3f c = box.center(), h = box.size();
+    const int nf = int( mesh.topology.faceSize() );
+    rs.org.resize( n );
+    rs.dir.resize( n );
+    for ( int i = 0; i < n; ++i )
+    {
+        rs.org[i] = c + Vector3f{ ( r.uni() - 0.5f ) * 2 * h.x, ( r.uni() - 0.5f ) * 2 * h.y, ( r.uni() - 0.5f ) * 2 * h.z };
+        const auto tv = mesh.topology.getTriVerts( FaceId( int( r.next() % uint64_t( nf ) ) ) );
+        float a = r.uni(), b = r.uni();
+        if ( a + b > 1 )
+        {
+            a = 1 - a;
+            b = 1 - b;
+        }
+        const Vector3f target = mesh.points[tv[0]] + a * ( mesh.points[tv[1]] - mesh.points[tv[0]] ) + b * ( mesh.points[tv[2]] - mesh.points[tv[0]] );
+        const Vector3f d = target - rs.org[i];
+        rs.dir[i] = d.lengthSq() > 0 ? d.normalized() : randomUnit( r );
+    }
+    return rs;
+}
+
 std::atomic<int64_t> gEmbreeBytes{ 0 };
 bool embreeMemoryMonitor( void*, ssize_t bytes, bool )
 {
@@ -275,7 +301,7 @@ void emAny( RTCScene scene, const Rays& rs, std::vector<uint8_t>& hit )
 
 struct Agreement
 {
-    size_t hitsA = 0, hitsB = 0, onlyOne = 0, sameFace = 0, farApart = 0;
+    size_t hitsA = 0, hitsB = 0, onlyOne = 0, sameFace = 0, farApart = 0, aFarther = 0, bFarther = 0;
     float maxRelDiff = 0;
 };
 
@@ -297,7 +323,11 @@ Agreement compare( const Hits& a, const Hits& b, float scale )
         g.sameFace += a.face[i] == b.face[i];
         const float d = std::abs( a.t[i] - b.t[i] ) / scale;
         g.maxRelDiff = std::max( g.maxRelDiff, d );
-        g.farApart += d > 1e-4f;
+        if ( d > 1e-4f )
+        {
+            ++g.farApart;
+            ( a.t[i] > b.t[i] ? g.aFarther : g.bFarther )++;
+        }
     }
     return g;
 }
@@ -369,7 +399,7 @@ int main( int argc, char** argv )
             if ( threads == hw )
                 out( "tree_MB", mlMB, emMB );
 
-            for ( const Rays& rs : { makeCoherent( box, nRays ), makeRandom( box, nRays, 12345 ) } )
+            for ( const Rays& rs : { makeCoherent( box, nRays ), makeRandom( box, nRays, 12345 ), makeToward( mesh, box, nRays, 777 ) } )
             {
                 const size_t n = rs.org.size();
                 const double mr = n / 1e6;
@@ -401,10 +431,10 @@ int main( int argc, char** argv )
                         anyHitsM += am[i];
                     }
                     auto g8 = compare( he1, he8, box.diagonal() );
-                    std::printf( "CHECK;%s;%s;hits ml=%zu em=%zu;only-one-hits=%zu;same-face=%zu;max|dt|/diag=%.2g;dt>1e-4=%zu;"
+                    std::printf( "CHECK;%s;%s;hits ml=%zu em=%zu;only-one-hits=%zu;same-face=%zu;max|dt|/diag=%.2g;dt>1e-4=%zu (ml farther %zu, em farther %zu);"
                                  "any-hit ml=%zu mismatches=%zu;embree 1 vs 8 differ=%zu\n",
                         c.name.c_str(), rs.name.c_str(), g.hitsA, g.hitsB, g.onlyOne, g.sameFace, g.maxRelDiff, g.farApart,
-                        anyHitsM, anyDiff, g8.onlyOne + g8.farApart );
+                        g.aFarther, g.bFarther, anyHitsM, anyDiff, g8.onlyOne + g8.farApart );
                     std::fflush( stdout );
                 }
             }

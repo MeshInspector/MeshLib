@@ -218,12 +218,8 @@ Expected<bool> findSelfCollidingTriangles(
     if ( tree.nodes().empty() )
         return false;
 
-    auto nodesIntersect = WideIntersect
-    {
-        [&tree]( NodeId x, NodeId y ) { return tree.nodes()[x].box.intersects( tree.nodes()[y].box ); },
-        // the same test of all children of a node at once
-        [&tree]( bool, NodeId parent, NodeId other ) { return childBoxesIntersect( tree, parent, tree.nodes()[other].box ); }
-    };
+    // the boxes of contiguous children are tested one by one: faster here than reading their copies in SIMD layout
+    auto nodesIntersect = [&tree]( NodeId x, NodeId y ) { return tree.nodes()[x].box.intersects( tree.nodes()[y].box ); };
     auto split = [&]( const WideNodePair & s, auto && push ) { return splitSelfWidePair( tree, s, nodesIntersect, push ); };
     // 8 levels -> at most 4^8 subtasks
     const auto subtasks = makeWideSubtasks( { { NodeId{ 0 }, NodeId{ 0 } } }, 8, split );

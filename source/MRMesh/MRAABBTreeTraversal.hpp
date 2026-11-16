@@ -6,6 +6,7 @@
 #include "MRBuffer.h"
 #include "MREnums.h"
 #include "MRInplaceStack.h"
+#include "MRSimd4.hpp"
 #include "MRVector.h"
 #include <atomic>
 #include <cstdint>
@@ -19,6 +20,31 @@ struct WideNodePair
     NodeId a, b;
 };
 
+/// returns the bit mask of the children of not-leaf node parent (bit i for child parent.first + i), whose boxes intersect given box
+/// (as Box3f::intersects) by one SIMD test of all children
+inline int childBoxesIntersect( const AABBTree & tree, NodeId parent, const Box3f & box )
+{
+    using namespace Simd4;
+    const auto & sn = tree.simdNodes()[tree.simdRef( parent )];
+    M ok = andm( le( load( sn.box[0] ), set1( box.max.x ) ), le( set1( box.min.x ), load( sn.box[3] ) ) );
+    ok = andm( ok, andm( le( load( sn.box[1] ), set1( box.max.y ) ), le( set1( box.min.y ), load( sn.box[4] ) ) ) );
+    ok = andm( ok, andm( le( load( sn.box[2] ), set1( box.max.z ) ), le( set1( box.min.z ), load( sn.box[5] ) ) ) );
+    return bits( ok ); // unused slots have empty boxes
+}
+
+/// intersect( aNode, bNode ) of splitWidePair together with
+/// children( aSide, parent, other ) returning the bit mask of the children of parent (in tree a if aSide, otherwise in tree b),
+/// for which intersect with node other of the other tree would return true
+template<typename Pair, typename Children>
+struct WideIntersect
+{
+    Pair pair;
+    Children children;
+    bool operator()( NodeId a, NodeId b ) const { return pair( a, b ); }
+};
+template<typename Pair, typename Children>
+WideIntersect( Pair, Children ) -> WideIntersect<Pair, Children>;
+
 /// pushes the pairs of each child of the bigger non-leaf node with the other node, if intersect( aNode, bNode ) of their boxes;
 /// returns false and pushes nothing if both nodes are leaves
 template<typename Intersect, typename Push>
@@ -26,18 +52,35 @@ bool splitWidePair( const AABBTree & aTree, const AABBTree & bTree, const WideNo
 {
     const auto & an = aTree.nodes()[s.a];
     const auto & bn = bTree.nodes()[s.b];
+    constexpr bool hasChildren = requires { intersect.children( true, s.a, s.b ); };
     if ( !an.leaf() && ( bn.leaf() || an.box.volume() >= bn.box.volume() ) )
     {
-        for ( int i = 0; i < an.count; ++i )
-            if ( const NodeId c( an.first + i ); intersect( c, s.b ) )
-                push( WideNodePair{ c, s.b } );
+        if constexpr ( hasChildren )
+        {
+            for ( int m = intersect.children( true, s.a, s.b ); m; m &= m - 1 )
+                push( WideNodePair{ NodeId( an.first + Simd4::lowestBit( m ) ), s.b } );
+        }
+        else
+        {
+            for ( int i = 0; i < an.count; ++i )
+                if ( const NodeId c( an.first + i ); intersect( c, s.b ) )
+                    push( WideNodePair{ c, s.b } );
+        }
         return true;
     }
     if ( !bn.leaf() )
     {
-        for ( int i = 0; i < bn.count; ++i )
-            if ( const NodeId c( bn.first + i ); intersect( s.a, c ) )
-                push( WideNodePair{ s.a, c } );
+        if constexpr ( hasChildren )
+        {
+            for ( int m = intersect.children( false, s.b, s.a ); m; m &= m - 1 )
+                push( WideNodePair{ s.a, NodeId( bn.first + Simd4::lowestBit( m ) ) } );
+        }
+        else
+        {
+            for ( int i = 0; i < bn.count; ++i )
+                if ( const NodeId c( bn.first + i ); intersect( s.a, c ) )
+                    push( WideNodePair{ s.a, c } );
+        }
         return true;
     }
     return false;
@@ -56,9 +99,18 @@ bool splitSelfWidePair( const AABBTree & tree, const WideNodePair & s, Intersect
     {
         const NodeId ci( n.first + i );
         push( WideNodePair{ ci, ci } );
-        for ( int j = i + 1; j < n.count; ++j )
-            if ( const NodeId cj( n.first + j ); intersect( ci, cj ) )
-                push( WideNodePair{ ci, cj } );
+        if constexpr ( requires { intersect.children( true, s.a, s.b ); } )
+        {
+            // the children after ci, whose boxes intersect the box of ci
+            for ( int m = intersect.children( true, s.a, ci ) & ( ~0 << ( i + 1 ) ); m; m &= m - 1 )
+                push( WideNodePair{ ci, NodeId( n.first + Simd4::lowestBit( m ) ) } );
+        }
+        else
+        {
+            for ( int j = i + 1; j < n.count; ++j )
+                if ( const NodeId cj( n.first + j ); intersect( ci, cj ) )
+                    push( WideNodePair{ ci, cj } );
+        }
     }
     return true;
 }

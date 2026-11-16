@@ -102,9 +102,12 @@ public:
     /// the reference to the root in SIMD layout as in SimdNode::child (the root is a leaf if the tree has at most MaxLeafTris triangles)
     [[nodiscard]] int simdRoot() const { return simdNodes_.empty() ? ~0 : 0; }
 
+    /// the reference to given node in SIMD layout as in SimdNode::child
+    [[nodiscard]] int simdRef( NodeId n ) const { return simdRefs_[n]; }
+
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] size_t heapBytes() const { return nodes_.heapBytes() + leafTris_.heapBytes() + leafBoxes_.heapBytes()
-        + simdNodes_.capacity() * sizeof( SimdNode ) + simdLeaves_.capacity() * sizeof( SimdLeaf ); }
+        + simdNodes_.capacity() * sizeof( SimdNode ) + simdLeaves_.capacity() * sizeof( SimdLeaf ) + simdRefs_.heapBytes(); }
 
     /// returns at least given number of top-level not-intersecting subtrees, union of which contain all tree leaves
     [[nodiscard]] MRMESH_API std::vector<NodeId> getSubtrees( int minNum ) const;
@@ -151,6 +154,7 @@ private:
     Vector<Box3f> leafBoxes_;
     std::vector<SimdNode> simdNodes_;
     std::vector<SimdLeaf> simdLeaves_;
+    Vector<int, NodeId> simdRefs_; ///< simdRef() for every node
 
     /// fills simdNodes_ and simdLeaves_ from nodes_ and the vertex coordinates of the mesh
     void makeSimd_( const VertCoords & points );

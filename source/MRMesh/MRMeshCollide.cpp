@@ -45,9 +45,39 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
     }
     auto bNodeBox = [&]( NodeId n ) { return bNodeBoxes ? bNodeBoxes->get( n, bTree.nodes()[n].box ) : bTree.nodes()[n].box; };
     auto bLeafBox = [&]( int i ) { return bLeafBoxes ? bLeafBoxes->get( i, bTree.leafBoxes()[i] ) : bTree.leafBoxes()[i]; };
-    auto nodesIntersect = [&]( NodeId an, NodeId bn )
+    auto nodesIntersect = WideIntersect
     {
-        return ( !a.region || aNodes.test( an ) ) && ( !b.region || bNodes.test( bn ) ) && aTree.nodes()[an].box.intersects( bNodeBox( bn ) );
+        [&]( NodeId an, NodeId bn )
+        {
+            return ( !a.region || aNodes.test( an ) ) && ( !b.region || bNodes.test( bn ) ) && aTree.nodes()[an].box.intersects( bNodeBox( bn ) );
+        },
+        // the same test of all children of a node at once
+        [&]( bool aSide, NodeId parent, NodeId other )
+        {
+            const auto & tree = aSide ? aTree : bTree;
+            const auto & regionNodes = aSide ? aNodes : bNodes;
+            const bool parentRegion = ( aSide ? a.region : b.region ) != nullptr;
+            const bool otherRegion = ( aSide ? b.region : a.region ) != nullptr;
+            if ( otherRegion && !( aSide ? bNodes : aNodes ).test( other ) )
+                return 0;
+            int m = 0;
+            const auto & pn = tree.nodes()[parent];
+            if ( !aSide && rigidB2A )
+            {
+                // the transformed boxes of the children of b
+                const auto & aBox = aTree.nodes()[other].box;
+                for ( int i = 0; i < pn.count; ++i )
+                    if ( aBox.intersects( bNodeBox( NodeId( pn.first + i ) ) ) )
+                        m |= 1 << i;
+            }
+            else
+                m = childBoxesIntersect( tree, parent, aSide ? bNodeBox( other ) : aTree.nodes()[other].box );
+            if ( parentRegion )
+                for ( int k = m; k; k &= k - 1 )
+                    if ( const int i = Simd4::lowestBit( k ); !regionNodes.test( NodeId( pn.first + i ) ) )
+                        m &= ~( 1 << i );
+            return m;
+        }
     };
     auto triNodeIntersect = [&]( int i, NodeId bn ) { return aTree.leafBoxes()[i].intersects( bNodeBox( bn ) ); };
     auto trisIntersect = [&]( int i, int j ) { return aTree.leafBoxes()[i].intersects( bLeafBox( j ) ); };
@@ -188,7 +218,12 @@ Expected<bool> findSelfCollidingTriangles(
     if ( tree.nodes().empty() )
         return false;
 
-    auto nodesIntersect = [&tree]( NodeId x, NodeId y ) { return tree.nodes()[x].box.intersects( tree.nodes()[y].box ); };
+    auto nodesIntersect = WideIntersect
+    {
+        [&tree]( NodeId x, NodeId y ) { return tree.nodes()[x].box.intersects( tree.nodes()[y].box ); },
+        // the same test of all children of a node at once
+        [&tree]( bool, NodeId parent, NodeId other ) { return childBoxesIntersect( tree, parent, tree.nodes()[other].box ); }
+    };
     auto split = [&]( const WideNodePair & s, auto && push ) { return splitSelfWidePair( tree, s, nodesIntersect, push ); };
     // 8 levels -> at most 4^8 subtasks
     const auto subtasks = makeWideSubtasks( { { NodeId{ 0 }, NodeId{ 0 } } }, 8, split );

@@ -368,14 +368,16 @@ void AABBTree::makeSimd_( const VertCoords & points )
     MR_TIMER;
     simdNodes_.clear();
     simdLeaves_.clear();
+    simdRefs_.clear();
     if ( nodes_.empty() )
         return;
 
     // the internal nodes and the leaves keep the order of nodes_
-    std::vector<int> ref( nodes_.size() );
+    auto & ref = simdRefs_;
+    ref.resize( nodes_.size() );
     int numInternal = 0, numLeaves = 0;
-    for ( size_t i = 0; i < nodes_.size(); ++i )
-        ref[i] = nodes_[NodeId( i )].leaf() ? ~numLeaves++ : numInternal++;
+    for ( NodeId i( 0 ); i < nodes_.size(); ++i )
+        ref[i] = nodes_[i].leaf() ? ~numLeaves++ : numInternal++;
     simdNodes_.resize( numInternal );
     simdLeaves_.resize( numLeaves );
 

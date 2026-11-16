@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [ macos-15-intel ]
+        runner: [ macos-13 ]
     name: ${{ matrix.runner }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 240
@@ -32,23 +32,24 @@ jobs:
           path: pr
       - name: Master checkout
         run: |
+          rm -rf base build-base build-pr tb-*.txt
+          git -C pr worktree prune
           git -C pr fetch -q --depth 1 origin ${BASE_SHA}
           git -C pr worktree add -q --detach ../base ${BASE_SHA}
       - name: Machine
         run: sw_vers; xcodebuild -version || true; sysctl -n machdep.cpu.brand_string; sysctl -n hw.physicalcpu hw.logicalcpu hw.memsize
-      - name: Homebrew dependencies
-        env:
-          HOMEBREW_NO_AUTO_UPDATE: '1'
-          HOMEBREW_NO_INSTALL_UPGRADE: '1'
-          HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: '1'
-        run: brew install boost eigen fmt jsoncpp parallel-hashmap spdlog tbb tl-expected zlib-ng libzip pkgconf ninja googletest
+      - name: Installed dependencies (nothing is installed here)
+        run: |
+          which brew cmake ninja c++ || true
+          brew --prefix || true
+          brew list --versions boost eigen fmt jsoncpp parallel-hashmap spdlog tbb tl-expected zlib-ng libzip googletest || true
       - name: Build master and PR
         run: |
           for t in base pr; do
             mkdir -p $t/bench
             cp pr/.github/tree-bench/treebench.cpp pr/.github/tree-bench/CMakeLists.txt $t/bench/
             echo 'add_subdirectory(bench)' >> $t/CMakeLists.txt
-            cmake -S $t -B build-$t -G Ninja ${MR_OPTIONS} -DCMAKE_PREFIX_PATH=$(brew --prefix)
+            cmake -S $t -B build-$t $(command -v ninja >/dev/null && echo -G Ninja) ${MR_OPTIONS} -DCMAKE_PREFIX_PATH=$(brew --prefix)
             cmake --build build-$t --target treebench -j $(sysctl -n hw.logicalcpu)
           done
       - name: Benchmark

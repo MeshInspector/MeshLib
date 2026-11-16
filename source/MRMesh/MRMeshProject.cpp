@@ -132,15 +132,16 @@ MeshProjectionResult findProjectionWide( const Vector3f & pt, const VertCoords &
         {
             if ( useLower && !( lowerDistSq[i] < distSq ) )
                 continue;
-            const auto & lt = leafTris[leaf.first + i];
+            // the triangle's ids are read only when needed: the plain search touches less memory
+            auto lt = [&]() -> const AABBTree::LeafTri & { return leafTris[leaf.first + i]; };
             Vector3d a( leaf.coord[0][0][i], leaf.coord[0][1][i], leaf.coord[0][2][i] );
             Vector3d b( leaf.coord[1][0][i], leaf.coord[1][1][i], leaf.coord[1][2][i] );
             Vector3d c( leaf.coord[2][0][i], leaf.coord[2][1][i], leaf.coord[2][2][i] );
             if constexpr ( !Plain )
             {
-                if ( validFaces && !validFaces( lt.face ) )
+                if ( validFaces && !validFaces( lt().face ) )
                     continue;
-                if ( region && !region->test( lt.face ) )
+                if ( region && !region->test( lt().face ) )
                     continue;
                 if ( xf )
                 {
@@ -160,14 +161,14 @@ MeshProjectionResult findProjectionWide( const Vector3f & pt, const VertCoords &
             {
                 if ( validProjections && !validProjections( MeshProjectionResult
                     {
-                        .proj = PointOnFace{ lt.face, p },
+                        .proj = PointOnFace{ lt().face, p },
                         .tp = TriPointf( baryD ),
                         .distSq = d
                     } ) )
                     continue;
             }
             distSq = d;
-            face = lt.face;
+            face = lt().face;
             proj = p;
             bary = TriPointf( baryD );
             if ( distSq <= loDistLimitSq )
@@ -261,61 +262,50 @@ namespace
 template <typename F>
 void forLeafTrisInBall( const AABBTree & tree, const FaceBitSet * region, Ball3f & ball, F && onTri )
 {
-    if ( tree.nodes().empty() )
+    const auto & nodes = tree.nodes();
+    if ( nodes.empty() )
         return;
-    const auto & simdNodes = tree.simdNodes();
-    const auto & simdLeaves = tree.simdLeaves();
 
-    struct SubTask
-    {
-        int ref; // as in AABBTree::SimdNode::child
-        float distSq; // from the center of the ball to the box of the node
-    };
-    // every level adds at most MaxChildren - 1 nodes, and the tree has at most MaxDepth levels
-    InplaceStack<SubTask, 64> subtasks;
-    subtasks.push( { tree.simdRoot(), tree.getBoundingBox().getDistanceSq( ball.center ) } );
+    // every level adds at most MaxChildren - 1 nodes, and the tree of 2^31 triangles has 16 levels
+    InplaceStack<NoInitNodeId, 64> subtasks;
+    subtasks.push( NodeId( 0 ) );
     while ( !subtasks.empty() )
     {
-        const auto s = subtasks.top();
+        const auto & node = nodes[subtasks.top()];
         subtasks.pop();
-        // the callback gets the ball by reference
-        const auto px = Simd4::set1( ball.center.x ), py = Simd4::set1( ball.center.y ), pz = Simd4::set1( ball.center.z );
-        // the ball might have shrunk since the node was pushed
-        if ( !( s.distSq < ball.radiusSq ) )
+        if ( !( node.box.getDistanceSq( ball.center ) < ball.radiusSq ) )
             continue;
 
-        if ( s.ref < 0 )
+        if ( node.leaf() )
         {
-            const auto & leaf = simdLeaves[~s.ref];
-            // the triangles outside the ball are not reported: neither their boxes nor their closest points are in it
-            alignas( 16 ) float lowerDistSq[4];
-            Simd4::store( lowerDistSq, Simd4::triLowerDistSq( leaf.coord, px, py, pz ) );
-            for ( int i = 0; i < leaf.count; ++i )
+            for ( int i = node.first, end = node.first + node.numLeafTris(); i < end; ++i )
             {
-                if ( !( lowerDistSq[i] < ball.radiusSq ) )
+                if ( region && !region->test( tree.leafTris()[i].face ) )
                     continue;
-                if ( region && !region->test( tree.leafTris()[leaf.first + i].face ) )
-                    continue;
-                if ( onTri( leaf.first + i, ball ) == Processing::Stop )
+                if ( onTri( i, ball ) == Processing::Stop )
                     return;
             }
             continue;
         }
 
         // first go in the nodes located closer to ball's center (in case the ball will shrink and the others will be away)
-        const auto & node = simdNodes[s.ref];
-        alignas( 16 ) float d[4];
-        Simd4::store( d, Simd4::boxDistSq( node.box, px, py, pz ) );
-        SubTask ch[AABBTree::MaxChildren];
+        NodeId ch[AABBTree::MaxChildren];
+        float chDistSq[AABBTree::MaxChildren];
         int numCh = 0;
-        for ( int i = 0; i < AABBTree::MaxChildren; ++i )
+        for ( int i = 0; i < node.count; ++i )
         {
-            if ( !( d[i] < ball.radiusSq ) )
+            const NodeId n( node.first + i );
+            const float distSq = nodes[n].box.getDistanceSq( ball.center );
+            if ( !( distSq < ball.radiusSq ) )
                 continue;
             int k = numCh++;
-            for ( ; k > 0 && ch[k - 1].distSq < d[i]; --k )
+            for ( ; k > 0 && chDistSq[k - 1] < distSq; --k )
+            {
                 ch[k] = ch[k - 1];
-            ch[k] = { node.child[i], d[i] };
+                chDistSq[k] = chDistSq[k - 1];
+            }
+            ch[k] = n;
+            chDistSq[k] = distSq;
         }
         for ( int i = 0; i < numCh; ++i )
             subtasks.push( ch[i] );

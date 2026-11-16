@@ -527,7 +527,7 @@ TEST( MRMesh, AABBTreeSameOnOneThread )
     }
 }
 
-// the searches in the tree of TriMesh find the same as the searches in the mesh part with the same triangles
+// the searches in the tree of TriMesh with its points find the same as the searches in the mesh part with the same triangles
 TEST( MRMesh, ProjectionToTriMesh )
 {
     const Mesh mesh = makeUVSphere( 1.f, 64, 32 );
@@ -553,18 +553,18 @@ TEST( MRMesh, ProjectionToTriMesh )
     };
     for ( const Vector3f pt : { Vector3f( 0.8f, 0.5f, -0.3f ), Vector3f( 0.3f, -0.9f, 0.4f ), Vector3f( 0, 0, 1.2f ) } )
     {
-        EXPECT_TRUE( same( findProjection( pt, tmesh, tree ), findProjectionSubtree( pt, mp, mpTree ) ) );
-        EXPECT_TRUE( same( findProjection( pt, tmesh, tree, FLT_MAX, &xf ), findProjectionSubtree( pt, mp, mpTree, FLT_MAX, &xf ) ) );
+        EXPECT_TRUE( same( findProjection( pt, tmesh.points, tree ), findProjectionSubtree( pt, mp, mpTree ) ) );
+        EXPECT_TRUE( same( findProjection( pt, tmesh.points, tree, FLT_MAX, &xf ), findProjectionSubtree( pt, mp, mpTree, FLT_MAX, &xf ) ) );
 
         const Ball3f ball{ pt, 0.25f }; // radius 0.5
-        const auto a = collect( [&]( auto cb ) { findTrisInBall( tmesh, tree, ball, cb ); } );
+        const auto a = collect( [&]( auto cb ) { findTrisInBall( tmesh.points, tree, ball, cb ); } );
         const auto b = collect( [&]( auto cb ) { findTrisInBall( mp, ball, cb ); } );
         ASSERT_EQ( a.size(), b.size() );
         for ( size_t i = 0; i < a.size(); ++i )
             EXPECT_TRUE( same( a[i], b[i] ) );
 
         std::vector<FaceId> boxedA, boxedB;
-        findBoxedTrisInBall( tmesh, tree, ball, [&]( FaceId f, Ball3f & ) { boxedA.push_back( f ); return Processing::Continue; } );
+        findBoxedTrisInBall( tree, ball, [&]( FaceId f, Ball3f & ) { boxedA.push_back( f ); return Processing::Continue; } );
         findBoxedTrisInBall( mp, ball, [&]( FaceId f, Ball3f & ) { boxedB.push_back( f ); return Processing::Continue; } );
         std::sort( boxedA.begin(), boxedA.end() );
         std::sort( boxedB.begin(), boxedB.end() );
@@ -572,7 +572,7 @@ TEST( MRMesh, ProjectionToTriMesh )
         EXPECT_FALSE( a.empty() || boxedA.empty() );
     }
 
-    const auto proj = findProjection( Vector3f( 0.3f, -0.9f, 0.4f ), tmesh, tree );
+    const auto proj = findProjection( Vector3f( 0.3f, -0.9f, 0.4f ), tmesh.points, tree );
     ASSERT_TRUE( proj.valid() && region.test( proj.proj.face ) );
     const auto [a, b, c] = tmesh.tris[proj.proj.face];
     const Vector3f p = proj.tp.interpolate( tmesh.points[a], tmesh.points[b], tmesh.points[c] );

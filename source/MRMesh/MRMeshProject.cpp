@@ -2,7 +2,6 @@
 #include "MRAABBTree.h"
 #include "MRAABBTreeTraversal.hpp"
 #include "MRMesh.h"
-#include "MRTriMesh.h"
 #include "MRClosestPointInTriangle.h"
 #include "MRBall.h"
 #include "MRInplaceStack.h"
@@ -213,12 +212,12 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
     return findProjectionWide<false>( pt, mp.mesh.points, mp.region, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
 }
 
-MeshProjectionResult findProjection( const Vector3f & pt, const TriMesh & tmesh, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
+MeshProjectionResult findProjection( const Vector3f & pt, const VertCoords & points, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
     const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections )
 {
     if ( !xf && !validFaces && !validProjections )
-        return findProjectionWide<true>( pt, tmesh.points, nullptr, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
-    return findProjectionWide<false>( pt, tmesh.points, nullptr, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
+        return findProjectionWide<true>( pt, points, nullptr, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
+    return findProjectionWide<false>( pt, points, nullptr, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
 }
 
 namespace
@@ -322,7 +321,7 @@ void findBoxedTrisInBall( const MeshPart & mp, Ball3f ball, const FoundBoxedTriC
     boxedTrisInBall( mp.mesh.getAABBTree(), mp.region, ball, foundCallback );
 }
 
-void findBoxedTrisInBall( const TriMesh &, const AABBTree & tree, Ball3f ball, const FoundBoxedTriCallback& foundCallback )
+void findBoxedTrisInBall( const AABBTree & tree, Ball3f ball, const FoundBoxedTriCallback& foundCallback )
 {
     boxedTrisInBall( tree, nullptr, ball, foundCallback );
 }
@@ -332,9 +331,9 @@ void findTrisInBall( const MeshPart & mp, const Ball3f& ball, const FoundTriCall
     trisInBall( mp.mesh.points, mp.mesh.getAABBTree(), mp.region, ball, foundCallback, validFaces );
 }
 
-void findTrisInBall( const TriMesh & tmesh, const AABBTree & tree, const Ball3f& ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces )
+void findTrisInBall( const VertCoords & points, const AABBTree & tree, const Ball3f& ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces )
 {
-    trisInBall( tmesh.points, tree, nullptr, ball, foundCallback, validFaces );
+    trisInBall( points, tree, nullptr, ball, foundCallback, validFaces );
 }
 
 std::optional<SignedDistanceToMeshResult> findSignedDistance( const Vector3f & pt, const MeshPart & mp,

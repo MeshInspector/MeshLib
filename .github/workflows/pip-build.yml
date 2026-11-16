@@ -304,17 +304,16 @@ jobs:
         with:
           build-dir: build/Release
 
-      # install helper utility for Python version management
       - name: Install uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
 
       - name: Generate and build MRBind bindings
         # The stub works around libstdc++11's https://gcc.gnu.org/PR108636 (fixed in 11.4, EL8 ships
         # 11.2.1): Clang emits an extern ref to path::_List::type, which EL8 defines in no library.
-        # The headers come from uv's Python of the oldest supported version, as the image has only python3.12-devel.
         run: |
           clang -O2 -c scripts/mrbind/libstdcxx_fs_path_compat.c -o libstdcxx_fs_path_compat.o
           PYTHON_MIN_VERSION=$(head -n 1 scripts/wheel/python_versions.txt)
+          # The headers come from uv's Python of the oldest supported version, as the image has only python3.12-devel.
           export PKG_CONFIG_PATH=$(uv run --no-project --managed-python --python ${PYTHON_MIN_VERSION} scripts/wheel/get_sysconfig_var.py LIBPC)
           make -f scripts/mrbind/generate.mk -B --trace \
             MODE=release \
@@ -481,15 +480,17 @@ jobs:
       - name: Install all Python versions
         run: scripts/wheel/install_all_python_versions_windows.bat
 
-      - name: Get the Python 3.8 headers
-        # python.org has no win-arm64 Python before 3.11, so take the headers of the x64 one, which also serve arm64.
+      - name: Install uv
         if: ${{ matrix.platform == 'arm64' }}
-        shell: pwsh
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
+
+      - name: Get the Python 3.8 headers
+        # There is no win-arm64 Python before 3.11, so take the headers of the x64 one, which also serve arm64.
+        if: ${{ matrix.platform == 'arm64' }}
+        shell: bash
         run: |
-          Invoke-WebRequest https://www.nuget.org/api/v2/package/python/3.8.10 -OutFile python38.zip
-          Expand-Archive -Force python38.zip python38
-          $include = (Resolve-Path python38/tools/include).Path -replace '\\','/'
-          "PYTHON_HEADER_ARGS=PYTHON_HEADER_VERSION=3.8 PYTHON_CFLAGS=-I$include" >> $env:GITHUB_ENV
+          INCLUDE=$(uv run --no-project --managed-python --python cpython-3.8-windows-x86_64-none python -c "import sysconfig, pathlib; print(pathlib.Path(sysconfig.get_path('include')).as_posix())")
+          echo "PYTHON_HEADER_ARGS=PYTHON_HEADER_VERSION=3.8 PYTHON_CFLAGS=-I${INCLUDE}" >> $GITHUB_ENV
 
       - name: Install CUDA
         if: ${{ matrix.cuda-version != '' }}

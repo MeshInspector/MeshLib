@@ -1,5 +1,4 @@
 #include "MRAABBTree.h"
-#include <tbb/parallel_for.h>
 #include "MRSimd4.hpp"
 #include "MRInplaceStack.h"
 #include "MRBitSetParallelFor.h"

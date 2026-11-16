@@ -74,15 +74,12 @@ struct MR_BIND_IGNORE AABBTreeSimdBoxes
         }
     }
 
-    /// returns the union of all four boxes
+    /// returns the union of all four boxes (as Box3f::include of them in their order)
     [[nodiscard]] Box3f getUnion() const
     {
         Box3f res;
-        for ( int c = 0; c < 3; ++c )
-        {
-            res.min[c] = std::min( std::min( box[c][0], box[c][1] ), std::min( box[c][2], box[c][3] ) );
-            res.max[c] = std::max( std::max( box[c + 3][0], box[c + 3][1] ), std::max( box[c + 3][2], box[c + 3][3] ) );
-        }
+        for ( int i = 0; i < 4; ++i )
+            res.include( get( i ) );
         return res;
     }
 };
@@ -235,6 +232,9 @@ private:
 
     /// sets triangle slot i of leaf l with its box and the coordinates of its vertices
     void setLeafTri_( int l, int i, const LeafTri & lt, const Box3f & box, const VertCoords & points );
+
+    /// sets the box and the coordinates of the vertices of the triangle in slot i of leaf l
+    void setLeafTriGeometry_( int l, int i, const ThreeVertIds & verts, const Box3f & box, const VertCoords & points );
 };
 
 /// AABBTree in the flat layout, where the children of a node are contiguous (e.g. for GPU)

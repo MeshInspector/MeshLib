@@ -106,34 +106,41 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
         }
 
         // split the bigger non-leaf node, and add the children with smaller distance last to descend there first
-        SubTask ch[AABBTree::MaxChildren];
-        int numCh = 0;
-        auto add = [&]( const SubTask & t )
-        {
-            if ( !( t.distSq < res.distSq ) )
-                return;
-            int k = numCh++;
-            for ( ; k > 0 && ch[k - 1].distSq < t.distSq; --k )
-                ch[k] = ch[k - 1];
-            ch[k] = t;
-        };
-        if ( !s.a.leaf() && ( s.b.leaf() || s.a.box.volume() >= s.b.box.volume() ) )
-        {
-            const auto & sn = aTree.simdNodes()[s.a.ref];
-            for ( int i = 0; i < AABBTree::MaxChildren && sn.child[i]; ++i )
-                if ( !a.region || aNodes.test( aTree.nodeId( sn.child[i] ) ) )
-                    add( getSubTask( childWideNode( sn, i ), s.b ) );
-        }
+        const bool splitA = !s.a.leaf() && ( s.b.leaf() || s.a.box.volume() >= s.b.box.volume() );
+        assert( splitA || !s.b.leaf() );
+        const auto & tree = splitA ? aTree : bTree;
+        const auto & sn = tree.simdNodes()[splitA ? s.a.ref : s.b.ref];
+        // the distances to the children, computed for all of them at once as getSubTask does
+        alignas( 16 ) float d[AABBTree::MaxChildren];
+        if ( splitA )
+            Simd4::store( d, boxBoxDistSq( sn, bBox( s.b.box ) ) );
+        else if ( !rigidB2A )
+            Simd4::store( d, boxBoxDistSq( sn, s.a.box ) );
         else
         {
-            assert( !s.b.leaf() );
-            const auto & sn = bTree.simdNodes()[s.b.ref];
-            for ( int i = 0; i < AABBTree::MaxChildren && sn.child[i]; ++i )
-                if ( !b.region || bNodes.test( bTree.nodeId( sn.child[i] ) ) )
-                    add( getSubTask( s.a, childWideNode( sn, i ) ) );
+            for ( int i = 0; i < AABBTree::MaxChildren; ++i )
+                d[i] = sn.child[i] ? s.a.box.getDistanceSq( bBox( sn.get( i ) ) ) : FLT_MAX;
         }
-        for ( int i = 0; i < numCh; ++i )
-            subtasks.push( ch[i] );
+        const auto * regionNodes = splitA ? ( a.region ? &aNodes : nullptr ) : ( b.region ? &bNodes : nullptr );
+        int ch[AABBTree::MaxChildren];
+        int numCh = 0;
+        for ( int i = 0; i < AABBTree::MaxChildren && sn.child[i]; ++i )
+        {
+            if ( !( d[i] < res.distSq ) )
+                continue;
+            if ( regionNodes && !regionNodes->test( tree.nodeId( sn.child[i] ) ) )
+                continue;
+            int k = numCh++;
+            for ( ; k > 0 && d[ch[k - 1]] < d[i]; --k )
+                ch[k] = ch[k - 1];
+            ch[k] = i;
+        }
+        for ( int k = 0; k < numCh; ++k )
+        {
+            const int i = ch[k];
+            const auto c = childWideNode( sn, i );
+            subtasks.push( splitA ? SubTask{ c, s.b, d[i] } : SubTask{ s.a, c, d[i] } );
+        }
     }
 
     if ( res.a ) // found closer than upDistLimitSq

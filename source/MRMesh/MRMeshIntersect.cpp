@@ -577,6 +577,39 @@ void rayMeshIntersectAll_( const VertCoords & points, const AABBTree & tree, con
         return;
     }
 
+    // the float version tests the four boxes of the children of a node or of the triangles of a leaf at once,
+    // computing the same as rayBoxIntersect (see meshRayIntersectSimd_); returns the bit mask of the crossed boxes
+    [[maybe_unused]] auto simdCrossed = [&]
+    {
+        if constexpr ( std::is_same_v<T, float> )
+        {
+            using namespace Simd4;
+            const Vector3f invDir = invDirOf( prec );
+            int nearIdx[3], farIdx[3];
+            for ( int a = 0; a < 3; ++a )
+            {
+                nearIdx[a] = invDir[a] >= 0 ? a : a + 3;
+                farIdx[a] = invDir[a] >= 0 ? a + 3 : a;
+            }
+            return [=, ox = set1( line.p.x ), oy = set1( line.p.y ), oz = set1( line.p.z ),
+                idx = set1( invDir.x ), idy = set1( invDir.y ), idz = set1( invDir.z ),
+                start = set1( rayStart ), end = set1( rayEnd )]( const AABBTree::SimdBoxes & b )
+            {
+                const Simd4::F tx0 = mul( sub( load( b.box[nearIdx[0]] ), ox ), idx );
+                const Simd4::F ty0 = mul( sub( load( b.box[nearIdx[1]] ), oy ), idy );
+                const Simd4::F tz0 = mul( sub( load( b.box[nearIdx[2]] ), oz ), idz );
+                const Simd4::F tx1 = mul( sub( load( b.box[farIdx[0]] ), ox ), idx );
+                const Simd4::F ty1 = mul( sub( load( b.box[farIdx[1]] ), oy ), idy );
+                const Simd4::F tz1 = mul( sub( load( b.box[farIdx[2]] ), oz ), idz );
+                const Simd4::F tNear = max( max( max( tx0, tz0 ), ty0 ), start );
+                const Simd4::F tFar = min( min( min( tx1, tz1 ), ty1 ), end );
+                return bits( le( tNear, tFar ) ); // the unused slots have empty boxes
+            };
+        }
+        else
+            return 0;
+    }();
+
     // every level adds at most MaxChildren - 1 nodes, and the tree has at most MaxDepth levels
     InplaceStack<int, 64> subtasks;
     subtasks.push( tree.rootRef() );
@@ -603,6 +636,9 @@ void rayMeshIntersectAll_( const VertCoords & points, const AABBTree & tree, con
         if( r < 0 )
         {
             const auto & leafBoxes = tree.leafBoxes()[~r];
+            [[maybe_unused]] int crossedTris = 0;
+            if constexpr ( std::is_same_v<T, float> )
+                crossedTris = simdCrossed( leafBoxes );
             for ( int k = 0; k < AABBTree::MaxLeafTris; ++k )
             {
                 const auto & lt = leafTris[~r * AABBTree::MaxLeafTris + k];
@@ -640,8 +676,7 @@ void rayMeshIntersectAll_( const VertCoords & points, const AABBTree & tree, con
                 else
                 {
                     // float version (faster); the box of the triangle rejects the near-miss hits of the float triangle test
-                    T bs = rayStart, be = rayEnd;
-                    if ( !rayBoxIntersect( leafBoxes.get( k ), rayOrigin, bs, be, prec ) )
+                    if ( !( crossedTris & ( 1 << k ) ) )
                         continue;
                     const Vector3<T> vA = Vector3<T>( points[pvc[0].id] ) - line.p;
                     const Vector3<T> vB = Vector3<T>( points[pvc[1].id] ) - line.p;
@@ -663,11 +698,19 @@ void rayMeshIntersectAll_( const VertCoords & points, const AABBTree & tree, con
         else
         {
             const auto & node = tree.simdNodes()[r];
-            for ( int i = 0; i < AABBTree::MaxChildren && node.child[i]; ++i )
+            if constexpr ( std::is_same_v<T, float> )
             {
-                s = rayStart, e = rayEnd;
-                if( rayBoxIntersect( nodeBox( node.get( i ) ), rayOrigin, s, e, prec ) )
-                    subtasks.push( node.child[i] );
+                for ( int m = simdCrossed( node ); m; m &= m - 1 )
+                    subtasks.push( node.child[Simd4::lowestBit( m )] );
+            }
+            else
+            {
+                for ( int i = 0; i < AABBTree::MaxChildren && node.child[i]; ++i )
+                {
+                    s = rayStart, e = rayEnd;
+                    if( rayBoxIntersect( nodeBox( node.get( i ) ), rayOrigin, s, e, prec ) )
+                        subtasks.push( node.child[i] );
+                }
             }
         }
     }
@@ -743,7 +786,7 @@ void boxedMeshIntersect( const MeshPart& meshPart, BoxOk && boxOk,
     assert( !ues || ues->size() >= m.topology.undirectedEdgeSize() );
     assert( !vs  || vs->size()  >= m.topology.vertSize() );
 
-    forWideTris( tree, boxOk, boxOk, [&]( int i )
+    forWideTris( tree, boxOk, [&]( int i )
     {
         const auto & lt = tree.leafTris()[i];
         const auto face = lt.face;
@@ -774,7 +817,7 @@ void boxedTreeIntersect( const AABBTree & tree, const FaceBitSet * region, BoxOk
     FaceBitSet * fs, VertBitSet * vs, std::vector<FaceId> * fsVec )
 {
     assert( fs || vs || fsVec );
-    forWideTris( tree, boxOk, boxOk, [&]( int i )
+    forWideTris( tree, boxOk, [&]( int i )
     {
         const auto & lt = tree.leafTris()[i];
         if ( region && !region->test( lt.face ) )
@@ -796,17 +839,45 @@ auto planeBoxOk( const Plane3f & plane )
     auto maxCorner = minCorner;
     for ( auto & v : maxCorner )
         v = !v;
-    return [&plane, minCorner, maxCorner]( const Box3f & box )
+    // the rows of SIMD boxes with the coordinates of the corners
+    int minRow[3], maxRow[3];
+    for ( int c = 0; c < 3; ++c )
     {
-        return dot( plane.n, box.corner( minCorner ) ) <= plane.d && dot( plane.n, box.corner( maxCorner ) ) >= plane.d;
+        minRow[c] = minCorner[c] ? c + 3 : c;
+        maxRow[c] = maxCorner[c] ? c + 3 : c;
+    }
+    using namespace Simd4;
+    return WideBoxTest
+    {
+        [&plane, minCorner, maxCorner]( const Box3f & box )
+        {
+            return dot( plane.n, box.corner( minCorner ) ) <= plane.d && dot( plane.n, box.corner( maxCorner ) ) >= plane.d;
+        },
+        // the same as dot above for four boxes at once; the unused slots have infinite or NaN dot products
+        [nx = set1( plane.n.x ), ny = set1( plane.n.y ), nz = set1( plane.n.z ), d = set1( plane.d ),
+            minRow0 = minRow[0], minRow1 = minRow[1], minRow2 = minRow[2], maxRow0 = maxRow[0], maxRow1 = maxRow[1], maxRow2 = maxRow[2]]
+            ( const AABBTree::SimdBoxes & sb )
+        {
+            const F lo = add( add( mul( nx, load( sb.box[minRow0] ) ), mul( ny, load( sb.box[minRow1] ) ) ), mul( nz, load( sb.box[minRow2] ) ) );
+            const F hi = add( add( mul( nx, load( sb.box[maxRow0] ) ), mul( ny, load( sb.box[maxRow1] ) ) ), mul( nz, load( sb.box[maxRow2] ) ) );
+            return bits( andm( le( lo, d ), le( d, hi ) ) );
+        }
     };
 }
 
 auto xyPlaneBoxOk( float zLevel )
 {
-    return [zLevel]( const Box3f & box )
+    using namespace Simd4;
+    return WideBoxTest
     {
-        return box.min.z <= zLevel && box.max.z >= zLevel;
+        [zLevel]( const Box3f & box )
+        {
+            return box.min.z <= zLevel && box.max.z >= zLevel;
+        },
+        [z = set1( zLevel )]( const AABBTree::SimdBoxes & sb )
+        {
+            return bits( andm( le( load( sb.box[2] ), z ), le( z, load( sb.box[5] ) ) ) );
+        }
     };
 }
 

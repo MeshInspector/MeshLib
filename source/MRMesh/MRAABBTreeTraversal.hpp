@@ -205,15 +205,39 @@ private:
     mutable Vector<std::atomic<std::uint8_t>, I> state_;
 };
 
-/// visits depth-first the nodes with boxes passing nodeOk( box ), children in their order, and calls onTri( i )
-/// for the triangles (slots in leafTris()) of the visited leaves with boxes passing triOk( box );
-/// stops as soon as onTri returns Processing::Stop
-template<typename NodeOk, typename TriOk, typename OnTri>
-void forWideTris( const AABBTree & tree, NodeOk && nodeOk, TriOk && triOk, OnTri && onTri )
+/// a test of boxes from given functions: one for a box, test( box ) -> bool, and one for four boxes at once, test( simdBoxes ) -> bit mask of passed ones
+template<typename... Fs>
+struct WideBoxTest : Fs...
 {
-    if ( tree.empty() || !nodeOk( tree.getBoundingBox() ) )
+    using Fs::operator()...;
+};
+template<typename... Fs>
+WideBoxTest( Fs... ) -> WideBoxTest<Fs...>;
+
+/// the squared distances between box b and four boxes, computed exactly as Box3f::getDistanceSq( b ) of each of them; infinite for empty boxes
+inline Simd4::F boxBoxDistSq( const AABBTree::SimdBoxes & sb, const Box3f & b )
+{
+    using namespace Simd4;
+    F res = set1( 0.0f );
+    for ( int c = 0; c < 3; ++c )
+    {
+        const F lo = max( load( sb.box[c] ), set1( b.min[c] ) );
+        const F hi = min( load( sb.box[c + 3] ), set1( b.max[c] ) );
+        const F d = sub( lo, hi );
+        res = add( res, select( gt( lo, hi ), mul( d, d ), set1( 0.0f ) ) );
+    }
+    return res;
+}
+
+/// visits depth-first the nodes with boxes passing boxOk, children in their order, and calls onTri( i )
+/// for the triangles (slots in leafTris()) of the visited leaves with boxes passing boxOk;
+/// boxOk( box ) tests the box of the root, and boxOk( simdBoxes ) the boxes of the children of a node or of the triangles of a leaf, see WideBoxTest;
+/// stops as soon as onTri returns Processing::Stop
+template<typename BoxOk, typename OnTri>
+void forWideTris( const AABBTree & tree, BoxOk && boxOk, OnTri && onTri )
+{
+    if ( tree.empty() || !boxOk( tree.getBoundingBox() ) )
         return;
-    const auto & leafTris = tree.leafTris();
     // every level adds at most MaxChildren - 1 nodes, and the tree has at most MaxDepth levels
     InplaceStack<int, 64> subtasks;
     subtasks.push( tree.rootRef() );
@@ -223,20 +247,16 @@ void forWideTris( const AABBTree & tree, NodeOk && nodeOk, TriOk && triOk, OnTri
         subtasks.pop();
         if ( r < 0 )
         {
-            const auto & boxes = tree.leafBoxes()[~r];
-            for ( int i = 0; i < AABBTree::MaxLeafTris; ++i )
-            {
-                const int t = ~r * AABBTree::MaxLeafTris + i;
-                if ( !leafTris[t].face )
-                    break;
-                if ( triOk( boxes.get( i ) ) && onTri( t ) == Processing::Stop )
+            // the unused slots have empty boxes, which do not pass
+            for ( int m = boxOk( tree.leafBoxes()[~r] ); m; m &= m - 1 )
+                if ( onTri( ~r * AABBTree::MaxLeafTris + Simd4::lowestBit( m ) ) == Processing::Stop )
                     return;
-            }
             continue;
         }
         const auto & sn = tree.simdNodes()[r];
+        const int m = boxOk( static_cast<const AABBTree::SimdBoxes &>( sn ) );
         for ( int i = AABBTree::MaxChildren - 1; i >= 0; --i )
-            if ( sn.child[i] && nodeOk( sn.get( i ) ) )
+            if ( m & ( 1 << i ) )
                 subtasks.push( sn.child[i] );
     }
 }

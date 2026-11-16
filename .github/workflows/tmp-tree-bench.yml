@@ -1,0 +1,77 @@
+name: tmp AABBTree benchmark master vs SIMD-only tree
+
+on:
+  push:
+    branches: [ tmp-tree-bench3 ]
+  workflow_dispatch:
+
+env:
+  BASE_SHA: 115cfa32d1a163a1256af5bce565ab48e5f18a20
+  BENCH_ARGS: '3'
+  MR_OPTIONS: >-
+    -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+    -DMESHLIB_PYTHON_SUPPORT=OFF -DMESHLIB_BUILD_MRVIEWER=OFF -DMESHLIB_BUILD_MESHVIEWER=OFF -DMESHLIB_BUILD_PYTHON_MODULES=OFF
+    -DMESHLIB_BUILD_MESHCONV=OFF -DMESHLIB_BUILD_SYMBOLMESH=OFF -DMESHLIB_BUILD_VOXELS=OFF -DMESHLIB_BUILD_EXTRA_IO_FORMATS=OFF
+    -DMESHLIB_BUILD_MCP=OFF -DMESHLIB_BUILD_MRCUDA=OFF -DMESHLIB_BUILD_GENERATED_C_BINDINGS=OFF
+    -DCMAKE_INSTALL_INCLUDEDIR=include -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_INSTALL_BINDIR=bin -DCMAKE_INSTALL_DATAROOTDIR=share
+
+jobs:
+  macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ macos-13 ]
+    name: ${{ matrix.runner }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 240
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: pr
+      - name: Master checkout
+        run: |
+          rm -rf base build-base build-pr tb-*.txt
+          git -C pr worktree prune
+          git -C pr fetch -q --depth 1 origin ${BASE_SHA}
+          git -C pr worktree add -q --detach ../base ${BASE_SHA}
+      - name: Machine
+        run: sw_vers; xcodebuild -version || true; sysctl -n machdep.cpu.brand_string; sysctl -n hw.physicalcpu hw.logicalcpu hw.memsize
+      - name: Installed dependencies (nothing is installed here)
+        run: |
+          which brew cmake ninja c++ || true
+          ls -d /opt/homebrew/opt/llvm*/bin/clang++ /usr/local/opt/llvm*/bin/clang++ /Applications/Xcode*.app 2>/dev/null || true
+          for c in /opt/homebrew/opt/llvm*/bin/clang++; do [ -x "$c" ] && "$c" --version | head -1; done || true
+          # the newest Homebrew LLVM if any (AppleClang 14 of the Command Line Tools is too old for MeshLib)
+          cxx=$(ls -d /opt/homebrew/opt/llvm*/bin/clang++ 2>/dev/null | sort -V | tail -1)
+          echo "CXX_FOR_BENCH=${cxx:-/usr/bin/c++}" >> $GITHUB_ENV
+          brew --prefix || true
+          brew list --versions boost eigen fmt jsoncpp parallel-hashmap spdlog tbb tl-expected zlib-ng libzip googletest || true
+      - name: Build master and PR
+        run: |
+          for t in base pr; do
+            mkdir -p $t/bench
+            cp pr/.github/tree-bench/treebench.cpp pr/.github/tree-bench/CMakeLists.txt $t/bench/
+            echo 'add_subdirectory(bench)' >> $t/CMakeLists.txt
+            cmake -S $t -B build-$t $(command -v ninja >/dev/null && echo -G Ninja) ${MR_OPTIONS} -DCMAKE_PREFIX_PATH=$(brew --prefix) -DCMAKE_CXX_COMPILER=${CXX_FOR_BENCH} -DCMAKE_C_COMPILER=${CXX_FOR_BENCH%++}
+            cmake --build build-$t --target treebench -j $(sysctl -n hw.logicalcpu)
+          done
+      - name: Benchmark
+        run: |
+          for round in 1 2; do
+            for t in base pr; do
+              exe=$(find build-$t -name treebench -type f -perm -u+x | head -1)
+              "$exe" ${BENCH_ARGS} | tee tb-${{ matrix.runner }}-$t-$round.txt
+            done
+          done
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: tb-${{ matrix.runner }}
+          path: tb-*.txt
+      - name: Clean the persistent workspace
+        if: always()
+        run: |
+          git -C pr worktree remove --force ../base || true
+          rm -rf base build-base build-pr tb-*.txt

@@ -44,6 +44,8 @@ inline M orm( M a, M b ) { return _mm_or_ps( a, b ); }
 inline M xorm( M a, M b ) { return _mm_xor_ps( a, b ); }
 /// bit i is set if lane i of the mask is set
 inline int bits( M m ) { return _mm_movemask_ps( m ); }
+/// m ? a : b in each lane
+inline F select( M m, F a, F b ) { return _mm_or_ps( _mm_and_ps( m, a ), _mm_andnot_ps( m, b ) ); }
 
 #elif defined(MR_SIMD4_NEON)
 
@@ -71,6 +73,7 @@ inline int bits( M m )
     static const uint32_t w[4] = { 1, 2, 4, 8 };
     return int( vaddvq_u32( vandq_u32( m, vld1q_u32( w ) ) ) );
 }
+inline F select( M m, F a, F b ) { return vbslq_f32( m, a, b ); }
 
 #elif defined(MR_SIMD4_WASM)
 
@@ -94,6 +97,7 @@ inline M andm( M a, M b ) { return wasm_v128_and( a, b ); }
 inline M orm( M a, M b ) { return wasm_v128_or( a, b ); }
 inline M xorm( M a, M b ) { return wasm_v128_xor( a, b ); }
 inline int bits( M m ) { return int( wasm_i32x4_bitmask( m ) ); }
+inline F select( M m, F a, F b ) { return wasm_v128_bitselect( a, b, m ); }
 
 #else
 
@@ -117,6 +121,7 @@ inline M ne( F a, F b ) { MR_SIMD4_LANES( M, a.v[i] != b.v[i] ); }
 inline M andm( M a, M b ) { MR_SIMD4_LANES( M, a.v[i] && b.v[i] ); }
 inline M orm( M a, M b ) { MR_SIMD4_LANES( M, a.v[i] || b.v[i] ); }
 inline M xorm( M a, M b ) { MR_SIMD4_LANES( M, a.v[i] != b.v[i] ); }
+inline F select( M m, F a, F b ) { MR_SIMD4_LANES( F, m.v[i] ? a.v[i] : b.v[i] ); }
 #undef MR_SIMD4_LANES
 inline int bits( M m ) { return int( m.v[0] ) | int( m.v[1] ) << 1 | int( m.v[2] ) << 2 | int( m.v[3] ) << 3; }
 
@@ -124,5 +129,41 @@ inline int bits( M m ) { return int( m.v[0] ) | int( m.v[1] ) << 1 | int( m.v[2]
 
 /// the index of the lowest set bit of a non-zero 4-bit mask
 inline int lowestBit( int m ) { return ( m & 1 ) ? 0 : ( m & 2 ) ? 1 : ( m & 4 ) ? 2 : 3; }
+
+/// lower bounds of the squared distances from point (px, py, pz) to 4 triangles given in SoA order as in AABBTree::SimdLeaf::coord:
+/// the distances to the triangles' boxes expanded by two units in the last place of their coordinates, and reduced by 1e-6 of them;
+/// never larger than ( Vector3f( closestPointInTriangle( Vector3d( p ), ... ).proj ) - p ).lengthSq(); NaN for unused slots
+inline F triLowerDistSq( const float ( &coord )[3][3][4], F px, F py, F pz )
+{
+    const F p[3] = { px, py, pz };
+    const F k = set1( 2.4e-7f ), tiny = set1( 1e-37f ), zero = set1( 0.0f );
+    F res = zero;
+    for ( int c = 0; c < 3; ++c )
+    {
+        const F a = load( coord[0][c] ), b = load( coord[1][c] ), cc = load( coord[2][c] );
+        F lo = min( min( a, b ), cc ), hi = max( max( a, b ), cc );
+        lo = sub( sub( lo, mul( abs( lo ), k ) ), tiny );
+        hi = add( add( hi, mul( abs( hi ), k ) ), tiny );
+        const F dlo = sub( lo, p[c] ), dhi = sub( p[c], hi );
+        const F d = max( max( dlo, dhi ), zero );
+        res = add( res, mul( d, d ) );
+    }
+    return mul( res, set1( 1 - 1e-6f ) );
+}
+
+/// squared distances from point (px, py, pz) to 4 boxes given in SoA order as in AABBTree::SimdNode::box,
+/// computed exactly as Box3f::getDistanceSq( pt ); infinite for empty boxes
+inline F boxDistSq( const float ( &box )[6][4], F px, F py, F pz )
+{
+    const F p[3] = { px, py, pz };
+    F res = set1( 0.0f );
+    for ( int c = 0; c < 3; ++c )
+    {
+        const F lo = load( box[c] ), hi = load( box[c + 3] );
+        const F dlo = sub( p[c], lo ), dhi = sub( p[c], hi );
+        res = add( res, select( lt( p[c], lo ), mul( dlo, dlo ), select( gt( p[c], hi ), mul( dhi, dhi ), set1( 0.0f ) ) ) );
+    }
+    return res;
+}
 
 } // namespace MR::Simd4

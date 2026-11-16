@@ -1,4 +1,5 @@
 #include "MRDirMax.h"
+#include "MRSimd4.hpp"
 #include "MRDirMaxBruteForce.h"
 #include "MRAABBTree.h"
 #include "MRAABBTreePolyline.h"
@@ -146,60 +147,71 @@ namespace
 
 VertId findDirMaxWide( const Vector3f & dir, const MeshPart & mp, const AABBTree & tree )
 {
+    using namespace Simd4;
     VertId res;
-    const auto & nodes = tree.nodes();
-    if ( nodes.empty() )
+    if ( tree.nodes().empty() )
         return res;
+    const auto & simdNodes = tree.simdNodes();
+    const auto & simdLeaves = tree.simdLeaves();
 
     struct SubTask
     {
-        NoInitNodeId n;
+        int ref; // as in AABBTree::SimdNode::child
         float furthestBoxProj;
     };
     const auto maxCorner = Box3f::getMaxBoxCorner( dir );
+    int cornerIdx[3];
+    for ( int c = 0; c < 3; ++c )
+        cornerIdx[c] = maxCorner[c] ? c + 3 : c;
+    const F dx = set1( dir.x ), dy = set1( dir.y ), dz = set1( dir.z );
     float furthestProj = -FLT_MAX;
-    // every level adds at most MaxChildren - 1 tasks, and the tree of 2^31 triangles has 16 levels
+    // every level adds at most MaxChildren - 1 tasks, and the tree has at most MaxDepth levels
     InplaceStack<SubTask, 64> subtasks;
-    subtasks.push( { NodeId( 0 ), dot( dir, nodes.front().box.corner( maxCorner ) ) } );
+    subtasks.push( { tree.simdRoot(), dot( dir, tree.getBoundingBox().corner( maxCorner ) ) } );
     while ( !subtasks.empty() )
     {
         const auto s = subtasks.top();
         subtasks.pop();
         if ( s.furthestBoxProj < furthestProj )
             continue;
-        const auto & node = nodes[s.n];
-        if ( node.leaf() )
+        if ( s.ref < 0 )
         {
-            for ( int i = node.first, end = node.first + node.numLeafTris(); i < end; ++i )
+            const auto & leaf = simdLeaves[~s.ref];
+            for ( int i = 0; i < leaf.count; ++i )
             {
-                const auto & lt = tree.leafTris()[i];
+                const auto & lt = tree.leafTris()[leaf.first + i];
                 if ( mp.region && !mp.region->test( lt.face ) )
                     continue;
-                for ( auto v : lt.verts )
+                for ( int j = 0; j < 3; ++j )
                 {
-                    const auto proj = dot( mp.mesh.points[v], dir );
+                    const auto proj = dot( Vector3f( leaf.coord[j][0][i], leaf.coord[j][1][i], leaf.coord[j][2][i] ), dir );
                     if ( proj > furthestProj )
                     {
                         furthestProj = proj;
-                        res = v;
+                        res = lt.verts[j];
                     }
                 }
             }
             continue;
         }
+        // the projections of the furthest corners of the children's boxes, as dot( dir, box.corner( maxCorner ) );
+        // NaN or -infinity for the unused slots
+        const auto & node = simdNodes[s.ref];
+        alignas( 16 ) float projs[4];
+        store( projs, add( add( mul( dx, load( node.box[cornerIdx[0]] ) ), mul( dy, load( node.box[cornerIdx[1]] ) ) ),
+            mul( dz, load( node.box[cornerIdx[2]] ) ) ) );
         // add the child with larger projection on line last to descend there first
         SubTask ch[AABBTree::MaxChildren];
         int numCh = 0;
-        for ( int i = 0; i < node.count; ++i )
+        for ( int i = 0; i < AABBTree::MaxChildren; ++i )
         {
-            const NodeId n( node.first + i );
-            const float proj = dot( dir, nodes[n].box.corner( maxCorner ) );
+            const float proj = projs[i];
             if ( !( proj > furthestProj ) )
                 continue;
             int k = numCh++;
             for ( ; k > 0 && ch[k - 1].furthestBoxProj > proj; --k )
                 ch[k] = ch[k - 1];
-            ch[k] = { n, proj };
+            ch[k] = { node.child[i], proj };
         }
         for ( int i = 0; i < numCh; ++i )
             subtasks.push( ch[i] );

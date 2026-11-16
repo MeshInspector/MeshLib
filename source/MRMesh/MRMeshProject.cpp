@@ -1,4 +1,5 @@
 #include "MRMeshProject.h"
+#include "MRSimd4.hpp"
 #include "MRAABBTree.h"
 #include "MRAABBTreeTraversal.hpp"
 #include "MRMesh.h"
@@ -46,16 +47,19 @@ MeshProjectionTransforms createProjectionTransforms( AffineXf3f& storageXf, cons
 namespace
 {
 
-// Plain: no transformation, region, validFaces or validProjections, so the hot loops skip their checks
+/// Plain: no transformation, region, validFaces or validProjections, so the hot loops skip their checks
 template <bool Plain>
 MeshProjectionResult findProjectionWide( const Vector3f & pt, const MeshPart & mp, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
     const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections )
 {
+    using namespace Simd4;
     MeshProjectionResult res;
     res.distSq = upDistLimitSq;
-    const auto & nodes = tree.nodes();
-    if ( nodes.empty() )
+    if ( tree.nodes().empty() )
         return res;
+    const auto & simdNodes = tree.simdNodes();
+    const auto & simdLeaves = tree.simdLeaves();
+    const auto & leafTris = tree.leafTris();
 
     // the best point so far
     float distSq = upDistLimitSq;
@@ -65,15 +69,33 @@ MeshProjectionResult findProjectionWide( const Vector3f & pt, const MeshPart & m
 
     struct SubTask
     {
-        NoInitNodeId n;
+        int ref; // as in AABBTree::SimdNode::child
         float distSq;
     };
-    // every level adds at most MaxChildren - 1 tasks, and the tree of 2^31 triangles has 16 levels
+    // every level adds at most MaxChildren - 1 tasks, and the tree has at most MaxDepth levels
     InplaceStack<SubTask, 64> subtasks;
 
-    auto boxDistSq = [&]( NodeId n )
+    const F px = set1( pt.x ), py = set1( pt.y ), pz = set1( pt.z );
+    // the squared distances to the children of a node
+    auto childDistSq = [&]( const AABBTree::SimdNode & node, float ( &d )[4] )
     {
-        const auto & box = nodes[n].box;
+        if constexpr ( !Plain )
+        {
+            if ( xf )
+            {
+                for ( int i = 0; i < AABBTree::MaxChildren; ++i )
+                {
+                    const Box3f box( { node.box[0][i], node.box[1][i], node.box[2][i] }, { node.box[3][i], node.box[4][i], node.box[5][i] } );
+                    d[i] = box.valid() ? transformed( box, *xf ).getDistanceSq( pt ) : std::numeric_limits<float>::infinity();
+                }
+                return;
+            }
+        }
+        store( d, boxDistSq( node.box, px, py, pz ) );
+    };
+    auto rootDistSq = [&]
+    {
+        const auto box = tree.getBoundingBox();
         if constexpr ( !Plain )
             if ( xf )
                 return transformed( box, *xf ).getDistanceSq( pt );
@@ -95,14 +117,23 @@ MeshProjectionResult findProjectionWide( const Vector3f & pt, const MeshPart & m
     }();
 
     // returns true if the search can stop
-    auto processLeaf = [&]( const AABBTree::Node & node )
+    auto processLeaf = [&]( const AABBTree::SimdLeaf & leaf )
     {
-        for ( int i = node.first, end = node.first + node.numLeafTris(); i < end; ++i )
+        // without transformation, the triangles that cannot be closer than the found point are skipped before the precise computation
+        alignas( 16 ) float lowerDistSq[4];
+        bool useLower = true;
+        if constexpr ( !Plain )
+            useLower = !xf;
+        if ( useLower )
+            store( lowerDistSq, triLowerDistSq( leaf.coord, px, py, pz ) );
+        for ( int i = 0; i < leaf.count; ++i )
         {
-            const auto & lt = tree.leafTris()[i];
-            Vector3d a( mp.mesh.points[lt.verts[0]] );
-            Vector3d b( mp.mesh.points[lt.verts[1]] );
-            Vector3d c( mp.mesh.points[lt.verts[2]] );
+            if ( useLower && !( lowerDistSq[i] < distSq ) )
+                continue;
+            const auto & lt = leafTris[leaf.first + i];
+            Vector3d a( leaf.coord[0][0][i], leaf.coord[0][1][i], leaf.coord[0][2][i] );
+            Vector3d b( leaf.coord[1][0][i], leaf.coord[1][1][i], leaf.coord[1][2][i] );
+            Vector3d c( leaf.coord[2][0][i], leaf.coord[2][1][i], leaf.coord[2][2][i] );
             if constexpr ( !Plain )
             {
                 if ( validFaces && !validFaces( lt.face ) )
@@ -144,32 +175,32 @@ MeshProjectionResult findProjectionWide( const Vector3f & pt, const MeshPart & m
     };
 
     // the node to visit next is not pushed in the stack
-    SubTask s{ NodeId( 0 ), boxDistSq( NodeId( 0 ) ) };
+    SubTask s{ tree.simdRoot(), rootDistSq() };
     for (;;)
     {
         if ( s.distSq < distSq )
         {
-            const auto & node = nodes[s.n];
-            if ( node.leaf() )
+            if ( s.ref < 0 )
             {
-                if ( processLeaf( node ) )
+                if ( processLeaf( simdLeaves[~s.ref] ) )
                     break;
             }
             else
             {
+                const auto & node = simdNodes[s.ref];
+                alignas( 16 ) float d[4];
+                childDistSq( node, d );
                 // the children closer than the found point ordered by distance, the farthest first
                 SubTask ch[AABBTree::MaxChildren];
                 int numCh = 0;
-                for ( int i = 0; i < node.count; ++i )
+                for ( int i = 0; i < AABBTree::MaxChildren; ++i )
                 {
-                    const NodeId n( node.first + i );
-                    const float d = boxDistSq( n );
-                    if ( !( d < distSq ) )
+                    if ( !( d[i] < distSq ) )
                         continue;
                     int k = numCh++;
-                    for ( ; k > 0 && ch[k - 1].distSq < d; --k )
+                    for ( ; k > 0 && ch[k - 1].distSq < d[i]; --k )
                         ch[k] = ch[k - 1];
-                    ch[k] = { n, d };
+                    ch[k] = { node.child[i], d[i] };
                 }
                 if ( numCh > 0 )
                 {
@@ -215,56 +246,67 @@ MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart 
 namespace
 {
 
-// calls onTri( i, ball ) for the triangles (indices in leafTris()) of mp in the leaves with boxes in the ball, closer subtrees first;
+/// calls onTri( i, ball ) for the triangles (indices in leafTris()) of mp in the leaves with boxes in the ball, closer subtrees first;
 // onTri can shrink the ball or stop the search
 template <typename F>
 void forLeafTrisInBall( const MeshPart & mp, Ball3f & ball, F && onTri )
 {
     const auto & tree = mp.mesh.getAABBTree();
-    const auto & nodes = tree.nodes();
-    if ( nodes.empty() )
+    if ( tree.nodes().empty() )
         return;
+    const auto & simdNodes = tree.simdNodes();
+    const auto & simdLeaves = tree.simdLeaves();
 
-    // every level adds at most MaxChildren - 1 nodes, and the tree of 2^31 triangles has 16 levels
-    InplaceStack<NoInitNodeId, 64> subtasks;
-    subtasks.push( NodeId( 0 ) );
+    struct SubTask
+    {
+        int ref; // as in AABBTree::SimdNode::child
+        float distSq; // from the center of the ball to the box of the node
+    };
+    // every level adds at most MaxChildren - 1 nodes, and the tree has at most MaxDepth levels
+    InplaceStack<SubTask, 64> subtasks;
+    subtasks.push( { tree.simdRoot(), tree.getBoundingBox().getDistanceSq( ball.center ) } );
     while ( !subtasks.empty() )
     {
-        const auto & node = nodes[subtasks.top()];
+        const auto s = subtasks.top();
         subtasks.pop();
-        if ( !( node.box.getDistanceSq( ball.center ) < ball.radiusSq ) )
+        // the callback gets the ball by reference
+        const auto px = Simd4::set1( ball.center.x ), py = Simd4::set1( ball.center.y ), pz = Simd4::set1( ball.center.z );
+        // the ball might have shrunk since the node was pushed
+        if ( !( s.distSq < ball.radiusSq ) )
             continue;
 
-        if ( node.leaf() )
+        if ( s.ref < 0 )
         {
-            for ( int i = node.first, end = node.first + node.numLeafTris(); i < end; ++i )
+            const auto & leaf = simdLeaves[~s.ref];
+            // the triangles outside the ball are not reported: neither their boxes nor their closest points are in it
+            alignas( 16 ) float lowerDistSq[4];
+            Simd4::store( lowerDistSq, Simd4::triLowerDistSq( leaf.coord, px, py, pz ) );
+            for ( int i = 0; i < leaf.count; ++i )
             {
-                if ( mp.region && !mp.region->test( tree.leafTris()[i].face ) )
+                if ( !( lowerDistSq[i] < ball.radiusSq ) )
                     continue;
-                if ( onTri( i, ball ) == Processing::Stop )
+                if ( mp.region && !mp.region->test( tree.leafTris()[leaf.first + i].face ) )
+                    continue;
+                if ( onTri( leaf.first + i, ball ) == Processing::Stop )
                     return;
             }
             continue;
         }
 
         // first go in the nodes located closer to ball's center (in case the ball will shrink and the others will be away)
-        NodeId ch[AABBTree::MaxChildren];
-        float chDistSq[AABBTree::MaxChildren];
+        const auto & node = simdNodes[s.ref];
+        alignas( 16 ) float d[4];
+        Simd4::store( d, Simd4::boxDistSq( node.box, px, py, pz ) );
+        SubTask ch[AABBTree::MaxChildren];
         int numCh = 0;
-        for ( int i = 0; i < node.count; ++i )
+        for ( int i = 0; i < AABBTree::MaxChildren; ++i )
         {
-            const NodeId n( node.first + i );
-            const float distSq = nodes[n].box.getDistanceSq( ball.center );
-            if ( !( distSq < ball.radiusSq ) )
+            if ( !( d[i] < ball.radiusSq ) )
                 continue;
             int k = numCh++;
-            for ( ; k > 0 && chDistSq[k - 1] < distSq; --k )
-            {
+            for ( ; k > 0 && ch[k - 1].distSq < d[i]; --k )
                 ch[k] = ch[k - 1];
-                chDistSq[k] = chDistSq[k - 1];
-            }
-            ch[k] = n;
-            chDistSq[k] = distSq;
+            ch[k] = { node.child[i], d[i] };
         }
         for ( int i = 0; i < numCh; ++i )
             subtasks.push( ch[i] );

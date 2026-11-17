@@ -111,14 +111,14 @@ MRMESH_API Expected<Mesh> fromOff( const std::filesystem::path& file, const Mesh
 /// important on Windows: in stream must be open in binary mode
 MRMESH_API Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings = {} );
 
-/// loads mesh as TriMesh (without building topology, so no vertex is duplicated) from file in textual or binary .OFF format;
+/// loads polygons (without triangulation and topology building) from file in textual or binary .OFF format;
 /// settings.skippedFaceCount and settings.duplicatedVertexCount are not used
-MRMESH_API Expected<TriMesh> fromOffAsTriMesh( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
+MRMESH_API Expected<FaceSoup> fromOffAsFaceSoup( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
 
-/// loads mesh as TriMesh (without building topology, so no vertex is duplicated) from stream in textual or binary .OFF format;
+/// loads polygons (without triangulation and topology building) from stream in textual or binary .OFF format;
 /// important on Windows: in stream must be open in binary mode;
 /// settings.skippedFaceCount and settings.duplicatedVertexCount are not used
-MRMESH_API Expected<TriMesh> fromOffAsTriMesh( std::istream& in, const MeshLoadSettings& settings = {} );
+MRMESH_API Expected<FaceSoup> fromOffAsFaceSoup( std::istream& in, const MeshLoadSettings& settings = {} );
 
 /// loads mesh from file in .OBJ format
 MRMESH_API Expected<Mesh> fromObj( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );

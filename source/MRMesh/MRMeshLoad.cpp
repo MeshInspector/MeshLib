@@ -14,9 +14,9 @@
 #include "MRProgressReadWrite.h"
 #include "MRIOParsing.h"
 #include "MRMeshDelone.h"
-#include "MRMeshFillHole.h"
 #include "MRPly.h"
 #include "MRTriMesh.h"
+#include "MRFaceSoup.h"
 #include "MRParallelFor.h"
 #include "MRImageLoad.h"
 #include "MRTelemetry.h"
@@ -95,7 +95,7 @@ Expected<Mesh> loadASCIIStl( std::istream& in, const MeshLoadSettings& settings 
     return MeshLoad::fromASCIIStl( in, settings );
 }
 
-/// settings for loading TriMesh, which takes given fraction of progress before building Mesh from it
+/// settings for loading TriMesh or FaceSoup, which takes given fraction of progress before building Mesh from it
 static MeshLoadSettings triMeshSettings( const MeshLoadSettings& settings, float triMeshProgress )
 {
     auto res = settings;
@@ -131,74 +131,22 @@ static Expected<Mesh> triMeshToMesh( Expected<TriMesh> && triMesh, const MeshLoa
     return res;
 }
 
-/// fills polygon with n >= 4 vertices on its own as Mesh::fromFaceSoup fills polygonal faces;
-/// returns false if the polygon cannot be a face or cannot be filled by n-2 triangles, then outTris can be partially written
-static bool triangulatePolygon( const VertCoords& points, const VertId* polyVerts, int n, ThreeVertIds* outTris )
+/// checks that all vertex ids of the polygons are in the range of points
+static Expected<FaceSoup> checkFaceSoup( FaceSoup && soup )
 {
-    std::vector<VertId> sorted( polyVerts, polyVerts + n );
-    std::sort( sorted.begin(), sorted.end() );
-    if ( std::adjacent_find( sorted.begin(), sorted.end() ) != sorted.end() )
-        return false; // repeated vertex
-
-    Mesh polygon;
-    polygon.points.resizeNoInit( n );
-    std::vector<VertId> localVerts( n );
-    for ( int i = 0; i < n; ++i )
-    {
-        polygon.points[VertId( i )] = points[polyVerts[i]];
-        localVerts[i] = VertId( i );
-    }
-    polygon.topology = MeshBuilder::fromFaceSoup( localVerts, Vector<MeshBuilder::VertSpan, FaceId>( 1, { 0, n } ) );
-    const auto e = polygon.topology.edgeWithLeft( 0_f );
-    if ( !e )
-        return false;
-    auto plan = getPlanarHoleFillPlan( polygon, e );
-    executeHoleFillPlan( polygon, e, plan );
-
-    int k = 0;
-    for ( auto f : polygon.topology.getValidFaces() )
-    {
-        const auto [a, b, c] = polygon.topology.getTriVerts( f );
-        if ( k >= n - 2 || a >= n || b >= n || c >= n )
-            return false;
-        outTris[k++] = { polyVerts[a], polyVerts[b], polyVerts[c] };
-    }
-    return k == n - 2;
+    for ( auto v : soup.verts )
+        if ( !v || v >= (int)soup.points.size() )
+            return unexpected( "vertex id is out of range of point coordinates" );
+    return std::move( soup );
 }
 
-/// triangulates each polygon on its own by the same planar filling as in Mesh::fromFaceSoup
-static Expected<TriMesh> faceSoupToTriMesh( VertCoords && points, const std::vector<VertId>& verts,
-    const Vector<MeshBuilder::VertSpan, FaceId>& faces, ProgressCallback cb )
+/// builds Mesh from just loaded FaceSoup, filling its polygons
+static Expected<Mesh> faceSoupToMesh( Expected<FaceSoup> && soup, const MeshLoadSettings& settings )
 {
-    MR_TIMER;
-    for ( auto v : verts )
-        if ( !v || v >= (int)points.size() )
-            return unexpected( "vertex id is out of range of point coordinates" );
-
-    // the first triangle of each polygon
-    std::vector<size_t> firstTri( faces.size() + 1 );
-    for ( size_t i = 0; i < faces.size(); ++i )
-        firstTri[i + 1] = firstTri[i] + std::max( 0, faces[FaceId( i )].lastVertex - faces[FaceId( i )].firstVertex - 2 );
-
-    TriMesh res;
-    res.tris.resize( firstTri.back() );
-    if ( !ParallelFor( size_t( 0 ), faces.size(), [&] ( size_t i )
-    {
-        const auto [first, last] = faces[FaceId( i )];
-        const int n = last - first;
-        auto* outTris = res.tris.data() + firstTri[i];
-        if ( n > 3 && triangulatePolygon( points, verts.data() + first, n, outTris ) )
-            return;
-        // a triangle, or a fan for the polygon that cannot be filled, then Mesh building can skip its degenerate triangles
-        for ( int j = 1; j + 1 < n; ++j )
-            outTris[j - 1] = { verts[first], verts[first + j], verts[first + j + 1] };
-    }, subprogress( cb, 0.0f, 0.9f ) ) )
-        return unexpectedOperationCanceled();
-    res.points = std::move( points );
-
-    if ( !reportProgress( cb, 1.0f ) )
-        return unexpectedOperationCanceled();
-    return res;
+    if ( !soup )
+        return unexpected( std::move( soup.error() ) );
+    return Mesh::fromFaceSoup( std::move( soup->points ), soup->verts, soup->faces,
+        { .skippedFaceCount = settings.skippedFaceCount }, subprogress( settings.callback, 0.7f, 1.0f ) );
 }
 
 // object color by Materialise Magics convention: "COLOR=" followed by red, green, blue, alpha bytes anywhere in the header
@@ -496,25 +444,25 @@ Expected<Mesh> fromMrmesh( std::istream& in, const MeshLoadSettings& settings /*
 
 Expected<Mesh> fromOff( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
-    return triMeshToMesh( fromOffAsTriMesh( file, triMeshSettings( settings, 0.7f ) ), settings );
+    return faceSoupToMesh( fromOffAsFaceSoup( file, triMeshSettings( settings, 0.7f ) ), settings );
 }
 
 Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
-    return triMeshToMesh( fromOffAsTriMesh( in, triMeshSettings( settings, 0.7f ) ), settings );
+    return faceSoupToMesh( fromOffAsFaceSoup( in, triMeshSettings( settings, 0.7f ) ), settings );
 }
 
-Expected<TriMesh> fromOffAsTriMesh( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
+Expected<FaceSoup> fromOffAsFaceSoup( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
     std::ifstream in( file, std::ifstream::binary );
     if ( !in )
         return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return addFileNameInError( fromOffAsTriMesh( in, settings ), file );
+    return addFileNameInError( fromOffAsFaceSoup( in, settings ), file );
 }
 
 /// binary OFF: big-endian 32-bit integers and floats following the newline after BINARY keyword
-static Expected<TriMesh> fromOffBinary( std::istream& in, const MeshLoadSettings& settings )
+static Expected<FaceSoup> fromOffBinary( std::istream& in, const MeshLoadSettings& settings )
 {
     std::string restOfHeaderLine;
     std::getline( in, restOfHeaderLine );
@@ -554,14 +502,14 @@ static Expected<TriMesh> fromOffBinary( std::istream& in, const MeshLoadSettings
     {
         const size_t p = pos + 12 * i;
         points[VertId( i )] = Vector3f( bit_cast<float>( get32( p ) ), bit_cast<float>( get32( p + 4 ) ), bit_cast<float>( get32( p + 8 ) ) );
-    }, subprogress( settings.callback, 0.0f, 0.3f ) ) )
+    }, subprogress( settings.callback, 0.0f, 0.4f ) ) )
         return unexpectedOperationCanceled();
     pos += 12 * size_t( numPoints );
 
     Vector<MeshBuilder::VertSpan, FaceId> faces( numPolygons );
     std::vector<VertId> flatPolygonIndices;
     flatPolygonIndices.reserve( 3 * size_t( numPolygons ) );
-    auto sp = subprogress( settings.callback, 0.3f, 0.7f );
+    auto sp = subprogress( settings.callback, 0.4f, 1.0f );
     for ( int f = 0; f < numPolygons; ++f )
     {
         int numPolygonPoints = 0;
@@ -591,10 +539,12 @@ static Expected<TriMesh> fromOffBinary( std::istream& in, const MeshLoadSettings
             return unexpectedOperationCanceled();
     }
 
-    return faceSoupToTriMesh( std::move( points ), flatPolygonIndices, faces, subprogress( settings.callback, 0.7f, 1.0f ) );
+    if ( !reportProgress( settings.callback, 1.0f ) )
+        return unexpectedOperationCanceled();
+    return FaceSoup{ std::move( points ), std::move( flatPolygonIndices ), std::move( faces ) };
 }
 
-Expected<TriMesh> fromOffAsTriMesh( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
+Expected<FaceSoup> fromOffAsFaceSoup( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
     MR_TIMER;
 
@@ -669,7 +619,7 @@ Expected<TriMesh> fromOffAsTriMesh( std::istream& in, const MeshLoadSettings& se
         {
             forseStop = true;
         }
-    }, subprogress( settings.callback, 0.0f, 0.3f ) );
+    }, subprogress( settings.callback, 0.0f, 0.4f ) );
 
     if ( forseStop )
     {
@@ -696,7 +646,7 @@ Expected<TriMesh> fromOffAsTriMesh( std::istream& in, const MeshLoadSettings& se
         faces[FaceId( i )] = MeshBuilder::VertSpan{ start, start + numPolygonPoint };
         start += numPolygonPoint;
     }
-    if ( !reportProgress( settings.callback, 0.4f ) )
+    if ( !reportProgress( settings.callback, 0.5f ) )
         return unexpectedOperationCanceled();
 
     std::vector<VertId> flatPolygonIndices( faces.back().lastVertex );
@@ -716,7 +666,7 @@ Expected<TriMesh> fromOffAsTriMesh( std::istream& in, const MeshLoadSettings& se
         {
             forseStop = true;
         }
-    }, subprogress( settings.callback, 0.4f, 0.7f ) );
+    }, subprogress( settings.callback, 0.5f, 1.0f ) );
 
     if ( forseStop )
     {
@@ -727,7 +677,7 @@ Expected<TriMesh> fromOffAsTriMesh( std::istream& in, const MeshLoadSettings& se
         return unexpectedOperationCanceled();
     }
 
-    return faceSoupToTriMesh( std::move( pointsBlocks ), flatPolygonIndices, faces, subprogress( settings.callback, 0.7f, 1.0f ) );
+    return checkFaceSoup( { std::move( pointsBlocks ), std::move( flatPolygonIndices ), std::move( faces ) } );
 }
 
 Expected<Mesh> fromObj( const std::filesystem::path & file, const MeshLoadSettings& settings /*= {}*/ )

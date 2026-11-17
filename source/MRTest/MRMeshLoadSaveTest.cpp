@@ -3,7 +3,7 @@
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMeshLoadObj.h>
 #include <MRMesh/MRMeshSave.h>
-#include <MRMesh/MRMeshBuilder.h>
+#include <MRMesh/MRFaceSoup.h>
 #include <MRMesh/MRConstants.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRAffineXf3.h>
@@ -364,7 +364,6 @@ TEST(MRMesh, LoadAsTriMeshAllFormats)
     };
     const std::vector<Format> formats =
     {
-        { ".off", save( [&] ( std::ostream & out ) { return MeshSave::toOff( triMesh, out ); } ), MeshLoad::fromOffAsTriMesh, MeshLoad::fromOff },
         { ".obj", save( [&] ( std::ostream & out ) { return MeshSave::toObj( triMesh, out, { .colors = &colors } ); } ), MeshLoad::fromObjAsTriMesh, MeshLoad::fromObj, true },
         { ".stl", save( [&] ( std::ostream & out ) { return MeshSave::toBinaryStl( triMesh, out ); } ), MeshLoad::fromBinaryStlAsTriMesh, MeshLoad::fromBinaryStl },
         { ".stl", save( [&] ( std::ostream & out ) { return MeshSave::toBinaryStl( triMesh, out ); } ), MeshLoad::fromAnyStlAsTriMesh, MeshLoad::fromAnyStl },
@@ -416,8 +415,7 @@ TEST(MRMesh, LoadAsTriMeshAllFormats)
         std::istringstream again( format.data );
         auto fromStream = format.loadTriMesh( again, {} );
         ASSERT_TRUE( fromStream.has_value() );
-        auto fromFile = format.ext == ".off" ? MeshLoad::fromOffAsTriMesh( path )
-            : format.ext == ".obj" ? MeshLoad::fromObjAsTriMesh( path )
+        auto fromFile = format.ext == ".obj" ? MeshLoad::fromObjAsTriMesh( path )
             : format.ext == ".stl" ? MeshLoad::fromAnyStlAsTriMesh( path )
             : format.ext == ".ply" ? MeshLoad::fromPlyAsTriMesh( path )
             : MeshLoad::fromDxfAsTriMesh( path );
@@ -430,10 +428,9 @@ TEST(MRMesh, LoadAsTriMeshAllFormats)
     EXPECT_TRUE( MeshLoad::fromASCIIStlAsTriMesh( folder / "trimesh.stl" ).has_value() );
 }
 
-TEST(MRMesh, LoadOffPolygonsAsTriMesh)
+TEST(MRMesh, LoadOffAsFaceSoup)
 {
-    // a triangle, a quad, a non-convex pentagon and a 20-gon (filled by the swept line) on a plane,
-    // then a quad with a repeated vertex, which is triangulated by a fan
+    // a triangle, a quad, a non-convex pentagon and a 20-gon on a plane, then a quad with a repeated vertex
     VertCoords points;
     std::vector<VertId> verts;
     Vector<MeshBuilder::VertSpan, FaceId> faces;
@@ -473,35 +470,34 @@ TEST(MRMesh, LoadOffPolygonsAsTriMesh)
         off += "\n";
     }
 
-    std::istringstream triIn( off );
-    auto triMesh = MeshLoad::fromOffAsTriMesh( triIn );
-    ASSERT_TRUE( triMesh.has_value() ) << triMesh.error();
-    EXPECT_EQ( triMesh->points.size(), points.size() );
-    EXPECT_EQ( triMesh->tris.size(), 1 + 2 + 3 + 18 + 2 );
-
-    // the same triangles as by filling the polygonal faces of the mesh
-    auto sortedTris = [] ( const Mesh & mesh )
+    auto checkSoup = [&] ( const Expected<FaceSoup> & soup )
     {
-        std::vector<std::array<int, 3>> res;
-        for ( auto f : mesh.topology.getValidFaces() )
+        ASSERT_TRUE( soup.has_value() ) << soup.error();
+        EXPECT_EQ( soup->points, points );
+        EXPECT_EQ( soup->verts, verts );
+        ASSERT_EQ( soup->faces.size(), faces.size() );
+        for ( auto f = 0_f; f < faces.endId(); ++f )
         {
-            auto [a, b, c] = mesh.topology.getTriVerts( f );
-            while ( a > b || a > c )
-            {
-                std::swap( a, b );
-                std::swap( b, c );
-            }
-            res.push_back( { int( a ), int( b ), int( c ) } );
+            EXPECT_EQ( soup->faces[f].firstVertex, faces[f].firstVertex );
+            EXPECT_EQ( soup->faces[f].lastVertex, faces[f].lastVertex );
         }
-        std::sort( res.begin(), res.end() );
-        return res;
     };
-    int skipped = 0;
+    std::istringstream soupIn( off );
+    checkSoup( MeshLoad::fromOffAsFaceSoup( soupIn ) );
+
+    UniqueTemporaryFolder folder;
+    ASSERT_TRUE( folder );
+    const auto path = folder / "polygons.off";
+    {
+        std::ofstream f( path, std::ios::binary );
+        f << off;
+    }
+    checkSoup( MeshLoad::fromOffAsFaceSoup( path ) );
+
     std::istringstream meshIn( off );
-    auto mesh = MeshLoad::fromOff( meshIn, { .skippedFaceCount = &skipped } );
+    auto mesh = MeshLoad::fromOff( meshIn );
     ASSERT_TRUE( mesh.has_value() ) << mesh.error();
-    EXPECT_EQ( skipped, 2 ); // degenerate triangles of the fan of the polygon with repeated vertex
-    EXPECT_EQ( sortedTris( *mesh ), sortedTris( Mesh::fromFaceSoup( triMesh->points, verts, faces ) ) );
+    EXPECT_TRUE( *mesh == Mesh::fromFaceSoup( points, verts, faces ) );
 }
 
 TEST(MRMesh, SaveObjectTreeAsPoints)

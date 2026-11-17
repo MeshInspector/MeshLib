@@ -129,6 +129,31 @@ inline int bits( M m ) { return int( m.v[0] ) | int( m.v[1] ) << 1 | int( m.v[2]
 
 #endif
 
+/// copies size bytes (a multiple of 16) to 16-byte aligned dst, bypassing the caches where possible (non-temporal stores)
+inline void streamCopyBytes( void * dst, const void * src, std::size_t size )
+{
+#if defined(MR_SIMD4_SSE)
+    for ( std::size_t i = 0; i < size; i += 16 )
+        _mm_stream_si128( reinterpret_cast<__m128i *>( static_cast<char *>( dst ) + i ),
+            _mm_loadu_si128( reinterpret_cast<const __m128i *>( static_cast<const char *>( src ) + i ) ) );
+#elif defined(MR_SIMD4_NEON) && defined(__clang__)
+    // stnp of two 16-byte registers, which only clang gives a way to ask for
+    typedef std::uint8_t V32 __attribute__(( vector_size( 32 ), aligned( 16 ) ));
+    std::size_t i = 0;
+    for ( ; i + 32 <= size; i += 32 )
+    {
+        V32 v;
+        std::memcpy( &v, static_cast<const char *>( src ) + i, 32 );
+        __builtin_nontemporal_store( v, reinterpret_cast<V32 *>( static_cast<char *>( dst ) + i ) );
+    }
+    for ( ; i < size; i += 16 )
+        __builtin_nontemporal_store( vld1q_u8( static_cast<const std::uint8_t *>( src ) + i ),
+            reinterpret_cast<uint8x16_t *>( static_cast<char *>( dst ) + i ) );
+#else
+    std::memcpy( dst, src, size );
+#endif
+}
+
 /// copies src to 16-byte aligned dst of a size multiple of 16 bytes, bypassing the caches where possible (non-temporal stores):
 /// for large arrays written once, it saves reading the destination lines first; call streamFence() before other threads read them
 template <typename T>
@@ -140,20 +165,10 @@ inline void streamCopy( T & dst, const T & src )
     float * d = reinterpret_cast<float *>( &dst );
     for ( size_t i = 0; i < sizeof( T ) / 4; i += 4 )
         _mm_stream_ps( d + i, _mm_load_ps( s + i ) );
+#elif defined(MR_SIMD4_NEON) && defined(__clang__)
+    streamCopyBytes( &dst, &src, sizeof( T ) );
 #else
     dst = src;
-#endif
-}
-
-/// the same for size bytes (a multiple of 16) of any objects, dst is 16-byte aligned
-inline void streamCopyBytes( void * dst, const void * src, std::size_t size )
-{
-#if defined(MR_SIMD4_SSE)
-    for ( std::size_t i = 0; i < size; i += 16 )
-        _mm_stream_si128( reinterpret_cast<__m128i *>( static_cast<char *>( dst ) + i ),
-            _mm_loadu_si128( reinterpret_cast<const __m128i *>( static_cast<const char *>( src ) + i ) ) );
-#else
-    std::memcpy( dst, src, size );
 #endif
 }
 

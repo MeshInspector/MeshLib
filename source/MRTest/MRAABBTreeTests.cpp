@@ -457,6 +457,15 @@ std::uint64_t treeHash( const AABBTree & tree )
     return h;
 }
 
+/// calls f in a task arena of 16 threads, also where the processor has fewer,
+/// so that big trees are built with the leaf boxes made again from the points
+template <typename F>
+void withSixteenThreads( F && f )
+{
+    tbb::global_control gc( tbb::global_control::max_allowed_parallelism, 16 );
+    tbb::task_arena( 16 ).execute( f );
+}
+
 } //anonymous namespace
 
 // the trees of meshes with exactly representable coordinates are pinned by their hashes, the same as the tree maker before ML#7479 gave:
@@ -476,6 +485,12 @@ TEST( MRMesh, AABBTreeGoldenHashes )
         EXPECT_EQ( treeHash( AABBTree( mesh ) ), c.hash ) << c.numTris << " triangles";
         EXPECT_EQ( treeHash( AABBTree( TriMesh{ mesh.topology.getTriangulation(), mesh.points }, &mesh.topology.getValidFaces() ) ), c.hash )
             << c.numTris << " triangles from the triangulation";
+        withSixteenThreads( [&]
+        {
+            EXPECT_EQ( treeHash( AABBTree( mesh ) ), c.hash ) << c.numTris << " triangles on 16 threads";
+            EXPECT_EQ( treeHash( AABBTree( TriMesh{ mesh.topology.getTriangulation(), mesh.points }, &mesh.topology.getValidFaces() ) ), c.hash )
+                << c.numTris << " triangles from the triangulation on 16 threads";
+        } );
     }
 }
 
@@ -505,25 +520,26 @@ TEST( MRMesh, AABBTreeFromTriangulationOfNewMesh )
 }
 
 // a big mesh, whose top ranges are split in parallel, gives the same tree on one thread
+// and on 16 threads (with the leaf boxes made again from the points)
 TEST( MRMesh, AABBTreeSameOnOneThread )
 {
     const Mesh mesh = makeUVSphere( 1.f, 400, 200 ); // 160000 triangles: at least 2^17 for the parallel splits
-    const AABBTree all( mesh );
-    std::optional<AABBTree> one;
+    std::optional<AABBTree> all, one;
+    withSixteenThreads( [&] { all.emplace( mesh ); } );
     tbb::task_arena( 1 ).execute( [&] { one.emplace( mesh ); } );
-    ASSERT_EQ( all.nodes().size(), one->nodes().size() );
-    for ( NodeId n( 0 ); n < all.nodes().size(); ++n )
+    ASSERT_EQ( all->nodes().size(), one->nodes().size() );
+    for ( NodeId n( 0 ); n < all->nodes().size(); ++n )
     {
-        const auto & a = all.nodes()[n];
+        const auto & a = all->nodes()[n];
         const auto & b = one->nodes()[n];
         ASSERT_TRUE( a.box == b.box && a.first == b.first && a.count == b.count ) << "node " << int( n );
     }
-    ASSERT_EQ( all.leafTris().size(), one->leafTris().size() );
-    for ( size_t i = 0; i < all.leafTris().size(); ++i )
+    ASSERT_EQ( all->leafTris().size(), one->leafTris().size() );
+    for ( size_t i = 0; i < all->leafTris().size(); ++i )
     {
-        const auto & a = all.leafTris()[i];
+        const auto & a = all->leafTris()[i];
         const auto & b = one->leafTris()[i];
-        ASSERT_TRUE( a.face == b.face && a.verts == b.verts && all.leafBoxes()[i] == one->leafBoxes()[i] ) << "leaf " << i;
+        ASSERT_TRUE( a.face == b.face && a.verts == b.verts && all->leafBoxes()[i] == one->leafBoxes()[i] ) << "leaf " << i;
     }
 }
 

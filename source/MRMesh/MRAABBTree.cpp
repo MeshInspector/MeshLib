@@ -43,11 +43,14 @@ struct UnboxedTri
     explicit UnboxedTri( NoInit ) noexcept : tri( noInit ) { }
 };
 
-/// the box of the triangle record t if it has one (T may be wrapped in NoDefInit), else tmp
+template <typename T>
+constexpr bool cHasBox = std::is_same_v<T, BoxedTri>;
+
+/// the box of the triangle record t if it has one, else tmp
 template <typename T>
 inline Box3f & boxOf( T & t, Box3f & tmp )
 {
-    if constexpr ( requires { t.box; } )
+    if constexpr ( cHasBox<T> )
         return t.box;
     else
         return tmp;
@@ -93,7 +96,7 @@ Buffer<T> makeBoxedTris( const MeshPart & mp, int numFaces, Buffer<TreeCenter> &
                 const FaceId f = faceOf( i );
                 bt.tri = { f, topology.getTriVerts( f ) };
                 Box3f tmp( noInit );
-                insignificantlyExpandedTriBoxAndCenter( points[bt.tri.verts[0]], points[bt.tri.verts[1]], points[bt.tri.verts[2]], i, boxOf( bt, tmp ), centers[i] );
+                insignificantlyExpandedTriBoxAndCenter( points[bt.tri.verts[0]], points[bt.tri.verts[1]], points[bt.tri.verts[2]], i, boxOf<T>( bt, tmp ), centers[i] );
             }
             box = includeCenters( box, centers.data() + b, std::min( end, b + cBlock ) - b );
         }
@@ -141,7 +144,7 @@ Buffer<T> makeBoxedTris( const TriMesh & tmesh, const FaceBitSet * region, int n
                 bt.tri.face = f;
                 bt.tri.verts = v;
                 Box3f tmp( noInit );
-                insignificantlyExpandedTriBoxAndCenter( points[v[0]], points[v[1]], points[v[2]], i, boxOf( bt, tmp ), centers[i] );
+                insignificantlyExpandedTriBoxAndCenter( points[v[0]], points[v[1]], points[v[2]], i, boxOf<T>( bt, tmp ), centers[i] );
             }
             box = includeCenters( box, centers.data() + b, std::min( end, b + cBlock ) - b );
         }
@@ -170,9 +173,9 @@ public:
 
     [[nodiscard]] int numNodes() const { return totalNodes_; }
 
-    /// fills nodes, and the triangles and their boxes in leaf order (all of the sizes for numTris)
+    /// fills nodes, and the triangles and their boxes in leaf order (all of the sizes for numTris), using up to the given number of threads
     void make( const VertCoords & points, const Buffer<T> & boxedTris, Buffer<TreeCenter> & centers, const Box3f & centersBox,
-        Node * nodes, AABBTree::LeafTri * leafTris, Box3f * leafBoxes )
+        Node * nodes, AABBTree::LeafTri * leafTris, Box3f * leafBoxes, int threads )
     {
         assert( (int)boxedTris.size() == numTris_ && (int)centers.size() == numTris_ );
         points_ = &points;
@@ -181,9 +184,7 @@ public:
         nodes_ = nodes;
         leafTris_ = leafTris;
         leafBoxes_ = leafBoxes;
-        parallelSplits_ = numTris_ >= cParallelSplitNum
-            && tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) > 1
-            && tbb::this_task_arena::max_concurrency() > 1;
+        parallelSplits_ = numTris_ >= cParallelSplitNum && threads > 1;
         if ( numTris_ >= cBucketSplitNum )
             scratch_ = Buffer<TreeCenter>( numTris_ );
         make_( NodeId( 0 ), NodeId( 1 ), { 0, { 0, numTris_, false, true, centersBox } } );
@@ -205,6 +206,15 @@ private:
     };
 
     TreeCenter * data_( const Range & r ) const { return ( r.inScratch ? scratch_.data() : centers_ ) + r.first; }
+
+    /// the box of a leaf triangle: stored in its record, or made again from its points
+    Box3f leafBox_( const T & t ) const
+    {
+        if constexpr ( cHasBox<T> )
+            return t.box;
+        else
+            return insignificantlyExpandedTriBox( ( *points_ )[t.tri.verts[0]], ( *points_ )[t.tri.verts[1]], ( *points_ )[t.tri.verts[2]] );
+    }
 
     // the number of nodes in the subtree of a node at binary depth d with num triangles
     int countNodes_( int d, int num )
@@ -277,11 +287,7 @@ private:
             for ( int i = 0; i < num; ++i )
             {
                 const auto & bt = boxedTris_[leaf[i].i];
-                Box3f b;
-                if constexpr ( std::is_same_v<T, BoxedTri> )
-                    b = bt.box;
-                else
-                    b = insignificantlyExpandedTriBox( ( *points_ )[bt.tri.verts[0]], ( *points_ )[bt.tri.verts[1]], ( *points_ )[bt.tri.verts[2]] );
+                const Box3f b = leafBox_( bt );
                 box.include( b );
                 leafTris_[first + i] = bt.tri;
                 leafBoxes_[first + i] = b;
@@ -357,10 +363,10 @@ private:
     std::array<int, 2> cnt_[64]; // by binary depth and the number of triangles minus ( numTris_ >> depth )
 };
 
-/// makes the tree of numTris triangles with their records T given by makeBoxedTris( T{}, centers, centersBox )
+/// makes the tree of numTris triangles with their records T given by makeBoxedTris( std::type_identity<T>{}, centers, centersBox ), using up to the given number of threads
 template <typename T, typename MakeBoxedTris>
-void makeTree( const VertCoords & points, int numTris, const MakeBoxedTris & makeBoxedTris,
-    Vector<AABBTree::Node, NodeId> & nodes, Vector<AABBTree::LeafTri> & leafTris, Vector<Box3f> & leafBoxes )
+void makeTreeOf( const VertCoords & points, int numTris, const MakeBoxedTris & makeBoxedTris,
+    Vector<AABBTree::Node, NodeId> & nodes, Vector<AABBTree::LeafTri> & leafTris, Vector<Box3f> & leafBoxes, int threads )
 {
     AABBTreeWideMaker<T> maker( numTris );
     Buffer<TreeCenter> centers;
@@ -370,7 +376,7 @@ void makeTree( const VertCoords & points, int numTris, const MakeBoxedTris & mak
     leafTris.resizeNoInit( numTris );
     leafBoxes.resizeNoInit( numTris );
     const auto boxedTris = makeBoxedTris( std::type_identity<T>{}, centers, centersBox );
-    maker.make( points, boxedTris, centers, centersBox, nodes.data(), leafTris.data(), leafBoxes.data() );
+    maker.make( points, boxedTris, centers, centersBox, nodes.data(), leafTris.data(), leafBoxes.data(), threads );
 }
 
 /// makes the tree of numTris triangles given by makeBoxedTris( std::type_identity<T>{}, centers, centersBox ) with T = BoxedTri or UnboxedTri
@@ -382,11 +388,13 @@ void makeTree( const VertCoords & points, int numTris, const MakeBoxedTris & mak
         return;
     // with many threads a big tree is bound by memory bandwidth, and making the leaf boxes again from the points is faster than storing and reading them;
     // with few threads the stored boxes are faster
+    constexpr int cUnboxedMinThreads = 16;
+    constexpr int cUnboxedMinTris = 1 << 17;
     const int threads = std::min( (int)tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ), tbb::this_task_arena::max_concurrency() );
-    if ( threads >= 16 && numTris >= ( 1 << 17 ) )
-        makeTree<UnboxedTri>( points, numTris, makeBoxedTris, nodes, leafTris, leafBoxes );
+    if ( threads >= cUnboxedMinThreads && numTris >= cUnboxedMinTris )
+        makeTreeOf<UnboxedTri>( points, numTris, makeBoxedTris, nodes, leafTris, leafBoxes, threads );
     else
-        makeTree<BoxedTri>( points, numTris, makeBoxedTris, nodes, leafTris, leafBoxes );
+        makeTreeOf<BoxedTri>( points, numTris, makeBoxedTris, nodes, leafTris, leafBoxes, threads );
 }
 
 } // anonymous namespace

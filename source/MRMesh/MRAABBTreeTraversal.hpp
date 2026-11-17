@@ -7,6 +7,7 @@
 #include "MREnums.h"
 #include "MRInplaceStack.h"
 #include "MRSimd4.hpp"
+#include "MRTriBox.hpp"
 #include "MRVector.h"
 #include <atomic>
 #include <concepts>
@@ -15,6 +16,20 @@
 
 namespace MR
 {
+
+/// the same as tree.leafBoxes( leaf ), inlined in the traversals
+inline AABBTree::SimdBoxes leafTriBoxes( const AABBTree & tree, int leaf )
+{
+    AABBTree::SimdBoxes res( noInit );
+    insignificantlyExpandedTriBoxes4( tree.simdLeaves()[leaf].coord, res.box );
+    return res;
+}
+
+/// the same as tree.leafBox( i ), inlined in the traversals
+inline Box3f leafTriBox( const AABBTree & tree, int i )
+{
+    return insignificantlyExpandedTriBox( tree.simdLeaves()[i / AABBTree::MaxLeafTris].coord, i % AABBTree::MaxLeafTris );
+}
 
 /// a node of AABBTree in a traversal: its reference as in AABBTree::SimdNode::child and its box
 struct WideNode
@@ -148,8 +163,8 @@ bool forWideLeafTris( const AABBTree & aTree, const AABBTree & bTree, const Wide
     const int bFirst = ~s.b.ref * AABBTree::MaxLeafTris;
     const int aNum = aTree.numLeafTris( ~s.a.ref );
     const int bMask = ( 1 << bTree.numLeafTris( ~s.b.ref ) ) - 1;
-    const auto aBoxes = aTree.leafBoxes( ~s.a.ref );
-    const auto bBoxes = self ? aBoxes : bTree.leafBoxes( ~s.b.ref );
+    const auto aBoxes = leafTriBoxes( aTree, ~s.a.ref );
+    const auto bBoxes = self ? aBoxes : leafTriBoxes( bTree, ~s.b.ref );
     for ( int k = 0; k < aNum; ++k )
     {
         const Box3f aBox = aBoxes.get( k );
@@ -304,7 +319,7 @@ void forWideTris( const AABBTree & tree, BoxOk && boxOk, OnTri && onTri )
             const int used = leafBoxBounds( tree.simdLeaves()[~r], inner, outer, bad );
             int m = boxOk( std::as_const( inner ) ) & used;
             if ( bad || m != ( boxOk( std::as_const( outer ) ) & used ) )
-                m = boxOk( tree.leafBoxes( ~r ) ); // the unused slots have empty boxes, which do not pass
+                m = boxOk( leafTriBoxes( tree, ~r ) ); // the unused slots have empty boxes, which do not pass
             for ( ; m; m &= m - 1 )
                 if ( onTri( ~r * AABBTree::MaxLeafTris + Simd4::lowestBit( m ) ) == Processing::Stop )
                     return;

@@ -444,6 +444,18 @@ AABBTree::AABBTree( const TriMesh & tmesh, const FaceBitSet * region )
         simdNodes_, simdLeaves_, leafTris_ );
 }
 
+AABBTree::SimdBoxes AABBTree::leafBoxes( int leaf ) const
+{
+    SimdBoxes res( noInit );
+    insignificantlyExpandedTriBoxes4( simdLeaves_[leaf].coord, res.box );
+    return res;
+}
+
+Box3f AABBTree::leafBox( int i ) const
+{
+    return insignificantlyExpandedTriBox( simdLeaves_[i / MaxLeafTris].coord, i % MaxLeafTris );
+}
+
 void AABBTree::setLeafTri_( int l, int i, const LeafTri & lt, const VertCoords & points )
 {
     leafTris_[size_t( l ) * MaxLeafTris + i] = lt;

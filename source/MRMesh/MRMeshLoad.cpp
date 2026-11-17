@@ -116,20 +116,15 @@ static Expected<Mesh> triMeshToMesh( Expected<TriMesh> && triMesh, const MeshLoa
     auto res = Mesh::fromTriMeshDuplicatingNonManifoldVertices( std::move( *triMesh ), &dups, { .skippedFaceCount = settings.skippedFaceCount } );
     if ( settings.duplicatedVertexCount )
         *settings.duplicatedVertexCount = int( dups.size() );
-    if ( !dups.empty() )
+    // the attributes of other sizes were not filled by the loader
+    auto copyDupAttributes = [&] ( auto * attributes )
     {
-        auto copyDupAttributes = [&dups, numLoadedPoints, sz = res.points.size()] ( auto * attributes )
-        {
-            if ( !attributes || attributes->size() != numLoadedPoints )
-                return; // not filled by the loader
-            attributes->resize( sz );
-            for ( const auto & [src, dup] : dups )
-                (*attributes)[dup] = (*attributes)[src];
-        };
-        copyDupAttributes( settings.colors );
-        copyDupAttributes( settings.uvCoords );
-        copyDupAttributes( settings.normals );
-    }
+        if ( attributes )
+            MeshBuilder::copyAttributesToDuplicates( *attributes, dups, numLoadedPoints, res.points.size() );
+    };
+    copyDupAttributes( settings.colors );
+    copyDupAttributes( settings.uvCoords );
+    copyDupAttributes( settings.normals );
     if ( !reportProgress( settings.callback, 1.0f ) )
         return unexpectedOperationCanceled();
     return res;

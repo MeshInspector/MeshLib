@@ -1410,26 +1410,14 @@ Expected<std::vector<MeshLoad::NamedMesh>> toNamedMeshes( Expected<std::vector<O
     for ( auto & model : *models )
     {
         auto & r = res.emplace_back( std::move( model.named ) );
+        const auto numLoadedPoints = model.triMesh.points.size();
         std::vector<MeshBuilder::VertDuplication> dups;
         // the temporary TriMesh frees the triangles of this model before building the next one
         r.mesh = Mesh::fromTriMeshDuplicatingNonManifoldVertices( TriMesh( std::move( model.triMesh ) ), &dups,
             { .skippedFaceCount = countSkippedFaces ? &r.skippedFaceCount : nullptr } );
         r.duplicatedVertexCount = int( dups.size() );
-        if ( !dups.empty() )
-        {
-            if ( !r.colors.empty() )
-            {
-                r.colors.resize( r.mesh.points.size() );
-                for ( const auto& [src, dup] : dups )
-                    r.colors[dup] = r.colors[src];
-            }
-            if ( !r.uvCoords.empty() )
-            {
-                r.uvCoords.resize( r.mesh.points.size() );
-                for ( const auto& [src, dup] : dups )
-                    r.uvCoords[dup] = r.uvCoords[src];
-            }
-        }
+        MeshBuilder::copyAttributesToDuplicates( r.colors, dups, numLoadedPoints, r.mesh.points.size() );
+        MeshBuilder::copyAttributesToDuplicates( r.uvCoords, dups, numLoadedPoints, r.mesh.points.size() );
     }
     return res;
 }

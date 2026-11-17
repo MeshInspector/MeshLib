@@ -145,6 +145,7 @@
     <ClInclude Include="MRFile.h" />
     <ClInclude Include="MRFillContour.h" />
     <ClInclude Include="MRFaceFace.h" />
+    <ClInclude Include="MRFaceSoup.h" />
     <ClInclude Include="MRFillContourByGraphCut.h" />
     <ClInclude Include="MRFillContours2D.h" />
     <ClInclude Include="MRGcodeProcessor.h" />

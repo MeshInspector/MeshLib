@@ -10,12 +10,22 @@
 #include "MRTriBox.hpp"
 #include "MRVector.h"
 #include <atomic>
+#include <optional>
 #include <concepts>
 #include <utility>
 #include <cstdint>
 
 namespace MR
 {
+
+/// the bit mask of the used slots of a leaf: the unused slots have NaN coordinates, and a slot is unused if both x and y of its first vertex are NaN
+/// (the same rule as in insignificantlyExpandedTriBoxes4), so a triangle with some NaN coordinates is still visited as before the SIMD layout
+inline int leafUsedSlots( const AABBTree::SimdLeaf & leaf )
+{
+    using namespace Simd4;
+    const F x = load( leaf.coord[0][0] ), y = load( leaf.coord[0][1] );
+    return bits( andm( ne( x, x ), ne( y, y ) ) ) ^ 15;
+}
 
 /// the same as tree.leafBoxes( leaf ), inlined in the traversals
 inline AABBTree::SimdBoxes leafTriBoxes( const AABBTree & tree, int leaf )
@@ -151,7 +161,8 @@ bool splitSelfWidePair( const AABBTree & tree, const WideNodePair & s, Intersect
 /// calls onTris( i, j ) for the triangles (slots in leafTris()) of leaves s.a and s.b, whose boxes intersect;
 /// the boxes of the triangles of both leaves are computed once from their coordinates:
 /// triNode( i, aBox, bNode ) tests the box aBox of triangle i of s.a with the box of leaf s.b,
-/// and tris( i, aBox, bLeaf, bBoxes ) returns the bit mask of the triangles of leaf s.b (with boxes bBoxes in tree b), whose boxes intersect aBox;
+/// and tris( i, aBox, bLeaf, bBoxes ) returns the bit mask of the triangles of leaf s.b, whose boxes intersect aBox,
+/// where bBoxes() returns the boxes of the triangles of s.b in tree b, computed on its first call (so not at all if the boxes after a transformation are cached);
 /// in the traversal of one tree with itself (Self), a leaf paired with itself gives each pair of its triangles once, i < j;
 /// stops and returns false as soon as onTris returns false
 template<bool Self = false, typename TriNode, typename Tris, typename OnTris>
@@ -164,7 +175,15 @@ bool forWideLeafTris( const AABBTree & aTree, const AABBTree & bTree, const Wide
     const int aNum = aTree.numLeafTris( ~s.a.ref );
     const int bMask = ( 1 << bTree.numLeafTris( ~s.b.ref ) ) - 1;
     const auto aBoxes = leafTriBoxes( aTree, ~s.a.ref );
-    const auto bBoxes = self ? aBoxes : leafTriBoxes( bTree, ~s.b.ref );
+    std::optional<AABBTree::SimdBoxes> bComputed;
+    const auto bBoxes = [&]() -> const AABBTree::SimdBoxes &
+    {
+        if ( self )
+            return aBoxes;
+        if ( !bComputed )
+            bComputed.emplace( leafTriBoxes( bTree, ~s.b.ref ) );
+        return *bComputed;
+    };
     for ( int k = 0; k < aNum; ++k )
     {
         const Box3f aBox = aBoxes.get( k );
@@ -199,8 +218,21 @@ Vector<WideNodePair> makeWideSubtasks( Vector<WideNodePair> subtasks, int levels
     return subtasks;
 }
 
-/// the boxes after a transformation, each computed on the first request (from any thread) and kept for the next ones
-template<typename I>
+/// the box after the transformation
+inline Box3f transformedBoxes( const Box3f & box, const AffineXf3f & xf ) { return transformed( box, xf ); }
+
+/// each of the four boxes after the transformation, the same as transformed( box, xf ) of it
+inline AABBTree::SimdBoxes transformedBoxes( const AABBTree::SimdBoxes & sb, const AffineXf3f & xf )
+{
+    AABBTree::SimdBoxes res( noInit );
+    for ( int i = 0; i < 4; ++i )
+        res.set( i, transformed( sb.get( i ), xf ) );
+    return res;
+}
+
+/// the boxes (Box3f) or the groups of four boxes (AABBTree::SimdBoxes) after a transformation,
+/// each computed on the first request (from any thread) and kept for the next ones
+template<typename I, typename T = Box3f>
 class LazyTransformedBoxes
 {
 public:
@@ -208,16 +240,16 @@ public:
 
     /// returns box i, which is src before the transformation (src can be a function returning it, called only if box i is not ready)
     template<typename Src>
-    Box3f get( I i, const Src & src ) const
+    T get( I i, const Src & src ) const
     {
         auto & state = state_[i];
         if ( state.load( std::memory_order_acquire ) == cReady )
             return boxes_[i];
-        Box3f res;
+        T res;
         if constexpr ( std::invocable<const Src &> )
-            res = transformed( src(), xf_ );
+            res = transformedBoxes( src(), xf_ );
         else
-            res = transformed( src, xf_ );
+            res = transformedBoxes( src, xf_ );
         // only the thread marking the box first stores it; the others meanwhile use their own copies
         std::uint8_t expected = cEmpty;
         if ( state.compare_exchange_strong( expected, cWriting, std::memory_order_relaxed ) )
@@ -231,7 +263,7 @@ public:
 private:
     static constexpr std::uint8_t cEmpty = 0, cWriting = 1, cReady = 2;
     const AffineXf3f & xf_;
-    mutable Buffer<Box3f, I> boxes_;
+    mutable Buffer<T, I> boxes_; // not initialized: an element is written before its state becomes ready
     mutable Vector<std::atomic<std::uint8_t>, I> state_;
 };
 
@@ -273,18 +305,16 @@ inline Simd4::F boxBoxDistSq( const AABBTree::SimdBoxes & sb, const Box3f & b )
 inline int leafBoxBounds( const AABBTree::SimdLeaf & leaf, AABBTree::SimdBoxes & inner, AABBTree::SimdBoxes & outer, int & bad )
 {
     using namespace Simd4;
-    const F k = set1( 2.4e-7f ), tiny = set1( 1e-37f );
-    const F c00 = load( leaf.coord[0][0] ), c01 = load( leaf.coord[0][1] );
-    const int used = bits( orm( ne( c00, c00 ) , ne( c01, c01 ) ) ) ^ 15;
-    M nan = lt( k, k ); // all false
+    const int used = leafUsedSlots( leaf );
+    M nan = lt( set1( 0.0f ), set1( 0.0f ) ); // all false
     for ( int c = 0; c < 3; ++c )
     {
         const F a = load( leaf.coord[0][c] ), b = load( leaf.coord[1][c] ), cc = load( leaf.coord[2][c] );
         const F lo = min( min( a, b ), cc ), hi = max( max( a, b ), cc );
         store( inner.box[c], lo );
         store( inner.box[c + 3], hi );
-        const F olo = sub( sub( lo, mul( abs( lo ), k ) ), tiny );
-        const F ohi = add( add( hi, mul( abs( hi ), k ) ), tiny );
+        F olo = lo, ohi = hi;
+        expandByTwoUlps( olo, ohi );
         store( outer.box[c], olo );
         store( outer.box[c + 3], ohi );
         // NaN in a coordinate, or an infinite one making NaN of the expansion

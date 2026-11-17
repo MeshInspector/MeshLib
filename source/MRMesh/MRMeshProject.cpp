@@ -8,6 +8,7 @@
 #include "MRInplaceStack.h"
 #include "MRTimer.h"
 #include "MRMatrix3Decompose.h"
+#include <cmath>
 
 namespace MR
 {
@@ -129,11 +130,9 @@ MeshProjectionResult findProjectionWide( const Vector3f & pt, const VertCoords &
             useLower = !xf;
         if ( useLower )
             store( lowerDistSq, triLowerDistSq( leaf.coord, px, py, pz ) );
-        // the used slots are first, the unused ones have NaN coordinates
-        const F c00 = load( leaf.coord[0][0] );
-        const int used = ~bits( ne( c00, c00 ) );
-        for ( int i = 0; i < AABBTree::MaxLeafTris && ( used & ( 1 << i ) ); ++i )
+        for ( int m = leafUsedSlots( leaf ); m; m &= m - 1 )
         {
+            const int i = lowestBit( m );
             if ( useLower && !( lowerDistSq[i] < distSq ) )
                 continue;
             // the triangle's ids are read only when needed: the plain search touches less memory
@@ -154,6 +153,9 @@ MeshProjectionResult findProjectionWide( const Vector3f & pt, const VertCoords &
                     c = xfd( c );
                 }
             }
+            // a triangle with a NaN coordinate has NaN distance and is never the closest (closestPointInTriangle asserts finite input)
+            if ( std::isnan( a.x + a.y + a.z ) || std::isnan( b.x + b.y + b.z ) || std::isnan( c.x + c.y + c.z ) )
+                continue;
 
             // compute the closest point in double-precision, because float might be not enough
             const auto [projD, baryD] = closestPointInTriangle( Vector3d( pt ), a, b, c );

@@ -135,7 +135,8 @@ void meshProjectionKernel( const float3* points,
                            MeshTree3 tree, const float3* meshPoints,
                            MeshProjectionResult* resVec, const Matrix4 xf, const Matrix4 refXf, float upDistLimitSq, float loDistLimitSq, size_t size )
 {
-    constexpr int maxThreadsPerBlock = 640;
+    // 256 and not more: the kernel needs about 60 registers, so only one block of 640 threads fits in a multiprocessor of sm_120
+    constexpr int maxThreadsPerBlock = 256;
     int numBlocks = int( ( size + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
     kernel<<< numBlocks, maxThreadsPerBlock >>>( points, tree, meshPoints, resVec, xf, refXf, upDistLimitSq, loDistLimitSq, size );
 }

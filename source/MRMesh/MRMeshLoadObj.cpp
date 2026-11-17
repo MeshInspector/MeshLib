@@ -15,6 +15,8 @@
 #include "MRParallelFor.h"
 #include "MRTelemetry.h"
 #include "MRMeshLoad.h"
+#include "MRMeshTexture.h"
+#include "MRTriMesh.h"
 #include "MRPch/MRFmt.h"
 
 #include <boost/algorithm/string/trim.hpp>
@@ -621,7 +623,14 @@ auto uniqueOrderedPoints( std::vector<VertexRepr> & vec, bool& perVertexUVs )
     return last;
 }
 
-Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
+/// one model of OBJ-file with its triangles before building mesh topology
+struct ObjModel
+{
+    MeshLoad::NamedMesh named; ///< all but named.mesh, named.skippedFaceCount and named.duplicatedVertexCount are filled
+    TriMesh triMesh;
+};
+
+Expected<ObjModel> loadSingleModelFromObj(
     const std::filesystem::path& dir,
     const Vector<Vector3d, VertId>& points,  // all points from file
     const std::vector<Color>& colors,     // all colors from file
@@ -740,7 +749,8 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
 
     timer.restart( "copy vertex attributes" );
 
-    MeshLoad::NamedMesh res;
+    ObjModel model;
+    auto & res = model.named;
     VertCoords coords;
     coords.resizeNoInit( numOrderedPoints );
     res.colors.resize( haveColors ? coords.size() : 0 );
@@ -901,25 +911,8 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
         return unexpectedOperationCanceled();
 
     timer.finish();
-    std::vector<MeshBuilder::VertDuplication> dups;
-    res.mesh = Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( coords ), t, &dups,
-        { .skippedFaceCount = settings.countSkippedFaces ? &res.skippedFaceCount : nullptr } );
-    res.duplicatedVertexCount = int( dups.size() );
-    if ( !dups.empty() )
-    {
-        if ( !res.colors.empty() )
-        {
-            res.colors.resize( res.mesh.points.size() );
-            for ( const auto& [src, dup] : dups )
-                res.colors[dup] = res.colors[src];
-        }
-        if ( !res.uvCoords.empty() )
-        {
-            res.uvCoords.resize( res.mesh.points.size() );
-            for ( const auto& [src, dup] : dups )
-                res.uvCoords[dup] = res.uvCoords[src];
-        }
-    }
+    model.triMesh.points = std::move( coords );
+    model.triMesh.tris = std::move( t );
 
     if ( !texMap.empty() )
     {
@@ -930,7 +923,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     if ( settings.telemetrySignal )
         TelemetrySignal( signalString );
 
-    return res;
+    return model;
 }
 
 /// remove white spaces, meaningless or case-specific information from a comment line
@@ -1050,7 +1043,7 @@ void trimComment( std::string_view& line )
     }
 }
 
-Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
+Expected<std::vector<ObjModel>> loadModelsFromObj(
     const std::filesystem::path& dir,
     bool mergeAllObjects,
     const char* data,
@@ -1329,7 +1322,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         settings.mtlErrors->clear();
 
     auto newSettings = settings;
-    std::vector<MeshLoad::NamedMesh> res;
+    std::vector<ObjModel> res;
     if ( mergeAllObjects || oScopes.size() <= 1 )
     {
         newSettings.callback = subprogress( settings.callback, 0.5f, 1.0f );
@@ -1338,7 +1331,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
             return unexpected( std::move( meshObj.error() ) );
         res.emplace_back( std::move( *meshObj ) );
         if ( oScopes.size() == 1 )
-            res.back().name = std::move( oScopes.front().name );
+            res.back().named.name = std::move( oScopes.front().name );
         return res;
     }
 
@@ -1355,47 +1348,13 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         if ( !meshObj.has_value() )
             return unexpected( std::move( meshObj.error() ) );
         res[i] = std::move( *meshObj );
-        res[i].name = std::move( oScopes[i].name );
+        res[i].named.name = std::move( oScopes[i].name );
     }
     return res;
 }
 
-} //anonymous namespace
-
-namespace MeshLoad
-{
-
-Expected<std::vector<NamedMesh>> fromSceneObjFile( const std::filesystem::path& file, bool combineAllObjects,
-                                                                const ObjLoadSettings& settings /*= {}*/ )
-{
-    std::ifstream in( file, std::ios::binary );
-    if ( !in )
-        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
-
-    return addFileNameInError( fromSceneObjFile( in, combineAllObjects, file.parent_path(), settings ), file );
-}
-
-Expected<std::vector<NamedMesh>> fromSceneObjFile( std::istream& in, bool combineAllObjects, const std::filesystem::path& dir,
-                                                                const ObjLoadSettings& settings /*= {}*/ )
-{
-    MR_TIMER;
-
-    auto data = readCharBuffer( in );
-    if ( !data.has_value() )
-        return unexpected( data.error() );
-
-    if ( !reportProgress(settings.callback, 0.1f) )
-        return unexpectedOperationCanceled();
-    // TODO: redefine callback
-
-    ObjLoadSettings newSettings = settings;
-    newSettings.callback = subprogress( settings.callback, 0.1f, 1.f );
-
-    return fromSceneObjFile( data->data(), data->size(), combineAllObjects, dir, newSettings );
-}
-
-Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size, bool combineAllObjects, const std::filesystem::path& dir,
-                                                                const ObjLoadSettings& settings /*= {}*/ )
+Expected<std::vector<ObjModel>> loadObjModels( const char* data, size_t size, bool combineAllObjects, const std::filesystem::path& dir,
+    const MeshLoad::ObjLoadSettings& settings )
 {
     MR_TIMER;
 
@@ -1419,6 +1378,133 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
     newSettings.callback = subprogress( settings.callback, 0.3f, 1.0f );
 
     return loadModelsFromObj( dir, combineAllObjects, data, newlines, groups, newSettings );
+}
+
+Expected<std::vector<ObjModel>> loadObjModels( std::istream& in, bool combineAllObjects, const std::filesystem::path& dir,
+    const MeshLoad::ObjLoadSettings& settings )
+{
+    MR_TIMER;
+
+    auto data = readCharBuffer( in );
+    if ( !data.has_value() )
+        return unexpected( data.error() );
+
+    if ( !reportProgress(settings.callback, 0.1f) )
+        return unexpectedOperationCanceled();
+    // TODO: redefine callback
+
+    auto newSettings = settings;
+    newSettings.callback = subprogress( settings.callback, 0.1f, 1.f );
+
+    return loadObjModels( data->data(), data->size(), combineAllObjects, dir, newSettings );
+}
+
+/// builds the meshes of the models, resolving non-manifold vertices by their duplication together with their attributes
+Expected<std::vector<MeshLoad::NamedMesh>> toNamedMeshes( Expected<std::vector<ObjModel>> && models, bool countSkippedFaces )
+{
+    if ( !models.has_value() )
+        return unexpected( std::move( models.error() ) );
+    MR_TIMER;
+    std::vector<MeshLoad::NamedMesh> res;
+    res.reserve( models->size() );
+    for ( auto & model : *models )
+    {
+        auto & r = res.emplace_back( std::move( model.named ) );
+        const auto numLoadedPoints = model.triMesh.points.size();
+        std::vector<MeshBuilder::VertDuplication> dups;
+        // the temporary TriMesh frees the triangles of this model before building the next one
+        r.mesh = Mesh::fromTriMeshDuplicatingNonManifoldVertices( TriMesh( std::move( model.triMesh ) ), &dups,
+            { .skippedFaceCount = countSkippedFaces ? &r.skippedFaceCount : nullptr } );
+        r.duplicatedVertexCount = int( dups.size() );
+        MeshBuilder::copyAttributesToDuplicates( r.colors, dups, numLoadedPoints, r.mesh.points.size() );
+        MeshBuilder::copyAttributesToDuplicates( r.uvCoords, dups, numLoadedPoints, r.mesh.points.size() );
+    }
+    return res;
+}
+
+} //anonymous namespace
+
+namespace MeshLoad
+{
+
+Expected<std::vector<NamedMesh>> fromSceneObjFile( const std::filesystem::path& file, bool combineAllObjects,
+                                                                const ObjLoadSettings& settings /*= {}*/ )
+{
+    std::ifstream in( file, std::ios::binary );
+    if ( !in )
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+
+    return addFileNameInError( fromSceneObjFile( in, combineAllObjects, file.parent_path(), settings ), file );
+}
+
+Expected<std::vector<NamedMesh>> fromSceneObjFile( std::istream& in, bool combineAllObjects, const std::filesystem::path& dir,
+                                                                const ObjLoadSettings& settings /*= {}*/ )
+{
+    return toNamedMeshes( loadObjModels( in, combineAllObjects, dir, settings ), settings.countSkippedFaces );
+}
+
+Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size, bool combineAllObjects, const std::filesystem::path& dir,
+                                                                const ObjLoadSettings& settings /*= {}*/ )
+{
+    return toNamedMeshes( loadObjModels( data, size, combineAllObjects, dir, settings ), settings.countSkippedFaces );
+}
+
+static Expected<TriMesh> fromObjAsTriMesh( std::istream& in, const MeshLoadSettings& settings, const std::filesystem::path& dir )
+{
+    MR_TIMER;
+
+    ObjLoadSettings objLoadSettings
+    {
+        .customXf = settings.xf != nullptr,
+        .callback = settings.callback,
+        .telemetrySignal = settings.telemetrySignal
+    };
+    auto objs = loadObjModels( in, true, dir, objLoadSettings );
+    if ( !objs.has_value() )
+        return unexpected( std::move( objs.error() ) );
+    if ( objs->empty() )
+        return unexpected( "OBJ-file is empty" );
+    assert( objs->size() == 1 );
+    auto & r = (*objs)[0].named;
+    if ( settings.colors )
+        *settings.colors = std::move( r.colors );
+    if ( settings.uvCoords )
+        *settings.uvCoords = std::move( r.uvCoords );
+    // only load one texture from MeshLoad version of obj opening for now; empty paths stand for the faces without a texture
+    const auto textureFile = std::find_if( begin( r.textureFiles ), end( r.textureFiles ), [] ( const auto& p ) { return !p.empty(); } );
+    if ( settings.texture && textureFile != end( r.textureFiles ) ) // if there is at least one texture
+    {
+        auto image = ImageLoad::fromAnySupportedFormat( *textureFile );
+        if ( image.has_value() )
+        {
+            settings.texture->resolution = std::move( image->resolution );
+            settings.texture->pixels = std::move( image->pixels );
+            settings.texture->filter = FilterType::Linear;
+            settings.texture->wrap = WrapType::Clamp;
+        }
+        else
+        {
+            // Cannot read texture, but do not fail at least to open geometry
+            // this could be valid branch for WASM
+        }
+    }
+    if ( settings.xf )
+        *settings.xf = r.xf;
+    return std::move( (*objs)[0].triMesh );
+}
+
+Expected<TriMesh> fromObjAsTriMesh( const std::filesystem::path & file, const MeshLoadSettings& settings )
+{
+    std::ifstream in( file, std::ios::binary );
+    if ( !in )
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+
+    return addFileNameInError( fromObjAsTriMesh( in, settings, file.parent_path() ), file );
+}
+
+Expected<TriMesh> fromObjAsTriMesh( std::istream& in, const MeshLoadSettings& settings )
+{
+    return fromObjAsTriMesh( in, settings, std::filesystem::path{} );
 }
 
 Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, const ProgressCallback& cb )

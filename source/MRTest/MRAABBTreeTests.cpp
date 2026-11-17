@@ -28,6 +28,71 @@
 namespace MR
 {
 
+namespace
+{
+
+/// node of AABBTree in the flat layout made by makeFlatAABBTree (the layout of master before the SIMD tree), where the children of a node are contiguous
+struct AABBTreeWideNode
+{
+    Box3f box; ///< bounding box of whole subtree
+    int first = 0; ///< the first child node, or for a leaf, the first of its triangles in leafTris
+    int count = 0; ///< the number of children, or for a leaf, minus the number of its triangles
+
+    [[nodiscard]] bool leaf() const { return count < 0; }
+    [[nodiscard]] int numLeafTris() const { return -count; }
+};
+
+/// AABBTree in the flat layout, where the children of a node are contiguous
+struct AABBTreeFlat
+{
+    Vector<AABBTreeWideNode, NodeId> nodes; ///< the root is the first node, if any
+    Vector<AABBTree::LeafTri> leafTris; ///< the triangles of each leaf are contiguous
+    Vector<NodeId, NodeId> treeNodeIds; ///< the id in AABBTree of every node
+};
+
+/// makes the flat layout of given tree, to compare it with the trees of master
+AABBTreeFlat makeFlatAABBTree( const AABBTree & tree )
+{
+    AABBTreeFlat res;
+    if ( tree.empty() )
+        return res;
+    res.nodes.resize( tree.numNodes() );
+    res.treeNodeIds.resize( tree.numNodes() );
+    res.leafTris.reserve( tree.numTris() );
+    // fills node n with the subtree of ref, the children blocks of its descendants start from next
+    auto fill = [&]( NodeId n, int ref, const Box3f & box, NodeId & next, auto && self ) -> void
+    {
+        auto & node = res.nodes[n];
+        node.box = box;
+        res.treeNodeIds[n] = tree.nodeId( ref );
+        if ( ref < 0 )
+        {
+            node.first = (int)res.leafTris.size();
+            const int num = tree.numLeafTris( ~ref );
+            node.count = -num;
+            for ( int i = 0; i < num; ++i )
+                res.leafTris.push_back( tree.leafTris()[size_t( ~ref ) * AABBTree::MaxLeafTris + i] );
+            return;
+        }
+        const auto & sn = tree.simdNodes()[ref];
+        int k = 0;
+        while ( k < AABBTree::MaxChildren && sn.child[k] )
+            ++k;
+        const NodeId first = next;
+        node.first = int( first );
+        node.count = k;
+        next += k;
+        for ( int i = 0; i < k; ++i )
+            self( first + i, sn.child[i], sn.get( i ), next, self );
+    };
+    NodeId next( 1 );
+    fill( NodeId( 0 ), tree.rootRef(), tree.getBoundingBox(), next, fill );
+    assert( next == res.nodes.size() );
+    return res;
+}
+
+} // anonymous namespace
+
 TEST(MRMesh, AABBTree)
 {
     Mesh sphere = makeUVSphere( 1, 8, 8 );
@@ -387,6 +452,34 @@ TEST(MRMesh, AABBTreeCopyDuringConstruction)
     tasks.run( [&] { mesh.getAABBTree(); } ); // construct the tree
     tasks.run( [&] { Mesh( mesh ).getAABBTree(); } ); // copy the mesh, then construct the tree for it
     tasks.wait();
+}
+
+// a triangle with a NaN coordinate does not hide the other triangles of its leaf from the projection
+TEST( MRMesh, AABBTreeProjectionPastNanTriangle )
+{
+    VertCoords points;
+    Triangulation t;
+    for ( int i = 0; i < 4; ++i )
+    {
+        const VertId v0( points.size() );
+        points.push_back( Vector3f( float( 2 * i ), 0, 0 ) );
+        points.push_back( Vector3f( float( 2 * i + 1 ), 0, 0 ) );
+        points.push_back( Vector3f( float( 2 * i ), 1, 0 ) );
+        t.push_back( { v0, v0 + 1, v0 + 2 } );
+    }
+    // the first vertex of the first triangle, so the first slot of the only leaf has NaN x
+    points[VertId( 0 )].x = std::numeric_limits<float>::quiet_NaN();
+    const Mesh mesh = Mesh::fromTriangles( std::move( points ), t );
+    const AABBTree & tree = mesh.getAABBTree();
+    ASSERT_EQ( tree.simdNodes().size(), 0 );
+    ASSERT_EQ( tree.simdLeaves().size(), 1 );
+    for ( int i = 1; i < 4; ++i )
+    {
+        const Vector3f p( float( 2 * i ) + 0.25f, 0.25f, 1 );
+        const auto res = findProjection( p, mesh );
+        EXPECT_EQ( res.proj.face, FaceId( i ) );
+        EXPECT_FLOAT_EQ( res.distSq, 1 );
+    }
 }
 
 // the leaf box of every triangle is the same as by Box::include and insignificantlyExpanded, also for zeros, denormals, extreme and non-finite coordinates

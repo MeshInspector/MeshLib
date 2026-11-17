@@ -154,20 +154,28 @@ inline void streamFence()
 /// the index of the lowest set bit of a non-zero 4-bit mask
 inline int lowestBit( int m ) { return ( m & 1 ) ? 0 : ( m & 2 ) ? 1 : ( m & 4 ) ? 2 : 3; }
 
+/// moves the bounds lo and hi apart by at least two units in the last place of their values:
+/// by 2.4e-7 of their magnitudes, and by 1e-37 more for zeros and denormals
+inline void expandByTwoUlps( F & lo, F & hi )
+{
+    const F k = set1( 2.4e-7f ), tiny = set1( 1e-37f );
+    lo = sub( sub( lo, mul( abs( lo ), k ) ), tiny );
+    hi = add( add( hi, mul( abs( hi ), k ) ), tiny );
+}
+
 /// lower bounds of the squared distances from point (px, py, pz) to 4 triangles given in SoA order as in AABBTree::SimdLeaf::coord:
 /// the distances to the triangles' boxes expanded by two units in the last place of their coordinates, and reduced by 1e-6 of them;
 /// never larger than ( Vector3f( closestPointInTriangle( Vector3d( p ), ... ).proj ) - p ).lengthSq(); NaN for unused slots
 inline F triLowerDistSq( const float ( &coord )[3][3][4], F px, F py, F pz )
 {
     const F p[3] = { px, py, pz };
-    const F k = set1( 2.4e-7f ), tiny = set1( 1e-37f ), zero = set1( 0.0f );
+    const F zero = set1( 0.0f );
     F res = zero;
     for ( int c = 0; c < 3; ++c )
     {
         const F a = load( coord[0][c] ), b = load( coord[1][c] ), cc = load( coord[2][c] );
         F lo = min( min( a, b ), cc ), hi = max( max( a, b ), cc );
-        lo = sub( sub( lo, mul( abs( lo ), k ) ), tiny );
-        hi = add( add( hi, mul( abs( hi ), k ) ), tiny );
+        expandByTwoUlps( lo, hi );
         const F dlo = sub( lo, p[c] ), dhi = sub( p[c], hi );
         const F d = max( max( dlo, dhi ), zero );
         res = add( res, mul( d, d ) );

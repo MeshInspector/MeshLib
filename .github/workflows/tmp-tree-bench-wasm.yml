@@ -72,7 +72,7 @@ jobs:
               echo 'add_subdirectory(bench)' >> CMakeLists.txt
               ./scripts/build_source.sh )
           done
-          find base/build pr/build -name 'treebench*' -type f | head
+          find pr/build -name 'treebench*' -type f | head || true
 
       - name: Benchmark
         run: |

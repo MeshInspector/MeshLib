@@ -3,6 +3,7 @@
 #include "MRBox.h"
 #include "MRAABBTreeCenters.hpp"
 #include <cstddef>
+#include <limits>
 
 #if defined(__x86_64__) || defined(_M_X64)
 #include <emmintrin.h>
@@ -159,6 +160,102 @@ inline void insignificantlyExpandedTriBoxAndCenter( const Vector3f & a, const Ve
 #endif
     box = insignificantlyExpandedTriBox( a, b, c );
     center = TreeCenter( i, box.min + box.max );
+}
+
+/// the boxes of 4 triangles given in SoA order as in AABBTree::SimdLeaf::coord, each the same as insignificantlyExpandedTriBox,
+/// in SoA order as in AABBTree::SimdBoxes::box; empty (min = +inf, max = -inf) for the unused slots (NaN in the x and y of the first vertex)
+inline void insignificantlyExpandedTriBoxes4( const float ( &coord )[3][3][4], float ( &box )[6][4] )
+{
+    constexpr float inf = std::numeric_limits<float>::infinity();
+#if defined(__x86_64__) || defined(_M_X64)
+    const __m128i one = _mm_set1_epi32( 1 );
+    const __m128i absMask = _mm_set1_epi32( 0x7fffffff );
+    const __m128i signBit = _mm_set1_epi32( int( 0x80000000u ) );
+    const __m128i limit = _mm_set1_epi32( int( ( 0x7f7fffffu - 1 ) ^ 0x80000000u ) );
+    const auto fast = [&]( __m128i x ) { return _mm_cmplt_epi32( _mm_xor_si128( _mm_sub_epi32( _mm_and_si128( x, absMask ), one ), signBit ), limit ); };
+    const auto zero = [&]( __m128i x ) { return _mm_cmpeq_epi32( _mm_and_si128( x, absMask ), _mm_setzero_si128() ); };
+    const __m128 c00 = _mm_load_ps( coord[0][0] ), c01 = _mm_load_ps( coord[0][1] );
+    const __m128 used = _mm_or_ps( _mm_cmpeq_ps( c00, c00 ), _mm_cmpeq_ps( c01, c01 ) );
+    __m128i ok = _mm_set1_epi32( -1 );
+    __m128 lo[3], hi[3];
+    for ( int c = 0; c < 3; ++c )
+    {
+        const __m128 a = _mm_load_ps( coord[0][c] ), b = _mm_load_ps( coord[1][c] ), cc = _mm_load_ps( coord[2][c] );
+        // as in expandedTriBoxLanes, a NaN in b or cc is skipped as by Box::include, and a NaN in a is not fast
+        const __m128i l = _mm_castps_si128( _mm_min_ps( cc, _mm_min_ps( b, a ) ) );
+        const __m128i h = _mm_castps_si128( _mm_max_ps( cc, _mm_max_ps( b, a ) ) );
+        const __m128i zl = zero( l ), zh = zero( h );
+        ok = _mm_and_si128( ok, _mm_and_si128( _mm_or_si128( fast( l ), zl ), _mm_or_si128( fast( h ), zh ) ) );
+        const __m128i l0 = _mm_or_si128( l, _mm_and_si128( zl, signBit ) );
+        const __m128i h0 = _mm_andnot_si128( _mm_and_si128( zh, signBit ), h );
+        lo[c] = _mm_castsi128_ps( _mm_sub_epi32( l0, _mm_or_si128( _mm_srai_epi32( l0, 31 ), one ) ) );
+        hi[c] = _mm_castsi128_ps( _mm_add_epi32( h0, _mm_or_si128( _mm_srai_epi32( h0, 31 ), one ) ) );
+    }
+    if ( _mm_movemask_ps( _mm_or_ps( _mm_castsi128_ps( ok ), _mm_xor_ps( used, _mm_castsi128_ps( _mm_set1_epi32( -1 ) ) ) ) ) == 15 )
+    {
+        const __m128 pinf = _mm_set1_ps( inf ), ninf = _mm_set1_ps( -inf );
+        for ( int c = 0; c < 3; ++c )
+        {
+            _mm_store_ps( box[c], _mm_or_ps( _mm_and_ps( used, lo[c] ), _mm_andnot_ps( used, pinf ) ) );
+            _mm_store_ps( box[c + 3], _mm_or_ps( _mm_and_ps( used, hi[c] ), _mm_andnot_ps( used, ninf ) ) );
+        }
+        return;
+    }
+#elif defined(__aarch64__) || defined(_M_ARM64)
+    const uint32x4_t one = vdupq_n_u32( 1 );
+    const uint32x4_t absMask = vdupq_n_u32( 0x7fffffff );
+    const uint32x4_t limit = vdupq_n_u32( 0x7f7fffffu - 1 );
+    const uint32x4_t signBit = vdupq_n_u32( 0x80000000u );
+    const auto fast = [&]( uint32x4_t x ) { return vcltq_u32( vsubq_u32( vandq_u32( x, absMask ), one ), limit ); };
+    const auto zero = [&]( uint32x4_t x ) { return vceqq_u32( vandq_u32( x, absMask ), vdupq_n_u32( 0 ) ); };
+    const auto step = [&]( uint32x4_t x ) { return vorrq_u32( vreinterpretq_u32_s32( vshrq_n_s32( vreinterpretq_s32_u32( x ), 31 ) ), one ); };
+    const float32x4_t c00 = vld1q_f32( coord[0][0] ), c01 = vld1q_f32( coord[0][1] );
+    const uint32x4_t used = vorrq_u32( vceqq_f32( c00, c00 ), vceqq_f32( c01, c01 ) );
+    uint32x4_t ok = vdupq_n_u32( 0xffffffffu );
+    float32x4_t lo[3], hi[3];
+    for ( int c = 0; c < 3; ++c )
+    {
+        const float32x4_t a = vld1q_f32( coord[0][c] ), b = vld1q_f32( coord[1][c] ), cc = vld1q_f32( coord[2][c] );
+        const uint32x4_t notNan = vandq_u32( vandq_u32( vceqq_f32( a, a ), vceqq_f32( b, b ) ), vceqq_f32( cc, cc ) );
+        const uint32x4_t l = vreinterpretq_u32_f32( vminq_f32( vminq_f32( a, b ), cc ) );
+        const uint32x4_t h = vreinterpretq_u32_f32( vmaxq_f32( vmaxq_f32( a, b ), cc ) );
+        const uint32x4_t zl = zero( l ), zh = zero( h );
+        ok = vandq_u32( ok, vandq_u32( notNan, vandq_u32( vorrq_u32( fast( l ), zl ), vorrq_u32( fast( h ), zh ) ) ) );
+        const uint32x4_t l0 = vorrq_u32( l, vandq_u32( zl, signBit ) );
+        const uint32x4_t h0 = vbicq_u32( h, vandq_u32( zh, signBit ) );
+        lo[c] = vreinterpretq_f32_u32( vsubq_u32( l0, step( l0 ) ) );
+        hi[c] = vreinterpretq_f32_u32( vaddq_u32( h0, step( h0 ) ) );
+    }
+    if ( vminvq_u32( vorrq_u32( ok, vmvnq_u32( used ) ) ) != 0 )
+    {
+        const float32x4_t pinf = vdupq_n_f32( inf ), ninf = vdupq_n_f32( -inf );
+        for ( int c = 0; c < 3; ++c )
+        {
+            vst1q_f32( box[c], vbslq_f32( used, lo[c], pinf ) );
+            vst1q_f32( box[c + 3], vbslq_f32( used, hi[c], ninf ) );
+        }
+        return;
+    }
+#endif
+    for ( int i = 0; i < 4; ++i )
+    {
+        if ( !( coord[0][0][i] == coord[0][0][i] ) && !( coord[0][1][i] == coord[0][1][i] ) )
+        {
+            for ( int c = 0; c < 3; ++c )
+            {
+                box[c][i] = inf;
+                box[c + 3][i] = -inf;
+            }
+            continue;
+        }
+        const auto b = insignificantlyExpandedTriBox( { coord[0][0][i], coord[0][1][i], coord[0][2][i] },
+            { coord[1][0][i], coord[1][1][i], coord[1][2][i] }, { coord[2][0][i], coord[2][1][i], coord[2][2][i] } );
+        for ( int c = 0; c < 3; ++c )
+        {
+            box[c][i] = b.min[c];
+            box[c + 3][i] = b.max[c];
+        }
+    }
 }
 
 } //namespace MR

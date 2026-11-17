@@ -67,22 +67,24 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
             const int aFirst = ~s.a.ref * AABBTree::MaxLeafTris;
             const int bFirst = ~s.b.ref * AABBTree::MaxLeafTris;
             const int bNum = bTree.numLeafTris( ~s.b.ref );
+            // the boxes and the coordinates of the triangles from the leaves (the coordinates are the same as the points of the meshes)
+            const auto bLeafBoxes = bTree.leafBoxes( ~s.b.ref );
+            const auto aLeafBoxes = aTree.leafBoxes( ~s.a.ref );
             Box3f bBoxes[AABBTree::MaxLeafTris];
             Triangle3f bTris[AABBTree::MaxLeafTris];
             for ( int j = 0; j < bNum; ++j )
             {
-                const auto & bt = bTree.leafTris()[bFirst + j];
-                bBoxes[j] = bBox( bTree.leafBox( bFirst + j ) );
+                bBoxes[j] = bBox( bLeafBoxes.get( j ) );
                 for ( int k = 0; k < 3; ++k )
-                    bTris[j][k] = rigidB2A ? ( *rigidB2A )( b.mesh.points[bt.verts[k]] ) : b.mesh.points[bt.verts[k]];
+                    bTris[j][k] = rigidB2A ? ( *rigidB2A )( bTree.leafPoint( bFirst + j, k ) ) : bTree.leafPoint( bFirst + j, k );
             }
             for ( int i = aFirst, aEnd = aFirst + aTree.numLeafTris( ~s.a.ref ); i < aEnd; ++i )
             {
                 const auto & at = aTree.leafTris()[i];
                 if ( a.region && !a.region->test( at.face ) )
                     continue;
-                const auto aBox = aTree.leafBox( i );
-                const Triangle3f av{ a.mesh.points[at.verts[0]], a.mesh.points[at.verts[1]], a.mesh.points[at.verts[2]] };
+                const auto aBox = aLeafBoxes.get( i - aFirst );
+                const Triangle3f av{ aTree.leafPoint( i, 0 ), aTree.leafPoint( i, 1 ), aTree.leafPoint( i, 2 ) };
                 for ( int j = 0; j < bNum; ++j )
                 {
                     const auto bFace = bTree.leafTris()[bFirst + j].face;

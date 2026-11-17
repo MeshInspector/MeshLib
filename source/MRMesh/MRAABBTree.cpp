@@ -153,9 +153,9 @@ public:
     [[nodiscard]] int numInternal() const { return total_.nodes - total_.leaves; }
     [[nodiscard]] int numLeaves() const { return total_.leaves; }
 
-    /// fills the internal nodes, the leaves, the boxes of the triangles in the leaves and the triangles (all of the sizes for numTris)
+    /// fills the internal nodes, the leaves and the triangles in them (all of the sizes for numTris)
     void make( const Buffer<BoxedTri> & boxedTris, Buffer<TreeCenter> & centers, const Box3f & centersBox, const VertCoords & points,
-        SimdNode * nodes, SimdLeaf * leaves, SimdBoxes * leafBoxes, LeafTri * leafTris )
+        SimdNode * nodes, SimdLeaf * leaves, LeafTri * leafTris )
     {
         assert( (int)boxedTris.size() == numTris_ && (int)centers.size() == numTris_ );
         boxedTris_ = boxedTris.data();
@@ -163,7 +163,6 @@ public:
         points_ = &points;
         nodes_ = nodes;
         leaves_ = leaves;
-        leafBoxes_ = leafBoxes;
         leafTris_ = leafTris;
         parallelSplits_ = numTris_ >= cParallelSplitNum
             && tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) > 1
@@ -270,7 +269,6 @@ private:
         }
         constexpr float nan = std::numeric_limits<float>::quiet_NaN();
         SimdLeaf sl( noInit );
-        SimdBoxes sb( noInit );
         Box3f box;
         for ( int i = 0; i < AABBTree::MaxLeafTris; ++i )
         {
@@ -278,7 +276,6 @@ private:
             if ( i >= num )
             {
                 lt = LeafTri();
-                sb.setEmpty( i );
                 for ( int v = 0; v < 3; ++v )
                     for ( int c = 0; c < 3; ++c )
                         sl.coord[v][c][i] = nan;
@@ -291,14 +288,12 @@ private:
             box.include( triBox );
             lt.face = bt.tri.face;
             lt.verts = bt.tri.verts;
-            sb.set( i, triBox );
             for ( int v = 0; v < 3; ++v )
                 for ( int c = 0; c < 3; ++c )
                     sl.coord[v][c][i] = p[v][c];
         }
         // the arrays are larger than caches, and every leaf is written once
         Simd4::streamCopy( leaves_[l], sl );
-        Simd4::streamCopy( leafBoxes_[l], sb );
         return box;
     }
 
@@ -407,7 +402,6 @@ private:
     bool parallelSplits_ = false; // on one thread the parallel split only adds passes over the range
     SimdNode * nodes_ = nullptr;
     SimdLeaf * leaves_ = nullptr;
-    SimdBoxes * leafBoxes_ = nullptr;
     LeafTri * leafTris_ = nullptr;
     int numTris_ = 0;
     Cnt total_;
@@ -417,7 +411,7 @@ private:
 /// makes the tree of numTris triangles given by makeBoxedTris( centers, centersBox )
 template <typename MakeBoxedTris>
 void makeTree( int numTris, const VertCoords & points, const MakeBoxedTris & makeBoxedTris, std::vector<AABBTree::SimdNode> & nodes,
-    std::vector<AABBTree::SimdLeaf> & leaves, std::vector<AABBTree::SimdBoxes> & leafBoxes, Vector<AABBTree::LeafTri> & leafTris )
+    std::vector<AABBTree::SimdLeaf> & leaves, Vector<AABBTree::LeafTri> & leafTris )
 {
     if ( numTris <= 0 )
         return;
@@ -428,9 +422,8 @@ void makeTree( int numTris, const VertCoords & points, const MakeBoxedTris & mak
     // the pages are touched first by the parallel filling
     resizeNoInit( nodes, maker.numInternal() );
     resizeNoInit( leaves, maker.numLeaves() );
-    resizeNoInit( leafBoxes, maker.numLeaves() );
     leafTris.resizeNoInit( size_t( maker.numLeaves() ) * AABBTree::MaxLeafTris );
-    maker.make( boxedTris, centers, centersBox, points, nodes.data(), leaves.data(), leafBoxes.data(), leafTris.data() );
+    maker.make( boxedTris, centers, centersBox, points, nodes.data(), leaves.data(), leafTris.data() );
 }
 
 } // anonymous namespace
@@ -440,7 +433,7 @@ AABBTree::AABBTree( const MeshPart & mp )
     MR_TIMER;
     numTris_ = mp.region ? (int)mp.region->count() : mp.mesh.topology.numValidFaces();
     makeTree( numTris_, mp.mesh.points, [&] ( Buffer<TreeCenter> & centers, Box3f & centersBox ) { return makeBoxedTris( mp, numTris_, centers, centersBox ); },
-        simdNodes_, simdLeaves_, leafBoxes_, leafTris_ );
+        simdNodes_, simdLeaves_, leafTris_ );
 }
 
 AABBTree::AABBTree( const TriMesh & tmesh, const FaceBitSet * region )
@@ -448,18 +441,17 @@ AABBTree::AABBTree( const TriMesh & tmesh, const FaceBitSet * region )
     MR_TIMER;
     numTris_ = region ? (int)region->count() : (int)tmesh.tris.size();
     makeTree( numTris_, tmesh.points, [&] ( Buffer<TreeCenter> & centers, Box3f & centersBox ) { return makeBoxedTris( tmesh, region, numTris_, centers, centersBox ); },
-        simdNodes_, simdLeaves_, leafBoxes_, leafTris_ );
+        simdNodes_, simdLeaves_, leafTris_ );
 }
 
-void AABBTree::setLeafTri_( int l, int i, const LeafTri & lt, const Box3f & box, const VertCoords & points )
+void AABBTree::setLeafTri_( int l, int i, const LeafTri & lt, const VertCoords & points )
 {
     leafTris_[size_t( l ) * MaxLeafTris + i] = lt;
-    setLeafTriGeometry_( l, i, lt.verts, box, points );
+    setLeafTriGeometry_( l, i, lt.verts, points );
 }
 
-void AABBTree::setLeafTriGeometry_( int l, int i, const ThreeVertIds & verts, const Box3f & box, const VertCoords & points )
+void AABBTree::setLeafTriGeometry_( int l, int i, const ThreeVertIds & verts, const VertCoords & points )
 {
-    leafBoxes_[l].set( i, box );
     auto & leaf = simdLeaves_[l];
     for ( int v = 0; v < 3; ++v )
     {
@@ -650,20 +642,17 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
             {
                 const auto * lts = leafTris_.data() + l * MaxLeafTris;
                 SimdLeaf sl( noInit );
-                SimdBoxes sb( noInit );
                 Box3f box;
                 for ( int i = 0; i < MaxLeafTris; ++i )
                 {
                     if ( !lts[i].face )
                     {
-                        sb.setEmpty( i );
                         for ( int v = 0; v < 3; ++v )
                             for ( int c = 0; c < 3; ++c )
                                 sl.coord[v][c][i] = nan;
                         continue;
                     }
                     const auto tb = wideTriBox( points, lts[i] );
-                    sb.set( i, tb );
                     box.include( tb );
                     for ( int v = 0; v < 3; ++v )
                     {
@@ -673,7 +662,6 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
                     }
                 }
                 Simd4::streamCopy( simdLeaves_[l], sl );
-                Simd4::streamCopy( leafBoxes_[l], sb );
                 leafBox[l] = box;
             }
             Simd4::streamFence();
@@ -690,13 +678,13 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
             {
                 if ( !changedFaces.test( lts[i].face ) )
                     continue;
-                setLeafTriGeometry_( int( l ), i, lts[i].verts, wideTriBox( points, lts[i] ), points );
+                setLeafTriGeometry_( int( l ), i, lts[i].verts, points );
                 changed = true;
             }
             if ( !changed )
                 return;
             changedLeaves.set( l );
-            leafBox[l] = leafBoxes_[l].getUnion();
+            leafBox[l] = leafBoxes( int( l ) ).getUnion();
         } );
     }
 
@@ -761,7 +749,7 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
             if ( !splitFaces.test( face ) )
                 continue;
             const LeafTri lt( face, mesh.topology.getTriVerts( face ) );
-            setLeafTri_( int( l ), i, lt, wideTriBox( mesh.points, lt ), mesh.points );
+            setLeafTri_( int( l ), i, lt, mesh.points );
             const auto it = std::lower_bound( oldFaces.begin(), oldFaces.end(), face );
             assert( it != oldFaces.end() && *it == face );
             leafOfOld[it - oldFaces.begin()] = int( l );
@@ -802,7 +790,6 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
     {
         const int l = (int)simdLeaves_.size();
         simdLeaves_.emplace_back( noInit );
-        leafBoxes_.emplace_back( noInit );
         leafTris_.resize( leafTris_.size() + MaxLeafTris );
         for ( int i = 0; i < MaxLeafTris; ++i )
         {
@@ -810,10 +797,9 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
             {
                 const auto f = faces[i].second;
                 const LeafTri lt( f, mesh.topology.getTriVerts( f ) );
-                setLeafTri_( l, i, lt, wideTriBox( mesh.points, lt ), mesh.points );
+                setLeafTri_( l, i, lt, mesh.points );
                 continue;
             }
-            leafBoxes_[l].setEmpty( i );
             for ( int v = 0; v < 3; ++v )
                 for ( int c = 0; c < 3; ++c )
                     simdLeaves_[l].coord[v][c][i] = nan;
@@ -821,7 +807,7 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
         numTris_ += num;
         return ~l;
     };
-    auto boxOf = [&]( int ref ) { return ref < 0 ? leafBoxes_[~ref].getUnion() : simdNodes_[ref].getUnion(); };
+    auto boxOf = [&]( int ref ) { return ref < 0 ? leafBoxes( ~ref ).getUnion() : simdNodes_[ref].getUnion(); };
     // appends a node with given children, more than MaxChildren of them are grouped in subtrees; the new nodes are appended,
     // so children have larger ids than their parents as in a constructed tree; returns the reference to the node and its box
     auto makeNode = [&]( const std::vector<int> & refs, auto && self ) -> std::pair<int, Box3f>

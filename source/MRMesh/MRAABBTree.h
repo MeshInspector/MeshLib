@@ -5,6 +5,7 @@
 #include "MRVector.h"
 #include "MRResizeNoInit.h"
 #include "MRMeshPart.h"
+#include "MRTriBox.hpp"
 #include <algorithm>
 #include <limits>
 #include <vector>
@@ -107,7 +108,7 @@ struct MR_BIND_IGNORE AABBTreeSimdLeaf
 
 /// bounding volume hierarchy of mesh triangles with up to 4 children per node and up to 4 triangles per leaf
 /// in SIMD layout: every internal node keeps the boxes of its children, and every leaf the coordinates of its triangles;
-/// the triangles of leaf l are in slots [4 * l, 4 * l + 4) of leafTris() and leafBoxes(), its unused slots have invalid faces;
+/// the triangles of leaf l are in slots [4 * l, 4 * l + 4) of leafTris(), its unused slots have invalid faces;
 /// a node is referenced as in AABBTreeSimdNode::child, or by NodeId: the internal nodes first, then the leaves
 class AABBTree
 {
@@ -145,14 +146,29 @@ public:
     /// the leaves
     [[nodiscard]] MR_BIND_IGNORE const std::vector<SimdLeaf> & simdLeaves() const { return simdLeaves_; }
 
-    /// the bounding boxes of the triangles of every leaf (in the order of simdLeaves()), slightly expanded for robust searches
-    [[nodiscard]] MR_BIND_IGNORE const std::vector<SimdBoxes> & leafBoxes() const { return leafBoxes_; }
+    /// the bounding boxes of the triangles of given leaf, slightly expanded for robust searches, computed from its coordinates
+    [[nodiscard]] MR_BIND_IGNORE SimdBoxes leafBoxes( int leaf ) const
+    {
+        SimdBoxes res( noInit );
+        insignificantlyExpandedTriBoxes4( simdLeaves_[leaf].coord, res.box );
+        return res;
+    }
 
     /// the triangles of all leaves, MaxLeafTris slots per leaf
     [[nodiscard]] const Vector<LeafTri> & leafTris() const { return leafTris_; }
 
     /// the bounding box of the triangle in slot i of leafTris()
-    [[nodiscard]] Box3f leafBox( int i ) const { return leafBoxes_[i / MaxLeafTris].get( i % MaxLeafTris ); }
+    [[nodiscard]] Box3f leafBox( int i ) const
+    {
+        const auto & c = simdLeaves_[i / MaxLeafTris].coord;
+        const int k = i % MaxLeafTris;
+        if ( !( c[0][0][k] == c[0][0][k] ) && !( c[0][1][k] == c[0][1][k] ) )
+        {
+            constexpr float inf = std::numeric_limits<float>::infinity();
+            return Box3f( Vector3f::diagonal( inf ), Vector3f::diagonal( -inf ) );
+        }
+        return insignificantlyExpandedTriBox( { c[0][0][k], c[0][1][k], c[0][2][k] }, { c[1][0][k], c[1][1][k], c[1][2][k] }, { c[2][0][k], c[2][1][k], c[2][2][k] } );
+    }
 
     /// the coordinates of vertex v (in the order of LeafTri::verts) of the triangle in slot i of leafTris(), the same as the points of the mesh
     [[nodiscard]] Vector3f leafPoint( int i, int v ) const
@@ -174,7 +190,7 @@ public:
 
     /// returns the bounding box of the whole tree (empty for an empty tree)
     [[nodiscard]] Box3f getBoundingBox() const
-        { return !simdNodes_.empty() ? simdNodes_.front().getUnion() : !leafBoxes_.empty() ? leafBoxes_.front().getUnion() : Box3f{}; }
+        { return !simdNodes_.empty() ? simdNodes_.front().getUnion() : !simdLeaves_.empty() ? leafBoxes( 0 ).getUnion() : Box3f{}; }
 
     /// the total number of nodes: internal ones and leaves
     [[nodiscard]] size_t numNodes() const { return simdNodes_.size() + simdLeaves_.size(); }
@@ -190,7 +206,7 @@ public:
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] size_t heapBytes() const { return simdNodes_.capacity() * sizeof( SimdNode ) + simdLeaves_.capacity() * sizeof( SimdLeaf )
-        + leafBoxes_.capacity() * sizeof( SimdBoxes ) + leafTris_.heapBytes(); }
+        + leafTris_.heapBytes(); }
 
     /// returns at least given number of top-level not-intersecting subtrees, union of which contain all tree leaves
     [[nodiscard]] MRMESH_API std::vector<NodeId> getSubtrees( int minNum ) const;
@@ -234,15 +250,14 @@ private:
 
     std::vector<SimdNode> simdNodes_; ///< the children follow their parent
     std::vector<SimdLeaf> simdLeaves_;
-    std::vector<SimdBoxes> leafBoxes_;
     Vector<LeafTri> leafTris_;
     int numTris_ = 0;
 
-    /// sets triangle slot i of leaf l with its box and the coordinates of its vertices
-    void setLeafTri_( int l, int i, const LeafTri & lt, const Box3f & box, const VertCoords & points );
+    /// sets triangle slot i of leaf l with the coordinates of its vertices
+    void setLeafTri_( int l, int i, const LeafTri & lt, const VertCoords & points );
 
-    /// sets the box and the coordinates of the vertices of the triangle in slot i of leaf l
-    void setLeafTriGeometry_( int l, int i, const ThreeVertIds & verts, const Box3f & box, const VertCoords & points );
+    /// sets the coordinates of the vertices of the triangle in slot i of leaf l
+    void setLeafTriGeometry_( int l, int i, const ThreeVertIds & verts, const VertCoords & points );
 };
 
 /// AABBTree in the flat layout, where the children of a node are contiguous (e.g. for GPU)

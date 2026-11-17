@@ -8,6 +8,7 @@
 #include "MRInplaceStack.h"
 #include "MRTimer.h"
 #include "MRMatrix3Decompose.h"
+#include <cmath>
 
 namespace MR
 {
@@ -152,6 +153,9 @@ MeshProjectionResult findProjectionWide( const Vector3f & pt, const VertCoords &
                     c = xfd( c );
                 }
             }
+            // a triangle with a NaN coordinate has NaN distance and is never the closest (closestPointInTriangle asserts finite input)
+            if ( std::isnan( a.x + a.y + a.z ) || std::isnan( b.x + b.y + b.z ) || std::isnan( c.x + c.y + c.z ) )
+                continue;
 
             // compute the closest point in double-precision, because float might be not enough
             const auto [projD, baryD] = closestPointInTriangle( Vector3d( pt ), a, b, c );

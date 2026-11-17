@@ -19,7 +19,6 @@
 #include "MRParallelFor.h"
 #include "MRImageLoad.h"
 #include "MRTelemetry.h"
-#include "MRTextureColors.h"
 #include "MRPch/MRFmt.h"
 #include "MRPch/MRTBB.h"
 #include "MRBitSetParallelFor.h"
@@ -813,16 +812,6 @@ static Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& setting
             copyDupAttributes( settings.colors );
             copyDupAttributes( settings.uvCoords );
             copyDupAttributes( settings.normals );
-        }
-    }
-
-    // try converting per-corner UVs into per-vertex UVs
-    if ( settings.uvCoords && tris && !tris->empty() && settings.triCornerUvCoords && !settings.triCornerUvCoords->empty() )
-    {
-        if ( auto vertUVs = findVertexUVs( res.topology, *settings.triCornerUvCoords ) )
-        {
-            *settings.uvCoords = std::move( *vertUVs );
-            settings.triCornerUvCoords->clear();
         }
     }
 

@@ -173,6 +173,15 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
     if ( !mesh.has_value() )
         return unexpected( mesh.error() );
 
+    // try converting per-corner UVs into per-vertex UVs
+    if ( !triCornerUvCoords.empty() && mesh->topology.numValidFaces() > 0 )
+    {
+        if ( auto vertUVs = findVertexUVs( mesh->topology, triCornerUvCoords ) )
+        {
+            data.uvCoordinates = std::move( *vertUVs );
+            triCornerUvCoords.clear(); // not to sample colors from UVs below
+        }
+    }
     // convert per-corner UVs into per-vertex colors by averaging the value
     if ( !data.texture.pixels.empty() && !triCornerUvCoords.empty() && mesh->topology.numValidFaces() > 0 )
     {

@@ -20,20 +20,6 @@ namespace MR
 /// \addtogroup AABBTreeGroup
 /// \{
 
-/// node of AABBTree in the flat layout made by makeFlatAABBTree, where the children of a node are contiguous
-struct AABBTreeWideNode
-{
-    Box3f box; ///< bounding box of whole subtree
-    int first; ///< the first child node, or for a leaf, the first of its triangles in leafTris()
-    int count; ///< the number of children, or for a leaf, minus the number of its triangles
-
-    AABBTreeWideNode() noexcept : first( 0 ), count( 0 ) {}
-    /// all members uninitialized, e.g. for the nodes written by the tree builder
-    explicit AABBTreeWideNode( NoInit ) noexcept : box( noInit ) {}
-    [[nodiscard]] bool leaf() const { return count < 0; }
-    [[nodiscard]] int numLeafTris() const { return -count; }
-};
-
 /// triangle in a leaf of AABBTree
 struct AABBTreeWideLeafTri
 {
@@ -108,6 +94,24 @@ struct MR_BIND_IGNORE AABBTreeSimdLeaf
 
     AABBTreeSimdLeaf() = default;
     explicit AABBTreeSimdLeaf( NoInit ) noexcept {}
+
+    /// sets the coordinates of the vertices of i-th triangle
+    void set( int i, const Vector3f & a, const Vector3f & b, const Vector3f & c )
+    {
+        const Vector3f * p[3] = { &a, &b, &c };
+        for ( int v = 0; v < 3; ++v )
+            for ( int k = 0; k < 3; ++k )
+                coord[v][k][i] = ( *p[v] )[k];
+    }
+
+    /// makes i-th slot unused: NaN coordinates
+    void setEmpty( int i )
+    {
+        constexpr float nan = std::numeric_limits<float>::quiet_NaN();
+        for ( int v = 0; v < 3; ++v )
+            for ( int k = 0; k < 3; ++k )
+                coord[v][k][i] = nan;
+    }
 };
 
 /// bounding volume hierarchy of mesh triangles with up to 4 children per node and up to 4 triangles per leaf
@@ -145,10 +149,10 @@ public:
     [[nodiscard]] int numTris() const { return numTris_; }
 
     /// the internal nodes, the root is the first one (if the tree has more than MaxLeafTris triangles)
-    [[nodiscard]] MR_BIND_IGNORE const std::vector<SimdNode> & simdNodes() const { return simdNodes_; }
+    [[nodiscard]] MR_BIND_IGNORE const Vector<SimdNode> & simdNodes() const { return simdNodes_; }
 
     /// the leaves
-    [[nodiscard]] MR_BIND_IGNORE const std::vector<SimdLeaf> & simdLeaves() const { return simdLeaves_; }
+    [[nodiscard]] MR_BIND_IGNORE const Vector<SimdLeaf> & simdLeaves() const { return simdLeaves_; }
 
     /// the bounding boxes of the triangles of given leaf, slightly expanded for robust searches, computed from its coordinates
     [[nodiscard]] MR_BIND_IGNORE MRMESH_API SimdBoxes leafBoxes( int leaf ) const;
@@ -237,8 +241,8 @@ private:
     friend class UniqueThreadSafeOwner<AABBTree>;
     friend class SharedThreadSafeOwner<AABBTree>;
 
-    std::vector<SimdNode> simdNodes_; ///< the children follow their parent
-    std::vector<SimdLeaf> simdLeaves_;
+    Vector<SimdNode> simdNodes_; ///< the children follow their parent
+    Vector<SimdLeaf> simdLeaves_;
     Vector<LeafTri> leafTris_;
     int numTris_ = 0;
 
@@ -248,17 +252,6 @@ private:
     /// sets the coordinates of the vertices of the triangle in slot i of leaf l
     void setLeafTriGeometry_( int l, int i, const ThreeVertIds & verts, const VertCoords & points );
 };
-
-/// AABBTree in the flat layout, where the children of a node are contiguous (e.g. for GPU)
-struct AABBTreeFlat
-{
-    Vector<AABBTreeWideNode, NodeId> nodes; ///< the root is the first node, if any
-    Vector<AABBTreeWideLeafTri> leafTris; ///< the triangles of each leaf are contiguous
-    Vector<NodeId, NodeId> treeNodeIds; ///< the id in AABBTree of every node
-};
-
-/// makes the flat layout of given tree
-[[nodiscard]] MRMESH_API AABBTreeFlat makeFlatAABBTree( const AABBTree & tree );
 
 /// \}
 

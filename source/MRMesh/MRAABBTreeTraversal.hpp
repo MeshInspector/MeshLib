@@ -305,17 +305,16 @@ inline Simd4::F boxBoxDistSq( const AABBTree::SimdBoxes & sb, const Box3f & b )
 inline int leafBoxBounds( const AABBTree::SimdLeaf & leaf, AABBTree::SimdBoxes & inner, AABBTree::SimdBoxes & outer, int & bad )
 {
     using namespace Simd4;
-    const F k = set1( 2.4e-7f ), tiny = set1( 1e-37f );
     const int used = leafUsedSlots( leaf );
-    M nan = lt( k, k ); // all false
+    M nan = lt( set1( 0.0f ), set1( 0.0f ) ); // all false
     for ( int c = 0; c < 3; ++c )
     {
         const F a = load( leaf.coord[0][c] ), b = load( leaf.coord[1][c] ), cc = load( leaf.coord[2][c] );
         const F lo = min( min( a, b ), cc ), hi = max( max( a, b ), cc );
         store( inner.box[c], lo );
         store( inner.box[c + 3], hi );
-        const F olo = sub( sub( lo, mul( abs( lo ), k ) ), tiny );
-        const F ohi = add( add( hi, mul( abs( hi ), k ) ), tiny );
+        F olo = lo, ohi = hi;
+        expandByTwoUlps( olo, ohi );
         store( outer.box[c], olo );
         store( outer.box[c + 3], ohi );
         // NaN in a coordinate, or an infinite one making NaN of the expansion

@@ -173,6 +173,49 @@ Vector3f invDirOf( const IntersectionPrecomputes<float>& prec )
 #endif
 }
 
+/// the intersections of a ray with four boxes in SoA order by one SIMD test, computed exactly as rayBoxIntersect:
+/// the plane of the box entered first along each axis is selected once for the ray,
+/// the same choice as min/max of the distances to both planes in rayBoxIntersect, including zero direction (invDir = FLT_MAX)
+struct SimdRayBoxes
+{
+    int nearIdx[3], farIdx[3];
+    Simd4::F ox, oy, oz, idx, idy, idz;
+
+    SimdRayBoxes( const Line3f & line, const IntersectionPrecomputes<float> & prec )
+    {
+        using namespace Simd4;
+        const Vector3f invDir = invDirOf( prec );
+        for ( int a = 0; a < 3; ++a )
+        {
+            nearIdx[a] = invDir[a] >= 0 ? a : a + 3;
+            farIdx[a] = invDir[a] >= 0 ? a + 3 : a;
+        }
+        ox = set1( line.p.x ); oy = set1( line.p.y ); oz = set1( line.p.z );
+        idx = set1( invDir.x ); idy = set1( invDir.y ); idz = set1( invDir.z );
+    }
+
+    /// the parameters of the entries into the boxes, after rayStart, and the bit mask of the boxes crossed within [rayStart, rayEnd]
+    /// (the unused slots have empty boxes, which are not crossed)
+    int test( const AABBTree::SimdBoxes & b, float rayStart, float rayEnd, Simd4::F & tNear ) const
+    {
+        using namespace Simd4;
+        const F tx0 = mul( sub( load( b.box[nearIdx[0]] ), ox ), idx );
+        const F ty0 = mul( sub( load( b.box[nearIdx[1]] ), oy ), idy );
+        const F tz0 = mul( sub( load( b.box[nearIdx[2]] ), oz ), idz );
+        const F tx1 = mul( sub( load( b.box[farIdx[0]] ), ox ), idx );
+        const F ty1 = mul( sub( load( b.box[farIdx[1]] ), oy ), idy );
+        const F tz1 = mul( sub( load( b.box[farIdx[2]] ), oz ), idz );
+        tNear = max( max( max( tx0, tz0 ), ty0 ), set1( rayStart ) );
+        const F tFar = min( min( min( tx1, tz1 ), ty1 ), set1( rayEnd ) );
+        return bits( le( tNear, tFar ) );
+    }
+    int test( const AABBTree::SimdBoxes & b, float rayStart, float rayEnd ) const
+    {
+        Simd4::F tNear;
+        return test( b, rayStart, rayEnd, tNear );
+    }
+};
+
 /// the intersections of a ray with the (up to) four triangles of a leaf of AABBTree by one SIMD test, computed exactly as rayTriangleIntersect
 struct SimdRayTris
 {
@@ -247,17 +290,7 @@ MeshIntersectionResult meshRayIntersectSimd_( const AABBTree & tree, const FaceB
             return res;
     }
 
-    // ray-box: the plane of the box entered first along each axis is selected once for the ray,
-    // the same choice as min/max of the distances to both planes in rayBoxIntersect, including zero direction (invDir = FLT_MAX)
-    const Vector3f invDir = invDirOf( prec );
-    int nearIdx[3], farIdx[3];
-    for ( int a = 0; a < 3; ++a )
-    {
-        nearIdx[a] = invDir[a] >= 0 ? a : a + 3;
-        farIdx[a] = invDir[a] >= 0 ? a + 3 : a;
-    }
-    const F ox = set1( line.p.x ), oy = set1( line.p.y ), oz = set1( line.p.z );
-    const F idx = set1( invDir.x ), idy = set1( invDir.y ), idz = set1( invDir.z );
+    const SimdRayBoxes rayBoxes( line, prec );
 
     // ray-triangles: the same sheared coordinates as in rayTriangleIntersect
     const SimdRayTris rayTris( line, prec );
@@ -331,16 +364,8 @@ MeshIntersectionResult meshRayIntersectSimd_( const AABBTree & tree, const FaceB
             else
             {
                 const auto & node = simdNodes[st.ref];
-                const F tx0 = mul( sub( load( node.box[nearIdx[0]] ), ox ), idx );
-                const F ty0 = mul( sub( load( node.box[nearIdx[1]] ), oy ), idy );
-                const F tz0 = mul( sub( load( node.box[nearIdx[2]] ), oz ), idz );
-                const F tx1 = mul( sub( load( node.box[farIdx[0]] ), ox ), idx );
-                const F ty1 = mul( sub( load( node.box[farIdx[1]] ), oy ), idy );
-                const F tz1 = mul( sub( load( node.box[farIdx[2]] ), oz ), idz );
-                const F tNear = max( max( max( tx0, tz0 ), ty0 ), set1( rayStart ) );
-                const F tFar = min( min( min( tx1, tz1 ), ty1 ), set1( rayEnd ) );
-                // the unused slots have empty boxes
-                int crossed = bits( le( tNear, tFar ) );
+                F tNear;
+                int crossed = rayBoxes.test( node, rayStart, rayEnd, tNear );
                 if ( crossed )
                 {
                     alignas( 16 ) float tn[4];
@@ -601,36 +626,11 @@ void rayMeshIntersectAll_( const VertCoords & points, const AABBTree & tree, con
 
     // the float version tests the four boxes of the children of a node or of the triangles of a leaf at once,
     // computing the same as rayBoxIntersect (see meshRayIntersectSimd_); returns the bit mask of the crossed boxes
-    [[maybe_unused]] auto simdCrossed = [&]
-    {
-        if constexpr ( std::is_same_v<T, float> )
-        {
-            using namespace Simd4;
-            const Vector3f invDir = invDirOf( prec );
-            int nearIdx[3], farIdx[3];
-            for ( int a = 0; a < 3; ++a )
-            {
-                nearIdx[a] = invDir[a] >= 0 ? a : a + 3;
-                farIdx[a] = invDir[a] >= 0 ? a + 3 : a;
-            }
-            return [=, ox = set1( float( line.p.x ) ), oy = set1( float( line.p.y ) ), oz = set1( float( line.p.z ) ),
-                idx = set1( invDir.x ), idy = set1( invDir.y ), idz = set1( invDir.z ),
-                start = set1( float( rayStart ) ), end = set1( float( rayEnd ) )]( const AABBTree::SimdBoxes & b )
-            {
-                const Simd4::F tx0 = mul( sub( load( b.box[nearIdx[0]] ), ox ), idx );
-                const Simd4::F ty0 = mul( sub( load( b.box[nearIdx[1]] ), oy ), idy );
-                const Simd4::F tz0 = mul( sub( load( b.box[nearIdx[2]] ), oz ), idz );
-                const Simd4::F tx1 = mul( sub( load( b.box[farIdx[0]] ), ox ), idx );
-                const Simd4::F ty1 = mul( sub( load( b.box[farIdx[1]] ), oy ), idy );
-                const Simd4::F tz1 = mul( sub( load( b.box[farIdx[2]] ), oz ), idz );
-                const Simd4::F tNear = max( max( max( tx0, tz0 ), ty0 ), start );
-                const Simd4::F tFar = min( min( min( tx1, tz1 ), ty1 ), end );
-                return bits( le( tNear, tFar ) ); // the unused slots have empty boxes
-            };
-        }
-        else
-            return 0;
-    }();
+    // the float version tests the four boxes of the children of a node or of the triangles of a leaf at once
+    [[maybe_unused]] std::optional<SimdRayBoxes> simdRayBoxes;
+    if constexpr ( std::is_same_v<T, float> )
+        simdRayBoxes.emplace( line, prec );
+    [[maybe_unused]] auto simdCrossed = [&]( const AABBTree::SimdBoxes & b ) { return simdRayBoxes->test( b, float( rayStart ), float( rayEnd ) ); };
 
     [[maybe_unused]] std::optional<SimdRayTris> simdRayTris;
     if constexpr ( std::is_same_v<T, float> )

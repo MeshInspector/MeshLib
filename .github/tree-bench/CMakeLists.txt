@@ -1,4 +1,12 @@
-# tree benchmark, added to a MeshLib checkout by tmp-tree-bench.yml
+# tree benchmark, added to a MeshLib checkout by tmp-tree-bench.yml and tmp-tree-bench-wasm.yml
 find_package(TBB 2020.1 COMPONENTS tbb REQUIRED)
 add_executable(treebench treebench.cpp)
 target_link_libraries(treebench PRIVATE MRMesh TBB::tbb)
+if(EMSCRIPTEN)
+  # run by node: the program exits when main returns; with threads, the workers are created in advance,
+  # since a worker requested later starts only when the main thread returns to the event loop
+  target_link_options(treebench PRIVATE "-sEXIT_RUNTIME=1")
+  if(NOT MR_EMSCRIPTEN_SINGLETHREAD)
+    target_link_options(treebench PRIVATE "-sPTHREAD_POOL_SIZE=8")
+  endif()
+endif()

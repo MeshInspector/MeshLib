@@ -1,0 +1,91 @@
+name: tmp AABBTree benchmark master vs SIMD-only tree, WebAssembly
+
+on:
+  push:
+    branches: [ tmp-tree-bench3 ]
+  workflow_dispatch:
+
+env:
+  BASE_SHA: 9f6c4ec9d44aa6329b4a1145fc94c67b6ca5b101
+
+jobs:
+  wasm:
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [ Singlethreaded, Multithreaded ]
+        include:
+          - config: Singlethreaded
+            thirdparty-dir: emscripten-single
+            single: 'ON'
+            threads: '1'
+          - config: Multithreaded
+            thirdparty-dir: emscripten
+            single: 'OFF'
+            threads: '1 4'
+    name: wasm-${{ matrix.config }}
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 240
+    container:
+      image: ghcr.io/meshinspector/meshlib-emscripten-arm64:latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          path: pr
+
+      - name: Master checkout and submodules
+        run: |
+          export HOME=${RUNNER_TEMP}
+          git config --global --add safe.directory '*'
+          git -C pr fetch -q --depth 1 origin ${BASE_SHA}
+          git -C pr worktree add -q --detach ../base ${BASE_SHA}
+          for t in pr base; do
+            ( cd $t && bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_emscripten.sh --skip-prebuilt-thirdparty )
+          done
+
+      - name: Machine
+        run: nproc; cat /proc/cpuinfo | grep -m3 -i -E "model|implementer|part" || true; ${EMSDK_NODE:-node} --version; emcc --version | head -1
+
+      - name: Build master and PR
+        env:
+          MR_EMSCRIPTEN: "ON"
+          MESHLIB_BUILD_RELEASE: "ON"
+          MESHLIB_BUILD_DEBUG: "OFF"
+          MR_EMSCRIPTEN_SINGLE: ${{ matrix.single }}
+          MR_EMSCRIPTEN_SINGLETHREAD: ${{ matrix.single }}
+          MR_EMSCRIPTEN_WASM64: "OFF"
+          MR_CMAKE_OPTIONS: >
+            -DMR_CXX_STANDARD=23
+            -DMR_PCH_USE_EXTRA_HEADERS=ON
+          MR_CMAKE_BUILD_OPTIONS: --target treebench
+        run: |
+          for t in base pr; do
+            ( cd $t
+              ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/include ./include
+              ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/lib ./lib
+              ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/share ./share
+              mkdir -p bench
+              cp ../pr/.github/tree-bench/treebench.cpp ../pr/.github/tree-bench/CMakeLists.txt bench/
+              echo 'add_subdirectory(bench)' >> CMakeLists.txt
+              ./scripts/build_source.sh )
+          done
+          find base/build pr/build -name 'treebench*' -type f | head
+
+      - name: Benchmark
+        run: |
+          for round in 1 2 3; do
+            for t in base pr; do
+              js=$(find $t/build -name treebench.js -type f | head -1)
+              ( cd $(dirname $js) && ${EMSDK_NODE:-node} treebench.js 3 ${{ matrix.threads }} ) | tee tb-wasm-${{ matrix.config }}-$t-$round.txt
+            done
+          done
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: tb-wasm-${{ matrix.config }}
+          path: tb-wasm-*.txt

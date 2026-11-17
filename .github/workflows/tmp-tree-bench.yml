@@ -6,10 +6,9 @@ on:
   workflow_dispatch:
 
 env:
-  BASE_SHA: 1744457045c8b732154dc86ec05714794b5a9e19
-  CUR_SHA: c80c3d53a0a7dee75f7c536a80e4dd0a74907d4e
+  BASE_SHA: 3416511373244ddfcee8c367abf451c7a3aa9807
   BENCH_ARGS: '3'
-  TB_ONLY: 'ray all hits;ray closest;ray any'
+  TB_ONLY: 'collide;collide rigid;collide first;collide precise;collide precise rigid'
   MR_OPTIONS: >-
     -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
     -DMESHLIB_PYTHON_SUPPORT=OFF -DMESHLIB_BUILD_MRVIEWER=OFF -DMESHLIB_BUILD_MESHVIEWER=OFF -DMESHLIB_BUILD_PYTHON_MODULES=OFF
@@ -38,8 +37,6 @@ jobs:
           git -C pr worktree prune
           git -C pr fetch -q --depth 1 origin ${BASE_SHA}
           git -C pr worktree add -q --detach ../base ${BASE_SHA}
-          git -C pr fetch -q --depth 1 origin ${CUR_SHA}
-          git -C pr worktree add -q --detach ../cur ${CUR_SHA}
       - name: Machine
         run: sw_vers; xcodebuild -version || true; sysctl -n machdep.cpu.brand_string; sysctl -n hw.physicalcpu hw.logicalcpu hw.memsize
       - name: Installed dependencies (nothing is installed here)
@@ -54,7 +51,7 @@ jobs:
           brew list --versions boost eigen fmt jsoncpp parallel-hashmap spdlog tbb tl-expected zlib-ng libzip googletest || true
       - name: Build master and PR
         run: |
-          for t in base cur pr; do
+          for t in base pr; do
             mkdir -p $t/bench
             cp pr/.github/tree-bench/treebench.cpp pr/.github/tree-bench/CMakeLists.txt $t/bench/
             echo 'add_subdirectory(bench)' >> $t/CMakeLists.txt
@@ -64,7 +61,7 @@ jobs:
       - name: Benchmark
         run: |
           for round in 1 2 3; do
-            for t in base cur pr; do
+            for t in base pr; do
               exe=$(find build-$t -name treebench -type f -perm -u+x | head -1)
               "$exe" ${BENCH_ARGS} | tee tb-${{ matrix.runner }}-$t-$round.txt
             done

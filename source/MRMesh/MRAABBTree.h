@@ -20,8 +20,12 @@ namespace MR
 struct AABBTreeWideNode
 {
     Box3f box; ///< bounding box of whole subtree
-    int first = 0; ///< the first child node, or for a leaf, the first of its triangles in leafTris()
-    int count = 0; ///< the number of children, or for a leaf, minus the number of its triangles
+    int first; ///< the first child node, or for a leaf, the first of its triangles in leafTris()
+    int count; ///< the number of children, or for a leaf, minus the number of its triangles
+
+    AABBTreeWideNode() noexcept : first( 0 ), count( 0 ) {}
+    /// all members uninitialized, e.g. for the nodes written by the tree builder
+    explicit AABBTreeWideNode( NoInit ) noexcept : box( noInit ) {}
     [[nodiscard]] bool leaf() const { return count < 0; }
     [[nodiscard]] int numLeafTris() const { return -count; }
 };
@@ -31,6 +35,11 @@ struct AABBTreeWideLeafTri
 {
     FaceId face;
     ThreeVertIds verts; ///< in the order of mesh.topology.getTriVerts( face )
+
+    AABBTreeWideLeafTri() = default;
+    AABBTreeWideLeafTri( FaceId face, const ThreeVertIds & verts ) noexcept : face( face ), verts( verts ) {}
+    /// all members uninitialized, e.g. for the triangles written by the tree builder
+    explicit AABBTreeWideLeafTri( NoInit ) noexcept : face( noInit ), verts{ VertId( noInit ), VertId( noInit ), VertId( noInit ) } {}
 };
 
 /// bounding volume hierarchy of mesh triangles with up to 4 children per node and up to 4 triangles per leaf;

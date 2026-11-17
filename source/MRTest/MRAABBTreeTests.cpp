@@ -454,7 +454,6 @@ TEST(MRMesh, AABBTreeCopyDuringConstruction)
     tasks.wait();
 }
 
-// the leaf box of every triangle is the same as by Box::include and insignificantlyExpanded, also for zeros, denormals, extreme and non-finite coordinates
 // a triangle with a NaN coordinate does not hide the other triangles of its leaf from the projection
 TEST( MRMesh, AABBTreeProjectionPastNanTriangle )
 {
@@ -483,6 +482,7 @@ TEST( MRMesh, AABBTreeProjectionPastNanTriangle )
     }
 }
 
+// the leaf box of every triangle is the same as by Box::include and insignificantlyExpanded, also for zeros, denormals, extreme and non-finite coordinates
 TEST( MRMesh, AABBTreeLeafBoxesOfSpecialValues )
 {
     // no signaling NaN: Box::include of it depends on the compiler (clang for Arm turns a comparison with a constant into fminnm, which quiets it)

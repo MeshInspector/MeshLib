@@ -625,8 +625,7 @@ void rayMeshIntersectAll_( const VertCoords & points, const AABBTree & tree, con
     }
 
     // the float version tests the four boxes of the children of a node or of the triangles of a leaf at once,
-    // computing the same as rayBoxIntersect (see meshRayIntersectSimd_); returns the bit mask of the crossed boxes
-    // the float version tests the four boxes of the children of a node or of the triangles of a leaf at once
+    // computing the same as rayBoxIntersect; simdCrossed returns the bit mask of the crossed boxes
     [[maybe_unused]] std::optional<SimdRayBoxes> simdRayBoxes;
     if constexpr ( std::is_same_v<T, float> )
         simdRayBoxes.emplace( line, prec );

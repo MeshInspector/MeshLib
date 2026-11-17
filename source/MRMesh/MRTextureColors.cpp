@@ -210,4 +210,23 @@ VertColors sampleVertexColors( const TriMesh& mesh, const MeshTexture& tex, cons
     return res;
 }
 
+void convertTriCornerUVs( const Mesh& mesh, TriCornerUVCoords& triCornerUvCoords, VertUVCoords& uvCoords, VertColors& colors, MeshTexture& texture )
+{
+    if ( triCornerUvCoords.empty() || mesh.topology.numValidFaces() <= 0 )
+        return;
+
+    if ( auto vertUVs = findVertexUVs( mesh.topology, triCornerUvCoords ) )
+    {
+        uvCoords = std::move( *vertUVs );
+        triCornerUvCoords.clear();
+        return;
+    }
+
+    if ( texture.pixels.empty() )
+        return;
+    colors = sampleVertexColors( mesh, texture, triCornerUvCoords );
+    if ( uvCoords.empty() )
+        texture = {}; // texture will not be used without uv-coordinates
+}
+
 } //namespace MR

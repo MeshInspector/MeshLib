@@ -20,7 +20,6 @@
 #include "MRParallelFor.h"
 #include "MRImageLoad.h"
 #include "MRTelemetry.h"
-#include "MRTextureColors.h"
 #include "MRPch/MRFmt.h"
 #include "MRPch/MRTBB.h"
 #include "MRBitSetParallelFor.h"
@@ -824,7 +823,6 @@ static Expected<TriMesh> fromPlyAsTriMesh( std::istream& in, const MeshLoadSetti
     MR_TIMER;
 
     std::optional<Triangulation> tris;
-    TriCornerUVCoords triCornerUvCoords;
     PlyLoadParams params =
     {
         .tris = &tris,
@@ -832,7 +830,7 @@ static Expected<TriMesh> fromPlyAsTriMesh( std::istream& in, const MeshLoadSetti
         .colors = settings.colors,
         .faceColors = settings.faceColors,
         .uvCoords = settings.uvCoords,
-        .triCornerUvCoords = ( settings.texture && settings.colors ) ? &triCornerUvCoords : nullptr,
+        .triCornerUvCoords = settings.triCornerUvCoords,
         .normals = settings.normals,
         .texture = settings.texture,
         .dir = dir,
@@ -853,23 +851,6 @@ static Expected<TriMesh> fromPlyAsTriMesh( std::istream& in, const MeshLoadSetti
                 if ( v >= (int)res.points.size() )
                     return unexpected( "vertex id is larger than total point coordinates" );
         res.tris = std::move( *tris );
-    }
-
-    // try converting per-corner UVs into per-vertex UVs
-    if ( settings.uvCoords && !res.tris.empty() && !triCornerUvCoords.empty() )
-    {
-        if ( auto vertUVs = findVertexUVs( res.tris, triCornerUvCoords ) )
-        {
-            *settings.uvCoords = std::move( *vertUVs );
-            triCornerUvCoords.clear(); // not to sample colors from UVs below
-        }
-    }
-    // convert per-corner UVs into per-vertex colors by averaging the value
-    if ( settings.texture && !settings.texture->pixels.empty() && settings.colors && !res.tris.empty() && !triCornerUvCoords.empty() )
-    {
-        *settings.colors = sampleVertexColors( res, *settings.texture, triCornerUvCoords );
-        if ( !settings.uvCoords || settings.uvCoords->empty() )
-            *settings.texture = {}; // texture will not be used outside of this function
     }
 
     if ( !reportProgress( settings.callback, 1.0f ) )

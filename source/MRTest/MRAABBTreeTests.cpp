@@ -12,6 +12,7 @@
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRBuffer.h>
 #include <MRMesh/MRBitCast.h>
+#include <MRMesh/MRBall.h>
 #include <MRMesh/MRTriMesh.h>
 #include <cmath>
 #include <gtest/gtest.h>
@@ -524,6 +525,66 @@ TEST( MRMesh, AABBTreeSameOnOneThread )
         const auto & b = one->leafTris()[i];
         ASSERT_TRUE( a.face == b.face && a.verts == b.verts && all.leafBoxes()[i] == one->leafBoxes()[i] ) << "leaf " << i;
     }
+}
+
+// the searches in the tree of TriMesh with its points find the same as the searches in the mesh part with the same triangles
+TEST( MRMesh, ProjectionToTriMesh )
+{
+    const Mesh mesh = makeUVSphere( 1.f, 64, 32 );
+    FaceBitSet region( mesh.topology.faceSize() );
+    for ( FaceId f : mesh.topology.getValidFaces() )
+        region.set( f, f % 3 != 0 );
+    const TriMesh tmesh{ mesh.topology.getTriangulation(), mesh.points };
+    const AABBTree tree( tmesh, &region );
+    const MeshPart mp( mesh, &region );
+    const AABBTree mpTree( mp ); // the same tree, so the same one of equally close projections is found
+    const AABBTree fullTree( tmesh ); // the same as mesh.getAABBTree(), searched with region
+    const auto xf = AffineXf3f::translation( { 0.1f, 0.2f, 0.3f } );
+
+    auto same = []( const MeshProjectionResult & a, const MeshProjectionResult & b )
+    {
+        return a.proj.face == b.proj.face && a.proj.point == b.proj.point && a.tp == b.tp && a.distSq == b.distSq;
+    };
+    auto collect = []( auto && find )
+    {
+        std::vector<MeshProjectionResult> res;
+        find( [&]( const MeshProjectionResult & found, Ball3f & ) { res.push_back( found ); return Processing::Continue; } );
+        std::sort( res.begin(), res.end(), []( const auto & x, const auto & y ) { return x.proj.face < y.proj.face; } );
+        return res;
+    };
+    for ( const Vector3f pt : { Vector3f( 0.8f, 0.5f, -0.3f ), Vector3f( 0.3f, -0.9f, 0.4f ), Vector3f( 0, 0, 1.2f ) } )
+    {
+        EXPECT_TRUE( same( findProjection( pt, tmesh.points, tree ), findProjectionSubtree( pt, mp, mpTree ) ) );
+        EXPECT_TRUE( same( findProjection( pt, tmesh.points, tree, FLT_MAX, &xf ), findProjectionSubtree( pt, mp, mpTree, FLT_MAX, &xf ) ) );
+        EXPECT_TRUE( same( findProjection( pt, tmesh.points, fullTree, FLT_MAX, nullptr, 0, {}, {}, &region ), findProjection( pt, mp ) ) );
+        EXPECT_TRUE( same( findProjection( pt, tmesh.points, fullTree, FLT_MAX, &xf, 0, {}, {}, &region ), findProjection( pt, mp, FLT_MAX, &xf ) ) );
+
+        const Ball3f ball{ pt, 0.25f }; // radius 0.5
+        const auto a = collect( [&]( auto cb ) { findTrisInBall( tmesh.points, tree, ball, cb ); } );
+        const auto b = collect( [&]( auto cb ) { findTrisInBall( mp, ball, cb ); } );
+        const auto c = collect( [&]( auto cb ) { findTrisInBall( tmesh.points, fullTree, ball, cb, {}, &region ); } );
+        ASSERT_EQ( a.size(), b.size() );
+        ASSERT_EQ( c.size(), b.size() );
+        for ( size_t i = 0; i < a.size(); ++i )
+            EXPECT_TRUE( same( a[i], b[i] ) && same( c[i], b[i] ) );
+
+        std::vector<FaceId> boxedA, boxedB, boxedC;
+        findBoxedTrisInBall( tree, ball, [&]( FaceId f, Ball3f & ) { boxedA.push_back( f ); return Processing::Continue; } );
+        findBoxedTrisInBall( mp, ball, [&]( FaceId f, Ball3f & ) { boxedB.push_back( f ); return Processing::Continue; } );
+        findBoxedTrisInBall( fullTree, ball, [&]( FaceId f, Ball3f & ) { boxedC.push_back( f ); return Processing::Continue; }, &region );
+        std::sort( boxedA.begin(), boxedA.end() );
+        std::sort( boxedB.begin(), boxedB.end() );
+        std::sort( boxedC.begin(), boxedC.end() );
+        EXPECT_EQ( boxedA, boxedB );
+        EXPECT_EQ( boxedC, boxedB );
+        EXPECT_FALSE( a.empty() || boxedA.empty() );
+    }
+
+    const auto proj = findProjection( Vector3f( 0.3f, -0.9f, 0.4f ), tmesh.points, tree );
+    ASSERT_TRUE( proj.valid() && region.test( proj.proj.face ) );
+    const auto [a, b, c] = tmesh.tris[proj.proj.face];
+    const Vector3f p = proj.tp.interpolate( tmesh.points[a], tmesh.points[b], tmesh.points[c] );
+    EXPECT_NEAR( ( p - proj.proj.point ).length(), 0.f, 1e-6f );
 }
 
 } //namespace MR

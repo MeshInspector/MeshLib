@@ -30,4 +30,8 @@ namespace MR
 /// if one vertex has different colors in different triangles, then angle-weight average is computed
 [[nodiscard]] MRMESH_API VertColors sampleVertexColors( const TriMesh& mesh, const MeshTexture& tex, const TriCornerUVCoords& triCornerUvCoords );
 
+/// if per-corner UVs can be converted into per-vertex UVs, then puts them in uvCoords and clears triCornerUvCoords;
+/// otherwise, if texture is not empty, samples per-vertex colors from it, and drops the texture if uvCoords are empty
+MRMESH_API void convertTriCornerUVs( const Mesh& mesh, TriCornerUVCoords& triCornerUvCoords, VertUVCoords& uvCoords, VertColors& colors, MeshTexture& texture );
+
 } //namespace MR

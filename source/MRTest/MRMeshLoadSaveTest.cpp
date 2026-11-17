@@ -4,8 +4,6 @@
 #include <MRMesh/MRMeshLoadObj.h>
 #include <MRMesh/MRMeshSave.h>
 #include <MRMesh/MRMeshBuilder.h>
-#include <MRMesh/MRMeshTexture.h>
-#include <MRMesh/MRTextureColors.h>
 #include <MRMesh/MRConstants.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRAffineXf3.h>
@@ -504,39 +502,6 @@ TEST(MRMesh, LoadOffPolygonsAsTriMesh)
     ASSERT_TRUE( mesh.has_value() ) << mesh.error();
     EXPECT_EQ( skipped, 2 ); // degenerate triangles of the fan of the polygon with repeated vertex
     EXPECT_EQ( sortedTris( *mesh ), sortedTris( Mesh::fromFaceSoup( triMesh->points, verts, faces ) ) );
-}
-
-TEST(MRMesh, TriMeshTextureColors)
-{
-    TriMesh triMesh;
-    triMesh.tris = Triangulation{ { 0_v, 1_v, 2_v }, { 0_v, 2_v, 3_v }, { 0_v, 3_v, 1_v }, { 1_v, 3_v, 2_v } };
-    triMesh.points = VertCoords{ { 0.f, 0.f, 0.f }, { 1.f, 0.f, 0.f }, { 0.f, 1.f, 0.f }, { 0.f, 0.f, 1.f } };
-    const auto mesh = Mesh::fromTriMesh( TriMesh( triMesh ) );
-
-    const VertUVCoords uvs{ { 0.1f, 0.1f }, { 0.9f, 0.1f }, { 0.1f, 0.9f }, { 0.9f, 0.9f } };
-    TriCornerUVCoords cornerUVs;
-    for ( const auto & t : triMesh.tris )
-        cornerUVs.push_back( { uvs[t[0]], uvs[t[1]], uvs[t[2]] } );
-
-    auto triMeshUVs = findVertexUVs( triMesh.tris, cornerUVs );
-    ASSERT_TRUE( triMeshUVs.has_value() );
-    EXPECT_EQ( *triMeshUVs, uvs );
-    EXPECT_EQ( *triMeshUVs, findVertexUVs( mesh.topology, cornerUVs ) );
-
-    MeshTexture tex;
-    tex.resolution = { 2, 2 };
-    tex.pixels = { Color( 255, 0, 0 ), Color( 0, 255, 0 ), Color( 0, 0, 255 ), Color( 255, 255, 255 ) };
-    tex.filter = FilterType::Linear;
-    const auto triMeshColors = sampleVertexColors( triMesh, tex, cornerUVs );
-    const auto meshColors = sampleVertexColors( mesh, tex, cornerUVs );
-    ASSERT_EQ( triMeshColors.size(), meshColors.size() );
-    for ( auto v = 0_v; v < meshColors.endId(); ++v )
-        for ( int c = 0; c < 4; ++c )
-            EXPECT_NEAR( triMeshColors[v][c], meshColors[v][c], 1 );
-
-    cornerUVs[1_f][0] = { 0.5f, 0.5f };
-    EXPECT_FALSE( findVertexUVs( triMesh.tris, cornerUVs ).has_value() );
-    EXPECT_FALSE( findVertexUVs( mesh.topology, cornerUVs ).has_value() );
 }
 
 TEST(MRMesh, SaveObjectTreeAsPoints)

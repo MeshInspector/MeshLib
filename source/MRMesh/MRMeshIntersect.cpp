@@ -613,9 +613,9 @@ void rayMeshIntersectAll_( const VertCoords & points, const AABBTree & tree, con
                 nearIdx[a] = invDir[a] >= 0 ? a : a + 3;
                 farIdx[a] = invDir[a] >= 0 ? a + 3 : a;
             }
-            return [=, ox = set1( line.p.x ), oy = set1( line.p.y ), oz = set1( line.p.z ),
+            return [=, ox = set1( float( line.p.x ) ), oy = set1( float( line.p.y ) ), oz = set1( float( line.p.z ) ),
                 idx = set1( invDir.x ), idy = set1( invDir.y ), idz = set1( invDir.z ),
-                start = set1( rayStart ), end = set1( rayEnd )]( const AABBTree::SimdBoxes & b )
+                start = set1( float( rayStart ) ), end = set1( float( rayEnd ) )]( const AABBTree::SimdBoxes & b )
             {
                 const Simd4::F tx0 = mul( sub( load( b.box[nearIdx[0]] ), ox ), idx );
                 const Simd4::F ty0 = mul( sub( load( b.box[nearIdx[1]] ), oy ), idy );
@@ -661,7 +661,7 @@ void rayMeshIntersectAll_( const VertCoords & points, const AABBTree & tree, con
         subtasks.pop();
         if( r < 0 )
         {
-            const auto & leafBoxes = tree.leafBoxes()[~r];
+            const auto & leafBoxes = tree.leafBoxes( ~r );
             // the float version tests all triangles of the leaf at once, and with their boxes rejects the near-miss hits
             [[maybe_unused]] int crossedTris = 0;
             [[maybe_unused]] alignas( 16 ) float ts[4], vs[4], ws[4], ids[4];

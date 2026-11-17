@@ -10,6 +10,7 @@
 #include "MRVector.h"
 #include <atomic>
 #include <concepts>
+#include <utility>
 #include <cstdint>
 
 namespace MR
@@ -119,7 +120,7 @@ bool splitSelfWidePair( const AABBTree & tree, const WideNodePair & s, Intersect
         if constexpr ( requires { intersect.children( true, s.a, s.b ); } )
         {
             // the children after ci, whose boxes intersect the box of ci
-            for ( int m = intersect.children( true, s.a, ci ) & ( ~0 << ( i + 1 ) ); m; m &= m - 1 )
+            for ( int m = intersect.children( true, s.a, ci ) & int( ~0u << ( i + 1 ) ); m; m &= m - 1 )
                 push( WideNodePair{ ci, childWideNode( sn, Simd4::lowestBit( m ) ) } );
         }
         else
@@ -132,8 +133,10 @@ bool splitSelfWidePair( const AABBTree & tree, const WideNodePair & s, Intersect
     return true;
 }
 
-/// calls onTris( i, j ) for the triangles (slots in leafTris()) of leaves s.a and s.b, whose boxes intersect:
-/// triNode( i, bNode ) tests the box of triangle i with the box of leaf s.b, and tris( i, j ) the boxes of two triangles;
+/// calls onTris( i, j ) for the triangles (slots in leafTris()) of leaves s.a and s.b, whose boxes intersect;
+/// the boxes of the triangles of both leaves are computed once from their coordinates:
+/// triNode( i, aBox, bNode ) tests the box aBox of triangle i of s.a with the box of leaf s.b,
+/// and tris( i, aBox, bLeaf, bBoxes ) returns the bit mask of the triangles of leaf s.b (with boxes bBoxes in tree b), whose boxes intersect aBox;
 /// in the traversal of one tree with itself (Self), a leaf paired with itself gives each pair of its triangles once, i < j;
 /// stops and returns false as soon as onTris returns false
 template<bool Self = false, typename TriNode, typename Tris, typename OnTris>
@@ -143,28 +146,21 @@ bool forWideLeafTris( const AABBTree & aTree, const AABBTree & bTree, const Wide
     const bool self = Self && s.a.ref == s.b.ref;
     const int aFirst = ~s.a.ref * AABBTree::MaxLeafTris;
     const int bFirst = ~s.b.ref * AABBTree::MaxLeafTris;
-    const int aEnd = aFirst + aTree.numLeafTris( ~s.a.ref );
-    const int bEnd = bFirst + bTree.numLeafTris( ~s.b.ref );
-    for ( int i = aFirst; i < aEnd; ++i )
+    const int aNum = aTree.numLeafTris( ~s.a.ref );
+    const int bMask = ( 1 << bTree.numLeafTris( ~s.b.ref ) ) - 1;
+    const auto aBoxes = aTree.leafBoxes( ~s.a.ref );
+    const auto bBoxes = self ? aBoxes : bTree.leafBoxes( ~s.b.ref );
+    for ( int k = 0; k < aNum; ++k )
     {
-        if ( !self && !triNode( i, s.b ) )
+        const Box3f aBox = aBoxes.get( k );
+        if ( !self && !triNode( aFirst + k, aBox, s.b ) )
             continue;
-        if constexpr ( requires { { tris( i, s.b ) } -> std::convertible_to<int>; } )
-        {
-            // tris( i, bLeaf ) tests the box of triangle i with the boxes of all triangles of leaf s.b at once
-            int m = tris( i, s.b ) & ( ( 1 << ( bEnd - bFirst ) ) - 1 );
-            if ( self )
-                m &= ~0 << ( i - aFirst + 1 );
-            for ( ; m; m &= m - 1 )
-                if ( !onTris( i, bFirst + Simd4::lowestBit( m ) ) )
-                    return false;
-        }
-        else
-        {
-            for ( int j = self ? i + 1 : bFirst; j < bEnd; ++j )
-                if ( tris( i, j ) && !onTris( i, j ) )
-                    return false;
-        }
+        int m = tris( aFirst + k, aBox, s.b, bBoxes ) & bMask;
+        if ( self )
+            m &= int( ~0u << ( k + 1 ) );
+        for ( ; m; m &= m - 1 )
+            if ( !onTris( aFirst + k, bFirst + Simd4::lowestBit( m ) ) )
+                return false;
     }
     return true;
 }
@@ -195,13 +191,18 @@ class LazyTransformedBoxes
 public:
     LazyTransformedBoxes( size_t size, const AffineXf3f & xf ) : xf_( xf ), boxes_( size ), state_( size ) { }
 
-    /// returns box i, which is src before the transformation
-    Box3f get( I i, const Box3f & src ) const
+    /// returns box i, which is src before the transformation (src can be a function returning it, called only if box i is not ready)
+    template<typename Src>
+    Box3f get( I i, const Src & src ) const
     {
         auto & state = state_[i];
         if ( state.load( std::memory_order_acquire ) == cReady )
             return boxes_[i];
-        const auto res = transformed( src, xf_ );
+        Box3f res;
+        if constexpr ( std::invocable<const Src &> )
+            res = transformed( src(), xf_ );
+        else
+            res = transformed( src, xf_ );
         // only the thread marking the box first stores it; the others meanwhile use their own copies
         std::uint8_t expected = cEmpty;
         if ( state.compare_exchange_strong( expected, cWriting, std::memory_order_relaxed ) )
@@ -220,13 +221,21 @@ private:
 };
 
 /// a test of boxes from given functions: one for a box, test( box ) -> bool, and one for four boxes at once, test( simdBoxes ) -> bit mask of passed ones
-template<typename... Fs>
-struct WideBoxTest : Fs...
+/// (the functions are members and not bases: deriving from a lambda with tail padding is warned about by MSVC for its ABI)
+template<typename F1, typename F2>
+struct WideBoxTest
 {
-    using Fs::operator()...;
+    F1 f1;
+    F2 f2;
+
+    template<typename... A> requires std::invocable<const F1 &, A...>
+    decltype(auto) operator()( A &&... a ) const { return f1( std::forward<A>( a )... ); }
+
+    template<typename... A> requires ( !std::invocable<const F1 &, A...> && std::invocable<const F2 &, A...> )
+    decltype(auto) operator()( A &&... a ) const { return f2( std::forward<A>( a )... ); }
 };
-template<typename... Fs>
-WideBoxTest( Fs... ) -> WideBoxTest<Fs...>;
+template<typename F1, typename F2>
+WideBoxTest( F1, F2 ) -> WideBoxTest<F1, F2>;
 
 /// the squared distances between box b and four boxes, computed exactly as Box3f::getDistanceSq( b ) of each of them; infinite for empty boxes
 inline Simd4::F boxBoxDistSq( const AABBTree::SimdBoxes & sb, const Box3f & b )
@@ -243,9 +252,37 @@ inline Simd4::F boxBoxDistSq( const AABBTree::SimdBoxes & sb, const Box3f & b )
     return res;
 }
 
+/// bounds of the boxes of the triangles of a leaf as in AABBTree::leafBoxes( leaf ): inner - the boxes of their vertices, contained in them,
+/// and outer - the same expanded by two units in the last place, containing them; returns the bit mask of the used slots with the bounds
+/// not suitable for the decision (a NaN or an infinite coordinate) in bad, and of all used slots
+inline int leafBoxBounds( const AABBTree::SimdLeaf & leaf, AABBTree::SimdBoxes & inner, AABBTree::SimdBoxes & outer, int & bad )
+{
+    using namespace Simd4;
+    const F k = set1( 2.4e-7f ), tiny = set1( 1e-37f );
+    const F c00 = load( leaf.coord[0][0] ), c01 = load( leaf.coord[0][1] );
+    const int used = bits( orm( ne( c00, c00 ) , ne( c01, c01 ) ) ) ^ 15;
+    M nan = lt( k, k ); // all false
+    for ( int c = 0; c < 3; ++c )
+    {
+        const F a = load( leaf.coord[0][c] ), b = load( leaf.coord[1][c] ), cc = load( leaf.coord[2][c] );
+        const F lo = min( min( a, b ), cc ), hi = max( max( a, b ), cc );
+        store( inner.box[c], lo );
+        store( inner.box[c + 3], hi );
+        const F olo = sub( sub( lo, mul( abs( lo ), k ) ), tiny );
+        const F ohi = add( add( hi, mul( abs( hi ), k ) ), tiny );
+        store( outer.box[c], olo );
+        store( outer.box[c + 3], ohi );
+        // NaN in a coordinate, or an infinite one making NaN of the expansion
+        nan = orm( nan, orm( ne( olo, olo ), ne( ohi, ohi ) ) );
+    }
+    bad = bits( nan ) & used;
+    return used;
+}
+
 /// visits depth-first the nodes with boxes passing boxOk, children in their order, and calls onTri( i )
 /// for the triangles (slots in leafTris()) of the visited leaves with boxes passing boxOk;
 /// boxOk( box ) tests the box of the root, and boxOk( simdBoxes ) the boxes of the children of a node or of the triangles of a leaf, see WideBoxTest;
+/// boxOk must be monotone: a box containing a passing box passes too (as in the tests of intersection with a set);
 /// stops as soon as onTri returns Processing::Stop
 template<typename BoxOk, typename OnTri>
 void forWideTris( const AABBTree & tree, BoxOk && boxOk, OnTri && onTri )
@@ -261,8 +298,14 @@ void forWideTris( const AABBTree & tree, BoxOk && boxOk, OnTri && onTri )
         subtasks.pop();
         if ( r < 0 )
         {
-            // the unused slots have empty boxes, which do not pass
-            for ( int m = boxOk( tree.leafBoxes()[~r] ); m; m &= m - 1 )
+            // boxOk is monotone, so a slot passing with the inner bound or failing with the outer one is decided without the exact box
+            AABBTree::SimdBoxes inner( noInit ), outer( noInit );
+            int bad;
+            const int used = leafBoxBounds( tree.simdLeaves()[~r], inner, outer, bad );
+            int m = boxOk( std::as_const( inner ) ) & used;
+            if ( bad || m != ( boxOk( std::as_const( outer ) ) & used ) )
+                m = boxOk( tree.leafBoxes( ~r ) ); // the unused slots have empty boxes, which do not pass
+            for ( ; m; m &= m - 1 )
                 if ( onTri( ~r * AABBTree::MaxLeafTris + Simd4::lowestBit( m ) ) == Processing::Stop )
                     return;
             continue;

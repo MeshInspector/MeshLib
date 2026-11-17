@@ -102,7 +102,7 @@ static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
     EXPECT_EQ( tree.numTris(), mesh.topology.numValidFaces() );
     const int numLeaves = (int)tree.simdLeaves().size();
     const int numInternal = (int)tree.simdNodes().size();
-    ASSERT_EQ( tree.leafBoxes().size(), size_t( numLeaves ) );
+
     ASSERT_EQ( tree.leafTris().size(), size_t( numLeaves ) * AABBTree::MaxLeafTris );
     EXPECT_EQ( tree.numNodes(), size_t( numLeaves + numInternal ) );
     FaceBitSet faces( mesh.topology.faceSize() );
@@ -114,6 +114,9 @@ static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
         {
             const int t = l * AABBTree::MaxLeafTris + i;
             const auto & lt = tree.leafTris()[t];
+            // the SIMD boxes of a leaf are bitwise the same as the boxes of its triangles one by one
+            const Box3f simdBox = tree.leafBoxes( l ).get( i ), oneBox = tree.leafBox( t );
+            EXPECT_EQ( 0, std::memcmp( &simdBox, &oneBox, sizeof( Box3f ) ) );
             if ( i >= num )
             {
                 EXPECT_FALSE( lt.face.valid() );
@@ -160,7 +163,7 @@ static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
             else
             {
                 ASSERT_TRUE( ~c < numLeaves );
-                EXPECT_TRUE( sn.get( i ).contains( tree.leafBoxes()[~c].getUnion() ) );
+                EXPECT_TRUE( sn.get( i ).contains( tree.leafBoxes( ~c ).getUnion() ) );
             }
             ++numParents[tree.nodeId( c )];
         }
@@ -593,7 +596,6 @@ TEST( MRMesh, AABBTreeSameOnOneThread )
     };
     EXPECT_TRUE( sameBits( all.simdNodes(), one->simdNodes() ) );
     EXPECT_TRUE( sameBits( all.simdLeaves(), one->simdLeaves() ) );
-    EXPECT_TRUE( sameBits( all.leafBoxes(), one->leafBoxes() ) );
     ASSERT_EQ( all.leafTris().size(), one->leafTris().size() );
     for ( size_t i = 0; i < all.leafTris().size(); ++i )
     {

@@ -44,7 +44,6 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
         bLeafBoxes.emplace( bTree.leafTris().size(), *rigidB2A );
     }
     auto bNodeBox = [&]( const WideNode & n ) { return bNodeBoxes ? bNodeBoxes->get( bTree.nodeId( n.ref ), n.box ) : n.box; };
-    auto bLeafBox = [&]( int i ) { return bLeafBoxes ? bLeafBoxes->get( i, bTree.leafBox( i ) ) : bTree.leafBox( i ); };
     auto nodesIntersect = WideIntersect
     {
         [&]( const WideNode & an, const WideNode & bn )
@@ -79,22 +78,17 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
             return m;
         }
     };
-    auto triNodeIntersect = [&]( int i, const WideNode & bn ) { return aTree.leafBox( i ).intersects( bNodeBox( bn ) ); };
-    auto trisIntersect = WideBoxTest
+    auto triNodeIntersect = [&]( int, const Box3f & aBox, const WideNode & bn ) { return aBox.intersects( bNodeBox( bn ) ); };
+    // all triangles of leaf b at once, the transformed boxes one by one
+    auto trisIntersect = [&]( int, const Box3f & aBox, const WideNode & bn, const AABBTree::SimdBoxes & bBoxes )
     {
-        [&]( int i, int j ) { return aTree.leafBox( i ).intersects( bLeafBox( j ) ); },
-        // all triangles of leaf b at once, the transformed boxes one by one
-        [&]( int i, const WideNode & bn )
-        {
-            const auto aBox = aTree.leafBox( i );
-            if ( !rigidB2A )
-                return simdBoxesIntersect( bTree.leafBoxes()[~bn.ref], aBox );
-            int m = 0;
-            for ( int j = 0, bFirst = ~bn.ref * AABBTree::MaxLeafTris; j < AABBTree::MaxLeafTris && bTree.leafTris()[bFirst + j].face; ++j )
-                if ( aBox.intersects( bLeafBox( bFirst + j ) ) )
-                    m |= 1 << j;
-            return m;
-        }
+        if ( !rigidB2A )
+            return simdBoxesIntersect( bBoxes, aBox );
+        int m = 0;
+        for ( int j = 0, bFirst = ~bn.ref * AABBTree::MaxLeafTris; j < AABBTree::MaxLeafTris && bTree.leafTris()[bFirst + j].face; ++j )
+            if ( aBox.intersects( bLeafBoxes->get( size_t( bFirst + j ), [&] { return bBoxes.get( j ); } ) ) )
+                m |= 1 << j;
+        return m;
     };
     auto inRegions = [&]( int i, int j )
     {
@@ -347,12 +341,8 @@ Expected<bool> findSelfCollidingTriangles(
                 if ( split( s, [&mySubtasks]( const WideNodePair & c ) { mySubtasks.push_back( c ); } ) )
                     continue;
                 if ( !forWideLeafTris<true>( tree, tree, s,
-                    [&tree]( int i, const WideNode & n ) { return tree.leafBox( i ).intersects( n.box ); },
-                    WideBoxTest
-                    {
-                        [&tree]( int i, int j ) { return tree.leafBox( i ).intersects( tree.leafBox( j ) ); },
-                        [&tree]( int i, const WideNode & bn ) { return simdBoxesIntersect( tree.leafBoxes()[~bn.ref], tree.leafBox( i ) ); }
-                    },
+                    []( int, const Box3f & aBox, const WideNode & n ) { return aBox.intersects( n.box ); },
+                    []( int, const Box3f & aBox, const WideNode &, const AABBTree::SimdBoxes & bBoxes ) { return simdBoxesIntersect( bBoxes, aBox ); },
                     onTris ) )
                 {
                     mySubtasks.clear();

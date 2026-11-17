@@ -129,11 +129,9 @@ MeshProjectionResult findProjectionWide( const Vector3f & pt, const VertCoords &
             useLower = !xf;
         if ( useLower )
             store( lowerDistSq, triLowerDistSq( leaf.coord, px, py, pz ) );
-        // the used slots are first, the unused ones have NaN coordinates
-        const F c00 = load( leaf.coord[0][0] );
-        const int used = ~bits( ne( c00, c00 ) );
-        for ( int i = 0; i < AABBTree::MaxLeafTris && ( used & ( 1 << i ) ); ++i )
+        for ( int m = leafUsedSlots( leaf ); m; m &= m - 1 )
         {
+            const int i = lowestBit( m );
             if ( useLower && !( lowerDistSq[i] < distSq ) )
                 continue;
             // the triangle's ids are read only when needed: the plain search touches less memory

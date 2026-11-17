@@ -18,6 +18,15 @@
 namespace MR
 {
 
+/// the bit mask of the used slots of a leaf: the unused slots have NaN coordinates, and a slot is unused if both x and y of its first vertex are NaN
+/// (the same rule as in insignificantlyExpandedTriBoxes4), so a triangle with some NaN coordinates is still visited as before the SIMD layout
+inline int leafUsedSlots( const AABBTree::SimdLeaf & leaf )
+{
+    using namespace Simd4;
+    const F x = load( leaf.coord[0][0] ), y = load( leaf.coord[0][1] );
+    return bits( andm( ne( x, x ), ne( y, y ) ) ) ^ 15;
+}
+
 /// the same as tree.leafBoxes( leaf ), inlined in the traversals
 inline AABBTree::SimdBoxes leafTriBoxes( const AABBTree & tree, int leaf )
 {
@@ -297,8 +306,7 @@ inline int leafBoxBounds( const AABBTree::SimdLeaf & leaf, AABBTree::SimdBoxes &
 {
     using namespace Simd4;
     const F k = set1( 2.4e-7f ), tiny = set1( 1e-37f );
-    const F c00 = load( leaf.coord[0][0] ), c01 = load( leaf.coord[0][1] );
-    const int used = bits( orm( ne( c00, c00 ) , ne( c01, c01 ) ) ) ^ 15;
+    const int used = leafUsedSlots( leaf );
     M nan = lt( k, k ); // all false
     for ( int c = 0; c < 3; ++c )
     {

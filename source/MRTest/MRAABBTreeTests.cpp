@@ -390,6 +390,34 @@ TEST(MRMesh, AABBTreeCopyDuringConstruction)
 }
 
 // the leaf box of every triangle is the same as by Box::include and insignificantlyExpanded, also for zeros, denormals, extreme and non-finite coordinates
+// a triangle with a NaN coordinate does not hide the other triangles of its leaf from the projection
+TEST( MRMesh, AABBTreeProjectionPastNanTriangle )
+{
+    VertCoords points;
+    Triangulation t;
+    for ( int i = 0; i < 4; ++i )
+    {
+        const VertId v0( points.size() );
+        points.push_back( Vector3f( float( 2 * i ), 0, 0 ) );
+        points.push_back( Vector3f( float( 2 * i + 1 ), 0, 0 ) );
+        points.push_back( Vector3f( float( 2 * i ), 1, 0 ) );
+        t.push_back( { v0, v0 + 1, v0 + 2 } );
+    }
+    // the first vertex of the first triangle, so the first slot of the only leaf has NaN x
+    points[VertId( 0 )].x = std::numeric_limits<float>::quiet_NaN();
+    const Mesh mesh = Mesh::fromTriangles( std::move( points ), t );
+    const AABBTree & tree = mesh.getAABBTree();
+    ASSERT_EQ( tree.simdNodes().size(), 0 );
+    ASSERT_EQ( tree.simdLeaves().size(), 1 );
+    for ( int i = 1; i < 4; ++i )
+    {
+        const Vector3f p( float( 2 * i ) + 0.25f, 0.25f, 1 );
+        const auto res = findProjection( p, mesh );
+        EXPECT_EQ( res.proj.face, FaceId( i ) );
+        EXPECT_FLOAT_EQ( res.distSq, 1 );
+    }
+}
+
 TEST( MRMesh, AABBTreeLeafBoxesOfSpecialValues )
 {
     // no signaling NaN: Box::include of it depends on the compiler (clang for Arm turns a comparison with a constant into fminnm, which quiets it)

@@ -26,6 +26,7 @@
 #include "MRIdentifyVertices.h"
 #include "MRMeshFillHole.h"
 #include "MRTriMesh.h"
+#include "MRFaceSoup.h"
 #include "MRDipole.h"
 #include "MRPartMappingAdapters.h"
 
@@ -101,15 +102,12 @@ Mesh Mesh::fromTriMeshDuplicatingNonManifoldVertices(
     return fromTrianglesDuplicatingNonManifoldVertices( std::move( triMesh.points ), triMesh.tris, dups, settings, betterCont );
 }
 
-Mesh Mesh::fromFaceSoup(
-    VertCoords vertexCoordinates,
-    const std::vector<VertId> & verts, const Vector<MeshBuilder::VertSpan, FaceId> & faces,
-    const MeshBuilder::BuildSettings& settings, ProgressCallback cb /*= {}*/ )
+Mesh Mesh::fromFaceSoup( FaceSoup && soup, const MeshBuilder::BuildSettings& settings, ProgressCallback cb /*= {}*/ )
 {
     MR_TIMER;
     Mesh res;
-    res.points = std::move( vertexCoordinates );
-    res.topology = MeshBuilder::fromFaceSoup( verts, faces, settings, subprogress( cb, 0.0f, 0.8f ) );
+    res.points = std::move( soup.points );
+    res.topology = MeshBuilder::fromFaceSoup( soup.verts, soup.faces, settings, subprogress( cb, 0.0f, 0.8f ) );
 
     std::vector<EdgeId> holeRepresentativeEdges;
     for ( auto f : res.topology.getValidFaces() )

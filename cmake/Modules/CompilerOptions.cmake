@@ -59,6 +59,8 @@ IF(MSVC)
     # it ignores the MSVC /wd numbers below, and -Wno-clang-cl-pch is its C4605/C4651 (macros differing from the shared PCH)
     string(REPLACE "-Wall -Wextra" "/W4" MESHLIB_CLANG_CL_WARNINGS "${MESHLIB_GCC_CLANG_WARNINGS}")
     set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} ${MESHLIB_CLANG_CL_WARNINGS} -Wno-clang-cl-pch")
+    # clang-cl relaxes aliasing as MSVC does; type-based alias analysis as in the GCC and Clang builds of other platforms
+    set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} -fstrict-aliasing")
   ELSE()
     set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} /Wall /WX")
   ENDIF()

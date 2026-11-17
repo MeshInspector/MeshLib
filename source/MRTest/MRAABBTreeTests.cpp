@@ -458,11 +458,12 @@ std::uint64_t treeHash( const AABBTree & tree )
 }
 
 /// calls f in a task arena of 16 threads, also where the processor has fewer, so that big trees are built with the leaf boxes made again
-/// from the points; fails if a lower limit keeps the threads below 16; does nothing in the single-threaded wasm build
+/// from the points; fails if a lower limit keeps the threads below 16; does nothing in Emscripten builds, where threads beyond the pool
+/// start only when the main thread returns to the event loop, so the extra TBB workers would hang later tests
 template <typename F>
 void withSixteenThreads( F && f )
 {
-#if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
+#ifdef __EMSCRIPTEN__
     (void)f;
 #else
     tbb::global_control gc( tbb::global_control::max_allowed_parallelism, 16 );

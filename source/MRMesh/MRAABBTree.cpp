@@ -12,6 +12,7 @@
 #include "MRTriBox.hpp"
 #include "MRTriMesh.h"
 #include <algorithm>
+#include <cstring>
 #include <limits>
 #include <tbb/parallel_invoke.h>
 
@@ -157,6 +158,7 @@ public:
         nodes_ = nodes;
         leaves_ = leaves;
         leafTris_ = leafTris;
+        streamLeafTris_ = reinterpret_cast<std::uintptr_t>( leafTris ) % 16 == 0;
         parallelSplits_ = numTris_ >= cParallelSplitNum
             && tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) > 1
             && tbb::this_task_arena::max_concurrency() > 1;
@@ -261,13 +263,13 @@ private:
         default: break;
         }
         SimdLeaf sl( noInit );
+        LeafTri lts[AABBTree::MaxLeafTris]; // the unused slots stay invalid
         Box3f box;
         for ( int i = 0; i < AABBTree::MaxLeafTris; ++i )
         {
-            auto & lt = leafTris_[l * AABBTree::MaxLeafTris + i];
+            auto & lt = lts[i];
             if ( i >= num )
             {
-                lt = LeafTri();
                 sl.setEmpty( i );
                 continue;
             }
@@ -282,6 +284,11 @@ private:
         }
         // the arrays are larger than caches, and every leaf is written once
         Simd4::streamCopy( leaves_[l], sl );
+        static_assert( sizeof( lts ) % 16 == 0 );
+        if ( streamLeafTris_ )
+            Simd4::streamCopyBytes( leafTris_ + l * AABBTree::MaxLeafTris, lts, sizeof( lts ) );
+        else
+            std::memcpy( static_cast<void *>( leafTris_ + l * AABBTree::MaxLeafTris ), lts, sizeof( lts ) );
         return box;
     }
 
@@ -294,6 +301,20 @@ private:
         {
             assert( ref == ~lFirst );
             return makeLeaf_( lFirst, c.r );
+        }
+        // the leaves read the triangles and their points in random order: a subtree of up to 64 triangles reads ahead
+        // its triangles, and a subtree of up to 16 triangles (when they are in the cache) reads ahead their points
+        if ( num <= 64 )
+        {
+            const TreeCenter * d = data_( c.r );
+            for ( int i = 0; i < num; ++i )
+            {
+                if ( num > 16 )
+                    MR_PREFETCH( faceTris_ + d[i].i );
+                else
+                    for ( auto v : faceTris_[d[i].i].verts )
+                        MR_PREFETCH( &( *points_ )[v] );
+            }
         }
 
         const auto halves = split_( c.r );
@@ -391,6 +412,7 @@ private:
     SimdNode * nodes_ = nullptr;
     SimdLeaf * leaves_ = nullptr;
     LeafTri * leafTris_ = nullptr;
+    bool streamLeafTris_ = false; // leafTris_ is 16-byte aligned for non-temporal stores
     int numTris_ = 0;
     Cnt total_;
     std::array<Cnt, 2> cnt_[64]; // by binary depth and the number of triangles minus ( numTris_ >> depth )

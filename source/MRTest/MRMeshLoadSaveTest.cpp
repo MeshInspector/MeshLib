@@ -73,6 +73,17 @@ TEST( MRMesh, LoadBinaryOff )
 
     std::istringstream truncated( file.substr( 0, file.size() - 4 ) );
     EXPECT_FALSE( MeshLoad::fromOff( truncated ).has_value() );
+
+    // the last vertex id of the last triangle is out of range
+    for ( int badId : { -1, 5 } )
+    {
+        auto bad = file;
+        const auto u = bit_cast<std::uint32_t>( badId );
+        for ( int i = 0; i < 4; ++i )
+            bad[bad.size() - 8 + i] = char( ( u >> ( 24 - 8 * i ) ) & 0xFF );
+        std::istringstream badIn( bad );
+        EXPECT_FALSE( MeshLoad::fromOffAsFaceSoup( badIn ).has_value() ) << badId;
+    }
 }
 
 TEST(MRMesh, LoadSave) 

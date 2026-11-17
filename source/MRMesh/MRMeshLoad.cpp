@@ -521,8 +521,6 @@ static Expected<FaceSoup> fromOffBinary( std::istream& in, const MeshLoadSetting
         {
             int v = 0;
             readInt( v );
-            if ( v < 0 || v >= numPoints )
-                return unexpected( std::string( "vertex id is larger than total point coordinates" ) );
             flatPolygonIndices.emplace_back( v );
         }
         faces[FaceId( f )] = { firstVertex, firstVertex + numPolygonPoints };
@@ -538,9 +536,7 @@ static Expected<FaceSoup> fromOffBinary( std::istream& in, const MeshLoadSetting
             return unexpectedOperationCanceled();
     }
 
-    if ( !reportProgress( settings.callback, 1.0f ) )
-        return unexpectedOperationCanceled();
-    return FaceSoup{ std::move( points ), std::move( flatPolygonIndices ), std::move( faces ) };
+    return checkFaceSoup( { std::move( points ), std::move( flatPolygonIndices ), std::move( faces ) } );
 }
 
 Expected<FaceSoup> fromOffAsFaceSoup( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )

@@ -1,4 +1,5 @@
 # tree benchmark, added to a MeshLib checkout by tmp-tree-bench.yml and tmp-tree-bench-wasm.yml
+find_package(Threads REQUIRED)
 find_package(TBB 2020.1 COMPONENTS tbb REQUIRED)
 add_executable(treebench treebench.cpp)
 target_link_libraries(treebench PRIVATE MRMesh TBB::tbb)

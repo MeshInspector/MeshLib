@@ -1,8 +1,6 @@
 name: tmp AABBTree benchmark master vs SIMD-only tree
 
 on:
-  push:
-    branches: [ tmp-tree-bench3 ]
   workflow_dispatch:
 
 env:

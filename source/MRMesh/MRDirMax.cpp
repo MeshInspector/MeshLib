@@ -9,6 +9,7 @@
 #include "MRPointCloud.h"
 
 #include <cfloat>
+#include <type_traits>
 
 namespace MR
 {
@@ -16,11 +17,42 @@ namespace MR
 namespace
 {
 
+// AABBTreePoints has leaf nodes, and in other trees the leaves are only referenced from nodes
+template<class Tree>
+constexpr bool hasLeafNodes = std::is_same_v<Tree, AABBTreePoints>;
+
+template<class Tree>
+bool emptyTree( const Tree & tree )
+{
+    if constexpr ( hasLeafNodes<Tree> )
+        return tree.nodes().empty();
+    else
+        return tree.empty();
+}
+
+template<class Tree>
+bool isLeaf( const Tree & tree, NodeId n )
+{
+    if constexpr ( hasLeafNodes<Tree> )
+        return tree[n].leaf();
+    else
+        return tree.isLeaf( n );
+}
+
+template<class Tree>
+const auto & nodeBox( const Tree & tree, NodeId n )
+{
+    if constexpr ( hasLeafNodes<Tree> )
+        return tree[n].box;
+    else
+        return tree.box( n );
+}
+
 template<class V, class Tree, class LeafProcessor>
 VertId findDirMaxT( const V & dir, const Tree & tree, LeafProcessor && lp )
 {
     VertId res;
-    if ( tree.nodes().empty() )
+    if ( emptyTree( tree ) )
         return res;
 
     struct SubTask
@@ -42,7 +74,7 @@ VertId findDirMaxT( const V & dir, const Tree & tree, LeafProcessor && lp )
 
     auto getSubTask = [&]( NodeId n )
     {
-        return SubTask { n, dot( dir, tree.nodes()[n].box.corner( maxCorner ) ) };
+        return SubTask { n, dot( dir, nodeBox( tree, n ).corner( maxCorner ) ) };
     };
 
     addSubTask( getSubTask( tree.rootNodeId() ) );
@@ -51,15 +83,15 @@ VertId findDirMaxT( const V & dir, const Tree & tree, LeafProcessor && lp )
     {
         const auto s = subtasks.top();
         subtasks.pop();
-        const auto & node = tree[s.n];
         if ( s.furthestBoxProj < furthestProj )
             continue;
 
-        if ( node.leaf() )
+        if ( isLeaf( tree, s.n ) )
         {
-            lp( node, furthestProj, res );
+            lp( s.n, furthestProj, res );
             continue;
         }
+        const auto & node = tree[s.n];
 
         auto s1 = getSubTask( node.l );
         auto s2 = getSubTask( node.r );
@@ -85,9 +117,10 @@ VertId findDirMaxT( const V & dir, const Polyline<V> & polyline, UseAABBTree u )
     if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !polyline.getAABBTreeNotCreate() ) )
         return findDirMaxBruteForce( dir, polyline );
 
-    return findDirMaxT( dir, polyline.getAABBTree(), [&]( const typename AABBTreePolyline<V>::Node & node, float & furthestProj, VertId & res )
+    const auto & tree = polyline.getAABBTree();
+    return findDirMaxT( dir, tree, [&]( NodeId n, float & furthestProj, VertId & res )
     {
-        EdgeId e = node.leafId();
+        EdgeId e = tree.leafId( n );
         VertId vs[2] = { polyline.topology.org( e ), polyline.topology.dest( e ) };
         for ( int i = 0; i < 2; ++i )
         {
@@ -108,28 +141,79 @@ VertId findDirMax( const Vector3f & dir, const Mesh & m, UseAABBTree u )
     return findDirMax( dir, MeshPart{ m }, u );
 }
 
+namespace
+{
+
+VertId findDirMaxWide( const Vector3f & dir, const MeshPart & mp, const AABBTree & tree )
+{
+    VertId res;
+    const auto & nodes = tree.nodes();
+    if ( nodes.empty() )
+        return res;
+
+    struct SubTask
+    {
+        NoInitNodeId n;
+        float furthestBoxProj;
+    };
+    const auto maxCorner = Box3f::getMaxBoxCorner( dir );
+    float furthestProj = -FLT_MAX;
+    // every level adds at most MaxChildren - 1 tasks, and the tree of 2^31 triangles has 16 levels
+    InplaceStack<SubTask, 64> subtasks;
+    subtasks.push( { NodeId( 0 ), dot( dir, nodes.front().box.corner( maxCorner ) ) } );
+    while ( !subtasks.empty() )
+    {
+        const auto s = subtasks.top();
+        subtasks.pop();
+        if ( s.furthestBoxProj < furthestProj )
+            continue;
+        const auto & node = nodes[s.n];
+        if ( node.leaf() )
+        {
+            for ( int i = node.first, end = node.first + node.numLeafTris(); i < end; ++i )
+            {
+                const auto & lt = tree.leafTris()[i];
+                if ( mp.region && !mp.region->test( lt.face ) )
+                    continue;
+                for ( auto v : lt.verts )
+                {
+                    const auto proj = dot( mp.mesh.points[v], dir );
+                    if ( proj > furthestProj )
+                    {
+                        furthestProj = proj;
+                        res = v;
+                    }
+                }
+            }
+            continue;
+        }
+        // add the child with larger projection on line last to descend there first
+        SubTask ch[AABBTree::MaxChildren];
+        int numCh = 0;
+        for ( int i = 0; i < node.count; ++i )
+        {
+            const NodeId n( node.first + i );
+            const float proj = dot( dir, nodes[n].box.corner( maxCorner ) );
+            if ( !( proj > furthestProj ) )
+                continue;
+            int k = numCh++;
+            for ( ; k > 0 && ch[k - 1].furthestBoxProj > proj; --k )
+                ch[k] = ch[k - 1];
+            ch[k] = { n, proj };
+        }
+        for ( int i = 0; i < numCh; ++i )
+            subtasks.push( ch[i] );
+    }
+    return res;
+}
+
+} // anonymous namespace
+
 VertId findDirMax( const Vector3f & dir, const MeshPart & mp, UseAABBTree u )
 {
     if ( u == UseAABBTree::No || ( u == UseAABBTree::YesIfAlreadyConstructed && !mp.mesh.getAABBTreeNotCreate() ) )
         return findDirMaxBruteForce( dir, mp );
-
-    return findDirMaxT( dir, mp.mesh.getAABBTree(), [&]( const AABBTree::Node & node, float & furthestProj, VertId & res )
-    {
-        FaceId face = node.leafId();
-        if ( mp.region && !mp.region->test( face ) )
-            return;
-        VertId vs[3];
-        mp.mesh.topology.getTriVerts( face, vs );
-        for ( int i = 0; i < 3; ++i )
-        {
-            auto proj = dot( mp.mesh.points[vs[i]], dir );
-            if ( proj > furthestProj )
-            {
-                furthestProj = proj;
-                res = vs[i];
-            }
-        }
-    } );
+    return findDirMaxWide( dir, mp, mp.mesh.getAABBTree() );
 }
 
 VertId findDirMax( const Vector3f & dir, const MeshVertPart & mp, UseAABBTree u )
@@ -162,9 +246,9 @@ VertId findDirMax( const Vector3f & dir, const AABBTreePoints & tree, const Vert
 {
     const auto& orderedPoints = tree.orderedPoints();
 
-    return findDirMaxT( dir, tree, [&]( const AABBTreePoints::Node & node, float & furthestProj, VertId & res )
+    return findDirMaxT( dir, tree, [&]( NodeId n, float & furthestProj, VertId & res )
     {
-        auto [first, last] = node.getLeafPointRange();
+        auto [first, last] = tree[n].getLeafPointRange();
         for ( int i = first; i < last; ++i )
         {
             if ( region )

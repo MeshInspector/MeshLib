@@ -211,6 +211,9 @@
     <ClCompile Include="MRMeshCollideTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRPointsToMeshProjectorTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRShrinkwrapTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -386,6 +389,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRViewportIdTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRViewportTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRVolumeIndexerTests.cpp">

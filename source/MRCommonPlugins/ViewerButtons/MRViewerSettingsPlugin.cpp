@@ -34,6 +34,7 @@
 #include "MRMesh/MRConfig.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRViewer/MRViewportGlobalBasis.h"
+#include "MRViewer/MRViewportCornerController.h"
 #include "MRViewer/MRImGuiMultiViewport.h"
 #include "MRViewer/MRShortcutManager.h"
 #include "MRViewer/MRViewerConfigConstants.h"
@@ -371,6 +372,15 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth )
         UI::setTooltipIfHovered( _tr( "Allow tool windows to be moved outside the main window. To apply the changes, need to restart the application." ) );
     }
 
+    if ( viewer->getLaunchParams().splashWindow )
+    {
+        auto& config = Config::instance();
+        bool value = config.getBool( cShowSplashScreenKey, true );
+        if ( UI::checkbox( _tr( "Show Splash Screen" ), &value ) )
+            config.setBool( cShowSplashScreenKey, value );
+        UI::setTooltipIfHovered( _tr( "Show the splash screen while the application is starting." ) );
+    }
+
     if ( UI::button( _tr( "Toolbar Customize" ), Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu )
         ribbonMenu->openToolbarCustomize();
 
@@ -576,6 +586,14 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth )
     bool showRotCenter = viewer->rotationSphere->isVisible( viewport.id );
     UI::checkbox( _tr( "Show Rotation Center" ), &showRotCenter );
     viewport.showRotationCenter( showRotCenter );
+
+    if ( viewer->basisViewController )
+    {
+        bool viewCubeAnimation = viewer->basisViewController->isCameraAnimationEnabled();
+        if ( UI::checkbox( _tr( "View Cube Animation" ), &viewCubeAnimation ) )
+            viewer->basisViewController->enableCameraAnimation( viewCubeAnimation );
+        UI::setTooltipIfHovered( _tr( "Smoothly turns the camera after a click on the view cube in the viewport corner." ) );
+    }
 
     ImGui::PopItemWidth();
     ImGui::PopStyleVar();

@@ -108,7 +108,7 @@ jobs:
       - name: Checkout third-party submodules
         if: ${{ !matrix.cmake_install }}
         shell: bash
-        run: scripts/checkout_submodules.sh . thirdparty/imgui thirdparty/parallel-hashmap thirdparty/mrbind-pybind11
+        run: scripts/checkout_submodules.sh . thirdparty/imgui thirdparty/parallel-hashmap
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}

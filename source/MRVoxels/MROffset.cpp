@@ -342,7 +342,7 @@ Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetP
     }
     else
     {
-        resMesh.topology.flipOrientation(); // flip to have inversed offset
+        resMesh.flipOrientation(); // flip to have inversed offset
         // add original mesh to the result without flipping
         resMesh.addMesh( mesh, map );
     }
@@ -391,7 +391,7 @@ Expected<Mesh> offsetOneDirection( const MeshPart& mp, float offset, const Gener
         resMesh.pack();
 
         if ( offset < 0 )
-            resMesh.topology.flipOrientation();
+            resMesh.flipOrientation();
     }
 
     return resMesh;

@@ -42,6 +42,7 @@ std::string getShaderName( MR::GLStaticHolder::ShaderType type )
         "Viewport points shader (no offset)",
         "Immediate tri shader",
         "Viewport border shader",
+        "Viewport background shader",
         "Alpha-sort overlay shader",
         "Shadow overlay shader",
         "Simple overlay shader",
@@ -439,13 +440,13 @@ void GLStaticHolder::createShader_( ShaderType type )
 	b = tmp; \
 }
 
-layout (early_fragment_tests) in;
+// no early_fragment_tests: the depth test must use gl_FragDepth
 
 out vec4 color;
 
 struct Node 
 {
-    vec4    color;
+    uvec2   color; // packHalf2x16 of rg and ba
     float   depth;
     uint    next;
 };
@@ -489,7 +490,8 @@ vec4 blendColor(uint fragsInds[MAX_FRAGMENTS], int count)
     for ( int i = count - 1; i >= 0; i-- )
     {
         float destA = color.a;
-        vec4 fragColor = nodes[fragsInds[i]].color;
+        uvec2 packedColor = nodes[fragsInds[i]].color;
+        vec4 fragColor = vec4( unpackHalf2x16( packedColor.x ), unpackHalf2x16( packedColor.y ) );
         color.a = fragColor.a + destA * ( 1.0 - fragColor.a );
         if ( color.a == 0.0 )
           color.rgb = vec3(0);
@@ -602,6 +604,27 @@ void main(void)
   }
 )";
         }
+        else if ( type == ViewportBackground )
+        {
+            fragmentShader =
+                MR_GLSL_VERSION_LINE R"(
+  precision highp float;
+  precision highp int;
+  uniform sampler2D pixels;
+  uniform vec2 origin; // framebuffer position of the image's lower-left corner
+  uniform vec2 size; // image size in framebuffer pixels
+  uniform bool clipOutside; // draw nothing outside the image
+  out vec4 outColor;
+
+  void main()
+  {
+    vec2 pos = ( gl_FragCoord.xy - origin ) / size;
+    if ( clipOutside && pos != clamp( pos, 0.0, 1.0 ) )
+      discard;
+    outColor = texture( pixels, pos );
+  }
+)";
+        }
         else if ( type == DepthOverlayQuad )
         {
             fragmentShader =
@@ -611,6 +634,7 @@ void main(void)
   uniform sampler2D pixels;
   uniform sampler2D depths;
   uniform vec2 viewportSize;
+  uniform float maxDepth;
   out vec4 outColor;                 // (out to render) fragment color
 
   void main()
@@ -621,9 +645,9 @@ void main(void)
     if ( outColor.a == 0.0 )
       discard;
     float depth = texture(depths, pos ).r;
-    if ( depth > 0.999 ) // antialiased pixels might have _depth == 1.0
-      gl_FragDepth = 0.999;
-    else 
+    if ( depth > maxDepth ) // antialiased pixels might have _depth == 1.0
+      gl_FragDepth = maxDepth;
+    else
       gl_FragDepth = depth;
   }
 )";

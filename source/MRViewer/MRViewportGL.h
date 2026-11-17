@@ -1,5 +1,6 @@
 #pragma once
 #include "MRViewerFwd.h"
+#include "MRRenderGLHelpers.h"
 #include "MRMesh/MRVector4.h"
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRBox.h"
@@ -12,28 +13,6 @@
 
 namespace MR
 {
-// colors of segment ends
-struct SegmEndColors
-{
-    Vector4f a, b;
-};
-
-inline bool operator==( const SegmEndColors& a, const SegmEndColors& b )
-{
-    return a.a == b.a && a.b == b.b;
-}
-
-// stores points and corresponding colors (sizes of vectors should be the same)
-struct ViewportPointsWithColors
-{
-    std::vector<Vector3f> points;
-    std::vector<Vector4f> colors;
-};
-
-inline bool operator==( const ViewportPointsWithColors& a, const ViewportPointsWithColors& b )
-{
-    return a.points == b.points && a.colors == b.colors;
-}
 
 // This class holds data needed to render viewport primitives and accumulative picker via OpenGL
 class ViewportGL
@@ -61,6 +40,12 @@ public:
 
     // Fills viewport with given color (clear frame buffer)
     void fillViewport( const Box2f& rect, const Color& color ) const;
+
+    // Draws texture over the viewport filled with background color, nothing outside texRect if the wrap type is Clamp;
+    // texRect is the image rectangle in framebuffer coordinates, the image is uploaded to GL on `refresh` or first draw
+    void drawBackgroundTexture( const Box2f& rect, const MeshTexture& texture, const Box2f& texRect, bool refresh );
+    // Frees GL memory of the background texture
+    void freeBackgroundTexture() { background_texture.del(); }
 
     // Check that members have been initialized
     bool checkInit() const;
@@ -135,6 +120,10 @@ private:
 
     GLuint border_line_vbo = 0;
     GLuint border_line_vao = 0;
+
+    GLuint background_vbo = 0;
+    GLuint background_vao = 0;
+    GlTexture2 background_texture;
 };
 
 }

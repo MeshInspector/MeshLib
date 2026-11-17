@@ -35,10 +35,13 @@ RenderPointsObject::~RenderPointsObject()
 bool RenderPointsObject::render( const ModelRenderParams& renderParams )
 {
     MR_TIMER;
-    bool isColorTransparent = objPoints_->getFrontColor( objPoints_->isSelected(), renderParams.viewportId ).a < 255;
+    // the shader discards fully transparent fragments, so a fully transparent color needs no transparent pass;
+    // a color map fully replaces the front color, then its alpha < 255 is the way to request the transparent pass for translucent map colors
+    const auto front = objPoints_->getFrontColor( objPoints_->isSelected(), renderParams.viewportId );
+    bool isColorTransparent = objPoints_->getColoringType() == ColoringType::SolidColor ? front.isTranslucent() : front.a < 255;
     if ( !isColorTransparent && objPoints_->pointCloudPtr() && objPoints_->pointCloudPtr()->hasNormals() )
     {
-        isColorTransparent = objPoints_->getBackColor( renderParams.viewportId ).a < 255;
+        isColorTransparent = objPoints_->getBackColor( renderParams.viewportId ).isTranslucent();
     }
     bool depthTest = objPoints_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId );
     RenderModelPassMask desiredPass =

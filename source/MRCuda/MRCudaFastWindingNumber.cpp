@@ -21,11 +21,16 @@ namespace MR
 namespace Cuda
 {
 
+static_assert( sizeof( WideNode3 ) == sizeof( AABBTree::Node ) );
+static_assert( sizeof( LeafTri3 ) == sizeof( AABBTree::LeafTri ) );
+
+
 struct FastWindingNumberDataBuffers
 {
     DynamicArray<Dipole> dipoles;
     DynamicArray<float3> cudaMeshPoints;
-    DynamicArray<Node3> cudaNodes;
+    DynamicArray<WideNode3> cudaNodes;
+    DynamicArray<LeafTri3> cudaLeafTris;
     DynamicArray<FaceToThreeVerts> cudaFaces;
 
     [[nodiscard]] FastWindingNumberData toData() const
@@ -33,6 +38,7 @@ struct FastWindingNumberDataBuffers
         return {
             .dipoles = dipoles.data(),
             .nodes = cudaNodes.data(),
+        .leafTris = cudaLeafTris.data(),
             .meshPoints = cudaMeshPoints.data(),
             .faces = cudaFaces.data(),
         };
@@ -73,6 +79,7 @@ Expected<void> FastWindingNumber::prepareData_( ProgressCallback cb )
 
     const auto& nodes = tree.nodes();
     CUDA_LOGE_RETURN_UNEXPECTED( data->cudaNodes.fromVector( nodes ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( data->cudaLeafTris.fromVector( tree.leafTris() ) );
     if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
 
@@ -198,6 +205,7 @@ Expected<void> FastWindingNumber::calcFromGrid( std::vector<float>& res, const V
     if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
 
+    res.resize( totalSize );
     const auto cb1 = subprogress( cb, 0.60f, 1.00f );
     const auto iterCount = chunkCount( totalSize, bufferSize );
     size_t iterIndex = 0;
@@ -253,6 +261,7 @@ Expected<void> FastWindingNumber::calcFromGridWithDistances( VoxelScalars& res, 
     if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
 
+    res.resize( totalSize );
     const auto cb1 = subprogress( cb, 0.60f, 1.00f );
     const auto iterCount = chunkCount( totalSize, bufferSize );
     size_t iterIndex = 0;

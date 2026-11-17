@@ -132,21 +132,6 @@ jobs:
           # No retry.sh, linux scripts retry themselves.
           scripts/clone_submodules_linux_vcpkg.sh --skip-prebuilt-thirdparty
 
-      - name: Install MRBind
-        if: ${{ inputs.mrbind || inputs.mrbind_c }}
-        uses: ./.github/actions/build-mrbind
-        env:
-          GCC_INSTALL_DIR: ${{ matrix.gcc-install-dir }}
-        with:
-          # The C bindings come from the generate-c-bindings job, so no parser.
-          generators-only: 'true'
-          # Prefix is shared with pip-build.yml's rocky section, which uses the same
-          # image and script. The Dockerfile hash in extra-cache-key busts the cache
-          # whenever the toolchain inside the image changes (e.g. clang upgrade).
-          cache-key-prefix: rockylinux8-vcpkg-${{ matrix.arch }}
-          build-script: scripts/mrbind/install_mrbind_rockylinux.sh
-          extra-cache-key: ${{ hashFiles('docker/rockylinux8-vcpkgDockerfile') }}
-
       - name: Create virtualenv
         run: |
           python3.12 -m venv .venv
@@ -200,7 +185,7 @@ jobs:
         # extern ref to path::_List::type, which EL8 defines in no library.
         run: |
           clang -O2 -c scripts/mrbind/libstdcxx_fs_path_compat.c -o libstdcxx_fs_path_compat.o
-          make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib EXTRA_CFLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }} EXTRA_LDFLAGS="--gcc-install-dir=${{ matrix.gcc-install-dir }} $PWD/libstdcxx_fs_path_compat.o"
+          make -f scripts/mrbind/generate.mk MODE=none -B --trace PYTHON_SOURCES_DIR=source/MeshLibC2/temp/python MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib EXTRA_CFLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }} EXTRA_LDFLAGS="--gcc-install-dir=${{ matrix.gcc-install-dir }} $PWD/libstdcxx_fs_path_compat.o"
 
       - name: Run Start-and-Exit Tests
         timeout-minutes: 3

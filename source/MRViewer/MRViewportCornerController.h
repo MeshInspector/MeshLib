@@ -43,8 +43,13 @@ public:
 
     /// marks this object as drawn
     MRVIEWER_API void resetRedrawFlag();
+
+    /// enables or disables smooth camera animation after a click on this object (enabled by default)
+    void enableCameraAnimation( bool on ) { cameraAnimation_ = on; }
+    [[nodiscard]] bool isCameraAnimationEnabled() const { return cameraAnimation_; }
 private:
     std::shared_ptr<Object> rootObj_;
+    bool cameraAnimation_ = true;
     std::vector<boost::signals2::scoped_connection> connections_;
 
     PickedIds pick_( const Vector2f& mousePos ) const;
@@ -97,7 +102,8 @@ MRVIEWER_API RegionId getCornerControllerRegionByFace( FaceId face );
 /// returns textures map with region faces hovered
 MRVIEWER_API TexturePerFace getCornerControllerHoveredTextureMap( RegionId rId );
 
-/// setup camera for selected viewport by corner controller region
-MRVIEWER_API void updateCurrentViewByControllerRegion( CornerControllerObject::PickedIds pickedId );
+/// setup camera for selected viewport by corner controller region;
+/// animationSec - duration of the camera animation in seconds, zero to change the camera at once
+MRVIEWER_API void updateCurrentViewByControllerRegion( CornerControllerObject::PickedIds pickedId, float animationSec = 0 );
 
 }

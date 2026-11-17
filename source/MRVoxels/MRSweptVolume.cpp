@@ -134,7 +134,7 @@ template <typename Callback>
 void findEdgesInTool( const Polyline3& polyline, const Vector3f& pos, float toolRadius, float toolMinHeight, float toolMaxHeight, Callback&& cb )
 {
     const auto& tree = polyline.getAABBTree();
-    if ( tree.nodes().empty() )
+    if ( tree.empty() )
         return;
 
     const auto pos2 = Vector2f{ pos };
@@ -151,7 +151,7 @@ void findEdgesInTool( const Polyline3& polyline, const Vector3f& pos, float tool
 
     auto addSubTask = [&] ( NodeId n )
     {
-        const auto& box = tree.nodes()[n].box;
+        const auto& box = tree.box( n );
         if ( box.intersection( toolBox ).valid() )
             subtasks.push( n );
     };
@@ -162,11 +162,10 @@ void findEdgesInTool( const Polyline3& polyline, const Vector3f& pos, float tool
     {
         const auto n = subtasks.top();
         subtasks.pop();
-        const auto& node = tree[n];
 
-        if ( node.leaf() )
+        if ( tree.isLeaf( n ) )
         {
-            const auto segm = polyline.edgeSegment( node.leafId() );
+            const auto segm = polyline.edgeSegment( tree.leafId( n ) );
             const auto proj = closestPointOnLineSegm( pos, segm );
 
             const auto dist2Sq = ( Vector2f{ proj } - pos2 ).lengthSq();
@@ -179,6 +178,7 @@ void findEdgesInTool( const Polyline3& polyline, const Vector3f& pos, float tool
         }
         else
         {
+            const auto& node = tree[n];
             addSubTask( node.r ); // look at right node later
             addSubTask( node.l ); // look at left node first
         }

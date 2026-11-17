@@ -29,7 +29,6 @@ libharu
 libjpeg-turbo
 libzip
 mimalloc
-mrbind-pybind11
 opencascade-minimal
 openctm
 openvdb

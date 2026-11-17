@@ -266,26 +266,4 @@ else()
     set(HTTPLIB_USE_ZSTD_IF_AVAILABLE OFF)
     meshlib_add_package(cpp-httplib)
   endif()
-
-  function(add_mrbind_pybind11)
-    set(PYBIND11_INSTALL ON)
-    option(PYBIND11_NONLIMITEDAPI_BUILD_STUBS "" ON)
-    option(PYBIND11_NONLIMITEDAPI_INSTALL_EXPORTS "" ON)
-    set(PYBIND11_NONLIMITEDAPI_SUFFIX "meshlib" CACHE STRING "")
-    set(PYBIND11_NONLIMITEDAPI_PYTHON_MIN_VERSION_HEX "0x030800f0" CACHE STRING "") # Python 3.8
-    set(PYBIND11_NONLIMITEDAPI_INTERNALS_VERSION "5" CACHE STRING "")
-    set(PYBIND11_NONLIMITEDAPI_COMPILER_TYPE_STRING "_meshlib" CACHE STRING "")
-    set(PYBIND11_NONLIMITEDAPI_BUILD_ABI_STRING "_meshlib" CACHE STRING "")
-    IF(APPLE)
-      set(PYBIND11_NONLIMITEDAPI_PYTHON_HEADERS_VERSION "3.12" CACHE STRING "")
-      execute_process(
-        COMMAND brew --prefix
-        OUTPUT_VARIABLE HOMEBREW_PREFIX
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-      )
-      set(Python_ROOT_DIR "${HOMEBREW_PREFIX}/opt/python@${PYBIND11_NONLIMITEDAPI_PYTHON_HEADERS_VERSION}")
-    ENDIF()
-    meshlib_add_package(mrbind-pybind11)
-  endfunction()
-  add_mrbind_pybind11()
 endif()

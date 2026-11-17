@@ -135,11 +135,6 @@ set(MESHLIB_PACKAGE_mimalloc
   GIT_TAG v3.5.3
 )
 
-set(MESHLIB_PACKAGE_mrbind-pybind11
-  GIT_REPOSITORY https://github.com/MeshInspector/mrbind-pybind11
-  GIT_TAG 2bead442a0146befdd5383bab79f5aa101afb573
-)
-
 set(MESHLIB_PACKAGE_nlohmann-json
   GIT_REPOSITORY https://github.com/nlohmann/json
   GIT_TAG 3946872265598aed5a7aea68cad4d9d1f168bd4b

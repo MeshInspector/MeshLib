@@ -4,6 +4,8 @@
 #include <MRMesh/MRMeshLoadObj.h>
 #include <MRMesh/MRMeshSave.h>
 #include <MRMesh/MRMesh.h>
+#include <MRMesh/MRAffineXf3.h>
+#include <MRMesh/MRMatrix3.h>
 #include <MRMesh/MRTriMesh.h>
 #include <MRMesh/MRBitCast.h>
 #include <MRMesh/MRBox.h>
@@ -14,6 +16,10 @@
 #include <MRMesh/MRIOFormatsRegistry.h>
 #include <MRMesh/MRObjectGcode.h>
 #include <MRMesh/MRObjectMesh.h>
+#include <MRMesh/MRObjectPoints.h>
+#include <MRMesh/MRPointCloud.h>
+#include <MRMesh/MRPointsLoad.h>
+#include <MRMesh/MRObjectLoad.h>
 #include <MRMesh/MRObjectSave.h>
 #include <MRMesh/MRStringConvert.h>
 #include <MRMesh/MRUniqueTemporaryFolder.h>
@@ -168,6 +174,76 @@ TEST(MRMesh, TriMeshSavePly)
     EXPECT_EQ( loadRes->topology.numValidFaces(), 6 );
 }
 
+TEST(MRMesh, TriMeshSaveAllFormats)
+{
+    TriMesh triMesh;
+    triMesh.tris = Triangulation{
+        { 0_v, 1_v, 2_v },
+        { 0_v, 2_v, 3_v },
+        { 0_v, 3_v, 4_v },
+        { 0_v, 4_v, 1_v },
+        { 1_v, 3_v, 2_v },
+        { 1_v, 4_v, 3_v }
+    };
+    triMesh.points.emplace_back( 0.f, 0.f, 1.f );
+    triMesh.points.emplace_back( 1.f, 0.f, 0.f );
+    triMesh.points.emplace_back( 0.f, 1.f, 0.f );
+    triMesh.points.emplace_back( -1.f, 0.f, 0.f );
+    triMesh.points.emplace_back( 0.f, -1.f, 0.f );
+    const auto mesh = Mesh::fromTriMesh( TriMesh( triMesh ) );
+
+    VertColors colors;
+    for ( int i = 0; i < 5; ++i )
+        colors.push_back( Color( 50 * i, 0, 0 ) );
+    const AffineXf3d xf( Matrix3d::scale( 2.0 ), Vector3d( 1, 2, 3 ) );
+    const SaveSettings settings{ .colors = &colors, .xf = &xf };
+
+    // TriMesh region and the Mesh with all other triangles deleted, which also deletes vertex #4
+    const FaceBitSet region = FaceBitSet( 6 ).set( 0_f ).set( 1_f ).set( 4_f );
+    auto meshPart = mesh;
+    meshPart.deleteFaces( FaceBitSet( 6, true ) - region );
+    ASSERT_EQ( meshPart.topology.numValidVerts(), 4 );
+
+    // the same bytes must be saved for TriMesh and for equivalent Mesh
+    auto check = [&]( auto saver, const char * name )
+    {
+        SCOPED_TRACE( name );
+        for ( bool onlyValidPoints : { true, false } )
+        {
+            for ( bool packPrimitives : { true, false } )
+            {
+                auto s = settings;
+                s.onlyValidPoints = onlyValidPoints;
+                s.packPrimitives = packPrimitives;
+                std::ostringstream outTriMesh, outMesh, outTriMeshRegion, outMeshPart;
+                EXPECT_TRUE( saver( triMesh, outTriMesh, s ).has_value() );
+                EXPECT_TRUE( saver( mesh, outMesh, s ).has_value() );
+                EXPECT_FALSE( outTriMesh.str().empty() );
+                EXPECT_EQ( outTriMesh.str(), outMesh.str() );
+
+                EXPECT_TRUE( saver( triMesh, outTriMeshRegion, s, &region ).has_value() );
+                EXPECT_TRUE( saver( meshPart, outMeshPart, s ).has_value() );
+                EXPECT_EQ( outTriMeshRegion.str(), outMeshPart.str() );
+                EXPECT_NE( outTriMeshRegion.str(), outTriMesh.str() );
+            }
+        }
+    };
+    check( []( const auto & m, std::ostream & out, const SaveSettings & s, auto... r ) { return MeshSave::toOff( m, out, s, r... ); }, "off" );
+    check( []( const auto & m, std::ostream & out, const SaveSettings & s, auto... r ) { return MeshSave::toObj( m, out, s, r... ); }, "obj" );
+    check( []( const auto & m, std::ostream & out, const SaveSettings & s, auto... r ) { return MeshSave::toObj( m, out, s, 10, r... ); }, "obj firstVertId" );
+    check( []( const auto & m, std::ostream & out, const SaveSettings & s, auto... r ) { return MeshSave::toBinaryStl( m, out, s, r... ); }, "binary stl" );
+    check( []( const auto & m, std::ostream & out, const SaveSettings & s, auto... r ) { return MeshSave::toAsciiStl( m, out, s, r... ); }, "ascii stl" );
+    check( []( const auto & m, std::ostream & out, const SaveSettings & s, auto... r ) { return MeshSave::toPly( m, out, s, r... ); }, "ply" );
+    check( []( const auto & m, std::ostream & out, const SaveSettings & s, auto... r ) { return MeshSave::toModel3mf( m, out, s, r... ); }, "model" );
+
+    UniqueTemporaryFolder dir;
+    ASSERT_TRUE( dir );
+    EXPECT_TRUE( MeshSave::to3mf( triMesh, dir / "tri.3mf" ).has_value() );
+    EXPECT_GT( std::filesystem::file_size( dir / "tri.3mf" ), 0 );
+    EXPECT_TRUE( MeshSave::to3mf( triMesh, dir / "region.3mf", {}, &region ).has_value() );
+    EXPECT_GT( std::filesystem::file_size( dir / "region.3mf" ), 0 );
+}
+
 TEST(MRMesh, LoadPlyDuplicatingNonManifoldVertices)
 {
     // two closed triangle fans sharing only the central vertex #0
@@ -230,6 +306,59 @@ TEST(MRMesh, LoadPlyPointCloud)
     ASSERT_TRUE( loadRes.has_value() );
     EXPECT_EQ( loadRes->points.size(), 2 );
     EXPECT_EQ( loadRes->topology.numValidFaces(), 0 );
+}
+
+TEST(MRMesh, SaveObjectTreeAsPoints)
+{
+    // the points of every point cloud object in the tree are saved, in world coordinates
+    Object root;
+    for ( int i = 0; i < 2; ++i )
+    {
+        auto pointCloud = std::make_shared<PointCloud>();
+        pointCloud->addPoint( Vector3f( float( i ), 0, 0 ) );
+        pointCloud->addPoint( Vector3f( float( i ), 1, 0 ) );
+        auto objPoints = std::make_shared<ObjectPoints>();
+        objPoints->setPointCloud( pointCloud );
+        objPoints->setXf( AffineXf3f::translation( Vector3f( 0, 0, float( i + 1 ) ) ) );
+        root.addChild( objPoints );
+    }
+
+    UniqueTemporaryFolder dir;
+    ASSERT_TRUE( ObjectSave::toAnySupportedFormat( root, dir / "points.xyz" ).has_value() );
+    auto loaded = PointsLoad::fromAnySupportedFormat( dir / "points.xyz" );
+    ASSERT_TRUE( loaded.has_value() );
+    ASSERT_EQ( loaded->points.size(), 4 );
+    EXPECT_EQ( loaded->points[0_v], Vector3f( 0, 0, 1 ) );
+    EXPECT_EQ( loaded->points[1_v], Vector3f( 0, 1, 1 ) );
+    EXPECT_EQ( loaded->points[2_v], Vector3f( 1, 0, 2 ) );
+    EXPECT_EQ( loaded->points[3_v], Vector3f( 1, 1, 2 ) );
+}
+
+TEST(MRMesh, SaveStlSolidColor)
+{
+    // object color in the header by Materialise Magics convention, and in every triangle by both Magics and VisCAM conventions
+    auto mesh = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 1, 0, 0 ), Vector3f( 0, 1, 0 ) }, { { 0_v, 1_v, 2_v } } );
+    std::ostringstream out;
+    ASSERT_TRUE( MeshSave::toBinaryStl( mesh, out, { .solidColor = Color( 10, 20, 30, 40 ) } ).has_value() );
+    const auto s = out.str();
+    ASSERT_EQ( s.size(), 80 + 4 + 50 );
+    EXPECT_EQ( s.substr( 0, 28 ), std::string( "MeshInspector.com COLOR=\x0A\x14\x1E\x28" ) );
+    EXPECT_EQ( s.substr( 132, 2 ), std::string( "\x43\x84" ) ); // 0x8000 | 1 << 10 | 2 << 5 | 3
+
+    std::optional<Color> loadedColor;
+    std::istringstream in( s );
+    ASSERT_TRUE( MeshLoad::fromBinaryStl( in, { .solidColor = &loadedColor } ).has_value() );
+    EXPECT_EQ( loadedColor, Color( 10, 20, 30, 40 ) );
+
+    // the loaded object gets the color both selected and not
+    UniqueTemporaryFolder dir;
+    ASSERT_TRUE( MeshSave::toBinaryStl( mesh, dir / "model.stl", { .solidColor = Color( 10, 20, 30, 40 ) } ).has_value() );
+    auto obj = makeObjectFromMeshFile( dir / "model.stl" );
+    ASSERT_TRUE( obj.has_value() );
+    auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( obj->obj );
+    ASSERT_TRUE( objMesh );
+    EXPECT_EQ( objMesh->getFrontColor( true ), Color( 10, 20, 30, 40 ) );
+    EXPECT_EQ( objMesh->getFrontColor( false ), Color( 10, 20, 30, 40 ) );
 }
 
 TEST(MRMesh, StlLoadAsTriMesh)
@@ -549,6 +678,23 @@ TEST(MRMesh, LoadObjMtlNameWithSpaces)
     EXPECT_EQ( res->warnings, "" );
     ASSERT_EQ( res->objs.size(), 2 );
     EXPECT_EQ( frontColor( res->objs[0] ), Color::red() );
+}
+
+TEST(MRMesh, SaveObjSolidColor)
+{
+#ifdef __EMSCRIPTEN__
+    GTEST_SKIP() << ".mtl files are not saved in this build";
+#endif
+    // object color is saved in Kd of the material
+    UniqueTemporaryFolder dir;
+    auto mesh = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 1, 0, 0 ), Vector3f( 0, 1, 0 ) }, { { 0_v, 1_v, 2_v } } );
+    const Color solid( 255, 51, 0 );
+    ASSERT_TRUE( MeshSave::toObj( mesh, dir / "model.obj", { .materialName = "model", .solidColor = solid } ).has_value() );
+
+    auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
+    ASSERT_TRUE( res.has_value() );
+    ASSERT_EQ( res->objs.size(), 1 );
+    EXPECT_EQ( frontColor( res->objs[0] ), solid );
 }
 
 TEST(MRMesh, LoadObjWithTexture)

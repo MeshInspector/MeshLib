@@ -1,7 +1,7 @@
 name: 'Verify meshlib.mrmeshpy import'
 description: |
-  Run scripts/ci/verify_meshlib_import.py against every Python shim in
-  the build dir, to surface import failures with a real traceback.
+  Run scripts/ci/verify_meshlib_import.py with every Python version the
+  runner has, to surface import failures with a real traceback.
 
 inputs:
   build-bin-dir:
@@ -11,11 +11,9 @@ inputs:
 runs:
   using: composite
   steps:
-    # The pybind11 shim filename (pybind11nonlimitedapi_meshlib_X.Y.{dll,so,dylib})
-    # encodes the Python version the bindings target; pip-build jobs produce
-    # one shim per version. Run verify against each shim using the matching
-    # interpreter, from PATH or from uv's launcher directory; skip versions
-    # that have neither.
+    # The modules use the limited API of Python, so check them with every version of
+    # scripts/wheel/python_versions.txt that the runner has, from PATH or from uv's
+    # launcher directory; skip the versions that it doesn't have.
 
     - name: Verify meshlib.mrmeshpy import (Windows)
       if: runner.os == 'Windows'
@@ -23,18 +21,11 @@ runs:
       env:
         PYTHONPATH: ${{ inputs.build-bin-dir }}
       run: |
-        $meshlib = Join-Path '${{ inputs.build-bin-dir }}' 'meshlib'
-        $shims = @(Get-ChildItem -Path $meshlib -Filter 'pybind11nonlimitedapi_meshlib_*.dll' -ErrorAction SilentlyContinue | Sort-Object Name)
-        if ($shims.Count -eq 0) {
-          Write-Host "No pybind11nonlimitedapi_meshlib_*.dll shim in $meshlib; running once with default py -3"
-          py -3 -u "$Env:GITHUB_WORKSPACE/scripts/ci/verify_meshlib_import.py"
-          exit $LASTEXITCODE
-        }
+        $versions = @(Get-Content "$Env:GITHUB_WORKSPACE/scripts/wheel/python_versions.txt" | Where-Object { $_.Trim() })
         $attempted = 0; $failed = 0; $skipped = @()
-        foreach ($shim in $shims) {
-          $ver = $shim.BaseName -replace '^pybind11nonlimitedapi_meshlib_', ''
+        foreach ($ver in $versions) {
           Write-Host ""
-          Write-Host "===== verify with py -$ver  (shim: $($shim.Name)) ====="
+          Write-Host "===== verify with py -$ver ====="
           py "-$ver" -c "import sys" 2>$null
           if ($LASTEXITCODE -ne 0) {
             Write-Host "SKIP: py -$ver not available on runner"
@@ -45,8 +36,13 @@ runs:
           py "-$ver" -u "$Env:GITHUB_WORKSPACE/scripts/ci/verify_meshlib_import.py"
           if ($LASTEXITCODE -ne 0) { $failed++ }
         }
+        if ($attempted -eq 0) {
+          Write-Host "No listed Python version on the runner; running once with default py -3"
+          py -3 -u "$Env:GITHUB_WORKSPACE/scripts/ci/verify_meshlib_import.py"
+          exit $LASTEXITCODE
+        }
         Write-Host ""
-        Write-Host "Summary: shims=$($shims.Count) attempted=$attempted failed=$failed skipped=$($skipped.Count) [$($skipped -join ', ')]"
+        Write-Host "Summary: versions=$($versions.Count) attempted=$attempted failed=$failed skipped=$($skipped.Count) [$($skipped -join ', ')]"
         if ($failed -gt 0) { exit 1 }
 
     - name: Verify meshlib.mrmeshpy import (Unix)
@@ -55,19 +51,10 @@ runs:
       env:
         PYTHONPATH: ${{ inputs.build-bin-dir }}
       run: |
-        meshlib="${{ inputs.build-bin-dir }}/meshlib"
-        shopt -s nullglob
-        shims=( "$meshlib"/libpybind11nonlimitedapi_meshlib_*.so "$meshlib"/libpybind11nonlimitedapi_meshlib_*.dylib )
-        shopt -u nullglob
-        if [ "${#shims[@]}" -eq 0 ]; then
-          echo "No libpybind11nonlimitedapi_meshlib_*.{so,dylib} shim in $meshlib; running once with default python3"
-          exec python3 -u "$GITHUB_WORKSPACE/scripts/ci/verify_meshlib_import.py"
-        fi
         attempted=0
         failed=0
         skipped=()
-        for shim in "${shims[@]}"; do
-          ver=$(basename "$shim" | sed -E 's/^libpybind11nonlimitedapi_meshlib_([0-9]+\.[0-9]+)\.(so|dylib)$/\1/')
+        for ver in $(cat "$GITHUB_WORKSPACE/scripts/wheel/python_versions.txt"); do
           py_cmd="python${ver}"
           if ! command -v "$py_cmd" >/dev/null 2>&1 && command -v uv >/dev/null 2>&1; then
             uv_bin=$(uv python dir --bin)
@@ -76,7 +63,7 @@ runs:
             fi
           fi
           echo
-          echo "===== verify with $py_cmd  (shim: $(basename "$shim")) ====="
+          echo "===== verify with $py_cmd ====="
           if ! command -v "$py_cmd" >/dev/null 2>&1; then
             echo "SKIP: $py_cmd not on PATH"
             skipped+=( "$ver" )
@@ -87,6 +74,10 @@ runs:
             failed=$((failed + 1))
           fi
         done
+        if [ "$attempted" -eq 0 ]; then
+          echo "No listed Python version on the runner; running once with default python3"
+          exec python3 -u "$GITHUB_WORKSPACE/scripts/ci/verify_meshlib_import.py"
+        fi
         echo
-        echo "Summary: shims=${#shims[@]} attempted=${attempted} failed=${failed} skipped=${#skipped[@]} [${skipped[*]}]"
+        echo "Summary: attempted=$attempted failed=$failed skipped=${#skipped[@]} [${skipped[*]}]"
         [ "$failed" -eq 0 ]

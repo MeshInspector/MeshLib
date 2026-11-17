@@ -82,8 +82,12 @@ void AlphaSortGL::drawTransparencyTextureToScreen() const
 {
     if ( !inited_ )
         return;
-    GL_EXEC( glDisable( GL_DEPTH_TEST ) );
-    GL_EXEC( glDepthMask( GL_TRUE ) );
+    // the overlay is drawn at the depth of the nearest transparent node, so the depth test keeps it off the samples
+    // of opaque objects in front of all transparent ones (their antialiased edges);
+    // LEQUAL keeps the nodes tied with an opaque surface (lines are drawn with LEQUAL, e.g. polylines on mesh edges)
+    GL_EXEC( glEnable( GL_DEPTH_TEST ) );
+    GL_EXEC( glDepthFunc( GL_LEQUAL ) );
+    GL_EXEC( glDepthMask( GL_FALSE ) );
     GL_EXEC( glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE ) );
 
     constexpr GLfloat transparencyTextureQuad[18] =
@@ -114,8 +118,13 @@ void AlphaSortGL::drawTransparencyTextureToScreen() const
 
     getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleArraySize, 2 );
 
+#ifndef __EMSCRIPTEN__
+    // the transparent pass wrote the lists and the node counter, read here and then reset by clearTransparencyTextures
+    GL_EXEC( glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT | GL_ATOMIC_COUNTER_BARRIER_BIT | GL_TEXTURE_UPDATE_BARRIER_BIT ) );
+#endif
     GL_EXEC( glDrawArrays( GL_TRIANGLES, 0, static_cast <GLsizei> ( 6 ) ) );
-    GL_EXEC( glEnable( GL_DEPTH_TEST ) );
+    GL_EXEC( glDepthFunc( GL_LESS ) );
+    GL_EXEC( glDepthMask( GL_TRUE ) );
 }
 
 void AlphaSortGL::updateTransparencyTexturesSize( int width, int height )
@@ -134,9 +143,9 @@ void AlphaSortGL::updateTransparencyTexturesSize( int width, int height )
     GL_EXEC( glBindImageTexture( 0, transparency_heads_texture_vbo, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32UI ) );
 
     GLuint maxNodes = cAlphaSortStoragePixelCapacity * GLuint( width ) * GLuint( height );
-    GLint  nodeSize = 5 * sizeof( GLfloat ) + sizeof( GLuint );
+    GLint  nodeSize = 4 * sizeof( GLuint ); // half-float color, depth, next: std430 stride of Node in the shaders
     GL_EXEC( glBindBuffer( GL_SHADER_STORAGE_BUFFER, transparency_shared_shader_data_vbo ) );
-    GL_EXEC( glBufferData( GL_SHADER_STORAGE_BUFFER, maxNodes * nodeSize, NULL, GL_DYNAMIC_DRAW ) );
+    GL_EXEC( glBufferData( GL_SHADER_STORAGE_BUFFER, GLsizeiptr( maxNodes ) * nodeSize, NULL, GL_DYNAMIC_DRAW ) ); // 64-bit: over 4 GB above ~22 Mpx
     GL_EXEC( glBindBuffer( GL_SHADER_STORAGE_BUFFER, 0 ) ); // unbind
 #endif
     std::vector<GLuint> ones( GLuint( width ) * GLuint( height ), 0xFFFFFFFF );

@@ -201,8 +201,9 @@ static Walk chooseWalk( const BitSet & set, size_t meshSize, size_t denseFractio
 static void addVertsOfFaces( const MeshTopology & topology, const FaceBitSet & faces, VertBitSet & res )
 {
     for ( auto f : faces )
-        for ( auto e : leftRing( topology, f ) )
-            res.set( topology.org( e ) );
+        if ( auto e = topology.edgeWithLeft( f ) )
+            for ( auto v : topology.getLeftTriVerts( e ) )
+                res.set( v );
 }
 
 // vertices that can be touched by the region: its own when the region is small, otherwise all valid vertices
@@ -415,8 +416,9 @@ VertBitSet getIncidentVerts( const MeshTopology & topology, const FaceBitSet & f
         VertBitSet res( topology.getValidVerts().size() );
         BitSetWalk( faces, res, walk == Walk::Parallel, [&]( FaceId f, auto && add )
         {
-            for ( auto e : leftRing( topology, f ) ) // empty for a deleted or out-of-range face
-                add( topology.org( e ) );
+            if ( auto e = topology.edgeWithLeft( f ) ) // invalid for a deleted or out-of-range face
+                for ( auto v : topology.getLeftTriVerts( e ) )
+                    add( v );
         } );
         return res;
     }
@@ -701,13 +703,30 @@ FaceBitSet getNeighborFaces( const MeshTopology& topology, const UndirectedEdgeB
 {
     MR_TIMER;
     FaceBitSet res( topology.faceSize() );
-    for ( auto ue : edges )
+    if ( const auto walk = chooseWalk( edges, topology.undirectedEdgeSize(), 48, 64, 2 ); walk != Walk::None )
     {
-        if ( auto l = topology.left( ue ) )
-            res.set( l );
-        if ( auto r = topology.right( ue ) )
-            res.set( r );
+        BitSetWalk( edges, res, walk == Walk::Parallel, [&]( UndirectedEdgeId ue, auto && add )
+        {
+            if ( ue >= topology.undirectedEdgeSize() )
+                return;
+            if ( auto l = topology.left( ue ) )
+                add( l );
+            if ( auto r = topology.right( ue ) )
+                add( r );
+        } );
+        return res;
     }
+    BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f )
+    {
+        for ( auto e : leftRing( topology, f ) )
+        {
+            if ( edges.test( e.undirected() ) )
+            {
+                res.set( f );
+                break;
+            }
+        }
+    } );
     return res;
 }
 

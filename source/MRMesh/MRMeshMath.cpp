@@ -368,9 +368,9 @@ public:
         {
             if ( region_.test( f ) && topology_.hasFace( f ) )
             {
-                for ( EdgeId e : leftRing( topology_, f ) )
+                for ( auto v : topology_.getTriVerts( f ) )
                 {
-                    box_.include( toWorld_ ? ( *toWorld_ )( points_[topology_.org( e )] ) : points_[topology_.org( e )] );
+                    box_.include( toWorld_ ? ( *toWorld_ )( points_[v] ) : points_[v] );
                 }
             }
         }

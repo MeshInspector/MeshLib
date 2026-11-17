@@ -83,8 +83,7 @@ IF(MR_PCH)
     "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/MRPch.h>"
   )
 
-  # `dladdr` in our patched `PYBIND11_MODULE(...)` needs this.
-  # Also needed for `Boost.Stacktrace` apparently.
+  # Needed for `Boost.Stacktrace` apparently.
   IF(NOT WIN32)
     target_compile_definitions(${PROJECT_NAME} PUBLIC _GNU_SOURCE)
   ENDIF()

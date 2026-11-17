@@ -1,5 +1,6 @@
 #include "MRMeshProject.h"
 #include "MRAABBTree.h"
+#include "MRAABBTreeTraversal.hpp"
 #include "MRMesh.h"
 #include "MRClosestPointInTriangle.h"
 #include "MRBall.h"
@@ -10,96 +11,18 @@
 namespace MR
 {
 
-MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart & mp, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
-    const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections )
+MeshTriPoint MeshProjectionResult::mtp( const MeshTopology & topology ) const
 {
-    MeshProjectionResult res;
-    res.distSq = upDistLimitSq;
-    if ( tree.nodes().empty() )
-        return res;
+    if ( !proj.valid() )
+        return {};
+    return { topology.edgeWithLeft( proj.face ), tp };
+}
 
-    struct SubTask
-    {
-        NoInitNodeId n;
-        float distSq;
-    };
-    InplaceStack<SubTask, 32> subtasks;
-
-    auto addSubTask = [&]( const SubTask & s )
-    {
-        if ( s.distSq < res.distSq )
-            subtasks.push( s );
-    };
-
-    auto getSubTask = [&]( NodeId n )
-    {
-        const auto & box = tree.nodes()[n].box;
-        float distSq = xf ? transformed( box, *xf ).getDistanceSq( pt ) : box.getDistanceSq( pt );
-        return SubTask { n, distSq };
-    };
-
-    addSubTask( getSubTask( tree.rootNodeId() ) );
-
-    while ( !subtasks.empty() )
-    {
-        const auto s = subtasks.top();
-        subtasks.pop();
-        const auto & node = tree[s.n];
-        if ( s.distSq >= res.distSq )
-            continue;
-
-        if ( node.leaf() )
-        {
-            const auto face = node.leafId();
-            if ( validFaces && !validFaces( face ) )
-                continue;
-            if ( mp.region && !mp.region->test( face ) )
-                continue;
-            Vector3f a, b, c;
-            mp.mesh.getTriPoints( face, a, b, c );
-            if ( xf )
-            {
-                a = (*xf)( a );
-                b = (*xf)( b );
-                c = (*xf)( c );
-            }
-            
-            // compute the closest point in double-precision, because float might be not enough
-            const auto [projD, baryD] = closestPointInTriangle( Vector3d( pt ), Vector3d( a ), Vector3d( b ), Vector3d( c ) );
-            const Vector3f proj( projD );
-            const MeshProjectionResult candidate
-            {
-                .proj = PointOnFace{ face, proj },
-                .mtp = MeshTriPoint{ mp.mesh.topology.edgeWithLeft( face ), TriPointf( baryD ) },
-                .distSq = ( proj - pt ).lengthSq()
-            };
-            if ( validProjections && !validProjections( candidate ) )
-                continue;
-            if ( candidate.distSq < res.distSq )
-            {
-                res = candidate;
-                if ( res.distSq <= loDistLimitSq )
-                    break;
-            }
-            continue;
-        }
-        
-        auto s1 = getSubTask( node.l );
-        auto s2 = getSubTask( node.r );
-        // add task with smaller distance last to descend there first
-        if ( s1.distSq < s2.distSq )
-        {
-            addSubTask( s2 );
-            addSubTask( s1 );
-        }
-        else
-        {
-            addSubTask( s1 );
-            addSubTask( s2 );
-        }
-    }
-
-    return res;
+MeshTriPoint SignedDistanceToMeshResult::mtp( const MeshTopology & topology ) const
+{
+    if ( !proj.valid() )
+        return {};
+    return { topology.edgeWithLeft( proj.face ), tp };
 }
 
 MeshProjectionTransforms createProjectionTransforms( AffineXf3f& storageXf, const AffineXf3f* pointXf, const AffineXf3f* treeXf )
@@ -120,88 +43,298 @@ MeshProjectionTransforms createProjectionTransforms( AffineXf3f& storageXf, cons
     return res;
 }
 
+namespace
+{
+
+// Plain: no transformation, region, validFaces or validProjections, so the hot loops skip their checks
+template <bool Plain>
+MeshProjectionResult findProjectionWide( const Vector3f & pt, const VertCoords & points, const FaceBitSet * region, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
+    const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections )
+{
+    MeshProjectionResult res;
+    res.distSq = upDistLimitSq;
+    const auto & nodes = tree.nodes();
+    if ( nodes.empty() )
+        return res;
+
+    // the best point so far
+    float distSq = upDistLimitSq;
+    FaceId face;
+    Vector3f proj;
+    TriPointf bary;
+
+    struct SubTask
+    {
+        NoInitNodeId n;
+        float distSq;
+    };
+    // every level adds at most MaxChildren - 1 tasks, and the tree of 2^31 triangles has 16 levels
+    InplaceStack<SubTask, 64> subtasks;
+
+    auto boxDistSq = [&]( NodeId n )
+    {
+        const auto & box = nodes[n].box;
+        if constexpr ( !Plain )
+            if ( xf )
+                return transformed( box, *xf ).getDistanceSq( pt );
+        return box.getDistanceSq( pt );
+    };
+
+    // the transformation is applied to the triangles in double-precision: in float, the rounding of transformed coordinates
+    // distorts the shape of small triangles far from the origin, and the projections of far points on them become very inaccurate;
+    // in Plain mode there is no transformation, and xfd is an empty object
+    [[maybe_unused]] const auto xfd = [&]
+    {
+        if constexpr ( Plain )
+        {
+            struct NoXf {};
+            return NoXf{};
+        }
+        else
+            return xf ? AffineXf3d( *xf ) : AffineXf3d{};
+    }();
+
+    // returns true if the search can stop
+    auto processLeaf = [&]( const AABBTree::Node & node )
+    {
+        for ( int i = node.first, end = node.first + node.numLeafTris(); i < end; ++i )
+        {
+            const auto & lt = tree.leafTris()[i];
+            Vector3d a( points[lt.verts[0]] );
+            Vector3d b( points[lt.verts[1]] );
+            Vector3d c( points[lt.verts[2]] );
+            if constexpr ( !Plain )
+            {
+                if ( validFaces && !validFaces( lt.face ) )
+                    continue;
+                if ( region && !region->test( lt.face ) )
+                    continue;
+                if ( xf )
+                {
+                    a = xfd( a );
+                    b = xfd( b );
+                    c = xfd( c );
+                }
+            }
+
+            // compute the closest point in double-precision, because float might be not enough
+            const auto [projD, baryD] = closestPointInTriangle( Vector3d( pt ), a, b, c );
+            const Vector3f p( projD );
+            const float d = ( p - pt ).lengthSq();
+            if ( !( d < distSq ) )
+                continue;
+            if constexpr ( !Plain )
+            {
+                if ( validProjections && !validProjections( MeshProjectionResult
+                    {
+                        .proj = PointOnFace{ lt.face, p },
+                        .tp = TriPointf( baryD ),
+                        .distSq = d
+                    } ) )
+                    continue;
+            }
+            distSq = d;
+            face = lt.face;
+            proj = p;
+            bary = TriPointf( baryD );
+            if ( distSq <= loDistLimitSq )
+                return true;
+        }
+        return false;
+    };
+
+    // the node to visit next is not pushed in the stack
+    SubTask s{ NodeId( 0 ), boxDistSq( NodeId( 0 ) ) };
+    for (;;)
+    {
+        if ( s.distSq < distSq )
+        {
+            const auto & node = nodes[s.n];
+            if ( node.leaf() )
+            {
+                if ( processLeaf( node ) )
+                    break;
+            }
+            else
+            {
+                // the children closer than the found point ordered by distance, the farthest first
+                SubTask ch[AABBTree::MaxChildren];
+                int numCh = 0;
+                for ( int i = 0; i < node.count; ++i )
+                {
+                    const NodeId n( node.first + i );
+                    const float d = boxDistSq( n );
+                    if ( !( d < distSq ) )
+                        continue;
+                    int k = numCh++;
+                    for ( ; k > 0 && ch[k - 1].distSq < d; --k )
+                        ch[k] = ch[k - 1];
+                    ch[k] = { n, d };
+                }
+                if ( numCh > 0 )
+                {
+                    // descend in the nearest child, the others wait in the stack
+                    for ( int i = 0; i + 1 < numCh; ++i )
+                        subtasks.push( ch[i] );
+                    s = ch[numCh - 1];
+                    continue;
+                }
+            }
+        }
+        if ( subtasks.empty() )
+            break;
+        s = subtasks.top();
+        subtasks.pop();
+    }
+
+    if ( face )
+    {
+        res.proj = PointOnFace{ face, proj };
+        res.tp = bary;
+        res.distSq = distSq;
+    }
+    return res;
+}
+
+} // anonymous namespace
+
 MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
     const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections )
 {
     return findProjectionSubtree( pt, mp, mp.mesh.getAABBTree(), upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
 }
 
-void findBoxedTrisInBall( const MeshPart & mp, Ball3f ball, const FoundBoxedTriCallback& foundCallback )
+MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart & mp, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
+    const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections )
 {
-    const auto & tree = mp.mesh.getAABBTree();
-    if ( tree.nodes().empty() )
+    if ( !xf && !mp.region && !validFaces && !validProjections )
+        return findProjectionWide<true>( pt, mp.mesh.points, nullptr, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
+    return findProjectionWide<false>( pt, mp.mesh.points, mp.region, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
+}
+
+MeshProjectionResult findProjection( const Vector3f & pt, const VertCoords & points, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
+    const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections, const FaceBitSet * region )
+{
+    if ( !xf && !region && !validFaces && !validProjections )
+        return findProjectionWide<true>( pt, points, nullptr, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
+    return findProjectionWide<false>( pt, points, region, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
+}
+
+namespace
+{
+
+// calls onTri( i, ball ) for the triangles (indices in leafTris()) of the tree (only from region if given) in the leaves with boxes in the ball, closer subtrees first;
+// onTri can shrink the ball or stop the search
+template <typename F>
+void forLeafTrisInBall( const AABBTree & tree, const FaceBitSet * region, Ball3f & ball, F && onTri )
+{
+    const auto & nodes = tree.nodes();
+    if ( nodes.empty() )
         return;
 
-    InplaceStack<NoInitNodeId, 32> subtasks;
-
-    auto boxDistSq = [&]( NodeId n ) // squared distance from ball center to the box with interior
-    {
-        return tree.nodes()[n].box.getDistanceSq( ball.center );
-    };
-
-    auto addSubTask = [&]( NodeId n )
-    {
-        subtasks.push( n );
-    };
-
-    addSubTask( tree.rootNodeId() );
-
+    // every level adds at most MaxChildren - 1 nodes, and the tree of 2^31 triangles has 16 levels
+    InplaceStack<NoInitNodeId, 64> subtasks;
+    subtasks.push( NodeId( 0 ) );
     while ( !subtasks.empty() )
     {
-        const auto n = subtasks.top();
+        const auto & node = nodes[subtasks.top()];
         subtasks.pop();
-        const auto & node = tree[n];
-        if ( !( boxDistSq( n ) < ball.radiusSq ) )
+        if ( !( node.box.getDistanceSq( ball.center ) < ball.radiusSq ) )
             continue;
 
         if ( node.leaf() )
         {
-            const auto face = node.leafId();
-            if ( mp.region && !mp.region->test( face ) )
-                continue;
-            if ( foundCallback( face, ball ) == Processing::Stop )
-                break;
+            for ( int i = node.first, end = node.first + node.numLeafTris(); i < end; ++i )
+            {
+                if ( region && !region->test( tree.leafTris()[i].face ) )
+                    continue;
+                if ( onTri( i, ball ) == Processing::Stop )
+                    return;
+            }
             continue;
         }
-        
-        auto lDistSq = boxDistSq( node.l );
-        auto rDistSq = boxDistSq( node.r );
-        /// first go in the node located closer to ball's center (in case the ball will shrink and the other node will be away)
-        if ( lDistSq <= rDistSq )
+
+        // first go in the nodes located closer to ball's center (in case the ball will shrink and the others will be away)
+        NodeId ch[AABBTree::MaxChildren];
+        float chDistSq[AABBTree::MaxChildren];
+        int numCh = 0;
+        for ( int i = 0; i < node.count; ++i )
         {
-            addSubTask( node.r );
-            addSubTask( node.l );
+            const NodeId n( node.first + i );
+            const float distSq = nodes[n].box.getDistanceSq( ball.center );
+            if ( !( distSq < ball.radiusSq ) )
+                continue;
+            int k = numCh++;
+            for ( ; k > 0 && chDistSq[k - 1] < distSq; --k )
+            {
+                ch[k] = ch[k - 1];
+                chDistSq[k] = chDistSq[k - 1];
+            }
+            ch[k] = n;
+            chDistSq[k] = distSq;
         }
-        else
-        {
-            addSubTask( node.l );
-            addSubTask( node.r );
-        }
+        for ( int i = 0; i < numCh; ++i )
+            subtasks.push( ch[i] );
     }
+}
+
+void boxedTrisInBall( const AABBTree & tree, const FaceBitSet * region, Ball3f ball, const FoundBoxedTriCallback& foundCallback )
+{
+    forLeafTrisInBall( tree, region, ball, [&]( int i, Ball3f & b )
+    {
+        if ( !( tree.leafBoxes()[i].getDistanceSq( b.center ) < b.radiusSq ) )
+            return Processing::Continue;
+        return foundCallback( tree.leafTris()[i].face, b );
+    } );
+}
+
+void trisInBall( const VertCoords & points, const AABBTree & tree, const FaceBitSet * region, const Ball3f& ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces )
+{
+    Ball3f myBall = ball;
+    forLeafTrisInBall( tree, region, myBall, [&]( int i, Ball3f & b )
+    {
+        const auto & lt = tree.leafTris()[i];
+        if ( validFaces && !validFaces( lt.face ) )
+            return Processing::Continue;
+
+        // compute the closest point in double-precision, because float might be not enough
+        const auto [projD, baryD] = closestPointInTriangle( Vector3d( b.center ), Vector3d( points[lt.verts[0]] ),
+            Vector3d( points[lt.verts[1]] ), Vector3d( points[lt.verts[2]] ) );
+        const Vector3f proj( projD );
+        const float distSq = ( proj - b.center ).lengthSq();
+        if ( !( distSq < b.radiusSq ) )
+            return Processing::Continue;
+        const MeshProjectionResult candidate
+        {
+            .proj = PointOnFace{ lt.face, proj },
+            .tp = TriPointf( baryD ),
+            .distSq = distSq
+        };
+        return foundCallback( candidate, b );
+    } );
+}
+
+} // anonymous namespace
+
+void findBoxedTrisInBall( const MeshPart & mp, Ball3f ball, const FoundBoxedTriCallback& foundCallback )
+{
+    boxedTrisInBall( mp.mesh.getAABBTree(), mp.region, ball, foundCallback );
+}
+
+void findBoxedTrisInBall( const AABBTree & tree, Ball3f ball, const FoundBoxedTriCallback& foundCallback, const FaceBitSet * region )
+{
+    boxedTrisInBall( tree, region, ball, foundCallback );
 }
 
 void findTrisInBall( const MeshPart & mp, const Ball3f& ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces )
 {
-    findBoxedTrisInBall( mp, ball, [&]( FaceId face, Ball3f & ball )
-    {
-        if ( validFaces && !validFaces( face ) )
-            return Processing::Continue;
-        Vector3f a, b, c;
-        mp.mesh.getTriPoints( face, a, b, c );
-            
-        // compute the closest point in double-precision, because float might be not enough
-        const auto [projD, baryD] = closestPointInTriangle( Vector3d( ball.center ), Vector3d( a ), Vector3d( b ), Vector3d( c ) );
-        const Vector3f proj( projD );
-        const MeshProjectionResult candidate
-        {
-            .proj = PointOnFace{ face, proj },
-            .mtp = MeshTriPoint{ mp.mesh.topology.edgeWithLeft( face ), TriPointf( baryD ) },
-            .distSq = ( proj - ball.center ).lengthSq()
-        };
-        if ( candidate.distSq < ball.radiusSq )
-            return foundCallback( candidate, ball );
-        return Processing::Continue;
-    } );
+    trisInBall( mp.mesh.points, mp.mesh.getAABBTree(), mp.region, ball, foundCallback, validFaces );
+}
+
+void findTrisInBall( const VertCoords & points, const AABBTree & tree, const Ball3f& ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces,
+    const FaceBitSet * region )
+{
+    trisInBall( points, tree, region, ball, foundCallback, validFaces );
 }
 
 std::optional<SignedDistanceToMeshResult> findSignedDistance( const Vector3f & pt, const MeshPart & mp,
@@ -215,7 +348,7 @@ std::optional<SignedDistanceToMeshResult> findSignedDistance( const Vector3f & p
     }
     res = SignedDistanceToMeshResult();
     res->proj = projRes.proj;
-    res->mtp = projRes.mtp;
+    res->tp = projRes.tp;
     res->dist = mp.mesh.signedDistance( pt, projRes, mp.region );
     return res;
 }

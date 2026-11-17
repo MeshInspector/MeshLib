@@ -5,6 +5,12 @@
 #include <MRMesh/MRLine3.h>
 #include <MRMesh/MRCube.h>
 #include <MRMesh/MREdgeIterator.h>
+#include <MRMesh/MRAABBTree.h>
+#include <MRMesh/MRTriMesh.h>
+#include <MRMesh/MRBitSet.h>
+#include <MRMesh/MRPlane3.h>
+#include <algorithm>
+#include <cmath>
 
 namespace MR
 {
@@ -94,6 +100,124 @@ TEST( MRMesh, MeshIntersectAllPrecise )
     {
         const Vector3d p( x, 0.1, 0.2 );
         EXPECT_EQ( countHits( cube3, Line3d( p, Vector3d::plusX() ), 0 ) % 2, countHits( cube3, Line3d( p, Vector3d::minusX() ), 0 ) % 2 );
+    }
+}
+
+TEST( MRMesh, MeshIntersectNearlyCoplanarRay )
+{
+    // the ray is almost in the plane of the triangle and misses it; tiny Y-coordinates must not be hidden by rounding tolerance
+    const auto mesh = Mesh::fromTriangles( { Vector3f( -63, 1.65e-13f, 87.05f ), Vector3f( -62.66f, 2.82e-13f, 87.72f ), Vector3f( -47.62f, -1.88e-13f, 84.84f ) },
+        { { 0_v, 1_v, 2_v } } );
+    const Vector3d p( -200, 0, 87.5 );
+    EXPECT_FALSE( rayMeshIntersect( mesh, Line3f( Vector3f( p ), Vector3f::plusX() ) ) );
+    EXPECT_FALSE( rayMeshIntersect( mesh, Line3d( p, Vector3d::plusX() ) ) );
+
+    // the ray across the plane hits the triangle in its centroid
+    const Vector3f c = ( mesh.points[0_v] + mesh.points[1_v] + mesh.points[2_v] ) / 3.0f;
+    const auto hit = rayMeshIntersect( mesh, Line3f( c + Vector3f( 0, 1, 0 ), Vector3f::minusY() ) );
+    ASSERT_TRUE( hit );
+    EXPECT_NEAR( hit.distanceAlongLine, 1.0f, 1e-6f );
+}
+
+// the intersections with the triangles of a tree and their points are the same as with the mesh part of these triangles
+TEST( MRMesh, MeshIntersectPointsTree )
+{
+    const Mesh mesh = makeUVSphere( 1.f, 64, 32 );
+    FaceBitSet region( mesh.topology.faceSize() );
+    for ( FaceId f : mesh.topology.getValidFaces() )
+        region.set( f, f % 3 != 0 );
+    const TriMesh tmesh{ mesh.topology.getTriangulation(), mesh.points };
+    const AABBTree fullTree( tmesh ); // the same as mesh.getAABBTree()
+    const AABBTree regionTree( tmesh, &region );
+    const MeshPart mp( mesh, &region );
+    const AABBTree mpTree( mp ); // the same as regionTree
+
+    auto same = []( const MeshIntersectionResult & a, const MeshIntersectionResult & b )
+    {
+        return a.proj.face == b.proj.face && a.proj.point == b.proj.point && a.tp == b.tp && a.distanceAlongLine == b.distanceAlongLine;
+    };
+    auto all = []( auto && find )
+    {
+        std::vector<std::pair<MeshIntersectionResult, bool>> res;
+        find( res );
+        std::sort( res.begin(), res.end(), []( const auto & x, const auto & y ) { return x.first.proj.face < y.first.proj.face; } );
+        return res;
+    };
+    auto sameAll = [&]( const auto & a, const auto & b )
+    {
+        if ( a.size() != b.size() )
+            return false;
+        for ( size_t i = 0; i < a.size(); ++i )
+            if ( !same( a[i].first, b[i].first ) || a[i].second != b[i].second )
+                return false;
+        return true;
+    };
+
+    int numHits = 0, numAllHits = 0;
+    std::vector<Vector3f> origins, dirs;
+    for ( const Vector3f d : { Vector3f( 1, 0.1f, 0.2f ), Vector3f( -0.3f, 1, 0.4f ), Vector3f( 0.2f, -0.5f, -1 ) } )
+    {
+        for ( const Vector3f o : { Vector3f(), Vector3f( 0.1f, -0.2f, 0.05f ), Vector3f( -3, 0, 0 ) } )
+        {
+            origins.push_back( o );
+            dirs.push_back( d );
+            const Line3f lf( o, d );
+            const Line3d ld( lf );
+            for ( bool closest : { true, false } )
+            {
+                const auto ref = rayMeshIntersect( mp, lf, -FLT_MAX, FLT_MAX, nullptr, closest );
+                numHits += ref.valid();
+                EXPECT_TRUE( same( rayMeshIntersect( tmesh.points, fullTree, lf, -FLT_MAX, FLT_MAX, nullptr, closest, {}, &region ), ref ) );
+                EXPECT_TRUE( same( rayMeshIntersect( tmesh.points, fullTree, ld, -DBL_MAX, DBL_MAX, nullptr, closest, {}, &region ),
+                    rayMeshIntersect( mp, ld, -DBL_MAX, DBL_MAX, nullptr, closest ) ) );
+                EXPECT_TRUE( same( rayMeshIntersect( tmesh.points, regionTree, lf, -FLT_MAX, FLT_MAX, nullptr, closest ),
+                    rayMeshIntersect( mesh.points, mpTree, lf, -FLT_MAX, FLT_MAX, nullptr, closest, {}, &region ) ) );
+            }
+
+            auto collect = []( auto & res ) { return [&res]( const MeshIntersectionResult & r ) { res.push_back( { r, false } ); return true; }; };
+            auto collectSide = []( auto & res ) { return [&res]( const MeshIntersectionResult & r, bool front ) { res.push_back( { r, front } ); return true; }; };
+            const auto refF = all( [&]( auto & res ) { rayMeshIntersectAll( mp, lf, collect( res ), -FLT_MAX, FLT_MAX ); } );
+            const auto refD = all( [&]( auto & res ) { rayMeshIntersectAll( mp, ld, collect( res ), -DBL_MAX, DBL_MAX ); } );
+            const auto refS = all( [&]( auto & res ) { rayMeshIntersectAll( mp, ld, MeshIntersectionWithSideCallback( collectSide( res ) ), -DBL_MAX, DBL_MAX ); } );
+            numAllHits += int( refS.size() );
+            EXPECT_TRUE( sameAll( all( [&]( auto & res ) { rayMeshIntersectAll( tmesh.points, fullTree, lf, collect( res ), -FLT_MAX, FLT_MAX, nullptr, &region ); } ), refF ) );
+            EXPECT_TRUE( sameAll( all( [&]( auto & res ) { rayMeshIntersectAll( tmesh.points, fullTree, ld, collect( res ), -DBL_MAX, DBL_MAX, nullptr, &region ); } ), refD ) );
+            EXPECT_TRUE( sameAll( all( [&]( auto & res ) { rayMeshIntersectAll( tmesh.points, fullTree, ld,
+                MeshIntersectionWithSideCallback( collectSide( res ) ), -DBL_MAX, DBL_MAX, nullptr, &region ); } ), refS ) );
+            EXPECT_TRUE( sameAll( all( [&]( auto & res ) { rayMeshIntersectAll( tmesh.points, regionTree, ld,
+                MeshIntersectionWithSideCallback( collectSide( res ) ), -DBL_MAX, DBL_MAX ); } ), refS ) );
+        }
+    }
+    EXPECT_GT( numHits, 0 );
+    EXPECT_GT( numAllHits, 0 );
+
+    std::vector<FaceId> facesA, facesB;
+    std::vector<float> distA, distB;
+    std::vector<TriPointf> baryA, baryB;
+    multiRayMeshIntersect( mp, origins, dirs, { .rayDistances = &distA, .isectFaces = &facesA, .isectBary = &baryA } );
+    multiRayMeshIntersect( tmesh.points, fullTree, origins, dirs, { .rayDistances = &distB, .isectFaces = &facesB, .isectBary = &baryB },
+        0.0f, FLT_MAX, true, {}, &region );
+    EXPECT_EQ( facesA, facesB );
+    for ( size_t i = 0; i < origins.size(); ++i )
+        EXPECT_TRUE( ( std::isnan( distA[i] ) && std::isnan( distB[i] ) ) || ( distA[i] == distB[i] && baryA[i] == baryB[i] ) );
+
+    for ( float z : { -0.5f, 0.f, 0.7f } )
+    {
+        FaceBitSet fsA( mesh.topology.faceSize() ), fsB;
+        VertBitSet vsA( mesh.topology.vertSize() ), vsB;
+        xyPlaneMeshIntersect( mp, z, &fsA, nullptr, &vsA );
+        xyPlaneMeshIntersect( fullTree, z, &fsB, &vsB, nullptr, &region );
+        fsB.resize( fsA.size() );
+        vsB.resize( vsA.size() );
+        EXPECT_TRUE( fsA.any() && fsA == fsB && vsA == vsB );
+
+        const auto plane = Plane3f::fromDirAndPt( Vector3f( 0.3f, -0.2f, 1 ).normalized(), Vector3f( 0, 0, z ) );
+        std::vector<FaceId> vecA, vecB;
+        planeMeshIntersect( mp, plane, nullptr, nullptr, nullptr, &vecA );
+        planeMeshIntersect( regionTree, plane, nullptr, nullptr, &vecB );
+        std::sort( vecA.begin(), vecA.end() );
+        std::sort( vecB.begin(), vecB.end() );
+        EXPECT_TRUE( !vecA.empty() && vecA == vecB );
     }
 }
 

@@ -24,27 +24,6 @@ runs:
     - name: Install Rust
       uses: ./.github/actions/setup-rust
 
-    # Only `generate`: the crate is built below by its consumers, in one target directory with one environment,
-    # because a different MESHLIB_LIB_DIR or linker would rebuild it and its dependencies in every cargo call.
-    - name: Generate Rust bindings
-      if: runner.os != 'Windows'
-      shell: bash
-      run: |
-        set -eu
-        if [ "$RUNNER_OS" = macOS ]; then
-          export PATH="$(brew --prefix)/opt/make/libexec/gnubin:$(brew --prefix)/opt/grep/libexec/gnubin:$PATH"
-        fi
-        make -f scripts/mrbind/generate.mk -B --trace TARGET=rust generate
-
-    - name: Generate Rust bindings (Windows)
-      if: runner.os == 'Windows'
-      shell: cmd
-      env:
-        MSYS2_DIR: C:\msys64
-      run: |
-        ${{ inputs.windows-vsdevcmd }} || exit /b 1
-        call ./scripts/mrbind/generate_win.bat -B --trace TARGET=rust generate || exit /b 1
-
     - name: Build and run Rust examples and tests
       if: runner.os != 'Windows'
       shell: bash

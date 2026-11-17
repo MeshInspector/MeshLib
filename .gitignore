@@ -42,6 +42,8 @@ wheelhouse/*
 /source/MeshLibC2/temp
 /source/MeshLibC2Cuda/include
 /source/MeshLibC2Cuda/src
+/source/MeshLibC2PythonViewer/include
+/source/MeshLibC2PythonViewer/src
 compile_commands.json
 /source/CustomMRPlatform.props
 /source/MRDotNet2/bin

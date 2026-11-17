@@ -1,9 +1,11 @@
 #include "MRViewportGL.h"
+#include "MRViewport.h"
 #include "MRGLMacro.h"
 #include "MRGLStaticHolder.h"
 #include "MRViewer.h"
 #include "MRGladGlfw.h"
 #include "MRMesh/MRBitSet.h"
+#include "MRMesh/MRMeshTexture.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRVisualObject.h"
 #include "MRMesh/MRMatrix4.h"
@@ -39,6 +41,10 @@ ViewportGL& ViewportGL::operator=( ViewportGL&& other ) noexcept
 
     border_line_vbo = other.border_line_vbo;
     border_line_vao = other.border_line_vao;
+
+    background_vbo = other.background_vbo;
+    background_vao = other.background_vao;
+    background_texture = std::move( other.background_texture );
 
     inited_ = other.inited_;
 
@@ -79,6 +85,17 @@ void ViewportGL::init()
     GL_EXEC( glGenVertexArrays( 1, &border_line_vao ) );
     GL_EXEC( glGenBuffers( 1, &border_line_vbo ) );
 
+    // background
+    constexpr GLfloat quad[8] = { -1.f, -1.f, 1.f, -1.f, -1.f, 1.f, 1.f, 1.f };
+    GL_EXEC( glGenVertexArrays( 1, &background_vao ) );
+    GL_EXEC( glGenBuffers( 1, &background_vbo ) );
+    GL_EXEC( glBindVertexArray( background_vao ) );
+    GL_EXEC( glBindBuffer( GL_ARRAY_BUFFER, background_vbo ) );
+    GL_EXEC( glBufferData( GL_ARRAY_BUFFER, sizeof( quad ), quad, GL_STATIC_DRAW ) );
+    GL_EXEC( glVertexAttribPointer( 0, 2, GL_FLOAT, GL_FALSE, 0, 0 ) );
+    GL_EXEC( glEnableVertexAttribArray( 0 ) );
+    GL_EXEC( glBindVertexArray( 0 ) );
+
     inited_ = true;
 }
 
@@ -99,6 +116,10 @@ void ViewportGL::free()
 
     GL_EXEC( glDeleteVertexArrays( 1, &border_line_vao ) );
     GL_EXEC( glDeleteBuffers( 1, &border_line_vbo ) );
+
+    GL_EXEC( glDeleteVertexArrays( 1, &background_vao ) );
+    GL_EXEC( glDeleteBuffers( 1, &background_vbo ) );
+    background_texture.del();
 
     pickFBO_.del();
     inited_ = false;
@@ -170,6 +191,36 @@ void ViewportGL::fillViewport( const Box2f& rectf, const Color& color ) const
     GL_EXEC( glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ) );
     GL_EXEC( glDisable( GL_SCISSOR_TEST ) );
 
+}
+
+void ViewportGL::drawBackgroundTexture( const Box2f& rectf, const MeshTexture& texture, const Box2f& texRect, bool refresh )
+{
+    if ( !inited_ )
+        return;
+    const auto rect = roundBox( rectf );
+    GL_EXEC( glDisable( GL_DEPTH_TEST ) );
+    GL_EXEC( glEnable( GL_BLEND ) );
+    GL_EXEC( glBlendFuncSeparate( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA ) );
+    GL_EXEC( glViewport( (GLsizei) rect.min.x, (GLsizei) rect.min.y,
+                         (GLsizei) width( rect ), (GLsizei) height( rect ) ) );
+
+    auto shader = GLStaticHolder::getShaderId( GLStaticHolder::ViewportBackground );
+    GL_EXEC( glUseProgram( shader ) );
+
+    GL_EXEC( glBindVertexArray( background_vao ) );
+
+    GL_EXEC( glActiveTexture( GL_TEXTURE0 ) );
+    background_texture.loadDataOpt( refresh || !background_texture.valid(),
+        { .resolution = GlTexture2::ToResolution( texture.resolution ) }, texture.pixels );
+    setTextureWrapType( texture.wrap );
+    setTextureFilterType( texture.filter );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "pixels" ), 0 ) );
+    GL_EXEC( glUniform1i( glGetUniformLocation( shader, "clipOutside" ), texture.wrap == WrapType::Clamp ) );
+    GL_EXEC( glUniform2f( glGetUniformLocation( shader, "origin" ), texRect.min.x, texRect.min.y ) );
+    GL_EXEC( glUniform2f( glGetUniformLocation( shader, "size" ), width( texRect ), height( texRect ) ) );
+
+    getViewerInstance().incrementThisFrameGLPrimitivesCount( Viewer::GLPrimitivesType::TriangleArraySize, 2 );
+    GL_EXEC( glDrawArrays( GL_TRIANGLE_STRIP, 0, 4 ) );
 }
 
 bool ViewportGL::checkInit() const

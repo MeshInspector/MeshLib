@@ -1,6 +1,7 @@
 #pragma once
 #include "exports.h"
 #include "MRMesh/MRExpected.h"
+#include <atomic>
 #include <chrono>
 #include <queue>
 #include <functional>
@@ -104,7 +105,7 @@ private:
 
     // if set then cannot accept new commands
     bool queueClosed_{ false }; // marked true in `removeCommands`
-    std::thread::id mainThreadId_;
+    std::atomic<std::thread::id> mainThreadId_; // not guarded by `mutex_`: read inside viewer event callbacks
     std::queue<std::shared_ptr<Command>> commands_;
     std::chrono::steady_clock::time_point lastProcessTime_;
     std::mutex mutex_;

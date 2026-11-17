@@ -37,9 +37,13 @@ bool RenderLinesObject::render( const ModelRenderParams& renderParams )
 {
     MR_TIMER;
     bool depthTest = objLines_->getVisualizeProperty( VisualizeMaskType::DepthTest, renderParams.viewportId );
+    // the shader discards fully transparent fragments, so a fully transparent color needs no transparent pass;
+    // a color map fully replaces the color, then its alpha < 255 is the way to request the transparent pass for translucent map colors
+    const auto front = objLines_->getFrontColor( objLines_->isSelected(), renderParams.viewportId );
     RenderModelPassMask desiredPass =
         !depthTest ? RenderModelPassMask::NoDepthTest :
-        ( objLines_->getGlobalAlpha( renderParams.viewportId ) < 255 || objLines_->getFrontColor( objLines_->isSelected(), renderParams.viewportId ).a < 255 ) ? RenderModelPassMask::Transparent :
+        ( objLines_->getGlobalAlpha( renderParams.viewportId ) < 255
+            || ( objLines_->getColoringType() == ColoringType::SolidColor ? front.isTranslucent() : front.a < 255 ) ) ? RenderModelPassMask::Transparent :
         RenderModelPassMask::Opaque;
     if ( !bool( renderParams.passMask & desiredPass ) )
         return false; // Nothing to draw in this pass.

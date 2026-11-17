@@ -2,6 +2,7 @@
 
 #include "MRMcpCommon.h"
 
+#include "MRMesh/MRColor.h"
 #include "MRMesh/MRObject.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRSceneRoot.h"
@@ -31,6 +32,17 @@ Expected<std::shared_ptr<Object>> resolveId( uint64_t id )
             return obj;
     }
     return unexpected( fmt::format( "No object with id {}. Call scene_listObjectTree to enumerate.", id ) );
+}
+
+Color parseColor( const nlohmann::json& j, std::string_view field )
+{
+    if ( !j.is_array() || ( j.size() != 3 && j.size() != 4 ) )
+        throw std::runtime_error( fmt::format( "`{}` must be a 3- or 4-element array of floats in [0,1]", field ) );
+    const float r = j[0].get<float>();
+    const float g = j[1].get<float>();
+    const float b = j[2].get<float>();
+    const float a = j.size() == 4 ? j[3].get<float>() : 1.0f;
+    return Color{ r, g, b, a }; // the float ctor clamps to [0, 1]
 }
 
 std::runtime_error busyError( std::string_view what )

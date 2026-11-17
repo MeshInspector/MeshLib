@@ -10,6 +10,8 @@ namespace MR
 namespace Cuda
 {
 
+static_assert( sizeof( MR::MeshIntersectionResult ) == sizeof( MeshIntersectionResult ) );
+
 static std::vector<IntersectionPrecomputes> calcPrecs( const std::vector<MR::SkyPatch>& skyPatches )
 {
     std::vector<IntersectionPrecomputes> precs;
@@ -45,16 +47,16 @@ BitSet findSkyRays( const Mesh& terrain, const VertCoords& samples, const VertBi
 {
     MR_TIMER;
 
-    const auto& tree = terrain.getAABBTree();
+    const AABBTree& tree = terrain.getAABBTree();
     const auto& nodes = tree.nodes();
 
     CUDA_EXEC( cudaSetDevice( 0 ) );
 
-    DynamicArray<Node3> cudaNodes;
+    DynamicArray<WideNode3> cudaNodes;
     cudaNodes.fromVector( nodes );
 
     DynamicArray<float3> cudaMeshPoints( terrain.points );
-    DynamicArray<FaceToThreeVerts> cudaFaces( terrain.topology.getTriangulation() );
+    DynamicArray<LeafTri3> cudaLeafTris( tree.leafTris() );
     DynamicArray<float3> cudaSamples( samples );
 
     std::vector<uint64_t> blocks;
@@ -70,7 +72,7 @@ BitSet findSkyRays( const Mesh& terrain, const VertCoords& samples, const VertBi
     if ( outIntersections )
         cudaIntersections.resize( rayCount );
 
-    findSkyRaysKernel( cudaNodes.data(), cudaMeshPoints.data(), cudaFaces.data(), cudaSamples.data(), cudaValidSamples.data(), cudaPrecs.data(), cudaRes.data(), cudaRes.size(), cudaSamples.size(), cudaPrecs.size(), cudaIntersections.data() );
+    findSkyRaysKernel( cudaNodes.data(), cudaMeshPoints.data(), cudaLeafTris.data(), cudaSamples.data(), cudaValidSamples.data(), cudaPrecs.data(), cudaRes.data(), cudaRes.size(), cudaSamples.size(), cudaPrecs.size(), cudaIntersections.data() );
 
     if ( outIntersections )
         cudaIntersections.toVector( *outIntersections );
@@ -87,16 +89,16 @@ VertScalars  computeSkyViewFactor( const Mesh& terrain,
 {
     MR_TIMER;
 
-    const auto& tree = terrain.getAABBTree();
+    const AABBTree& tree = terrain.getAABBTree();
     const auto& nodes = tree.nodes();
 
     CUDA_EXEC( cudaSetDevice( 0 ) );
 
-    DynamicArray<Node3> cudaNodes;
+    DynamicArray<WideNode3> cudaNodes;
     cudaNodes.fromVector( nodes );
 
     DynamicArray<float3> cudaMeshPoints( terrain.points );
-    DynamicArray<FaceToThreeVerts> cudaFaces( terrain.topology.getTriangulation() );
+    DynamicArray<LeafTri3> cudaLeafTris( tree.leafTris() );
     DynamicArray<float3> cudaSamples( samples );
 
     DynamicArray<uint64_t> cudaValidSamples( validSamples.bits() );
@@ -113,7 +115,7 @@ VertScalars  computeSkyViewFactor( const Mesh& terrain,
         cudaIntersections.resize( rayCount );
 
     if ( outSkyRays &&
-        findSkyRaysKernel( cudaNodes.data(), cudaMeshPoints.data(), cudaFaces.data(), cudaSamples.data(), cudaValidSamples.data(), cudaPrecs.data(), cudaOutSkyRays.data(), cudaOutSkyRays.size(), cudaSamples.size(), cudaPrecs.size(), cudaIntersections.data() ) == cudaSuccess )
+        findSkyRaysKernel( cudaNodes.data(), cudaMeshPoints.data(), cudaLeafTris.data(), cudaSamples.data(), cudaValidSamples.data(), cudaPrecs.data(), cudaOutSkyRays.data(), cudaOutSkyRays.size(), cudaSamples.size(), cudaPrecs.size(), cudaIntersections.data() ) == cudaSuccess )
     {
         BitSet::Blocks outSkyRaysBlocks;
         cudaOutSkyRays.toVector( outSkyRaysBlocks );
@@ -127,9 +129,9 @@ VertScalars  computeSkyViewFactor( const Mesh& terrain,
         maxRadiation += patch.radiation;
 
     if ( outSkyRays )
-        computeSkyViewFactorKernel(cudaNodes.data(), cudaMeshPoints.data(), cudaFaces.data(), cudaSamples.data(), cudaValidSamples.data(), cudaSkyPatches.data(), cudaPrecs.data(), 1.0f / maxRadiation, cudaRes.data(), cudaSamples.size(), cudaPrecs.size(), cudaOutSkyRays.data() );
+        computeSkyViewFactorKernel(cudaNodes.data(), cudaMeshPoints.data(), cudaLeafTris.data(), cudaSamples.data(), cudaValidSamples.data(), cudaSkyPatches.data(), cudaPrecs.data(), 1.0f / maxRadiation, cudaRes.data(), cudaSamples.size(), cudaPrecs.size(), cudaOutSkyRays.data() );
     else
-        computeSkyViewFactorKernel( cudaNodes.data(), cudaMeshPoints.data(), cudaFaces.data(), cudaSamples.data(), cudaValidSamples.data(), cudaSkyPatches.data(), cudaPrecs.data(), 1.0f / maxRadiation, cudaRes.data(), cudaSamples.size(), cudaPrecs.size(), cudaIntersections.data() );
+        computeSkyViewFactorKernel( cudaNodes.data(), cudaMeshPoints.data(), cudaLeafTris.data(), cudaSamples.data(), cudaValidSamples.data(), cudaSkyPatches.data(), cudaPrecs.data(), 1.0f / maxRadiation, cudaRes.data(), cudaSamples.size(), cudaPrecs.size(), cudaIntersections.data() );
 
     if ( outIntersections )
         cudaIntersections.toVector( *outIntersections );

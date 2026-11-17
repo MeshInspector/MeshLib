@@ -36,10 +36,10 @@ public:
 MRMESH_API std::unique_ptr<IFillContours2DPlanCache> makeFillContours2DPlanCache();
 
 /**
- * @brief prepare filling plan for hole with border in same plane (i.e. after cut by plane)
+ * @brief prepare filling plan for hole or face with border in same plane (i.e. after cut by plane)
  * @param mesh - mesh with hole
- * @param holeEdgeId - the edge here represents a hole borders that should be filled
- * edge should have invalid left face (FaceId == -1)
+ * @param holeEdgeId - the edge here represents a hole or a face (to its left) that should be triangulated;
+ * executeHoleFillPlan keeps that face as one of the triangles
  * @param cache - if not null, keeps the buffers of this call in it, see IFillContours2DPlanCache
  * @return Expected with has_value()=true if hole plan is prepared, otherwise - string error
  */

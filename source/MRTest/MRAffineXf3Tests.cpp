@@ -1,5 +1,6 @@
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRMatrix3.h>
+#include <MRMesh/MRMatrix3Decompose.h>
 #include <MRMesh/MRVector3.h>
 #include <MRMesh/MRConstants.h>
 #include <MRMesh/MRQuaternion.h>
@@ -94,6 +95,37 @@ TEST(MRMesh, AffineXf3)
     const auto [q, r] = rr.qr();
     ASSERT_NEAR( ( q - Matrix3d::identity() ).norm(), 0, 1e-12 );
     ASSERT_NEAR( ( r - rr ).norm(), 0, 1e-12 );
+}
+
+TEST(MRMesh, DecomposeMatrix3)
+{
+    const auto rot = Matrix3f::rotationFromEuler( { 0.3f, -0.7f, 1.9f } );
+    const Matrix3f mirrorX = Matrix3f::scale( -1.f, 1.f, 1.f ), mirrorY = Matrix3f::scale( 1.f, -1.f, 1.f ), mirrorZ = Matrix3f::scale( 1.f, 1.f, -1.f );
+    for ( const Matrix3f& m : { Matrix3f{}, rot, mirrorX, mirrorY, mirrorZ, Matrix3f::scale( -1.f ), rot * Matrix3f::scale( 2.f, -0.5f, 3.f ) } )
+    {
+        for ( bool signedScale : { false, true } )
+        {
+            Matrix3f r, s;
+            decomposeMatrix3( m, r, s, signedScale );
+            const bool mirror = m.det() < 0;
+            EXPECT_NEAR( ( r * s - m ).norm(), 0, 1e-5f );
+            EXPECT_NEAR( r.det(), ( !mirror || signedScale ) ? 1 : -1, 1e-5f );
+            EXPECT_EQ( s.x.x * s.y.y * s.z.z < 0, mirror && signedScale );
+            if ( signedScale )
+            {
+                // the round trip of MCP and the Scene-info panel: rotation to Euler angles and back
+                EXPECT_NEAR( ( Matrix3f::rotationFromEuler( r.toEulerAngles() ) * s - m ).norm(), 0, 1e-5f );
+            }
+        }
+    }
+
+    // axis mirrors read back as written (with the identity rotation), and a singular matrix is not a mirror
+    for ( const Matrix3f& m : { mirrorX, mirrorY, mirrorZ, Matrix3f::scale( 1.f, 1.f, 0.f ) } )
+    {
+        Matrix3f r, s;
+        decomposeMatrix3( m, r, s, true );
+        EXPECT_EQ( s, m );
+    }
 }
 
 // verifies that template can be instantiated with typical parameters

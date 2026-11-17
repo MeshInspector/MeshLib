@@ -70,7 +70,7 @@ Expected<Mesh> RegularMapMesher::createMesh() const
     } );
 
     if( mesh )
-        mesh.value().topology.flipOrientation();
+        mesh.value().flipOrientation();
 
     return mesh;
 }

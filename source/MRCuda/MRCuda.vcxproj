@@ -115,6 +115,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
+    <ClInclude Include="MRCudaAABBTree.hpp" />
     <ClInclude Include="MRCudaBasic.cuh" />
     <ClInclude Include="MRCudaBasic.hpp" />
     <ClInclude Include="MRCudaBasic.h" />

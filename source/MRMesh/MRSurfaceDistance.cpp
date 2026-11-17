@@ -57,6 +57,21 @@ VertScalars computeSurfaceDistances( const Mesh& mesh, const HashMap<VertId, flo
     return b.takeDistanceMap();
 }
 
+VertScalars computeSurfaceDistances( const Mesh& mesh, const UndirectedEdgeBitSet& startEdges, const VertBitSet& startPoints,
+    float maxDist, const VertBitSet* region, int maxVertUpdates )
+{
+    MR_TIMER;
+
+    SurfaceDistanceBuilder b( mesh, region );
+    b.setMaxVertUpdates( maxVertUpdates );
+    b.addStartEdgesAndPoints( startEdges, startPoints, 0 );
+    while ( b.doneDistance() < maxDist )
+    {
+        b.growOne();
+    }
+    return b.takeDistanceMap();
+}
+
 VertScalars computeSurfaceDistances( const Mesh & mesh, const MeshTriPoint & start, const MeshTriPoint & end, 
                                               const VertBitSet* region, bool * endReached, int maxVertUpdates )
 {

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # --skip-prebuilt-thirdparty: the thirdparty comes prebuilt in the Docker image
-# --wheel: also mrbind and mrbind-pybind11, for the Python bindings and their shims
+# --wheel: also mrbind, for the Python bindings
 
 SCRIPT_DIR="$(dirname "$BASH_SOURCE")"
 
@@ -22,7 +22,6 @@ done
 if [ $WHEEL = 1 ]; then
     SUBMODULES+=(
         thirdparty/mrbind
-        thirdparty/mrbind-pybind11
     )
 fi
 

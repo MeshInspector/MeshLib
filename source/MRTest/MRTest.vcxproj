@@ -79,6 +79,7 @@
     <ClCompile Include="MRReducePathTests.cpp" />
     <ClCompile Include="MRSerializeTests.cpp" />
     <ClCompile Include="MRSharpOffsetComponentsTests.cpp" />
+    <ClCompile Include="MRPointsToMeshProjectorTests.cpp" />
     <ClCompile Include="MRShrinkwrapTests.cpp" />
     <ClCompile Include="MRSpdlog.cpp" />
     <ClCompile Include="MRStreamOperatorsTests.cpp" />
@@ -154,6 +155,7 @@
     <ClCompile Include="MRScalarConvertTests.cpp" />
     <ClCompile Include="MRTupleBindingsTests.cpp" />
     <ClCompile Include="MRViewportIdTests.cpp" />
+    <ClCompile Include="MRViewportTests.cpp" />
     <ClCompile Include="MRVolumeIndexerTests.cpp" />
     <ClCompile Include="MRVectorTests.cpp" />
     <ClCompile Include="MRVoxelsLoadTests.cpp" />

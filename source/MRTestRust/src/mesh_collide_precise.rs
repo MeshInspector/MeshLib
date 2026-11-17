@@ -17,11 +17,14 @@ fn mesh_collide_precise()
 
     let contours = meshlib::order_intersection_contours(mesh_a.topology(), mesh_b.topology(), &intersections);
     assert_eq!(contours.size(), 4);
-    let sizes: Vec<usize> = (0..4).map(|i| contours.index(i).size()).collect();
-    assert!(sizes[0] == 69 || sizes[0] == 71); // Apple Debug
-    assert!(sizes[1] == 9 || sizes[1] == 7); // Apple Debug
-    assert!(sizes[2] == 69 || sizes[2] == 71); // with or without the FMA instruction
-    assert!(sizes[3] == 9 || sizes[3] == 7); // with or without the FMA instruction
+    // the order of the contours follows the order of the intersections found in the trees;
+    // 7 and 71 or 9 and 69, with or without the FMA instruction
+    let mut sizes: Vec<usize> = (0..4).map(|i| contours.index(i).size()).collect();
+    sizes.sort();
+    assert!(sizes[0] == 7 || sizes[0] == 9, "{sizes:?}");
+    assert!(sizes[1] == 7 || sizes[1] == 9, "{sizes:?}");
+    assert!(sizes[2] == 69 || sizes[2] == 71, "{sizes:?}");
+    assert!(sizes[3] == 69 || sizes[3] == 71, "{sizes:?}");
 
     let mut contours_a = meshlib::OneMeshContours::new();
     let mut contours_b = meshlib::OneMeshContours::new();

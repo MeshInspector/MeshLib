@@ -421,19 +421,6 @@
       }
     },
     {
-      "id": "pybind11",
-      "modules": [
-        "MRPython"
-      ],
-      "license": "BSD-3-Clause",
-      "upstream": "https://github.com/pybind/pybind11",
-      "source": {
-        "type": "submodule",
-        "path": "thirdparty/mrbind-pybind11"
-      },
-      "version": "2bead442a0146befdd5383bab79f5aa101afb573"
-    },
-    {
       "id": "OpenVDB",
       "modules": [
         "MRVoxels"

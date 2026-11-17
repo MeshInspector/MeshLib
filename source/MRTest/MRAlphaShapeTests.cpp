@@ -2,6 +2,7 @@
 #include <MRMesh/MRPointCloud.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshComponents.h>
+#include <MRPch/MRTBB.h>
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <chrono>
@@ -13,6 +14,50 @@
 
 namespace MR
 {
+
+namespace
+{
+
+// appends n points of the Fibonacci sphere
+void addFibonacciSphere( VertCoords & points, int n, const Vector3f & center = {}, float radius = 1 )
+{
+    for ( int i = 0; i < n; ++i )
+    {
+        const float z = 1 - ( 2 * i + 1 ) / float( n );
+        const float rho = std::sqrt( 1 - z * z );
+        const float phi = 2.39996323f * i;
+        points.push_back( center + radius * Vector3f{ rho * std::cos( phi ), rho * std::sin( phi ), z } );
+    }
+}
+
+// appends n random points inside the unit sphere, the same ones in every call
+void addInnerPoints( VertCoords & points, int n )
+{
+    std::mt19937 gen( 0 );
+    std::uniform_real_distribution<float> coord( -0.28f, 0.28f );
+    for ( int i = 0; i < n; ++i )
+        points.push_back( { coord( gen ), coord( gen ), coord( gen ) } );
+}
+
+// triangle (a, b, c) rotated to start from the smallest id
+ThreeVertIds rotatedTri( VertId a, VertId b, VertId c )
+{
+    if ( b < a && b < c )
+        return { b, c, a };
+    if ( c < a && c < b )
+        return { c, a, b };
+    return { a, b, c };
+}
+
+std::set<ThreeVertIds> rotatedSet( const Triangulation & tris )
+{
+    std::set<ThreeVertIds> res;
+    for ( const auto & t : tris )
+        res.insert( rotatedTri( t[0], t[1], t[2] ) );
+    return res;
+}
+
+} // anonymous namespace
 
 TEST( MRMesh, AlphaShapeDuplicates )
 {
@@ -45,7 +90,7 @@ TEST( MRMesh, AlphaShapeDuplicates )
 
     // the duplicate point with the larger id gets no triangles of its own
     Triangulation vTris;
-    std::vector<AlphaShapeNei> neis;
+    Vector<AlphaShapeNei> neis;
     auto data = getAlphaShapeData( cloud, 1, false );
     findAlphaShapeNeiTriangles( cloud, 4_v, data, vTris, neis, false );
     EXPECT_TRUE( vTris.empty() );
@@ -66,7 +111,7 @@ TEST( MRMesh, AlphaShape )
     cloud.validPoints.autoResizeSet( 2_v, 3, true );
 
     Triangulation tris;
-    std::vector<AlphaShapeNei> neis;
+    Vector<AlphaShapeNei> neis;
     AlphaShapeStats stats;
 
     auto data = getAlphaShapeData( cloud, 3, false );
@@ -120,8 +165,8 @@ TEST( MRMesh, BallPivotVertex )
     cloud.points.push_back( {  0.2952f, 1.6742f, 0.5f } ); //5_v, rotation 80 degrees, far from the axis
     cloud.validPoints.resize( cloud.points.size(), true );
 
-    auto data = getAlphaShapeData( cloud, 1, false );
-    std::vector<BallPivotCandidate> cands;
+    auto data = getAlphaShapeData( cloud, 1, true );
+    Vector<BallPivotCandidate> cands;
     auto ids = [&cands]
     {
         std::vector<VertId> res;
@@ -142,7 +187,7 @@ TEST( MRMesh, BallPivotVertex )
 
     cloud.validPoints.reset( 3_v );
     cloud.invalidateCaches();
-    data = getAlphaShapeData( cloud, 1, false );
+    data = getAlphaShapeData( cloud, 1, true );
     EXPECT_EQ( findBallPivotVertex( cloud, 0_v, 1_v, 2_v, data, cands ), 5_v );
 
     // with no other point, the ball rotates to the other side of the same triangle
@@ -150,7 +195,7 @@ TEST( MRMesh, BallPivotVertex )
     for ( VertId v : { 0_v, 1_v, 2_v } )
         tri.points.push_back( cloud.points[v] );
     tri.validPoints.resize( tri.points.size(), true );
-    data = getAlphaShapeData( tri, 1, false );
+    data = getAlphaShapeData( tri, 1, true );
     EXPECT_EQ( findBallPivotVertex( tri, 0_v, 1_v, 2_v, data, cands ), 2_v );
     EXPECT_TRUE( cands.empty() );
     EXPECT_EQ( findBallPivotVertex( tri, 1_v, 0_v, 2_v, data, cands ), 2_v );
@@ -162,39 +207,353 @@ TEST( MRMesh, BallPivotVertex )
 TEST( MRMesh, BallPivotAlphaShapeTriangles )
 {
     PointCloud cloud;
-    const int n = 2000;
-    for ( int i = 0; i < n; ++i ) // Fibonacci sphere
-    {
-        const float z = 1 - ( 2 * i + 1 ) / float( n );
-        const float rho = std::sqrt( 1 - z * z );
-        const float phi = 2.39996323f * i;
-        cloud.points.push_back( { rho * std::cos( phi ), rho * std::sin( phi ), z } );
-    }
+    addFibonacciSphere( cloud.points, 2000 );
     cloud.validPoints.resize( cloud.points.size(), true );
 
-    auto cyclic = []( VertId a, VertId b, VertId c ) // the rotation starting from the smallest id
-    {
-        if ( b < a && b < c )
-            return std::array<VertId, 3>{ b, c, a };
-        if ( c < a && c < b )
-            return std::array<VertId, 3>{ c, a, b };
-        return std::array<VertId, 3>{ a, b, c };
-    };
     const auto data = getAlphaShapeData( cloud, 0.2f, true );
     const auto tris = findAlphaShapeAllTriangles( cloud, data );
-    std::set<std::array<VertId, 3>> triSet;
-    for ( const auto & t : tris )
-        triSet.insert( cyclic( t[0], t[1], t[2] ) );
+    const auto triSet = rotatedSet( tris );
 
-    std::vector<BallPivotCandidate> cands;
+    Vector<BallPivotCandidate> cands;
     for ( const auto & t : tris )
         for ( int e = 0; e < 3; ++e )
         {
             const VertId a = t[e], b = t[( e + 1 ) % 3], c = t[( e + 2 ) % 3];
             const auto x = findBallPivotVertex( cloud, a, b, c, data, cands );
-            EXPECT_TRUE( triSet.contains( cyclic( b, a, x ) ) );
+            EXPECT_TRUE( triSet.contains( rotatedTri( b, a, x ) ) );
         }
     EXPECT_GT( tris.size(), size_t( 1000 ) );
+}
+
+// the ball pivoting finds only the outer side of a sphere sampled on its surface and inside,
+// while the alpha shape has also the inner side and the triangles around the inner points;
+// the leftmost point is a far outlier with no alpha-shape triangles, skipped in the search of the first triangle
+TEST( MRMesh, BallPivotingSphere )
+{
+    PointCloud cloud;
+    const int n = 2000;
+    addFibonacciSphere( cloud.points, n );
+    addInnerPoints( cloud.points, 200 );
+    cloud.points.push_back( { -5, 0, 0 } );
+    cloud.validPoints.resize( cloud.points.size(), true );
+
+    std::vector<MeshBuilder::VertDuplication> dups;
+    const auto mesh = findBallPivotingMesh( cloud, 0.2f, false, &dups );
+    EXPECT_TRUE( dups.empty() );
+    EXPECT_TRUE( mesh.topology.isClosed() );
+    EXPECT_EQ( mesh.topology.numValidVerts(), n );
+    EXPECT_EQ( mesh.topology.lastValidVert(), VertId( n - 1 ) );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 2 * n - 4 );
+    EXPECT_GT( mesh.volume(), 4.0 ); // outward orientation: the volume of the unit ball is 4.19
+
+    // the pivoting triangles are alpha-shape triangles
+    const auto data = getAlphaShapeData( cloud, 0.2f, true );
+    const auto alphaTris = rotatedSet( findAlphaShapeAllTriangles( cloud, data ) );
+    const auto pivotTris = *findBallPivotingTriangles( cloud, data );
+    for ( const auto & t : pivotTris )
+    {
+        EXPECT_TRUE( alphaTris.contains( t ) );
+    }
+    EXPECT_GT( alphaTris.size(), 2 * pivotTris.size() );
+}
+
+// the pivoting from the seed of any point of the sphere looking outside finds the same outer side
+TEST( MRMesh, BallPivotingFromSeed )
+{
+    PointCloud cloud;
+    const int n = 2000;
+    addFibonacciSphere( cloud.points, n );
+    addInnerPoints( cloud.points, 200 );
+    cloud.validPoints.resize( cloud.points.size(), true );
+
+    const auto data = getAlphaShapeData( cloud, 0.2f, true );
+    const auto all = *findBallPivotingTriangles( cloud, data );
+    EXPECT_EQ( all.size(), 2 * n - 4 );
+    Triangulation tris;
+    Vector<AlphaShapeNei> neis;
+    for ( VertId v : { 0_v, 777_v, 1234_v } )
+    {
+        const auto seed = findBallPivotingSeed( cloud, v, cloud.points[v], data, tris, neis );
+        ASSERT_TRUE( seed.has_value() );
+        EXPECT_TRUE( std::find( ( *seed ).begin(), ( *seed ).end(), v ) != ( *seed ).end() );
+        EXPECT_EQ( *findBallPivotingComponent( cloud, *seed, data ), all );
+    }
+}
+
+// a flat grid in the integer coordinates of the predicates themselves: the four points of every grid square are
+// cocircular, so the ball emptiness tests are ties resolved by simulation-of-simplicity; both sides of the open sheet
+// are reached via its boundary, giving the same triangles as the alpha shape: two triangulations of the square
+TEST( MRMesh, BallPivotingGridSheet )
+{
+    const int k = 12;
+    PointCloud cloud;
+    for ( int i = 0; i < k; ++i )
+        for ( int j = 0; j < k; ++j )
+            cloud.points.push_back( { 4.0f * i, 4.0f * j, 0 } );
+    cloud.validPoints.resize( cloud.points.size(), true );
+
+    auto data = getAlphaShapeData( cloud, 8, true );
+    data.toInt = ConvertToIntVector{ Vector3d{}, 1.0 };
+    data.intPoints = computeIntCoords( data.toInt, cloud.points, &cloud.validPoints );
+    EXPECT_TRUE( data.twins.none() ); // computed in the original grid, and the new one has no twins either
+    data.intRadiusSq = 64;
+    data.searchRadius = 2 * 8 + 2;
+
+    const auto pivotTris = *findBallPivotingTriangles( cloud, data );
+    EXPECT_EQ( pivotTris.size(), 4 * ( k - 1 ) * ( k - 1 ) );
+    EXPECT_EQ( rotatedSet( pivotTris ), rotatedSet( findAlphaShapeAllTriangles( cloud, data ) ) );
+}
+
+// a cluster of four outliers forming a tetrahedron is the first piece found from -x direction,
+// but the sphere is the first one from the other directions and the largest piece
+TEST( MRMesh, BallPivotingOutlierCluster )
+{
+    PointCloud cloud;
+    const int n = 2000;
+    addFibonacciSphere( cloud.points, n );
+    cloud.points.push_back( { -5, 0, 0 } );
+    cloud.points.push_back( { -5, 0.1f, 0 } );
+    cloud.points.push_back( { -5, 0, 0.1f } );
+    cloud.points.push_back( { -4.9f, 0.03f, 0.03f } );
+    cloud.validPoints.resize( cloud.points.size(), true );
+
+    const auto data = getAlphaShapeData( cloud, 0.2f, true );
+    Triangulation clusterTris;
+    Vector<AlphaShapeNei> neis;
+    findAlphaShapeNeiTriangles( cloud, VertId( n ), data, clusterTris, neis, false );
+    EXPECT_FALSE( clusterTris.empty() );
+
+    const auto mesh = findBallPivotingMesh( cloud, 0.2f );
+    EXPECT_TRUE( mesh.topology.isClosed() );
+    EXPECT_EQ( mesh.topology.numValidVerts(), n );
+    EXPECT_EQ( mesh.topology.lastValidVert(), VertId( n - 1 ) );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 2 * n - 4 );
+}
+
+// the second sphere far away from the first one is returned only with allComponents, together with the shape
+// of the inner points of the first sphere having alpha-shape triangles among themselves
+TEST( MRMesh, BallPivotingAllComponents )
+{
+    PointCloud cloud;
+    const int n = 2000, m = 500;
+    addFibonacciSphere( cloud.points, n );
+    addFibonacciSphere( cloud.points, m, { 4, 0, 0 }, 0.5f );
+    addInnerPoints( cloud.points, 200 );
+    cloud.validPoints.resize( cloud.points.size(), true );
+
+    const auto first = findBallPivotingMesh( cloud, 0.2f );
+    EXPECT_EQ( first.topology.numValidVerts(), n );
+    EXPECT_EQ( first.topology.numValidFaces(), 2 * n - 4 );
+
+    const auto all = findBallPivotingMesh( cloud, 0.2f, true );
+    EXPECT_TRUE( all.topology.isClosed() );
+    for ( VertId v( 0 ); v < n + m; ++v )
+    {
+        EXPECT_TRUE( all.topology.hasVert( v ) );
+    }
+    const int comps = int( MeshComponents::getNumComponents( all ) );
+    EXPECT_GE( comps, 2 );
+    EXPECT_EQ( all.topology.numValidFaces(), 2 * all.topology.numValidVerts() - 4 * comps ); // closed shells of genus 0
+}
+
+// with allComponents on a noisy sphere, the inner side is regrown from the points left out of the outer one,
+// reusing the points already counted: the progress must not go back; the cancellation gives std::nullopt
+TEST( MRMesh, BallPivotingProgress )
+{
+    PointCloud cloud;
+    addFibonacciSphere( cloud.points, 2000 );
+    std::mt19937 gen( 1 );
+    std::uniform_real_distribution<float> noise( 0.97f, 1.03f );
+    for ( auto & p : cloud.points )
+        p *= noise( gen );
+    cloud.validPoints.resize( cloud.points.size(), true );
+    const auto data = getAlphaShapeData( cloud, 0.2f, true );
+
+    for ( bool allComponents : { false, true } )
+    {
+        float last = 0;
+        bool monotonic = true;
+        int calls = 0;
+        const auto tris = findBallPivotingTriangles( cloud, data, allComponents, [&]( float p )
+        {
+            monotonic = monotonic && p >= last;
+            last = p;
+            ++calls;
+            return true;
+        } );
+        ASSERT_TRUE( tris.has_value() );
+        EXPECT_TRUE( monotonic );
+        EXPECT_EQ( last, 1.0f );
+        EXPECT_GT( calls, 2 );
+
+        int left = calls / 2;
+        EXPECT_FALSE( findBallPivotingTriangles( cloud, data, allComponents, [&]( float ) { return --left > 0; } ).has_value() );
+        EXPECT_FALSE( findBallPivotingComponent( cloud, ( *tris )[0_f], data, []( float ) { return false; } ).has_value() );
+    }
+}
+
+// an empty cloud gives no triangles, which is not a cancellation
+TEST( MRMesh, BallPivotingEmpty )
+{
+    PointCloud cloud;
+    const auto data = getAlphaShapeData( cloud, 1, true );
+    for ( bool allComponents : { false, true } )
+    {
+        const auto tris = findBallPivotingTriangles( cloud, data, allComponents );
+        ASSERT_TRUE( tris.has_value() );
+        EXPECT_TRUE( tris->empty() );
+    }
+    EXPECT_EQ( findBallPivotingMesh( cloud, 1 ).topology.numValidFaces(), 0 );
+}
+
+// a tenth of the points of a sphere have twins with smaller ids and another tenth with larger ids:
+// only the smallest id of each position must appear, and the triangles must be the same as without the twins
+TEST( MRMesh, BallPivotingTwins )
+{
+    const int n = 2000;
+    VertCoords sphere;
+    addFibonacciSphere( sphere, n );
+    PointCloud cloud;
+    std::vector<int> posOf; // the index in sphere of each cloud point
+    std::vector<VertId> smallestId( n );
+    for ( int i = 5; i < n; i += 10 )
+    {
+        smallestId[i] = VertId( posOf.size() );
+        posOf.push_back( i );
+    }
+    for ( int i = 0; i < n; ++i )
+    {
+        if ( !smallestId[i] )
+            smallestId[i] = VertId( posOf.size() );
+        posOf.push_back( i );
+    }
+    for ( int i = 0; i < n; i += 10 )
+        posOf.push_back( i );
+    for ( int i : posOf )
+        cloud.points.push_back( sphere[VertId( i )] );
+    cloud.validPoints.resize( cloud.points.size(), true );
+
+    PointCloud plain;
+    plain.points = sphere;
+    plain.validPoints.resize( n, true );
+
+    // the triangles in sphere indices, rotated to start from the smallest one
+    auto posTris = []( const Triangulation & tris, auto && pos )
+    {
+        std::set<std::array<int, 3>> res;
+        for ( const auto & t : tris )
+        {
+            std::array<int, 3> p{ pos( t[0] ), pos( t[1] ), pos( t[2] ) };
+            std::rotate( p.begin(), std::min_element( p.begin(), p.end() ), p.end() );
+            res.insert( p );
+        }
+        return res;
+    };
+    const auto data = getAlphaShapeData( cloud, 0.2f, true );
+    EXPECT_EQ( data.twins.count(), 2 * ( n / 10 ) );
+    for ( VertId v : data.twins )
+    {
+        EXPECT_NE( v, smallestId[posOf[v]] );
+    }
+    const auto tris = *findBallPivotingTriangles( cloud, data );
+    const auto plainTris = *findBallPivotingTriangles( plain, getAlphaShapeData( plain, 0.2f, true ) );
+    EXPECT_EQ( tris.size(), 2 * n - 4 );
+    for ( const auto & t : tris )
+        for ( VertId v : t )
+        {
+            EXPECT_EQ( v, smallestId[posOf[v]] );
+        }
+    EXPECT_EQ( posTris( tris, [&]( VertId v ) { return posOf[v]; } ), posTris( plainTris, []( VertId v ) { return int( v ); } ) );
+
+    const auto mesh = findBallPivotingMesh( cloud, 0.2f );
+    EXPECT_TRUE( mesh.topology.isClosed() );
+    EXPECT_EQ( mesh.topology.numValidVerts(), n );
+    EXPECT_EQ( MeshComponents::getNumComponents( mesh ), 1 );
+}
+
+// points differing in float but sharing their position in the integer grid are twins as well:
+// the coordinates closer to zero than about the doubled integer step have finer floats
+TEST( MRMesh, BallPivotingIntTwins )
+{
+    const int n = 2000;
+    PointCloud plain;
+    addFibonacciSphere( plain.points, n );
+    plain.validPoints.resize( n, true );
+    const auto toInt = getAlphaShapeData( plain, 0.2f, false ).toInt;
+
+    PointCloud cloud; // not a copy of plain, whose AABB tree is already built
+    cloud.points = plain.points;
+    size_t numTwins = 0;
+    for ( VertId v( 0 ); v < n; ++v )
+        for ( int i = 0; i < 3; ++i )
+        {
+            auto p = plain.points[v];
+            p[i] = std::nextafter( p[i], 0.0f ); // inside the box, so toInt is the same
+            if ( p != plain.points[v] && toInt( p ) == toInt( plain.points[v] ) )
+            {
+                cloud.points.push_back( p );
+                ++numTwins;
+                break;
+            }
+        }
+    cloud.validPoints.resize( cloud.points.size(), true );
+    EXPECT_GE( numTwins, size_t( 5 ) );
+
+    const auto data = getAlphaShapeData( cloud, 0.2f, true );
+    EXPECT_EQ( data.twins.count(), numTwins );
+    EXPECT_EQ( *findBallPivotingTriangles( cloud, data ), *findBallPivotingTriangles( plain, getAlphaShapeData( plain, 0.2f, true ) ) );
+}
+
+// the result does not depend on the number of threads
+TEST( MRMesh, BallPivotingOneThread )
+{
+    PointCloud cloud;
+    addFibonacciSphere( cloud.points, 2000 );
+    addFibonacciSphere( cloud.points, 500, { 4, 0, 0 }, 0.5f );
+    addInnerPoints( cloud.points, 200 );
+    cloud.validPoints.resize( cloud.points.size(), true );
+    const auto data = getAlphaShapeData( cloud, 0.2f, true );
+    for ( bool allComponents : { false, true } )
+    {
+        const auto tris = *findBallPivotingTriangles( cloud, data, allComponents );
+        Triangulation oneThread;
+        tbb::task_arena arena( 1 );
+        arena.execute( [&] { oneThread = *findBallPivotingTriangles( cloud, data, allComponents ); } );
+        EXPECT_EQ( oneThread, tris );
+    }
+}
+
+// three tetrahedra sharing edge (0_v, 1_v), 120 degrees apart around it: the empty balls rotating around the edge
+// form three arcs, so each direction of the edge belongs to three triangles; the pivoting over the edge must not stop
+// after the first arc is crossed, since the third tetrahedron is reachable only via the edge
+TEST( MRMesh, BallPivotingTetrahedraSharingEdge )
+{
+    PointCloud cloud;
+    cloud.points.push_back( { 0, 0, 0 } );
+    cloud.points.push_back( { 0, 0, 1 } );
+    for ( int i = 0; i < 3; ++i )
+        for ( float da : { -0.26f, 0.26f } ) // +-15 degrees
+        {
+            const float a = i * 2.0944f + da;
+            cloud.points.push_back( { 1.5f * std::cos( a ), 1.5f * std::sin( a ), 0.5f } );
+        }
+    cloud.validPoints.resize( cloud.points.size(), true );
+
+    const auto tris = *findBallPivotingTriangles( cloud, getAlphaShapeData( cloud, 1, true ) );
+    EXPECT_EQ( tris.size(), 12 );
+    std::map<std::pair<VertId, VertId>, int> edges;
+    for ( const auto & t : tris )
+        for ( int i = 0; i < 3; ++i )
+            ++edges[ { t[i], t[( i + 1 ) % 3] } ];
+    for ( const auto & [e, num] : edges ) // every directed edge is balanced by its opposite
+    {
+        const auto it = edges.find( { e.second, e.first } );
+        EXPECT_EQ( num, it == edges.end() ? 0 : it->second );
+    }
+    EXPECT_EQ( ( edges[ { 0_v, 1_v } ] ), 3 );
+
+    const auto mesh = findBallPivotingMesh( cloud, 1 );
+    EXPECT_EQ( MeshComponents::getNumComponents( mesh ), 3 );
 }
 
 // four points of a square are exactly on both balls passing via any three of them,

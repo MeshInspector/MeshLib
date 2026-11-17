@@ -17,6 +17,7 @@ IGNORED_PROJECTS = {
     # auto-generated bindings
     "MeshLibC2",
     "MeshLibC2Cuda",
+    "MeshLibC2PythonViewer",
 }
 
 IGNORED_FILENAMES = {

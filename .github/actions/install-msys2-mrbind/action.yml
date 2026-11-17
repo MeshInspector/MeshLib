@@ -3,7 +3,8 @@ description: >
   Restore (or download) the pinned MSYS2 toolchain listed in
   `scripts/mrbind/msys2_package_hashes<packages-suffix>.txt`, sha256-verify it,
   and `pacman -U` into `msys2-dir`, installing MSYS2 first when the runner
-  image ships none (the arm64 images do not).
+  image ships none (the arm64 images do not). With `compile-only`, only what
+  compiling the generated bindings needs.
 
 inputs:
   packages-suffix:
@@ -13,6 +14,13 @@ inputs:
       Which pinned set to install: the `<suffix>` of
       `scripts/mrbind/msys2_package_hashes<suffix>.txt`. `_clang22` is the x86_64
       CLANG64 toolchain, `_clangarm64` the native aarch64 one.
+  compile-only:
+    required: false
+    default: 'false'
+    description: >
+      `true` installs only clang, lld, make, gettext and pkg-config with their
+      dependencies (22 of the 55 packages): enough to compile the generated
+      bindings and to build with clang-cl, not to build MRBind.
   repo-dir:
     required: false
     default: '.'
@@ -87,7 +95,7 @@ runs:
       run: |
         $attempts = 3
         foreach ($i in 1..$attempts) {
-          & "$env:MSYS2_DIR\msys2_shell.cmd" -no-start -defterm -here -c "set -e && bash ${{ inputs.repo-dir }}/scripts/mrbind/msys2_download_packages.sh ${{ inputs.packages-suffix }} && bash ${{ inputs.repo-dir }}/scripts/mrbind/msys2_install_packages.sh ${{ inputs.packages-suffix }}"
+          & "$env:MSYS2_DIR\msys2_shell.cmd" -no-start -defterm -here -c "set -e && bash ${{ inputs.repo-dir }}/scripts/mrbind/msys2_download_packages.sh ${{ inputs.packages-suffix }} && bash ${{ inputs.repo-dir }}/scripts/mrbind/msys2_install_packages.sh ${{ inputs.packages-suffix }} ${{ inputs.compile-only == 'true' && 'clang lld make gettext-tools pkgconf' || '' }}"
           $code = $LASTEXITCODE
           if ($code -eq 0) { break }
           # The msys2 shell dies without its console output reaching the

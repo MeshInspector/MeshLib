@@ -92,6 +92,15 @@ Mesh Mesh::fromTrianglesDuplicatingNonManifoldVertices(
     return res;
 }
 
+Mesh Mesh::fromTriMeshDuplicatingNonManifoldVertices(
+    TriMesh && triMesh,
+    std::vector<MeshBuilder::VertDuplication> * dups,
+    const MeshBuilder::BuildSettings & settings,
+    const MeshBuilder::BetterDupContinuation & betterCont )
+{
+    return fromTrianglesDuplicatingNonManifoldVertices( std::move( triMesh.points ), triMesh.tris, dups, settings, betterCont );
+}
+
 Mesh Mesh::fromFaceSoup(
     VertCoords vertexCoordinates,
     const std::vector<VertId> & verts, const Vector<MeshBuilder::VertSpan, FaceId> & faces,
@@ -164,7 +173,7 @@ MeshEdgePoint Mesh::toEdgePoint( VertId v ) const
 
 bool Mesh::isOutsideByProjNorm( const Vector3f & pt, const MeshProjectionResult & proj, const FaceBitSet * region ) const
 {
-    return dot( proj.proj.point - pt, pseudonormal( proj.mtp, region ) ) <= 0;
+    return dot( proj.proj.point - pt, pseudonormal( proj.mtp( topology ), region ) ) <= 0;
 }
 
 Plane3f Mesh::getPlane3f( FaceId f ) const
@@ -363,7 +372,7 @@ void Mesh::addMesh( const Mesh & from, PartMapping map, bool rearrangeTriangles 
     VertId lastPointId = topology.lastValidVert();
     if ( points.size() < lastPointId + 1 )
         points.resize( lastPointId + 1 );
-    map.src2tgtVerts->forEach( [&]( VertId fromVert, VertId thisVert ) { points[thisVert] = from.points[fromVert]; } );
+    map.src2tgtVerts->forEachParallel( [&]( VertId fromVert, VertId thisVert ) { points[thisVert] = from.points[fromVert]; } );
 }
 
 void Mesh::addMeshPart( const MeshPart & from, const PartMapping & map, VacantElements * vacant )
@@ -387,7 +396,7 @@ bool Mesh::addMeshPart( const MeshPart & from, bool flipOrientation,
     VertId lastPointId = topology.lastValidVert();
     if ( points.size() < lastPointId + 1 )
         points.resize( lastPointId + 1 );
-    map.src2tgtVerts->forEach( [&]( VertId fromVert, VertId thisVert ) { points[thisVert] = from.mesh.points[fromVert]; } );
+    map.src2tgtVerts->forEachParallel( [&]( VertId fromVert, VertId thisVert ) { points[thisVert] = from.mesh.points[fromVert]; } );
     return true;
 }
 
@@ -465,10 +474,11 @@ Expected<PackMapping> Mesh::packOptimally( bool preserveAABBTree, ProgressCallba
 
     PackMapping map;
     AABBTreePointsOwner_.reset(); // points-tree will be invalidated anyway
+    dipolesOwner_.reset();
     // an already constructed tree gives the face order much faster than getOptimalFaceOrdering
     if ( preserveAABBTree || AABBTreeOwner_.get() )
     {
-        getAABBTree(); // ensure that tree is constructed
+        const auto & tree = getAABBTree(); // ensure that tree is constructed
         map.f.b.resize( topology.faceSize() );
         const bool packed = topology.numValidFaces() == topology.faceSize();
         if ( !packed )
@@ -477,13 +487,9 @@ Expected<PackMapping> Mesh::packOptimally( bool preserveAABBTree, ProgressCallba
                 if ( !topology.hasFace( f ) )
                     map.f.b[f] = FaceId{};
         }
-        if ( preserveAABBTree )
-            AABBTreeOwner_.update( [&map]( AABBTree& t ) { t.getLeafOrderAndReset( map.f ); } );
-        else
-        {
-            AABBTreeOwner_.get()->getLeafOrder( map.f );
+        tree.getLeafOrder( map.f );
+        if ( !preserveAABBTree )
             AABBTreeOwner_.reset();
-        }
     }
     else
         map.f = getOptimalFaceOrdering( *this );
@@ -500,15 +506,23 @@ Expected<PackMapping> Mesh::packOptimally( bool preserveAABBTree, ProgressCallba
 
     if ( auto r = pack( map, subprogress( cb, 0.7f, 1.0f ) ); !r )
         return unexpected( std::move( r.error() ) );
+    AABBTreeOwner_.update( [&map]( AABBTree & t ) { t.renumber( map.f, map.v ); } );
 
     return map;
 }
 
-VacantElements Mesh::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
+void Mesh::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
 {
     if ( fs.any() )
         invalidateCaches(); // some points can be deleted as well
-    return topology.deleteFaces( fs, keepEdges );
+    topology.deleteFaces( fs, keepEdges );
+}
+
+VacantElements Mesh::deleteFacesFindVacant( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
+{
+    if ( fs.any() )
+        invalidateCaches(); // some points can be deleted as well
+    return topology.deleteFacesFindVacant( fs, keepEdges );
 }
 
 bool Mesh::projectPoint( const Vector3f& point, PointOnFace& res, float maxDistSq, const FaceBitSet * region, const AffineXf3f * xf ) const
@@ -539,7 +553,7 @@ MeshProjectionResult Mesh::projectPoint( const Vector3f& point, float maxDistSq,
 const AABBTree & Mesh::getAABBTree() const
 {
     const auto & res = AABBTreeOwner_.getOrCreate( [this]{ return AABBTree( *this ); } );
-    assert( res.numLeaves() == topology.numValidFaces() );
+    assert( res.leafTris().size() == topology.numValidFaces() );
     return res;
 }
 
@@ -575,7 +589,7 @@ void Mesh::updateCaches( const VertBitSet * changedVerts )
 {
     AABBTreeOwner_.update( [&]( AABBTree & tree )
     {
-        assert( tree.numLeaves() == topology.numValidFaces() );
+        assert( tree.leafTris().size() == topology.numValidFaces() );
         tree.refit( *this, changedVerts );
     } );
     AABBTreePointsOwner_.update( [&]( AABBTreePoints & tree )
@@ -593,9 +607,23 @@ void Mesh::updateCachesAfterSplits( const FaceHashMap & new2Old )
     AABBTreeOwner_.update( [&]( AABBTree & tree )
     {
         tree.addSplitFaces( *this, new2Old );
-        assert( tree.numLeaves() == topology.numValidFaces() );
+        assert( tree.leafTris().size() == topology.numValidFaces() );
     } );
     AABBTreePointsOwner_.reset(); // new vertices appeared
+    dipolesOwner_.reset();
+}
+
+void Mesh::flipOrientation( const UndirectedEdgeBitSet * fullComponents )
+{
+    MR_TIMER;
+    topology.flipOrientation( fullComponents );
+    AABBTreeOwner_.update( [&]( AABBTree & tree )
+    {
+        if ( !fullComponents )
+            return tree.flipOrientation();
+        const auto flipped = getNeighborFaces( topology, *fullComponents );
+        tree.flipOrientation( &flipped );
+    } );
     dipolesOwner_.reset();
 }
 

@@ -1,4 +1,5 @@
 #include "MRViewport.h"
+#include "MRViewportGL.h"
 #include "MRViewer.h"
 #include "ImGuiMenu.h"
 #include "MRGLMacro.h"
@@ -23,7 +24,6 @@
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRPolyline.h"
-#include "MRMesh/MRMeshNormals.h"
 #include "MRPch/MRSuppressWarning.h"
 #include "MRPch/MRTBB.h"
 
@@ -74,6 +74,7 @@ Viewport& Viewport::get( ViewportId viewportId )
 
 Viewport::Viewport()
 {
+    viewportGL_ = std::make_unique<ViewportGL>();
     cameraLookAlong( Vector3f( -1.f, -1.f, -1.f ), Vector3f( -1, -1, 2 ) );
 }
 
@@ -81,9 +82,14 @@ Viewport::~Viewport()
 {
 }
 
+Viewport::Viewport( const Viewport& other ) : Viewport() { *this = other; } // own fresh ViewportGL, see UniquePtr
+Viewport& Viewport::operator =( const Viewport& ) = default;
+Viewport::Viewport( Viewport&& ) noexcept = default;
+Viewport& Viewport::operator =( Viewport&& ) noexcept = default;
+
 void Viewport::init()
 {
-    viewportGL_ = ViewportGL();
+    viewportGL_ = std::make_unique<ViewportGL>();
     initBaseAxes();
     updateSceneBox_();
     auto sceneCenter = sceneBox_.valid() ? sceneBox_.center() : Vector3f();
@@ -94,14 +100,36 @@ void Viewport::init()
 
 void Viewport::shut()
 {
-    viewportGL_.free();
+    viewportGL_->free();
 }
 
 void Viewport::clearFramebuffers()
 {
-    if ( !viewportGL_.checkInit() )
-        viewportGL_.init();
-    viewportGL_.fillViewport( viewportRect_, params_.backgroundColor );
+    if ( !viewportGL_->checkInit() )
+        viewportGL_->init();
+    viewportGL_->fillViewport( viewportRect_, params_.backgroundColor );
+    if ( !backgroundTexture_ || backgroundTexture_->texture.resolution.x <= 0 || backgroundTexture_->texture.resolution.y <= 0 )
+    {
+        viewportGL_->freeBackgroundTexture(); // nothing to draw, also frees a removed image
+        return;
+    }
+    const auto& bg = *backgroundTexture_;
+    const Vector2f imageSize( bg.texture.resolution );
+    auto startPos = bg.startPos;
+    auto scaling = bg.scaling;
+    if ( bg.stretchMode != BackgroundTexture::StretchMode::None )
+    {
+        const Vector2f viewportSize( width( viewportRect_ ), height( viewportRect_ ) );
+        scaling = div( viewportSize, imageSize );
+        if ( bg.stretchMode == BackgroundTexture::StretchMode::Fit )
+            scaling = Vector2f::diagonal( std::min( scaling.x, scaling.y ) );
+        else if ( bg.stretchMode == BackgroundTexture::StretchMode::Fill )
+            scaling = Vector2f::diagonal( std::max( scaling.x, scaling.y ) );
+        startPos = ( viewportSize - mult( imageSize, scaling ) ) / 2.f;
+    }
+    const auto size = mult( imageSize, scaling );
+    const Vector2f min( viewportRect_.min.x + startPos.x, viewportRect_.max.y - startPos.y - size.y );
+    viewportGL_->drawBackgroundTexture( viewportRect_, bg.texture, { min, min + size }, std::exchange( backgroundTextureChanged_, false ) );
 }
 
 static ObjAndPick pickRenderObjectImpl( const Viewport& v, std::span<VisualObject* const> objects, const Viewport::PickRenderObjectParams& params )
@@ -259,7 +287,7 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( std::span<VisualObject* cons
         return result;
 
     bool needBindSceneTexture = getViewerInstance().isSceneTextureBound();
-    auto pickResult = viewportGL_.pickObjects( params, picks );
+    auto pickResult = viewportGL_->pickObjects( params, picks );
     if ( needBindSceneTexture )
         getViewerInstance().bindSceneTexture( true );
 
@@ -345,7 +373,7 @@ std::vector<std::shared_ptr<MR::VisualObject>> Viewport::findObjectsInRect( cons
     ViewportGL::PickParameters params{ renderVector, getBaseRenderParams(), params_.clippingPlane };
 
     auto viewportRect = Box2i( Vector2i( 0, 0 ), Vector2i( int( width( viewportRect_ ) ), int( height( viewportRect_ ) ) ) );
-    auto pickResult = viewportGL_.findUniqueObjectsInRect( params, rect.intersection( viewportRect ), maxRenderResolutionSide );
+    auto pickResult = viewportGL_->findUniqueObjectsInRect( params, rect.intersection( viewportRect ), maxRenderResolutionSide );
     std::vector<std::shared_ptr<VisualObject>> result( pickResult.size() );
     for ( int i = 0; i < pickResult.size(); ++i )
     {
@@ -381,7 +409,7 @@ std::unordered_map<std::shared_ptr<MR::ObjectMesh>, MR::FaceBitSet> Viewport::fi
     bool needBindSceneTexture = getViewerInstance().isSceneTextureBound();
     auto viewportRect = Box2i( Vector2i( 0, 0 ), Vector2i( width, height ) );
     auto realRect = rect.intersection( viewportRect );
-    auto [pickResult, updatedBox] = viewportGL_.pickObjectsInRect( params, realRect, maxRenderResolutionSide );
+    auto [pickResult, updatedBox] = viewportGL_->pickObjectsInRect( params, realRect, maxRenderResolutionSide );
     if ( needBindSceneTexture )
         getViewerInstance().bindSceneTexture( true );
 
@@ -434,25 +462,18 @@ std::unordered_map<std::shared_ptr<MR::ObjectMesh>, MR::FaceBitSet> Viewport::fi
 
 FaceBitSet Viewport::findCameraLookingFaces( const Mesh& mesh, const AffineXf3f& meshToWorld ) const
 {
-    const auto normals = computePerFaceNormals( mesh );
-    FaceBitSet faces;
-    faces.resize( normals.size() );
+    // the test is done in mesh space, where face normals need no transformation
+    const auto worldToMesh = meshToWorld.inverse();
+    const auto backwardDir = worldToMesh.A * getBackwardDirection();
+    const auto cameraPos = worldToMesh( getCameraPoint() );
 
-    const auto cameraPos =  getCameraPoint();
-
+    FaceBitSet faces( mesh.topology.faceSize() );
     BitSetParallelFor( mesh.topology.getValidFaces(), [&]( FaceId f )
     {
-        auto transformedNormal = meshToWorld.A * normals[f];
-        if ( params_.orthographic )
-        {
-            if ( ( dot( transformedNormal, cameraPos ) > 0.0f ) )
-                faces.set( f );
-        }
-        else
-        {
-            if ( dot( transformedNormal, cameraPos - mesh.triCenter( f ) ) > 0.0f )
-                faces.set( f );
-        }
+        // all view rays are parallel in orthographic mode
+        const auto toCamera = params_.orthographic ? backwardDir : cameraPos - mesh.triCenter( f );
+        if ( dot( mesh.dirDblArea( f ), toCamera ) > 0 )
+            faces.set( f );
     } );
     return faces;
 }
@@ -478,6 +499,7 @@ std::vector<ConstObjAndPick> Viewport::constMultiPickObjects( const std::vector<
 
 void Viewport::setupView()
 {
+    updateCameraAnimation_();
     setupViewMatrix_();
     setupProjMatrix_();
     setupAxesViewProjMatrix_();
@@ -485,8 +507,8 @@ void Viewport::setupView()
 
 void Viewport::preDraw()
 {
-    if ( !viewportGL_.checkInit() )
-        viewportGL_.init();
+    if ( !viewportGL_->checkInit() )
+        viewportGL_->init();
     draw_rotation_center();
     drawGlobalBasis();
 }
@@ -500,9 +522,9 @@ void Viewport::postDraw() const
     drawAxesAndViewController();
 }
 
-void Viewport::updateSceneBox_()
+Box3f Viewport::calcSceneBox_() const
 {
-    sceneBox_ = SceneRoot::get().getWorldTreeBox( id );
+    return SceneRoot::get().getWorldTreeBox( id );
 }
 
 void Viewport::setViewportRect( const ViewportRectangle& rect )
@@ -532,6 +554,16 @@ void Viewport::setBackgroundColor( const Color& color )
     if ( params_.backgroundColor == color )
         return;
     params_.backgroundColor = color;
+    needRedraw_ = true;
+}
+
+void Viewport::setBackgroundTexture( std::optional<BackgroundTexture> texture )
+{
+    // upload the image again only if it changed, not on new placement, filter or wrap type
+    backgroundTextureChanged_ |= texture && ( !backgroundTexture_
+        || backgroundTexture_->texture.resolution != texture->texture.resolution
+        || backgroundTexture_->texture.pixels != texture->texture.pixels );
+    backgroundTexture_ = std::move( texture );
     needRedraw_ = true;
 }
 
@@ -640,7 +672,7 @@ void Viewport::setAxesPos( const int pixelXoffset, const int pixelYoffset )
 
 void Viewport::draw_border() const
 {
-    viewportGL_.drawBorder( viewportRect_, params_.borderColor );
+    viewportGL_->drawBorder( viewportRect_, params_.borderColor );
 }
 
 // ================================================================

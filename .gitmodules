@@ -64,9 +64,6 @@
 [submodule "thirdparty/fmt"]
 	path = thirdparty/fmt
 	url = https://github.com/fmtlib/fmt.git
-[submodule "thirdparty/mrbind-pybind11"]
-	path = thirdparty/mrbind-pybind11
-	url = https://github.com/MeshInspector/mrbind-pybind11
 [submodule "thirdparty/mrbind"]
 	path = thirdparty/mrbind
 	url = https://github.com/MeshInspector/mrbind

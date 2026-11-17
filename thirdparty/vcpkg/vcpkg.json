@@ -33,7 +33,6 @@
         "libharu",
         "libjpeg-turbo",
         "libzip",
-        "mrbind-pybind11",
         "opencascade-minimal",
         "openctm",
         "openvdb",

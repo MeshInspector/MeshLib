@@ -32,7 +32,7 @@ runs:
         if [ "$RUNNER_OS" = macOS ]; then
           export PATH="$(brew --prefix)/opt/make/libexec/gnubin:$(brew --prefix)/opt/grep/libexec/gnubin:$PATH"
         fi
-        make -f scripts/mrbind/generate.mk -B --trace TARGET=java
+        make -f scripts/mrbind/generate.mk -B --trace TARGET=java PREGENERATED=1
 
     - name: Generate and build Java bindings (Windows)
       if: runner.os == 'Windows'
@@ -41,7 +41,7 @@ runs:
         MSYS2_DIR: C:\msys64
       run: |
         ${{ inputs.windows-vsdevcmd }} || exit /b 1
-        call ./scripts/mrbind/generate_win.bat -B --trace TARGET=java || exit /b 1
+        call ./scripts/mrbind/generate_win.bat -B --trace TARGET=java PREGENERATED=1 || exit /b 1
 
     - name: Build and run Java examples and tests
       if: runner.os != 'Windows'

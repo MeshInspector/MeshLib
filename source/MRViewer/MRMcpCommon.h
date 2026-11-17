@@ -17,6 +17,7 @@ namespace MR
 {
 
 class Object;
+struct Color;
 
 namespace Mcp
 {
@@ -27,6 +28,9 @@ uint64_t idOf( const Object* obj );
 // Resolve a raw-pointer id (as returned by scene_listObjectTree) to a shared_ptr<Object>, verifying
 // the object is still reachable from SceneRoot. Defends against stale ids into freed memory.
 Expected<std::shared_ptr<Object>> resolveId( uint64_t id );
+
+// Color from `[r, g, b]` or `[r, g, b, a]` floats in [0, 1]
+Color parseColor( const nlohmann::json& j, std::string_view field );
 
 // How long a tool waits for the main thread, e.g. while it runs a long action,
 // so that the agent gets an explanation instead of a timeout in its MCP client

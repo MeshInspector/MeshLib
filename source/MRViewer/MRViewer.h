@@ -59,6 +59,7 @@ struct LaunchParams
     int animationMaxFps{ 30 }; // max fps if animating
     bool unloadPluginsAtEnd{ false }; // unload all extended libraries right before program exit
     bool noMSAA{ false }; // render without multisample anti-aliasing regardless of the saved setting
+    std::string language; // if not empty, the locale of the user interface (e.g. "en", "ru") for this run instead of the saved one
 
     std::shared_ptr<SplashWindow> splashWindow; // if present will show this window while initializing plugins (after menu initialization)
 };

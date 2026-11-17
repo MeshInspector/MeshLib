@@ -560,7 +560,11 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     }
 
 #ifndef MRVIEWER_NO_LOCALE
-    if ( cfg.hasJsonValue( cLanguage ) )
+    if ( const auto& launchLanguage = viewer.getLaunchParams().language; !launchLanguage.empty() )
+    {
+        Locale::set( launchLanguage );
+    }
+    else if ( cfg.hasJsonValue( cLanguage ) )
     {
         const auto lang = cfg.getJsonValue( cLanguage ).asString();
         Locale::set( lang );
@@ -743,7 +747,8 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     }
 
 #ifndef MRVIEWER_NO_LOCALE
-    cfg.setJsonValue( cLanguage, Locale::getName() );
+    if ( viewer.getLaunchParams().language.empty() ) // the language given in the command line is for one run only
+        cfg.setJsonValue( cLanguage, Locale::getName() );
 #endif
 }
 

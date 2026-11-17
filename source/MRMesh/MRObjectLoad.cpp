@@ -23,6 +23,7 @@
 #include "MRDirectory.h"
 #include "MRSceneSettings.h"
 #include "MRMeshLoadSettings.h"
+#include "MRTextureColors.h"
 #include "MRZip.h"
 #include "MRVoxels/MRDicom.h"
 #include "MRPch/MRTBB.h"
@@ -152,12 +153,14 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
     LoadedMeshData data;
     VertNormals normals;
     std::optional<Edges> edges;
+    TriCornerUVCoords triCornerUvCoords;
     MeshLoadSettings settings
     {
         .edges = &edges,
         .colors = &data.vertColors,
         .faceColors = &data.faceColors,
         .uvCoords = &data.uvCoordinates,
+        .triCornerUvCoords = &triCornerUvCoords,
         .normals = returnOnlyMesh ? nullptr : &normals,
         .texture = &data.texture,
         .solidColor = &data.solidColor,
@@ -169,6 +172,14 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
     auto mesh = MeshLoad::fromAnySupportedFormat( file, settings );
     if ( !mesh.has_value() )
         return unexpected( mesh.error() );
+
+    // convert per-corner UVs into per-vertex colors by averaging the value
+    if ( !data.texture.pixels.empty() && !triCornerUvCoords.empty() && mesh->topology.numValidFaces() > 0 )
+    {
+        data.vertColors = sampleVertexColors( *mesh, data.texture, triCornerUvCoords );
+        if ( data.uvCoordinates.empty() )
+            data.texture = {}; // texture will not be used without uv-coordinates
+    }
 
     if ( !mesh->points.empty() && mesh->topology.numValidFaces() <= 0 )
     {

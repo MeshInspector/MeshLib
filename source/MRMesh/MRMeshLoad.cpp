@@ -765,7 +765,8 @@ static Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& setting
     MR_TIMER;
 
     std::optional<Triangulation> tris;
-    TriCornerUVCoords triCornerUvCoords;
+    TriCornerUVCoords myTriCornerUvCoords;
+    auto triCornerUvCoords = settings.triCornerUvCoords ? settings.triCornerUvCoords : settings.uvCoords ? &myTriCornerUvCoords : nullptr;
     PlyLoadParams params =
     {
         .tris = &tris,
@@ -773,7 +774,7 @@ static Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& setting
         .colors = settings.colors,
         .faceColors = settings.faceColors,
         .uvCoords = settings.uvCoords,
-        .triCornerUvCoords = ( settings.texture && settings.colors ) ? &triCornerUvCoords : nullptr,
+        .triCornerUvCoords = triCornerUvCoords,
         .normals = settings.normals,
         .texture = settings.texture,
         .dir = dir,
@@ -818,20 +819,13 @@ static Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& setting
     }
 
     // try converting per-corner UVs into per-vertex UVs
-    if ( settings.uvCoords && tris && !tris->empty() && !triCornerUvCoords.empty() )
+    if ( settings.uvCoords && tris && !tris->empty() && triCornerUvCoords && !triCornerUvCoords->empty() )
     {
-        if ( auto vertUVs = findVertexUVs( res.topology, triCornerUvCoords ) )
+        if ( auto vertUVs = findVertexUVs( res.topology, *triCornerUvCoords ) )
         {
             *settings.uvCoords = std::move( *vertUVs );
-            triCornerUvCoords.clear(); // not to sample colors from UVs below
+            triCornerUvCoords->clear();
         }
-    }
-    // convert per-corner UVs into per-vertex colors by averaging the value
-    if ( settings.texture && !settings.texture->pixels.empty() && settings.colors && tris && !tris->empty() && !triCornerUvCoords.empty() )
-    {
-        *settings.colors = sampleVertexColors( res, *settings.texture, triCornerUvCoords );
-        if ( !settings.uvCoords || settings.uvCoords->empty() )
-            *settings.texture = {}; // texture will not be used outside of this function
     }
 
     if ( !reportProgress( settings.callback, 1.0f ) )

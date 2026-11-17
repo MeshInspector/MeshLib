@@ -37,11 +37,13 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
         bNodes = bTree.getNodesFromFaces( *b.region );
 
     std::optional<LazyTransformedBoxes<NodeId>> bNodeBoxes;
-    std::optional<LazyTransformedBoxes<size_t>> bLeafBoxes;
+    // the transformed boxes of the children of the internal nodes of b and of the triangles of its leaves, by four
+    std::optional<LazyTransformedBoxes<size_t, AABBTree::SimdBoxes>> bChildBoxes, bLeafBoxes;
     if ( rigidB2A )
     {
         bNodeBoxes.emplace( bTree.numNodes(), *rigidB2A );
-        bLeafBoxes.emplace( bTree.leafTris().size(), *rigidB2A );
+        bChildBoxes.emplace( bTree.simdNodes().size(), *rigidB2A );
+        bLeafBoxes.emplace( bTree.simdLeaves().size(), *rigidB2A );
     }
     auto bNodeBox = [&]( const WideNode & n ) { return bNodeBoxes ? bNodeBoxes->get( bTree.nodeId( n.ref ), n.box ) : n.box; };
     auto nodesIntersect = WideIntersect
@@ -60,17 +62,10 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
             const bool otherRegion = ( aSide ? b.region : a.region ) != nullptr;
             if ( otherRegion && !( aSide ? bNodes : aNodes ).test( ( aSide ? bTree : aTree ).nodeId( other.ref ) ) )
                 return 0;
-            int m = 0;
             const auto & sn = tree.simdNodes()[parent.ref];
-            if ( !aSide && rigidB2A )
-            {
-                // the transformed boxes of the children of b
-                for ( int i = 0; i < AABBTree::MaxChildren && sn.child[i]; ++i )
-                    if ( other.box.intersects( bNodeBox( childWideNode( sn, i ) ) ) )
-                        m |= 1 << i;
-            }
-            else
-                m = simdBoxesIntersect( sn, aSide ? bNodeBox( other ) : other.box );
+            int m = !aSide && rigidB2A
+                ? simdBoxesIntersect( bChildBoxes->get( size_t( parent.ref ), sn ), other.box ) // the transformed boxes of the children of b
+                : simdBoxesIntersect( sn, aSide ? bNodeBox( other ) : other.box );
             if ( parentRegion )
                 for ( int k = m; k; k &= k - 1 )
                     if ( const int i = Simd4::lowestBit( k ); !regionNodes.test( tree.nodeId( sn.child[i] ) ) )
@@ -79,16 +74,10 @@ std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart
         }
     };
     auto triNodeIntersect = [&]( int, const Box3f & aBox, const WideNode & bn ) { return aBox.intersects( bNodeBox( bn ) ); };
-    // all triangles of leaf b at once, the transformed boxes one by one
-    auto trisIntersect = [&]( int, const Box3f & aBox, const WideNode & bn, const AABBTree::SimdBoxes & bBoxes )
+    // all triangles of leaf b at once
+    auto trisIntersect = [&]( int, const Box3f & aBox, const WideNode & bn, const auto & bBoxes )
     {
-        if ( !rigidB2A )
-            return simdBoxesIntersect( bBoxes, aBox );
-        int m = 0;
-        for ( int j = 0, bFirst = ~bn.ref * AABBTree::MaxLeafTris; j < AABBTree::MaxLeafTris && bTree.leafTris()[bFirst + j].face; ++j )
-            if ( aBox.intersects( bLeafBoxes->get( size_t( bFirst + j ), [&] { return bBoxes.get( j ); } ) ) )
-                m |= 1 << j;
-        return m;
+        return simdBoxesIntersect( rigidB2A ? bLeafBoxes->get( size_t( ~bn.ref ), bBoxes ) : bBoxes(), aBox );
     };
     auto inRegions = [&]( int i, int j )
     {
@@ -342,7 +331,7 @@ Expected<bool> findSelfCollidingTriangles(
                     continue;
                 if ( !forWideLeafTris<true>( tree, tree, s,
                     []( int, const Box3f & aBox, const WideNode & n ) { return aBox.intersects( n.box ); },
-                    []( int, const Box3f & aBox, const WideNode &, const AABBTree::SimdBoxes & bBoxes ) { return simdBoxesIntersect( bBoxes, aBox ); },
+                    []( int, const Box3f & aBox, const WideNode &, const auto & bBoxes ) { return simdBoxesIntersect( bBoxes(), aBox ); },
                     onTris ) )
                 {
                     mySubtasks.clear();

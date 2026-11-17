@@ -10,6 +10,7 @@
 #include "MRTriBox.hpp"
 #include "MRVector.h"
 #include <atomic>
+#include <optional>
 #include <concepts>
 #include <utility>
 #include <cstdint>
@@ -151,7 +152,8 @@ bool splitSelfWidePair( const AABBTree & tree, const WideNodePair & s, Intersect
 /// calls onTris( i, j ) for the triangles (slots in leafTris()) of leaves s.a and s.b, whose boxes intersect;
 /// the boxes of the triangles of both leaves are computed once from their coordinates:
 /// triNode( i, aBox, bNode ) tests the box aBox of triangle i of s.a with the box of leaf s.b,
-/// and tris( i, aBox, bLeaf, bBoxes ) returns the bit mask of the triangles of leaf s.b (with boxes bBoxes in tree b), whose boxes intersect aBox;
+/// and tris( i, aBox, bLeaf, bBoxes ) returns the bit mask of the triangles of leaf s.b, whose boxes intersect aBox,
+/// where bBoxes() returns the boxes of the triangles of s.b in tree b, computed on its first call (so not at all if the boxes after a transformation are cached);
 /// in the traversal of one tree with itself (Self), a leaf paired with itself gives each pair of its triangles once, i < j;
 /// stops and returns false as soon as onTris returns false
 template<bool Self = false, typename TriNode, typename Tris, typename OnTris>
@@ -164,7 +166,15 @@ bool forWideLeafTris( const AABBTree & aTree, const AABBTree & bTree, const Wide
     const int aNum = aTree.numLeafTris( ~s.a.ref );
     const int bMask = ( 1 << bTree.numLeafTris( ~s.b.ref ) ) - 1;
     const auto aBoxes = leafTriBoxes( aTree, ~s.a.ref );
-    const auto bBoxes = self ? aBoxes : leafTriBoxes( bTree, ~s.b.ref );
+    std::optional<AABBTree::SimdBoxes> bComputed;
+    const auto bBoxes = [&]() -> const AABBTree::SimdBoxes &
+    {
+        if ( self )
+            return aBoxes;
+        if ( !bComputed )
+            bComputed.emplace( leafTriBoxes( bTree, ~s.b.ref ) );
+        return *bComputed;
+    };
     for ( int k = 0; k < aNum; ++k )
     {
         const Box3f aBox = aBoxes.get( k );
@@ -199,8 +209,21 @@ Vector<WideNodePair> makeWideSubtasks( Vector<WideNodePair> subtasks, int levels
     return subtasks;
 }
 
-/// the boxes after a transformation, each computed on the first request (from any thread) and kept for the next ones
-template<typename I>
+/// the box after the transformation
+inline Box3f transformedBoxes( const Box3f & box, const AffineXf3f & xf ) { return transformed( box, xf ); }
+
+/// each of the four boxes after the transformation, the same as transformed( box, xf ) of it
+inline AABBTree::SimdBoxes transformedBoxes( const AABBTree::SimdBoxes & sb, const AffineXf3f & xf )
+{
+    AABBTree::SimdBoxes res( noInit );
+    for ( int i = 0; i < 4; ++i )
+        res.set( i, transformed( sb.get( i ), xf ) );
+    return res;
+}
+
+/// the boxes (Box3f) or the groups of four boxes (AABBTree::SimdBoxes) after a transformation,
+/// each computed on the first request (from any thread) and kept for the next ones
+template<typename I, typename T = Box3f>
 class LazyTransformedBoxes
 {
 public:
@@ -208,16 +231,16 @@ public:
 
     /// returns box i, which is src before the transformation (src can be a function returning it, called only if box i is not ready)
     template<typename Src>
-    Box3f get( I i, const Src & src ) const
+    T get( I i, const Src & src ) const
     {
         auto & state = state_[i];
         if ( state.load( std::memory_order_acquire ) == cReady )
             return boxes_[i];
-        Box3f res;
+        T res;
         if constexpr ( std::invocable<const Src &> )
-            res = transformed( src(), xf_ );
+            res = transformedBoxes( src(), xf_ );
         else
-            res = transformed( src, xf_ );
+            res = transformedBoxes( src, xf_ );
         // only the thread marking the box first stores it; the others meanwhile use their own copies
         std::uint8_t expected = cEmpty;
         if ( state.compare_exchange_strong( expected, cWriting, std::memory_order_relaxed ) )
@@ -231,7 +254,7 @@ public:
 private:
     static constexpr std::uint8_t cEmpty = 0, cWriting = 1, cReady = 2;
     const AffineXf3f & xf_;
-    mutable Buffer<Box3f, I> boxes_;
+    mutable Buffer<T, I> boxes_; // not initialized: an element is written before its state becomes ready
     mutable Vector<std::atomic<std::uint8_t>, I> state_;
 };
 

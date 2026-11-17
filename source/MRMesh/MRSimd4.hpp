@@ -3,7 +3,9 @@
 // minimal 4-lane float SIMD helpers for the traversals of AABBTree's SIMD layout:
 // SSE2 on x86-64, NEON on ARM64, Wasm SIMD128, and a portable scalar fallback
 
+#include <cstddef>
 #include <cstdint>
+#include <cstring>
 
 #if defined(__x86_64__) || defined(_M_X64)
 #include <emmintrin.h>
@@ -140,6 +142,18 @@ inline void streamCopy( T & dst, const T & src )
         _mm_stream_ps( d + i, _mm_load_ps( s + i ) );
 #else
     dst = src;
+#endif
+}
+
+/// the same for size bytes (a multiple of 16) of any objects, dst is 16-byte aligned
+inline void streamCopyBytes( void * dst, const void * src, std::size_t size )
+{
+#if defined(MR_SIMD4_SSE)
+    for ( std::size_t i = 0; i < size; i += 16 )
+        _mm_stream_si128( reinterpret_cast<__m128i *>( static_cast<char *>( dst ) + i ),
+            _mm_loadu_si128( reinterpret_cast<const __m128i *>( static_cast<const char *>( src ) + i ) ) );
+#else
+    std::memcpy( dst, src, size );
 #endif
 }
 

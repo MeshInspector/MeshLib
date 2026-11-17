@@ -17,6 +17,7 @@
 
 #include "MRVector3.h"
 #include "MRTriPoint.h"
+#include "MRMacros.h"
 #include "MRPch/MRBindingMacros.h"
 
 #include <cassert>
@@ -24,8 +25,9 @@
 namespace MR
 {
 
+// forced inline: through a call, the vertices are stored in memory and reloaded, which can stall on store forwarding
 template <typename T>
-std::pair<Vector3<T>, TriPoint<T>> closestPointInTriangle( const Vector3<T>& p, const Vector3<T>& a, const Vector3<T>& b, const Vector3<T>& c )
+MR_FORCE_INLINE std::pair<Vector3<T>, TriPoint<T>> closestPointInTriangle( const Vector3<T>& p, const Vector3<T>& a, const Vector3<T>& b, const Vector3<T>& c )
 {
     // https://stackoverflow.com/a/74395029/7325599
     const Vector3<T> ab = b - a;

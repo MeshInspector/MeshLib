@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cstring>
 #include <limits>
+#include <type_traits>
 #include <tbb/parallel_invoke.h>
 
 namespace MR
@@ -28,12 +29,54 @@ Box3f wideTriBox( const VertCoords & points, const AABBTree::LeafTri & lt )
     return insignificantlyExpandedTriBox( points[lt.verts[0]], points[lt.verts[1]], points[lt.verts[2]] );
 }
 
+/// where the processor cannot read ahead (WebAssembly has no prefetch), the build records keep the coordinates of the triangles,
+/// so that each triangle of a leaf is one random read instead of four (its record and three points)
+#if defined(__EMSCRIPTEN__) || defined(MR_AABBTREE_FACE_COORDS)
+constexpr bool cFaceCoords = true;
+#else
+constexpr bool cFaceCoords = false;
+#endif
+
+/// a triangle of the build with the coordinates of its vertices
+struct FaceTriCoords
+{
+    FaceId face;
+    ThreeVertIds verts;
+    Vector3f p[3];
+
+    explicit FaceTriCoords( NoInit ) noexcept : face( noInit ), verts{ VertId( noInit ), VertId( noInit ), VertId( noInit ) },
+        p{ Vector3f( noInit ), Vector3f( noInit ), Vector3f( noInit ) } { }
+};
+
+/// the record of a triangle in the build
+using FaceTri = std::conditional_t<cFaceCoords, FaceTriCoords, AABBTree::LeafTri>;
+
+/// the coordinates of the vertices of triangle ft: from the points, or from the record if it keeps them
+inline void triPoints( const AABBTree::LeafTri & ft, const VertCoords & points, Vector3f ( &p )[3] )
+{
+    for ( int k = 0; k < 3; ++k )
+        p[k] = points[ft.verts[k]];
+}
+inline void triPoints( const FaceTriCoords & ft, const VertCoords &, Vector3f ( &p )[3] )
+{
+    for ( int k = 0; k < 3; ++k )
+        p[k] = ft.p[k];
+}
+
+/// keeps the coordinates of the vertices in the record if it has them
+inline void keepPoints( AABBTree::LeafTri &, const Vector3f ( & )[3] ) { }
+inline void keepPoints( FaceTriCoords & ft, const Vector3f ( &p )[3] )
+{
+    for ( int k = 0; k < 3; ++k )
+        ft.p[k] = p[k];
+}
+
 /// the numFaces triangles (faces and vertices), the doubled centers of their boxes, and the box of the centers;
 /// the leaves read the triangles in random order, so they are kept small (no boxes) to stay in the cache together with the points,
 /// from which the leaves take the coordinates and the boxes
-Buffer<AABBTree::LeafTri> makeFaceTris( const MeshPart & mp, int numFaces, Buffer<TreeCenter> & centers, Box3f & centersBox )
+Buffer<FaceTri> makeFaceTris( const MeshPart & mp, int numFaces, Buffer<TreeCenter> & centers, Box3f & centersBox )
 {
-    Buffer<AABBTree::LeafTri> faceTris( numFaces );
+    Buffer<FaceTri> faceTris( numFaces );
     centers = Buffer<TreeCenter>( numFaces );
     const bool packed = numFaces == mp.mesh.topology.faceSize();
     if ( !packed )
@@ -67,9 +110,12 @@ Buffer<AABBTree::LeafTri> makeFaceTris( const MeshPart & mp, int numFaces, Buffe
                         MR_PREFETCH( &points[v] );
                 auto & ft = faceTris[i];
                 const FaceId f = faceOf( i );
-                ft = { f, topology.getTriVerts( f ) };
+                ft.face = f;
+                ft.verts = topology.getTriVerts( f );
+                const Vector3f p[3] = { points[ft.verts[0]], points[ft.verts[1]], points[ft.verts[2]] };
+                keepPoints( ft, p );
                 Box3f triBox( noInit );
-                insignificantlyExpandedTriBoxAndCenter( points[ft.verts[0]], points[ft.verts[1]], points[ft.verts[2]], i, triBox, centers[i] );
+                insignificantlyExpandedTriBoxAndCenter( p[0], p[1], p[2], i, triBox, centers[i] );
             }
             box = includeCenters( box, centers.data() + b, std::min( end, b + cBlock ) - b );
         }
@@ -80,12 +126,12 @@ Buffer<AABBTree::LeafTri> makeFaceTris( const MeshPart & mp, int numFaces, Buffe
 }
 
 /// the triangles of tmesh (all if region is nullptr), see makeFaceTris above
-Buffer<AABBTree::LeafTri> makeFaceTris( const TriMesh & tmesh, const FaceBitSet * region, int numFaces,
+Buffer<FaceTri> makeFaceTris( const TriMesh & tmesh, const FaceBitSet * region, int numFaces,
     Buffer<TreeCenter> & centers, Box3f & centersBox )
 {
     const auto & points = tmesh.points;
     const auto & t = tmesh.tris;
-    Buffer<AABBTree::LeafTri> faceTris( numFaces );
+    Buffer<FaceTri> faceTris( numFaces );
     centers = Buffer<TreeCenter>( numFaces );
     const bool packed = numFaces == (int)t.size();
     if ( !packed )
@@ -115,8 +161,10 @@ Buffer<AABBTree::LeafTri> makeFaceTris( const TriMesh & tmesh, const FaceBitSet 
                 auto & ft = faceTris[i];
                 ft.face = f;
                 ft.verts = v;
+                const Vector3f p[3] = { points[v[0]], points[v[1]], points[v[2]] };
+                keepPoints( ft, p );
                 Box3f triBox( noInit );
-                insignificantlyExpandedTriBoxAndCenter( points[v[0]], points[v[1]], points[v[2]], i, triBox, centers[i] );
+                insignificantlyExpandedTriBoxAndCenter( p[0], p[1], p[2], i, triBox, centers[i] );
             }
             box = includeCenters( box, centers.data() + b, std::min( end, b + cBlock ) - b );
         }
@@ -148,7 +196,7 @@ public:
     [[nodiscard]] int numLeaves() const { return total_.leaves; }
 
     /// fills the internal nodes, the leaves and the triangles in them (all of the sizes for numTris)
-    void make( const Buffer<AABBTree::LeafTri> & faceTris, Buffer<TreeCenter> & centers, const Box3f & centersBox, const VertCoords & points,
+    void make( const Buffer<FaceTri> & faceTris, Buffer<TreeCenter> & centers, const Box3f & centersBox, const VertCoords & points,
         SimdNode * nodes, SimdLeaf * leaves, LeafTri * leafTris )
     {
         assert( (int)faceTris.size() == numTris_ && (int)centers.size() == numTris_ );
@@ -274,8 +322,8 @@ private:
                 continue;
             }
             const auto & ft = faceTris_[leaf[i].i];
-            const auto & points = *points_;
-            const Vector3f p[3] = { points[ft.verts[0]], points[ft.verts[1]], points[ft.verts[2]] };
+            Vector3f p[3];
+            triPoints( ft, *points_, p );
             const auto triBox = insignificantlyExpandedTriBox( p[0], p[1], p[2] );
             box.include( triBox );
             lt.face = ft.face;
@@ -309,7 +357,7 @@ private:
             const TreeCenter * d = data_( c.r );
             for ( int i = 0; i < num; ++i )
             {
-                if ( num > 16 )
+                if ( cFaceCoords || num > 16 )
                     MR_PREFETCH( faceTris_ + d[i].i );
                 else
                     for ( auto v : faceTris_[d[i].i].verts )
@@ -401,7 +449,7 @@ private:
         return box;
     }
 
-    const AABBTree::LeafTri * faceTris_ = nullptr;
+    const FaceTri * faceTris_ = nullptr;
     const VertCoords * points_ = nullptr;
     TreeCenter * centers_ = nullptr;
     Buffer<TreeCenter> scratch_; // the centers of a range move between centers_ and scratch_ by each split of the range by buckets

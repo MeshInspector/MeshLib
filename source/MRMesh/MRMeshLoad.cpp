@@ -507,7 +507,7 @@ static Expected<FaceSoup> fromOffBinary( std::istream& in, const MeshLoadSetting
     pos += 12 * size_t( numPoints );
 
     Vector<MeshBuilder::VertSpan, FaceId> faces( numPolygons );
-    Vector<VertId, int> flatPolygonIndices;
+    Vector<VertId> flatPolygonIndices;
     flatPolygonIndices.reserve( 3 * size_t( numPolygons ) );
     auto sp = subprogress( settings.callback, 0.4f, 1.0f );
     for ( int f = 0; f < numPolygons; ++f )
@@ -649,7 +649,7 @@ Expected<FaceSoup> fromOffAsFaceSoup( std::istream& in, const MeshLoadSettings& 
     if ( !reportProgress( settings.callback, 0.5f ) )
         return unexpectedOperationCanceled();
 
-    Vector<VertId, int> flatPolygonIndices( faces.back().lastVertex );
+    Vector<VertId> flatPolygonIndices( faces.back().lastVertex );
 
     keepGoing = ParallelFor( faces, [&] ( size_t numPolygon )
     {
@@ -660,7 +660,7 @@ Expected<FaceSoup> fromOffAsFaceSoup( std::istream& in, const MeshLoadSettings& 
         size_t numLine = delta + numPolygon;
 
         const std::string_view line( &buf[splitLines[numLine]], splitLines[numLine + 1] - splitLines[numLine] );
-        auto result = parsePolygon( line, &flatPolygonIndices[faces[FaceId( numPolygon )].firstVertex], nullptr );
+        auto result = parsePolygon( line, flatPolygonIndices.data() + faces[FaceId( numPolygon )].firstVertex, nullptr );
 
         if ( !result.has_value() )
         {

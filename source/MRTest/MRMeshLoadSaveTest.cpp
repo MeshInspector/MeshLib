@@ -432,7 +432,7 @@ TEST(MRMesh, LoadOffAsFaceSoup)
 {
     // a triangle, a quad, a non-convex pentagon and a 20-gon on a plane, then a quad with a repeated vertex
     VertCoords points;
-    Vector<VertId, int> verts;
+    Vector<VertId> verts;
     Vector<MeshBuilder::VertSpan, FaceId> faces;
     auto addPolygon = [&] ( std::vector<Vector3f> ps )
     {

@@ -28,7 +28,7 @@ TEST(MRMesh, BuildTri)
 
 TEST(MRMesh, fromFaceSoup) 
 {
-    Vector<VertId, int> vs
+    Vector<VertId> vs
     { 
         0_v, 1_v, 2_v, 3_v, 4_v,
         1_v, 0_v, 5_v, 6_v,

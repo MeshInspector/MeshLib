@@ -14,7 +14,7 @@ struct [[nodiscard]] FaceSoup
     VertCoords points;
 
     /// vertex ids of all polygons, one polygon after another
-    Vector<VertId, int> verts;
+    Vector<VertId> verts;
 
     /// the range in verts of each polygon
     Vector<MeshBuilder::VertSpan, FaceId> faces;

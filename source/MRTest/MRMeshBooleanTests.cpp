@@ -105,6 +105,40 @@ static void expectUnionKeepsBoth( const Mesh& meshA, const Mesh& meshB )
 
 // the boxes touch one another by the plane z = -41.50188 and no triangle of one crosses another,
 // so the distance from any face of meshA there is zero and its sign is defined by rounding errors only
+TEST( MRMesh, BooleanKeptAndConsumedMeshes )
+{
+    const Mesh sphere = makeSphere( { .radius = 0.4f, .numMeshVertices = 100 } );
+    const AffineXf3f xf = AffineXf3f::translation( Vector3f( 0.5f, 0.4f, 0.3f ) );
+    const BooleanParameters params{ .rigidB2A = &xf };
+    for ( auto op : { BooleanOperation::Union, BooleanOperation::Intersection, BooleanOperation::DifferenceAB, BooleanOperation::DifferenceBA,
+        BooleanOperation::InsideA, BooleanOperation::OutsideB } )
+    {
+        // new meshes in every call, so no tree is cached before it
+        const Mesh a = makeCube(), b = sphere;
+        const auto ref = boolean( a, b, op, params );
+        ASSERT_TRUE( ref.valid() );
+        EXPECT_GT( ref.mesh.topology.numValidFaces(), 0 );
+
+        const auto expectSame = [&ref] ( const BooleanResult& res )
+        {
+            ASSERT_TRUE( res.valid() );
+            EXPECT_EQ( res.mesh.topology, ref.mesh.topology );
+            EXPECT_EQ( res.mesh.points, ref.mesh.points );
+        };
+        expectSame( boolean( makeCube(), Mesh( sphere ), op, params ) );
+
+        const Mesh keptA = makeCube();
+        expectSame( boolean( keptA, Mesh( sphere ), op, params ) );
+        EXPECT_TRUE( keptA.getAABBTreeNotCreate() );
+        EXPECT_EQ( keptA.topology, a.topology );
+
+        const Mesh keptB = sphere;
+        expectSame( boolean( makeCube(), keptB, op, params ) );
+        EXPECT_TRUE( keptB.getAABBTreeNotCreate() );
+        EXPECT_EQ( keptB.topology, b.topology );
+    }
+}
+
 TEST( MRMesh, BooleanTouchingMeshes )
 {
     expectUnionKeepsBoth(

@@ -135,6 +135,13 @@ MR_BIND_OVERLOAD_SUFFIX() MRMESH_API BooleanResult boolean( const Mesh& meshA, c
 /// then only a temporary tree of that part is constructed, which is much faster
 MR_BIND_OVERLOAD_SUFFIX(move) MRMESH_API BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
                                   const BooleanParameters& params = {} );
+/// keeps meshA as the first overload does (its whole tree is cached in it) and consumes meshB as the second one does
+MR_BIND_OVERLOAD_SUFFIX(moveB) MRMESH_API BooleanResult boolean( const Mesh& meshA, Mesh&& meshB, BooleanOperation operation,
+                                  const BooleanParameters& params = {} );
+/// consumes meshA as the second overload does and keeps meshB as the first one does (its whole tree is cached in it),
+/// e.g. for many subtractions of the same small mesh in different positions from a large mesh
+MR_BIND_OVERLOAD_SUFFIX(moveA) MRMESH_API BooleanResult boolean( Mesh&& meshA, const Mesh& meshB, BooleanOperation operation,
+                                  const BooleanParameters& params = {} );
 
 /// calls boolean in force mode, also unites close vertices and fills holes afterwards
 /// \note expects closed mesh on input, and fills all holes

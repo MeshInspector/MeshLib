@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        config: [ Singlethreaded, Multithreaded ]
+        config: [ Singlethreaded ]
         include:
           - config: Singlethreaded
             thirdparty-dir: emscripten-single
@@ -42,8 +42,7 @@ jobs:
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory '*'
           git -C pr fetch -q --depth 1 origin ${BASE_SHA}
-          git -C pr worktree add -q --detach ../base ${BASE_SHA}
-          for t in pr base; do
+          for t in pr; do
             ( cd $t && bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_emscripten.sh --skip-prebuilt-thirdparty )
           done
 
@@ -63,7 +62,7 @@ jobs:
             -DMR_PCH_USE_EXTRA_HEADERS=ON
           MR_CMAKE_BUILD_OPTIONS: --target treebench
         run: |
-          for t in base pr; do
+          for t in pr; do
             ( cd $t
               ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/include ./include
               ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/lib ./lib
@@ -77,8 +76,8 @@ jobs:
 
       - name: Benchmark
         run: |
-          for round in 1 2 3; do
-            for t in base pr; do
+          for round in 1; do
+            for t in pr; do
               js=$(find $t/build -name treebench.js -type f | head -1)
               ( cd $(dirname $js) && ${EMSDK_NODE:-node} treebench.js 3 ${{ matrix.threads }} ) | tee tb-wasm-${{ matrix.config }}-$t-$round.txt
             done

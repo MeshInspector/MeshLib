@@ -765,8 +765,6 @@ static Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& setting
     MR_TIMER;
 
     std::optional<Triangulation> tris;
-    TriCornerUVCoords myTriCornerUvCoords;
-    auto triCornerUvCoords = settings.triCornerUvCoords ? settings.triCornerUvCoords : settings.uvCoords ? &myTriCornerUvCoords : nullptr;
     PlyLoadParams params =
     {
         .tris = &tris,
@@ -774,7 +772,7 @@ static Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& setting
         .colors = settings.colors,
         .faceColors = settings.faceColors,
         .uvCoords = settings.uvCoords,
-        .triCornerUvCoords = triCornerUvCoords,
+        .triCornerUvCoords = settings.triCornerUvCoords,
         .normals = settings.normals,
         .texture = settings.texture,
         .dir = dir,
@@ -819,12 +817,12 @@ static Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& setting
     }
 
     // try converting per-corner UVs into per-vertex UVs
-    if ( settings.uvCoords && tris && !tris->empty() && triCornerUvCoords && !triCornerUvCoords->empty() )
+    if ( settings.uvCoords && tris && !tris->empty() && settings.triCornerUvCoords && !settings.triCornerUvCoords->empty() )
     {
-        if ( auto vertUVs = findVertexUVs( res.topology, *triCornerUvCoords ) )
+        if ( auto vertUVs = findVertexUVs( res.topology, *settings.triCornerUvCoords ) )
         {
             *settings.uvCoords = std::move( *vertUVs );
-            triCornerUvCoords->clear();
+            settings.triCornerUvCoords->clear();
         }
     }
 

@@ -661,18 +661,21 @@ void rayMeshIntersectAll_( const VertCoords & points, const AABBTree & tree, con
         subtasks.pop();
         if( r < 0 )
         {
-            const auto & leafBoxes = leafTriBoxes( tree, ~r );
-            // the float version tests all triangles of the leaf at once, and with their boxes rejects the near-miss hits
+            // the float version tests all triangles of the leaf at once, and with their boxes rejects the near-miss hits;
+            // the boxes are computed only for the leaves with crossed triangles, which are few
             [[maybe_unused]] int crossedTris = 0;
             [[maybe_unused]] alignas( 16 ) float ts[4], vs[4], ws[4], ids[4];
             if constexpr ( std::is_same_v<T, float> )
             {
-                crossedTris = simdCrossed( leafBoxes );
+                crossedTris = simdRayTris->test( tree.simdLeaves()[~r], ts, vs, ws, ids );
                 if ( crossedTris )
-                    crossedTris &= simdRayTris->test( tree.simdLeaves()[~r], ts, vs, ws, ids );
+                    crossedTris &= simdCrossed( leafTriBoxes( tree, ~r ) );
                 if ( !crossedTris )
                     continue;
             }
+            [[maybe_unused]] AABBTree::SimdBoxes leafBoxes( noInit );
+            if constexpr ( std::is_same_v<T, double> )
+                leafBoxes = leafTriBoxes( tree, ~r );
             for ( int k = 0; k < AABBTree::MaxLeafTris; ++k )
             {
                 const auto & lt = leafTris[~r * AABBTree::MaxLeafTris + k];

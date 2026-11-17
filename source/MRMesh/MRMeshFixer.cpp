@@ -21,6 +21,9 @@
 #include "MRProjectionMeshAttribute.h"
 #include "MRPartMapping.h"
 #include "MRMapOrHashMap.h"
+#include "MRFillContours2D.h"
+#include "MR2DContoursTriangulation.h"
+#include "MRClosestPointInTriangle.h"
 
 namespace MR
 {
@@ -965,78 +968,145 @@ FaceBitSet findHoleComplicatingFaces( const Mesh & mesh )
     return res;
 }
 
+/// returns true if fillContours2D can replace the region by a planar triangulation of its boundary, all its triangles facing the boundary's vector area (positive on n) with aspect ratios below maxAspectRatio;
+/// resets grow if larger regions are not to be tried: the region folds at a mesh border or is not flat
+static bool hasPlanarFill( const Mesh& mesh, const FaceBitSet& region, const Vector3f& n, float maxAspectRatio, bool& grow )
+{
+    const auto loops = findLeftBoundary( mesh.topology, region );
+    HashSet<VertId> bdVerts;
+    Vector3d sumCross;
+    for ( const auto& loop : loops )
+        for ( auto e : loop )
+        {
+            if ( !( grow = mesh.topology.right( e ) || dot( mesh.leftDirDblArea( e ), n ) >= 0 ) || !bdVerts.insert( mesh.topology.org( e ) ).second )
+                return false; // the fold reaches a mesh border, or the boundary passes a vertex twice, which fillContours2D does not fill
+            sumCross += cross( Vector3d( mesh.orgPnt( e ) ), Vector3d( mesh.destPnt( e ) ) );
+        }
+    if ( dot( sumCross, Vector3d( n ) ) <= 0 )
+        return false;
+    const auto dir = sumCross.normalized(); // fillContours2D triangulates around it
+    MinMaxd height; // of the region's vertices along dir
+    for ( auto f : region )
+        for ( auto v : mesh.topology.getTriVerts( f ) )
+            height.include( dot( Vector3d( mesh.points[v] ), dir ) );
+    if ( sqr( ( height.max - height.min ) * maxAspectRatio ) > sumCross.length() / 2 )
+        return grow = false; // the planar triangulation of a region that is not flat changes the shape
+    // all triangles face dir, and the loops wind around it as the triangles do: otherwise the triangles have more or less area than the loops
+    double triArea = 0; // stays zero if the boundary has no planar triangulation; a triangle without area or a sliver, which may double an edge of the mesh, makes it huge
+    if ( const auto patch = PlanarTriangulation::triangulateDisjointContours( mesh, loops, Vector3f( dir ) ) )
+        for ( auto f : patch->topology.getValidFaces() )
+            triArea += patch->triangleAspectRatio( f ) < maxAspectRatio ? std::abs( dot( Vector3d( patch->dirDblArea( f ) ), dir ) ) : DBL_MAX;
+    return std::abs( sumCross.length() - triArea ) < 1e-4 * triArea;
+}
+
 void fixMeshCreases( Mesh& mesh, const FixCreasesParams& params )
 {
-    auto planarAngleCos = std::cos( std::abs( PI_F - params.creaseAngle ) );
-    FaceBitSet fixFacesBuffer( mesh.topology.getValidFaces().size() );
+    MR_TIMER;
+    const auto new2Old = params.new2Old;
+    const auto planarAngleCos = std::cos( std::abs( PI_F - params.creaseAngle ) );
     for ( int iter = 0; iter < params.maxIters; ++iter )
     {
-        auto creases = mesh.findCreaseEdges( params.creaseAngle );
+        const auto creases = mesh.findCreaseEdges( params.creaseAngle );
         if ( creases.none() )
             return;
 
+        // the flat area grows by rings of faces parallel to the crease in either orientation (and slivers); the faces of planar triangulations (filled)
+        // keep their creases for the next iteration, and no flat area grows from the faces of failed areas and fans (failed)
+        FaceBitSet filled( mesh.topology.faceSize() ), failed = filled;
         for ( auto ue : creases )
         {
-            if ( mesh.topology.isLoneEdge( EdgeId( ue ) ) )
+            const auto l = mesh.topology.left( ue ), r = mesh.topology.right( ue );
+            if ( !l || !r || filled.test( l ) || filled.test( r ) )
                 continue;
-            auto findBadFaces = [&] ( EdgeId ce, bool left )
+            const auto seedNormal = mesh.normal( l );
+            FaceBitSet region( mesh.topology.faceSize() );
+            region.set( l ).set( r );
+            std::vector<FaceId> ring{ l, r }, next;
+            bool planar = false, grow = !failed.test( l ) && !failed.test( r );
+            for ( int rings = 16; !planar && grow && rings > 0; --rings )
             {
-                for ( auto e = ce;; )
+                next.clear();
+                size_t numUp = 0;
+                for ( auto f : ring )
+                    for ( auto e : leftRing( mesh.topology, f ) )
+                    {
+                        const auto g = mesh.topology.right( e );
+                        if ( !g || region.test( g ) )
+                            continue;
+                        const auto c = dot( mesh.normal( g ), seedNormal );
+                        if ( std::abs( c ) < planarAngleCos && mesh.triangleAspectRatio( g ) <= params.criticalTriAspectRatio )
+                            continue;
+                        region.set( g );
+                        next.push_back( g );
+                        numUp += c > 0;
+                    }
+                if ( !next.empty() && ( numUp == 0 || numUp == next.size() ) )
                 {
-                    auto f = left ? mesh.topology.left( e ) : mesh.topology.right( e );
-                    if ( !f )
-                        return;
-                    fixFacesBuffer.autoResizeSet( f ); // as far as we triangulate holes - new faces might appear, so we need to resize
-                    e = left ? mesh.topology.next( e ) : mesh.topology.prev( e );
-                    if ( e == ce )
-                        return; // full cycle
-                    auto nextF = left ? mesh.topology.left( e ) : mesh.topology.right( e );
-                    if ( !nextF )
-                        return;
-                    if ( creases.test( e.undirected() ) )
-                        continue;
-                    if ( mesh.triangleAspectRatio( f ) > params.criticalTriAspectRatio || mesh.triangleAspectRatio( nextF ) > params.criticalTriAspectRatio )
-                        continue;
-                    auto digAngCos = mesh.dihedralAngleCos( e.undirected() );
-                    if ( digAngCos < planarAngleCos )
-                        return; // stop propagation on sharp angle
+                    for ( auto g : next )
+                        region.reset( g );
+                    planar = hasPlanarFill( mesh, region, numUp ? seedNormal : -seedNormal, params.criticalTriAspectRatio, grow );
                 }
-            };
-
-            int numIncidentLCreases = 0;
-            int numIncidentRCreases = 0;
-            auto creaseEdge = EdgeId( ue );
-            for ( auto e : orgRing( mesh.topology, creaseEdge ) )
-            {
-                if ( creases.test( e.undirected() ) )
-                    numIncidentLCreases++;
+                for ( auto g : next )
+                    region.set( g, !planar );
+                ring.swap( next );
             }
-            for ( auto e : orgRing( mesh.topology, creaseEdge.sym() ) )
+            if ( !planar )
             {
-                if ( creases.test( e.undirected() ) )
-                    numIncidentRCreases++;
+                failed |= region;
+                // the fan around the worse end of the crease (more incident creases, then higher degree) up to sharp edges or holes on both sides
+                std::pair<int, int> rank[2]; // incident creases and degree of each end
+                for ( int i : { 0, 1 } )
+                    for ( auto x : orgRing( mesh.topology, i ? EdgeId( ue ).sym() : EdgeId( ue ) ) )
+                        rank[i] = { rank[i].first + creases.test( x.undirected() ), rank[i].second + 1 };
+                const auto ce = rank[0] < rank[1] ? EdgeId( ue ).sym() : EdgeId( ue );
+                region.reset();
+                for ( bool left : { true, false } )
+                    for ( auto e = ce;; )
+                    {
+                        const auto f = left ? mesh.topology.left( e ) : mesh.topology.right( e );
+                        region.set( f );
+                        e = left ? mesh.topology.next( e ) : mesh.topology.prev( e );
+                        const auto g = left ? mesh.topology.left( e ) : mesh.topology.right( e );
+                        if ( e == ce || !g || !( creases.test( e.undirected() ) || mesh.triangleAspectRatio( f ) > params.criticalTriAspectRatio
+                            || mesh.triangleAspectRatio( g ) > params.criticalTriAspectRatio || mesh.dihedralAngleCos( e.undirected() ) >= planarAngleCos ) )
+                            break;
+                    }
             }
-            if ( ( numIncidentRCreases > numIncidentLCreases )
-                || ( numIncidentRCreases == numIncidentLCreases &&
-                    mesh.topology.getOrgDegree( creaseEdge ) < mesh.topology.getOrgDegree( creaseEdge.sym() ) ) )
-            {
-                creaseEdge = creaseEdge.sym();// important part to triangulate worse end of the edge (mb we should change degree check to area check?)
-            }
-            fixFacesBuffer.reset();
-            findBadFaces( creaseEdge, true );
-            findBadFaces( creaseEdge, false );
-            if ( fixFacesBuffer.none() )
-                continue;
-
-            auto loops = delRegionKeepBd( mesh, fixFacesBuffer, true );
+            // the region is replaced by the planar triangulation of its boundary, or by the minimal-area fill of each boundary loop
+            struct Replaced { FaceId f; Triangle3f tri; Vector3f dir; };
+            std::vector<Replaced> replaced;
+            if ( new2Old )
+                for ( auto f : region )
+                {
+                    const auto old = new2Old->extract( f );
+                    replaced.push_back( { old ? old.mapped() : f, mesh.getTriPoints( f ), mesh.dirDblArea( f ) } );
+                }
+            const FaceId firstNew( mesh.topology.faceSize() );
+            const auto loops = delRegionKeepBd( mesh, region, true );
+            std::vector<EdgeId> holes;
             for ( const auto& loop : loops )
+                holes.push_back( loop.front() );
+            if ( !planar || !fillContours2D( mesh, holes ) )
+                for ( const auto& loop : loops )
+                    if ( auto it = std::find_if( loop.begin(), loop.end(), [&] ( EdgeId e ) { return !mesh.topology.left( e ); } ); it != loop.end() )
+                        fillHole( mesh, *it, { .metric = getMinAreaMetric( mesh ) } );
+            // each new face takes the replaced face closest to its center, preferring the faces oriented as it is
+            for ( FaceId f = firstNew; new2Old && f < mesh.topology.faceSize(); ++f )
             {
-                int i = 0;
-                while ( i < loop.size() && mesh.topology.left( loop[i] ) ) ++i;
-                if ( i == loop.size() )
+                if ( !mesh.topology.hasFace( f ) )
                     continue;
-                fillHole( mesh, loop[i], { .metric = getMinAreaMetric( mesh ) } );
+                const auto c = mesh.triCenter( f );
+                const auto dir = mesh.dirDblArea( f );
+                std::pair<bool, float> best{ true, FLT_MAX };
+                for ( const auto& rep : replaced )
+                    if ( const std::pair key{ dot( dir, rep.dir ) <= 0, ( closestPointInTriangle( c, rep.tri[0], rep.tri[1], rep.tri[2] ).first - c ).lengthSq() }; key < best )
+                    {
+                        best = key;
+                        ( *new2Old )[f] = rep.f;
+                    }
             }
+            filled.resize( mesh.topology.faceSize(), planar ); // the new faces
+            failed.resize( mesh.topology.faceSize(), !planar );
         }
     }
 }

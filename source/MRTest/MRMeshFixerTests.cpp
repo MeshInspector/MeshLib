@@ -12,6 +12,13 @@
 #include <MRMesh/MRLineSegm.h>
 #include <MRMesh/MRRingIterator.h>
 #include <MRMesh/MRphmap.h>
+#include <MRMesh/MRRegularGridMesh.h>
+#include <MRMesh/MRMeshFillHole.h>
+#include <MRMesh/MRMeshMetrics.h>
+#include <MRMesh/MRMeshMeshDistance.h>
+#include <MRMesh/MRClosestPointInTriangle.h>
+#include <MRMesh/MRPlane3.h>
+#include <MRMesh/MRMakeSphereMesh.h>
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <cmath>
@@ -368,6 +375,192 @@ TEST( MRMesh, EliminateDoubleTrisPillow )
             EXPECT_FALSE( eliminateDoubleTris( lone, x, nullptr, true ) );
     EXPECT_EQ( lone.numValidFaces(), 1 );
     EXPECT_EQ( lone.numValidVerts(), 3 );
+}
+
+// a flat sheet of nx x ny square cells in the plane z = 0
+static Mesh makeGrid( size_t nx, size_t ny )
+{
+    return *makeRegularGridMesh( nx + 1, ny + 1, [] ( size_t, size_t ) { return true; },
+        [] ( size_t x, size_t y ) { return Vector3f( float( x ), float( y ), 0 ); } );
+}
+
+static void moveVert( Mesh & mesh, const Vector3f & from, const Vector3f & to )
+{
+    for ( auto & p : mesh.points )
+        if ( p == from )
+            p = to;
+}
+
+// each face of mesh not in folded is mapped to a replaced face of folded within maxDist of its center, the other faces keep their vertices and have no entry
+static void checkNew2Old( const Mesh & mesh, const Mesh & folded, const FaceHashMap & new2Old, float maxDist )
+{
+    size_t numNew = 0;
+    for ( auto f : mesh.topology.getValidFaces() )
+    {
+        const auto it = new2Old.find( f );
+        if ( folded.topology.hasFace( f ) )
+        {
+            EXPECT_TRUE( it == new2Old.end() && mesh.topology.getTriVerts( f ) == folded.topology.getTriVerts( f ) );
+            continue;
+        }
+        ++numNew;
+        ASSERT_TRUE( it != new2Old.end() );
+        ASSERT_TRUE( folded.topology.hasFace( it->second ) );
+        EXPECT_FALSE( mesh.topology.hasFace( it->second ) );
+        const auto c = mesh.triCenter( f );
+        const auto [a, b, d] = folded.getTriPoints( it->second );
+        EXPECT_LT( ( closestPointInTriangle( c, a, b, d ).first - c ).length(), maxDist );
+    }
+    EXPECT_EQ( new2Old.size(), numNew );
+}
+
+// a vertex moved over its neighbour folds its triangles over the next ones, away from its own star
+TEST( MRMesh, FixMeshCreasesFlatFold )
+{
+    auto folded = makeGrid( 3, 3 );
+    moveVert( folded, { 2, 2, 0 }, { 2, 0.4f, 0 } );
+    auto mesh = folded;
+    FaceHashMap new2Old;
+    fixMeshCreases( mesh, { .new2Old = &new2Old } );
+
+    // all triangles face up and cover the square once
+    for ( auto f : mesh.topology.getValidFaces() )
+        EXPECT_GT( mesh.dirDblArea( f ).z, 0 );
+    EXPECT_NEAR( mesh.area(), 9.0, 1e-5 );
+    EXPECT_TRUE( mesh.topology.checkValidity() );
+    EXPECT_EQ( mesh.topology.findNumHoles(), 1 );
+
+    // a new face takes an original face facing up under its center, the others keep their ids
+    EXPECT_FALSE( new2Old.empty() );
+    checkNew2Old( mesh, folded, new2Old, 1e-5f );
+    for ( auto [f, o] : new2Old )
+        EXPECT_GT( folded.dirDblArea( o ).z, 0 );
+}
+
+// a planar triangulation with a triangle without area is not used: it would double an edge of the mesh in the pleat,
+// and leave that triangle around the moved vertex, where a larger area has a planar triangulation without it
+TEST( MRMesh, FixMeshCreasesDegenerateTriangulation )
+{
+    auto pleat = makeGrid( 4, 4 ), moved = pleat;
+    for ( auto & p : pleat.points )
+        if ( p.x == 1 || p.x == 3 )
+            p.x = 4 - p.x; // two columns swapped: a pleat across the sheet
+    moveVert( moved, { 2, 3, 0 }, { 0.5f, 0.5f, 0 } ); // onto the diagonal of a cell away from it
+    for ( auto * mesh : { &pleat, &moved } )
+    {
+        fixMeshCreases( *mesh );
+        EXPECT_TRUE( mesh->findCreaseEdges( FixCreasesParams{}.creaseAngle ).none() );
+        EXPECT_FALSE( hasMultipleEdges( mesh->topology ) );
+        EXPECT_TRUE( mesh->topology.checkValidity() );
+    }
+    // the fans re-filled along the pleat have triangles without area, as before the planar triangulation was added
+    for ( auto f : moved.topology.getValidFaces() )
+        EXPECT_GT( moved.dirDblArea( f ).z, 0 );
+}
+
+// the top of a box folded by a vertex moved over its neighbour: fixing the fold keeps the box
+TEST( MRMesh, FixMeshCreasesKeepsShape )
+{
+    auto box = makeGrid( 3, 3 );
+    const auto e = extendHole( box, box.topology.findHoleRepresentiveEdges().front(), Plane3f( Vector3f::plusZ(), -1 ) );
+    fillHole( box, e, { .metric = getPlaneFillMetric( box, e ) } );
+
+    auto mesh = box;
+    moveVert( mesh, { 2, 1, 0 }, { 0.5f, 1.4f, 0 } );
+    fixMeshCreases( mesh );
+    EXPECT_NEAR( mesh.area(), box.area(), 1e-4 );
+    EXPECT_NEAR( mesh.volume(), box.volume(), 1e-4 );
+    EXPECT_LT( findMaxDistanceSqOneWay( mesh, box ), 1e-10f );
+    EXPECT_TRUE( mesh.topology.checkValidity() );
+    EXPECT_EQ( mesh.topology.findNumHoles(), 0 );
+}
+
+// a vertex of a sphere slid past its neighbour folds the curved surface, which has no flat area around the fold (on the fine sphere
+// the faces around it are parallel within 5 degrees, but not in one plane): the fill of the fan around the moved vertex removes it
+TEST( MRMesh, FixMeshCreasesCurvedFold )
+{
+    // the coarse sphere's vertices are in the last two rows, next to the pole
+    for ( auto [res, v, u, t, maxDist] : { std::tuple{ 12, 11 * 12 + 11, 10 * 12 + 11, 1.7f, 0.05f }, std::tuple{ 160, 16781, 16622, 1.333f, 0.0005f } } )
+    {
+        const auto sphere = makeUVSphere( 1, res, res );
+        auto mesh = sphere;
+        ASSERT_TRUE( mesh.topology.findEdge( VertId( v ), VertId( u ) ) );
+        mesh.points[VertId( v )] = ( mesh.points[VertId( v )] + t * ( mesh.points[VertId( u )] - mesh.points[VertId( v )] ) ).normalized();
+        const auto creaseAngle = FixCreasesParams{}.creaseAngle;
+        EXPECT_TRUE( mesh.findCreaseEdges( creaseAngle ).any() );
+        fixMeshCreases( mesh );
+        EXPECT_TRUE( mesh.findCreaseEdges( creaseAngle ).none() );
+        EXPECT_TRUE( mesh.topology.checkValidity() );
+        EXPECT_EQ( mesh.topology.findNumHoles(), 0 );
+        EXPECT_LT( findMaxDistanceSq( mesh, sphere ), sqr( maxDist ) );
+    }
+}
+
+// a border strip folded under a sheet: the planar triangulation of the two layers would keep only the part of the sheet not covered by the strip
+TEST( MRMesh, FixMeshCreasesFoldAtBorder )
+{
+    // the sheet is 8 x 4, and its strip of width 3 is folded under it along x = 0
+    const auto folded = *makeRegularGridMesh( 12, 5, [] ( size_t, size_t ) { return true; },
+        [] ( size_t x, size_t y ) { return Vector3f( std::abs( float( x ) - 3 ), float( y ), 0 ); } );
+    auto mesh = folded;
+    fixMeshCreases( mesh );
+    // the fans re-filled around the fold line take at most one cell from its side, as they always did
+    EXPECT_LT( findMaxDistanceSqOneWay( mesh, folded ), sqr( 1.5f ) );
+    EXPECT_GT( mesh.area(), 32 );
+    EXPECT_TRUE( mesh.topology.checkValidity() );
+    EXPECT_EQ( mesh.topology.findNumHoles(), 1 );
+}
+
+// a pleat longer than 16 rings of faces around one of its creases enclose, on a sheet with low ridges along it:
+// the fans around the pleat are re-filled, and the sheet is not re-triangulated in a plane without its ridges
+TEST( MRMesh, FixMeshCreasesLongPleat )
+{
+    auto mesh = makeGrid( 24, 6 );
+    for ( auto & p : mesh.points )
+    {
+        p.z = 0.005f * ( int( p.y ) % 2 ); // the odd rows are the ridges
+        if ( p.x >= 4 && p.x <= 20 && ( p.y == 2 || p.y == 3 ) )
+            p.y = 5 - p.y; // two rows swapped over 16 cells
+    }
+    const auto numVerts = mesh.topology.numValidVerts();
+    fixMeshCreases( mesh );
+    EXPECT_TRUE( mesh.findCreaseEdges( FixCreasesParams{}.creaseAngle ).none() );
+    EXPECT_GT( mesh.topology.numValidVerts(), numVerts - 3 * 17 ); // only vertices in the 17 columns of the pleat are removed
+}
+
+// a fold of a flat area and a fold of a curved area in one mesh: the planar triangulation of the first does not postpone
+// the creases next to the fans re-filled before it, so one iteration leaves the curved fold as without the flat fold
+TEST( MRMesh, FixMeshCreasesFlatAndCurvedFolds )
+{
+    auto curved = makeUVSphere( 1, 16, 16 );
+    ASSERT_TRUE( curved.topology.findEdge( 0_v, 15_v ) && curved.topology.findEdge( 31_v, 15_v ) && curved.topology.findEdge( 100_v, 101_v ) );
+    for ( auto & p : curved.points )
+        p.x = std::min( p.x, 0.7f ); // a flat side
+    for ( auto v : { 0_v, 31_v } ) // two neighbours of a vertex next to the pole slid past it
+        curved.points[v] = ( curved.points[v] + 1.5f * ( curved.points[15_v] - curved.points[v] ) ).normalized();
+    auto both = curved;
+    both.points[100_v] += 1.3f * ( both.points[101_v] - both.points[100_v] ); // a vertex of the flat side moved over its neighbour
+    const FixCreasesParams oneIter{ .maxIters = 1 };
+    const auto numCreases = [&] ( const Mesh & m ) { return m.findCreaseEdges( oneIter.creaseAngle ).count(); };
+    EXPECT_GT( numCreases( both ), numCreases( curved ) );
+    fixMeshCreases( curved, oneIter );
+    fixMeshCreases( both, oneIter );
+    EXPECT_EQ( numCreases( both ), numCreases( curved ) );
+}
+
+// fans re-filled one over another on a curved surface: every new face is mapped to a replaced original face near it,
+// and the faces replaced again leave the map
+TEST( MRMesh, FixMeshCreasesNew2OldOfFans )
+{
+    auto mesh = makeUVSphere( 1, 16, 16 );
+    for ( auto v : { 0_v, 31_v } ) // two neighbours of a vertex next to the pole slid past it
+        mesh.points[v] = ( mesh.points[v] + 1.5f * ( mesh.points[15_v] - mesh.points[v] ) ).normalized();
+    const auto folded = mesh;
+    FaceHashMap new2Old;
+    fixMeshCreases( mesh, { .new2Old = &new2Old } );
+    EXPECT_TRUE( mesh.topology.checkValidity() );
+    checkNew2Old( mesh, folded, new2Old, 0.05f );
+    EXPECT_GT( mesh.topology.faceSize() - folded.topology.faceSize(), new2Old.size() ); // some new faces were replaced again
 }
 
 } //namespace MR

@@ -31,7 +31,7 @@ struct BoxedTri
     AABBTree::LeafTri tri;
     Box3f box;
 
-    explicit BoxedTri( NoInit ) noexcept : tri{ FaceId( noInit ), { VertId( noInit ), VertId( noInit ), VertId( noInit ) } }, box( noInit ) { }
+    explicit BoxedTri( NoInit ) noexcept : tri( noInit ), box( noInit ) { }
 };
 
 /// the numFaces triangles with their boxes, the doubled centers of these boxes, and the box of the centers
@@ -335,10 +335,11 @@ void makeTree( int numTris, const MakeBoxedTris & makeBoxedTris,
     AABBTreeWideMaker maker( numTris );
     Buffer<TreeCenter> centers;
     Box3f centersBox;
-    Buffer<BoxedTri> boxedTris;
-    // the outputs are filled with their default values (by one thread) while the triangles are boxed
-    tbb::parallel_invoke( [&] { boxedTris = makeBoxedTris( centers, centersBox ); },
-        [&] { nodes.resize( maker.numNodes() ); leafTris.resize( numTris ); leafBoxes.resizeNoInit( numTris ); } );
+    // every element of the outputs is written by the maker
+    nodes.resizeNoInit( maker.numNodes() );
+    leafTris.resizeNoInit( numTris );
+    leafBoxes.resizeNoInit( numTris );
+    const auto boxedTris = makeBoxedTris( centers, centersBox );
     maker.make( boxedTris, centers, centersBox, nodes.data(), leafTris.data(), leafBoxes.data() );
 }
 

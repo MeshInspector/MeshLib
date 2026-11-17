@@ -5,6 +5,7 @@
 #include "MRCudaMath.h"
 #include "MRCudaMath.cuh"
 #include "MRCudaPipeline.h"
+#include "MRCudaAABBTree.hpp"
 
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRBitSetParallelFor.h"
@@ -21,24 +22,20 @@ namespace MR
 namespace Cuda
 {
 
-static_assert( sizeof( WideNode3 ) == sizeof( AABBTreeWideNode ) );
-static_assert( sizeof( LeafTri3 ) == sizeof( AABBTree::LeafTri ) );
 
 
 struct FastWindingNumberDataBuffers
 {
     DynamicArray<Dipole> dipoles;
     DynamicArray<float3> cudaMeshPoints;
-    DynamicArray<WideNode3> cudaNodes;
-    DynamicArray<LeafTri3> cudaLeafTris;
+    MeshTreeBuffers tree;
     DynamicArray<FaceToThreeVerts> cudaFaces;
 
     [[nodiscard]] FastWindingNumberData toData() const
     {
         return {
             .dipoles = dipoles.data(),
-            .nodes = cudaNodes.data(),
-        .leafTris = cudaLeafTris.data(),
+            .tree = tree.toData(),
             .meshPoints = cudaMeshPoints.data(),
             .faces = cudaFaces.data(),
         };
@@ -77,19 +74,12 @@ Expected<void> FastWindingNumber::prepareData_( ProgressCallback cb )
     if ( !reportProgress( cb, 0.5f ) )
         return unexpectedOperationCanceled();
 
-    const auto flat = makeFlatAABBTree( tree );
-    const auto& nodes = flat.nodes;
-    CUDA_LOGE_RETURN_UNEXPECTED( data->cudaNodes.fromVector( nodes ) );
-    CUDA_LOGE_RETURN_UNEXPECTED( data->cudaLeafTris.fromVector( flat.leafTris ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( data->tree.fromTree( tree ) );
     if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
 
-    // the dipoles in the order of the flat nodes
-    const auto & treeDipoles = mesh_.getDipoles();
-    Dipoles dipoles( flat.nodes.size() );
-    for ( NodeId n( 0 ); n < dipoles.size(); ++n )
-        dipoles[n] = treeDipoles[flat.treeNodeIds[n]];
-    CUDA_LOGE_RETURN_UNEXPECTED( data->dipoles.fromVector( dipoles ) );
+    // the dipoles are in the order of the node ids of the tree
+    CUDA_LOGE_RETURN_UNEXPECTED( data->dipoles.fromVector( mesh_.getDipoles() ) );
     if ( !reportProgress( cb, 1.0f ) )
         return unexpectedOperationCanceled();
 

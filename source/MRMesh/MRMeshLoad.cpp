@@ -111,16 +111,17 @@ static Expected<Mesh> triMeshToMesh( Expected<TriMesh> && triMesh, const MeshLoa
 {
     if ( !triMesh )
         return unexpected( std::move( triMesh.error() ) );
+    const auto numLoadedPoints = triMesh->points.size();
     std::vector<MeshBuilder::VertDuplication> dups;
     auto res = Mesh::fromTriMeshDuplicatingNonManifoldVertices( std::move( *triMesh ), &dups, { .skippedFaceCount = settings.skippedFaceCount } );
     if ( settings.duplicatedVertexCount )
         *settings.duplicatedVertexCount = int( dups.size() );
     if ( !dups.empty() )
     {
-        auto copyDupAttributes = [&dups, sz = res.points.size()] ( auto * attributes )
+        auto copyDupAttributes = [&dups, numLoadedPoints, sz = res.points.size()] ( auto * attributes )
         {
-            if ( !attributes || attributes->empty() )
-                return;
+            if ( !attributes || attributes->size() != numLoadedPoints )
+                return; // not filled by the loader
             attributes->resize( sz );
             for ( const auto & [src, dup] : dups )
                 (*attributes)[dup] = (*attributes)[src];
@@ -799,10 +800,14 @@ static Expected<TriMesh> fromPlyAsTriMesh( std::istream& in, const MeshLoadSetti
 
     if ( tris )
     {
-        for ( const auto & t : *tris )
+        for ( auto & t : *tris )
+        {
             for ( auto v : t )
                 if ( v >= (int)res.points.size() )
                     return unexpected( "vertex id is larger than total point coordinates" );
+            if ( !t[0] || !t[1] || !t[2] )
+                t = {}; // invalid triangle, skipped when building Mesh
+        }
         res.tris = std::move( *tris );
     }
 

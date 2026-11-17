@@ -428,6 +428,51 @@ TEST(MRMesh, LoadAsTriMeshAllFormats)
     EXPECT_TRUE( MeshLoad::fromASCIIStlAsTriMesh( folder / "trimesh.stl" ).has_value() );
 }
 
+TEST(MRMesh, LoadPlyNegativeVertexId)
+{
+    const std::string ply =
+        "ply\nformat ascii 1.0\n"
+        "element vertex 4\nproperty float x\nproperty float y\nproperty float z\n"
+        "element face 3\nproperty list uchar int vertex_indices\nend_header\n"
+        "0 0 0\n1 0 0\n0 1 0\n0 0 1\n"
+        "3 0 1 2\n3 0 2 -5\n3 0 3 1\n";
+
+    std::istringstream triIn( ply );
+    auto triMesh = MeshLoad::fromPlyAsTriMesh( triIn );
+    ASSERT_TRUE( triMesh.has_value() ) << triMesh.error();
+    ASSERT_EQ( triMesh->tris.size(), 3 );
+    EXPECT_EQ( triMesh->tris[1_f], ThreeVertIds{} );
+    EXPECT_EQ( triMesh->tris[2_f], ( ThreeVertIds{ 0_v, 3_v, 1_v } ) );
+
+    int skipped = 0;
+    std::istringstream meshIn( ply );
+    auto mesh = MeshLoad::fromPly( meshIn, { .skippedFaceCount = &skipped } );
+    ASSERT_TRUE( mesh.has_value() ) << mesh.error();
+    EXPECT_EQ( mesh->topology.numValidFaces(), 2 );
+    EXPECT_EQ( skipped, 1 );
+}
+
+TEST(MRMesh, LoadKeepsUnfilledAttributes)
+{
+    // two closed triangle fans sharing only the central vertex #0, so one vertex is duplicated
+    TriMesh triMesh;
+    triMesh.tris = Triangulation{
+        { 0_v, 1_v, 2_v }, { 0_v, 2_v, 3_v }, { 0_v, 3_v, 1_v },
+        { 0_v, 4_v, 5_v }, { 0_v, 5_v, 6_v }, { 0_v, 6_v, 4_v } };
+    triMesh.points = VertCoords{ { 0.f, 0.f, 0.f }, { 1.f, 0.f, 0.f }, { 0.f, 1.f, 0.f }, { 0.f, 0.f, 1.f },
+        { -1.f, 0.f, 0.f }, { 0.f, -1.f, 0.f }, { 0.f, 0.f, -1.f } };
+    std::ostringstream out;
+    ASSERT_TRUE( MeshSave::toBinaryStl( triMesh, out ).has_value() );
+
+    // the vectors left from some previous loading must not be touched, because STL has no vertex attributes
+    VertColors colors( 3, Color::red() );
+    std::istringstream in( out.str() );
+    auto mesh = MeshLoad::fromBinaryStl( in, { .colors = &colors } );
+    ASSERT_TRUE( mesh.has_value() ) << mesh.error();
+    EXPECT_EQ( mesh->points.size(), 8 );
+    EXPECT_EQ( colors, VertColors( 3, Color::red() ) );
+}
+
 TEST(MRMesh, LoadOffAsFaceSoup)
 {
     // a triangle, a quad, a non-convex pentagon and a 20-gon on a plane, then a quad with a repeated vertex

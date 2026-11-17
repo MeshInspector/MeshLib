@@ -1725,4 +1725,45 @@ TEST( MRMesh, getToIntConverter )
     EXPECT_EQ( getToFloatConverter( Box3d( Vector3d( p ), Vector3d( p ) ) )( Vector3i{} ), p );
 }
 
+TEST( MRMesh, getNestedCoordinateConverters )
+{
+    // a point rounded to the integer grid of one box must not be moved by the grid of another box of the same or smaller size,
+    // otherwise every boolean in a chain moves all the vertices made by the previous ones
+    std::mt19937 gen( 7 );
+    const auto rnd = [&] ( double a, double b ) { return std::uniform_real_distribution<double>( a, b )( gen ); };
+    for ( int trial = 0; trial < 2000; ++trial )
+    {
+        const Vector3d center1( rnd( -10, 10 ), rnd( -10, 10 ), rnd( -10, 10 ) );
+        const Vector3d halfSize1( rnd( 0.1, 8 ), rnd( 0.1, 8 ), rnd( 0.1, 8 ) );
+        const Box3d box1( center1 - halfSize1, center1 + halfSize1 );
+        // the second box is inside the first one
+        const Vector3d halfSize2 = halfSize1 * rnd( 0.05, 1 );
+        Vector3d center2;
+        for ( int i = 0; i < 3; ++i )
+            center2[i] = center1[i] + rnd( -1, 1 ) * ( halfSize1[i] - halfSize2[i] );
+        const Box3d box2( center2 - halfSize2, center2 + halfSize2 );
+
+        const auto [toInt1, toFloat1] = getNestedCoordinateConverters( box1 );
+        const auto [toInt2, toFloat2] = getNestedCoordinateConverters( box2 );
+        EXPECT_LE( toFloat2.range, toFloat1.range );
+
+        for ( int j = 0; j < 8; ++j )
+        {
+            Vector3d p;
+            for ( int i = 0; i < 3; ++i )
+                p[i] = center2[i] + rnd( -1, 1 ) * halfSize2[i];
+            if ( j % 2 )
+                p *= 1e-7; // small coordinates are known in float much more precisely than the grid step
+            if ( !box2.contains( p ) )
+                continue;
+            const Vector3i i1 = toInt1( Vector3f( p ) );
+            for ( int i = 0; i < 3; ++i )
+                EXPECT_LE( std::abs( i1[i] ), INT_MAX / 2 );
+            const Vector3f rounded = toFloat1( i1 );
+            EXPECT_EQ( toFloat1( toInt1( rounded ) ), rounded );
+            EXPECT_EQ( toFloat2( toInt2( rounded ) ), rounded );
+        }
+    }
+}
+
 } //namespace MR

@@ -1,6 +1,7 @@
 #include "MRNesting3mfExport.h"
 #ifndef MRIOEXTRAS_NO_XML
 #include "MRMesh/MRUniqueTemporaryFolder.h"
+#include "MRMesh/MRFile.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRId.h"
 #include "MRMesh/MRProgressCallback.h"
@@ -102,7 +103,11 @@ static Slices2D prepareSlices( const MeshXf& mesh, const Box3f& worldBox, float 
 
 static Expected<void> saveXml( tinyxml2::XMLDocument& doc, const std::filesystem::path& file )
 {
-    if ( tinyxml2::XML_SUCCESS != doc.SaveFile( utf8string( file ).c_str() ) )
+    // tinyxml2 opens a file by narrow name, which does not support Unicode names on Windows
+    File fp( file, "w" );
+    if ( !fp )
+        return unexpected( fmt::format( "Cannot open file for writing {}", utf8string( file ) ) );
+    if ( tinyxml2::XML_SUCCESS != doc.SaveFile( fp ) )
         return unexpected( fmt::format( "Cannot save {}: {}", utf8string( file.filename() ), doc.ErrorStr() ) );
     return {};
 }

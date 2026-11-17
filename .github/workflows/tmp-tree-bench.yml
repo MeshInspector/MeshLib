@@ -6,9 +6,8 @@ on:
   workflow_dispatch:
 
 env:
-  BASE_SHA: 3416511373244ddfcee8c367abf451c7a3aa9807
+  BASE_SHA: 9f6c4ec9d44aa6329b4a1145fc94c67b6ca5b101
   BENCH_ARGS: '3'
-  TB_ONLY: 'collide;collide rigid;collide first;collide precise;collide precise rigid'
   MR_OPTIONS: >-
     -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
     -DMESHLIB_PYTHON_SUPPORT=OFF -DMESHLIB_BUILD_MRVIEWER=OFF -DMESHLIB_BUILD_MESHVIEWER=OFF -DMESHLIB_BUILD_PYTHON_MODULES=OFF

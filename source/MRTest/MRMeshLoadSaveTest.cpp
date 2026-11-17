@@ -497,7 +497,7 @@ TEST(MRMesh, LoadOffAsFaceSoup)
     std::istringstream meshIn( off );
     auto mesh = MeshLoad::fromOff( meshIn );
     ASSERT_TRUE( mesh.has_value() ) << mesh.error();
-    EXPECT_TRUE( *mesh == Mesh::fromFaceSoup( points, verts, faces ) );
+    EXPECT_TRUE( *mesh == Mesh::fromFaceSoup( { points, verts, faces } ) );
 }
 
 TEST(MRMesh, SaveObjectTreeAsPoints)

@@ -145,7 +145,7 @@ static Expected<Mesh> faceSoupToMesh( Expected<FaceSoup> && soup, const MeshLoad
 {
     if ( !soup )
         return unexpected( std::move( soup.error() ) );
-    return Mesh::fromFaceSoup( std::move( soup->points ), soup->verts, soup->faces,
+    return Mesh::fromFaceSoup( std::move( *soup ),
         { .skippedFaceCount = settings.skippedFaceCount }, subprogress( settings.callback, 0.7f, 1.0f ) );
 }
 

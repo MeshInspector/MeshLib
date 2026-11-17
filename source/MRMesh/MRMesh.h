@@ -54,12 +54,10 @@ struct [[nodiscard]] Mesh
         const MeshBuilder::BuildSettings & settings = {},
         const MeshBuilder::BetterDupContinuation & betterCont = {} );
 
-    /// construct mesh from vertex coordinates and construct mesh topology from face soup,
-    /// where each face can have arbitrary degree (not only triangles);
+    /// construct mesh from face soup, where each face can have arbitrary degree (not only triangles);
     /// all non-triangular faces will be automatically subdivided on triangles
     [[nodiscard]] MRMESH_API static Mesh fromFaceSoup(
-        VertCoords vertexCoordinates,
-        const Vector<VertId, int> & verts, const Vector<MeshBuilder::VertSpan, FaceId> & faces,
+        FaceSoup && soup, ///< points of soup will be moved in the result
         const MeshBuilder::BuildSettings& settings = {}, ProgressCallback cb = {} );
 
     /// construct mesh from point triples;

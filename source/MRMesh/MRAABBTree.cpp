@@ -52,20 +52,20 @@ struct FaceTriCoords
 using FaceTri = std::conditional_t<cFaceCoords, FaceTriCoords, AABBTree::LeafTri>;
 
 /// the coordinates of the vertices of triangle ft: from the points, or from the record if it keeps them
-inline void triPoints( const AABBTree::LeafTri & ft, const VertCoords & points, Vector3f ( &p )[3] )
+[[maybe_unused]] inline void triPoints( const AABBTree::LeafTri & ft, const VertCoords & points, Vector3f ( &p )[3] )
 {
     for ( int k = 0; k < 3; ++k )
         p[k] = points[ft.verts[k]];
 }
-inline void triPoints( const FaceTriCoords & ft, const VertCoords &, Vector3f ( &p )[3] )
+[[maybe_unused]] inline void triPoints( const FaceTriCoords & ft, const VertCoords &, Vector3f ( &p )[3] )
 {
     for ( int k = 0; k < 3; ++k )
         p[k] = ft.p[k];
 }
 
 /// keeps the coordinates of the vertices in the record if it has them
-inline void keepPoints( AABBTree::LeafTri &, const Vector3f ( & )[3] ) { }
-inline void keepPoints( FaceTriCoords & ft, const Vector3f ( &p )[3] )
+[[maybe_unused]] inline void keepPoints( AABBTree::LeafTri &, const Vector3f ( & )[3] ) { }
+[[maybe_unused]] inline void keepPoints( FaceTriCoords & ft, const Vector3f ( &p )[3] )
 {
     for ( int k = 0; k < 3; ++k )
         ft.p[k] = p[k];

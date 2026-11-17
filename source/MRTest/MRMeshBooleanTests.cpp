@@ -103,42 +103,65 @@ static void expectUnionKeepsBoth( const Mesh& meshA, const Mesh& meshB )
     }
 }
 
-// the boxes touch one another by the plane z = -41.50188 and no triangle of one crosses another,
-// so the distance from any face of meshA there is zero and its sign is defined by rounding errors only
+// all four overloads of boolean, keeping or consuming each mesh, give the same result, also with the precut output of either mesh,
+// which leaves that mesh uncut, and in force mode; a kept mesh is not changed and gets the tree of the whole mesh
 TEST( MRMesh, BooleanKeptAndConsumedMeshes )
 {
+    // without cached trees, and they get none below
+    const Mesh cube = makeCube();
     const Mesh sphere = makeSphere( { .radius = 0.4f, .numMeshVertices = 100 } );
     const AffineXf3f xf = AffineXf3f::translation( Vector3f( 0.5f, 0.4f, 0.3f ) );
-    const BooleanParameters params{ .rigidB2A = &xf };
+    enum Mode { Default, PreCutA, PreCutB, ForceCut };
+    struct Run
+    {
+        BooleanResult res;
+        BooleanPreCutResult pre;
+    };
     for ( auto op : { BooleanOperation::Union, BooleanOperation::Intersection, BooleanOperation::DifferenceAB, BooleanOperation::DifferenceBA,
         BooleanOperation::InsideA, BooleanOperation::OutsideB } )
     {
-        // new meshes in every call, so no tree is cached before it
-        const Mesh a = makeCube(), b = sphere;
-        const auto ref = boolean( a, b, op, params );
-        ASSERT_TRUE( ref.valid() );
-        EXPECT_GT( ref.mesh.topology.numValidFaces(), 0 );
-
-        const auto expectSame = [&ref] ( const BooleanResult& res )
+        for ( Mode mode : { Default, PreCutA, PreCutB, ForceCut } )
         {
-            ASSERT_TRUE( res.valid() );
-            EXPECT_EQ( res.mesh.topology, ref.mesh.topology );
-            EXPECT_EQ( res.mesh.points, ref.mesh.points );
-        };
-        expectSame( boolean( makeCube(), Mesh( sphere ), op, params ) );
+            const auto run = [&] ( bool keepA, bool keepB )
+            {
+                Run r;
+                const BooleanParameters params{ .rigidB2A = &xf, .outPreCutA = mode == PreCutA ? &r.pre : nullptr,
+                    .outPreCutB = mode == PreCutB ? &r.pre : nullptr, .forceCut = mode == ForceCut };
+                Mesh a = cube, b = sphere;
+                r.res = keepA ? ( keepB ? boolean( a, b, op, params ) : boolean( a, std::move( b ), op, params ) )
+                              : ( keepB ? boolean( std::move( a ), b, op, params ) : boolean( std::move( a ), std::move( b ), op, params ) );
+                if ( keepA )
+                {
+                    EXPECT_TRUE( a.getAABBTreeNotCreate() );
+                    EXPECT_TRUE( a == cube );
+                }
+                if ( keepB )
+                {
+                    EXPECT_TRUE( b.getAABBTreeNotCreate() );
+                    EXPECT_TRUE( b == sphere );
+                }
+                return r;
+            };
+            const Run ref = run( true, true );
+            ASSERT_TRUE( ref.res.valid() ) << ref.res.errorString;
+            const bool preCut = mode == PreCutA || mode == PreCutB;
+            EXPECT_EQ( ref.res.mesh.topology.numValidFaces() > 0, !preCut );
+            EXPECT_EQ( ref.pre.mesh.topology.numValidFaces() > 0, preCut );
 
-        const Mesh keptA = makeCube();
-        expectSame( boolean( keptA, Mesh( sphere ), op, params ) );
-        EXPECT_TRUE( keptA.getAABBTreeNotCreate() );
-        EXPECT_EQ( keptA.topology, a.topology );
-
-        const Mesh keptB = sphere;
-        expectSame( boolean( makeCube(), keptB, op, params ) );
-        EXPECT_TRUE( keptB.getAABBTreeNotCreate() );
-        EXPECT_EQ( keptB.topology, b.topology );
+            for ( auto [keepA, keepB] : { std::pair{ false, false }, std::pair{ true, false }, std::pair{ false, true } } )
+            {
+                const Run r = run( keepA, keepB );
+                ASSERT_TRUE( r.res.valid() ) << r.res.errorString;
+                EXPECT_TRUE( r.res.mesh == ref.res.mesh );
+                EXPECT_TRUE( r.pre.mesh == ref.pre.mesh );
+                EXPECT_EQ( r.pre.intersections.size(), ref.pre.intersections.size() );
+            }
+        }
     }
 }
 
+// the boxes touch one another by the plane z = -41.50188 and no triangle of one crosses another,
+// so the distance from any face of meshA there is zero and its sign is defined by rounding errors only
 TEST( MRMesh, BooleanTouchingMeshes )
 {
     expectUnionKeepsBoth(

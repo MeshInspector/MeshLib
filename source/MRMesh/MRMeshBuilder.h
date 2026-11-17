@@ -78,7 +78,7 @@ MRMESH_API void addTriangles( MeshTopology & res, std::vector<VertId> & vertTrip
     FaceBitSet * createdFaces = nullptr ); ///< this set receives indices of added triangles
 
 /// construct mesh topology from face soup, where each face can have arbitrary degree (not only triangles)
-MRMESH_API MeshTopology fromFaceSoup( const std::vector<VertId> & verts, const Vector<VertSpan, FaceId> & faces,
+MRMESH_API MeshTopology fromFaceSoup( const Vector<VertId, int> & verts, const Vector<VertSpan, FaceId> & faces,
     const BuildSettings & settings = {}, ProgressCallback progressCb = {} );
 
 /// computes the histogram of triangle repetitions in given triangulation, ignoring vertex order in each triangle:

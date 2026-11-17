@@ -103,7 +103,7 @@ Mesh Mesh::fromTriMeshDuplicatingNonManifoldVertices(
 
 Mesh Mesh::fromFaceSoup(
     VertCoords vertexCoordinates,
-    const std::vector<VertId> & verts, const Vector<MeshBuilder::VertSpan, FaceId> & faces,
+    const Vector<VertId, int> & verts, const Vector<MeshBuilder::VertSpan, FaceId> & faces,
     const MeshBuilder::BuildSettings& settings, ProgressCallback cb /*= {}*/ )
 {
     MR_TIMER;

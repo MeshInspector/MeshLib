@@ -3,7 +3,6 @@
 #include "MRMeshBuilderTypes.h"
 #include "MRVector.h"
 #include "MRVector3.h"
-#include <vector>
 
 namespace MR
 {
@@ -15,7 +14,7 @@ struct [[nodiscard]] FaceSoup
     VertCoords points;
 
     /// vertex ids of all polygons, one polygon after another
-    std::vector<VertId> verts;
+    Vector<VertId, int> verts;
 
     /// the range in verts of each polygon
     Vector<MeshBuilder::VertSpan, FaceId> faces;

@@ -59,7 +59,7 @@ struct [[nodiscard]] Mesh
     /// all non-triangular faces will be automatically subdivided on triangles
     [[nodiscard]] MRMESH_API static Mesh fromFaceSoup(
         VertCoords vertexCoordinates,
-        const std::vector<VertId> & verts, const Vector<MeshBuilder::VertSpan, FaceId> & faces,
+        const Vector<VertId, int> & verts, const Vector<MeshBuilder::VertSpan, FaceId> & faces,
         const MeshBuilder::BuildSettings& settings = {}, ProgressCallback cb = {} );
 
     /// construct mesh from point triples;

@@ -398,8 +398,8 @@ private:
 
 /// makes the tree of numTris triangles given by makeFaceTris( centers, centersBox )
 template <typename MakeFaceTris>
-void makeTree( int numTris, const VertCoords & points, const MakeFaceTris & makeFaceTris, Vector<AABBTree::SimdNode> & nodes,
-    Vector<AABBTree::SimdLeaf> & leaves, Vector<AABBTree::LeafTri> & leafTris )
+void makeTree( int numTris, const VertCoords & points, const MakeFaceTris & makeFaceTris, std::vector<AABBTree::SimdNode, Allocator<AABBTree::SimdNode>> & nodes,
+    std::vector<AABBTree::SimdLeaf, Allocator<AABBTree::SimdLeaf>> & leaves, Vector<AABBTree::LeafTri> & leafTris )
 {
     if ( numTris <= 0 )
         return;
@@ -408,8 +408,8 @@ void makeTree( int numTris, const VertCoords & points, const MakeFaceTris & make
     Box3f centersBox;
     const auto faceTris = makeFaceTris( centers, centersBox );
     // the pages are touched first by the parallel filling
-    nodes.resizeNoInit( maker.numInternal() );
-    leaves.resizeNoInit( maker.numLeaves() );
+    resizeNoInit( nodes, maker.numInternal() );
+    resizeNoInit( leaves, maker.numLeaves() );
     leafTris.resizeNoInit( size_t( maker.numLeaves() ) * AABBTree::MaxLeafTris );
     maker.make( faceTris, centers, centersBox, points, nodes.data(), leaves.data(), leafTris.data() );
 }

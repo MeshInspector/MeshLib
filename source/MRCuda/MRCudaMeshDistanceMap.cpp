@@ -3,6 +3,7 @@
 
 #include "MRCudaBasic.cuh"
 #include "MRCudaBasic.h"
+#include "MRCudaAABBTree.hpp"
 
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRChunkIterator.h"
@@ -46,19 +47,13 @@ Expected<DistanceMap> computeDistanceMap( const MR::Mesh& mesh, const MR::MeshTo
         return unexpectedOperationCanceled();
 
     const AABBTree& tree = mesh.getAABBTree();
-    const auto flat = makeFlatAABBTree( tree );
-    const auto& nodes = flat.nodes;
     const auto& meshPoints = mesh.points;
-
 
     DynamicArray<float3> cudaMeshPoints;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaMeshPoints.fromVector( meshPoints ) );
 
-    DynamicArray<WideNode3> cudaNodes;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaNodes.fromVector( nodes ) );
-
-    DynamicArray<LeafTri3> cudaLeafTris;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaLeafTris.fromVector( flat.leafTris ) );
+    MeshTreeBuffers cudaTree;
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaTree.fromTree( tree ) );
 
     MeshToDistanceMapParams cudaParams {
         .xRange = { params.xRange.x, params.xRange.y, params.xRange.z },
@@ -109,7 +104,7 @@ Expected<DistanceMap> computeDistanceMap( const MR::Mesh& mesh, const MR::MeshTo
     {
         const auto cb2 = subprogress( cb1, iterIndex++, iterCount );
 
-        computeMeshDistanceMapKernel( cudaNodes.data(), cudaMeshPoints.data(), cudaLeafTris.data(), cudaParams, cudaPrec, shift, result.data(), outSamples ? outTriPoints.data() : nullptr, size, offset );
+        computeMeshDistanceMapKernel( cudaTree.toData(), cudaMeshPoints.data(), cudaParams, cudaPrec, shift, result.data(), outSamples ? outTriPoints.data() : nullptr, size, offset );
         CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
         if ( !reportProgress( cb2, 0.33f ) )
             return unexpectedOperationCanceled();
@@ -132,8 +127,7 @@ size_t computeDistanceMapHeapBytes( const MR::Mesh& mesh, const MR::MeshToDistan
     constexpr size_t cMinRowCount = 10;
     size_t size = cMinRowCount * params.resolution.y;
     return
-        tree.numNodes() * sizeof( Cuda::WideNode3 ) +
-        tree.numTris() * sizeof( Cuda::LeafTri3 ) +
+        Cuda::MeshTreeBuffers::heapBytes( tree ) +
         meshPoints.size() * sizeof( float3 ) +
 
         size * sizeof( float ) +

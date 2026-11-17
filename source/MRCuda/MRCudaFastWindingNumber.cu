@@ -29,7 +29,7 @@ __device__ float triangleSolidAngle( const float3& p, const float3& tri0, const 
 }
 
 __device__ void processPoint( const float3& q, float& res, const Dipole* dipoles,
-    const WideNode3* __restrict__ nodes, const LeafTri3* __restrict__ leafTris, const float3* __restrict__ meshPoints,
+    const MeshTree3 tree, const float3* __restrict__ meshPoints,
     float beta, int skipFace = -1 )
 {
     const float betaSq = beta * beta;
@@ -38,24 +38,27 @@ __device__ void processPoint( const float3& q, float& res, const Dipole* dipoles
     // every level adds at most 3 nodes, and the tree of 2^31 triangles has 16 levels
     // only the nodes with not good enough approximation by their dipoles get in the stack
     InplaceStack<int, 64> subtasks;
-    if ( !dipoles[0].addIfGoodApprox( q, betaSq, res ) )
-        subtasks.push( 0 );
+    if ( !dipoles[tree.nodeId( tree.rootRef )].addIfGoodApprox( q, betaSq, res ) )
+        subtasks.push( tree.rootRef );
 
     while ( !subtasks.empty() )
     {
-        const auto& node = nodes[subtasks.top()];
+        const int ref = subtasks.top();
         subtasks.pop();
-        if ( !node.leaf() )
+        if ( ref >= 0 )
         {
-            for ( int c = node.first + node.count - 1; c >= node.first; --c )
-                if ( !dipoles[c].addIfGoodApprox( q, betaSq, res ) )
-                    subtasks.push( c );
+            const SimdNode3 node = tree.nodes[ref]; // to registers
+            #pragma unroll
+            for ( int c = 3; c >= 0; --c )
+                if ( const int ch = node.child[c]; ch && !dipoles[tree.nodeId( ch )].addIfGoodApprox( q, betaSq, res ) )
+                    subtasks.push( ch );
             continue;
         }
         // the triangles of a leaf with not good enough approximation by its dipole are summed exactly
-        for ( int t = node.first, e = node.first + node.numLeafTris(); t < e; ++t )
+        const auto* lts = tree.leafSlots( ref );
+        for ( int t = 0; t < cMaxLeafTris && lts[t].face >= 0; ++t )
         {
-            const auto& lt = leafTris[t];
+            const auto& lt = lts[t];
             if ( lt.face != skipFace )
                 res += triangleSolidAngle( q, meshPoints[lt.verts[0]], meshPoints[lt.verts[1]], meshPoints[lt.verts[2]] );
         }
@@ -65,7 +68,7 @@ __device__ void processPoint( const float3& q, float& res, const Dipole* dipoles
 }
 
 __device__ float calcDistanceSq( const float3& pt,
-    const WideNode3* __restrict__ nodes, const LeafTri3* __restrict__ leafTris, const float3* __restrict__ meshPoints,
+    const MeshTree3 tree, const float3* __restrict__ meshPoints,
     float maxDistSq, float minDistSq )
 {
     float resSq = maxDistSq;
@@ -78,27 +81,28 @@ __device__ float calcDistanceSq( const float3& pt,
     // every level adds at most 3 tasks, and the tree of 2^31 triangles has 16 levels
     InplaceStack<SubTask, 64> subtasks;
 
-    auto boxDistSq = [&] ( int n )
+    auto boxDistSq = [&] ( const Box3& box )
     {
-        return lengthSq( nodes[n].box.getBoxClosestPointTo( pt ) - pt );
+        return lengthSq( box.getBoxClosestPointTo( pt ) - pt );
     };
 
     // the node to visit next is not pushed in the stack
-    SubTask s{ 0, boxDistSq( 0 ) };
+    SubTask s{ tree.rootRef, boxDistSq( tree.rootBox ) };
     while ( true )
     {
         if ( s.distSq < resSq )
         {
-            const auto& node = nodes[s.n];
-            if ( !node.leaf() )
+            if ( s.n >= 0 )
             {
+                const SimdNode3 node = tree.nodes[s.n]; // to registers
                 // the children closer than the found point ordered by distance, the farthest first
                 SubTask ch[4];
                 int numCh = 0;
-                for ( int c = 0; c < node.count; ++c )
+                #pragma unroll
+                for ( int c = 0; c < 4 && node.child[c]; ++c )
                 {
-                    const int n = node.first + c;
-                    const float d = boxDistSq( n );
+                    const int n = node.child[c];
+                    const float d = boxDistSq( node.childBox( c ) );
                     if ( !( d < resSq ) )
                         continue;
                     int k = numCh++;
@@ -117,9 +121,10 @@ __device__ float calcDistanceSq( const float3& pt,
             }
             else
             {
-                for ( int t = node.first, e = node.first + node.numLeafTris(); t < e; ++t )
+                const auto* lts = tree.leafSlots( s.n );
+                for ( int t = 0; t < cMaxLeafTris && lts[t].face >= 0; ++t )
                 {
-                    const auto& lt = leafTris[t];
+                    const auto& lt = lts[t];
                     const auto closestPointRes = closestPointInTriangle( pt, meshPoints[lt.verts[0]], meshPoints[lt.verts[1]], meshPoints[lt.verts[2]] );
                     const float distSq = lengthSq( closestPointRes.proj - pt );
                     if ( distSq < resSq )
@@ -138,7 +143,7 @@ __device__ float calcDistanceSq( const float3& pt,
 }
 
 __global__ void fastWindingNumberFromVectorKernel( const float3* points,
-    const Dipole* __restrict__ dipoles, const WideNode3* __restrict__ nodes, const LeafTri3* __restrict__ leafTris, const float3* __restrict__ meshPoints, const FaceToThreeVerts* __restrict__ faces,
+    const Dipole* __restrict__ dipoles, const MeshTree3 tree, const float3* __restrict__ meshPoints, const FaceToThreeVerts* __restrict__ faces,
     float* resVec, float beta, int skipFace, size_t size )
 {
     if ( size == 0 )
@@ -151,11 +156,11 @@ __global__ void fastWindingNumberFromVectorKernel( const float3* points,
     if ( index >= size )
         return;
 
-    processPoint( points[index], resVec[index], dipoles, nodes, leafTris, meshPoints, beta, skipFace );
+    processPoint( points[index], resVec[index], dipoles, tree, meshPoints, beta, skipFace );
 }
 
 __global__ void fastWindingNumberFromMeshKernel( const Dipole* __restrict__ dipoles,
-    const WideNode3* __restrict__ nodes, const LeafTri3* __restrict__ leafTris, const float3* __restrict__ meshPoints, const FaceToThreeVerts* __restrict__ faces,
+    const MeshTree3 tree, const float3* __restrict__ meshPoints, const FaceToThreeVerts* __restrict__ faces,
     float* resVec, float beta, size_t chunkSize, size_t chunkOffset )
 {
     if ( chunkSize == 0 )
@@ -174,11 +179,11 @@ __global__ void fastWindingNumberFromMeshKernel( const Dipole* __restrict__ dipo
         return;
 
     const auto q = ( meshPoints[face.verts[0]] + meshPoints[face.verts[1]] + meshPoints[face.verts[2]] ) / 3.0f;
-    processPoint( q, resVec[index], dipoles, nodes, leafTris, meshPoints, beta, faceIndex );
+    processPoint( q, resVec[index], dipoles, tree, meshPoints, beta, faceIndex );
 }
 
 __global__ void fastWindingNumberFromGridKernel( int3 dims, Matrix4 gridToMeshXf,
-    const Dipole* __restrict__ dipoles, const WideNode3* __restrict__ nodes, const LeafTri3* __restrict__ leafTris, const float3* __restrict__ meshPoints, const FaceToThreeVerts* __restrict__ faces,
+    const Dipole* __restrict__ dipoles, const MeshTree3 tree, const float3* __restrict__ meshPoints, const FaceToThreeVerts* __restrict__ faces,
     float* resVec, float beta, size_t chunkSize, size_t chunkOffset )
 {
     if ( chunkSize == 0 )
@@ -202,13 +207,13 @@ __global__ void fastWindingNumberFromGridKernel( int3 dims, Matrix4 gridToMeshXf
     const float3 point{ float( voxel.x ), float( voxel.y ), float( voxel.z ) };
     const float3 transformedPoint = gridToMeshXf.isIdentity ? point : gridToMeshXf.transform( point );
 
-    processPoint( transformedPoint, resVec[index], dipoles, nodes, leafTris, meshPoints, beta );
+    processPoint( transformedPoint, resVec[index], dipoles, tree, meshPoints, beta );
 }
 
 static constexpr float cQuietNan = std::numeric_limits<float>::quiet_NaN();
 
 __global__ void signedDistanceKernel( int3 dims, Matrix4 gridToMeshXf,
-    const Dipole* __restrict__ dipoles, const WideNode3* __restrict__ nodes, const LeafTri3* __restrict__ leafTris, const float3* __restrict__ meshPoints, const FaceToThreeVerts* __restrict__ faces,
+    const Dipole* __restrict__ dipoles, const MeshTree3 tree, const float3* __restrict__ meshPoints, const FaceToThreeVerts* __restrict__ faces,
     float* resVec, DistanceToMeshOptions options, size_t chunkSize, size_t chunkOffset ) // pass options by value to avoid reference on CPU memory
 {
     if ( chunkSize == 0 )
@@ -232,7 +237,7 @@ __global__ void signedDistanceKernel( int3 dims, Matrix4 gridToMeshXf,
     const float3 point{ float( voxel.x ), float( voxel.y ), float( voxel.z ) };
     const float3 transformedPoint = gridToMeshXf.isIdentity ? point : gridToMeshXf.transform( point );
 
-    float resSq = calcDistanceSq( transformedPoint, nodes, leafTris, meshPoints, options.maxDistSq, options.minDistSq );
+    float resSq = calcDistanceSq( transformedPoint, tree, meshPoints, options.maxDistSq, options.minDistSq );
     if ( options.nullOutsideMinMax && ( resSq < options.minDistSq || resSq >= options.maxDistSq ) ) // note that resSq == minDistSq (e.g. == 0) is a valid situation
     {
         resVec[index] = cQuietNan;
@@ -240,7 +245,7 @@ __global__ void signedDistanceKernel( int3 dims, Matrix4 gridToMeshXf,
     }
 
     float fwn{ 0 };
-    processPoint( transformedPoint, fwn, dipoles, nodes, leafTris, meshPoints, options.windingNumberBeta );
+    processPoint( transformedPoint, fwn, dipoles, tree, meshPoints, options.windingNumberBeta );
     float res = sqrt( resSq );
     if ( fwn > options.windingNumberThreshold )
         res = -res;
@@ -252,14 +257,14 @@ void fastWindingNumberFromVector( const float3* points,
                                 float* resVec, float beta, int skipFace, size_t size )
 {
     int numBlocks = int( ( size + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
-    fastWindingNumberFromVectorKernel<<< numBlocks, maxThreadsPerBlock >>>( points, data.dipoles, data.nodes, data.leafTris, data.meshPoints, data.faces, resVec, beta, skipFace, size );
+    fastWindingNumberFromVectorKernel<<< numBlocks, maxThreadsPerBlock >>>( points, data.dipoles, data.tree, data.meshPoints, data.faces, resVec, beta, skipFace, size );
 }
 
 void fastWindingNumberFromMesh( FastWindingNumberData data,
                                         float* resVec, float beta, size_t chunkSize, size_t chunkOffset )
 {
     int numBlocks = int( ( chunkSize + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
-    fastWindingNumberFromMeshKernel<<< numBlocks, maxThreadsPerBlock >>>( data.dipoles, data.nodes, data.leafTris, data.meshPoints, data.faces, resVec, beta, chunkSize, chunkOffset );
+    fastWindingNumberFromMeshKernel<<< numBlocks, maxThreadsPerBlock >>>( data.dipoles, data.tree, data.meshPoints, data.faces, resVec, beta, chunkSize, chunkOffset );
 }
 
 void fastWindingNumberFromGrid( int3 dims, Matrix4 gridToMeshXf,
@@ -267,7 +272,7 @@ void fastWindingNumberFromGrid( int3 dims, Matrix4 gridToMeshXf,
                                         float* resVec, float beta, size_t chunkSize, size_t chunkOffset )
 {
     int numBlocks = int( ( chunkSize + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
-    fastWindingNumberFromGridKernel<<< numBlocks, maxThreadsPerBlock >>>( dims, gridToMeshXf, data.dipoles, data.nodes, data.leafTris, data.meshPoints, data.faces, resVec, beta, chunkSize, chunkOffset );
+    fastWindingNumberFromGridKernel<<< numBlocks, maxThreadsPerBlock >>>( dims, gridToMeshXf, data.dipoles, data.tree, data.meshPoints, data.faces, resVec, beta, chunkSize, chunkOffset );
 }
 
 void signedDistance( int3 dims, Matrix4 gridToMeshXf,
@@ -275,7 +280,7 @@ void signedDistance( int3 dims, Matrix4 gridToMeshXf,
                      float* resVec, size_t chunkSize, size_t chunkOffset, const DistanceToMeshOptions& options )
 {
     int numBlocks = int( ( chunkSize + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
-    signedDistanceKernel<<< numBlocks, maxThreadsPerBlock >>>( dims, gridToMeshXf, data.dipoles, data.nodes, data.leafTris, data.meshPoints, data.faces, resVec, options, chunkSize, chunkOffset );
+    signedDistanceKernel<<< numBlocks, maxThreadsPerBlock >>>( dims, gridToMeshXf, data.dipoles, data.tree, data.meshPoints, data.faces, resVec, options, chunkSize, chunkOffset );
 }
 
 } //namespace Cuda

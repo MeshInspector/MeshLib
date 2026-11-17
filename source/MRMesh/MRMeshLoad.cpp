@@ -95,6 +95,9 @@ Expected<Mesh> loadASCIIStl( std::istream& in, const MeshLoadSettings& settings 
     return MeshLoad::fromASCIIStl( in, settings );
 }
 
+/// the fraction of progress for loading TriMesh or FaceSoup in most formats, the rest is for building Mesh from it
+constexpr float cLoadAsTriMeshProgress = 0.7f;
+
 /// settings for loading TriMesh or FaceSoup, which takes given fraction of progress before building Mesh from it
 static MeshLoadSettings triMeshSettings( const MeshLoadSettings& settings, float triMeshProgress )
 {
@@ -146,7 +149,7 @@ static Expected<Mesh> faceSoupToMesh( Expected<FaceSoup> && soup, const MeshLoad
     if ( !soup )
         return unexpected( std::move( soup.error() ) );
     return Mesh::fromFaceSoup( std::move( *soup ),
-        { .skippedFaceCount = settings.skippedFaceCount }, subprogress( settings.callback, 0.7f, 1.0f ) );
+        { .skippedFaceCount = settings.skippedFaceCount }, subprogress( settings.callback, cLoadAsTriMeshProgress, 1.0f ) );
 }
 
 // object color by Materialise Magics convention: "COLOR=" followed by red, green, blue, alpha bytes anywhere in the header
@@ -444,12 +447,12 @@ Expected<Mesh> fromMrmesh( std::istream& in, const MeshLoadSettings& settings /*
 
 Expected<Mesh> fromOff( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
-    return faceSoupToMesh( fromOffAsFaceSoup( file, triMeshSettings( settings, 0.7f ) ), settings );
+    return faceSoupToMesh( fromOffAsFaceSoup( file, triMeshSettings( settings, cLoadAsTriMeshProgress ) ), settings );
 }
 
 Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
-    return faceSoupToMesh( fromOffAsFaceSoup( in, triMeshSettings( settings, 0.7f ) ), settings );
+    return faceSoupToMesh( fromOffAsFaceSoup( in, triMeshSettings( settings, cLoadAsTriMeshProgress ) ), settings );
 }
 
 Expected<FaceSoup> fromOffAsFaceSoup( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
@@ -682,22 +685,22 @@ Expected<FaceSoup> fromOffAsFaceSoup( std::istream& in, const MeshLoadSettings& 
 
 Expected<Mesh> fromObj( const std::filesystem::path & file, const MeshLoadSettings& settings /*= {}*/ )
 {
-    return triMeshToMesh( fromObjAsTriMesh( file, triMeshSettings( settings, 0.7f ) ), settings );
+    return triMeshToMesh( fromObjAsTriMesh( file, triMeshSettings( settings, cLoadAsTriMeshProgress ) ), settings );
 }
 
 Expected<Mesh> fromObj( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
-    return triMeshToMesh( fromObjAsTriMesh( in, triMeshSettings( settings, 0.7f ) ), settings );
+    return triMeshToMesh( fromObjAsTriMesh( in, triMeshSettings( settings, cLoadAsTriMeshProgress ) ), settings );
 }
 
 Expected<Mesh> fromAnyStl( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
-    return triMeshToMesh( fromAnyStlAsTriMesh( file, triMeshSettings( settings, 0.7f ) ), settings );
+    return triMeshToMesh( fromAnyStlAsTriMesh( file, triMeshSettings( settings, cLoadAsTriMeshProgress ) ), settings );
 }
 
 Expected<Mesh> fromAnyStl( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
-    return triMeshToMesh( fromAnyStlAsTriMesh( in, triMeshSettings( settings, 0.7f ) ), settings );
+    return triMeshToMesh( fromAnyStlAsTriMesh( in, triMeshSettings( settings, cLoadAsTriMeshProgress ) ), settings );
 }
 
 Expected<TriMesh> fromAnyStlAsTriMesh( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )

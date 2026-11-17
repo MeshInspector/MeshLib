@@ -322,7 +322,7 @@ void boxedTrisInBall( const AABBTree & tree, const FaceBitSet * region, Ball3f b
 {
     forLeafTrisInBall( tree, region, ball, [&]( int i, Ball3f & b )
     {
-        if ( !( tree.leafBox( i ).getDistanceSq( b.center ) < b.radiusSq ) )
+        if ( !( leafTriBox( tree, i ).getDistanceSq( b.center ) < b.radiusSq ) )
             return Processing::Continue;
         return foundCallback( tree.leafTris()[i].face, b );
     } );

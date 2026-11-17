@@ -661,7 +661,7 @@ void rayMeshIntersectAll_( const VertCoords & points, const AABBTree & tree, con
         subtasks.pop();
         if( r < 0 )
         {
-            const auto & leafBoxes = tree.leafBoxes( ~r );
+            const auto & leafBoxes = leafTriBoxes( tree, ~r );
             // the float version tests all triangles of the leaf at once, and with their boxes rejects the near-miss hits
             [[maybe_unused]] int crossedTris = 0;
             [[maybe_unused]] alignas( 16 ) float ts[4], vs[4], ws[4], ids[4];

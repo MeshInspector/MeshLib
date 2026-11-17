@@ -258,6 +258,19 @@ inline void insignificantlyExpandedTriBoxes4( const float ( &coord )[3][3][4], f
     }
 }
 
+/// the box of triangle k given in SoA order as in AABBTree::SimdLeaf::coord, the same as insignificantlyExpandedTriBox;
+/// empty (min = +inf, max = -inf) for an unused slot (NaN in the x and y of the first vertex)
+inline Box3f insignificantlyExpandedTriBox( const float ( &coord )[3][3][4], int k )
+{
+    if ( !( coord[0][0][k] == coord[0][0][k] ) && !( coord[0][1][k] == coord[0][1][k] ) )
+    {
+        constexpr float inf = std::numeric_limits<float>::infinity();
+        return Box3f( Vector3f::diagonal( inf ), Vector3f::diagonal( -inf ) );
+    }
+    return insignificantlyExpandedTriBox( { coord[0][0][k], coord[0][1][k], coord[0][2][k] },
+        { coord[1][0][k], coord[1][1][k], coord[1][2][k] }, { coord[2][0][k], coord[2][1][k], coord[2][2][k] } );
+}
+
 } //namespace MR
 
 #undef MR_TRI_BOX_LANES

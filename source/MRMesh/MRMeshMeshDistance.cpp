@@ -68,8 +68,8 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
             const int bFirst = ~s.b.ref * AABBTree::MaxLeafTris;
             const int bNum = bTree.numLeafTris( ~s.b.ref );
             // the boxes and the coordinates of the triangles from the leaves (the coordinates are the same as the points of the meshes)
-            const auto bLeafBoxes = bTree.leafBoxes( ~s.b.ref );
-            const auto aLeafBoxes = aTree.leafBoxes( ~s.a.ref );
+            const auto bLeafBoxes = leafTriBoxes( bTree, ~s.b.ref );
+            const auto aLeafBoxes = leafTriBoxes( aTree, ~s.a.ref );
             Box3f bBoxes[AABBTree::MaxLeafTris];
             Triangle3f bTris[AABBTree::MaxLeafTris];
             for ( int j = 0; j < bNum; ++j )

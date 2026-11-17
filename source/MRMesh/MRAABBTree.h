@@ -5,7 +5,6 @@
 #include "MRVector.h"
 #include "MRResizeNoInit.h"
 #include "MRMeshPart.h"
-#include "MRTriBox.hpp"
 #include <algorithm>
 #include <limits>
 #include <vector>
@@ -147,28 +146,13 @@ public:
     [[nodiscard]] MR_BIND_IGNORE const std::vector<SimdLeaf> & simdLeaves() const { return simdLeaves_; }
 
     /// the bounding boxes of the triangles of given leaf, slightly expanded for robust searches, computed from its coordinates
-    [[nodiscard]] MR_BIND_IGNORE SimdBoxes leafBoxes( int leaf ) const
-    {
-        SimdBoxes res( noInit );
-        insignificantlyExpandedTriBoxes4( simdLeaves_[leaf].coord, res.box );
-        return res;
-    }
+    [[nodiscard]] MR_BIND_IGNORE MRMESH_API SimdBoxes leafBoxes( int leaf ) const;
 
     /// the triangles of all leaves, MaxLeafTris slots per leaf
     [[nodiscard]] const Vector<LeafTri> & leafTris() const { return leafTris_; }
 
-    /// the bounding box of the triangle in slot i of leafTris()
-    [[nodiscard]] Box3f leafBox( int i ) const
-    {
-        const auto & c = simdLeaves_[i / MaxLeafTris].coord;
-        const int k = i % MaxLeafTris;
-        if ( !( c[0][0][k] == c[0][0][k] ) && !( c[0][1][k] == c[0][1][k] ) )
-        {
-            constexpr float inf = std::numeric_limits<float>::infinity();
-            return Box3f( Vector3f::diagonal( inf ), Vector3f::diagonal( -inf ) );
-        }
-        return insignificantlyExpandedTriBox( { c[0][0][k], c[0][1][k], c[0][2][k] }, { c[1][0][k], c[1][1][k], c[1][2][k] }, { c[2][0][k], c[2][1][k], c[2][2][k] } );
-    }
+    /// the bounding box of the triangle in slot i of leafTris(), slightly expanded for robust searches, computed from its coordinates (empty for an unused slot)
+    [[nodiscard]] MRMESH_API Box3f leafBox( int i ) const;
 
     /// the coordinates of vertex v (in the order of LeafTri::verts) of the triangle in slot i of leafTris(), the same as the points of the mesh
     [[nodiscard]] Vector3f leafPoint( int i, int v ) const

@@ -66,8 +66,8 @@ inline int usedLeafTris( const AABBTree & tree, int l )
 class PreciseBoxesIntersection
 {
 public:
-    PreciseBoxesIntersection( const AABBTree & aTree, const AABBTree & bTree, const ConvertToIntVector & conv, const AffineXf3f * xf )
-        : aTree_( aTree ), bTree_( bTree ), conv_( conv ), minGap_( 2 / conv.invRange )
+    PreciseBoxesIntersection( const AABBTree &, const AABBTree & bTree, const ConvertToIntVector & conv, const AffineXf3f * xf )
+        : bTree_( bTree ), conv_( conv ), minGap_( 2 / conv.invRange )
     {
         if ( xf )
         {
@@ -96,7 +96,6 @@ private:
     bool test_( const Box3f & a, const Box3f & b ) const { return preciseBoxesIntersect( a, b, conv_, minGap_ ); }
     Box3f bNodeBox_( const WideNode & b ) const { return bNodeBoxes_ ? bNodeBoxes_->get( bTree_.nodeId( b.ref ), b.box ) : b.box; }
 
-    const AABBTree & aTree_;
     const AABBTree & bTree_;
     const ConvertToIntVector & conv_;
     double minGap_ = 0;
@@ -488,7 +487,7 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
         xfLeafBoxes.resizeNoInit( tree.leafTris().size() );
         ParallelFor( size_t( 0 ), tree.simdLeaves().size(), [&]( size_t l )
         {
-            const auto boxes = tree.leafBoxes( int( l ) );
+            const auto boxes = leafTriBoxes( tree, int( l ) );
             for ( int j = 0; j < AABBTree::MaxLeafTris; ++j )
             {
                 const size_t i = l * AABBTree::MaxLeafTris + j;

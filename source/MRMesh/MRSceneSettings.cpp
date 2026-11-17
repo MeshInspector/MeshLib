@@ -73,6 +73,7 @@ SceneSettings::SceneSettings()
     floatSettings_[int( FloatType::FeatureLineWidth )] = 3;
     floatSettings_[int( FloatType::FeatureSubLineWidth )] = 2;
     floatSettings_[int( FloatType::AmbientCoefSelectedObj )] = 2.5f;
+    floatSettings_[int( FloatType::PointCloudPointSize )] = 5;
 
     // .PLY format is the most compact among other formats with zero compression costs
     stringSettings_[int( StringType::MeshSerializeFormat )] = ".ply";

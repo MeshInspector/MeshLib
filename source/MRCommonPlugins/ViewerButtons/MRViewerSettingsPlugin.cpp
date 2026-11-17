@@ -652,6 +652,16 @@ void ViewerSettingsPlugin::drawViewportTab_( float menuWidth )
     drawSeparator_( _t( "Defaults" ) );
 
     drawShadingModeCombo_( true, 170.0f * UI::scale() );
+
+    ImGui::SetNextItemWidth( 170.0f * UI::scale() );
+    float pointSize = SceneSettings::get( SceneSettings::FloatType::PointCloudPointSize );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
+    if ( UI::drag<PixelSizeUnit>( _tr( "Point Size" ), pointSize, 0.1f, 1.0f, 30.0f ) )
+        SceneSettings::set( SceneSettings::FloatType::PointCloudPointSize, pointSize );
+    ImGui::PopStyleVar();
+    UI::setTooltipIfHovered( _tr( "Size of points in new point clouds: opened from files or created by tools. "
+        "Point size of existing objects is changed in their context menu." ) );
+
     drawUpDirectionSelector_();
 
     drawSeparator_( _t( "Render" ) );

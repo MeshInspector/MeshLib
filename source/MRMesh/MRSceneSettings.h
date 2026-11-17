@@ -41,6 +41,8 @@ public:
         FeatureSubPointSize,
         // Ambient multiplication coefficient for ambientStrength for selected objects
         AmbientCoefSelectedObj,
+        // Size of points in new point cloud objects, in pixels
+        PointCloudPointSize,
 
         Count,
     };

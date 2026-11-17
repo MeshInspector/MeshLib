@@ -1411,7 +1411,8 @@ Expected<std::vector<MeshLoad::NamedMesh>> toNamedMeshes( Expected<std::vector<O
     {
         auto & r = res.emplace_back( std::move( model.named ) );
         std::vector<MeshBuilder::VertDuplication> dups;
-        r.mesh = Mesh::fromTriMeshDuplicatingNonManifoldVertices( std::move( model.triMesh ), &dups,
+        // the temporary TriMesh frees the triangles of this model before building the next one
+        r.mesh = Mesh::fromTriMeshDuplicatingNonManifoldVertices( TriMesh( std::move( model.triMesh ) ), &dups,
             { .skippedFaceCount = countSkippedFaces ? &r.skippedFaceCount : nullptr } );
         r.duplicatedVertexCount = int( dups.size() );
         if ( !dups.empty() )

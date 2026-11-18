@@ -10,6 +10,7 @@
 #include <MRMesh/MRSphereObject.h>
 #include <MRMesh/MRLineObject.h>
 #include <algorithm>
+#include <cmath>
 #include <map>
 
 namespace MR::FeatureAlignmentTool
@@ -39,7 +40,14 @@ Expected<void> rigidAncestry( const Object *object )
 {
     for ( auto *current = object; current; current = current->parent() )
     {
-        if ( !FeatureAlignment::isRigid( AffineXf3d( current->xf() ) ) )
+        const auto xf = AffineXf3d( current->xf() );
+        constexpr double cTolerance = 1e-5;
+        bool rigid = std::isfinite( xf.b.x ) && std::isfinite( xf.b.y ) && std::isfinite( xf.b.z ) &&
+                     std::abs( xf.A.det() - 1 ) <= cTolerance;
+        for ( int i = 0; i < 3; ++i )
+            for ( int j = 0; j < 3; ++j )
+                rigid = rigid && std::abs( dot( xf.A.col( i ), xf.A.col( j ) ) - ( i == j ? 1. : 0. ) ) <= cTolerance;
+        if ( !rigid )
             return unexpected( std::string( _t( "Physical parts and their ancestors must have rigid transforms. Scale, "
                                             "shear and mirror are unsupported." ) ) );
         auto views = current->xfsForAllViewports();
@@ -249,12 +257,8 @@ bool haveCompatiblePrimaryFeatures( const OrderedRoles &roles )
     };
     return ( featureMask( roles.fixed, true ) & featureMask( roles.moving, false ) ) != 0;
 }
-Expected<Constraints> readConstraints( const ObjectPtr &root, const Selection &s, const Settings &settings )
-{
-    return readConstraints( root, catalog( root ), s, settings );
-}
-Expected<Constraints> readConstraints( const ObjectPtr &root, const Catalog &entries,
-    const Selection &s, const Settings &settings )
+Expected<FeatureAlignment::FeatureReferences> readReferences( const ObjectPtr &root, const Catalog &entries,
+    const Selection &s )
 {
     const auto present = [&]( const ObjectPtr &object )
     {
@@ -312,6 +316,6 @@ Expected<Constraints> readConstraints( const ObjectPtr &root, const Catalog &ent
                             std::dynamic_pointer_cast<const FeatureObject>( s.fixedClock ) };
     if ( ( s.movingClock && !references.clocking.moving ) || ( s.fixedClock && !references.clocking.fixed ) )
         return unexpected( std::string( _t( "Clocking references must be existing fitted features." ) ) );
-    return FeatureAlignment::readConstraints( references, settings );
+    return references;
 }
 } // namespace MR::FeatureAlignmentTool

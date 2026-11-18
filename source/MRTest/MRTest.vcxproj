@@ -19,10 +19,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="MRFeatureAlignmentTests.cpp" />
-    <ClCompile Include="MRFeatureAlignmentToolTests.cpp" />
-    <ClCompile Include="..\MRCommonPlugins\Basic\MRFeatureAlignmentScene.cpp" />
-    <ClCompile Include="..\MRCommonPlugins\Basic\MRFeatureAlignmentController.cpp" />
     <ClCompile Include="MRAABBTreeTests.cpp" />
     <ClCompile Include="MRAABBTreePointsTests.cpp" />
     <ClCompile Include="MRAlphaShapeTests.cpp" />
@@ -141,6 +137,7 @@
     <ClCompile Include="MRObjectMeshTests.cpp" />
     <ClCompile Include="MRPointToPlaneAligningTransformTests.cpp" />
     <ClCompile Include="MRPointToPointAligningTransformTests.cpp" />
+    <ClCompile Include="MRFeatureAlignmentTests.cpp" />
     <ClCompile Include="MRPolyline2CollideTests.cpp" />
     <ClCompile Include="MRPolylineDecimateTests.cpp" />
     <ClCompile Include="MRPolylineSubdivideTests.cpp" />

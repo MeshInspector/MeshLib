@@ -9,7 +9,6 @@
 namespace MR::FeatureAlignmentTool
 {
 using FeatureAlignment::AxisDirection;
-using FeatureAlignment::Constraints;
 using FeatureAlignment::HoleMode;
 using FeatureAlignment::NormalRelation;
 using FeatureAlignment::PrimaryMode;
@@ -49,8 +48,6 @@ struct Selection
     ObjectPtr movingClock, fixedClock;
     bool explicitRoles{};
 };
-Expected<Constraints> readConstraints( const ObjectPtr &root, const Selection &selection, const Settings &settings );
-// Internal UI reuse only; mutating controller operations use the fresh-root overload.
-Expected<Constraints> readConstraints( const ObjectPtr &root, const Catalog &entries,
-    const Selection &selection, const Settings &settings );
+Expected<FeatureAlignment::FeatureReferences> readReferences( const ObjectPtr &root, const Catalog &entries,
+    const Selection &selection );
 } // namespace MR::FeatureAlignmentTool

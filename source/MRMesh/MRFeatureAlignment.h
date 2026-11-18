@@ -8,6 +8,11 @@
 #include <optional>
 #include <vector>
 
+namespace MR::detail
+{
+struct FeatureAlignmentWorkingSolution;
+} // namespace MR::detail
+
 namespace MR::FeatureAlignment
 {
 
@@ -26,11 +31,6 @@ enum class MRMESH_CLASS HoleMode
     Centers,
     Axes
 };
-enum class MRMESH_CLASS HoleKind
-{
-    Circle,
-    Cylinder
-};
 enum class MRMESH_CLASS PrimaryMode
 {
     Plane,
@@ -42,7 +42,9 @@ enum class MRMESH_CLASS AxisDirection
     /// Minimize the largest controlled position residual, then angular residual, over both signs.
     /// Numerical ties choose the smaller rotation; acceptance tolerances do not affect this choice.
     Closest = 0,
+    /// Align the moving axis with the fixed axis direction.
     Same = 1,
+    /// Align the moving axis against the fixed axis direction.
     Opposing = -1
 };
 /// Plane datum including its reference center, used to preserve free tangential placement.
@@ -69,7 +71,6 @@ struct MRMESH_CLASS Hole
     Vector3d center;                   ///< Fitted feature center; depth is diagnostic in plane center mode.
     Vector3d axis{ 0, 0, 1 };          ///< Nonzero circle normal or cylinder axis.
     double radius{ 1 };                ///< Positive radius; mismatch is a warning, never a scale request.
-    HoleKind kind{ HoleKind::Circle }; ///< Feature identity for validation/reporting.
 };
 struct MRMESH_CLASS HolePair
 {
@@ -91,6 +92,9 @@ struct MRMESH_CLASS Settings
     double offset{ 0 };
     double linearTolerance{ 1.0 };     ///< Nonnegative residual tolerance in input scene length units.
     double angularToleranceDeg{ 5.0 }; ///< Nonnegative angular tolerance in degrees, strictly below 90.
+    /// Plane Axes mode: both hole axes must tilt at least this far from the plane normal to set spin.
+    /// Choose this from fitting uncertainty, independently of the acceptance tolerance; range [0, 90).
+    double minimumObliqueAngleDeg{ 1.0 };
     MRMESH_API bool operator==( const Settings & ) const = default;
 };
 /// All values must be expressed in the same coordinate frame.
@@ -109,14 +113,7 @@ struct MRMESH_CLASS Constraints
 };
 struct MRMESH_CLASS HoleResidual
 {
-    bool hasAxis{ true };           ///< False for a center-only locator.
-    bool angleConstrained{ false }; ///< Whether axisAngleDeg participates in conflicts/maximumAngleError.
-    double position{};     ///< Controlled position error: tangent distance for plane holes, 3D distance for centers.
-    double inPlane{};      ///< Plane-hole tangential distance; zero for center-only locators.
-    double axial{};        ///< Plane-hole signed depth mismatch, diagnostic only.
-    double axisAngleDeg{}; ///< Unoriented hole-axis angle in degrees.
-    double radiusDifference{};  ///< Moving minus fixed radius in input length units; diagnostic only.
-    double rawCenterDistance{}; ///< Full fitted-center distance, independent of projected/intersected locators.
+    double position{}; ///< Controlled position error: tangent distance for plane holes, 3D distance for centers.
 };
 /// Reference determining residual spin after the primary constraint is satisfied.
 enum class MRMESH_CLASS RotationSource
@@ -172,7 +169,7 @@ struct MRMESH_CLASS Diagnostic
     DiagnosticCode code{ DiagnosticCode::Unspecified };
     /// Zero-based input index for CenterPositionMismatch (Constraints::centers) and
     /// HolePositionMismatch, HoleAxisAngleMismatch, HoleRadiusMismatch (Constraints::holes).
-    /// All other codes use -1; applicable metrics are in the corresponding Solution::holes entry.
+    /// All other codes use -1; controlled position residuals are in Solution::holes.
     int index{ -1 };
     MRMESH_API bool operator==( const Diagnostic & ) const = default;
 };
@@ -184,16 +181,8 @@ struct MRMESH_CLASS Solution
     int remainingDof{ 3 }; ///< Unconstrained rigid degrees of freedom, independent of residual conflicts.
     RotationSource rotationSource{ RotationSource::Unconstrained }; ///< Reference determining residual rotation, if any.
     FreeMotion freeMotion{ FreeMotion::Unspecified };                 ///< Constraint-rank description; populated by both solve and measure.
-    PrimaryMode mode{ PrimaryMode::Plane }; ///< Active primary mode.
-    double primaryPositionError{};          ///< Controlled primary position residual in input length units.
     double primaryAngleErrorDeg{};          ///< Controlled primary direction residual in degrees.
     double yawDeg{};                        ///< Residual spin selected by solve in degrees; zero for measure.
-    double signedPlaneGap{};                ///< Plane mode: measured gap along the fixed normal.
-    double planeOffsetError{};              ///< Plane mode: signedPlaneGap minus requested offset.
-    double normalErrorDeg{};                ///< Plane mode: directed normal relationship error in degrees.
-    double orthogonalityError{};            ///< Maximum absolute error in R-transpose times R versus identity.
-    double determinant{ 1 };                ///< Rotation determinant; a successful API result is finite and rigid.
-    std::optional<double> clockingErrorDeg; ///< Directed projected-reference residual in degrees.
     std::vector<HoleResidual> holes;        ///< One entry per active hole or center pair, in input order.
     std::vector<Diagnostic> conflicts, warnings; ///< Tolerance failures versus informational diagnostics.
     /// True when all controlled residuals meet tolerance. Invalid numeric results are returned as errors.
@@ -205,6 +194,11 @@ struct MRMESH_CLASS Solution
     [[nodiscard]] MRMESH_API double maximumPositionError() const;
     /// Largest constrained primary/locator/clocking angular residual in degrees.
     [[nodiscard]] MRMESH_API double maximumAngleError() const;
+
+private:
+    double primaryPositionError_{};
+    double secondaryAngleErrorDeg_{};
+    friend struct MR::detail::FeatureAlignmentWorkingSolution;
 };
 
 /// Calculates a proper rigid transform; never scales, mirrors, fits or edits input geometry.
@@ -214,8 +208,6 @@ struct MRMESH_CLASS Solution
 /// DOF/freeMotion describe the input constraint rank, as in solve, independently of placement errors.
 /// Inputs whose intermediate arithmetic or reported results exceed the finite numeric range are rejected.
 [[nodiscard]] MRMESH_API Expected<Solution> measure( Constraints constraints, const AffineXf3d &delta );
-/// Tests finite values, proper rotation determinant and orthogonality within the nonnegative tolerance.
-[[nodiscard]] MRMESH_API bool isRigid( const AffineXf3d &xf, double tolerance = 1e-5 );
 
 /// Corresponding fitted features. Both null pointers denote an unused optional pair.
 struct MRMESH_CLASS FeaturePair

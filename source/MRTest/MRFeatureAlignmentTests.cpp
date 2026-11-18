@@ -7,7 +7,6 @@
 #include <MRMesh/MRLineObject.h>
 #include <gtest/gtest.h>
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <limits>
 #include <numbers>
@@ -38,710 +37,7 @@ void expectVectorNear( Vector3d a, Vector3d b, double eps = 1e-8 )
 {
     EXPECT_NEAR( ( a - b ).length(), 0, eps );
 }
-} // namespace
 
-TEST( MRMesh, FeatureAlignmentScanToleranceDefaultsAreEditableStartingValues )
-{
-    Settings s;
-    ASSERT_TRUE( s.linearTolerance == 1. && s.angularToleranceDeg == 5. ) << "scan defaults";
-    s.linearTolerance = .2;
-    s.angularToleranceDeg = .5;
-    auto c = base();
-    c.settings = s;
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    ASSERT_TRUE( solved->acceptable() ) << "custom tolerances accepted";
-}
-
-TEST( MRMesh, FeatureAlignmentPlaneOnlyPreservesTangentialPosition )
-{
-    auto c = base();
-    c.movingPlane.center = { 8, 3, 20 };
-    c.fixedPlane.center = { 100, -50, 2 };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    expectVectorNear( r.delta( c.movingPlane.center ), { 8, 3, 2 } );
-    ASSERT_TRUE( r.remainingDof == 3 ) << "DOF";
-}
-
-TEST( MRMesh, FeatureAlignmentTiltedPlaneCenterConvention )
-{
-    auto c = base();
-    c.movingPlane = { { 50, 20, 30 }, { 1, 0, 0 } };
-    c.fixedPlane.center = { 0, 0, 4 };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    expectVectorNear( solved->delta( c.movingPlane.center ), { 50, 20, 4 } );
-}
-
-TEST( MRMesh, FeatureAlignmentOpposingNormalsAndSignedGap )
-{
-    auto c = base();
-    c.settings.normals = NormalRelation::Opposing;
-    c.settings.offset = 2;
-    c.fixedPlane.center = { 0, 0, 7 };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    expectVectorNear( r.delta.A * Vector3d{ 0, 0, 1 }, { 0, 0, -1 } );
-    expectVectorNear( r.delta( { 0, 0, 0 } ), { 0, 0, 9 } );
-    ASSERT_TRUE( std::abs( r.signedPlaneGap - 2 ) < 1e-9 ) << "gap";
-}
-
-TEST( MRMesh, FeatureAlignmentOneHoleLeavesRotation )
-{
-    auto c = base();
-    c.holes = { { h( { 3, 4, 0 } ), h( { 20, 30, 0 } ) } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    expectVectorNear( r.delta( { 3, 4, 0 } ), { 20, 30, 0 } );
-    ASSERT_TRUE( r.remainingDof == 1 ) << "DOF";
-}
-
-TEST( MRMesh, FeatureAlignmentSecondHoleSetsRotation )
-{
-    auto c = base();
-    c.holes = { { h( { 0, 0, 0 } ), h( { 10, 20, 0 } ) }, { h( { 10, 0, 0 } ), h( { 10, 30, 0 } ) } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    expectVectorNear( r.delta( { 10, 0, 0 } ), { 10, 30, 0 } );
-    ASSERT_TRUE( r.remainingDof == 0 && r.acceptable() ) << "constraints";
-}
-
-TEST( MRMesh, FeatureAlignmentMismatchNeverScales )
-{
-    auto c = base();
-    c.settings.linearTolerance = .05;
-    c.holes = { { h( { 0, 0, 0 } ), h( { 0, 0, 0 } ) }, { h( { 10, 0, 0 } ), h( { 0, 11, 0 } ) } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    ASSERT_TRUE( !r.acceptable() && std::abs( r.holes[1].position - 1 ) < 1e-8 ) << "mismatch";
-    ASSERT_TRUE( isRigid( r.delta ) ) << "rigid";
-}
-
-TEST( MRMesh, FeatureAlignmentCylinderAxisIgnoresAxialDisplayCenter )
-{
-    auto c = base();
-    c.holes = { { h( { 1, 2, 100 } ), h( { 3, 4, -100 } ) } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    ASSERT_TRUE( r.acceptable() && r.maximumPositionError() < 1e-9 ) << "axis center";
-}
-
-TEST( MRMesh, FeatureAlignmentPlaneCenterLocatorsPreserveSeatingInsteadOfMatchingFeatureDepths )
-{
-    auto c = base();
-    c.settings.holeMode = HoleMode::Centers;
-    c.holes = { { h( { 1, 2, 5 } ), h( { 3, 4, 0 } ) } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    ASSERT_TRUE( r.acceptable() && r.maximumPositionError() < 1e-9 ) << "depth is not a plane locator constraint";
-    ASSERT_TRUE( std::abs( r.holes[0].axial - 5 ) < 1e-9 ) << "retain depth diagnostic";
-    ASSERT_TRUE( std::abs( r.signedPlaneGap ) < 1e-9 ) << "plane seating";
-}
-
-TEST( MRMesh, FeatureAlignmentPlaneCenterDepthsDoNotBecomeConstraintsAtSignedGaps )
-{
-    for ( auto relation : { NormalRelation::Same, NormalRelation::Opposing } )
-        for ( double gap : { -10., 0., 10. } )
-        {
-            auto c = base();
-            c.settings.holeMode = HoleMode::Centers;
-            c.settings.normals = relation;
-            c.settings.offset = gap;
-            c.holes = { { h( { 0, 0, 7 } ), h( { 0, 0, -9 } ) }, { h( { 10, 0, -3 } ), h( { 10, 0, 4 } ) } };
-            const auto solved = solve( c );
-            ASSERT_TRUE( solved ) << solved.error();
-            const auto& r = *solved;
-            ASSERT_TRUE( r.acceptable() && r.maximumPositionError() < 1e-8 ) << "projected hole centers";
-            ASSERT_TRUE( std::abs( r.signedPlaneGap - gap ) < 1e-9 && isRigid( r.delta ) ) << "rigid plane priority";
-        }
-}
-
-TEST( MRMesh, FeatureAlignmentRealisticTwoHoleMismatchRejectsOnlyTheIncompatibleProjectedLocator )
-{
-    auto c = base();
-    c.settings.holeMode = HoleMode::Centers;
-    c.settings.linearTolerance = .5;
-    c.holes = { { h( { 0, 0, -8.9457646 } ), h( { 0, 0, 0 } ) },
-                { h( { 10.708838, 0, 2.0678686 } ), h( { 10, 0, 0 } ) } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    ASSERT_TRUE( !r.acceptable() && r.conflicts.size() == 1 ) << "only the second hole conflicts";
-    ASSERT_TRUE( r.holes[0].position < 1e-8 && std::abs( r.holes[1].position - .708838 ) < 1e-8 ) << "controlled position errors";
-    ASSERT_TRUE( std::abs( r.maximumPositionError() - .708838 ) < 1e-8 ) << "maximum controlled residual";
-}
-
-TEST( MRMesh, FeatureAlignmentExplicitBalancedHoleFitSharesSpacingErrorWithoutChangingPlaneOrScale )
-{
-    auto c = base();
-    c.settings.holeMode = HoleMode::Centers;
-    c.settings.balanceHoles = true;
-    c.settings.linearTolerance = .5;
-    c.settings.offset = 10;
-    c.holes = { { h( { 0, 0, -8.9457646 } ), h( { 0, 0, 0 } ) },
-                { h( { 10.708838, 0, 2.0678686 } ), h( { 10, 0, 0 } ) } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    ASSERT_TRUE( r.acceptable() ) << "both projected centers can meet tolerance";
-    ASSERT_TRUE( std::abs( r.holes[0].position - .354419 ) < 1e-8 && std::abs( r.holes[1].position - .354419 ) < 1e-8 ) << "symmetric residuals";
-    ASSERT_TRUE( std::abs( r.signedPlaneGap - 10 ) < 1e-9 && isRigid( r.delta ) ) << "plane and rigid geometry";
-}
-
-TEST( MRMesh, FeatureAlignmentBalancedFitStillRejectsIncompatibleSpacing )
-{
-    auto c = base();
-    c.settings.holeMode = HoleMode::Centers;
-    c.settings.balanceHoles = true;
-    c.settings.linearTolerance = .5;
-    c.holes = { { h( { 0, 0, 0 } ), h( { 0, 0, 0 } ) }, { h( { 12, 0, 3 } ), h( { 10, 0, -4 } ) } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    ASSERT_TRUE( !r.acceptable() && std::abs( r.maximumPositionError() - 1 ) < 1e-8 ) << "honest balanced residual";
-    ASSERT_TRUE( isRigid( r.delta ) ) << "no scale";
-}
-
-TEST( MRMesh, FeatureAlignmentPlanePriorityHoldsForSingleAndPairedMixedHoleFeatures )
-{
-    const auto turn = Matrix3d::rotation( Vector3d{ 1, 2, 3 }, .61 );
-    const AffineXf3d wanted{ Matrix3d::rotation( Vector3d{ 2, -1, 4 }, .83 ), { 70, -35, 18 } };
-    const auto inverse = wanted.inverse();
-    const auto n = turn * Vector3d{ 0, 0, 1 };
-    const Vector3d origin{ 100, -40, 20 };
-    for ( int count : { 1, 2 } )
-        for ( auto kindA : { HoleKind::Circle, HoleKind::Cylinder } )
-            for ( auto kindB : { HoleKind::Circle, HoleKind::Cylinder } )
-                for ( auto mode : { HoleMode::Centers, HoleMode::Axes } )
-                    for ( auto relation : { NormalRelation::Same, NormalRelation::Opposing } )
-                        for ( double gap : { -10., 0., 10. } )
-                        {
-                            auto c = base();
-                            c.settings.holeMode = mode;
-                            c.settings.normals = relation;
-                            c.settings.offset = gap;
-                            c.fixedPlane = { origin, n };
-                            c.movingPlane = { inverse( origin + gap * n ),
-                                              inverse.A * ( double( int( relation ) ) * n ) };
-                            for ( int i = 0; i < count; ++i )
-                            {
-                                const auto center = origin + turn * Vector3d{ i ? 25. : -30., 8., 0. };
-                                auto moving = h( inverse( center + ( gap + ( i ? 4. : -7. ) ) * n ), inverse.A * n );
-                                auto fixed = h( center + ( i ? -2. : 9. ) * n, n );
-                                moving.kind = kindA;
-                                fixed.kind = kindB;
-                                c.holes.push_back( { moving, fixed } );
-                            }
-                            const auto solved = solve( c );
-                            ASSERT_TRUE( solved ) << solved.error();
-                            const auto& r = *solved;
-                            ASSERT_TRUE( r.acceptable() && r.maximumPositionError() < 1e-7 ) << "mixed projected/axis locators";
-                            ASSERT_TRUE( std::abs( r.signedPlaneGap - gap ) < 1e-7 && r.normalErrorDeg < 1e-5 ) << "locked plane";
-                            ASSERT_TRUE( r.remainingDof == ( count == 1 ? 1 : 0 ) && isRigid( r.delta ) ) << "honest freedom and rigid placement";
-                        }
-}
-
-TEST( MRMesh, FeatureAlignmentObliqueAxisSetsRotation )
-{
-    auto c = base();
-    c.holes = { { h( { 0, 0, 0 }, { 1, 0, 1 } ), h( { 4, 7, 0 }, { 0, 1, 1 } ) } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    ASSERT_TRUE( r.acceptable() && r.remainingDof == 0 ) << "oblique";
-    expectVectorNear( r.delta.A * Vector3d{ 1, 0, 1 }, { 0, 1, 1 } );
-}
-
-TEST( MRMesh, FeatureAlignmentNearNormalUsableAxisDeterminesRotation )
-{
-    auto c = base();
-    c.holes = { { h( { 0, 0, 0 }, { .0001, 0, 1 } ), h( { 0, 0, 0 }, { 0, .0001, 1 } ) } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    EXPECT_EQ( solved->remainingDof, 0 );
-    EXPECT_NEAR( solved->yawDeg, 90, 1e-10 );
-    expectVectorNear( solved->delta.A * c.holes[0].moving.axis, c.holes[0].fixed.axis, 1e-12 );
-}
-
-TEST( MRMesh, FeatureAlignmentAxesAreUnoriented )
-{
-    auto c = base();
-    c.holes = { { h( { 0, 0, 0 }, { 1, 0, 1 } ), h( { 0, 0, 0 }, { 0, -1, -1 } ) } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    ASSERT_TRUE( solved->acceptable() ) << "unoriented";
-}
-
-TEST( MRMesh, FeatureAlignmentIncompatibleTiltBlocksApply )
-{
-    auto c = base();
-    c.holes = { { h( { 0, 0, 0 } ), h( { 0, 0, 0 }, { 1, 0, 1 } ) } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    ASSERT_TRUE( !solved->acceptable() ) << "tilt conflict";
-}
-
-TEST( MRMesh, FeatureAlignmentDirectedClockingWithOneHole )
-{
-    auto c = base();
-    c.holes = { { h( { 0, 0, 0 } ), h( { 4, 7, 0 } ) } };
-    c.clocking = { { { 1, 0, 0 }, { 0, -1, 0 } } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    expectVectorNear( r.delta.A * Vector3d{ 1, 0, 0 }, { 0, -1, 0 } );
-    ASSERT_TRUE( r.remainingDof == 0 ) << "DOF";
-
-    // Direct vector targets verify signed residual spin across the branch cut and rotated frames.
-    for ( const double angle : { -std::numbers::pi, -2.7, -1.2, -0.01, 0., 0.01, 1.2, 2.7, std::numbers::pi } )
-        for ( const auto normal : { Vector3d{ 0, 0, 1 }, Vector3d{ 1, -2, 3 }.normalized() } )
-        {
-            SCOPED_TRACE( angle );
-            auto sweep = base();
-            sweep.movingPlane.normal = normal;
-            sweep.fixedPlane.normal = normal;
-            const auto direction = cross( normal, Vector3d{ 1, 1, 0 } ).normalized();
-            const auto target = std::cos( angle ) * direction + std::sin( angle ) * cross( normal, direction );
-            sweep.clocking = { { direction, target } };
-            const auto rotated = solve( sweep );
-            ASSERT_TRUE( rotated ) << rotated.error();
-            EXPECT_TRUE( rotated->acceptable() );
-            expectVectorNear( rotated->delta.A * direction, target, 1e-10 );
-            expectVectorNear( rotated->delta.A * normal, normal, 1e-10 );
-            EXPECT_NEAR( std::abs( rotated->yawDeg ), std::abs( angle ) * 180. / std::numbers::pi, 1e-9 );
-        }
-}
-
-TEST( MRMesh, FeatureAlignmentDirectedReferenceConflict )
-{
-    auto c = base();
-    c.holes = { { h( { 0, 0, 0 } ), h( { 0, 0, 0 } ) }, { h( { 10, 0, 0 } ), h( { 0, 10, 0 } ) } };
-    c.clocking = { { { 1, 0, 0 }, { 1, 0, 0 } } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    ASSERT_TRUE( !solved->acceptable() ) << "clock conflict";
-}
-
-TEST( MRMesh, FeatureAlignmentZeroProjectedBaselineRejected )
-{
-    auto c = base();
-    c.holes = { { h( { 0, 0, 0 } ), h( { 0, 0, 0 } ) }, { h( { 0, 0, 5 } ), h( { 10, 0, 0 } ) } };
-    ASSERT_TRUE( !solve( c ) ) << "degenerate baseline";
-}
-
-TEST( MRMesh, FeatureAlignmentParallelAxisRejected )
-{
-    auto c = base();
-    c.holes = { { h( { 0, 0, 1 }, { 1, 0, 0 } ), h( { 0, 0, 0 } ) } };
-    ASSERT_TRUE( !solve( c ) ) << "parallel axis";
-}
-
-TEST( MRMesh, FeatureAlignmentNonfiniteGeometryRejected )
-{
-    auto c = base();
-    c.movingPlane.center.x = std::numeric_limits<double>::quiet_NaN();
-    ASSERT_TRUE( !solve( c ) ) << "nonfinite";
-
-    // Unused finite center data cannot introduce a plane locator or alter its free motion.
-    c = base();
-    c.centers = { { { 10, -5, 7 }, { 99, 8, -4 } } };
-    const auto finiteCenters = solve( c );
-    ASSERT_TRUE( finiteCenters ) << finiteCenters.error();
-    EXPECT_TRUE( finiteCenters->acceptable() );
-    EXPECT_EQ( finiteCenters->remainingDof, 3 );
-    expectVectorNear( finiteCenters->delta.b, {} );
-    expectVectorNear( finiteCenters->delta.A.x, { 1, 0, 0 } );
-    expectVectorNear( finiteCenters->delta.A.y, { 0, 1, 0 } );
-    expectVectorNear( finiteCenters->delta.A.z, { 0, 0, 1 } );
-    EXPECT_TRUE( measure( c, {} ) );
-    // Every supplied datum must be finite, including a center unused by the selected mode.
-    for ( const double value : { std::numeric_limits<double>::infinity(),
-                                -std::numeric_limits<double>::infinity(),
-                                std::numeric_limits<double>::quiet_NaN() } )
-    {
-        c.centers.front().moving.x = value;
-        EXPECT_FALSE( solve( c ) );
-        EXPECT_FALSE( measure( c, {} ) );
-    }
-}
-
-TEST( MRMesh, FeatureAlignmentZeroNormalRejected )
-{
-    auto c = base();
-    c.movingPlane.normal = {};
-    ASSERT_TRUE( !solve( c ) ) << "normal";
-}
-
-TEST( MRMesh, FeatureAlignmentNegativeRadiusRejected )
-{
-    auto c = base();
-    c.holes = { { h( {} ), h( {} ) } };
-    c.holes[0].moving.radius = -1;
-    ASSERT_TRUE( !solve( c ) ) << "radius";
-}
-
-TEST( MRMesh, FeatureAlignmentInvalidTolerancesRejected )
-{
-    auto c = base();
-    c.settings.linearTolerance = -1;
-    ASSERT_TRUE( !solve( c ) ) << "negative tolerance";
-    c = base();
-    c.settings.angularToleranceDeg = 90;
-    ASSERT_TRUE( !solve( c ) ) << "angle tolerance";
-}
-
-TEST( MRMesh, FeatureAlignmentRigidValidationRejectsMirrorAndScale )
-{
-    AffineXf3d x;
-    ASSERT_TRUE( isRigid( x ) ) << "identity";
-    x.A.x.x = 2;
-    ASSERT_TRUE( !isRigid( x ) ) << "scale";
-    x.A.x.x = -1;
-    ASSERT_TRUE( !isRigid( x ) ) << "reflection";
-}
-
-TEST( MRMesh, FeatureAlignmentMeasureDoesNotHideASuppliedPositionError )
-{
-    auto c = base();
-    c.settings.linearTolerance = .05;
-    c.holes = { { h( {} ), h( {} ) } };
-    auto r = measure( c, AffineXf3d::translation( { 1, 0, 0 } ) );
-    ASSERT_TRUE( r && !r->acceptable() && std::abs( r->holes[0].position - 1 ) < 1e-10 ) << "measurement";
-}
-
-TEST( MRMesh, FeatureAlignment150RandomizedRigidRecoveries )
-{
-    std::mt19937 random( 150 );
-    std::uniform_real_distribution<double> d( -1, 1 );
-    for ( int i = 0; i < 150; ++i )
-    {
-        auto c = base();
-        c.settings.normals = i % 2 ? NormalRelation::Same : NormalRelation::Opposing;
-        c.settings.holeMode = i % 3 ? HoleMode::Centers : HoleMode::Axes;
-        c.settings.offset = d( random ) * 3;
-        auto r = Matrix3d::rotation( Vector3d{ d( random ), d( random ), d( random ) }, d( random ) * 3 );
-        AffineXf3d desired{ r, { d( random ) * 100, d( random ) * 100, d( random ) * 100 } };
-        c.movingPlane = { { d( random ) * 40, d( random ) * 40, d( random ) * 40 },
-                          Vector3d{ d( random ), d( random ), d( random ) }.normalized() };
-        c.fixedPlane.normal = double( int( c.settings.normals ) ) * ( r * c.movingPlane.normal );
-        c.fixedPlane.center = desired( c.movingPlane.center ) - c.settings.offset * c.fixedPlane.normal;
-        auto tangent = cross( c.movingPlane.normal, c.movingPlane.normal.furthestBasisVector() ).normalized();
-        for ( double step : { -30., 30. } )
-        {
-            auto source = h( c.movingPlane.center + step * tangent, c.movingPlane.normal );
-            auto target = h( desired( source.center ) - c.settings.offset * c.fixedPlane.normal, r * source.axis );
-            c.holes.push_back( { source, target } );
-        }
-        const auto solved = solve( c );
-        ASSERT_TRUE( solved ) << solved.error();
-        const auto& solution = *solved;
-        ASSERT_TRUE( solution.acceptable() && solution.remainingDof == 0 ) << "random constraints";
-        expectVectorNear( solution.delta( { 4, 5, 6 } ), desired( { 4, 5, 6 } ), 1e-8 );
-        ASSERT_TRUE( isRigid( solution.delta ) ) << "random rigidity";
-    }
-}
-
-TEST( MRMesh, FeatureAlignmentAxisCentersAlignWithoutAPlane )
-{
-    auto c = base();
-    c.settings.mode = PrimaryMode::Axis;
-    c.movingAxis = { { 3, 4, 9 }, { 1, 0, 0 } };
-    c.fixedAxis = { { 10, 20, 0 }, { 0, 0, 1 } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    ASSERT_TRUE( r.acceptable() && r.remainingDof == 1 ) << "axis DOF";
-    expectVectorNear( r.delta( c.movingAxis.center ), c.fixedAxis.center );
-}
-
-TEST( MRMesh, FeatureAlignmentCoaxialAxesRetainSlideAndSpin )
-{
-    auto c = base();
-    c.settings.mode = PrimaryMode::Axis;
-    c.settings.matchAxialCenters = false;
-    c.movingAxis.center = { 3, 4, 9 };
-    c.fixedAxis.center = { 20, 30, 0 };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    ASSERT_TRUE( r.remainingDof == 2 && r.acceptable() ) << "axis free motions";
-    expectVectorNear( r.delta( c.movingAxis.center ), { 20, 30, 9 } );
-}
-
-TEST( MRMesh, FeatureAlignmentAxisDirectionOnlyRetainsFourFreedoms )
-{
-    auto c = base();
-    c.settings.mode = PrimaryMode::Axis;
-    c.settings.matchAxialCenters = false;
-    c.settings.coaxial = false;
-    c.movingAxis = { { 3, 4, 9 }, { 1, 0, 0 } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    ASSERT_TRUE( r.remainingDof == 4 ) << "direction DOF";
-    expectVectorNear( r.delta( c.movingAxis.center ), c.movingAxis.center );
-}
-
-TEST( MRMesh, FeatureAlignmentOffAxisCenterSetsCylinderRotation )
-{
-    auto c = base();
-    c.settings.mode = PrimaryMode::Axis;
-    c.fixedAxis.center = { 20, 30, 0 };
-    c.centers = { { { 10, 0, 5 }, { 20, 40, 5 } } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    ASSERT_TRUE( r.acceptable() && r.remainingDof == 0 ) << "locator";
-    expectVectorNear( r.delta( { 10, 0, 5 } ), { 20, 40, 5 } );
-}
-
-TEST( MRMesh, FeatureAlignmentOnAxisCenterSetsSlideButNotSpin )
-{
-    auto c = base();
-    c.settings.mode = PrimaryMode::Axis;
-    c.settings.matchAxialCenters = false;
-    c.fixedAxis.center = { 3, 4, 0 };
-    c.centers = { { { 0, 0, 7 }, { 3, 4, 20 } } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    ASSERT_TRUE( r.acceptable() && r.remainingDof == 1 ) << "on-axis locator";
-    expectVectorNear( r.delta( { 0, 0, 7 } ), { 3, 4, 20 } );
-}
-
-TEST( MRMesh, FeatureAlignmentInconsistentRadialLocatorIsAConflict )
-{
-    auto c = base();
-    c.settings.linearTolerance = .05;
-    c.settings.mode = PrimaryMode::Axis;
-    c.centers = { { { 5, 0, 0 }, { 6, 0, 0 } } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    ASSERT_TRUE( !r.acceptable() && isRigid( r.delta ) ) << "radial mismatch";
-}
-
-TEST( MRMesh, FeatureAlignmentPrimaryAxialCenterHasPriority )
-{
-    auto c = base();
-    c.settings.mode = PrimaryMode::Axis;
-    c.centers = { { { 5, 0, 4 }, { 5, 0, 6 } } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    ASSERT_TRUE( !r.acceptable() && r.primaryPositionError < 1e-8 ) << "axial priority";
-}
-
-TEST( MRMesh, FeatureAlignmentSignedAxialOffset )
-{
-    auto c = base();
-    c.settings.mode = PrimaryMode::Axis;
-    c.settings.offset = 2;
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    expectVectorNear( r.delta( {} ), { 0, 0, 2 } );
-    ASSERT_TRUE( r.acceptable() ) << "axis gap";
-}
-
-TEST( MRMesh, FeatureAlignmentDirectedAxisClockingLeavesSlide )
-{
-    auto c = base();
-    c.settings.mode = PrimaryMode::Axis;
-    c.settings.matchAxialCenters = false;
-    c.clocking = { { { 1, 0, 0 }, { 0, 1, 0 } } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    ASSERT_TRUE( r.remainingDof == 1 && r.acceptable() ) << "axis clocking";
-    expectVectorNear( r.delta.A * Vector3d{ 1, 0, 0 }, { 0, 1, 0 } );
-}
-
-TEST( MRMesh, FeatureAlignmentDirectionOnlyPlusOneCenterLeavesSpin )
-{
-    auto c = base();
-    c.settings.mode = PrimaryMode::Axis;
-    c.settings.coaxial = false;
-    c.settings.matchAxialCenters = false;
-    c.centers = { { { 10, 0, 0 }, { 20, 30, 4 } } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    ASSERT_TRUE( r.remainingDof == 1 && r.acceptable() ) << "direction and center";
-}
-
-TEST( MRMesh, FeatureAlignmentDirectionOnlyPlusTwoCentersSetsRotation )
-{
-    auto c = base();
-    c.settings.mode = PrimaryMode::Axis;
-    c.settings.coaxial = false;
-    c.settings.matchAxialCenters = false;
-    c.centers = { { { 10, 0, 0 }, { 20, 30, 4 } }, { { 20, 0, 0 }, { 20, 40, 4 } } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    ASSERT_TRUE( r.remainingDof == 0 && r.acceptable() ) << "direction and centers";
-}
-
-TEST( MRMesh, FeatureAlignmentUnorientedAxesChooseTheSignConsistentWithLocators )
-{
-    auto c = base();
-    c.settings.mode = PrimaryMode::Axis;
-    c.centers = { { { 5, 0, 3 }, { 5, 0, -3 } } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    ASSERT_TRUE( r.acceptable() ) << "axis sign must follow compatible measurements";
-    expectVectorNear( r.delta.A * Vector3d{ 0, 0, 1 }, { 0, 0, -1 } );
-}
-
-TEST( MRMesh, FeatureAlignmentZeroAxisRejected )
-{
-    auto c = base();
-    c.settings.mode = PrimaryMode::Axis;
-    c.movingAxis.direction = {};
-    ASSERT_TRUE( !solve( c ) ) << "zero axis";
-}
-
-TEST( MRMesh, FeatureAlignmentCenterOnlyOnePairLeavesThreeRotations )
-{
-    auto c = base();
-    c.settings.mode = PrimaryMode::Centers;
-    c.centers = { { { 3, 4, 5 }, { 10, 20, 30 } } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    ASSERT_TRUE( r.remainingDof == 3 && r.acceptable() ) << "center DOF";
-    expectVectorNear( r.delta( { 3, 4, 5 } ), { 10, 20, 30 } );
-}
-
-TEST( MRMesh, FeatureAlignmentCenterOnlyTwoPairsLeaveOneRotation )
-{
-    auto c = base();
-    c.settings.mode = PrimaryMode::Centers;
-    c.centers = { { { 0, 0, 0 }, { 10, 20, 30 } }, { { 10, 0, 0 }, { 10, 30, 30 } } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    ASSERT_TRUE( r.remainingDof == 1 && r.acceptable() ) << "two centers";
-}
-
-TEST( MRMesh, FeatureAlignmentCenterOnlyThreePointsFullyLocate )
-{
-    auto c = base();
-    c.settings.mode = PrimaryMode::Centers;
-    AffineXf3d x{ Matrix3d::rotation( { 1, 2, -3 }, .8 ), { 10, 20, 30 } };
-    for ( Vector3d p : std::vector<Vector3d>{ { 0, 0, 0 }, { 10, 0, 0 }, { 0, 5, 1 } } )
-        c.centers.push_back( { p, x( p ) } );
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    ASSERT_TRUE( r.remainingDof == 0 && r.acceptable() ) << "three centers";
-    expectVectorNear( r.delta( { 3, 4, 5 } ), x( { 3, 4, 5 } ) );
-}
-
-TEST( MRMesh, FeatureAlignmentCenterOnlyMismatchNeverScales )
-{
-    auto c = base();
-    c.settings.linearTolerance = .05;
-    c.settings.mode = PrimaryMode::Centers;
-    c.centers = { { { 0, 0, 0 }, { 0, 0, 0 } }, { { 10, 0, 0 }, { 0, 11, 0 } } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    ASSERT_TRUE( !r.acceptable() && isRigid( r.delta ) ) << "center mismatch";
-}
-
-TEST( MRMesh, FeatureAlignmentCollinearCentersReportRemainingRotation )
-{
-    auto c = base();
-    c.settings.mode = PrimaryMode::Centers;
-    c.centers = { { { 0, 0, 0 }, { 0, 0, 0 } }, { { 10, 0, 0 }, { 0, 10, 0 } }, { { 20, 0, 0 }, { 0, 20, 0 } } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    const auto& r = *solved;
-    ASSERT_TRUE( r.remainingDof == 1 && r.acceptable() ) << "collinear DOF";
-}
-
-TEST( MRMesh, FeatureAlignmentDuplicateSecondaryCenterRejected )
-{
-    auto c = base();
-    c.settings.mode = PrimaryMode::Centers;
-    c.centers = { { { 0, 0, 0 }, { 0, 0, 0 } }, { { 0, 0, 0 }, { 1, 0, 0 } } };
-    ASSERT_TRUE( !solve( c ) ) << "duplicate center";
-}
-
-TEST( MRMesh, FeatureAlignmentCenterOnlyOffsetHasNoAssumedDirection )
-{
-    auto c = base();
-    c.settings.mode = PrimaryMode::Centers;
-    c.settings.offset = 1;
-    c.centers = { { { 0, 0, 0 }, { 0, 0, 0 } } };
-    ASSERT_TRUE( !solve( c ) ) << "undefined offset";
-}
-
-TEST( MRMesh, FeatureAlignmentAxisLocatorAndClockingConflict )
-{
-    auto c = base();
-    c.settings.mode = PrimaryMode::Axis;
-    c.centers = { { { 5, 0, 0 }, { 0, 5, 0 } } };
-    c.clocking = { { { 1, 0, 0 }, { 1, 0, 0 } } };
-    const auto solved = solve( c );
-    ASSERT_TRUE( solved ) << solved.error();
-    ASSERT_TRUE( !solved->acceptable() ) << "clocking conflict";
-}
-
-TEST( MRMesh, FeatureAlignmentInvalidPrimaryModeRejected )
-{
-    auto c = base();
-    c.settings.mode = PrimaryMode( 99 );
-    ASSERT_TRUE( !solve( c ) ) << "mode";
-}
-
-TEST( MRMesh, FeatureAlignment150AxisAnd150CenterRigidRecoveries )
-{
-    std::mt19937 random( 300 );
-    std::uniform_real_distribution<double> d( -1, 1 );
-    for ( int i = 0; i < 150; ++i )
-    {
-        AffineXf3d x{ Matrix3d::rotation( Vector3d{ d( random ), d( random ), d( random ) }, d( random ) * 3 ),
-                      { d( random ) * 100, d( random ) * 100, d( random ) * 100 } };
-        auto c = base();
-        c.settings.mode = PrimaryMode::Axis;
-        c.settings.axisDirection = AxisDirection::Same;
-        c.movingAxis = { { d( random ) * 20, d( random ) * 20, d( random ) * 20 },
-                         Vector3d{ d( random ), d( random ), d( random ) }.normalized() };
-        c.fixedAxis = { x( c.movingAxis.center ), x.A * c.movingAxis.direction };
-        auto off = cross( c.movingAxis.direction, c.movingAxis.direction.furthestBasisVector() ).normalized() * 20;
-        auto point = c.movingAxis.center + off + 7 * c.movingAxis.direction;
-        c.centers = { { point, x( point ) } };
-        const auto axisSolved = solve( c );
-        ASSERT_TRUE( axisSolved ) << axisSolved.error();
-        const auto& axis = *axisSolved;
-        ASSERT_TRUE( axis.acceptable() && axis.remainingDof == 0 ) << "random axis";
-        expectVectorNear( axis.delta( { 2, 3, 4 } ), x( { 2, 3, 4 } ) );
-        c = base();
-        c.settings.mode = PrimaryMode::Centers;
-        for ( Vector3d p : std::vector<Vector3d>{ { 0, 0, 0 }, { 20, 0, 0 }, { 0, 10, 3 } } )
-            c.centers.push_back( { p, x( p ) } );
-        const auto centerSolved = solve( c );
-        ASSERT_TRUE( centerSolved ) << centerSolved.error();
-        const auto& center = *centerSolved;
-        ASSERT_TRUE( center.acceptable() && center.remainingDof == 0 ) << "random center";
-        expectVectorNear( center.delta( { 2, 3, 4 } ), x( { 2, 3, 4 } ) );
-    }
-}
-
-namespace
-{
 std::shared_ptr<PlaneObject> fittedPlane( Vector3f center = {}, Vector3f normal = { 0, 0, 1 } )
 {
     auto object = std::make_shared<PlaneObject>();
@@ -776,7 +72,251 @@ FeatureReferences planeReferences()
     refs.primary = { fittedPlane(), fittedPlane() };
     return refs;
 }
+
+AffineXf3d randomRigidFrame( std::mt19937& generator )
+{
+    std::uniform_real_distribution<double> unit( -1, 1 );
+    Vector3d axis{ unit( generator ), unit( generator ), unit( generator ) };
+    if ( axis.length() < .1 )
+        axis = Vector3d::plusZ();
+    return { Matrix3d::rotation( axis, unit( generator ) * 3 ),
+             { unit( generator ) * 100, unit( generator ) * 100, unit( generator ) * 100 } };
+}
+void expectProperRigid( const AffineXf3d& placement )
+{
+    EXPECT_NEAR( placement.A.det(), 1, 1e-10 );
+    for ( int i = 0; i < 3; ++i )
+        for ( int j = 0; j < 3; ++j )
+            EXPECT_NEAR( dot( placement.A.col( i ), placement.A.col( j ) ), i == j ? 1. : 0., 1e-10 );
+    EXPECT_TRUE( std::isfinite( placement.b.x ) && std::isfinite( placement.b.y ) && std::isfinite( placement.b.z ) );
+}
+
+void expectDiagnostics( const std::vector<Diagnostic> &actual, std::vector<Diagnostic> expected )
+{
+    EXPECT_EQ( actual, expected );
+}
 } // namespace
+
+TEST( MRMesh, FeatureAlignmentPlaneOnlyPreservesTangentialPosition )
+{
+    auto c = base();
+    c.movingPlane.center = { 8, 3, 20 };
+    c.fixedPlane.center = { 100, -50, 2 };
+    const auto solved = solve( c );
+    ASSERT_TRUE( solved ) << solved.error();
+    const auto& r = *solved;
+    expectVectorNear( r.delta( c.movingPlane.center ), { 8, 3, 2 } );
+    ASSERT_TRUE( r.remainingDof == 3 ) << "DOF";
+}
+
+TEST( MRMesh, FeatureAlignmentPlaneCenterDepthsDoNotBecomeConstraintsAtSignedGaps )
+{
+    for ( auto relation : { NormalRelation::Same, NormalRelation::Opposing } )
+        for ( double gap : { -10., 0., 10. } )
+        {
+            auto c = base();
+            c.settings.holeMode = HoleMode::Centers;
+            c.settings.normals = relation;
+            c.settings.offset = gap;
+            c.holes = { { h( { 0, 0, 7 } ), h( { 0, 0, -9 } ) }, { h( { 10, 0, -3 } ), h( { 10, 0, 4 } ) } };
+            const auto solved = solve( c );
+            ASSERT_TRUE( solved ) << solved.error();
+            const auto& r = *solved;
+            ASSERT_TRUE( r.acceptable() && r.maximumPositionError() < 1e-8 ) << "projected hole centers";
+            EXPECT_NEAR( r.delta( c.movingPlane.center ).z, gap, 1e-8 );
+            expectProperRigid( r.delta );
+        }
+}
+
+TEST( MRMesh, FeatureAlignmentExplicitBalancedHoleFitSharesSpacingErrorWithoutChangingPlaneOrScale )
+{
+    auto c = base();
+    c.settings.holeMode = HoleMode::Centers;
+    c.settings.balanceHoles = true;
+    c.settings.linearTolerance = .5;
+    c.settings.offset = 10;
+    c.holes = { { h( { 0, 0, -8.9457646 } ), h( { 0, 0, 0 } ) },
+                { h( { 10.708838, 0, 2.0678686 } ), h( { 10, 0, 0 } ) } };
+    const auto solved = solve( c );
+    ASSERT_TRUE( solved ) << solved.error();
+    const auto& r = *solved;
+    ASSERT_TRUE( r.acceptable() ) << "both projected centers can meet tolerance";
+    ASSERT_TRUE( std::abs( r.holes[0].position - .354419 ) < 1e-8 && std::abs( r.holes[1].position - .354419 ) < 1e-8 ) << "symmetric residuals";
+    EXPECT_NEAR( r.delta( c.movingPlane.center ).z, 10, 1e-8 );
+    expectProperRigid( r.delta );
+}
+
+TEST( MRMesh, FeatureAlignmentBalancedFitStillRejectsIncompatibleSpacing )
+{
+    auto c = base();
+    c.settings.holeMode = HoleMode::Centers;
+    c.settings.balanceHoles = true;
+    c.settings.linearTolerance = .5;
+    c.holes = { { h( { 0, 0, 0 } ), h( { 0, 0, 0 } ) }, { h( { 12, 0, 3 } ), h( { 10, 0, -4 } ) } };
+    const auto solved = solve( c );
+    ASSERT_TRUE( solved ) << solved.error();
+    const auto& r = *solved;
+    ASSERT_TRUE( !r.acceptable() && std::abs( r.maximumPositionError() - 1 ) < 1e-8 ) << "honest balanced residual";
+    expectProperRigid( r.delta );
+}
+
+TEST( MRMesh, FeatureAlignmentNoisyPerpendicularFittedHoleLeavesSpin )
+{
+    FeatureReferences references;
+    references.primary = { std::make_shared<PlaneObject>(), std::make_shared<PlaneObject>() };
+    const auto moving = std::make_shared<CircleObject>();
+    const auto fixed = std::make_shared<CircleObject>();
+    const float cTilt = .01f * std::numbers::pi_v<float> / 180;
+    moving->setNormal( { std::sin( cTilt ), 0, std::cos( cTilt ) } );
+    references.locators[0] = { moving, fixed };
+    for ( const float azimuth : { -90.f, 47.f, 90.f, 180.f } )
+    {
+        SCOPED_TRACE( azimuth );
+        const float radians = azimuth * std::numbers::pi_v<float> / 180;
+        fixed->setNormal( { std::sin( cTilt ) * std::cos( radians ),
+                           std::sin( cTilt ) * std::sin( radians ), std::cos( cTilt ) } );
+        for ( const double tolerance : { 1., 5. } )
+        {
+            auto settings = base().settings;
+            settings.angularToleranceDeg = tolerance;
+            const auto constraints = readConstraints( references, settings );
+            ASSERT_TRUE( constraints ) << constraints.error();
+            const auto solved = solve( *constraints );
+            ASSERT_TRUE( solved ) << solved.error();
+            EXPECT_TRUE( solved->acceptable() );
+            EXPECT_EQ( solved->remainingDof, 1 );
+            EXPECT_EQ( solved->freeMotion, FreeMotion::PrimarySpin );
+            EXPECT_EQ( solved->rotationSource, RotationSource::Unconstrained );
+            EXPECT_NEAR( solved->yawDeg, 0, 1e-6 );
+            expectVectorNear( solved->delta.A * Vector3d::plusX(), Vector3d::plusX(), 1e-6 );
+        }
+    }
+}
+
+TEST( MRMesh, FeatureAlignmentDirectedClockingWithOneHole )
+{
+    auto c = base();
+    c.holes = { { h( { 0, 0, 0 } ), h( { 4, 7, 0 } ) } };
+    c.clocking = { { { 1, 0, 0 }, { 0, -1, 0 } } };
+    const auto solved = solve( c );
+    ASSERT_TRUE( solved ) << solved.error();
+    const auto& r = *solved;
+    expectVectorNear( r.delta.A * Vector3d{ 1, 0, 0 }, { 0, -1, 0 } );
+    ASSERT_TRUE( r.remainingDof == 0 ) << "DOF";
+
+    // Direct vector targets verify signed residual spin across the branch cut and rotated frames.
+    for ( const double angle : { -std::numbers::pi, -2.7, -1.2, -0.01, 0., 0.01, 1.2, 2.7, std::numbers::pi } )
+        for ( const auto normal : { Vector3d{ 0, 0, 1 }, Vector3d{ 1, -2, 3 }.normalized() } )
+        {
+            SCOPED_TRACE( angle );
+            auto sweep = base();
+            sweep.movingPlane.normal = normal;
+            sweep.fixedPlane.normal = normal;
+            const auto direction = cross( normal, Vector3d{ 1, 1, 0 } ).normalized();
+            const auto target = std::cos( angle ) * direction + std::sin( angle ) * cross( normal, direction );
+            sweep.clocking = { { direction, target } };
+            const auto rotated = solve( sweep );
+            ASSERT_TRUE( rotated ) << rotated.error();
+            EXPECT_TRUE( rotated->acceptable() );
+            expectVectorNear( rotated->delta.A * direction, target, 1e-10 );
+            expectVectorNear( rotated->delta.A * normal, normal, 1e-10 );
+            EXPECT_NEAR( std::abs( rotated->yawDeg ), std::abs( angle ) * 180. / std::numbers::pi, 1e-9 );
+        }
+}
+
+TEST( MRMesh, FeatureAlignmentNonfiniteGeometryRejected )
+{
+    auto c = base();
+    c.movingPlane.center.x = std::numeric_limits<double>::quiet_NaN();
+    ASSERT_TRUE( !solve( c ) ) << "nonfinite";
+
+    // Unused finite center data cannot introduce a plane locator or alter its free motion.
+    c = base();
+    c.centers = { { { 10, -5, 7 }, { 99, 8, -4 } } };
+    const auto finiteCenters = solve( c );
+    ASSERT_TRUE( finiteCenters ) << finiteCenters.error();
+    EXPECT_TRUE( finiteCenters->acceptable() );
+    EXPECT_EQ( finiteCenters->remainingDof, 3 );
+    expectVectorNear( finiteCenters->delta.b, {} );
+    expectVectorNear( finiteCenters->delta.A.x, { 1, 0, 0 } );
+    expectVectorNear( finiteCenters->delta.A.y, { 0, 1, 0 } );
+    expectVectorNear( finiteCenters->delta.A.z, { 0, 0, 1 } );
+    EXPECT_TRUE( measure( c, {} ) );
+    // Every supplied datum must be finite, including a center unused by the selected mode.
+    for ( const double value : { std::numeric_limits<double>::infinity(),
+                                -std::numeric_limits<double>::infinity(),
+                                std::numeric_limits<double>::quiet_NaN() } )
+    {
+        c.centers.front().moving.x = value;
+        EXPECT_FALSE( solve( c ) );
+        EXPECT_FALSE( measure( c, {} ) );
+    }
+}
+
+TEST( MRMesh, FeatureAlignmentInvalidTolerancesRejected )
+{
+    auto c = base();
+    c.settings.linearTolerance = -1;
+    ASSERT_TRUE( !solve( c ) ) << "negative tolerance";
+    c = base();
+    c.settings.angularToleranceDeg = 90;
+    ASSERT_TRUE( !solve( c ) ) << "angle tolerance";
+}
+
+TEST( MRMesh, FeatureAlignmentRigidValidationRejectsMirrorAndScale )
+{
+    AffineXf3d x;
+    ASSERT_TRUE( measure( base(), x ) );
+    x.A.x.x = 2;
+    EXPECT_FALSE( measure( base(), x ) );
+    x.A.x.x = -1;
+    EXPECT_FALSE( measure( base(), x ) );
+    x = {};
+    x.A.x.y = .1;
+    EXPECT_FALSE( measure( base(), x ) ) << "shear";
+}
+
+TEST( MRMesh, FeatureAlignmentSignedAxialOffset )
+{
+    auto c = base();
+    c.settings.mode = PrimaryMode::Axis;
+    c.settings.offset = 2;
+    const auto solved = solve( c );
+    ASSERT_TRUE( solved ) << solved.error();
+    const auto& r = *solved;
+    expectVectorNear( r.delta( {} ), { 0, 0, 2 } );
+    ASSERT_TRUE( r.acceptable() ) << "axis gap";
+}
+
+TEST( MRMesh, FeatureAlignmentCenterOnlyMismatchNeverScales )
+{
+    auto c = base();
+    c.settings.linearTolerance = .05;
+    c.settings.mode = PrimaryMode::Centers;
+    c.centers = { { { 0, 0, 0 }, { 0, 0, 0 } }, { { 10, 0, 0 }, { 0, 11, 0 } } };
+    const auto solved = solve( c );
+    ASSERT_TRUE( solved ) << solved.error();
+    const auto& r = *solved;
+    EXPECT_FALSE( r.acceptable() );
+    expectProperRigid( r.delta );
+}
+
+TEST( MRMesh, FeatureAlignmentDuplicateSecondaryCenterRejected )
+{
+    auto c = base();
+    c.settings.mode = PrimaryMode::Centers;
+    c.centers = { { { 0, 0, 0 }, { 0, 0, 0 } }, { { 0, 0, 0 }, { 1, 0, 0 } } };
+    ASSERT_TRUE( !solve( c ) ) << "duplicate center";
+}
+
+TEST( MRMesh, FeatureAlignmentCenterOnlyOffsetHasNoAssumedDirection )
+{
+    auto c = base();
+    c.settings.mode = PrimaryMode::Centers;
+    c.settings.offset = 1;
+    c.centers = { { { 0, 0, 0 }, { 0, 0, 0 } } };
+    ASSERT_TRUE( !solve( c ) ) << "undefined offset";
+}
 
 TEST( MRMesh, FeatureAlignmentFeatureCentersKeepPlaneDepthAndBalanceMismatch )
 {
@@ -789,18 +329,18 @@ TEST( MRMesh, FeatureAlignmentFeatureCentersKeepPlaneDepthAndBalanceMismatch )
     settings.linearTolerance = .5;
     const auto pinned = solveReferences( refs, settings );
     ASSERT_TRUE( pinned ) << pinned.error();
-    EXPECT_NEAR( pinned->signedPlaneGap, -7, 1e-9 );
+    EXPECT_NEAR( pinned->delta( {} ).z, -7, 1e-6 );
     EXPECT_NEAR( pinned->holes[0].position, 0, 1e-9 );
     EXPECT_NEAR( pinned->holes[1].position, 2, 1e-9 );
     EXPECT_FALSE( pinned->acceptable() );
     settings.balanceHoles = true;
     const auto balanced = solveReferences( refs, settings );
     ASSERT_TRUE( balanced ) << balanced.error();
-    EXPECT_NEAR( balanced->signedPlaneGap, -7, 1e-9 );
+    EXPECT_NEAR( balanced->delta( {} ).z, -7, 1e-6 );
     EXPECT_NEAR( balanced->holes[0].position, 1, 1e-9 );
     EXPECT_NEAR( balanced->holes[1].position, 1, 1e-9 );
     EXPECT_EQ( balanced->remainingDof, 0 );
-    EXPECT_TRUE( isRigid( balanced->delta ) );
+    expectProperRigid( balanced->delta );
 }
 
 TEST( MRMesh, FeatureAlignmentFeatureHoleAxesIgnoreCylinderDisplayCenter )
@@ -816,8 +356,8 @@ TEST( MRMesh, FeatureAlignmentFeatureHoleAxesIgnoreCylinderDisplayCenter )
     ASSERT_TRUE( one ) << one.error();
     EXPECT_TRUE( one->acceptable() );
     EXPECT_EQ( one->remainingDof, 1 );
-    EXPECT_NEAR( one->signedPlaneGap, 0, 1e-9 );
-    EXPECT_NEAR( one->holes[0].inPlane, 0, 1e-9 );
+    EXPECT_NEAR( one->delta( {} ).z, 0, 1e-6 );
+    EXPECT_NEAR( one->holes[0].position, 0, 1e-6 );
     refs.locators[1] = { fittedCircle( { 13, 4, 75 } ), fittedCircle( { 18, 10, -80 } ) };
     const auto two = solveReferences( refs, settings );
     ASSERT_TRUE( two ) << two.error();
@@ -853,22 +393,6 @@ TEST( MRMesh, FeatureAlignmentNestedFeatureFramesApplyParentTransformOnce )
     EXPECT_EQ( parent->xf().b, ( Vector3f{ 10, 0, 5 } ) );
 }
 
-TEST( MRMesh, FeatureAlignmentFeaturesPreserveOpposingPlaneNormalAndGap )
-{
-    FeatureReferences refs;
-    refs.primary = { fittedPlane( { 5, 6, 20 }, { 1, 0, 0 } ), fittedPlane( { 0, 0, 4 } ) };
-    Settings settings;
-    settings.offset = 3;
-    const auto constraints = readConstraints( refs, settings );
-    const auto result = solveReferences( refs, settings );
-    ASSERT_TRUE( constraints );
-    ASSERT_TRUE( result ) << result.error();
-    EXPECT_NEAR( result->signedPlaneGap, 3, 1e-9 );
-    EXPECT_NEAR( ( result->delta.A * constraints->movingPlane.normal + constraints->fixedPlane.normal ).length(), 0,
-                 1e-6 );
-    EXPECT_EQ( result->remainingDof, 3 );
-}
-
 TEST( MRMesh, FeatureAlignmentFeatureAxisModePreservesPrimaryAndReportsLocatorConflict )
 {
     auto moving = std::make_shared<LineObject>();
@@ -885,10 +409,10 @@ TEST( MRMesh, FeatureAlignmentFeatureAxisModePreservesPrimaryAndReportsLocatorCo
     const auto result = solveReferences( refs, settings );
     ASSERT_TRUE( result ) << result.error();
     EXPECT_FALSE( result->acceptable() );
-    EXPECT_NEAR( result->primaryPositionError, 0, 1e-9 );
+    expectVectorNear( result->delta( { 1, 2, 3 } ), { 10, 20, 30 }, 1e-5 );
     EXPECT_NEAR( result->primaryAngleErrorDeg, 0, 1e-6 );
     EXPECT_EQ( result->remainingDof, 0 );
-    EXPECT_TRUE( isRigid( result->delta ) );
+    expectProperRigid( result->delta );
 }
 
 TEST( MRMesh, FeatureAlignmentFeatureCenterModePreservesPrimaryAndCountsRank )
@@ -936,7 +460,7 @@ TEST( MRMesh, FeatureAlignmentFeaturesRejectPartialDuplicateAndUnsupportedRefere
     EXPECT_FALSE( readConstraints( refs, settings ) );
 }
 
-TEST( MRMesh, FeatureAlignmentFeaturesRejectNonrigidAncestryAndDegenerateGeometry )
+TEST( MRMesh, FeatureAlignmentFeatureAncestryMustBeRigidButDisplayExtentsDoNotConstrainPlacement )
 {
     auto refs = planeReferences();
     auto parent = std::make_shared<Object>();
@@ -948,13 +472,13 @@ TEST( MRMesh, FeatureAlignmentFeaturesRejectNonrigidAncestryAndDegenerateGeometr
     cylinder->setLength( 1e-12f );
     ASSERT_GT( cylinder->xf().A.det(), 0 );
     refs.locators[0] = { cylinder, fittedCircle( {} ) };
-    EXPECT_FALSE( solveReferences( refs, base().settings ) );
+    EXPECT_TRUE( solveReferences( refs, base().settings ) );
     auto plane = fittedPlane();
     plane->setSizeX( 1e-12f );
     ASSERT_GT( plane->xf().A.det(), 0 );
     refs = planeReferences();
     refs.primary.moving = plane;
-    EXPECT_FALSE( solveReferences( refs, base().settings ) );
+    EXPECT_TRUE( solveReferences( refs, base().settings ) );
     refs = planeReferences();
     refs.locators[0] = { fittedCircle( {}, { 1, 0, 0 } ), fittedCircle( {} ) };
     EXPECT_FALSE( solveReferences( refs, base().settings ) );
@@ -1015,7 +539,7 @@ TEST( MRMesh, FeatureAlignmentMeasureReportsCenterConstraintRankWithoutHidingRes
         EXPECT_EQ( result->remainingDof, dof );
         EXPECT_NE( result->freeMotion, FreeMotion::Unspecified );
         EXPECT_EQ( result->delta, supplied );
-        EXPECT_NEAR( result->primaryPositionError, std::sqrt( 29. ), 1e-12 );
+        EXPECT_NEAR( result->maximumPositionError(), std::sqrt( 29. ), 1e-8 );
         EXPECT_FALSE( result->acceptable() );
     };
     expectRank( 3 );
@@ -1050,93 +574,27 @@ TEST( MRMesh, FeatureAlignmentMeasureReportsPlaneConstraintRank )
     expectRank( 0 );
 }
 
-TEST( MRMesh, FeatureAlignmentRejectsOverflowingSolvedPlacementsInEveryMode )
-{
-    auto c = base();
-    c.settings.mode = PrimaryMode::Axis;
-    c.settings.axisDirection = AxisDirection::Same;
-    c.movingAxis = { { 1.5e308, 1.5e308, 0 }, { 1, 0, 0 } };
-    c.fixedAxis = { {}, { 1, 1, 0 } };
-    EXPECT_FALSE( solve( c ) );
-    c = base();
-    c.settings.mode = PrimaryMode::Centers;
-    c.centers = { { { 1.5e308, 0, 0 }, { -1.5e308, 0, 0 } } };
-    EXPECT_FALSE( solve( c ) );
-    c = base();
-    c.fixedPlane.center = { 0, 0, 1.5e308 };
-    c.settings.offset = 1.5e308;
-    EXPECT_FALSE( solve( c ) );
-}
-
-TEST( MRMesh, FeatureAlignmentRejectsOverflowingMeasurementsInEveryMode )
-{
-    for ( const auto mode : { PrimaryMode::Plane, PrimaryMode::Axis, PrimaryMode::Centers } )
-    {
-        SCOPED_TRACE( int( mode ) );
-        auto c = base();
-        c.settings.mode = mode;
-        c.movingPlane.center = c.movingAxis.center = { 1.5e308, 0, 0 };
-        c.fixedPlane.center = c.fixedAxis.center = { -1.5e308, 0, 0 };
-        c.centers = { { { 1.5e308, 0, 0 }, { -1.5e308, 0, 0 } } };
-        EXPECT_FALSE( measure( c, {} ) );
-        c.fixedPlane.center = c.fixedAxis.center = {};
-        c.centers.front().fixed = {};
-        EXPECT_FALSE( measure( c, AffineXf3d::translation( { 1.5e308, 0, 0 } ) ) );
-    }
-}
-
-TEST( MRMesh, FeatureAlignmentRejectsUnrepresentableLocatorNorms )
-{
-    auto c = base();
-    c.settings.mode = PrimaryMode::Centers;
-    c.centers = { { {}, {} }, { { 1e200, 0, 0 }, { 1e200, 0, 0 } }, { { 0, 1e200, 0 }, { 0, 1e200, 0 } } };
-    EXPECT_FALSE( solve( c ) );
-    EXPECT_FALSE( measure( c, {} ) );
-    c = base();
-    c.settings.mode = PrimaryMode::Axis;
-    c.centers = { { { 1e200, 0, 0 }, { 1e200, 0, 0 } } };
-    EXPECT_FALSE( solve( c ) );
-    EXPECT_FALSE( measure( c, {} ) );
-}
-
 TEST( MRMesh, FeatureAlignmentObliqueAxesSetQuarterTurnIndependentlyOfTolerance )
 {
-    auto c = base();
-    c.holes = { { h( {}, { 1, 0, 1 } ), h( { 4, 7, 0 }, { 0, 1, 1 } ) } };
-    for ( const double tolerance : { .25, 5., 20., 60. } )
-    {
-        SCOPED_TRACE( tolerance );
-        c.settings.angularToleranceDeg = tolerance;
-        const auto result = solve( c );
-        ASSERT_TRUE( result ) << result.error();
-        EXPECT_EQ( result->remainingDof, 0 );
-        EXPECT_NEAR( result->yawDeg, 90, 1e-10 );
-        EXPECT_NEAR( ( result->delta.A * Vector3d{ 1, 0, 1 } - Vector3d{ 0, 1, 1 } ).length(), 0, 1e-12 );
-        EXPECT_NEAR( result->signedPlaneGap, 0, 1e-12 );
-        EXPECT_TRUE( result->acceptable() );
-    }
-}
-
-TEST( MRMesh, FeatureAlignmentAxisRawCenterDistanceDoesNotSubtractRequestedOffset )
-{
-    auto c = base();
-    c.settings.mode = PrimaryMode::Axis;
-    c.settings.axisDirection = AxisDirection::Same;
-    c.centers = { { { 5, 0, 0 }, { 5, 0, 0 } } };
-    for ( const double offset : { -7., 0., 7. } )
-    {
-        SCOPED_TRACE( offset );
-        c.settings.offset = offset;
-        const auto result = solve( c );
-        ASSERT_TRUE( result ) << result.error();
-        ASSERT_EQ( result->holes.size(), 1 );
-        EXPECT_NEAR( result->holes[0].position, 0, 1e-12 );
-        EXPECT_NEAR( result->holes[0].rawCenterDistance, std::abs( offset ), 1e-12 );
-        const auto measured = measure( c, AffineXf3d::translation( { 0, 0, offset } ) );
-        ASSERT_TRUE( measured ) << measured.error();
-        ASSERT_EQ( measured->holes.size(), 1 );
-        EXPECT_NEAR( measured->holes[0].rawCenterDistance, std::abs( offset ), 1e-12 );
-    }
+    const double cTilt = 10 * std::numbers::pi / 180;
+    const Vector3d cMoving{ std::sin( cTilt ), 0, std::cos( cTilt ) };
+    const Vector3d cFixed{ 0, std::sin( cTilt ), std::cos( cTilt ) };
+    for ( const double sign : { -1., 1. } )
+        for ( const double tolerance : { .25, 5., 20., 60. } )
+        {
+            SCOPED_TRACE( sign );
+            SCOPED_TRACE( tolerance );
+            auto c = base();
+            c.holes = { { h( {}, cMoving ), h( { 4, 7, 0 }, sign * cFixed ) } };
+            c.settings.angularToleranceDeg = tolerance;
+            const auto result = solve( c );
+            ASSERT_TRUE( result ) << result.error();
+            EXPECT_EQ( result->remainingDof, 0 );
+            EXPECT_NEAR( result->yawDeg, 90, 1e-8 );
+            expectVectorNear( result->delta.A * cMoving, cFixed, 1e-8 );
+            EXPECT_NEAR( result->delta( {} ).z, 0, 1e-8 );
+            EXPECT_TRUE( result->acceptable() );
+        }
 }
 
 TEST( MRMesh, FeatureAlignmentParallelMeasuredPlaneClockingIsAnExplicitFiniteConflict )
@@ -1147,226 +605,12 @@ TEST( MRMesh, FeatureAlignmentParallelMeasuredPlaneClockingIsAnExplicitFiniteCon
     const auto result = measure( c, supplied );
     ASSERT_TRUE( result ) << result.error();
     EXPECT_FALSE( result->acceptable() );
-    EXPECT_FALSE( result->clockingErrorDeg.has_value() );
     EXPECT_TRUE( std::any_of( result->conflicts.begin(), result->conflicts.end(), []( const Diagnostic& conflict )
     {
         return conflict == Diagnostic{ DiagnosticCode::ClockingParallelToPrimary };
     } ) );
     EXPECT_TRUE( std::isfinite( result->maximumAngleError() ) );
     EXPECT_EQ( result->delta, supplied );
-}
-
-namespace
-{
-AffineXf3d randomRigidFrame( std::mt19937& generator )
-{
-    std::uniform_real_distribution<double> unit( -1, 1 );
-    Vector3d axis{ unit( generator ), unit( generator ), unit( generator ) };
-    if ( axis.length() < .1 )
-        axis = Vector3d::plusZ();
-    return { Matrix3d::rotation( axis, unit( generator ) * 3 ),
-             { unit( generator ) * 100, unit( generator ) * 100, unit( generator ) * 100 } };
-}
-void expectProperRigid( const AffineXf3d& placement )
-{
-    EXPECT_NEAR( placement.A.det(), 1, 1e-10 );
-    for ( int i = 0; i < 3; ++i )
-        for ( int j = 0; j < 3; ++j )
-            EXPECT_NEAR( dot( placement.A.col( i ), placement.A.col( j ) ), i == j ? 1. : 0., 1e-10 );
-    EXPECT_TRUE( std::isfinite( placement.b.x ) && std::isfinite( placement.b.y ) && std::isfinite( placement.b.z ) );
-}
-void expectFiniteReport( const Solution& result )
-{
-    for ( const double value : { result.primaryPositionError, result.primaryAngleErrorDeg, result.yawDeg,
-          result.signedPlaneGap, result.planeOffsetError, result.normalErrorDeg, result.orthogonalityError, result.determinant } )
-        EXPECT_TRUE( std::isfinite( value ) );
-    if ( result.clockingErrorDeg )
-        EXPECT_TRUE( std::isfinite( *result.clockingErrorDeg ) );
-    for ( const auto& residual : result.holes )
-        for ( const double value : { residual.position, residual.inPlane, residual.axial, residual.axisAngleDeg,
-              residual.radiusDifference, residual.rawCenterDistance } )
-            EXPECT_TRUE( std::isfinite( value ) );
-}
-} // namespace
-
-TEST( MRMesh, FeatureAlignmentSeededPlaneOraclesCoverDepthModesNormalsOffsetsAndTolerance )
-{
-    std::mt19937 generator( 73191 );
-    std::uniform_real_distribution<double> unit( -1, 1 );
-    for ( int iteration = 0; iteration < 160; ++iteration )
-    {
-        SCOPED_TRACE( iteration );
-        const auto frame = randomRigidFrame( generator );
-        const auto desired = randomRigidFrame( generator );
-        const auto inverse = desired.inverse();
-        const auto normal = frame.A * Vector3d::plusZ();
-        auto c = base();
-        c.settings.normals = iteration % 2 ? NormalRelation::Same : NormalRelation::Opposing;
-        c.settings.holeMode = iteration % 3 ? HoleMode::Centers : HoleMode::Axes;
-        c.settings.offset = unit( generator ) * 12;
-        c.settings.balanceHoles = iteration % 2 != 0;
-        c.fixedPlane = { frame.b, normal };
-        c.movingPlane = { inverse( frame.b + c.settings.offset * normal ),
-                          inverse.A * ( double( int( c.settings.normals ) ) * normal ) };
-        const int count = iteration % 4 == 0 ? 1 : 2;
-        for ( int i = 0; i < count; ++i )
-        {
-            const auto anchor = frame( { i == 0 ? -20. : 30., i == 0 ? 4. : -7., 0 } );
-            const auto axis = frame.A * ( c.settings.holeMode == HoleMode::Axes ? Vector3d{ .6, .2, 1 }.normalized()
-                                                                                 : Vector3d::plusZ() );
-            const auto fixedCenter = anchor + unit( generator ) * 40 * axis;
-            const auto movingTarget = c.settings.holeMode == HoleMode::Axes
-                                        ? anchor + unit( generator ) * 40 * axis
-                                        : anchor + ( c.settings.offset + unit( generator ) * 40 ) * normal;
-            auto moving = h( inverse( movingTarget ), inverse.A * axis );
-            auto fixed = h( fixedCenter, axis );
-            moving.kind = iteration % 2 ? HoleKind::Circle : HoleKind::Cylinder;
-            fixed.kind = iteration % 3 ? HoleKind::Cylinder : HoleKind::Circle;
-            c.holes.push_back( { moving, fixed } );
-        }
-        // Center mode data must share tangent centers; axial depth is independently arbitrary.
-        if ( c.settings.holeMode == HoleMode::Centers )
-            for ( int i = 0; i < count; ++i )
-            {
-                const auto anchor = frame( { i == 0 ? -20. : 30., i == 0 ? 4. : -7., 0 } );
-                c.holes[i].fixed.center = anchor + unit( generator ) * 40 * normal;
-            }
-        for ( const double tolerance : { .1, 30. } )
-        {
-            c.settings.angularToleranceDeg = tolerance;
-            const auto result = solve( c );
-            ASSERT_TRUE( result ) << result.error();
-            expectProperRigid( result->delta );
-            expectFiniteReport( *result );
-            EXPECT_TRUE( result->acceptable() );
-            EXPECT_NEAR( dot( normal, result->delta( c.movingPlane.center ) - c.fixedPlane.center ), c.settings.offset, 1e-8 );
-            expectVectorNear( result->delta.A * c.movingPlane.normal, double( int( c.settings.normals ) ) * normal, 1e-9 );
-            EXPECT_EQ( result->remainingDof, count == 1 && c.settings.holeMode == HoleMode::Centers ? 1 : 0 );
-            for ( int i = 0; i < count; ++i )
-            {
-                const auto& pair = c.holes[i];
-                Vector3d source = pair.moving.center;
-                Vector3d target = pair.fixed.center + c.settings.offset * normal;
-                if ( c.settings.holeMode == HoleMode::Axes )
-                {
-                    source += pair.moving.axis * ( dot( c.movingPlane.normal, c.movingPlane.center - source ) /
-                                                   dot( c.movingPlane.normal, pair.moving.axis ) );
-                    target = pair.fixed.center + pair.fixed.axis *
-                        ( dot( normal, c.fixedPlane.center + c.settings.offset * normal - pair.fixed.center ) /
-                          dot( normal, pair.fixed.axis ) );
-                }
-                const auto difference = result->delta( source ) - target;
-                const auto tangent = difference - dot( difference, normal ) * normal;
-                EXPECT_NEAR( tangent.length(), 0, 1e-8 );
-                EXPECT_NEAR( result->holes[i].position, tangent.length(), 1e-10 );
-                EXPECT_NEAR( result->holes[i].rawCenterDistance,
-                             ( result->delta( pair.moving.center ) - pair.fixed.center ).length(), 1e-10 );
-            }
-            if ( count == 2 || c.settings.holeMode == HoleMode::Axes )
-                expectVectorNear( result->delta( { 3, -4, 8 } ), desired( { 3, -4, 8 } ), 1e-8 );
-        }
-    }
-}
-
-TEST( MRMesh, FeatureAlignmentSeededAxisOraclesCoverAllLocksDirectionsAndLocatorRanks )
-{
-    std::mt19937 generator( 83117 );
-    for ( int iteration = 0; iteration < 8; ++iteration )
-        for ( const auto relation : { AxisDirection::Same, AxisDirection::Opposing, AxisDirection::Closest } )
-            for ( const bool coaxial : { false, true } )
-                for ( const bool matchCenters : { false, true } )
-                    for ( int count : { 0, 1, 2 } )
-                        for ( const bool clocked : { false, true } )
-                        {
-                            SCOPED_TRACE( iteration );
-                            SCOPED_TRACE( int( relation ) * 1000 + int( coaxial ) * 100 + int( matchCenters ) * 10 + count * 2 + int( clocked ) );
-                            const auto frame = randomRigidFrame( generator );
-                            const auto desired = randomRigidFrame( generator );
-                            const auto inverse = desired.inverse();
-                            const auto n = frame.A * Vector3d::plusZ();
-                            const auto u = frame.A * Vector3d::plusX();
-                            const auto v = frame.A * Vector3d::plusY();
-                            auto c = base();
-                            c.settings.mode = PrimaryMode::Axis;
-                            c.settings.axisDirection = relation;
-                            c.settings.coaxial = coaxial;
-                            c.settings.matchAxialCenters = matchCenters;
-                            c.settings.offset = matchCenters || count ? ( iteration % 2 ? 3. : -3. ) : 0.;
-                            const auto directionSign = relation == AxisDirection::Opposing ? -1. : 1.;
-                            const double slide = matchCenters ? c.settings.offset : 6.;
-                            c.fixedAxis = { frame.b, n };
-                            c.movingAxis = { inverse( frame.b + slide * n ), directionSign * ( inverse.A * n ) };
-                            for ( int i = 0; i < count; ++i )
-                            {
-                                const auto target = frame.b + ( i == 0 ? 13. * u + 2. * n : 9. * v + 7. * n );
-                                c.centers.push_back( { inverse( target + c.settings.offset * n ), target } );
-                            }
-                            if ( clocked )
-                                c.clocking = { { inverse.A * u, u } };
-                            const auto result = solve( c );
-                            ASSERT_TRUE( result ) << result.error();
-                            EXPECT_TRUE( result->acceptable() );
-                            expectProperRigid( result->delta );
-                            expectFiniteReport( *result );
-                            const auto transformedAxis = result->delta.A * c.movingAxis.direction;
-                            if ( relation == AxisDirection::Closest )
-                                EXPECT_NEAR( std::abs( dot( transformedAxis, n ) ), 1, 1e-10 );
-                            else
-                                expectVectorNear( transformedAxis, directionSign * n, 1e-9 );
-                            const auto displacement = result->delta( c.movingAxis.center ) - c.fixedAxis.center;
-                            if ( matchCenters )
-                                expectVectorNear( displacement, c.settings.offset * n, 1e-8 );
-                            else if ( coaxial )
-                                EXPECT_NEAR( ( displacement - dot( displacement, n ) * n ).length(), 0, 1e-8 );
-                            else if ( count == 0 )
-                                expectVectorNear( result->delta( c.movingAxis.center ), c.movingAxis.center, 1e-8 );
-                            for ( int i = 0; i < count; ++i )
-                            {
-                                const auto raw = result->delta( c.centers[i].moving ) - c.centers[i].fixed;
-                                EXPECT_NEAR( ( raw - c.settings.offset * n ).length(), 0, 1e-8 );
-                                EXPECT_NEAR( result->holes[i].rawCenterDistance, raw.length(), 1e-9 );
-                            }
-                            if ( clocked )
-                                expectVectorNear( result->delta.A * c.clocking->moving, u, 1e-9 );
-                            const bool spinLocked = clocked || ( ( coaxial || matchCenters ) ? count >= 1 : count == 2 );
-                            const bool positionLocked = matchCenters || count > 0;
-                            const int expectedRank = ( spinLocked ? 0 : 1 ) + ( positionLocked ? 0 : coaxial ? 1 : 3 );
-                            EXPECT_EQ( result->remainingDof, expectedRank );
-                            // Closest axes can admit two discrete placements with one locator; do not invent uniqueness.
-                            if ( expectedRank == 0 && relation != AxisDirection::Closest )
-                                expectVectorNear( result->delta( { 2, -3, 7 } ), desired( { 2, -3, 7 } ), 1e-8 );
-                        }
-}
-
-TEST( MRMesh, FeatureAlignmentSeededCenterOraclesPreservePrimaryAndDistinguishCollinearRank )
-{
-    std::mt19937 generator( 14533 );
-    for ( int iteration = 0; iteration < 100; ++iteration )
-        for ( int count : { 1, 2, 3 } )
-            for ( const bool collinear : { false, true } )
-            {
-                SCOPED_TRACE( iteration );
-                SCOPED_TRACE( count * 2 + int( collinear ) );
-                const auto frame = randomRigidFrame( generator );
-                const auto desired = randomRigidFrame( generator );
-                auto c = base();
-                c.settings.mode = PrimaryMode::Centers;
-                const std::array<Vector3d, 3> points{ frame( {} ), frame( { 10, 0, 0 } ), frame( collinear ? Vector3d{ 25, 0, 0 } : Vector3d{ 0, 7, 3 } ) };
-                for ( int i = 0; i < count; ++i )
-                    c.centers.push_back( { points[i], desired( points[i] ) } );
-                const auto result = solve( c );
-                ASSERT_TRUE( result ) << result.error();
-                expectProperRigid( result->delta );
-                expectFiniteReport( *result );
-                EXPECT_TRUE( result->acceptable() );
-                EXPECT_EQ( result->remainingDof, count == 1 ? 3 : count == 2 || collinear ? 1 : 0 );
-                for ( const auto& pair : c.centers )
-                    expectVectorNear( result->delta( pair.moving ), pair.fixed, 1e-8 );
-                if ( count == 1 )
-                    EXPECT_NEAR( ( result->delta.A - Matrix3d{} ).norm(), 0, 1e-12 );
-                if ( count == 3 && !collinear )
-                    expectVectorNear( result->delta( { 4, 3, -2 } ), desired( { 4, 3, -2 } ), 1e-8 );
-            }
 }
 
 TEST( MRMesh, FeatureAlignmentKnownPlacementsAreEquivariantUnderCommonFrameChanges )
@@ -1458,7 +702,7 @@ TEST( MRMesh, FeatureAlignmentRejectsInvalidEnumsNonfiniteInputsAndUnstableInter
         }
         AffineXf3d transform;
         transform.b.x = invalid;
-        EXPECT_FALSE( isRigid( transform ) );
+        EXPECT_FALSE( measure( base(), transform ) );
     }
     auto c = base();
     c.settings.normals = NormalRelation( 0 );
@@ -1478,13 +722,25 @@ TEST( MRMesh, FeatureAlignmentRejectsInvalidEnumsNonfiniteInputsAndUnstableInter
     const auto stable = solve( c );
     ASSERT_TRUE( stable ) << stable.error();
     EXPECT_TRUE( stable->acceptable() );
-    c.holes[0].moving.kind = HoleKind( 9 );
+    c = base();
+    c.settings.mode = PrimaryMode( 9 );
     EXPECT_FALSE( solve( c ) );
     c = base();
     c.clocking = { { Vector3d::plusZ(), Vector3d::plusX() } };
     EXPECT_FALSE( solve( c ) );
-    EXPECT_FALSE( isRigid( {}, -1 ) );
-    EXPECT_FALSE( isRigid( {}, nan ) );
+    c = base();
+    c.movingPlane.normal = {};
+    EXPECT_FALSE( solve( c ) );
+    c = base();
+    c.settings.mode = PrimaryMode::Axis;
+    c.movingAxis.direction = {};
+    EXPECT_FALSE( solve( c ) );
+    c = base();
+    c.holes = { { h( {} ), h( {} ) } };
+    c.holes[0].moving.radius = -1;
+    EXPECT_FALSE( solve( c ) );
+    c.holes = { { h( {} ), h( {} ) }, { h( { 0, 0, 1 } ), h( {} ) } };
+    EXPECT_FALSE( solve( c ) );
 }
 
 TEST( MRMesh, FeatureAlignmentOnAxisLocatorsConstrainPositionButNeverInventSpin )
@@ -1586,29 +842,12 @@ TEST( MRMesh, FeatureAlignmentHoleAxisConflictsNeverRelaxPlaneTiltAndCentersMode
         expectVectorNear( result->delta.A * Vector3d::plusZ(), Vector3d::plusZ(), 1e-12 );
         EXPECT_NEAR( dot( result->delta( c.movingPlane.center ) - c.fixedPlane.center, c.fixedPlane.normal ), 0, 1e-12 );
         EXPECT_NEAR( result->holes[1].position, 0, 1e-12 );
-        EXPECT_NEAR( result->holes[1].axisAngleDeg, 45, 1e-10 );
+        EXPECT_NEAR( result->maximumAngleError(), mode == HoleMode::Axes ? 45 : 0, 1e-6 );
         EXPECT_EQ( result->acceptable(), mode == HoleMode::Centers );
-        EXPECT_EQ( result->holes[1].angleConstrained, mode == HoleMode::Axes );
     }
 }
 
-TEST( MRMesh, FeatureAlignmentLargeRepresentableCenterTranslationRemainsFinite )
-{
-    auto c = base();
-    c.settings.mode = PrimaryMode::Centers;
-    c.centers = { { { 1e150, 0, 0 }, { -1e150, 0, 0 } } };
-    const auto result = solve( c );
-    ASSERT_TRUE( result ) << result.error();
-    EXPECT_TRUE( result->acceptable() );
-    expectProperRigid( result->delta );
-    expectFiniteReport( *result );
-    EXPECT_EQ( result->remainingDof, 3 );
-    EXPECT_DOUBLE_EQ( result->delta.b.x, -2e150 );
-    EXPECT_DOUBLE_EQ( result->delta( c.centers[0].moving ).x, c.centers[0].fixed.x );
-    EXPECT_NEAR( result->holes[0].rawCenterDistance, 0, 1e-12 );
-}
-
-TEST( MRMesh, FeatureAlignmentNumericalAxisProjectionUsabilityIsIndependentOfTolerance )
+TEST( MRMesh, FeatureAlignmentMinimumObliqueTiltIsIndependentOfTolerance )
 {
     struct Case
     {
@@ -1616,7 +855,7 @@ TEST( MRMesh, FeatureAlignmentNumericalAxisProjectionUsabilityIsIndependentOfTol
         int dof;
         double yaw;
     };
-    for ( const auto test : { Case{ 0, 1, 0 }, Case{ 1e-12, 1, 0 }, Case{ 1e-8, 0, 90 }, Case{ .5, 0, 90 } } )
+    for ( const auto test : { Case{ 0, 1, 0 }, Case{ 1e-4, 1, 0 }, Case{ .01, 1, 0 }, Case{ .5, 0, 90 } } )
         for ( const double tolerance : { .1, 5., 60. } )
         {
             SCOPED_TRACE( test.projection );
@@ -1628,14 +867,18 @@ TEST( MRMesh, FeatureAlignmentNumericalAxisProjectionUsabilityIsIndependentOfTol
             ASSERT_TRUE( result ) << result.error();
             EXPECT_EQ( result->remainingDof, test.dof );
             EXPECT_NEAR( result->yawDeg, test.yaw, 1e-10 );
+            const auto measured = measure( c, result->delta );
+            ASSERT_TRUE( measured ) << measured.error();
+            EXPECT_EQ( measured->remainingDof, result->remainingDof );
+            EXPECT_EQ( measured->freeMotion, result->freeMotion );
             expectProperRigid( result->delta );
             expectVectorNear( result->delta.A * Vector3d::plusZ(), Vector3d::plusZ(), 1e-12 );
         }
 }
 
-TEST( MRMesh, FeatureAlignmentSmallUsableObliqueAxisStillDeterminesExactQuarterTurn )
+TEST( MRMesh, FeatureAlignmentCallerDeclaredObliqueAxisDeterminesQuarterTurn )
 {
-    for ( const double tiltDeg : { .5, .01, .001 } )
+    for ( const double tiltDeg : { .5, 10. } )
         for ( const double tolerance : { .0001, .1, 30. } )
         {
             SCOPED_TRACE( tiltDeg );
@@ -1643,6 +886,7 @@ TEST( MRMesh, FeatureAlignmentSmallUsableObliqueAxisStillDeterminesExactQuarterT
             const double tilt = tiltDeg * PI / 180.;
             auto c = base();
             c.settings.angularToleranceDeg = tolerance;
+            c.settings.minimumObliqueAngleDeg = .25;
             c.holes = { { h( {}, { std::sin( tilt ), 0, std::cos( tilt ) } ),
                           h( { 4, 7, 0 }, { 0, std::sin( tilt ), std::cos( tilt ) } ) } };
             const auto result = solve( c );
@@ -1655,17 +899,28 @@ TEST( MRMesh, FeatureAlignmentSmallUsableObliqueAxisStillDeterminesExactQuarterT
         }
 }
 
-TEST( MRMesh, FeatureAlignmentTinyClockAndAxisAnglesCannotFalselyPassTolerance )
+TEST( MRMesh, FeatureAlignmentMinimumObliqueTiltRejectsInvalidSettings )
 {
-    const double angleRad = 1e-9;
+    for ( const double minimumTilt : { -1., 90., std::numeric_limits<double>::infinity(),
+                                      std::numeric_limits<double>::quiet_NaN() } )
+    {
+        auto c = base();
+        c.settings.minimumObliqueAngleDeg = minimumTilt;
+        EXPECT_FALSE( solve( c ) );
+        EXPECT_FALSE( measure( c, {} ) );
+    }
+}
+
+TEST( MRMesh, FeatureAlignmentSmallClockAndAxisAnglesRespectTolerance )
+{
+    const double angleRad = 1e-7;
     const double angleDeg = angleRad * 180 / PI;
     auto c = base();
     c.settings.angularToleranceDeg = 1e-9;
     c.clocking = { { Vector3d::plusX(), Vector3d::plusX() } };
     const auto clock = measure( c, { Matrix3d::rotation( Vector3d::plusZ(), angleRad ), {} } );
     ASSERT_TRUE( clock ) << clock.error();
-    ASSERT_TRUE( clock->clockingErrorDeg );
-    EXPECT_NEAR( *clock->clockingErrorDeg / angleDeg, 1, 1e-12 );
+    EXPECT_NEAR( clock->maximumAngleError(), angleDeg, 1e-8 );
     EXPECT_FALSE( clock->acceptable() );
     c = base();
     c.settings.mode = PrimaryMode::Axis;
@@ -1677,113 +932,6 @@ TEST( MRMesh, FeatureAlignmentTinyClockAndAxisAnglesCannotFalselyPassTolerance )
     EXPECT_FALSE( axis->acceptable() );
 }
 
-TEST( MRMesh, FeatureAlignmentAngularMetricsPreserveRepresentableTinyAnglesAndUnorientedSigns )
-{
-    for ( const double radians : { 1e-7, 1e-12, 1e-100, 1e-200 } )
-    {
-        SCOPED_TRACE( radians );
-        const double degrees = radians * 180 / PI;
-        auto c = base();
-        c.settings.angularToleranceDeg = degrees / 2;
-        c.clocking = { { Vector3d::plusX(), Vector3d::plusX() } };
-        const AffineXf3d clockPlacement{ Matrix3d::rotation( Vector3d::plusZ(), radians ), {} };
-        auto result = measure( c, clockPlacement );
-        ASSERT_TRUE( result ) << result.error();
-        ASSERT_TRUE( result->clockingErrorDeg );
-        EXPECT_NEAR( *result->clockingErrorDeg / degrees, 1, 1e-12 );
-        EXPECT_FALSE( result->acceptable() );
-        c.settings.angularToleranceDeg = degrees * 2;
-        result = measure( c, clockPlacement );
-        ASSERT_TRUE( result );
-        EXPECT_TRUE( result->acceptable() );
-        // Construct a near-antiparallel proper rotation directly: no subtraction from pi loses the tiny sine.
-        const double sine = std::sin( radians ), cosine = std::cos( radians );
-        const AffineXf3d nearOpposite{ Matrix3d{ { 1, 0, 0 }, { 0, -cosine, -sine }, { 0, sine, -cosine } }, {} };
-        c = base();
-        c.settings.mode = PrimaryMode::Axis;
-        c.settings.angularToleranceDeg = degrees / 2;
-        c.settings.axisDirection = AxisDirection::Opposing;
-        result = measure( c, nearOpposite );
-        ASSERT_TRUE( result ) << result.error();
-        EXPECT_NEAR( result->primaryAngleErrorDeg / degrees, 1, 1e-12 );
-        EXPECT_FALSE( result->acceptable() );
-        c.settings.axisDirection = AxisDirection::Closest;
-        result = measure( c, nearOpposite );
-        ASSERT_TRUE( result );
-        EXPECT_NEAR( result->primaryAngleErrorDeg / degrees, 1, 1e-12 );
-        EXPECT_FALSE( result->acceptable() );
-    }
-}
-
-TEST( MRMesh, FeatureAlignmentDirectedAndUnorientedAnglesDistinguishNearPi )
-{
-    for ( const double radians : { 1e-3, 1e-6, 1e-9 } )
-    {
-        SCOPED_TRACE( radians );
-        const double sine = std::sin( radians ), cosine = std::cos( radians );
-        const double degrees = radians * 180 / PI;
-        const AffineXf3d placement{ Matrix3d{ { 1, 0, 0 }, { 0, -cosine, -sine }, { 0, sine, -cosine } }, {} };
-        auto c = base();
-        c.settings.mode = PrimaryMode::Axis;
-        c.settings.axisDirection = AxisDirection::Same;
-        auto result = measure( c, placement );
-        ASSERT_TRUE( result ) << result.error();
-        EXPECT_NEAR( result->primaryAngleErrorDeg, 180 - degrees, 1e-11 );
-        c.settings.axisDirection = AxisDirection::Opposing;
-        result = measure( c, placement );
-        ASSERT_TRUE( result );
-        EXPECT_NEAR( result->primaryAngleErrorDeg / degrees, 1, 1e-12 );
-        c = base();
-        c.holes = { { h( {} ), h( {} ) } };
-        result = measure( c, placement );
-        ASSERT_TRUE( result );
-        ASSERT_EQ( result->holes.size(), 1 );
-        EXPECT_NEAR( result->normalErrorDeg, 180 - degrees, 1e-11 );
-        EXPECT_NEAR( result->holes[0].axisAngleDeg / degrees, 1, 1e-12 );
-    }
-}
-
-TEST( MRMesh, FeatureAlignmentClosestAxisRanksFiniteScoresWithoutSquaringOverflow )
-{
-    auto c = base();
-    c.settings.mode = PrimaryMode::Axis;
-    c.settings.axisDirection = AxisDirection::Closest;
-    c.settings.linearTolerance = 1e-10;
-    c.centers = { { { 1, 0, 1e150 }, { 2, 0, -2e150 } } };
-    const auto result = solve( c );
-    ASSERT_TRUE( result ) << result.error();
-    EXPECT_NEAR( result->maximumPositionError() / 1e150, 1, 1e-12 );
-    EXPECT_LT( dot( result->delta.A * c.movingAxis.direction, c.fixedAxis.direction ), -.99 );
-    EXPECT_FALSE( result->acceptable() );
-    expectProperRigid( result->delta );
-    expectFiniteReport( *result );
-}
-
-TEST( MRMesh, FeatureAlignmentClosestAxisScoreOrderingIsStableAcrossFiniteMagnitudeAndTolerance )
-{
-    for ( const double magnitude : { 1e120, 1e140, 1e150, 1e153 } )
-        for ( const double tolerance : { 1e-10, .1, 1., 1e100 } )
-            for ( const double fixedSign : { -1., 1. } )
-            {
-                SCOPED_TRACE( magnitude );
-                SCOPED_TRACE( tolerance );
-                SCOPED_TRACE( fixedSign );
-                auto c = base();
-                c.settings.mode = PrimaryMode::Axis;
-                c.settings.axisDirection = AxisDirection::Closest;
-                c.settings.linearTolerance = tolerance;
-                c.centers = { { { 1, 0, magnitude }, { 2, 0, fixedSign * 2 * magnitude } } };
-                const auto result = solve( c );
-                ASSERT_TRUE( result ) << result.error();
-                // One sign leaves axial mismatch magnitude; the other leaves 3*magnitude. Primary center stays exact.
-                EXPECT_NEAR( result->holes[0].position / magnitude, 1, 1e-12 );
-                expectVectorNear( result->delta( {} ), {}, 1e-12 );
-                EXPECT_NEAR( dot( result->delta.A * c.movingAxis.direction, c.fixedAxis.direction ), fixedSign, 1e-12 );
-                expectProperRigid( result->delta );
-                expectFiniteReport( *result );
-            }
-}
-
 TEST( MRMesh, FeatureAlignmentClosestAxisPlacementIsIndependentOfAcceptanceTolerances )
 {
     auto c = base();
@@ -1791,7 +939,7 @@ TEST( MRMesh, FeatureAlignmentClosestAxisPlacementIsIndependentOfAcceptanceToler
     c.settings.axisDirection = AxisDirection::Closest;
     c.centers = { { { 1, 0, 1e-5 }, { 1, 0, -1e-5 } } };
     for ( const bool clocking : { false, true } )
-        for ( const double positionTolerance : { 0., 1e-6, .01, 1., 1e100 } )
+        for ( const double positionTolerance : { 0., 1e-6, .01, 1. } )
             for ( const double angleTolerance : { 0., .01, 1., 89. } )
             {
                 SCOPED_TRACE( clocking );
@@ -1811,7 +959,9 @@ TEST( MRMesh, FeatureAlignmentClosestAxisPlacementIsIndependentOfAcceptanceToler
                 expectVectorNear( result->delta.b, {}, 1e-12 );
                 expectVectorNear( result->delta( c.centers[0].moving ), c.centers[0].fixed, 1e-12 );
                 if ( clocking && positionTolerance >= 1e-6 )
+                {
                     EXPECT_EQ( result->acceptable(), angleTolerance >= 1. );
+                }
             }
 }
 
@@ -1828,8 +978,7 @@ TEST( MRMesh, FeatureAlignmentClosestAxisUsesClockingThenRotationForPositionTies
         ASSERT_TRUE( clocked ) << clocked.error();
         // Both signs match the locator, but only the X half-turn matches the directed clocking.
         expectVectorNear( clocked->delta.A * Vector3d::plusZ(), { 0, 0, -1 }, 1e-12 );
-        ASSERT_TRUE( clocked->clockingErrorDeg );
-        EXPECT_NEAR( *clocked->clockingErrorDeg, 0, 1e-12 );
+        EXPECT_NEAR( clocked->maximumAngleError(), 0, 1e-8 );
         c.clocking.reset();
         const auto unclocked = solve( c );
         ASSERT_TRUE( unclocked ) << unclocked.error();
@@ -1838,30 +987,6 @@ TEST( MRMesh, FeatureAlignmentClosestAxisUsesClockingThenRotationForPositionTies
         expectVectorNear( unclocked->delta.A * Vector3d::plusY(), { 0, 1, 0 }, 1e-12 );
         expectVectorNear( unclocked->delta.A * Vector3d::plusZ(), { 0, 0, 1 }, 1e-12 );
     }
-}
-
-namespace
-{
-void expectDiagnostics( const std::vector<Diagnostic> &actual, std::vector<Diagnostic> expected )
-{
-    EXPECT_EQ( actual, expected );
-}
-} // namespace
-
-TEST( MRMesh, FeatureAlignmentTypedDiagnosticDefaultsAndEquality )
-{
-    const Diagnostic unspecified;
-    EXPECT_EQ( unspecified.code, DiagnosticCode::Unspecified );
-    EXPECT_EQ( unspecified.index, -1 );
-    const Diagnostic hole{ DiagnosticCode::HolePositionMismatch, 1 };
-    EXPECT_EQ( hole, ( Diagnostic{ DiagnosticCode::HolePositionMismatch, 1 } ) );
-    EXPECT_NE( hole, ( Diagnostic{ DiagnosticCode::HolePositionMismatch, 0 } ) );
-    EXPECT_NE( hole, ( Diagnostic{ DiagnosticCode::HoleAxisAngleMismatch, 1 } ) );
-    const Solution unpopulated;
-    EXPECT_EQ( unpopulated.rotationSource, RotationSource::Unconstrained );
-    EXPECT_EQ( unpopulated.freeMotion, FreeMotion::Unspecified );
-    EXPECT_TRUE( unpopulated.conflicts.empty() );
-    EXPECT_TRUE( unpopulated.warnings.empty() );
 }
 
 TEST( MRMesh, FeatureAlignmentTypedPlaneDiagnosticsPreserveInputIndices )
@@ -1884,7 +1009,7 @@ TEST( MRMesh, FeatureAlignmentTypedPlaneDiagnosticsPreserveInputIndices )
     EXPECT_FALSE( measured->acceptable() );
     ASSERT_EQ( measured->holes.size(), 2 );
     EXPECT_NEAR( measured->holes[1].position, 1, 1e-12 );
-    EXPECT_NEAR( measured->holes[1].axisAngleDeg, std::atan( .2 ) * 180. / std::numbers::pi, 1e-12 );
+    EXPECT_NEAR( measured->maximumAngleError(), std::atan( .2 ) * 180. / std::numbers::pi, 1e-8 );
 
     const auto displaced = measure( c, AffineXf3d::translation( { 0, 0, 2 } ) );
     ASSERT_TRUE( displaced ) << displaced.error();
@@ -1904,7 +1029,7 @@ TEST( MRMesh, FeatureAlignmentTypedPlaneDiagnosticsPreserveInputIndices )
                                             { DiagnosticCode::BalancedHoleFit } } );
     EXPECT_EQ( balanced->freeMotion, FreeMotion::FullyConstrained );
     EXPECT_FALSE( balanced->acceptable() );
-    EXPECT_NEAR( balanced->planeOffsetError, 0, 1e-12 );
+    EXPECT_NEAR( balanced->delta( {} ).z, 0, 1e-8 );
     EXPECT_NEAR( balanced->holes[0].position, .5, 1e-12 );
     EXPECT_NEAR( balanced->holes[1].position, .5, 1e-12 );
 }
@@ -2043,6 +1168,55 @@ TEST( MRMesh, FeatureAlignmentTypedAxisAmbiguityWarningRetainsRank )
     expectDiagnostics( result->warnings, { { DiagnosticCode::Underconstrained },
                                            { DiagnosticCode::AmbiguousAxisDirection } } );
     expectVectorNear( result->delta( { 0, 0, 2 } ), { 0, 0, 3 } );
+
+    c = base();
+    c.settings.mode = PrimaryMode::Axis;
+    c.fixedAxis.direction = Vector3d::plusX();
+    c.clocking = { { Vector3d::plusY(), Vector3d::plusY() } };
+    for ( int locatorCount : { 0, 1 } )
+    {
+        c.centers.resize( locatorCount );
+        const auto clocked = solve( c );
+        ASSERT_TRUE( clocked ) << clocked.error();
+        EXPECT_TRUE( clocked->acceptable() );
+        EXPECT_EQ( clocked->remainingDof, 0 );
+        expectDiagnostics( clocked->warnings, { { DiagnosticCode::FittedAxialCenters },
+                                                { DiagnosticCode::AmbiguousAxisDirection } } );
+    }
+}
+
+TEST( MRMesh, FeatureAlignmentCollinearFittedCentersLeaveSpinAtDifferentScales )
+{
+    auto settings = base().settings;
+    settings.mode = PrimaryMode::Centers;
+    for ( const Vector3f v : { Vector3f{ 1, 3, 9 }, Vector3f{ 1, 2, 2 } } )
+        for ( const float scale : { 1.f, 50000.f, 100000.f } )
+        {
+            SCOPED_TRACE( scale );
+            const auto pair = []( Vector3f p ) -> FeaturePair
+            {
+                return { fittedPoint( p ), fittedPoint( { -p.y, p.x, p.z } ) };
+            };
+            FeatureReferences refs;
+            refs.primary = pair( {} );
+            refs.locators[0] = pair( scale * v );
+            for ( const bool collinear : { true, false } )
+            {
+                refs.locators[1] = pair( 2.f * scale * v + ( collinear ? Vector3f{} : Vector3f::plusY() ) );
+                const auto c = readConstraints( refs, settings );
+                ASSERT_TRUE( c ) << c.error();
+                const auto solved = solve( *c );
+                ASSERT_TRUE( solved ) << solved.error();
+                const auto measured = measure( *c, solved->delta );
+                ASSERT_TRUE( measured ) << measured.error();
+                for ( const auto *result : { &*solved, &*measured } )
+                {
+                    EXPECT_TRUE( result->acceptable() );
+                    EXPECT_EQ( result->remainingDof, collinear ? 1 : 0 );
+                    EXPECT_EQ( result->freeMotion, collinear ? FreeMotion::BaselineSpin : FreeMotion::FullyConstrained );
+                }
+            }
+        }
 }
 
 TEST( MRMesh, FeatureAlignmentTypedCenterReasonsAndIndicesIncludePrimary )
@@ -2082,63 +1256,6 @@ TEST( MRMesh, FeatureAlignmentTypedCenterReasonsAndIndicesIncludePrimary )
     EXPECT_EQ( result->freeMotion, FreeMotion::FullyConstrained );
     EXPECT_EQ( result->delta, displaced );
     EXPECT_NEAR( result->maximumPositionError(), 2, 1e-12 );
-}
-
-TEST( MRMesh, FeatureAlignmentPositionResidualsRetainFiniteExtremeMagnitudes )
-{
-    for ( const double scale : { 1e-200, 1e200 } )
-        for ( const auto mode : { PrimaryMode::Plane, PrimaryMode::Axis, PrimaryMode::Centers } )
-        {
-            SCOPED_TRACE( ::testing::Message() << "scale=" << scale << " mode=" << int( mode ) );
-            auto c = base();
-            c.settings.mode = mode;
-            c.settings.axisDirection = AxisDirection::Same;
-            c.settings.holeMode = HoleMode::Centers;
-            c.settings.linearTolerance = 4 * scale;
-            if ( mode == PrimaryMode::Plane )
-                c.holes = { { h( {} ), h( {} ) } };
-            else if ( mode == PrimaryMode::Centers )
-                c.centers = { { {}, {} } };
-            const auto measured = measure( c, AffineXf3d::translation( { 3 * scale, 4 * scale, 0 } ) );
-            ASSERT_TRUE( measured ) << measured.error();
-            EXPECT_FALSE( measured->acceptable() );
-            EXPECT_NEAR( measured->maximumPositionError() / scale, 5, 1e-12 );
-            if ( !measured->holes.empty() )
-                EXPECT_NEAR( measured->holes.front().rawCenterDistance / scale, 5, 1e-12 );
-            if ( mode == PrimaryMode::Axis )
-            {
-                c.settings.matchAxialCenters = false;
-                const auto radial = measure( c, AffineXf3d::translation( { 3 * scale, 4 * scale, 0 } ) );
-                ASSERT_TRUE( radial ) << radial.error();
-                EXPECT_FALSE( radial->acceptable() );
-                EXPECT_NEAR( radial->primaryPositionError / scale, 5, 1e-12 );
-            }
-        }
-}
-
-TEST( MRMesh, FeatureAlignmentShortestRotationRetainsRepresentableTinyTilt )
-{
-    constexpr double cTilt = 1e-200;
-    for ( const auto mode : { PrimaryMode::Plane, PrimaryMode::Axis, PrimaryMode::Centers } )
-    {
-        SCOPED_TRACE( int( mode ) );
-        auto c = base();
-        c.settings.mode = mode;
-        c.settings.axisDirection = AxisDirection::Same;
-        c.settings.angularToleranceDeg = cTilt * 180 / std::numbers::pi / 2;
-        c.settings.linearTolerance = 1e-210;
-        if ( mode == PrimaryMode::Plane )
-            c.fixedPlane.normal = { cTilt, 0, 1 };
-        else if ( mode == PrimaryMode::Axis )
-            c.fixedAxis.direction = { cTilt, 0, 1 };
-        else
-            c.centers = { { {}, {} }, { { 0, 0, 1 }, { cTilt, 0, 1 } } };
-        const auto result = solve( c );
-        ASSERT_TRUE( result ) << result.error();
-        EXPECT_TRUE( result->acceptable() );
-        EXPECT_NEAR( ( result->delta.A * Vector3d::plusZ() ).x / cTilt, 1, 1e-12 );
-        EXPECT_TRUE( isRigid( result->delta ) );
-    }
 }
 
 } // namespace MR

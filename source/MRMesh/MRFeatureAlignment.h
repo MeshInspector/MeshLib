@@ -8,11 +8,6 @@
 #include <optional>
 #include <vector>
 
-namespace MR::detail
-{
-struct FeatureAlignmentWorkingSolution;
-} // namespace MR::detail
-
 namespace MR::FeatureAlignment
 {
 
@@ -95,7 +90,7 @@ struct MRMESH_CLASS Settings
     /// Plane Axes mode: both hole axes must tilt at least this far from the plane normal to set spin.
     /// Choose this from fitting uncertainty, independently of the acceptance tolerance; range [0, 90).
     double minimumObliqueAngleDeg{ 1.0 };
-    MRMESH_API bool operator==( const Settings & ) const = default;
+    bool operator==( const Settings & ) const = default;
 };
 /// All values must be expressed in the same coordinate frame.
 /// Plane mode owns tilt and gap; locators control tangent placement and residual spin only.
@@ -162,16 +157,17 @@ enum class MRMESH_CLASS DiagnosticCode
     PlaneCentersProjected,
     BalancedHoleFit,
     ObliqueHoleAxis,
-    OppositePlaneNormalsConvention
+    OppositePlaneNormalsConvention,
+    ShortLocatorLeverArm ///< A center within linear tolerance of the spin axis determines rotation.
 };
 struct MRMESH_CLASS Diagnostic
 {
     DiagnosticCode code{ DiagnosticCode::Unspecified };
-    /// Zero-based input index for CenterPositionMismatch (Constraints::centers) and
+    /// Zero-based input index for CenterPositionMismatch and ShortLocatorLeverArm (Constraints::centers) and
     /// HolePositionMismatch, HoleAxisAngleMismatch, HoleRadiusMismatch (Constraints::holes).
     /// All other codes use -1; controlled position residuals are in Solution::holes.
     int index{ -1 };
-    MRMESH_API bool operator==( const Diagnostic & ) const = default;
+    bool operator==( const Diagnostic & ) const = default;
 };
 /// Placement and measured residuals. An incompatible measurement produces a valid solution
 /// with conflicts, while invalid input produces an unexpected error instead.
@@ -182,23 +178,15 @@ struct MRMESH_CLASS Solution
     RotationSource rotationSource{ RotationSource::Unconstrained }; ///< Reference determining residual rotation, if any.
     FreeMotion freeMotion{ FreeMotion::Unspecified };                 ///< Constraint-rank description; populated by both solve and measure.
     double primaryAngleErrorDeg{};          ///< Controlled primary direction residual in degrees.
-    double yawDeg{};                        ///< Residual spin selected by solve in degrees; zero for measure.
+    double maxPositionError{};               ///< Largest controlled position residual, including the primary.
+    double maxAngleErrorDeg{};               ///< Largest controlled primary, hole-axis or clocking angle residual in degrees.
     std::vector<HoleResidual> holes;        ///< One entry per active hole or center pair, in input order.
     std::vector<Diagnostic> conflicts, warnings; ///< Tolerance failures versus informational diagnostics.
     /// True when all controlled residuals meet tolerance. Invalid numeric results are returned as errors.
-    [[nodiscard]] MRMESH_API bool acceptable() const
+    [[nodiscard]] bool acceptable() const
     {
         return conflicts.empty();
     }
-    /// Largest controlled position residual; excludes diagnostic-only depth/radius differences.
-    [[nodiscard]] MRMESH_API double maximumPositionError() const;
-    /// Largest constrained primary/locator/clocking angular residual in degrees.
-    [[nodiscard]] MRMESH_API double maximumAngleError() const;
-
-private:
-    double primaryPositionError_{};
-    double secondaryAngleErrorDeg_{};
-    friend struct MR::detail::FeatureAlignmentWorkingSolution;
 };
 
 /// Calculates a proper rigid transform; never scales, mirrors, fits or edits input geometry.

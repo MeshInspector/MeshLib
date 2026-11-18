@@ -122,7 +122,7 @@ TEST( MRMesh, FeatureAlignmentPlaneCenterDepthsDoNotBecomeConstraintsAtSignedGap
             const auto solved = solve( c );
             ASSERT_TRUE( solved ) << solved.error();
             const auto& r = *solved;
-            ASSERT_TRUE( r.acceptable() && r.maximumPositionError() < 1e-8 ) << "projected hole centers";
+            ASSERT_TRUE( r.acceptable() && r.maxPositionError < 1e-8 ) << "projected hole centers";
             EXPECT_NEAR( r.delta( c.movingPlane.center ).z, gap, 1e-8 );
             expectProperRigid( r.delta );
         }
@@ -156,7 +156,7 @@ TEST( MRMesh, FeatureAlignmentBalancedFitStillRejectsIncompatibleSpacing )
     const auto solved = solve( c );
     ASSERT_TRUE( solved ) << solved.error();
     const auto& r = *solved;
-    ASSERT_TRUE( !r.acceptable() && std::abs( r.maximumPositionError() - 1 ) < 1e-8 ) << "honest balanced residual";
+    ASSERT_TRUE( !r.acceptable() && std::abs( r.maxPositionError - 1 ) < 1e-8 ) << "honest balanced residual";
     expectProperRigid( r.delta );
 }
 
@@ -187,7 +187,6 @@ TEST( MRMesh, FeatureAlignmentNoisyPerpendicularFittedHoleLeavesSpin )
             EXPECT_EQ( solved->remainingDof, 1 );
             EXPECT_EQ( solved->freeMotion, FreeMotion::PrimarySpin );
             EXPECT_EQ( solved->rotationSource, RotationSource::Unconstrained );
-            EXPECT_NEAR( solved->yawDeg, 0, 1e-6 );
             expectVectorNear( solved->delta.A * Vector3d::plusX(), Vector3d::plusX(), 1e-6 );
         }
     }
@@ -220,7 +219,6 @@ TEST( MRMesh, FeatureAlignmentDirectedClockingWithOneHole )
             EXPECT_TRUE( rotated->acceptable() );
             expectVectorNear( rotated->delta.A * direction, target, 1e-10 );
             expectVectorNear( rotated->delta.A * normal, normal, 1e-10 );
-            EXPECT_NEAR( std::abs( rotated->yawDeg ), std::abs( angle ) * 180. / std::numbers::pi, 1e-9 );
         }
 }
 
@@ -539,7 +537,7 @@ TEST( MRMesh, FeatureAlignmentMeasureReportsCenterConstraintRankWithoutHidingRes
         EXPECT_EQ( result->remainingDof, dof );
         EXPECT_NE( result->freeMotion, FreeMotion::Unspecified );
         EXPECT_EQ( result->delta, supplied );
-        EXPECT_NEAR( result->maximumPositionError(), std::sqrt( 29. ), 1e-8 );
+        EXPECT_NEAR( result->maxPositionError, std::sqrt( 29. ), 1e-8 );
         EXPECT_FALSE( result->acceptable() );
     };
     expectRank( 3 );
@@ -590,7 +588,6 @@ TEST( MRMesh, FeatureAlignmentObliqueAxesSetQuarterTurnIndependentlyOfTolerance 
             const auto result = solve( c );
             ASSERT_TRUE( result ) << result.error();
             EXPECT_EQ( result->remainingDof, 0 );
-            EXPECT_NEAR( result->yawDeg, 90, 1e-8 );
             expectVectorNear( result->delta.A * cMoving, cFixed, 1e-8 );
             EXPECT_NEAR( result->delta( {} ).z, 0, 1e-8 );
             EXPECT_TRUE( result->acceptable() );
@@ -609,7 +606,7 @@ TEST( MRMesh, FeatureAlignmentParallelMeasuredPlaneClockingIsAnExplicitFiniteCon
     {
         return conflict == Diagnostic{ DiagnosticCode::ClockingParallelToPrimary };
     } ) );
-    EXPECT_TRUE( std::isfinite( result->maximumAngleError() ) );
+    EXPECT_TRUE( std::isfinite( result->maxAngleErrorDeg ) );
     EXPECT_EQ( result->delta, supplied );
 }
 
@@ -842,7 +839,7 @@ TEST( MRMesh, FeatureAlignmentHoleAxisConflictsNeverRelaxPlaneTiltAndCentersMode
         expectVectorNear( result->delta.A * Vector3d::plusZ(), Vector3d::plusZ(), 1e-12 );
         EXPECT_NEAR( dot( result->delta( c.movingPlane.center ) - c.fixedPlane.center, c.fixedPlane.normal ), 0, 1e-12 );
         EXPECT_NEAR( result->holes[1].position, 0, 1e-12 );
-        EXPECT_NEAR( result->maximumAngleError(), mode == HoleMode::Axes ? 45 : 0, 1e-6 );
+        EXPECT_NEAR( result->maxAngleErrorDeg, mode == HoleMode::Axes ? 45 : 0, 1e-6 );
         EXPECT_EQ( result->acceptable(), mode == HoleMode::Centers );
     }
 }
@@ -853,9 +850,10 @@ TEST( MRMesh, FeatureAlignmentMinimumObliqueTiltIsIndependentOfTolerance )
     {
         double projection;
         int dof;
-        double yaw;
+        Vector3d rotatedX;
     };
-    for ( const auto test : { Case{ 0, 1, 0 }, Case{ 1e-4, 1, 0 }, Case{ .01, 1, 0 }, Case{ .5, 0, 90 } } )
+    for ( const auto test : { Case{ 0, 1, Vector3d::plusX() }, Case{ 1e-4, 1, Vector3d::plusX() },
+                              Case{ .01, 1, Vector3d::plusX() }, Case{ .5, 0, Vector3d::plusY() } } )
         for ( const double tolerance : { .1, 5., 60. } )
         {
             SCOPED_TRACE( test.projection );
@@ -866,7 +864,7 @@ TEST( MRMesh, FeatureAlignmentMinimumObliqueTiltIsIndependentOfTolerance )
             const auto result = solve( c );
             ASSERT_TRUE( result ) << result.error();
             EXPECT_EQ( result->remainingDof, test.dof );
-            EXPECT_NEAR( result->yawDeg, test.yaw, 1e-10 );
+            expectVectorNear( result->delta.A * Vector3d::plusX(), test.rotatedX, 1e-10 );
             const auto measured = measure( c, result->delta );
             ASSERT_TRUE( measured ) << measured.error();
             EXPECT_EQ( measured->remainingDof, result->remainingDof );
@@ -892,7 +890,6 @@ TEST( MRMesh, FeatureAlignmentCallerDeclaredObliqueAxisDeterminesQuarterTurn )
             const auto result = solve( c );
             ASSERT_TRUE( result ) << result.error();
             EXPECT_EQ( result->remainingDof, 0 );
-            EXPECT_NEAR( result->yawDeg, 90, 1e-10 );
             expectVectorNear( result->delta( { 10, 0, 0 } ), { 4, 17, 0 }, 1e-10 );
             expectVectorNear( result->delta.A * c.holes[0].moving.axis, c.holes[0].fixed.axis, 1e-12 );
             EXPECT_TRUE( result->acceptable() );
@@ -920,7 +917,7 @@ TEST( MRMesh, FeatureAlignmentSmallClockAndAxisAnglesRespectTolerance )
     c.clocking = { { Vector3d::plusX(), Vector3d::plusX() } };
     const auto clock = measure( c, { Matrix3d::rotation( Vector3d::plusZ(), angleRad ), {} } );
     ASSERT_TRUE( clock ) << clock.error();
-    EXPECT_NEAR( clock->maximumAngleError(), angleDeg, 1e-8 );
+    EXPECT_NEAR( clock->maxAngleErrorDeg, angleDeg, 1e-8 );
     EXPECT_FALSE( clock->acceptable() );
     c = base();
     c.settings.mode = PrimaryMode::Axis;
@@ -978,7 +975,7 @@ TEST( MRMesh, FeatureAlignmentClosestAxisUsesClockingThenRotationForPositionTies
         ASSERT_TRUE( clocked ) << clocked.error();
         // Both signs match the locator, but only the X half-turn matches the directed clocking.
         expectVectorNear( clocked->delta.A * Vector3d::plusZ(), { 0, 0, -1 }, 1e-12 );
-        EXPECT_NEAR( clocked->maximumAngleError(), 0, 1e-8 );
+        EXPECT_NEAR( clocked->maxAngleErrorDeg, 0, 1e-8 );
         c.clocking.reset();
         const auto unclocked = solve( c );
         ASSERT_TRUE( unclocked ) << unclocked.error();
@@ -1009,7 +1006,7 @@ TEST( MRMesh, FeatureAlignmentTypedPlaneDiagnosticsPreserveInputIndices )
     EXPECT_FALSE( measured->acceptable() );
     ASSERT_EQ( measured->holes.size(), 2 );
     EXPECT_NEAR( measured->holes[1].position, 1, 1e-12 );
-    EXPECT_NEAR( measured->maximumAngleError(), std::atan( .2 ) * 180. / std::numbers::pi, 1e-8 );
+    EXPECT_NEAR( measured->maxAngleErrorDeg, std::atan( .2 ) * 180. / std::numbers::pi, 1e-8 );
 
     const auto displaced = measure( c, AffineXf3d::translation( { 0, 0, 2 } ) );
     ASSERT_TRUE( displaced ) << displaced.error();
@@ -1185,6 +1182,48 @@ TEST( MRMesh, FeatureAlignmentTypedAxisAmbiguityWarningRetainsRank )
     }
 }
 
+TEST( MRMesh, FeatureAlignmentWarnsOnlyForShortLeverThatSetsSpin )
+{
+    for ( const auto mode : { PrimaryMode::Axis, PrimaryMode::Centers } )
+        for ( const double radius : { 0., .009, .01, .011 } )
+            for ( const bool shortMoving : { false, true } )
+            {
+                SCOPED_TRACE( ::testing::Message() << int( mode ) << " radius " << radius << " moving " << shortMoving );
+                auto c = base();
+                c.settings.mode = mode;
+                c.settings.axisDirection = AxisDirection::Same;
+                c.settings.linearTolerance = .01;
+                if ( mode == PrimaryMode::Centers )
+                    c.centers = { { {}, {} }, { Vector3d::plusZ(), Vector3d::plusZ() } };
+                const int index = int( c.centers.size() );
+                const double movingRadius = shortMoving ? radius : .011;
+                const double fixedRadius = shortMoving ? .011 : radius;
+                c.centers.push_back( { { movingRadius, 0, 2 }, { 0, fixedRadius, 2 } } );
+                if ( mode == PrimaryMode::Axis && radius > 0 )
+                    c.centers.push_back( { { .001, 0, 3 }, { 0, .001, 3 } } ); // Unused for spin.
+                const auto solved = solve( c );
+                ASSERT_TRUE( solved ) << solved.error();
+                const auto measured = measure( c, solved->delta );
+                ASSERT_TRUE( measured ) << measured.error();
+                const bool warn = radius > 0 && radius < c.settings.linearTolerance;
+                for ( const auto *result : { &*solved, &*measured } )
+                {
+                    EXPECT_EQ( result->remainingDof, radius == 0 ? 1 : 0 );
+                    const Diagnostic expected{ DiagnosticCode::ShortLocatorLeverArm, index };
+                    EXPECT_EQ( std::count( result->warnings.begin(), result->warnings.end(), expected ), int( warn ) );
+                    EXPECT_EQ( std::count_if( result->warnings.begin(), result->warnings.end(), []( const Diagnostic &d )
+                    {
+                        return d.code == DiagnosticCode::ShortLocatorLeverArm;
+                    } ), int( warn ) );
+                    expectVectorNear( result->delta.A * Vector3d::plusX(), radius == 0 ? Vector3d::plusX() : Vector3d::plusY() );
+                    if ( radius > 0 )
+                    {
+                        EXPECT_TRUE( result->acceptable() );
+                    }
+                }
+            }
+}
+
 TEST( MRMesh, FeatureAlignmentCollinearFittedCentersLeaveSpinAtDifferentScales )
 {
     auto settings = base().settings;
@@ -1255,7 +1294,7 @@ TEST( MRMesh, FeatureAlignmentTypedCenterReasonsAndIndicesIncludePrimary )
     EXPECT_FALSE( result->acceptable() );
     EXPECT_EQ( result->freeMotion, FreeMotion::FullyConstrained );
     EXPECT_EQ( result->delta, displaced );
-    EXPECT_NEAR( result->maximumPositionError(), 2, 1e-12 );
+    EXPECT_NEAR( result->maxPositionError, 2, 1e-12 );
 }
 
 } // namespace MR

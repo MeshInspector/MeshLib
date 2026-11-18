@@ -10,7 +10,6 @@
 #include <MRMesh/MRSphereObject.h>
 #include <MRMesh/MRLineObject.h>
 #include <algorithm>
-#include <cmath>
 #include <map>
 
 namespace MR::FeatureAlignmentTool
@@ -35,26 +34,6 @@ bool hasPartGeometry( const ObjectPtr &object )
             pending.push_back( child );
     }
     return false;
-}
-Expected<void> rigidAncestry( const Object *object )
-{
-    for ( auto *current = object; current; current = current->parent() )
-    {
-        const auto xf = AffineXf3d( current->xf() );
-        constexpr double cTolerance = 1e-5;
-        bool rigid = std::isfinite( xf.b.x ) && std::isfinite( xf.b.y ) && std::isfinite( xf.b.z ) &&
-                     std::abs( xf.A.det() - 1 ) <= cTolerance;
-        for ( int i = 0; i < 3; ++i )
-            for ( int j = 0; j < 3; ++j )
-                rigid = rigid && std::abs( dot( xf.A.col( i ), xf.A.col( j ) ) - ( i == j ? 1. : 0. ) ) <= cTolerance;
-        if ( !rigid )
-            return unexpected( std::string( _t( "Physical parts and their ancestors must have rigid transforms. Scale, "
-                                            "shear and mirror are unsupported." ) ) );
-        auto views = current->xfsForAllViewports();
-        if ( views.reset() )
-            return unexpected( std::string( _t( "Per-viewport transforms are unsupported. Use the same part position in all viewports." ) ) );
-    }
-    return {};
 }
 } // namespace
 bool below( const Object *object, const Object *ancestor )
@@ -280,12 +259,6 @@ Expected<FeatureAlignment::FeatureReferences> readReferences( const ObjectPtr &r
     if ( below( s.fixed.get(), s.moving.get() ) )
         return unexpected(
             std::string( _t( "The moving assembly contains the fixed part. Choose a smaller moving branch." ) ) );
-    for ( const auto &part : { s.moving, s.fixed } )
-    {
-        auto rigid = rigidAncestry( part.get() );
-        if ( !rigid )
-            return unexpected( rigid.error() );
-    }
     const auto owner = [&]( const ObjectPtr &feature, bool moving ) -> bool
     {
         if ( !present( feature ) )

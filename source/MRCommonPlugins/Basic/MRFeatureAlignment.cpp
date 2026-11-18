@@ -144,6 +144,11 @@ void drawDiagnostic( const FeatureAlignment::Diagnostic &diagnostic, const Solut
     case DiagnosticCode::AmbiguousAxisDirection:
         ImGui::TextWrapped( "%s", _tr( "Unoriented axes admit two direction choices. Use Same or Opposing to choose explicitly." ) );
         return;
+    case DiagnosticCode::ShortLocatorLeverArm:
+        ImGui::TextWrapped( mode == PrimaryMode::Centers
+                                ? _tr( "Center %d is within Position tolerance of the baseline. Rotation is unreliable." )
+                                : _tr( "Locator %d is within Position tolerance of the axis. Rotation is unreliable." ), number );
+        return;
     case DiagnosticCode::CollinearCenters:
         ImGui::TextWrapped( "%s", _tr( "The centers are collinear. A noncollinear third pair can set rotation." ) );
         return;
@@ -518,8 +523,8 @@ void FeatureAlignmentPlugin::drawDialog( ImGuiContext * )
         }
         const auto *last =
             controller_->result() && !changed ? &*controller_->result() : nullptr;
-        const bool positionFailed = last && last->maximumPositionError() > settings.linearTolerance;
-        const bool angleFailed = last && last->maximumAngleError() > settings.angularToleranceDeg;
+        const bool positionFailed = last && last->maxPositionError > settings.linearTolerance;
+        const bool angleFailed = last && last->maxAngleErrorDeg > settings.angularToleranceDeg;
         beginToleranceField( positionFailed );
         ImGui::SetNextItemWidth( 150 * scale );
         changed |= UI::input<LengthUnit>( _tr( "Position tolerance" ), settings.linearTolerance, 0. );
@@ -533,7 +538,7 @@ void FeatureAlignmentPlugin::drawDialog( ImGuiContext * )
                                       "the plane gap and hole errors are measured within the plane." ) );
         if ( positionFailed )
         {
-            const auto measured = valueToString<LengthUnit>( last->maximumPositionError() );
+            const auto measured = valueToString<LengthUnit>( last->maxPositionError );
             const auto allowed = valueToString<LengthUnit>( settings.linearTolerance );
             ImGui::TextColored( errorColor(), _tr( "Measured %s; allowed %s" ), measured.c_str(),
                                 allowed.c_str() );
@@ -558,7 +563,7 @@ void FeatureAlignmentPlugin::drawDialog( ImGuiContext * )
                                           "when Locate is set to Hole axes." ) );
             if ( angleFailed )
             {
-                const auto measured = valueToString<AngleUnit>( last->maximumAngleError() * std::numbers::pi / 180. );
+                const auto measured = valueToString<AngleUnit>( last->maxAngleErrorDeg * std::numbers::pi / 180. );
                 const auto allowed = valueToString<AngleUnit>( angle );
                 ImGui::TextColored( errorColor(), _tr( "Measured %s; allowed %s" ), measured.c_str(),
                                     allowed.c_str() );
@@ -618,7 +623,7 @@ void FeatureAlignmentPlugin::drawDialog( ImGuiContext * )
             ImGui::TextColored( r.acceptable() ? roleColor( false ) : errorColor(), "%s",
                                 heading.c_str() );
             ImGui::TextWrapped( "%s", freeMotionText( r, settings.mode ).c_str() );
-            const auto residual = valueToString<LengthUnit>( r.maximumPositionError() );
+            const auto residual = valueToString<LengthUnit>( r.maxPositionError );
             ImGui::Text( _tr( "Max constrained residual: %s" ), residual.c_str() );
             ImGui::SetNextItemOpen( diagnostics_, ImGuiCond_Always );
             diagnostics_ = ImGui::CollapsingHeader( _tr( "Diagnostics" ) );

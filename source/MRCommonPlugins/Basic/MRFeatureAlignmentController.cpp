@@ -7,6 +7,7 @@
 #include <MRMesh/MRObjectPoints.h>
 #include <MRMesh/MRObjectLines.h>
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <unordered_set>
 
@@ -165,7 +166,7 @@ Expected<AffineXf3f> Controller::evaluate_( const Catalog &entries )
     auto refs = readReferences( root_, entries, selection_ );
     if ( !refs )
         return unexpected( refs.error() );
-    const auto constraints = FeatureAlignment::readConstraints( *refs, settings_ );
+    auto constraints = FeatureAlignment::readConstraints( *refs, settings_ );
     if ( !constraints )
         return unexpected( constraints.error() );
     const auto solution = FeatureAlignment::solve( *constraints );
@@ -182,31 +183,39 @@ Expected<AffineXf3f> Controller::evaluate_( const Catalog &entries )
             xf = ( node == selection_.moving.get() ? target : node->xf() ) * xf;
         return xf;
     };
-    // Read the prospective fitted datums through the same readers that will see them after Apply.
-    // The fixed references stay in their original frames. Only detached feature copies are reparented.
-    std::array<Object, 4> frames;
-    size_t frameIndex = 0;
-    for ( auto *pair : { &refs->primary, &refs->locators[0], &refs->locators[1], &refs->clocking } )
+    const auto roundedDelta = AffineXf3d( worldAtTarget( selection_.moving.get() ) ) * world.inverse();
+    const std::array pairs{ &refs->primary, &refs->locators[0], &refs->locators[1], &refs->clocking };
+    const bool nested = std::any_of( pairs.begin(), pairs.end(), [&]( const auto *pair )
     {
-        if ( !pair->moving )
-            continue;
-        const auto xf = worldAtTarget( pair->moving->parent() );
-        if ( !( xf.A.det() > 0 ) || !std::isfinite( xf.A.det() ) )
-            return unexpected( std::string( _t( "The proposed feature transform is not rigid." ) ) );
-        auto &frame = frames[frameIndex++];
-        frame.setXf( xf );
-        auto copy = std::static_pointer_cast<FeatureObject>( pair->moving->shallowClone() );
-        frame.addChild( copy );
-        pair->moving = std::move( copy );
+        return pair->moving && pair->moving->parent() != selection_.moving.get();
+    } );
+    if ( nested )
+    {
+        // Intermediate parents round independently in Object::worldXf. Measure their actual float frames.
+        std::array<Object, 4> frames;
+        for ( size_t i = 0; i < pairs.size(); ++i )
+        {
+            auto &moving = pairs[i]->moving;
+            if ( !moving )
+                continue;
+            const auto xf = worldAtTarget( moving->parent() );
+            const auto det = xf.A.det();
+            if ( !( det > 0 ) || !std::isfinite( det ) )
+                return unexpected( std::string( _t( "The proposed feature transform is not rigid." ) ) );
+            frames[i].setXf( xf );
+            auto copy = std::static_pointer_cast<FeatureObject>( moving->shallowClone() );
+            frames[i].addChild( copy );
+            moving = std::move( copy );
+        }
+        constraints = FeatureAlignment::readConstraints( *refs, settings_ );
+        if ( !constraints )
+            return unexpected( constraints.error() );
     }
-    const auto placed = FeatureAlignment::readConstraints( *refs, settings_ );
-    if ( !placed )
-        return unexpected( placed.error() );
-    auto actual = FeatureAlignment::measure( *placed, {} );
+    auto actual = FeatureAlignment::measure( *constraints, nested ? AffineXf3d{} : roundedDelta );
     if ( !actual )
         return unexpected( actual.error() );
-    actual->delta = AffineXf3d( worldAtTarget( selection_.moving.get() ) ) * world.inverse();
-    actual->yawDeg = solution->yawDeg;
+    if ( nested )
+        actual->delta = roundedDelta;
     for ( const auto &warning : solution->warnings )
         if ( std::find( actual->warnings.begin(), actual->warnings.end(), warning ) == actual->warnings.end() )
             actual->warnings.push_back( warning );

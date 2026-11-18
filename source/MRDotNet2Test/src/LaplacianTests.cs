@@ -19,8 +19,8 @@ namespace MRTest
 
             // initialize laplacian
             var triangulation = mesh.topology.getTriangulation();
-            var i0 = triangulation.front().elems._0;
-            var i1 = triangulation.back().elems._0;
+            var i0 = triangulation.front()[0];
+            var i1 = triangulation.back()[0];
 
             var ancV0 = mesh.points[i0];
             var ancV1 = mesh.points[i1];

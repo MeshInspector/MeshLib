@@ -23,7 +23,7 @@ import meshlib.Vector3f;
 import meshlib.VertBitSet;
 import meshlib.VertCoords;
 import meshlib.VertId;
-import meshlib.std_array_MR_VertId_3;
+import meshlib.ThreeVertIds;
 import meshlib.std_vector_MR_EdgeId;
 import meshlib.std_vector_std_vector_MR_EdgeId;
 
@@ -77,13 +77,9 @@ public final class TestMeshBoolean
         }
     }
 
-    static std_array_MR_VertId_3 tri(int a, int b, int c)
+    static ThreeVertIds tri(int a, int b, int c)
     {
-        std_array_MR_VertId_3 ret = new std_array_MR_VertId_3();
-        ret.setElems(0, new VertId(a));
-        ret.setElems(1, new VertId(b));
-        ret.setElems(2, new VertId(c));
-        return ret;
+        return new ThreeVertIds(new VertId(a), new VertId(b), new VertId(c));
     }
 
     public static void booleanMultipleEdgePropogationSort()

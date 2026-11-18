@@ -6,14 +6,9 @@ namespace MRTest
     [TestFixture]
     internal class FillHoleTests
     {
-        private static Std.Array_MRVertId_3 makeTri(int v0, int v1, int v2)
+        private static ThreeVertIds makeTri(int v0, int v1, int v2)
         {
-            // TODO: array constructor
-            Std.Array_MRVertId_3 tri;
-            tri.elems._0 = new VertId(v0);
-            tri.elems._1 = new VertId(v1);
-            tri.elems._2 = new VertId(v2);
-            return tri;
+            return new ThreeVertIds(new VertId(v0), new VertId(v1), new VertId(v2));
         }
 
         private static Mesh CreateMeshWithHoles()

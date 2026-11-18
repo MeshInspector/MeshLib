@@ -504,9 +504,10 @@ Expected<SurfacePath, PathError> computeFastMarchingPath( const MeshPart & mp,
         vertRegion = &myVertRegion;
     }
 
-    // build distances from end to start, so to get correct path in reverse order
+    // build distances from end to start, so to get correct path in reverse order;
+    // without local minima in the distances, the steepest descent from start always reaches end
     bool connected = false;
-    auto distances = computeSurfaceDistances( mp.mesh, end, start, vertRegion, &connected );
+    auto distances = computeSurfaceDistances( mp.mesh, end, start, vertRegion, &connected, 3, true );
     if ( !connected )
         return unexpected( PathError::StartEndNotConnected );
 

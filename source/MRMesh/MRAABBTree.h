@@ -69,6 +69,12 @@ public:
     /// the root is the first node, if any
     [[nodiscard]] const Vector<Node, NodeId> & nodes() const { return nodes_; }
 
+    /// the total number of nodes: internal ones and leaves
+    [[nodiscard]] size_t numNodes() const { return nodes_.size(); }
+
+    /// returns the number of triangles in the tree
+    [[nodiscard]] int numTris() const { return int( leafTris_.size() ); }
+
     /// returns the bounding box of the whole tree (empty for an empty tree)
     [[nodiscard]] Box3f getBoundingBox() const { return nodes_.empty() ? Box3f{} : nodes_.front().box; }
 

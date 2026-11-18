@@ -453,6 +453,14 @@ Triangulation MeshTopology::getTriangulation() const
     Triangulation res;
     res.resizeNoInit( faceSize() );
     assert( updateValids_ );
+    if ( numValidFaces_ == (int)res.size() )
+    {
+        ParallelFor( res, [&]( FaceId f )
+        {
+            getTriVerts( f, res[f] );
+        } );
+        return res;
+    }
     ParallelFor( res, [&]( FaceId f )
     {
         if ( validFaces_.test( f ) )

@@ -37,8 +37,7 @@ struct Dipole
 struct FastWindingNumberData
 {
     const Dipole* __restrict__ dipoles{ nullptr };
-    const WideNode3* __restrict__ nodes{ nullptr };
-    const LeafTri3* __restrict__ leafTris{ nullptr };
+    MeshTree3 tree; ///< the dipoles are in the order of its node ids
     const float3* __restrict__ meshPoints{ nullptr };
     const FaceToThreeVerts* __restrict__ faces{ nullptr }; ///< the vertices of every face, for the triangle centers
 };

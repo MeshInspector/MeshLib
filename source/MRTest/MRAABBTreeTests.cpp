@@ -28,23 +28,89 @@
 namespace MR
 {
 
+namespace
+{
+
+/// node of AABBTree in the flat layout made by makeFlatAABBTree (the layout of master before the SIMD tree), where the children of a node are contiguous
+struct AABBTreeWideNode
+{
+    Box3f box; ///< bounding box of whole subtree
+    int first = 0; ///< the first child node, or for a leaf, the first of its triangles in leafTris
+    int count = 0; ///< the number of children, or for a leaf, minus the number of its triangles
+
+    [[nodiscard]] bool leaf() const { return count < 0; }
+    [[nodiscard]] int numLeafTris() const { return -count; }
+};
+
+/// AABBTree in the flat layout, where the children of a node are contiguous
+struct AABBTreeFlat
+{
+    Vector<AABBTreeWideNode, NodeId> nodes; ///< the root is the first node, if any
+    Vector<AABBTree::LeafTri> leafTris; ///< the triangles of each leaf are contiguous
+    Vector<NodeId, NodeId> treeNodeIds; ///< the id in AABBTree of every node
+};
+
+/// makes the flat layout of given tree, to compare it with the trees of master
+AABBTreeFlat makeFlatAABBTree( const AABBTree & tree )
+{
+    AABBTreeFlat res;
+    if ( tree.empty() )
+        return res;
+    res.nodes.resize( tree.numNodes() );
+    res.treeNodeIds.resize( tree.numNodes() );
+    res.leafTris.reserve( tree.numTris() );
+    // fills node n with the subtree of ref, the children blocks of its descendants start from next
+    auto fill = [&]( NodeId n, int ref, const Box3f & box, NodeId & next, auto && self ) -> void
+    {
+        auto & node = res.nodes[n];
+        node.box = box;
+        res.treeNodeIds[n] = tree.nodeId( ref );
+        if ( ref < 0 )
+        {
+            node.first = (int)res.leafTris.size();
+            const int num = tree.numLeafTris( ~ref );
+            node.count = -num;
+            for ( int i = 0; i < num; ++i )
+                res.leafTris.push_back( tree.leafTris()[size_t( ~ref ) * AABBTree::MaxLeafTris + i] );
+            return;
+        }
+        const auto & sn = tree.simdNodes()[ref];
+        int k = 0;
+        while ( k < AABBTree::MaxChildren && sn.child[k] )
+            ++k;
+        const NodeId first = next;
+        node.first = int( first );
+        node.count = k;
+        next += k;
+        for ( int i = 0; i < k; ++i )
+            self( first + i, sn.child[i], sn.get( i ), next, self );
+    };
+    NodeId next( 1 );
+    fill( NodeId( 0 ), tree.rootRef(), tree.getBoundingBox(), next, fill );
+    assert( next == res.nodes.size() );
+    return res;
+}
+
+} // anonymous namespace
+
 TEST(MRMesh, AABBTree)
 {
     Mesh sphere = makeUVSphere( 1, 8, 8 );
     AABBTree tree( sphere );
-    EXPECT_EQ( tree.leafTris().size(), sphere.topology.numValidFaces() );
+    EXPECT_EQ( tree.numTris(), sphere.topology.numValidFaces() );
     EXPECT_EQ( tree.getBoundingBox(), sphere.computeBoundingBox().insignificantlyExpanded() );
-    EXPECT_FALSE( tree.nodes().front().leaf() );
+    EXPECT_EQ( tree.rootRef(), 0 );
 
-    assert( !tree.nodes().empty() );
+    assert( !tree.empty() );
     auto m = std::move( tree );
-    assert( tree.nodes().empty() );
+    assert( tree.empty() );
 
     FaceBitSet fs;
     fs.autoResizeSet( 1_f );
     AABBTree smallerTree( { sphere, &fs } );
-    EXPECT_EQ( smallerTree.nodes().size(), 1 );
-    EXPECT_EQ( smallerTree.leafTris().size(), 1 );
+    EXPECT_EQ( smallerTree.numNodes(), 1 );
+    EXPECT_EQ( smallerTree.rootRef(), ~0 );
+    EXPECT_EQ( smallerTree.numTris(), 1 );
 }
 
 TEST(MRMesh, ProjectionToEmptyMesh)
@@ -94,41 +160,89 @@ TEST( MRMesh, AABBTreeOfEmptyMesh )
 }
 
 // checks that every valid face of the mesh is in exactly one leaf with its vertices and a box containing it,
-// and the box of every node contains the boxes of its triangles or of its children having larger ids
+// that every node but the root is a child of one internal node with a smaller index, and that the box of every child in its parent
+// contains the boxes of its triangles or of its children
 static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
 {
-    const auto & nodes = tree.nodes();
-    EXPECT_EQ( tree.leafTris().size(), size_t( mesh.topology.numValidFaces() ) );
-    ASSERT_EQ( tree.leafBoxes().size(), tree.leafTris().size() );
+    EXPECT_EQ( tree.numTris(), mesh.topology.numValidFaces() );
+    const int numLeaves = tree.numLeaves();
+    const int numInternal = (int)tree.simdNodes().size();
+
+    ASSERT_EQ( tree.leafTris().size(), size_t( numLeaves ) * AABBTree::MaxLeafTris );
+    EXPECT_EQ( tree.numNodes(), size_t( numLeaves + numInternal ) );
     FaceBitSet faces( mesh.topology.faceSize() );
-    for ( NodeId n( 0 ); n < nodes.size(); ++n )
+    for ( int l = 0; l < numLeaves; ++l )
     {
-        const auto & node = nodes[n];
-        if ( node.leaf() )
+        const int num = tree.numLeafTris( l );
+        for ( int i = 0; i < AABBTree::MaxLeafTris; ++i )
         {
-            ASSERT_TRUE( node.numLeafTris() > 0 && node.first + node.numLeafTris() <= tree.leafTris().size() );
-            for ( int i = node.first; i < node.first + node.numLeafTris(); ++i )
+            const int t = l * AABBTree::MaxLeafTris + i;
+            const auto & lt = tree.leafTris()[t];
+            if ( i >= num )
             {
-                const auto & lt = tree.leafTris()[i];
-                ASSERT_TRUE( mesh.topology.hasFace( lt.face ) );
-                EXPECT_FALSE( faces.test_set( lt.face ) );
-                EXPECT_EQ( lt.verts, mesh.topology.getTriVerts( lt.face ) );
-                for ( auto v : lt.verts )
-                    EXPECT_TRUE( tree.leafBoxes()[i].contains( mesh.points[v] ) );
-                EXPECT_TRUE( node.box.contains( tree.leafBoxes()[i] ) );
+                EXPECT_FALSE( lt.face.valid() );
+                EXPECT_FALSE( tree.leafBox( t ).valid() );
+                continue;
             }
-        }
-        else
-        {
-            for ( int i = 0; i < node.count; ++i )
-            {
-                const NodeId c( node.first + i );
-                ASSERT_TRUE( c > n && c < nodes.size() );
-                EXPECT_TRUE( node.box.contains( nodes[c].box ) );
-            }
+            ASSERT_TRUE( mesh.topology.hasFace( lt.face ) );
+            EXPECT_FALSE( faces.test_set( lt.face ) );
+            EXPECT_EQ( lt.verts, mesh.topology.getTriVerts( lt.face ) );
+            for ( int v = 0; v < 3; ++v )
+                EXPECT_TRUE( tree.leafBox( t ).contains( mesh.points[lt.verts[v]] ) );
         }
     }
     EXPECT_EQ( faces.count(), size_t( mesh.topology.numValidFaces() ) );
+
+    if ( tree.empty() )
+        return;
+    std::vector<int> numParents( tree.numNodes(), 0 );
+    for ( int n = 0; n < numInternal; ++n )
+    {
+        const auto & sn = tree.simdNodes()[n];
+        EXPECT_TRUE( sn.child[0] && sn.child[1] );
+        for ( int i = 0; i < AABBTree::MaxChildren; ++i )
+        {
+            const int c = sn.child[i];
+            if ( !c )
+            {
+                EXPECT_FALSE( sn.get( i ).valid() );
+                EXPECT_TRUE( i + 1 == AABBTree::MaxChildren || !sn.child[i + 1] );
+                continue;
+            }
+            if ( c > 0 )
+            {
+                ASSERT_TRUE( c > n && c < numInternal );
+                EXPECT_TRUE( sn.get( i ).contains( tree.simdNodes()[c].getUnion() ) );
+            }
+            else
+            {
+                ASSERT_TRUE( ~c < numLeaves );
+                EXPECT_TRUE( sn.get( i ).contains( tree.leafBoxes( ~c ).getUnion() ) );
+            }
+            ++numParents[tree.nodeId( c )];
+        }
+    }
+    EXPECT_EQ( numParents[0], 0 );
+    for ( size_t n = 1; n < numParents.size(); ++n )
+        EXPECT_EQ( numParents[n], 1 );
+
+    // the flat layout of the same tree
+    const auto flat = makeFlatAABBTree( tree );
+    ASSERT_EQ( flat.nodes.size(), tree.numNodes() );
+    ASSERT_EQ( flat.leafTris.size(), size_t( tree.numTris() ) );
+    for ( NodeId n( 0 ); n < flat.nodes.size(); ++n )
+    {
+        const auto & node = flat.nodes[n];
+        EXPECT_EQ( node.leaf(), tree.nodeRef( flat.treeNodeIds[n] ) < 0 );
+        if ( node.leaf() )
+            continue;
+        for ( int i = 0; i < node.count; ++i )
+        {
+            const NodeId c( node.first + i );
+            ASSERT_TRUE( c > n && c < flat.nodes.size() );
+            EXPECT_TRUE( node.box.contains( flat.nodes[c].box ) );
+        }
+    }
 }
 
 // expects the same projections of some points on both meshes
@@ -192,8 +306,14 @@ TEST( MRMesh, AABBTreeWidePackOptimally )
     ASSERT_TRUE( tree );
     expectValidTree( *tree, mesh );
     // the faces are numbered in the order of the leaves
-    for ( size_t i = 0; i < tree->leafTris().size(); ++i )
-        EXPECT_EQ( tree->leafTris()[i].face, FaceId( i ) );
+    int k = 0;
+    for ( const auto & lt : tree->leafTris() )
+    {
+        if ( lt.face )
+        {
+            EXPECT_EQ( lt.face, FaceId( k++ ) );
+        }
+    }
     Mesh rebuilt = mesh;
     rebuilt.invalidateCaches();
     expectSameProjections( mesh, rebuilt );
@@ -253,16 +373,13 @@ TEST( MRMesh, AABBTreeDeepSplits )
 {
     auto treeDepth = []( const AABBTree & tree )
     {
-        const auto & nodes = tree.nodes();
-        std::vector<int> depth( nodes.size(), 0 );
+        // the children follow their parent
+        std::vector<int> depth( tree.numNodes(), 0 );
         int res = 0;
-        for ( NodeId n( 0 ); n < nodes.size(); ++n )
-        {
-            if ( nodes[n].leaf() )
-                continue;
-            for ( int i = 0; i < nodes[n].count; ++i )
-                res = std::max( res, depth[nodes[n].first + i] = depth[n] + 1 );
-        }
+        for ( int n = 0; n < (int)tree.simdNodes().size(); ++n )
+            for ( int c : tree.simdNodes()[n].child )
+                if ( c )
+                    res = std::max( res, depth[tree.nodeId( c )] = depth[n] + 1 );
         return res;
     };
     Mesh mesh = makeSphere( { .radius = 1.0f, .numMeshVertices = 1000 } );
@@ -326,6 +443,34 @@ TEST(MRMesh, AABBTreeCopyDuringConstruction)
     tasks.wait();
 }
 
+// a triangle with a NaN coordinate does not hide the other triangles of its leaf from the projection
+TEST( MRMesh, AABBTreeProjectionPastNanTriangle )
+{
+    VertCoords points;
+    Triangulation t;
+    for ( int i = 0; i < 4; ++i )
+    {
+        const VertId v0( points.size() );
+        points.push_back( Vector3f( float( 2 * i ), 0, 0 ) );
+        points.push_back( Vector3f( float( 2 * i + 1 ), 0, 0 ) );
+        points.push_back( Vector3f( float( 2 * i ), 1, 0 ) );
+        t.push_back( { v0, v0 + 1, v0 + 2 } );
+    }
+    // the first vertex of the first triangle, so the first slot of the only leaf has NaN x
+    points[VertId( 0 )].x = std::numeric_limits<float>::quiet_NaN();
+    const Mesh mesh = Mesh::fromTriangles( std::move( points ), t );
+    const AABBTree & tree = mesh.getAABBTree();
+    ASSERT_EQ( tree.simdNodes().size(), 0 );
+    ASSERT_EQ( tree.numLeaves(), 1 );
+    for ( int i = 1; i < 4; ++i )
+    {
+        const Vector3f p( float( 2 * i ) + 0.25f, 0.25f, 1 );
+        const auto res = findProjection( p, mesh );
+        EXPECT_EQ( res.proj.face, FaceId( i ) );
+        EXPECT_FLOAT_EQ( res.distSq, 1 );
+    }
+}
+
 // the leaf box of every triangle is the same as by Box::include and insignificantlyExpanded, also for zeros, denormals, extreme and non-finite coordinates
 TEST( MRMesh, AABBTreeLeafBoxesOfSpecialValues )
 {
@@ -356,11 +501,13 @@ TEST( MRMesh, AABBTreeLeafBoxesOfSpecialValues )
                 }
     const Mesh mesh = Mesh::fromTriangles( std::move( points ), t );
     const AABBTree tree( mesh );
-    ASSERT_EQ( tree.leafTris().size(), t.size() );
+    ASSERT_EQ( tree.numTris(), (int)t.size() );
     int numDiffer = 0;
     for ( size_t n = 0; n < tree.leafTris().size(); ++n )
     {
         const auto & lt = tree.leafTris()[n];
+        if ( !lt.face )
+            continue;
         // what Box::include gives, with NaN skipped explicitly: MSVC for arm64 compiles Box::include here with NaN kept
         Box3f box;
         for ( auto v : lt.verts )
@@ -375,7 +522,7 @@ TEST( MRMesh, AABBTreeLeafBoxesOfSpecialValues )
                     box.max[k] = x;
             }
         const Box3f expected = box.insignificantlyExpanded();
-        const Box3f & actual = tree.leafBoxes()[n];
+        const Box3f actual = tree.leafBox( int( n ) );
         // compares the bits, NaN included
         if ( std::memcmp( &expected, &actual, sizeof( Box3f ) ) == 0 || ++numDiffer > 5 )
             continue;
@@ -420,9 +567,22 @@ Mesh makeIntegerSoup( int numTris, int range, bool farOutlier )
     return Mesh::fromTriangles( std::move( points ), t );
 }
 
-/// FNV-1a of the nodes, the leaf triangles and the leaf boxes of the tree
+/// FNV-1a of the nodes, the leaf triangles and the leaf boxes of the tree in the flat layout (the same as the layout before the SIMD one)
 std::uint64_t treeHash( const AABBTree & tree )
 {
+    const auto flat = makeFlatAABBTree( tree );
+    // the boxes of the triangles in the order of flat.leafTris
+    std::vector<Box3f> leafBoxes( flat.leafTris.size() );
+    for ( NodeId n( 0 ); n < flat.nodes.size(); ++n )
+    {
+        const auto & node = flat.nodes[n];
+        if ( !node.leaf() )
+            continue;
+        const int l = ~tree.nodeRef( flat.treeNodeIds[n] );
+        for ( int i = 0; i < node.numLeafTris(); ++i )
+            leafBoxes[node.first + i] = tree.leafBox( l * AABBTree::MaxLeafTris + i );
+    }
+
     std::uint64_t h = 14695981039346656037ull;
     const auto add = [&h]( std::uint32_t x )
     {
@@ -440,25 +600,24 @@ std::uint64_t treeHash( const AABBTree & tree )
             add( bit_cast<std::uint32_t>( b.max[k] ) );
         }
     };
-    for ( const auto & n : tree.nodes() )
+    for ( const auto & n : flat.nodes )
     {
         addBox( n.box );
         add( std::uint32_t( n.first ) );
         add( std::uint32_t( n.count ) );
     }
-    for ( const auto & lt : tree.leafTris() )
+    for ( const auto & lt : flat.leafTris )
     {
         add( std::uint32_t( int( lt.face ) ) );
         for ( auto v : lt.verts )
             add( std::uint32_t( int( v ) ) );
     }
-    for ( const auto & b : tree.leafBoxes() )
+    for ( const auto & b : leafBoxes )
         addBox( b );
     return h;
 }
 
-/// calls f in a task arena of 16 threads, also where the processor has fewer, so that big trees are built with the leaf boxes made again
-/// from the points; fails if a lower limit keeps the threads below 16; does nothing in Emscripten builds, where threads beyond the pool
+/// calls f in a task arena of 16 threads, also where the processor has fewer; fails if a lower limit keeps the threads below 16; does nothing in Emscripten builds, where threads beyond the pool
 /// start only when the main thread returns to the event loop, so the extra TBB workers would hang later tests
 template <typename F>
 void withSixteenThreads( F && f )
@@ -469,9 +628,9 @@ void withSixteenThreads( F && f )
     tbb::global_control gc( tbb::global_control::max_allowed_parallelism, 16 );
     tbb::task_arena( 16 ).execute( [&]
     {
-        // the thread count by which AABBTree chooses its triangle records
+        // the thread count of the tree build
         const int threads = std::min( (int)tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ), tbb::this_task_arena::max_concurrency() );
-        ASSERT_GE( threads, 16 ) << "a lower limit of threads is set: the trees would be built with stored leaf boxes";
+        ASSERT_GE( threads, 16 ) << "a lower limit of threads is set";
         f();
     } );
 #endif
@@ -514,8 +673,8 @@ TEST( MRMesh, AABBTreeFromTriangulationRegion )
         region.set( f, f % 3 != 0 );
     const TriMesh tmesh{ mesh.topology.getTriangulation(), mesh.points };
     EXPECT_EQ( treeHash( AABBTree( tmesh, &region ) ), treeHash( AABBTree( { mesh, &region } ) ) );
-    EXPECT_TRUE( AABBTree( tmesh, &region ).leafTris().size() == region.count() );
-    EXPECT_TRUE( AABBTree( TriMesh{ {}, mesh.points } ).nodes().empty() );
+    EXPECT_TRUE( AABBTree( tmesh, &region ).numTris() == (int)region.count() );
+    EXPECT_TRUE( AABBTree( TriMesh{ {}, mesh.points } ).empty() );
 }
 
 // Mesh::fromTriangles keeps the vertex order of the triangles, so the tree of the triangulation is the tree of the mesh made from it
@@ -530,8 +689,7 @@ TEST( MRMesh, AABBTreeFromTriangulationOfNewMesh )
     }
 }
 
-// a big mesh, whose top ranges are split in parallel, gives the same tree on one thread as in the default arena
-// and on 16 threads (with the leaf boxes made again from the points)
+// a big mesh, whose top ranges are split in parallel, gives the same tree on one thread as in the default arena and on 16 threads
 TEST( MRMesh, AABBTreeSameOnOneThread )
 {
     const Mesh mesh = makeUVSphere( 1.f, 400, 200 ); // 160000 triangles: at least 2^17 for the parallel splits
@@ -539,24 +697,26 @@ TEST( MRMesh, AABBTreeSameOnOneThread )
     tbb::task_arena( 1 ).execute( [&] { one.emplace( mesh ); } );
     withSixteenThreads( [&] { sixteen.emplace( mesh ); } );
     const AABBTree all( mesh );
+    // compares the bits, NaN included
+    auto sameBits = []( const auto & x, const auto & y )
+    {
+        return x.size() == y.size() && std::memcmp( x.data(), y.data(), x.size() * sizeof( x[0] ) ) == 0;
+    };
     const AABBTree * const trees[] = { &all, sixteen ? &*sixteen : nullptr };
     for ( const AABBTree * t : trees )
     {
         if ( !t )
             continue;
-        ASSERT_EQ( t->nodes().size(), one->nodes().size() );
-        for ( NodeId n( 0 ); n < t->nodes().size(); ++n )
-        {
-            const auto & a = t->nodes()[n];
-            const auto & b = one->nodes()[n];
-            ASSERT_TRUE( a.box == b.box && a.first == b.first && a.count == b.count ) << "node " << int( n );
-        }
+        EXPECT_TRUE( sameBits( t->simdNodes(), one->simdNodes() ) );
+        ASSERT_EQ( t->numLeaves(), one->numLeaves() );
+        for ( int l = 0; l < t->numLeaves(); ++l )
+            ASSERT_EQ( 0, std::memcmp( &t->leafBoxes( l ), &one->leafBoxes( l ), sizeof( AABBTree::SimdBoxes ) ) ) << "leaf " << l;
         ASSERT_EQ( t->leafTris().size(), one->leafTris().size() );
         for ( size_t i = 0; i < t->leafTris().size(); ++i )
         {
             const auto & a = t->leafTris()[i];
             const auto & b = one->leafTris()[i];
-            ASSERT_TRUE( a.face == b.face && a.verts == b.verts && t->leafBoxes()[i] == one->leafBoxes()[i] ) << "leaf " << i;
+            ASSERT_TRUE( a.face == b.face && a.verts == b.verts ) << "slot " << i;
         }
     }
 }

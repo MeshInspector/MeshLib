@@ -4,7 +4,7 @@
 namespace MR { namespace Cuda {
 
 __global__ void kernel( const float3* points,
-    const WideNode3* __restrict__ nodes, const float3* __restrict__ meshPoints, const LeafTri3* __restrict__ leafTris,
+    MeshTree3 tree, const float3* __restrict__ meshPoints,
     MeshProjectionResult* resVec, const Matrix4 xf, const Matrix4 refXf, float upDistLimitSq, float loDistLimitSq, size_t size )
 {
     if ( size == 0 )
@@ -21,7 +21,7 @@ __global__ void kernel( const float3* points,
     MeshProjectionResult res;
     res.distSq = upDistLimitSq;
     res.proj.faceId = -1;
-    int resLeaf = -1; // the index in leafTris of the found triangle
+    const LeafTri3* resLeaf = nullptr; // the found triangle
     struct SubTask
     {
         int n;
@@ -31,28 +31,29 @@ __global__ void kernel( const float3* points,
     // every level adds at most 3 tasks, and the tree of 2^31 triangles has 16 levels
     InplaceStack<SubTask, 64> subtasks;
 
-    auto boxDistSq = [&] ( int n )
+    auto boxDistSq = [&] ( const Box3& b )
     {
-        const auto box = refXf.isIdentity ? nodes[n].box : refXf.transform( nodes[n].box );
+        const auto box = refXf.isIdentity ? b : refXf.transform( b );
         return lengthSq( box.getBoxClosestPointTo( pt ) - pt );
     };
 
     // the node to visit next is not pushed in the stack
-    SubTask s{ 0, boxDistSq( 0 ) };
+    SubTask s{ tree.rootRef, boxDistSq( tree.rootBox ) };
     while ( true )
     {
         if ( s.distSq < res.distSq )
         {
-            const auto& node = nodes[s.n];
-            if ( !node.leaf() )
+            if ( s.n >= 0 )
             {
+                const SimdNode3 node = tree.nodes[s.n]; // to registers
                 // the children closer than the found point ordered by distance, the farthest first
                 SubTask ch[4];
                 int numCh = 0;
-                for ( int c = 0; c < node.count; ++c )
+                #pragma unroll
+                for ( int c = 0; c < 4 && node.child[c]; ++c )
                 {
-                    const int n = node.first + c;
-                    const float d = boxDistSq( n );
+                    const int n = node.child[c];
+                    const float d = boxDistSq( node.childBox( c ) );
                     if ( !( d < res.distSq ) )
                         continue;
                     int k = numCh++;
@@ -72,9 +73,10 @@ __global__ void kernel( const float3* points,
             else
             {
                 bool stop = false;
-                for ( int i = node.first, e = node.first + node.numLeafTris(); i < e; ++i )
+                const auto* lts = tree.leafSlots( s.n );
+                for ( int i = 0; i < cMaxLeafTris && lts[i].face >= 0; ++i )
                 {
-                    const auto& lt = leafTris[i];
+                    const auto& lt = lts[i];
                     const float3 a = meshPoints[lt.verts[0]];
                     const float3 b = meshPoints[lt.verts[1]];
                     const float3 c = meshPoints[lt.verts[2]];
@@ -101,7 +103,7 @@ __global__ void kernel( const float3* points,
                         res.distSq = distSq;
                         res.proj.point = closestPointRes.proj;
                         res.proj.faceId = lt.face;
-                        resLeaf = i;
+                        resLeaf = &lt;
                         res.tp = TriPoint{ closestPointRes.bary.x, closestPointRes.bary.y };
                         if ( distSq <= loDistLimitSq )
                         {
@@ -119,10 +121,10 @@ __global__ void kernel( const float3* points,
         s = subtasks.top();
         subtasks.pop();
     }
-    if ( !refXf.isIdentity && resLeaf >= 0 )
+    if ( !refXf.isIdentity && resLeaf )
     {
         // return the point in the space of the reference mesh as in case of rigid refXf (which is applied to the points instead)
-        const auto& lt = leafTris[resLeaf];
+        const auto& lt = *resLeaf;
         const float3 a = meshPoints[lt.verts[0]];
         res.proj.point = a + ( meshPoints[lt.verts[1]] - a ) * res.tp.a + ( meshPoints[lt.verts[2]] - a ) * res.tp.b;
     }
@@ -130,12 +132,13 @@ __global__ void kernel( const float3* points,
 }
 
 void meshProjectionKernel( const float3* points, 
-                           const WideNode3* nodes, const float3* meshPoints, const LeafTri3* leafTris,
+                           MeshTree3 tree, const float3* meshPoints,
                            MeshProjectionResult* resVec, const Matrix4 xf, const Matrix4 refXf, float upDistLimitSq, float loDistLimitSq, size_t size )
 {
-    constexpr int maxThreadsPerBlock = 640;
+    // 256 and not more: the kernel needs about 60 registers, so only one block of 640 threads fits in a multiprocessor of sm_120
+    constexpr int maxThreadsPerBlock = 256;
     int numBlocks = int( ( size + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
-    kernel<<< numBlocks, maxThreadsPerBlock >>>( points, nodes, meshPoints, leafTris, resVec, xf, refXf, upDistLimitSq, loDistLimitSq, size );
+    kernel<<< numBlocks, maxThreadsPerBlock >>>( points, tree, meshPoints, resVec, xf, refXf, upDistLimitSq, loDistLimitSq, size );
 }
 
 }}

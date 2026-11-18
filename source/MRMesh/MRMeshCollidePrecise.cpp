@@ -169,7 +169,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const A
         for ( int j = 0; j < 3; ++j )
         {
             const auto v = lt.verts[j];
-            const auto & pt = mp.mesh.points[v];
+            const auto pt = mp.mesh.points[v];
             td.vc[j].pt = conv( isB && rigidB2A ? (*rigidB2A)( pt ) : pt );
             td.vc[j].id = isB ? v + aVertsSize : v;
         }
@@ -583,11 +583,11 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
 
         for ( int j = 0; j < 3; ++j )
         {
-            const auto & lf = mp.mesh.points[lt.verts[j]];
+            const auto lf = mp.mesh.points[lt.verts[j]];
             lvc[j].pt = conv( rigidB2A ? ( *rigidB2A )( lf ) : lf );
             lvc[j].id += aVertsSize;
 
-            const auto & rf = mp.mesh.points[rt.verts[j]];
+            const auto rf = mp.mesh.points[rt.verts[j]];
             rvc[j].pt = conv( rigidB2A ? ( *rigidB2A )( rf ) : rf );
             rvc[j].id += aVertsSize;
         }

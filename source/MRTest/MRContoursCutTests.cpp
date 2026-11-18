@@ -16,6 +16,7 @@
 #include <MRMesh/MRCylinder.h>
 #include <MRMesh/MR2DContoursTriangulation.h>
 #include <MRMesh/MRMakeSphereMesh.h>
+#include <MRMesh/MRSurfacePath.h>
 #include <algorithm>
 #include <cmath>
 #include <random>
@@ -167,6 +168,37 @@ TEST( MRMesh, ClosedContourWithEmptyWrapAroundPath )
         EXPECT_GT( pivots[i], lastPivot );
         lastPivot = pivots[i];
     }
+}
+
+TEST( MRMesh, SurfaceLineDisconnectedPath )
+{
+    const auto mesh = makeTorus( 1.0f, 0.3f, 8, 4 );
+    const std::vector<MeshTriPoint> mtps{
+        MeshTriPoint( mesh.topology.edgeWithLeft( 1_f ), { 1 / 3.f, 1 / 3.f } ),
+        MeshTriPoint( mesh.topology.edgeWithLeft( 17_f ), { 1 / 3.f, 1 / 3.f } ) };
+
+    auto contour = surfaceLineToMeshContour( mesh, mtps, SearchPathSettings{} );
+    ASSERT_TRUE( contour.has_value() );
+
+    // the connector stops one point short of the end
+    MeshTriPointsConnector truncated = [&] ( const MeshTriPoint& start, const MeshTriPoint& end, int, int ) -> Expected<SurfacePath>
+    {
+        auto sp = computeGeodesicPath( mesh, start, end, GeodesicPathApprox::DijkstraBiDir );
+        if ( !sp || sp->empty() )
+            return unexpected( "no path" );
+        sp->pop_back();
+        return *sp;
+    };
+    contour = surfaceLineToMeshContour( mesh, mtps, truncated );
+    EXPECT_FALSE( contour.has_value() );
+
+    // the connector returns no path for points from different triangles
+    MeshTriPointsConnector empty = [] ( const MeshTriPoint&, const MeshTriPoint&, int, int ) -> Expected<SurfacePath>
+    {
+        return SurfacePath{};
+    };
+    contour = surfaceLineToMeshContour( mesh, mtps, empty );
+    EXPECT_FALSE( contour.has_value() );
 }
 
 TEST( MRMesh, BooleanIntersectionsSort )

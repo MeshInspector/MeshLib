@@ -6,6 +6,7 @@
 #include "MRRingIterator.h"
 #include "MRBox.h"
 #include "MRSurfacePath.h"
+#include "MRPch/MRFmt.h"
 #include "MRPch/MRSpdlog.h"
 
 namespace MR
@@ -765,6 +766,20 @@ Contours3f extractMeshContours( const OneMeshContours& meshContours )
     return res;
 }
 
+// every two consecutive points among start, path and end must share a triangle
+static bool isConnectedPath( const MeshTopology& topology, const MeshTriPoint& start, const SurfacePath& path, const MeshTriPoint& end )
+{
+    MeshTriPoint prev = start;
+    for ( const auto& ep : path )
+    {
+        const MeshTriPoint curr( ep );
+        if ( !fromSameTriangle( topology, MeshTriPoint( prev ), MeshTriPoint( curr ) ) )
+            return false;
+        prev = curr;
+    }
+    return fromSameTriangle( topology, std::move( prev ), MeshTriPoint( end ) );
+}
+
 Expected<OneMeshContour> surfaceLineToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg,
     MeshTriPointsConnector connectorFn /*= {}*/, std::vector<int>* pivotIndices /*= nullptr */ )
 {
@@ -857,9 +872,12 @@ Expected<OneMeshContour> surfaceLineToMeshContour( const Mesh& mesh, const std::
             }
         }
         // using DijkstraAStar here might be faster, in most case points are close to each other
-        auto sp = connectorFn( meshTriPoints[i], meshTriPoints[( i + 1 ) % meshTriPoints.size()], firstIndex, secondIndex );
+        const auto& nextMtp = meshTriPoints[( i + 1 ) % meshTriPoints.size()];
+        auto sp = connectorFn( meshTriPoints[i], nextMtp, firstIndex, secondIndex );
         if ( !sp.has_value() )
             return unexpected( sp.error() );
+        if ( !isConnectedPath( mesh.topology, meshTriPoints[i], *sp, nextMtp ) )
+            return unexpected( fmt::format( "Path between points #{} and #{} is not connected", firstIndex, secondIndex ) );
         auto partContours = surfacePathsToMeshContours( mesh, { std::move( sp.value() ) } );
         assert( partContours.size() == 1 );
         surfacePaths[i] = partContours.contour( 0 );

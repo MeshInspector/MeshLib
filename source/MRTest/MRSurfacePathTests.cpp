@@ -133,21 +133,61 @@ TEST( MRMesh, SurfacePathTargets )
     }
 }
 
-TEST( MRMesh, GeodesicPathFastMarchingReachesEnd )
+TEST( MRMesh, GeodesicPathFastMarchingFallback )
 {
-    // on this coarse torus, steepest descent in the fast-marching field gets stuck in a vertex far from the end
-    const auto mesh = makeTorus( 1.0f, 0.3f, 8, 4 );
-    const MeshTriPoint start( mesh.topology.edgeWithLeft( 1_f ), { 1 / 3.f, 1 / 3.f } );
-    const MeshTriPoint end( mesh.topology.edgeWithLeft( 17_f ), { 0.375f, 0.5f } );
+    // on this symmetric torus some triangles get equal distances in all vertices,
+    // and the steepest descent from a point inside of such triangle cannot start
+    const auto mesh = makeTorus( 1.0f, 0.3f, 3, 3 );
+    // the region without one vertex, so the paths cannot pass it
+    VertBitSet region = mesh.topology.getValidVerts();
+    region.reset( 0_v );
+    const VertBitSet * regions[] = { nullptr, &region };
+    for ( const auto * vertRegion : regions )
+    {
+        int stuck = 0;
+        for ( auto f : mesh.topology.getValidFaces() )
+        {
+            const MeshTriPoint start( mesh.topology.edgeWithLeft( f ), { 1 / 3.f, 1 / 3.f } );
+            for ( auto v : mesh.topology.getValidVerts() )
+            {
+                const MeshTriPoint end( mesh.topology, v );
+                bool skip = fromSameTriangle( mesh.topology, MeshTriPoint( start ), MeshTriPoint( end ) );
+                if ( vertRegion )
+                    mesh.topology.forEachVertex( start, [&]( VertId sv ) { skip = skip || !vertRegion->test( sv ); } );
+                if ( skip || ( vertRegion && !vertRegion->test( v ) ) )
+                    continue;
+                const auto fm = computeFastMarchingPath( mesh, start, end, vertRegion );
+                const bool fmStuck = !fm.has_value() && fm.error() == PathError::InternalError;
+                stuck += fmStuck;
 
-    const auto path = computeGeodesicPath( mesh, start, end, GeodesicPathApprox::FastMarching );
-    ASSERT_TRUE( path.has_value() );
-    ASSERT_FALSE( path->empty() );
-    // every two consecutive points of start, path, end must share a triangle
-    EXPECT_TRUE( fromSameTriangle( mesh.topology, MeshTriPoint( start ), MeshTriPoint( path->front() ) ) );
-    for ( size_t i = 0; i + 1 < path->size(); ++i )
-        EXPECT_TRUE( fromSameTriangle( mesh.topology, MeshTriPoint( ( *path )[i] ), MeshTriPoint( ( *path )[i + 1] ) ) );
-    EXPECT_TRUE( fromSameTriangle( mesh.topology, MeshTriPoint( path->back() ), MeshTriPoint( end ) ) );
+                if ( !vertRegion )
+                {
+                    const auto path = computeGeodesicPath( mesh, start, end, GeodesicPathApprox::FastMarching );
+                    ASSERT_TRUE( path.has_value() );
+                    EXPECT_TRUE( isConnectedPath( mesh.topology, start, *path, end ) );
+                }
+
+                const auto path = computeSurfacePath( mesh, start, end, 5, vertRegion );
+                ASSERT_TRUE( path.has_value() );
+                EXPECT_TRUE( isConnectedPath( mesh.topology, start, *path, end ) );
+
+                if ( vertRegion && fmStuck )
+                {
+                    // without reduction, the fallback path along edges stays in the region
+                    const auto edgePath = computeSurfacePath( mesh, start, end, 0, vertRegion );
+                    ASSERT_TRUE( edgePath.has_value() );
+                    EXPECT_TRUE( isConnectedPath( mesh.topology, start, *edgePath, end ) );
+                    for ( const auto & ep : *edgePath )
+                        if ( auto pv = ep.inVertex( mesh.topology ) )
+                            EXPECT_TRUE( vertRegion->test( pv ) );
+                        else
+                            EXPECT_TRUE( vertRegion->test( mesh.topology.org( ep.e ) ) && vertRegion->test( mesh.topology.dest( ep.e ) ) );
+                }
+            }
+        }
+        // the fallback was actually used
+        EXPECT_GT( stuck, 0 ) << ( vertRegion ? "in region" : "whole mesh" );
+    }
 }
 
 } //namespace MR

@@ -58,7 +58,8 @@ inline std::string toString(PathError error)
 
 /// returns intermediate points of the geodesic path from start to end, where it crosses mesh edges;
 /// the path can be limited to given region: in face-format inside mp, or in vert-format in vertRegion argument.
-/// It is the same as calling computeFastMarchingPath() then reducePath();
+/// It is the same as calling computeFastMarchingPath() then reducePath(),
+/// but if the steepest descent stops before reaching end then the path along edges in the same region is taken before reducePath();
 /// the distances in outSurfaceDistances are computed with SurfaceDistanceBuilder::setNoLocalMinima( true )
 MRMESH_API Expected<SurfacePath, PathError> computeSurfacePath( const MeshPart & mp, 
     const MeshTriPoint & start, const MeshTriPoint & end, 
@@ -79,7 +80,7 @@ MRMESH_API Expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mes
 
 /// computes by Fast Marching method and returns intermediate points of approximately geodesic path from start to end, where it crosses mesh edges;
 /// the path can be limited to given region: in face-format inside mp, or in vert-format in vertRegion argument;
-/// returns PathError::InternalError if the steepest descent stops in a local minimum of the field before reaching end;
+/// returns PathError::InternalError if the steepest descent stops before reaching end, e.g. in a triangle with equal distances in all vertices;
 /// the distances in outSurfaceDistances are computed with SurfaceDistanceBuilder::setNoLocalMinima( true )
 MRMESH_API Expected<SurfacePath, PathError> computeFastMarchingPath( const MeshPart & mp, 
     const MeshTriPoint & start, const MeshTriPoint & end, const VertBitSet* vertRegion = nullptr,

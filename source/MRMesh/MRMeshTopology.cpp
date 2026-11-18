@@ -443,8 +443,10 @@ Vector<ThreeVertIds> MeshTopology::getAllTriVerts() const
     }
     res.resizeNoInit( numValidFaces_ );
     size_t i = 0;
-    for ( auto f : validFaces_ )
-        getTriVerts( f, res[i++] );
+    for ( auto e : edgePerFace_ )
+        if ( e ) // a face is valid if and only if it has an edge
+            getLeftTriVerts( e, res[i++] );
+    assert( i == res.size() );
 
     return res;
 }

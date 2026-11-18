@@ -14,18 +14,18 @@ int main( void )
     MR_Mesh* mesh = MR_makeCube( &size, &base );
 
     // all vertices of valid triangles
-    MR_Vector_MR_ThreeVertIds_size_t* triangles = MR_MeshTopology_getAllTriVerts( MR_Mesh_Get_topology( mesh ) );
+    MR_Vector_MR_ThreeVertIds* triangles = MR_MeshTopology_getAllTriVerts( MR_Mesh_Get_topology( mesh ) );
 
     // all point coordinates as x,y,z triples
     const float* points = (const float*)MR_VertCoords_data( MR_Mesh_Get_points( mesh ) );
     // triangle vertices as triples of ints (pointing to elements in points vector)
-    const int* vertexTriples = (const int*)MR_Vector_MR_ThreeVertIds_size_t_data( triangles );
+    const int* vertexTriples = (const int*)MR_Vector_MR_ThreeVertIds_data( triangles );
 
     // TODO: export in your format
     (void)points;
     (void)vertexTriples;
 
-    MR_Vector_MR_ThreeVertIds_size_t_Destroy( triangles );
+    MR_Vector_MR_ThreeVertIds_Destroy( triangles );
     MR_Mesh_Destroy( mesh );
     return EXIT_SUCCESS;
 }

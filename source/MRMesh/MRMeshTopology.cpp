@@ -454,19 +454,11 @@ Triangulation MeshTopology::getTriangulation() const
     MR_TIMER;
     Triangulation res;
     res.resizeNoInit( faceSize() );
-    assert( updateValids_ );
-    if ( numValidFaces_ == (int)res.size() )
-    {
-        ParallelFor( res, [&]( FaceId f )
-        {
-            getTriVerts( f, res[f] );
-        } );
-        return res;
-    }
     ParallelFor( res, [&]( FaceId f )
     {
-        if ( validFaces_.test( f ) )
-            getTriVerts( f, res[f] );
+        // a face is valid if and only if it has an edge
+        if ( auto e = edgePerFace_[f] )
+            getLeftTriVerts( e, res[f] );
         else
             res[f] = {};
     } );

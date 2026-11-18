@@ -220,6 +220,13 @@ struct SimdRayBoxes
 
 } // anonymous namespace
 
+// whether the float rays test the boxes of the triangles of a leaf before the triangles: on Arm (Apple M1) the tests of the triangles alone are faster
+#if defined(__aarch64__) || defined(_M_ARM64)
+constexpr bool cRayTestsLeafBoxes = false;
+#else
+constexpr bool cRayTestsLeafBoxes = true;
+#endif
+
 /// the float version of meshRayIntersectT_ over the SIMD layout of the tree: tests the boxes of all children of a node or all triangles of a leaf at once;
 /// visits the nodes and the triangles in the same order and computes the same values as meshRayIntersectT_, so it finds the same intersection
 template<bool Filtered>
@@ -261,12 +268,16 @@ MeshIntersectionResult meshRayIntersectSimd_( const VertCoords & points, const A
             if ( st.ref < 0 )
             {
                 bool stop = false;
-                // the triangles with crossed boxes in their order, as rayStart and rayEnd change after each intersection;
+                // the triangles with crossed boxes (or all on Arm) in their order, as rayStart and rayEnd change after each intersection;
                 // a triangle is inside its box, so the others cannot be crossed
                 {
-                    for ( int crossed = rayBoxes.test( tree.leafBoxes( ~st.ref ), rayStart, rayEnd ); crossed; crossed &= crossed - 1 )
+                    const int first = ~st.ref * AABBTree::MaxLeafTris;
+                    const int tested = cRayTestsLeafBoxes ? rayBoxes.test( tree.leafBoxes( ~st.ref ), rayStart, rayEnd ) : 15;
+                    for ( int crossed = tested; crossed; crossed &= crossed - 1 )
                     {
-                        const auto & lt = leafTris[~st.ref * AABBTree::MaxLeafTris + lowestBit( crossed )];
+                        const auto & lt = leafTris[first + lowestBit( crossed )];
+                        if ( !cRayTestsLeafBoxes && !lt.face )
+                            break;
                         if constexpr ( Filtered )
                         {
                             if ( ( region && !region->test( lt.face ) ) || ( validFaces && !validFaces( lt.face ) ) )
@@ -605,9 +616,9 @@ void rayMeshIntersectAll_( const VertCoords & points, const AABBTree & tree, con
         if( r < 0 )
         {
             const auto & leafBoxes = tree.leafBoxes( ~r );
-            // the float version tests the boxes of all triangles of the leaf at once
-            [[maybe_unused]] int crossedBoxes = 0;
-            if constexpr ( std::is_same_v<T, float> )
+            // the float version tests the boxes of all triangles of the leaf at once (except on Arm)
+            [[maybe_unused]] int crossedBoxes = 15;
+            if constexpr ( std::is_same_v<T, float> && cRayTestsLeafBoxes )
             {
                 crossedBoxes = simdCrossed( leafBoxes );
                 if ( !crossedBoxes )

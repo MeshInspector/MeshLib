@@ -62,17 +62,21 @@ MeshIntersectionResult meshRayIntersectT_( const AABBTree & tree, const FaceBitS
             if ( st.ref < 0 )
             {
                 bool stop = false;
-                for ( int i = ~st.ref * AABBTree::MaxLeafTris, end = i + AABBTree::MaxLeafTris; i < end && leafTris[i].face; ++i )
+                // the used slots from the coordinates, and the face of a slot only if it is filtered or hit:
+                // the leaf's slots are not read at all for most leaves, which saves memory traffic
+                const auto & leaf = tree.simdLeaves()[~st.ref];
+                for ( int m = leafUsedSlots( leaf ); m; m &= m - 1 )
                 {
-                    const auto & lt = leafTris[i];
+                    const int k = Simd4::lowestBit( m );
+                    const int i = ~st.ref * AABBTree::MaxLeafTris + k;
                     if constexpr ( Filtered )
                     {
-                        if ( ( region && !region->test( lt.face ) ) || ( validFaces && !validFaces( lt.face ) ) )
+                        const auto f = leafTris[i].face;
+                        if ( ( region && !region->test( f ) ) || ( validFaces && !validFaces( f ) ) )
                             continue;
                     }
-                    const Vector3<T> vA = Vector3<T>( tree.leafPoint( i, 0 ) ) - line.p;
-                    const Vector3<T> vB = Vector3<T>( tree.leafPoint( i, 1 ) ) - line.p;
-                    const Vector3<T> vC = Vector3<T>( tree.leafPoint( i, 2 ) ) - line.p;
+                    auto vert = [&]( int v ) { return Vector3<T>( Vector3f( leaf.coord[v][0][k], leaf.coord[v][1][k], leaf.coord[v][2][k] ) ) - line.p; };
+                    const Vector3<T> vA = vert( 0 ), vB = vert( 1 ), vC = vert( 2 );
                     const auto triIsect = rayTriangleIntersect( vA, vB, vC, prec );
                     if ( !triIsect )
                         continue;
@@ -80,7 +84,7 @@ MeshIntersectionResult meshRayIntersectT_( const AABBTree & tree, const FaceBitS
                     if ( !( t < rayEnd && t > rayStart ) )
                         continue;
                     distance = triIsect->t;
-                    face = lt.face;
+                    face = leafTris[i].face;
                     triP = triIsect->bary;
                     if ( t == 0 )
                     {

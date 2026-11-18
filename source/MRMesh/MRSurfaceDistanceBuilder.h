@@ -114,8 +114,8 @@ private:
     /// compares proposed distance with the value known in c.vert
     /// \details if proposed distance is smaller then adds it in the queue and returns true; \n
     /// otherwise if the known distance to c.vert is already not greater than returns false;
-    /// the proposed distance is first raised to minDist
-    bool suggestVertDistance_( VertDistance c, SurfaceDistanceStartId source, SurfaceDistanceStartId lineEnd, float minDist = -FLT_MAX );
+    /// if noLocalMinima_ then the proposed distance is first raised above va
+    bool suggestVertDistance_( VertDistance c, SurfaceDistanceStartId source, SurfaceDistanceStartId lineEnd, float va = -FLT_MAX );
     /// creates new start point with given initial distance, its vertex (if any) and position
     SurfaceDistanceStartId addSource_( float startDistance, VertId v, const Vector3f & pos );
     /// makes v a start point if its distance is larger than given one
@@ -145,11 +145,11 @@ private:
     /// consider a path going in the left triangle from edge (e) to the opposing vertex
     void considerLeftTriPath_( EdgeId e );
     /// computes the distance to c in left triangle abc of edge e, where a and b have distances (va <= vb) from different start points of one group,
-    /// or from one start point and from the linear field near it; the distance is not less than minDist
-    void considerTriNearStarts_( EdgeId e, VertId a, VertId b, VertId c, float va, float vb, float minDist );
+    /// or from one start point and from the linear field near it
+    void considerTriNearStarts_( EdgeId e, VertId a, VertId b, VertId c, float va, float vb );
     /// computes the distance to c in left triangle abc of edge e, where a and b have distances from starts of different groups:
-    /// the field of each start is extended to the other vertex through the triangle on the other side of e; the distance is not less than minDist
-    void considerTriBetweenGroups_( EdgeId e, VertId a, VertId b, VertId c, float va, float minDist );
+    /// the field of each start is extended to the other vertex through the triangle on the other side of e
+    void considerTriBetweenGroups_( EdgeId e, VertId a, VertId b, VertId c, float va );
     /// if target is provided then adds distance to it to the metric
     float metricToPenalty_( float metric, VertId v ) const;
 };

@@ -69,7 +69,7 @@ fn boolean_multiple_edge_propogation_sort()
     *points.index_mut(VertId {id_: 4}) = Vector3f {x: -1.0, y: 1.5, z: 0.0};
     *points.index_mut(VertId {id_: 5}) = Vector3f {x: 1.0, y: 1.5, z: 0.0};
     let mut triangulation = meshlib::Triangulation::construct(5);
-    let tri = |a, b, c| meshlib::std_array_MR_VertId_3 {elems: [VertId {id_: a}, VertId {id_: b}, VertId {id_: c}]};
+    let tri = |a, b, c| meshlib::ThreeVertIds {v: [VertId {id_: a}, VertId {id_: b}, VertId {id_: c}]};
     *triangulation.index_mut(FaceId {id_: 0}) = tri(0, 2, 1);
     *triangulation.index_mut(FaceId {id_: 1}) = tri(1, 2, 3);
     *triangulation.index_mut(FaceId {id_: 2}) = tri(3, 4, 1);

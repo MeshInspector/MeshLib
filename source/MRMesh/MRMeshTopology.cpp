@@ -451,11 +451,14 @@ Triangulation MeshTopology::getTriangulation() const
 {
     MR_TIMER;
     Triangulation res;
-    res.resize( faceSize() ); //TODO: resizeNoInit
+    res.resizeNoInit( faceSize() );
     assert( updateValids_ );
-    BitSetParallelFor( validFaces_, [&]( FaceId f )
+    ParallelFor( res, [&]( FaceId f )
     {
-        getTriVerts( f, res[f] );
+        if ( validFaces_.test( f ) )
+            getTriVerts( f, res[f] );
+        else
+            res[f] = {};
     } );
 
     return res;

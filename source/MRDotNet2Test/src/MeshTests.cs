@@ -71,14 +71,9 @@ namespace MRTest
             File.Delete(tempFile);
         }
 
-        private static Std.Array_MRVertId_3 makeTri(int v0, int v1, int v2)
+        private static ThreeVertIds makeTri(int v0, int v1, int v2)
         {
-            // TODO: array constructor
-            Std.Array_MRVertId_3 tri;
-            tri.elems._0 = new VertId(v0);
-            tri.elems._1 = new VertId(v1);
-            tri.elems._2 = new VertId(v2);
-            return tri;
+            return new ThreeVertIds(new VertId(v0), new VertId(v1), new VertId(v2));
         }
 
         [Test]
@@ -200,14 +195,14 @@ namespace MRTest
         {
             var cubeMesh = makeCube(Vector3f.diagonal(1), Vector3f.diagonal(-0.5f));
             var triVerts = cubeMesh.topology.getLeftTriVerts(new EdgeId(0));
-            Assert.That(triVerts.elems[0].id, Is.EqualTo(0));
-            Assert.That(triVerts.elems[1].id, Is.EqualTo(1));
-            Assert.That(triVerts.elems[2].id, Is.EqualTo(2));
+            Assert.That(triVerts[0].id, Is.EqualTo(0));
+            Assert.That(triVerts[1].id, Is.EqualTo(1));
+            Assert.That(triVerts[2].id, Is.EqualTo(2));
 
             triVerts = cubeMesh.topology.getLeftTriVerts(new EdgeId(6));
-            Assert.That(triVerts.elems[0].id, Is.EqualTo(2));
-            Assert.That(triVerts.elems[1].id, Is.EqualTo(3));
-            Assert.That(triVerts.elems[2].id, Is.EqualTo(0));
+            Assert.That(triVerts[0].id, Is.EqualTo(2));
+            Assert.That(triVerts[1].id, Is.EqualTo(3));
+            Assert.That(triVerts[2].id, Is.EqualTo(0));
         }
 
         [Test]
@@ -270,7 +265,7 @@ namespace MRTest
         {
             var cubeMesh = makeCube(Vector3f.diagonal(1), Vector3f.diagonal(-0.5f));
             var triVerts = cubeMesh.topology.getTriVerts(new FaceId(0));
-            var centerPoint = (cubeMesh.points[triVerts.elems[1]] + cubeMesh.points[triVerts.elems[2]]) * 0.5f;
+            var centerPoint = (cubeMesh.points[triVerts[1]] + cubeMesh.points[triVerts[2]]) * 0.5f;
             var triPoint = cubeMesh.toTriPoint(new FaceId(0), centerPoint);
             Assert.That(triPoint.bary.a, Is.EqualTo(0.5f));
             Assert.That(triPoint.bary.b, Is.EqualTo(0.5f));

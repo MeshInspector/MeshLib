@@ -6,15 +6,11 @@ def createTestMesh() -> mrmesh.Mesh:
     # test simple triangulation
     triangulation = mrmesh.Triangulation()
     triangulation.vec.resize(2)
-    assert len(triangulation.vec[0]) == 3
-    for i in range(len(triangulation.vec[0])):
+    assert triangulation.vec[0].size() == 3
+    for i in range(3):
         triangulation.vec[0][i] = mrmesh.VertId(i)
         assert triangulation.vec[0][i].get() == i
-    i = 0
-    for v in triangulation.vec[0]:
-        assert v.get() == i
-        i = i + 1
-    triangulation.vec[1] = mrmesh.ThreeVertIds([mrmesh.VertId(0), mrmesh.VertId(2), mrmesh.VertId(3)])
+    triangulation.vec[1] = mrmesh.ThreeVertIds(mrmesh.VertId(0), mrmesh.VertId(2), mrmesh.VertId(3))
 
     mesh = mrmesh.Mesh()
     mesh.points = mrmesh.VertCoords([mrmesh.Vector3f(0, 0, 0), mrmesh.Vector3f(1, 0, 0), mrmesh.Vector3f(1, 1, 0), mrmesh.Vector3f(0, 1, 0)])

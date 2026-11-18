@@ -504,9 +504,10 @@ Expected<SurfacePath, PathError> computeFastMarchingPath( const MeshPart & mp,
         vertRegion = &myVertRegion;
     }
 
-    // build distances from end to start, so to get correct path in reverse order
+    // build distances from end to start, so to get correct path in reverse order;
+    // without local minima in the distances, the steepest descent from start always reaches end
     bool connected = false;
-    auto distances = computeSurfaceDistances( mp.mesh, end, start, vertRegion, &connected );
+    auto distances = computeSurfaceDistances( mp.mesh, end, start, vertRegion, &connected, 3, true );
     if ( !connected )
         return unexpected( PathError::StartEndNotConnected );
 
@@ -614,6 +615,18 @@ SurfacePaths getSurfacePathsViaVertices( const Mesh & mesh, const VertBitSet & v
     res = extractIsolines( mesh.topology, scalarField, 0 );
 
     return res;
+}
+
+bool isConnectedPath( const MeshTopology& topology, const MeshTriPoint& start, const SurfacePath& path, const MeshTriPoint& end )
+{
+    if ( path.empty() )
+        return fromSameTriangle( topology, MeshTriPoint( start ), MeshTriPoint( end ) );
+    if ( !fromSameTriangle( topology, MeshTriPoint( start ), MeshTriPoint( path.front() ) ) )
+        return false;
+    for ( size_t i = 0; i + 1 < path.size(); ++i )
+        if ( !fromSameTriangle( topology, MeshEdgePoint( path[i] ), MeshEdgePoint( path[i + 1] ) ) )
+            return false;
+    return fromSameTriangle( topology, MeshTriPoint( path.back() ), MeshTriPoint( end ) );
 }
 
 float surfacePathLength( const Mesh& mesh, const SurfacePath& surfacePath )

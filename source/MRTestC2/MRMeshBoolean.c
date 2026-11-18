@@ -16,7 +16,6 @@
 #include <MRCMesh/MRTorus.h>
 #include <MRCMesh/MRVector.h>
 #include <MRCMesh/MRVector3.h>
-#include <MRCMisc/std_array_MR_VertId_3.h>
 #include <MRCMisc/std_vector_MR_Vector3f.h>
 #include <MRCMisc/std_vector_MR_EdgeId.h>
 #include <MRCMisc/std_vector_std_vector_MR_EdgeId.h>
@@ -111,11 +110,11 @@ void testBooleanMultipleEdgePropogationSort( void )
     *MR_VertCoords_index_mut( pointsVec, (MR_VertId){5} ) = (MR_Vector3f){ +1.0f, 1.5f, 0.0f };
 
     MR_Triangulation *triangulation = MR_Triangulation_Construct( 5 );
-    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){0} ) = (MR_std_array_MR_VertId_3){{ {0}, {2}, {1} }};
-    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){1} ) = (MR_std_array_MR_VertId_3){{ {1}, {2}, {3} }};
-    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){2} ) = (MR_std_array_MR_VertId_3){{ {3}, {4}, {1} }};
-    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){3} ) = (MR_std_array_MR_VertId_3){{ {2}, {5}, {3} }};
-    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){4} ) = (MR_std_array_MR_VertId_3){{ {3}, {5}, {4} }};
+    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){0} ) = (MR_ThreeVertIds){{ {0}, {2}, {1} }};
+    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){1} ) = (MR_ThreeVertIds){{ {1}, {2}, {3} }};
+    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){2} ) = (MR_ThreeVertIds){{ {3}, {4}, {1} }};
+    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){3} ) = (MR_ThreeVertIds){{ {2}, {5}, {3} }};
+    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){4} ) = (MR_ThreeVertIds){{ {3}, {5}, {4} }};
 
     MR_Mesh* meshA = MR_Mesh_fromTriangles( MR_PassBy_Move, pointsVec, triangulation, NULL, MR_PassBy_DefaultArgument, NULL );
 

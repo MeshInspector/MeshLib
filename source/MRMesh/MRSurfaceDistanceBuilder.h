@@ -62,6 +62,12 @@ public:
     /// the more the better obtuse triangles are handled
     MRMESH_API void setMaxVertUpdates( int v );
 
+    /// if true, then a distance computed in a triangle is always larger than the smaller distance in its other two vertices,
+    /// so every reached vertex except the vertices around the start has a neighbor with smaller distance,
+    /// and the steepest descent from any reached point arrives to the start; distances near the start and near obtuse or thin triangles become larger,
+    /// and some distances computed from them can become a bit smaller
+    void setNoLocalMinima( bool on ) { noLocalMinima_ = on; }
+
     /// processes one more candidate vertex, which is returned
     MRMESH_API VertId growOne();
     /// takes ownership over constructed distance map
@@ -81,6 +87,7 @@ private:
     std::priority_queue<VertDistance> nextVerts_;
     std::optional<Vector3f> target_;
     int maxVertUpdates_ = 3;
+    bool noLocalMinima_ = false;
 
     /// for each reached vertex: the start point, the distance from which is stored in the vertex
     Vector<SurfaceDistanceStartId, VertId> vertSource_;
@@ -106,8 +113,9 @@ private:
 
     /// compares proposed distance with the value known in c.vert
     /// \details if proposed distance is smaller then adds it in the queue and returns true; \n
-    /// otherwise if the known distance to c.vert is already not greater than returns false
-    bool suggestVertDistance_( VertDistance c, SurfaceDistanceStartId source, SurfaceDistanceStartId lineEnd );
+    /// otherwise if the known distance to c.vert is already not greater than returns false;
+    /// if noLocalMinima_ then the proposed distance is first raised above va
+    bool suggestVertDistance_( VertDistance c, SurfaceDistanceStartId source, SurfaceDistanceStartId lineEnd, float va = -FLT_MAX );
     /// creates new start point with given initial distance, its vertex (if any) and position
     SurfaceDistanceStartId addSource_( float startDistance, VertId v, const Vector3f & pos );
     /// makes v a start point if its distance is larger than given one

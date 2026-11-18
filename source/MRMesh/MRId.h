@@ -195,7 +195,54 @@ inline constexpr EdgeId operator ""_e( unsigned long long i ) noexcept { return 
 inline constexpr UndirectedEdgeId operator ""_ue( unsigned long long i ) noexcept { return UndirectedEdgeId{ (int)i }; }
 inline constexpr VoxelId operator ""_vox( unsigned long long i ) noexcept { return VoxelId{ size_t( i ) }; }
 
+/// three vertex ids describing a triangle with the corners in vertices given by their ids
+struct ThreeVertIds
+{
+    using value_type = VertId;
+
+    VertId v[3];
+
+    constexpr ThreeVertIds() noexcept = default;
+    constexpr ThreeVertIds( VertId a, VertId b, VertId c ) noexcept : v{ a, b, c } {}
+    /// leaves the ids not initialized, e.g. for resizeNoInit
+    explicit ThreeVertIds( NoInit ) noexcept : v{ VertId( noInit ), VertId( noInit ), VertId( noInit ) } {}
+
+    [[nodiscard]] constexpr       VertId & operator[]( size_t i )       noexcept { assert( i < 3 ); return v[i]; }
+    [[nodiscard]] constexpr const VertId & operator[]( size_t i ) const noexcept { assert( i < 3 ); return v[i]; }
+
+    [[nodiscard]] static constexpr size_t size() noexcept { return 3; }
+    [[nodiscard]] MR_BIND_IGNORE constexpr       VertId * data()       noexcept { return v; }
+    [[nodiscard]] MR_BIND_IGNORE constexpr const VertId * data() const noexcept { return v; }
+    [[nodiscard]] MR_BIND_IGNORE constexpr       VertId * begin()       noexcept { return v; }
+    [[nodiscard]] MR_BIND_IGNORE constexpr const VertId * begin() const noexcept { return v; }
+    [[nodiscard]] MR_BIND_IGNORE constexpr       VertId * end()       noexcept { return v + 3; }
+    [[nodiscard]] MR_BIND_IGNORE constexpr const VertId * end() const noexcept { return v + 3; }
+
+    [[nodiscard]] constexpr bool operator ==( const ThreeVertIds & b ) const noexcept { return v[0] == b.v[0] && v[1] == b.v[1] && v[2] == b.v[2]; }
+    /// lexicographical order
+    [[nodiscard]] constexpr bool operator <( const ThreeVertIds & b ) const noexcept
+    {
+        if ( v[0] != b.v[0] )
+            return v[0] < b.v[0];
+        if ( v[1] != b.v[1] )
+            return v[1] < b.v[1];
+        return v[2] < b.v[2];
+    }
+};
+
+/// for structured bindings: auto [a, b, c] = topology.getTriVerts( f );
+template <size_t I>
+MR_BIND_IGNORE constexpr const VertId & get( const ThreeVertIds & t ) noexcept { return t.v[I]; }
+template <size_t I>
+MR_BIND_IGNORE constexpr VertId & get( ThreeVertIds & t ) noexcept { return t.v[I]; }
+
 } //namespace MR
+
+template <>
+struct std::tuple_size<MR::ThreeVertIds> : std::integral_constant<size_t, 3> {};
+
+template <size_t I>
+struct std::tuple_element<I, MR::ThreeVertIds> { using type = MR::VertId; };
 
 template <typename T>
 struct std::hash<MR::Id<T>>

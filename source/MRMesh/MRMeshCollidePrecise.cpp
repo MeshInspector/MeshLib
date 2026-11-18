@@ -499,7 +499,7 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
 
         for ( int j = 0; j < 3; ++j )
         {
-            const auto& lf = mp.mesh.points[lvc[j].id];
+            const auto lf = mp.mesh.points[lvc[j].id];
             lvc[j].pt = conv( rigidB2A ? ( *rigidB2A )( lf ) : lf );
             lvc[j].id += aVertsSize;
 

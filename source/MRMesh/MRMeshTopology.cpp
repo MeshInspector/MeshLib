@@ -14,6 +14,8 @@
 #include "MRGridSettings.h"
 #include "MRIOParsing.h"
 #include "MRPartMappingAdapters.h"
+#include <tbb/global_control.h>
+#include <tbb/task_arena.h>
 #include <atomic>
 #include <bit>
 #include <initializer_list>
@@ -442,11 +444,41 @@ Vector<ThreeVertIds> MeshTopology::getAllTriVerts() const
         return res;
     }
     res.resizeNoInit( numValidFaces_ );
-    size_t i = 0;
-    for ( auto e : edgePerFace_ )
-        if ( e ) // a face is valid if and only if it has an edge
-            getLeftTriVerts( e, res[i++] );
-    assert( i == res.size() );
+    const int threads = std::min( (int)tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ), tbb::this_task_arena::max_concurrency() );
+    if ( threads <= 1 )
+    {
+        size_t i = 0;
+        for ( auto e : edgePerFace_ )
+            if ( e ) // a face is valid if and only if it has an edge
+                getLeftTriVerts( e, res[i++] );
+        assert( i == res.size() );
+        return res;
+    }
+
+    // first count the valid faces in each chunk, then fill the chunks in parallel from their start positions
+    constexpr size_t chunk = 4096;
+    const size_t numFaces = edgePerFace_.size();
+    const size_t numChunks = ( numFaces + chunk - 1 ) / chunk;
+    std::vector<size_t> chunkStart( numChunks + 1, 0 );
+    ParallelFor( size_t( 0 ), numChunks, [&]( size_t c )
+    {
+        const size_t end = std::min( ( c + 1 ) * chunk, numFaces );
+        size_t n = 0;
+        for ( size_t f = c * chunk; f < end; ++f )
+            n += size_t( edgePerFace_.vec[f].valid() );
+        chunkStart[c + 1] = n;
+    } );
+    for ( size_t c = 0; c < numChunks; ++c )
+        chunkStart[c + 1] += chunkStart[c];
+    assert( chunkStart.back() == res.size() );
+    ParallelFor( size_t( 0 ), numChunks, [&]( size_t c )
+    {
+        const size_t end = std::min( ( c + 1 ) * chunk, numFaces );
+        size_t i = chunkStart[c];
+        for ( size_t f = c * chunk; f < end; ++f )
+            if ( auto e = edgePerFace_.vec[f] )
+                getLeftTriVerts( e, res[i++] );
+    } );
 
     return res;
 }

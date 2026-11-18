@@ -533,8 +533,7 @@ using UVCoord = Vector2f;
 /// two vertex ids describing an edge with the ends in vertices given by their ids
 using TwoVertIds = std::array<VertId, 2>;
 
-/// three vertex ids describing a triangle with the corners in vertices given by their ids
-using ThreeVertIds = std::array<VertId, 3>;
+struct ThreeVertIds;
 
 /// three UV-coordinates describing texturing of a triangle
 using ThreeUVCoords = std::array<UVCoord, 3>;

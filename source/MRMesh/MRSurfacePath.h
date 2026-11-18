@@ -58,7 +58,8 @@ inline std::string toString(PathError error)
 
 /// returns intermediate points of the geodesic path from start to end, where it crosses mesh edges;
 /// the path can be limited to given region: in face-format inside mp, or in vert-format in vertRegion argument.
-/// It is the same as calling computeFastMarchingPath() then reducePath()
+/// It is the same as calling computeFastMarchingPath() then reducePath();
+/// the distances in outSurfaceDistances are computed with SurfaceDistanceBuilder::setNoLocalMinima( true )
 MRMESH_API Expected<SurfacePath, PathError> computeSurfacePath( const MeshPart & mp, 
     const MeshTriPoint & start, const MeshTriPoint & end, 
     int maxGeodesicIters = 5, ///< the maximum number of iterations to reduce approximate path length and convert it in geodesic path
@@ -78,7 +79,8 @@ MRMESH_API Expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mes
 
 /// computes by Fast Marching method and returns intermediate points of approximately geodesic path from start to end, where it crosses mesh edges;
 /// the path can be limited to given region: in face-format inside mp, or in vert-format in vertRegion argument;
-/// returns PathError::InternalError if the steepest descent stops in a local minimum of the field before reaching end
+/// returns PathError::InternalError if the steepest descent stops in a local minimum of the field before reaching end;
+/// the distances in outSurfaceDistances are computed with SurfaceDistanceBuilder::setNoLocalMinima( true )
 MRMESH_API Expected<SurfacePath, PathError> computeFastMarchingPath( const MeshPart & mp, 
     const MeshTriPoint & start, const MeshTriPoint & end, const VertBitSet* vertRegion = nullptr,
     VertScalars * outSurfaceDistances = nullptr );
@@ -133,6 +135,10 @@ enum class ExtremeEdgeType
 /// returns a set of mesh lines passing via most of given vertices in auto-selected order;
 /// the lines try to avoid sharp turns in the vertices
 [[nodiscard]] MRMESH_API SurfacePaths getSurfacePathsViaVertices( const Mesh & mesh, const VertBitSet & vs );
+
+/// returns true if every two consecutive points among start, path points and end share a triangle;
+/// an empty path is connected only if start and end share a triangle
+[[nodiscard]] MRMESH_API bool isConnectedPath( const MeshTopology& topology, const MeshTriPoint& start, const SurfacePath& path, const MeshTriPoint& end );
 
 /// computes the length of the given surface path
 [[nodiscard]] MRMESH_API float surfacePathLength( const Mesh& mesh, const SurfacePath& surfacePath );

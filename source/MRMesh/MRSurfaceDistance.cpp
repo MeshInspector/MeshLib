@@ -73,12 +73,13 @@ VertScalars computeSurfaceDistances( const Mesh& mesh, const UndirectedEdgeBitSe
 }
 
 VertScalars computeSurfaceDistances( const Mesh & mesh, const MeshTriPoint & start, const MeshTriPoint & end, 
-                                              const VertBitSet* region, bool * endReached, int maxVertUpdates )
+                                              const VertBitSet* region, bool * endReached, int maxVertUpdates, bool noLocalMinima )
 {
     MR_TIMER;
 
     SurfaceDistanceBuilder b( mesh, mesh.triPoint( end ), region );
     b.setMaxVertUpdates( maxVertUpdates );
+    b.setNoLocalMinima( noLocalMinima );
     b.addStart( start );
 
     VertId stopVerts[3];

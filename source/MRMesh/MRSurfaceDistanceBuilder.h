@@ -113,8 +113,9 @@ private:
 
     /// compares proposed distance with the value known in c.vert
     /// \details if proposed distance is smaller then adds it in the queue and returns true; \n
-    /// otherwise if the known distance to c.vert is already not greater than returns false
-    bool suggestVertDistance_( VertDistance c, SurfaceDistanceStartId source, SurfaceDistanceStartId lineEnd );
+    /// otherwise if the known distance to c.vert is already not greater than returns false;
+    /// the proposed distance is first raised to minDist
+    bool suggestVertDistance_( VertDistance c, SurfaceDistanceStartId source, SurfaceDistanceStartId lineEnd, float minDist = -FLT_MAX );
     /// creates new start point with given initial distance, its vertex (if any) and position
     SurfaceDistanceStartId addSource_( float startDistance, VertId v, const Vector3f & pos );
     /// makes v a start point if its distance is larger than given one

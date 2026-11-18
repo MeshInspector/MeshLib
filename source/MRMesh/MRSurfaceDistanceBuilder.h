@@ -87,8 +87,6 @@ private:
     std::optional<Vector3f> target_;
     int maxVertUpdates_ = 3;
     bool noLocalMinima_ = false;
-    /// the minimal distance suggested to a vertex from the triangle being considered
-    float triMinDistance_ = -FLT_MAX;
 
     /// for each reached vertex: the start point, the distance from which is stored in the vertex
     Vector<SurfaceDistanceStartId, VertId> vertSource_;
@@ -145,11 +143,11 @@ private:
     /// consider a path going in the left triangle from edge (e) to the opposing vertex
     void considerLeftTriPath_( EdgeId e );
     /// computes the distance to c in left triangle abc of edge e, where a and b have distances (va <= vb) from different start points of one group,
-    /// or from one start point and from the linear field near it
-    void considerTriNearStarts_( EdgeId e, VertId a, VertId b, VertId c, float va, float vb );
+    /// or from one start point and from the linear field near it; the distance is not less than minDist
+    void considerTriNearStarts_( EdgeId e, VertId a, VertId b, VertId c, float va, float vb, float minDist );
     /// computes the distance to c in left triangle abc of edge e, where a and b have distances from starts of different groups:
-    /// the field of each start is extended to the other vertex through the triangle on the other side of e
-    void considerTriBetweenGroups_( EdgeId e, VertId a, VertId b, VertId c, float va );
+    /// the field of each start is extended to the other vertex through the triangle on the other side of e; the distance is not less than minDist
+    void considerTriBetweenGroups_( EdgeId e, VertId a, VertId b, VertId c, float va, float minDist );
     /// if target is provided then adds distance to it to the metric
     float metricToPenalty_( float metric, VertId v ) const;
 };

@@ -341,7 +341,6 @@ void SurfaceDistanceBuilder::finishSourceGroups_()
 
 bool SurfaceDistanceBuilder::suggestVertDistance_( VertDistance c, SurfaceDistanceStartId source, SurfaceDistanceStartId lineEnd )
 {
-    c.distance = std::max( c.distance, triMinDistance_ );
     auto & vi = vertDistanceMap_[c.vert];
     if ( vi > c.distance )
     {
@@ -373,14 +372,12 @@ void SurfaceDistanceBuilder::suggestDistancesAround_( VertId v )
             // a shorter distance is known for dest
             considerLeftTriPath_( e );
             considerLeftTriPath_( e.sym() );
-            triMinDistance_ = -FLT_MAX;
         }
     }
 }
 
 void SurfaceDistanceBuilder::considerLeftTriPath_( EdgeId e )
 {
-    triMinDistance_ = -FLT_MAX;
     if ( !mesh_.topology.left( e ) )
         return;
     VertId a, b, c;
@@ -398,8 +395,7 @@ void SurfaceDistanceBuilder::considerLeftTriPath_( EdgeId e )
     // and then c gets that value from its triangles nearer to the start
     if ( vertDistanceMap_[c] <= va )
         return;
-    if ( noLocalMinima_ )
-        triMinDistance_ = nextUp( va );
+    const float minDist = noLocalMinima_ ? nextUp( va ) : -FLT_MAX;
 
     const auto pa = mesh_.points[a];
     const auto pb = mesh_.points[b];
@@ -415,14 +411,14 @@ void SurfaceDistanceBuilder::considerLeftTriPath_( EdgeId e )
         const double start = sourceStartDistance_[source];
         double dc = 0;
         if ( getPointSourceDistAtC( Vector3d( pa ), Vector3d( pb ), Vector3d( pc ), va - start, vb - start, dc ) )
-            suggestVertDistance_( { c, float( start + dc ) }, source, {} );
+            suggestVertDistance_( { c, std::max( float( start + dc ), minDist ) }, source, {} );
         return;
     }
 
     if ( sourceGroup_.parent( source ) != sourceGroup_.parent( sourceB ) )
-        considerTriBetweenGroups_( e, a, b, c, va );
+        considerTriBetweenGroups_( e, a, b, c, va, minDist );
     else
-        considerTriNearStarts_( e, a, b, c, va, vb );
+        considerTriNearStarts_( e, a, b, c, va, vb, minDist );
 }
 
 bool SurfaceDistanceBuilder::distAtC_( const Vector3f & pa, const Vector3f & pb, const Vector3f & pc, SurfaceDistanceStartId s0, SurfaceDistanceStartId s1,
@@ -465,7 +461,7 @@ double SurfaceDistanceBuilder::straightDistToStart_( const Vector3f & p, Surface
 }
 
 // not inlined: inlining it in considerLeftTriPath_ costs 1.5-2% even with no fronts meeting
-MR_SD_NOINLINE void SurfaceDistanceBuilder::considerTriBetweenGroups_( EdgeId e, VertId a, VertId b, VertId c, float va )
+MR_SD_NOINLINE void SurfaceDistanceBuilder::considerTriBetweenGroups_( EdgeId e, VertId a, VertId b, VertId c, float va, float minDist )
 {
     // the straight path from a start to c can cross ab near the seam, where b already has smaller distance from another group;
     // the distance from the start of a to b is estimated in triangle abw on the other side of ab, and vice versa
@@ -520,10 +516,10 @@ MR_SD_NOINLINE void SurfaceDistanceBuilder::considerTriBetweenGroups_( EdgeId e,
         }
     }
     if ( best < FLT_MAX )
-        suggestVertDistance_( { c, best }, best0, best1 );
+        suggestVertDistance_( { c, std::max( best, minDist ) }, best0, best1 );
 }
 
-void SurfaceDistanceBuilder::considerTriNearStarts_( EdgeId e, VertId a, VertId b, VertId c, float va, float vb )
+void SurfaceDistanceBuilder::considerTriNearStarts_( EdgeId e, VertId a, VertId b, VertId c, float va, float vb, float minDist )
 {
     const auto pa = mesh_.points[a];
     const auto pb = mesh_.points[b];
@@ -541,7 +537,7 @@ void SurfaceDistanceBuilder::considerTriNearStarts_( EdgeId e, VertId a, VertId 
     if ( regionSources_.test( source ) )
     {
         if ( const auto vc = planeWave(); vc < FLT_MAX )
-            suggestVertDistance_( { c, vc }, source, source );
+            suggestVertDistance_( { c, std::max( vc, minDist ) }, source, source );
         return;
     }
 
@@ -576,7 +572,7 @@ void SurfaceDistanceBuilder::considerTriNearStarts_( EdgeId e, VertId a, VertId 
         const auto se = sv && svB ? mesh_.topology.findEdge( sv, svB ) : EdgeId{};
         if ( !se || !startEdges_.test( se.undirected() ) )
         {
-            considerTriBetweenGroups_( e, a, b, c, va );
+            considerTriBetweenGroups_( e, a, b, c, va, minDist );
             return;
         }
     }
@@ -588,7 +584,7 @@ void SurfaceDistanceBuilder::considerTriNearStarts_( EdgeId e, VertId a, VertId 
         tryStart( source, sourceB );
     if ( best < FLT_MAX )
     {
-        suggestVertDistance_( { c, best }, best0, best1 );
+        suggestVertDistance_( { c, std::max( best, minDist ) }, best0, best1 );
         return;
     }
 
@@ -600,11 +596,11 @@ void SurfaceDistanceBuilder::considerTriNearStarts_( EdgeId e, VertId a, VertId 
     nearestStartEdge_( pc, s0, s1 );
     tryStart( s0, s1 );
     if ( best < FLT_MAX )
-        suggestVertDistance_( { c, best }, best0, best1 );
+        suggestVertDistance_( { c, std::max( best, minDist ) }, best0, best1 );
     else if ( const auto vc = planeWave(); vc < FLT_MAX )
     {
         const double minVc = sourceStartDistance_[source] + std::min( straightDistToStart_( pc, source, lineEndA, true ), straightDistToStart_( pc, sourceB, lineEndB, true ) );
-        suggestVertDistance_( { c, std::max( vc, float( minVc ) ) }, s0, s1 );
+        suggestVertDistance_( { c, std::max( { vc, float( minVc ), minDist } ) }, s0, s1 );
     }
 }
 

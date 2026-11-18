@@ -435,14 +435,19 @@ std::vector<ThreeVertIds> MeshTopology::getAllTriVerts() const
 {
     MR_TIMER;
     std::vector<ThreeVertIds> res;
+    resizeNoInit( res, numValidFaces_ );
     assert( updateValids_ );
-    res.reserve( numValidFaces_ );
-    for ( auto f : validFaces_ )
+    if ( numValidFaces_ == (int)edgePerFace_.size() ) // no invalid faces: res[f] is the triangle of face f
     {
-        VertId vs[3];
-        getTriVerts( f, vs );
-        res.push_back( { vs[0], vs[1], vs[2] } );
+        ParallelFor( 0_f, FaceId( numValidFaces_ ), [&]( FaceId f )
+        {
+            getTriVerts( f, res[f] );
+        } );
+        return res;
     }
+    size_t i = 0;
+    for ( auto f : validFaces_ )
+        getTriVerts( f, res[i++] );
 
     return res;
 }

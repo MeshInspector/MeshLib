@@ -2,6 +2,7 @@
 #include "MRAABBTreeTraversal.hpp"
 #include "MRAABBTree.h"
 #include "MRInplaceStack.h"
+#include "MRPrefetch.h"
 #include "MRMesh.h"
 #include "MRMeshPart.h"
 #include "MRRayBoxIntersection.h"
@@ -207,8 +208,9 @@ struct SimdRayBoxes
         const F tx1 = mul( sub( load( b.box[farIdx[0]] ), ox ), idx );
         const F ty1 = mul( sub( load( b.box[farIdx[1]] ), oy ), idy );
         const F tz1 = mul( sub( load( b.box[farIdx[2]] ), oz ), idz );
-        tNear = max( max( max( tx0, tz0 ), ty0 ), set1( rayStart ) );
-        const F tFar = min( min( min( tx1, tz1 ), ty1 ), set1( rayEnd ) );
+        // the boxes have no NaN coordinates (Box::include skips them), and the sign of a zero parameter does not change the comparisons
+        tNear = maxFast( maxFast( maxFast( tx0, tz0 ), ty0 ), set1( rayStart ) );
+        const F tFar = minFast( minFast( minFast( tx1, tz1 ), ty1 ), set1( rayEnd ) );
         return bits( le( tNear, tFar ) );
     }
     int test( const AABBTree::SimdBoxes & b, float rayStart, float rayEnd ) const
@@ -689,7 +691,13 @@ void rayMeshIntersectAll_( const VertCoords & points, const AABBTree & tree, con
             if constexpr ( std::is_same_v<T, float> )
             {
                 for ( int m = simdCrossed( node ); m; m &= m - 1 )
-                    subtasks.push( node.child[Simd4::lowestBit( m )] );
+                {
+                    // all crossed nodes are visited: the first lines of the internal ones are read ahead
+                    const int c = node.child[Simd4::lowestBit( m )];
+                    if ( c > 0 )
+                        MR_PREFETCH( &tree.simdNodes()[c] );
+                    subtasks.push( c );
+                }
             }
             else
             {

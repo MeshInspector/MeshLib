@@ -37,6 +37,9 @@ inline F min( F a, F b ) { return _mm_min_ps( a, b ); }
 /// a > b ? a : b
 inline F max( F a, F b ) { return _mm_max_ps( a, b ); }
 inline F abs( F a ) { return _mm_andnot_ps( _mm_set1_ps( -0.0f ), a ); }
+/// the same as min / max if no lane is NaN, except possibly the sign of a zero result
+inline F minFast( F a, F b ) { return min( a, b ); }
+inline F maxFast( F a, F b ) { return max( a, b ); }
 inline M lt( F a, F b ) { return _mm_cmplt_ps( a, b ); }
 inline M le( F a, F b ) { return _mm_cmple_ps( a, b ); }
 inline M gt( F a, F b ) { return _mm_cmpgt_ps( a, b ); }
@@ -63,6 +66,9 @@ inline F div( F a, F b ) { return vdivq_f32( a, b ); }
 inline F min( F a, F b ) { return vbslq_f32( vcltq_f32( a, b ), a, b ); }
 inline F max( F a, F b ) { return vbslq_f32( vcgtq_f32( a, b ), a, b ); }
 inline F abs( F a ) { return vabsq_f32( a ); }
+/// the same as min / max if no lane is NaN, except possibly the sign of a zero result; one instruction instead of two
+inline F minFast( F a, F b ) { return vminq_f32( a, b ); }
+inline F maxFast( F a, F b ) { return vmaxq_f32( a, b ); }
 inline M lt( F a, F b ) { return vcltq_f32( a, b ); }
 inline M le( F a, F b ) { return vcleq_f32( a, b ); }
 inline M gt( F a, F b ) { return vcgtq_f32( a, b ); }
@@ -91,6 +97,9 @@ inline F div( F a, F b ) { return wasm_f32x4_div( a, b ); }
 inline F min( F a, F b ) { return wasm_f32x4_pmin( b, a ); } // pmin( b, a ) = a < b ? a : b
 inline F max( F a, F b ) { return wasm_f32x4_pmax( b, a ); } // pmax( b, a ) = b < a ? a : b
 inline F abs( F a ) { return wasm_f32x4_abs( a ); }
+/// the same as min / max if no lane is NaN, except possibly the sign of a zero result
+inline F minFast( F a, F b ) { return min( a, b ); }
+inline F maxFast( F a, F b ) { return max( a, b ); }
 inline M lt( F a, F b ) { return wasm_f32x4_lt( a, b ); }
 inline M le( F a, F b ) { return wasm_f32x4_le( a, b ); }
 inline M gt( F a, F b ) { return wasm_f32x4_gt( a, b ); }
@@ -116,6 +125,8 @@ inline F div( F a, F b ) { MR_SIMD4_LANES( F, a.v[i] / b.v[i] ); }
 inline F min( F a, F b ) { MR_SIMD4_LANES( F, a.v[i] < b.v[i] ? a.v[i] : b.v[i] ); }
 inline F max( F a, F b ) { MR_SIMD4_LANES( F, a.v[i] > b.v[i] ? a.v[i] : b.v[i] ); }
 inline F abs( F a ) { MR_SIMD4_LANES( F, a.v[i] < 0 ? -a.v[i] : a.v[i] ); }
+inline F minFast( F a, F b ) { return min( a, b ); }
+inline F maxFast( F a, F b ) { return max( a, b ); }
 inline M lt( F a, F b ) { MR_SIMD4_LANES( M, a.v[i] < b.v[i] ); }
 inline M le( F a, F b ) { MR_SIMD4_LANES( M, a.v[i] <= b.v[i] ); }
 inline M gt( F a, F b ) { MR_SIMD4_LANES( M, a.v[i] > b.v[i] ); }

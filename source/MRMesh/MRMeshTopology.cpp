@@ -2342,7 +2342,9 @@ namespace
 template <typename I, typename F>
 I assignNewIds( const TypedBitSet<I> & from, TypedBitSet<I> * vacant, I end, bool parallel, F && set )
 {
-    if ( !parallel )
+    static constexpr size_t chunkBlocks = 1024;
+    // a set of one chunk has nothing to split between threads, and the parallel passes cost more than this loop
+    if ( !parallel || from.size() <= chunkBlocks * BitSet::bits_per_block )
     {
         I last = vacant ? I{} : end - 1;
         for ( auto fromId : from )
@@ -2367,7 +2369,6 @@ I assignNewIds( const TypedBitSet<I> & from, TypedBitSet<I> * vacant, I end, boo
     }
 
     // the rank of a set bit is found from the numbers of set bits in all preceding chunks of blocks
-    static constexpr size_t chunkBlocks = 1024;
     auto chunkStarts = [] ( const auto & blocks )
     {
         std::vector<size_t> starts( ( blocks.size() + chunkBlocks - 1 ) / chunkBlocks + 1, 0 );

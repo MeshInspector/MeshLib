@@ -1174,6 +1174,7 @@ generate:
 		--wasm-module ./MeshLibC2.mjs \
 		--wasm-module-node ./MeshLibC2.node.mjs \
 		--replace-namespace MR :: \
+		--single-lib-module \
 		$(if $(JS_WASM64),--wasm64) \
 	)
 

@@ -100,7 +100,6 @@ jobs:
             !./source/*/temp/*.combined.hpp
           retention-days: 1
 
-        # The TypeScript declarations of the JS bindings, for the documentation site (`update-docs.yml`).
       - name: Upload JS declarations
         uses: actions/upload-artifact@v7
         with:

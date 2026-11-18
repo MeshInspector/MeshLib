@@ -1,0 +1,3 @@
+# built bindings, copied here to run the tests
+meshlib-light.mjs
+meshlib-light.wasm

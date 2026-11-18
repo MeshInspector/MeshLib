@@ -160,12 +160,14 @@ jobs:
           - config: Singlethreaded
             thirdparty-dir: emscripten-single
             wasm-module-name: meshlib
+            light-module-name: meshlib-light
             singlethread: 1
             wasm64: 0
             js-dir: js
           - config: Multithreaded
             thirdparty-dir: emscripten
             wasm-module-name: meshlib-mt
+            light-module-name: meshlib-light-mt
             singlethread: 0
             wasm64: 0
             js-dir: js
@@ -237,6 +239,7 @@ jobs:
             -DMESHLIB_BUILD_MRVIEWER=OFF
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON
             -DMESHLIB_BUILD_JS_BINDINGS=ON
+            -DMESHLIB_BUILD_WASM_MODULE=ON
           MR_CMAKE_BUILD_OPTIONS: >
             --target MeshLibJS MeshLibJSNode
         run: ./scripts/build_source.sh
@@ -275,7 +278,7 @@ jobs:
         working-directory: examples/typescript
         run: |
           sed -i "s|@meshinspector/meshlib|@meshinspector/${{ matrix.wasm-module-name }}|g" main.ts package.json
-          npm install --no-audit --no-fund --no-save ../../js-${{ matrix.wasm-module-name }}-*.tgz
+          npm install --no-audit --no-fund --no-save ../../js-${{ matrix.wasm-module-name }}-[0-9]*.tgz
           npm start
 
         # The examples of the documentation aren't run, but they're type-checked against the generated declarations.
@@ -284,7 +287,7 @@ jobs:
         working-directory: examples/js-examples
         run: |
           sed -i "s|@meshinspector/meshlib'|@meshinspector/${{ matrix.wasm-module-name }}'|g" *.dox.js
-          npm install --no-audit --no-fund --no-save ../../js-${{ matrix.wasm-module-name }}-*.tgz typescript@5 @types/node@22
+          npm install --no-audit --no-fund --no-save ../../js-${{ matrix.wasm-module-name }}-[0-9]*.tgz typescript@5 @types/node@22
           npx tsc -p tsconfig.json
 
         # A browser bundle must not pull in the Node build of the module (the `browser` field of package.json excludes it).
@@ -292,7 +295,7 @@ jobs:
         if: ${{ matrix.wasm64 == 0 }}
         run: |
           mkdir -p bundle-check && cd bundle-check
-          npm install --no-audit --no-fund --no-save ../js-${{ matrix.wasm-module-name }}-*.tgz esbuild@0.25
+          npm install --no-audit --no-fund --no-save ../js-${{ matrix.wasm-module-name }}-[0-9]*.tgz esbuild@0.25
           echo "import * as ml from '@meshinspector/${{ matrix.wasm-module-name }}'; await ml.init(); console.log(ml.makeUVSphere(1, 8, 8).volume());" > main.mjs
           npx esbuild main.mjs --bundle --format=esm --platform=browser --loader:.wasm=file --outdir=dist
           ls -l dist
@@ -301,6 +304,42 @@ jobs:
             echo "The browser bundle contains the Node module" >&2
             exit 1
           fi
+
+      - name: Build light Wasm module
+        if: ${{ matrix.wasm64 == 0 }}
+        run: cmake --build build/Release --target MRWasmModuleBrowser MRWasmModuleNode --parallel $(nproc)
+
+      - name: Test light Wasm module
+        if: ${{ matrix.wasm64 == 0 }}
+        env:
+          MESHLIB_MODULE: build/Release/bin/${{ matrix.light-module-name }}.node.mjs
+        run: node source/MRWasmTest/index.mjs
+
+        # Embind doesn't provide any way to define docstrings for the generated TypeScript definition file.
+        # `inject_tsdoc.py` manually updates it with docstrings extracted from the C++ code with Doxygen,
+        # which the end users get as "hover information".
+      - name: Document the light TypeScript definition file
+        if: ${{ matrix.wasm64 == 0 }}
+        run: |
+          doxygen scripts/npm/Doxyfile
+          python3 scripts/npm/inject_tsdoc.py \
+            build/Release/bin/${{ matrix.light-module-name }}.d.mts \
+            --bindings source/MRWasmModule
+
+      - name: Assemble and pack light npm package
+        if: ${{ matrix.wasm64 == 0 }}
+        run: |
+          scripts/npm/assemble.sh ${{ matrix.light-module-name }} "${{ inputs.app_version }}"
+          npm pack ./npm-distr/${{ matrix.light-module-name }}
+          for TGZ in meshinspector-*.tgz ; do mv "${TGZ}" "js-${TGZ#meshinspector-}" ; done
+
+      - name: Build and run light TypeScript example
+        if: ${{ matrix.wasm64 == 0 }}
+        working-directory: examples/typescript-light
+        run: |
+          sed -i "s|@meshinspector/meshlib-light|@meshinspector/${{ matrix.light-module-name }}|g" main.ts package.json
+          npm install --no-audit --no-fund --no-save ../../js-${{ matrix.light-module-name }}-[0-9]*.tgz
+          npm start
 
       - name: Upload npm package
         if: ${{ inputs.upload_artifacts && matrix.wasm64 == 0 }}

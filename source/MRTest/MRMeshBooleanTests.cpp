@@ -1008,7 +1008,7 @@ TEST( MRMesh, SubdivideLoneContoursUpdatesAABBTree )
         EXPECT_EQ( meshA.topology.numValidFaces(), numFaces + 2 * int( loneFaces.count() ) );
         const auto * tree = meshA.getAABBTreeNotCreate();
         ASSERT_TRUE( tree );
-        EXPECT_EQ( tree->leafTris().size(), size_t( meshA.topology.numValidFaces() ) );
+        EXPECT_EQ( tree->numTris(), meshA.topology.numValidFaces() );
 
         // same intersections as with a new tree
         Mesh rebuiltA = meshA;

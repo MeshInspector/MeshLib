@@ -38,7 +38,7 @@ struct NoCtor<T>
 };
 
 // for our complex types, return wrapped type with default constructor doing nothing
-template <std::constructible_from<NoInit> T>
+template <std::constructible_from<NoInit> T> requires ( !Trivial<T> )
 struct NoCtor<T>
 {
     using type = NoDefInit<T>;

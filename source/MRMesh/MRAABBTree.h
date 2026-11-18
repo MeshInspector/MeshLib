@@ -145,8 +145,7 @@ public:
     [[nodiscard]] int rootRef() const { return simdNodes_.empty() ? ~0 : 0; }
 
     /// returns the bounding box of the whole tree (empty for an empty tree)
-    [[nodiscard]] Box3f getBoundingBox() const
-        { return !simdNodes_.empty() ? simdNodes_.front().getUnion() : !leafBoxes_.empty() ? leafBoxes_.front().getUnion() : Box3f{}; }
+    [[nodiscard]] Box3f getBoundingBox() const { return box_; }
 
     /// the total number of nodes: internal ones and leaves
     [[nodiscard]] size_t numNodes() const { return simdNodes_.size() + leafBoxes_.size(); }
@@ -208,6 +207,10 @@ private:
     std::vector<SimdNode, Allocator<SimdNode>> simdNodes_; ///< the children follow their parent
     std::vector<SimdBoxes, Allocator<SimdBoxes>> leafBoxes_; ///< the boxes of the triangles of each leaf
     Vector<LeafTri> leafTris_;
+    Box3f box_; ///< the union of the boxes of the root, kept for the queries starting with it
+
+    /// sets box_ from the root
+    void updateBox_();
     int numTris_ = 0;
 
     /// sets triangle slot i of leaf l and its box

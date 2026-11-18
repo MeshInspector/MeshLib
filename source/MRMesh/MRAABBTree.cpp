@@ -294,14 +294,19 @@ private:
         case 4: cs( 0, 1 ); cs( 2, 3 ); cs( 0, 2 ); cs( 1, 3 ); cs( 1, 2 ); break;
         default: break;
         }
-        SimdBoxes sl( noInit );
-        LeafTri lts[AABBTree::MaxLeafTris]; // the unused slots stay invalid
+        // the leaf is assembled in registers for the non-temporal stores, otherwise written in place
+        SimdBoxes tmpBoxes( noInit );
+        LeafTri tmpTris[AABBTree::MaxLeafTris];
+        const bool streamTris = Simd4::cStreamStores && streamLeafTris_;
+        SimdBoxes & sl = Simd4::cStreamStores ? tmpBoxes : leaves_[l];
+        LeafTri * const lts = streamTris ? tmpTris : leafTris_ + l * AABBTree::MaxLeafTris;
         Box3f box;
         for ( int i = 0; i < AABBTree::MaxLeafTris; ++i )
         {
             auto & lt = lts[i];
             if ( i >= num )
             {
+                lt = LeafTri{}; // invalid
                 sl.setEmpty( i );
                 continue;
             }
@@ -320,12 +325,11 @@ private:
             sl.set( i, triBox );
         }
         // the arrays are larger than caches, and every leaf is written once
-        Simd4::streamCopy( leaves_[l], sl );
-        static_assert( sizeof( lts ) % 16 == 0 );
-        if ( streamLeafTris_ )
-            Simd4::streamCopyBytes( leafTris_ + l * AABBTree::MaxLeafTris, lts, sizeof( lts ) );
-        else
-            std::memcpy( static_cast<void *>( leafTris_ + l * AABBTree::MaxLeafTris ), lts, sizeof( lts ) );
+        if constexpr ( Simd4::cStreamStores )
+            Simd4::streamCopy( leaves_[l], tmpBoxes );
+        static_assert( sizeof( tmpTris ) % 16 == 0 );
+        if ( streamTris )
+            Simd4::streamCopyBytes( leafTris_ + l * AABBTree::MaxLeafTris, tmpTris, sizeof( tmpTris ) );
         return box;
     }
 
@@ -418,7 +422,8 @@ private:
             group.wait();
         }
 
-        SimdNode sn( noInit );
+        SimdNode tmpNode( noInit );
+        SimdNode & sn = Simd4::cStreamStores ? tmpNode : nodes_[ref];
         Box3f box;
         for ( int j = 0; j < AABBTree::MaxChildren; ++j )
         {
@@ -434,7 +439,8 @@ private:
                 sn.setEmpty( j );
             }
         }
-        Simd4::streamCopy( nodes_[ref], sn );
+        if constexpr ( Simd4::cStreamStores )
+            Simd4::streamCopy( nodes_[ref], tmpNode );
         return box;
     }
 
@@ -498,6 +504,7 @@ AABBTree::AABBTree( const MeshPart & mp )
     makeTree( numTris_, mp.mesh.points, [&] ( auto t, Buffer<TreeCenter> & centers, Box3f & centersBox )
         { return makeFaceTris<typename decltype( t )::type>( mp, numTris_, centers, centersBox ); },
         simdNodes_, leafBoxes_, leafTris_ );
+    updateBox_();
 }
 
 AABBTree::AABBTree( const TriMesh & tmesh, const FaceBitSet * region )
@@ -507,6 +514,12 @@ AABBTree::AABBTree( const TriMesh & tmesh, const FaceBitSet * region )
     makeTree( numTris_, tmesh.points, [&] ( auto t, Buffer<TreeCenter> & centers, Box3f & centersBox )
         { return makeFaceTris<typename decltype( t )::type>( tmesh, region, numTris_, centers, centersBox ); },
         simdNodes_, leafBoxes_, leafTris_ );
+    updateBox_();
+}
+
+void AABBTree::updateBox_()
+{
+    box_ = !simdNodes_.empty() ? simdNodes_.front().getUnion() : !leafBoxes_.empty() ? leafBoxes_.front().getUnion() : Box3f{};
 }
 
 void AABBTree::setLeafTri_( int l, int i, const LeafTri & lt, const VertCoords & points )
@@ -673,34 +686,57 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
     if ( changedVerts )
         changedFaces = getIncidentFaces( mesh.topology, *changedVerts );
 
-    // the triangles with changed vertices in the leaves, and the boxes of the changed leaves
     const auto & points = mesh.points;
+    // makes all boxes of leaf l from the points, returns their union; the leaf is assembled in registers and written by non-temporal stores,
+    // which do not read the old lines first, where they are available
+    auto refitLeaf = [&]( size_t l )
+    {
+        const auto * lts = leafTris_.data() + l * MaxLeafTris;
+        Box3f box;
+        if constexpr ( Simd4::cStreamStores )
+        {
+            SimdBoxes sl( noInit );
+            for ( int i = 0; i < MaxLeafTris; ++i )
+            {
+                if ( !lts[i].face )
+                {
+                    sl.setEmpty( i );
+                    continue;
+                }
+                const auto tb = wideTriBox( points, lts[i] );
+                box.include( tb );
+                sl.set( i, tb );
+            }
+            Simd4::streamCopy( leafBoxes_[l], sl );
+        }
+        else
+        {
+            // in place, by one store per row
+            Box3f tb[MaxLeafTris]; // empty in the unused slots, which are the last ones
+            for ( int i = 0; i < MaxLeafTris && lts[i].face; ++i )
+            {
+                tb[i] = wideTriBox( points, lts[i] );
+                box.include( tb[i] );
+            }
+            auto & sl = leafBoxes_[l];
+            for ( int c = 0; c < 3; ++c )
+            {
+                Simd4::store( sl.box[c], Simd4::make( tb[0].min[c], tb[1].min[c], tb[2].min[c], tb[3].min[c] ) );
+                Simd4::store( sl.box[c + 3], Simd4::make( tb[0].max[c], tb[1].max[c], tb[2].max[c], tb[3].max[c] ) );
+            }
+        }
+        return box;
+    };
+
+    // the triangles with changed vertices in the leaves, and the boxes of the changed leaves
     BitSet changedLeaves;
     Buffer<Box3f> leafBox( leafBoxes_.size() );
     if ( !changedVerts )
     {
-        // every leaf is assembled in registers and written by non-temporal stores, which do not read the old lines first
         tbb::parallel_for( tbb::blocked_range<size_t>( 0, leafBoxes_.size(), 1024 ), [&]( const tbb::blocked_range<size_t> & range )
         {
             for ( size_t l = range.begin(); l < range.end(); ++l )
-            {
-                const auto * lts = leafTris_.data() + l * MaxLeafTris;
-                SimdBoxes sl( noInit );
-                Box3f box;
-                for ( int i = 0; i < MaxLeafTris; ++i )
-                {
-                    if ( !lts[i].face )
-                    {
-                        sl.setEmpty( i );
-                        continue;
-                    }
-                    const auto tb = wideTriBox( points, lts[i] );
-                    box.include( tb );
-                    sl.set( i, tb );
-                }
-                Simd4::streamCopy( leafBoxes_[l], sl );
-                leafBox[l] = box;
-            }
+                leafBox[l] = refitLeaf( l );
             Simd4::streamFence();
         } );
     }
@@ -726,7 +762,10 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
     }
 
     if ( simdNodes_.empty() )
+    {
+        updateBox_();
         return;
+    }
     // on one thread, the internal nodes are updated from the last (children follow their parent),
     // otherwise the subtrees of the top nodes in parallel
     if ( tbb::this_task_arena::max_concurrency() <= 1 || tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) <= 1 )
@@ -747,6 +786,7 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
             if ( changed )
                 changedNodes.set( n );
         }
+        updateBox_();
         return;
     }
 
@@ -780,6 +820,7 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
         return changed;
     };
     refitNode( 0, 0, refitNode );
+    updateBox_();
 }
 
 void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
@@ -949,6 +990,8 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
                     sn.set( i, boxOf( sn.child[i] ) );
         }
     }
+
+    updateBox_();
 
     // every split leaf went one level deeper: the stacks of the traversals hold the nodes of MaxDepth levels only
     int maxDepth = 0;

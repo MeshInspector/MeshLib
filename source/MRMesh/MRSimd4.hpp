@@ -27,6 +27,8 @@ using F = __m128; ///< 4 floats
 using M = __m128; ///< 4 lane masks
 inline F load( const float* p ) { return _mm_load_ps( p ); }
 inline F set1( float x ) { return _mm_set1_ps( x ); }
+/// lanes a, b, c, d
+inline F make( float a, float b, float c, float d ) { return _mm_setr_ps( a, b, c, d ); }
 inline void store( float* p, F a ) { _mm_store_ps( p, a ); }
 inline F add( F a, F b ) { return _mm_add_ps( a, b ); }
 inline F sub( F a, F b ) { return _mm_sub_ps( a, b ); }
@@ -58,6 +60,7 @@ using F = float32x4_t;
 using M = uint32x4_t;
 inline F load( const float* p ) { return vld1q_f32( p ); }
 inline F set1( float x ) { return vdupq_n_f32( x ); }
+inline F make( float a, float b, float c, float d ) { const float v[4] = { a, b, c, d }; return vld1q_f32( v ); }
 inline void store( float* p, F a ) { vst1q_f32( p, a ); }
 inline F add( F a, F b ) { return vaddq_f32( a, b ); }
 inline F sub( F a, F b ) { return vsubq_f32( a, b ); }
@@ -89,6 +92,7 @@ using F = v128_t;
 using M = v128_t;
 inline F load( const float* p ) { return wasm_v128_load( p ); }
 inline F set1( float x ) { return wasm_f32x4_splat( x ); }
+inline F make( float a, float b, float c, float d ) { return wasm_f32x4_make( a, b, c, d ); }
 inline void store( float* p, F a ) { wasm_v128_store( p, a ); }
 inline F add( F a, F b ) { return wasm_f32x4_add( a, b ); }
 inline F sub( F a, F b ) { return wasm_f32x4_sub( a, b ); }
@@ -116,6 +120,7 @@ struct F { float v[4]; };
 struct M { bool v[4]; };
 inline F load( const float* p ) { return { { p[0], p[1], p[2], p[3] } }; }
 inline F set1( float x ) { return { { x, x, x, x } }; }
+inline F make( float a, float b, float c, float d ) { return { { a, b, c, d } }; }
 inline void store( float* p, F a ) { for ( int i = 0; i < 4; ++i ) p[i] = a.v[i]; }
 #define MR_SIMD4_LANES( R, expr ) R r; for ( int i = 0; i < 4; ++i ) r.v[i] = ( expr ); return r
 inline F add( F a, F b ) { MR_SIMD4_LANES( F, a.v[i] + b.v[i] ); }
@@ -138,6 +143,13 @@ inline F select( M m, F a, F b ) { MR_SIMD4_LANES( F, m.v[i] ? a.v[i] : b.v[i] )
 #undef MR_SIMD4_LANES
 inline int bits( M m ) { return int( m.v[0] ) | int( m.v[1] ) << 1 | int( m.v[2] ) << 2 | int( m.v[3] ) << 3; }
 
+#endif
+
+/// whether streamCopy and streamCopyBytes use non-temporal stores; otherwise it is better to write the destination in place
+#if defined(MR_SIMD4_SSE) || ( defined(MR_SIMD4_NEON) && defined(__clang__) )
+inline constexpr bool cStreamStores = true;
+#else
+inline constexpr bool cStreamStores = false;
 #endif
 
 /// copies size bytes (a multiple of 16) to 16-byte aligned dst, bypassing the caches where possible (non-temporal stores)

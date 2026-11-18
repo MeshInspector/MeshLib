@@ -431,20 +431,17 @@ void MeshTopology::getLeftTriEdges( EdgeId e0, EdgeId & e1, EdgeId & e2 ) const
     assert( e0 == prev( e2.sym() ) );
 }
 
-std::vector<ThreeVertIds> MeshTopology::getAllTriVerts() const
+Vector<ThreeVertIds> MeshTopology::getAllTriVerts() const
 {
     MR_TIMER;
-    std::vector<ThreeVertIds> res;
-    resizeNoInit( res, numValidFaces_ );
     assert( updateValids_ );
-    if ( numValidFaces_ == (int)edgePerFace_.size() ) // no invalid faces: res[f] is the triangle of face f
+    Vector<ThreeVertIds> res;
+    if ( numValidFaces_ == (int)edgePerFace_.size() ) // no invalid faces: the triangle of face f goes to position f
     {
-        ParallelFor( 0_f, FaceId( numValidFaces_ ), [&]( FaceId f )
-        {
-            getTriVerts( f, res[f] );
-        } );
+        res.vec = std::move( getTriangulation().vec );
         return res;
     }
+    res.resizeNoInit( numValidFaces_ );
     size_t i = 0;
     for ( auto f : validFaces_ )
         getTriVerts( f, res[i++] );

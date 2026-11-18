@@ -1,7 +1,7 @@
 import meshlib.Functions;
 import meshlib.Mesh;
 import meshlib.VertCoords;
-import meshlib.std_vector_MR_ThreeVertIds;
+import meshlib.Vector_MR_ThreeVertIds_size_t;
 
 // The class isn't public because of the `.dox.java` file name, the launcher doesn't mind.
 class MeshExport
@@ -12,7 +12,7 @@ class MeshExport
         Mesh mesh = Functions.makeCube(null, null);
 
         // all vertices of valid triangles
-        std_vector_MR_ThreeVertIds triangles = mesh.topology().getAllTriVerts();
+        Vector_MR_ThreeVertIds_size_t triangles = mesh.topology().getAllTriVerts();
 
         // all point coordinates
         VertCoords points = mesh.points();
@@ -20,7 +20,7 @@ class MeshExport
         int[] vertexTriples = new int[(int)triangles.size() * 3];
         for (int t = 0; t < triangles.size(); t++)
             for (int i = 0; i < 3; i++)
-                vertexTriples[3 * t + i] = triangles.at(t).index(i).id_();
+                vertexTriples[3 * t + i] = triangles.index(t).index(i).id_();
 
         // TODO: export in your format
     }

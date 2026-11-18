@@ -37,7 +37,7 @@ TEST( MRMesh, PrimitivesExtractionExapmle )
     MR::Mesh mesh = MR::makeCube();
 
     // all vertices of valid triangles
-    const std::vector<MR::ThreeVertIds> triangles = mesh.topology.getAllTriVerts();
+    const MR::Vector<MR::ThreeVertIds> triangles = mesh.topology.getAllTriVerts();
 
     // all point coordinates
     const MR::VertCoords& points = mesh.points;

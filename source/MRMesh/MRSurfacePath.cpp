@@ -483,6 +483,27 @@ UndirectedEdgeBitSet findExtremeEdges( const Mesh & mesh, const VertScalars & fi
     return res;
 }
 
+// calls f( v ) for every vertex of every triangle containing given point
+template <typename F>
+static void forEachVertOfTrisWith( const MeshTopology & topology, const MeshTriPoint & p, F && f )
+{
+    auto leftTri = [&] ( EdgeId e )
+    {
+        if ( topology.left( e ) )
+            for ( auto v : topology.getLeftTriVerts( e ) )
+                f( v );
+    };
+    if ( auto v = p.inVertex( topology ) )
+    {
+        for ( auto e : orgRing( topology, v ) )
+            leftTri( e );
+        return;
+    }
+    leftTri( p.e );
+    if ( p.onEdge( topology ) )
+        leftTri( p.e.sym() );
+}
+
 Expected<SurfacePath, PathError> computeFastMarchingPath( const MeshPart & mp,
     const MeshTriPoint & start, const MeshTriPoint & end,
     const VertBitSet* vertRegion, VertScalars * outSurfaceDistances )
@@ -510,9 +531,32 @@ Expected<SurfacePath, PathError> computeFastMarchingPath( const MeshPart & mp,
     if ( !connected )
         return unexpected( PathError::StartEndNotConnected );
 
+    const auto & topology = mp.mesh.topology;
+    auto reachesEnd = [&]
+    {
+        // no edge is crossed only if start and end are from the same triangle
+        return !res.empty() && fromSameTriangle( topology, MeshTriPoint( end ), MeshTriPoint( res.back() ) );
+    };
     res = computeSteepestDescentPath( mp.mesh, distances, start, { .end = end } );
-    if ( res.empty() ) // no edge is crossed only if start and end are from the same triangle
-        return unexpected( PathError::InternalError );
+    if ( !reachesEnd() )
+    {
+        // near end, linear interpolation of exact distances can have a local minimum outside the triangle with end;
+        // zero distances in the triangles with end to make them the only minimum, and descend again
+        std::vector<std::pair<VertId, float>> saved;
+        forEachVertOfTrisWith( topology, end, [&] ( VertId v )
+        {
+            if ( distances[v] < FLT_MAX )
+            {
+                saved.emplace_back( v, distances[v] );
+                distances[v] = 0;
+            }
+        } );
+        res = computeSteepestDescentPath( mp.mesh, distances, start, { .end = end } );
+        for ( auto [v, d] : saved )
+            distances[v] = d;
+        if ( !reachesEnd() )
+            return unexpected( PathError::InternalError );
+    }
 
     if ( outSurfaceDistances )
         *outSurfaceDistances = std::move( distances );

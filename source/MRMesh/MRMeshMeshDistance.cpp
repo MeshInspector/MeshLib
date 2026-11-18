@@ -75,8 +75,14 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
             for ( int j = 0; j < bNum; ++j )
             {
                 bBoxes[j] = bBox( bLeafBoxes.get( j ) );
+                // not a single line with rigidB2A ? xf( p ) : p: MSVC writes the transformed point to a temporary as three floats
+                // and copies it out with an 8-byte load, a store-forwarding stall
                 for ( int k = 0; k < 3; ++k )
-                    bTris[j][k] = rigidB2A ? ( *rigidB2A )( bTree.leafPoint( bFirst + j, k ) ) : bTree.leafPoint( bFirst + j, k );
+                {
+                    bTris[j][k] = bTree.leafPoint( bFirst + j, k );
+                    if ( rigidB2A )
+                        bTris[j][k] = ( *rigidB2A )( bTris[j][k] );
+                }
             }
             for ( int i = aFirst, aEnd = aFirst + aTree.numLeafTris( ~s.a.ref ); i < aEnd; ++i )
             {

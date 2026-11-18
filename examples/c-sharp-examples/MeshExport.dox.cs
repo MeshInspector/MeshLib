@@ -14,10 +14,10 @@ public static class MeshExportExample
         var vertexTriples = new int[(int)triangles.size() * 3];
         for (int t = 0; t < (int)triangles.size(); ++t)
         {
-            var tri = triangles[(nuint)t].elems;
-            vertexTriples[3 * t + 0] = tri._0.id;
-            vertexTriples[3 * t + 1] = tri._1.id;
-            vertexTriples[3 * t + 2] = tri._2.id;
+            var tri = triangles[(nuint)t];
+            vertexTriples[3 * t + 0] = tri[0].id;
+            vertexTriples[3 * t + 1] = tri[1].id;
+            vertexTriples[3 * t + 2] = tri[2].id;
         }
 
         // TODO: export in your format

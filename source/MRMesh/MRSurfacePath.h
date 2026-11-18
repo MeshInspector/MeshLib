@@ -76,7 +76,8 @@ MRMESH_API Expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mes
     const MeshTriPoint & start, const MeshTriPoint & end, GeodesicPathApprox atype );
 
 /// computes by Fast Marching method and returns intermediate points of approximately geodesic path from start to end, where it crosses mesh edges;
-/// the path can be limited to given region: in face-format inside mp, or in vert-format in vertRegion argument
+/// the path can be limited to given region: in face-format inside mp, or in vert-format in vertRegion argument;
+/// the distances in outSurfaceDistances are computed with SurfaceDistanceBuilder::setNoLocalMinima( true )
 MRMESH_API Expected<SurfacePath, PathError> computeFastMarchingPath( const MeshPart & mp, 
     const MeshTriPoint & start, const MeshTriPoint & end, const VertBitSet* vertRegion = nullptr,
     VertScalars * outSurfaceDistances = nullptr );

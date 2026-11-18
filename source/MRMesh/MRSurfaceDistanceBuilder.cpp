@@ -341,6 +341,7 @@ void SurfaceDistanceBuilder::finishSourceGroups_()
 
 bool SurfaceDistanceBuilder::suggestVertDistance_( VertDistance c, SurfaceDistanceStartId source, SurfaceDistanceStartId lineEnd )
 {
+    c.distance = std::max( c.distance, triMinDistance_ );
     auto & vi = vertDistanceMap_[c.vert];
     if ( vi > c.distance )
     {
@@ -372,12 +373,14 @@ void SurfaceDistanceBuilder::suggestDistancesAround_( VertId v )
             // a shorter distance is known for dest
             considerLeftTriPath_( e );
             considerLeftTriPath_( e.sym() );
+            triMinDistance_ = -FLT_MAX;
         }
     }
 }
 
 void SurfaceDistanceBuilder::considerLeftTriPath_( EdgeId e )
 {
+    triMinDistance_ = -FLT_MAX;
     if ( !mesh_.topology.left( e ) )
         return;
     VertId a, b, c;
@@ -395,6 +398,8 @@ void SurfaceDistanceBuilder::considerLeftTriPath_( EdgeId e )
     // and then c gets that value from its triangles nearer to the start
     if ( vertDistanceMap_[c] <= va )
         return;
+    if ( noLocalMinima_ )
+        triMinDistance_ = nextUp( va );
 
     const auto pa = mesh_.points[a];
     const auto pb = mesh_.points[b];

@@ -132,6 +132,10 @@ enum class ExtremeEdgeType
 /// the lines try to avoid sharp turns in the vertices
 [[nodiscard]] MRMESH_API SurfacePaths getSurfacePathsViaVertices( const Mesh & mesh, const VertBitSet & vs );
 
+/// returns true if every two consecutive points among start, path points and end share a triangle;
+/// an empty path is connected only if start and end share a triangle
+[[nodiscard]] MRMESH_API bool isConnectedPath( const MeshTopology& topology, const MeshTriPoint& start, const SurfacePath& path, const MeshTriPoint& end );
+
 /// computes the length of the given surface path
 [[nodiscard]] MRMESH_API float surfacePathLength( const Mesh& mesh, const SurfacePath& surfacePath );
 

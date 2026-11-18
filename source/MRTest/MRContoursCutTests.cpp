@@ -170,6 +170,31 @@ TEST( MRMesh, ClosedContourWithEmptyWrapAroundPath )
     }
 }
 
+TEST( MRMesh, IsConnectedPath )
+{
+    const auto mesh = makeTorus( 1.0f, 0.3f, 32, 16 );
+    const MeshTriPoint start( mesh.topology.edgeWithLeft( 1_f ), { 1 / 3.f, 1 / 3.f } );
+    const MeshTriPoint end( mesh.topology.edgeWithLeft( 300_f ), { 1 / 3.f, 1 / 3.f } );
+    const MeshTriPoint nearStart( mesh.topology.edgeWithLeft( 1_f ), { 0.25f, 0.5f } );
+
+    auto path = computeGeodesicPath( mesh, start, end, GeodesicPathApprox::DijkstraBiDir );
+    ASSERT_TRUE( path.has_value() );
+    ASSERT_GE( path->size(), 3 );
+    EXPECT_TRUE( isConnectedPath( mesh.topology, start, *path, end ) );
+    EXPECT_FALSE( isConnectedPath( mesh.topology, end, *path, start ) );
+
+    auto noLast = *path;
+    noLast.pop_back();
+    EXPECT_FALSE( isConnectedPath( mesh.topology, start, noLast, end ) );
+
+    auto noMiddle = *path;
+    noMiddle.erase( noMiddle.begin() + noMiddle.size() / 2 );
+    EXPECT_FALSE( isConnectedPath( mesh.topology, start, noMiddle, end ) );
+
+    EXPECT_FALSE( isConnectedPath( mesh.topology, start, {}, end ) );
+    EXPECT_TRUE( isConnectedPath( mesh.topology, start, {}, nearStart ) );
+}
+
 TEST( MRMesh, SurfaceLineDisconnectedPath )
 {
     const auto mesh = makeTorus( 1.0f, 0.3f, 8, 4 );

@@ -2,6 +2,9 @@
 #include <gtest/gtest.h>
 #include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRTorus.h>
+#include <MRMesh/MRMesh.h>
+#include <MRMesh/MRMeshPart.h>
+#include <MRMesh/MRRegionBoundary.h>
 
 namespace MR
 {
@@ -25,6 +28,30 @@ TEST( MRMesh, FastMarchingPathReachesEnd )
                 ASSERT_FALSE( path->empty() );
                 EXPECT_TRUE( fromSameTriangle( mesh.topology, MeshTriPoint( end ), MeshTriPoint( path->back() ) ) ) << "end face " << int( f );
             }
+        }
+    }
+}
+
+TEST( MRMesh, FastMarchingPathInRegion )
+{
+    // the paths are limited to the half of a torus with thin triangles, given by faces or by vertices
+    const auto mesh = makeTorus( 1.0f, 0.3f, 6, 24 );
+    FaceBitSet faces( mesh.topology.faceSize() );
+    for ( auto f : mesh.topology.getValidFaces() )
+        if ( mesh.triCenter( f ).x > 0 )
+            faces.set( f );
+    const auto verts = getIncidentVerts( mesh.topology, faces );
+    const auto start = MeshTriPoint( mesh.topology.edgeWithLeft( faces.find_first() ), { 1 / 3.f, 1 / 3.f } );
+    for ( auto f : faces )
+    {
+        const MeshTriPoint end( mesh.topology.edgeWithLeft( f ), { 0.2f, 0.3f } );
+        if ( fromSameTriangle( mesh.topology, MeshTriPoint( start ), MeshTriPoint( end ) ) )
+            continue;
+        for ( const auto & path : { computeFastMarchingPath( { mesh, &faces }, start, end ), computeFastMarchingPath( mesh, start, end, &verts ) } )
+        {
+            ASSERT_TRUE( path.has_value() );
+            ASSERT_FALSE( path->empty() );
+            EXPECT_TRUE( fromSameTriangle( mesh.topology, MeshTriPoint( end ), MeshTriPoint( path->back() ) ) ) << "end face " << int( f );
         }
     }
 }

@@ -58,7 +58,8 @@ inline std::string toString(PathError error)
 
 /// returns intermediate points of the geodesic path from start to end, where it crosses mesh edges;
 /// the path can be limited to given region: in face-format inside mp, or in vert-format in vertRegion argument.
-/// It is the same as calling computeFastMarchingPath() then reducePath()
+/// It is the same as calling computeFastMarchingPath() then reducePath();
+/// the distances in outSurfaceDistances are computed with SurfaceDistanceBuilder::setNoLocalMinima( true )
 MRMESH_API Expected<SurfacePath, PathError> computeSurfacePath( const MeshPart & mp, 
     const MeshTriPoint & start, const MeshTriPoint & end, 
     int maxGeodesicIters = 5, ///< the maximum number of iterations to reduce approximate path length and convert it in geodesic path

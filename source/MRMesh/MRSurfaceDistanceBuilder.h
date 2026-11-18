@@ -64,7 +64,8 @@ public:
 
     /// if true, then a distance computed in a triangle is always larger than the smaller distance in its other two vertices,
     /// so every reached vertex except the vertices around the start has a neighbor with smaller distance,
-    /// and the steepest descent from any reached point arrives to the start (some distances near the start and near obtuse triangles become larger)
+    /// and the steepest descent from any reached point arrives to the start; distances near the start and near obtuse or thin triangles become larger,
+    /// and some distances computed from them can become a bit smaller
     void setNoLocalMinima( bool on ) { noLocalMinima_ = on; }
 
     /// processes one more candidate vertex, which is returned

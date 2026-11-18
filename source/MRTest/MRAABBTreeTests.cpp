@@ -763,9 +763,9 @@ TEST( MRMesh, ProjectionToTriMesh )
         EXPECT_TRUE( same( findProjection( pt, fullTree, FLT_MAX, &xf, 0, {}, {}, &region ), findProjection( pt, mp, FLT_MAX, &xf ) ) );
 
         const Ball3f ball{ pt, 0.25f }; // radius 0.5
-        const auto a = collect( [&]( auto cb ) { findTrisInBall( tmesh.points, tree, ball, cb ); } );
+        const auto a = collect( [&]( auto cb ) { findTrisInBall( tree, ball, cb ); } );
         const auto b = collect( [&]( auto cb ) { findTrisInBall( mp, ball, cb ); } );
-        const auto c = collect( [&]( auto cb ) { findTrisInBall( tmesh.points, fullTree, ball, cb, {}, &region ); } );
+        const auto c = collect( [&]( auto cb ) { findTrisInBall( fullTree, ball, cb, {}, &region ); } );
         ASSERT_EQ( a.size(), b.size() );
         ASSERT_EQ( c.size(), b.size() );
         for ( size_t i = 0; i < a.size(); ++i )

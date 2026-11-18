@@ -220,7 +220,7 @@ TEST( MRMesh, MeshIntersectPointsTree )
                 const auto ref = rayMeshIntersect( mp, lf, -FLT_MAX, FLT_MAX, nullptr, closest );
                 numHits += ref.valid();
                 EXPECT_TRUE( same( rayMeshIntersect( fullTree, lf, -FLT_MAX, FLT_MAX, nullptr, closest, {}, &region ), ref ) );
-                EXPECT_TRUE( same( rayMeshIntersect( tmesh.points, fullTree, ld, -DBL_MAX, DBL_MAX, nullptr, closest, {}, &region ),
+                EXPECT_TRUE( same( rayMeshIntersect( fullTree, ld, -DBL_MAX, DBL_MAX, nullptr, closest, {}, &region ),
                     rayMeshIntersect( mp, ld, -DBL_MAX, DBL_MAX, nullptr, closest ) ) );
                 EXPECT_TRUE( same( rayMeshIntersect( regionTree, lf, -FLT_MAX, FLT_MAX, nullptr, closest ),
                     rayMeshIntersect( mpTree, lf, -FLT_MAX, FLT_MAX, nullptr, closest, {}, &region ) ) );
@@ -233,10 +233,10 @@ TEST( MRMesh, MeshIntersectPointsTree )
             const auto refS = all( [&]( auto & res ) { rayMeshIntersectAll( mp, ld, MeshIntersectionWithSideCallback( collectSide( res ) ), -DBL_MAX, DBL_MAX ); } );
             numAllHits += int( refS.size() );
             EXPECT_TRUE( sameAll( all( [&]( auto & res ) { rayMeshIntersectAll( fullTree, lf, collect( res ), -FLT_MAX, FLT_MAX, nullptr, &region ); } ), refF ) );
-            EXPECT_TRUE( sameAll( all( [&]( auto & res ) { rayMeshIntersectAll( tmesh.points, fullTree, ld, collect( res ), -DBL_MAX, DBL_MAX, nullptr, &region ); } ), refD ) );
-            EXPECT_TRUE( sameAll( all( [&]( auto & res ) { rayMeshIntersectAll( tmesh.points, fullTree, ld,
+            EXPECT_TRUE( sameAll( all( [&]( auto & res ) { rayMeshIntersectAll( fullTree, ld, collect( res ), -DBL_MAX, DBL_MAX, nullptr, &region ); } ), refD ) );
+            EXPECT_TRUE( sameAll( all( [&]( auto & res ) { rayMeshIntersectAll( fullTree, ld,
                 MeshIntersectionWithSideCallback( collectSide( res ) ), -DBL_MAX, DBL_MAX, nullptr, &region ); } ), refS ) );
-            EXPECT_TRUE( sameAll( all( [&]( auto & res ) { rayMeshIntersectAll( tmesh.points, regionTree, ld,
+            EXPECT_TRUE( sameAll( all( [&]( auto & res ) { rayMeshIntersectAll( regionTree, ld,
                 MeshIntersectionWithSideCallback( collectSide( res ) ), -DBL_MAX, DBL_MAX ); } ), refS ) );
         }
     }

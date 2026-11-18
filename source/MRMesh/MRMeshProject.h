@@ -121,10 +121,11 @@ using FoundTriCallback = std::function<Processing( const MeshProjectionResult & 
 /// the ball during enumeration can shrink (new ball is always within the previous one) but never expand
 MRMESH_API void findTrisInBall( const MeshPart & mp, const Ball3f& ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces = {} );
 
-/// enumerates all triangles in the tree (only from region if given) within the ball until callback returns Stop, points are the coordinates of their vertices;
+/// enumerates all triangles in the tree (only from region if given) within the ball until callback returns Stop,
+/// with the coordinates of their vertices taken from the tree (those of the points it was built or last refit for);
 /// found.tp is relative to the vertices of the triangle in the tree (in the order of tmesh.tris[found.proj.face] for AABBTree( tmesh ));
 /// the ball during enumeration can shrink (new ball is always within the previous one) but never expand
-MRMESH_API void findTrisInBall( const VertCoords & points, const AABBTree & tree, const Ball3f& ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces = {},
+MRMESH_API void findTrisInBall( const AABBTree & tree, const Ball3f& ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces = {},
     const FaceBitSet * region = nullptr );
 
 struct SignedDistanceToMeshResult

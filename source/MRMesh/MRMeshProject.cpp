@@ -329,7 +329,7 @@ void boxedTrisInBall( const AABBTree & tree, const FaceBitSet * region, Ball3f b
     } );
 }
 
-void trisInBall( const VertCoords & points, const AABBTree & tree, const FaceBitSet * region, const Ball3f& ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces )
+void trisInBall( const AABBTree & tree, const FaceBitSet * region, const Ball3f& ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces )
 {
     Ball3f myBall = ball;
     forLeafTrisInBall( tree, region, myBall, [&]( int i, Ball3f & b )
@@ -339,8 +339,8 @@ void trisInBall( const VertCoords & points, const AABBTree & tree, const FaceBit
             return Processing::Continue;
 
         // compute the closest point in double-precision, because float might be not enough
-        const auto [projD, baryD] = closestPointInTriangle( Vector3d( b.center ), Vector3d( points[lt.verts[0]] ),
-            Vector3d( points[lt.verts[1]] ), Vector3d( points[lt.verts[2]] ) );
+        const auto [projD, baryD] = closestPointInTriangle( Vector3d( b.center ), Vector3d( tree.leafPoint( i, 0 ) ),
+            Vector3d( tree.leafPoint( i, 1 ) ), Vector3d( tree.leafPoint( i, 2 ) ) );
         const Vector3f proj( projD );
         const float distSq = ( proj - b.center ).lengthSq();
         if ( !( distSq < b.radiusSq ) )
@@ -369,13 +369,13 @@ void findBoxedTrisInBall( const AABBTree & tree, Ball3f ball, const FoundBoxedTr
 
 void findTrisInBall( const MeshPart & mp, const Ball3f& ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces )
 {
-    trisInBall( mp.mesh.points, mp.mesh.getAABBTree(), mp.region, ball, foundCallback, validFaces );
+    trisInBall( mp.mesh.getAABBTree(), mp.region, ball, foundCallback, validFaces );
 }
 
-void findTrisInBall( const VertCoords & points, const AABBTree & tree, const Ball3f& ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces,
+void findTrisInBall( const AABBTree & tree, const Ball3f& ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces,
     const FaceBitSet * region )
 {
-    trisInBall( points, tree, region, ball, foundCallback, validFaces );
+    trisInBall( tree, region, ball, foundCallback, validFaces );
 }
 
 std::optional<SignedDistanceToMeshResult> findSignedDistance( const Vector3f & pt, const MeshPart & mp,

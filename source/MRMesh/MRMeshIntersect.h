@@ -61,8 +61,9 @@ struct MeshIntersectionResult
     const FacePredicate & validFaces = {}, const FaceBitSet * region = nullptr );
 
 /// Same as rayMeshIntersect above in double-precision, but for the triangles of given tree (only from \p region if given), e.g. AABBTree( tmesh ),
-/// with \p points the coordinates of their vertices; tp of the result is relative to the vertices of the triangle in the tree
-[[nodiscard]] MRMESH_API MeshIntersectionResult rayMeshIntersect( const VertCoords & points, const AABBTree & tree, const Line3d& line,
+/// with the coordinates of their vertices taken from the tree (those of the points it was built or last refit for);
+/// tp of the result is relative to the vertices of the triangle in the tree
+[[nodiscard]] MRMESH_API MeshIntersectionResult rayMeshIntersect( const AABBTree & tree, const Line3d& line,
     double rayStart = 0.0, double rayEnd = DBL_MAX, const IntersectionPrecomputes<double>* prec = nullptr, bool closestIntersect = true,
     const FacePredicate & validFaces = {}, const FaceBitSet * region = nullptr );
 
@@ -146,8 +147,8 @@ MRMESH_API void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& lin
 MRMESH_API void rayMeshIntersectAll( const AABBTree & tree, const Line3f& line, MeshIntersectionCallback callback,
     float rayStart = 0.0f, float rayEnd = FLT_MAX, const IntersectionPrecomputes<float>* prec = nullptr, const FaceBitSet * region = nullptr );
 /// Same as \ref rayMeshIntersectAllF in double precision, but for the triangles of given tree (only from \p region if given), e.g. AABBTree( tmesh ),
-/// with \p points the coordinates of their vertices
-MRMESH_API void rayMeshIntersectAll( const VertCoords & points, const AABBTree & tree, const Line3d& line, MeshIntersectionCallback callback,
+/// with the coordinates of their vertices taken from the tree (those of the points it was built or last refit for)
+MRMESH_API void rayMeshIntersectAll( const AABBTree & tree, const Line3d& line, MeshIntersectionCallback callback,
     double rayStart = 0.0, double rayEnd = DBL_MAX, const IntersectionPrecomputes<double>* prec = nullptr, const FaceBitSet * region = nullptr );
 
 /// this callback is envoked for each encountered ray-mesh intersection,
@@ -161,8 +162,8 @@ using MeshIntersectionWithSideCallback = std::function<bool( const MeshIntersect
 MRMESH_API void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& line, MeshIntersectionWithSideCallback callback,
     double rayStart = 0.0, double rayEnd = DBL_MAX, const IntersectionPrecomputes<double>* prec = nullptr );
 /// Same as above, but for the triangles of given tree (only from \p region if given), e.g. AABBTree( tmesh ),
-/// with \p points the coordinates of their vertices
-MRMESH_API void rayMeshIntersectAll( const VertCoords & points, const AABBTree & tree, const Line3d& line, MeshIntersectionWithSideCallback callback,
+/// with the coordinates of their vertices taken from the tree (those of the points it was built or last refit for)
+MRMESH_API void rayMeshIntersectAll( const AABBTree & tree, const Line3d& line, MeshIntersectionWithSideCallback callback,
     double rayStart = 0.0, double rayEnd = DBL_MAX, const IntersectionPrecomputes<double>* prec = nullptr, const FaceBitSet * region = nullptr );
 
 /// given mesh part and arbitrary plane, outputs

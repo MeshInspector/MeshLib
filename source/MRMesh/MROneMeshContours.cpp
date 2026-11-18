@@ -769,15 +769,14 @@ Contours3f extractMeshContours( const OneMeshContours& meshContours )
 // every two consecutive points among start, path and end must share a triangle
 static bool isConnectedPath( const MeshTopology& topology, const MeshTriPoint& start, const SurfacePath& path, const MeshTriPoint& end )
 {
-    MeshTriPoint prev = start;
-    for ( const auto& ep : path )
-    {
-        const MeshTriPoint curr( ep );
-        if ( !fromSameTriangle( topology, MeshTriPoint( prev ), MeshTriPoint( curr ) ) )
+    if ( path.empty() )
+        return fromSameTriangle( topology, MeshTriPoint( start ), MeshTriPoint( end ) );
+    if ( !fromSameTriangle( topology, MeshTriPoint( start ), MeshTriPoint( path.front() ) ) )
+        return false;
+    for ( size_t i = 0; i + 1 < path.size(); ++i )
+        if ( !fromSameTriangle( topology, MeshEdgePoint( path[i] ), MeshEdgePoint( path[i + 1] ) ) )
             return false;
-        prev = curr;
-    }
-    return fromSameTriangle( topology, std::move( prev ), MeshTriPoint( end ) );
+    return fromSameTriangle( topology, MeshTriPoint( path.back() ), MeshTriPoint( end ) );
 }
 
 Expected<OneMeshContour> surfaceLineToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg,

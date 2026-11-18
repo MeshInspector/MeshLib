@@ -82,8 +82,8 @@ MRMESH_API MeshProjectionTransforms createProjectionTransforms( AffineXf3f& stor
 
 /**
  * \brief computes the closest point on the triangles of the given tree to given point;
- * the result's tp is relative to the vertices of the triangle in the tree (in the order of tmesh.tris[proj.face] for AABBTree( tmesh ))
- * \param points the coordinates of the vertices of the tree's triangles
+ * the result's tp is relative to the vertices of the triangle in the tree (in the order of tmesh.tris[proj.face] for AABBTree( tmesh ));
+ * the coordinates of the triangles are taken from the tree (those of the points it was built or last refit for)
  * \param tree the tree of a mesh or its part, e.g. AABBTree( tmesh, region )
  * \param upDistLimitSq upper limit on the distance in question, if the real distance is larger then the function exits returning upDistLimitSq and no valid point
  * \param xf mesh-to-point transformation, if not specified then identity transformation is assumed
@@ -93,7 +93,7 @@ MRMESH_API MeshProjectionTransforms createProjectionTransforms( AffineXf3f& stor
  * \param region if provided then only the triangles from there are searched; building the tree only from them is faster
  */
 [[nodiscard]] MRMESH_API MeshProjectionResult findProjection( const Vector3f & pt,
-    const VertCoords & points, const AABBTree & tree,
+    const AABBTree & tree,
     float upDistLimitSq = FLT_MAX,
     const AffineXf3f * xf = nullptr,
     float loDistLimitSq = 0,

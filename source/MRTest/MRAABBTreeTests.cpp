@@ -757,10 +757,10 @@ TEST( MRMesh, ProjectionToTriMesh )
     };
     for ( const Vector3f pt : { Vector3f( 0.8f, 0.5f, -0.3f ), Vector3f( 0.3f, -0.9f, 0.4f ), Vector3f( 0, 0, 1.2f ) } )
     {
-        EXPECT_TRUE( same( findProjection( pt, tmesh.points, tree ), findProjectionSubtree( pt, mp, mpTree ) ) );
-        EXPECT_TRUE( same( findProjection( pt, tmesh.points, tree, FLT_MAX, &xf ), findProjectionSubtree( pt, mp, mpTree, FLT_MAX, &xf ) ) );
-        EXPECT_TRUE( same( findProjection( pt, tmesh.points, fullTree, FLT_MAX, nullptr, 0, {}, {}, &region ), findProjection( pt, mp ) ) );
-        EXPECT_TRUE( same( findProjection( pt, tmesh.points, fullTree, FLT_MAX, &xf, 0, {}, {}, &region ), findProjection( pt, mp, FLT_MAX, &xf ) ) );
+        EXPECT_TRUE( same( findProjection( pt, tree ), findProjectionSubtree( pt, mp, mpTree ) ) );
+        EXPECT_TRUE( same( findProjection( pt, tree, FLT_MAX, &xf ), findProjectionSubtree( pt, mp, mpTree, FLT_MAX, &xf ) ) );
+        EXPECT_TRUE( same( findProjection( pt, fullTree, FLT_MAX, nullptr, 0, {}, {}, &region ), findProjection( pt, mp ) ) );
+        EXPECT_TRUE( same( findProjection( pt, fullTree, FLT_MAX, &xf, 0, {}, {}, &region ), findProjection( pt, mp, FLT_MAX, &xf ) ) );
 
         const Ball3f ball{ pt, 0.25f }; // radius 0.5
         const auto a = collect( [&]( auto cb ) { findTrisInBall( tmesh.points, tree, ball, cb ); } );
@@ -783,7 +783,7 @@ TEST( MRMesh, ProjectionToTriMesh )
         EXPECT_FALSE( a.empty() || boxedA.empty() );
     }
 
-    const auto proj = findProjection( Vector3f( 0.3f, -0.9f, 0.4f ), tmesh.points, tree );
+    const auto proj = findProjection( Vector3f( 0.3f, -0.9f, 0.4f ), tree );
     ASSERT_TRUE( proj.valid() && region.test( proj.proj.face ) );
     const auto [a, b, c] = tmesh.tris[proj.proj.face];
     const Vector3f p = proj.tp.interpolate( tmesh.points[a], tmesh.points[b], tmesh.points[c] );

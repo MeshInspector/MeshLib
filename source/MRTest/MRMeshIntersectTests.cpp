@@ -219,11 +219,11 @@ TEST( MRMesh, MeshIntersectPointsTree )
             {
                 const auto ref = rayMeshIntersect( mp, lf, -FLT_MAX, FLT_MAX, nullptr, closest );
                 numHits += ref.valid();
-                EXPECT_TRUE( same( rayMeshIntersect( tmesh.points, fullTree, lf, -FLT_MAX, FLT_MAX, nullptr, closest, {}, &region ), ref ) );
+                EXPECT_TRUE( same( rayMeshIntersect( fullTree, lf, -FLT_MAX, FLT_MAX, nullptr, closest, {}, &region ), ref ) );
                 EXPECT_TRUE( same( rayMeshIntersect( tmesh.points, fullTree, ld, -DBL_MAX, DBL_MAX, nullptr, closest, {}, &region ),
                     rayMeshIntersect( mp, ld, -DBL_MAX, DBL_MAX, nullptr, closest ) ) );
-                EXPECT_TRUE( same( rayMeshIntersect( tmesh.points, regionTree, lf, -FLT_MAX, FLT_MAX, nullptr, closest ),
-                    rayMeshIntersect( mesh.points, mpTree, lf, -FLT_MAX, FLT_MAX, nullptr, closest, {}, &region ) ) );
+                EXPECT_TRUE( same( rayMeshIntersect( regionTree, lf, -FLT_MAX, FLT_MAX, nullptr, closest ),
+                    rayMeshIntersect( mpTree, lf, -FLT_MAX, FLT_MAX, nullptr, closest, {}, &region ) ) );
             }
 
             auto collect = []( auto & res ) { return [&res]( const MeshIntersectionResult & r ) { res.push_back( { r, false } ); return true; }; };
@@ -232,7 +232,7 @@ TEST( MRMesh, MeshIntersectPointsTree )
             const auto refD = all( [&]( auto & res ) { rayMeshIntersectAll( mp, ld, collect( res ), -DBL_MAX, DBL_MAX ); } );
             const auto refS = all( [&]( auto & res ) { rayMeshIntersectAll( mp, ld, MeshIntersectionWithSideCallback( collectSide( res ) ), -DBL_MAX, DBL_MAX ); } );
             numAllHits += int( refS.size() );
-            EXPECT_TRUE( sameAll( all( [&]( auto & res ) { rayMeshIntersectAll( tmesh.points, fullTree, lf, collect( res ), -FLT_MAX, FLT_MAX, nullptr, &region ); } ), refF ) );
+            EXPECT_TRUE( sameAll( all( [&]( auto & res ) { rayMeshIntersectAll( fullTree, lf, collect( res ), -FLT_MAX, FLT_MAX, nullptr, &region ); } ), refF ) );
             EXPECT_TRUE( sameAll( all( [&]( auto & res ) { rayMeshIntersectAll( tmesh.points, fullTree, ld, collect( res ), -DBL_MAX, DBL_MAX, nullptr, &region ); } ), refD ) );
             EXPECT_TRUE( sameAll( all( [&]( auto & res ) { rayMeshIntersectAll( tmesh.points, fullTree, ld,
                 MeshIntersectionWithSideCallback( collectSide( res ) ), -DBL_MAX, DBL_MAX, nullptr, &region ); } ), refS ) );
@@ -247,7 +247,7 @@ TEST( MRMesh, MeshIntersectPointsTree )
     std::vector<float> distA, distB;
     std::vector<TriPointf> baryA, baryB;
     multiRayMeshIntersect( mp, origins, dirs, { .rayDistances = &distA, .isectFaces = &facesA, .isectBary = &baryA } );
-    multiRayMeshIntersect( tmesh.points, fullTree, origins, dirs, { .rayDistances = &distB, .isectFaces = &facesB, .isectBary = &baryB },
+    multiRayMeshIntersect( fullTree, origins, dirs, { .rayDistances = &distB, .isectFaces = &facesB, .isectBary = &baryB },
         0.0f, FLT_MAX, true, {}, &region );
     EXPECT_EQ( facesA, facesB );
     for ( size_t i = 0; i < origins.size(); ++i )

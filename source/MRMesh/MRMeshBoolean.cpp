@@ -139,8 +139,9 @@ void convertIntFloatAllVerts( Mesh & mesh, const CoordinateConverters& conv )
     } );
 }
 
-BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params, BooleanInternalParameters intParams,
-    bool copyOriginals = false );
+/// a mesh given in intParams.originalMeshA (originalMeshB) is the caller's: it is only read, and meshA (meshB) must be empty to receive its copy;
+/// otherwise meshA (meshB) is consumed
+BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params, BooleanInternalParameters intParams );
 
 BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
                        const AffineXf3f* rigidB2A /*= nullptr */, BooleanResultMapper* mapper /*= nullptr */, ProgressCallback cb )
@@ -155,12 +156,22 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
     // which is important for many calls to Boolean for the same mesh to avoid tree construction on every call
 
     // the meshes are copied in booleanImpl only when their cuts are known, with the room the cuts need
-    return booleanImpl( {}, {}, operation, params, { .originalMeshA = &meshA,.originalMeshB = &meshB }, true );
+    return booleanImpl( {}, {}, operation, params, { .originalMeshA = &meshA,.originalMeshB = &meshB } );
 }
 
 BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params /*= {} */ )
 {
     return booleanImpl( std::move( meshA ), std::move( meshB ), operation, params, {} );
+}
+
+BooleanResult boolean( const Mesh& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params /*= {} */ )
+{
+    return booleanImpl( {}, std::move( meshB ), operation, params, { .originalMeshA = &meshA } );
+}
+
+BooleanResult boolean( Mesh&& meshA, const Mesh& meshB, BooleanOperation operation, const BooleanParameters& params /*= {} */ )
+{
+    return booleanImpl( std::move( meshA ), {}, operation, params, { .originalMeshB = &meshB } );
 }
 
 namespace detail
@@ -466,17 +477,18 @@ Contours3f findIntersectionContours( const Mesh& meshA, const Mesh& meshB, const
 /// So if a mesh has no cached tree, the common part of the bounding boxes of the meshes is a small part of the box of this mesh,
 /// and few of its faces are there, then a temporary tree of only these faces is used;
 /// otherwise the tree of the whole mesh is taken or constructed and cached as usual.
-/// \param allowPartialTrees false if the meshes belong to the caller, who can call Boolean for them again:
-/// then the trees of the whole meshes are constructed and cached in them, so the next calls do not construct them
+/// \param cacheTreeA, cacheTreeB true if the mesh belongs to the caller, who can call Boolean for it again:
+/// then the tree of the whole mesh is constructed and cached in it, so the next calls do not construct it
 static PreciseCollisionResult findIntersections( const Mesh& a, const Mesh& b, const ConvertToIntVector& conv, const AffineXf3f* rigidB2A,
-    bool allowPartialTrees )
+    bool cacheTreeA, bool cacheTreeB )
 {
     MR_TIMER;
-    if ( !allowPartialTrees )
     {
         tbb::task_group taskGroup;
-        taskGroup.run( [&] { a.getAABBTree(); } );
-        b.getAABBTree();
+        if ( cacheTreeA )
+            taskGroup.run( [&] { a.getAABBTree(); } );
+        if ( cacheTreeB )
+            b.getAABBTree();
         taskGroup.wait();
     }
     const AABBTree* aTree = a.getAABBTreeNotCreate();
@@ -542,20 +554,20 @@ static PreciseCollisionResult findIntersections( const Mesh& a, const Mesh& b, c
     return findCollidingEdgeTrisPrecise( { a, aLocal ? &aNear : nullptr }, *aTree, { b, bLocal ? &bNear : nullptr }, *bTree, conv, rigidB2A );
 }
 
-BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params, BooleanInternalParameters intParams,
-    bool copyOriginals )
+BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params, BooleanInternalParameters intParams )
 {
     MR_TIMER;
-    // the meshes to read until they are cut: if copyOriginals, meshA and meshB are empty and get the copies of the original meshes just before their cuts
-    const Mesh& srcA = copyOriginals ? *intParams.originalMeshA : meshA;
-    const Mesh& srcB = copyOriginals ? *intParams.originalMeshB : meshB;
+    // whether the mesh is the caller's original: then meshA (meshB) is empty and gets the copy of the original just before its cut
+    const bool copyA = intParams.originalMeshA != nullptr;
+    const bool copyB = intParams.originalMeshB != nullptr;
+    // the meshes to read until they are cut
+    const Mesh& srcA = copyA ? *intParams.originalMeshA : meshA;
+    const Mesh& srcB = copyB ? *intParams.originalMeshB : meshB;
     // copies the original mesh with the capacity for its cut by these contours, so the cut does not reallocate the whole mesh
     // and if addContours, also with the room for all of the other mesh with its cut by them
-    auto copyOriginal = [copyOriginals, &intParams] ( Mesh& to, const Mesh* from, const OneMeshContours* cutContours,
+    auto copyOriginal = [&intParams] ( Mesh& to, const Mesh* from, const OneMeshContours* cutContours,
         const OneMeshContours* addContours = nullptr )
     {
-        if ( !copyOriginals )
-            return;
         MR_NAMED_TIMER( "copyOriginal" );
         if ( cutContours )
             reserveForCut( to, *from, *cutContours );
@@ -583,7 +595,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     // find and order intersections
     {
         // the original meshes are the caller's, the others are consumed here and their trees could not be reused
-        const auto intersections = findIntersections( srcA, srcB, converters.toInt, params.rigidB2A, !copyOriginals );
+        const auto intersections = findIntersections( srcA, srcB, converters.toInt, params.rigidB2A, copyA, copyB );
         contours = orderIntersectionContours( srcA.topology, srcB.topology, intersections );
         if ( contours.empty() && !intersections.empty() )
             return { .errorString = "Boolean cannot order the intersections: a mesh has a face that is not a triangle" };
@@ -658,12 +670,13 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     bool needInsideB = operation == BooleanOperation::InsideB || operation == BooleanOperation::Intersection || operation == BooleanOperation::DifferenceAB;
     // doBooleanOperation adds the part of cut mesh B to cut mesh A: the room for all of it is reserved in the copy of A,
     // so that the addition does not reallocate and copy the whole of A
-    const bool reserveBinA = copyOriginals && doCutA && doCutB && !params.outPreCutA;
+    const bool reserveBinA = copyA && doCutA && doCutB && !params.outPreCutA;
     if ( doCutA )
     {
         taskGroup.run( [&] ()
         {
-            copyOriginal( meshA, intParams.originalMeshA, &meshAContours, reserveBinA ? &meshBContours : nullptr );
+            if ( copyA )
+                copyOriginal( meshA, intParams.originalMeshA, &meshAContours, reserveBinA ? &meshBContours : nullptr );
             Timer t( "CutMeshA" );
             FaceMap* cut2oldAPtr = params.mapper ? &params.mapper->maps[int( BooleanResultMapper::MapObject::A )].cut2origin : nullptr;
             // cut meshes
@@ -683,7 +696,8 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
 
     if ( doCutB )
     {
-        copyOriginal( meshB, intParams.originalMeshB, &meshBContours );
+        if ( copyB )
+            copyOriginal( meshB, intParams.originalMeshB, &meshBContours );
         Timer t( "CutMeshB" );
         FaceMap* cut2oldBPtr = params.mapper ? &params.mapper->maps[int( BooleanResultMapper::MapObject::B )].cut2origin : nullptr;
         // cut meshes
@@ -700,9 +714,9 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         cutB = std::move( res.resultCut );
     }
     taskGroup.wait();
-    if ( !doCutA )
+    if ( copyA && !doCutA )
         copyOriginal( meshA, intParams.originalMeshA, nullptr );
-    if ( !doCutB )
+    if ( copyB && !doCutB )
         copyOriginal( meshB, intParams.originalMeshB, nullptr );
 
     // the precut outputs take the meshes only after the cuts: where one mesh is not cut (by the operation or for its precut output),

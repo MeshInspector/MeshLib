@@ -236,6 +236,41 @@ inline void insignificantlyExpandedTriBoxes4( const float ( &coord )[3][3][4], f
         }
         return;
     }
+#elif defined(__wasm_simd128__)
+    const v128_t one = wasm_i32x4_splat( 1 );
+    const v128_t absMask = wasm_i32x4_splat( 0x7fffffff );
+    const v128_t limit = wasm_i32x4_splat( int( 0x7f7fffffu - 1 ) );
+    const v128_t signBit = wasm_i32x4_splat( int( 0x80000000u ) );
+    const auto fast = [&]( v128_t x ) { return wasm_u32x4_lt( wasm_i32x4_sub( wasm_v128_and( x, absMask ), one ), limit ); };
+    const auto zero = [&]( v128_t x ) { return wasm_i32x4_eq( wasm_v128_and( x, absMask ), wasm_i32x4_splat( 0 ) ); };
+    const auto step = [&]( v128_t x ) { return wasm_v128_or( wasm_i32x4_shr( x, 31 ), one ); };
+    const v128_t c00 = wasm_v128_load( coord[0][0] ), c01 = wasm_v128_load( coord[0][1] );
+    const v128_t used = wasm_v128_or( wasm_f32x4_eq( c00, c00 ), wasm_f32x4_eq( c01, c01 ) );
+    v128_t ok = wasm_i32x4_splat( -1 );
+    v128_t lo[3], hi[3];
+    for ( int c = 0; c < 3; ++c )
+    {
+        const v128_t a = wasm_v128_load( coord[0][c] ), b = wasm_v128_load( coord[1][c] ), cc = wasm_v128_load( coord[2][c] );
+        // as in expandedTriBoxLanes, pmin and pmax skip a NaN in b or cc as Box::include does, and a NaN in a is not fast
+        const v128_t l = wasm_f32x4_pmin( wasm_f32x4_pmin( a, b ), cc );
+        const v128_t h = wasm_f32x4_pmax( wasm_f32x4_pmax( a, b ), cc );
+        const v128_t zl = zero( l ), zh = zero( h );
+        ok = wasm_v128_and( ok, wasm_v128_and( wasm_v128_or( fast( l ), zl ), wasm_v128_or( fast( h ), zh ) ) );
+        const v128_t l0 = wasm_v128_or( l, wasm_v128_and( zl, signBit ) );
+        const v128_t h0 = wasm_v128_andnot( h, wasm_v128_and( zh, signBit ) );
+        lo[c] = wasm_i32x4_sub( l0, step( l0 ) );
+        hi[c] = wasm_i32x4_add( h0, step( h0 ) );
+    }
+    if ( wasm_i32x4_all_true( wasm_v128_or( ok, wasm_v128_not( used ) ) ) )
+    {
+        const v128_t pinf = wasm_f32x4_splat( inf ), ninf = wasm_f32x4_splat( -inf );
+        for ( int c = 0; c < 3; ++c )
+        {
+            wasm_v128_store( box[c], wasm_v128_bitselect( lo[c], pinf, used ) );
+            wasm_v128_store( box[c + 3], wasm_v128_bitselect( hi[c], ninf, used ) );
+        }
+        return;
+    }
 #endif
     for ( int i = 0; i < 4; ++i )
     {

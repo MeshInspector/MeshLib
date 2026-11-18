@@ -348,7 +348,13 @@ Expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mesh,
 {
     MR_TIMER;
     if ( atype == GeodesicPathApprox::FastMarching )
-        return computeFastMarchingPath( mesh, start, end );
+    {
+        auto res = computeFastMarchingPath( mesh, start, end );
+        if ( res.has_value() || res.error() != PathError::InternalError )
+            return res;
+        // the descent got stuck before reaching end, Dijkstra paths always reach it
+        atype = GeodesicPathApprox::DijkstraBiDir;
+    }
 
     SurfacePath res;
     if ( !fromSameTriangle( mesh.topology, MeshTriPoint{ start }, MeshTriPoint{ end } ) )
@@ -511,7 +517,9 @@ Expected<SurfacePath, PathError> computeFastMarchingPath( const MeshPart & mp,
         return unexpected( PathError::StartEndNotConnected );
 
     res = computeSteepestDescentPath( mp.mesh, distances, start, { .end = end } );
-    if ( res.empty() ) // no edge is crossed only if start and end are from the same triangle
+    // no edge is crossed only if start and end are from the same triangle;
+    // the descent can stop in a local minimum of the field before reaching end, e.g. near huge triangles
+    if ( res.empty() || !fromSameTriangle( mp.mesh.topology, MeshTriPoint{ end }, MeshTriPoint{ res.back() } ) )
         return unexpected( PathError::InternalError );
 
     if ( outSurfaceDistances )

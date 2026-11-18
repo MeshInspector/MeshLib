@@ -15,35 +15,10 @@
 #include <string>
 #include <utility>
 
-namespace MR::detail
-{
-struct FeatureAlignmentWorkingSolution : FeatureAlignment::Solution
-{
-    double primaryPositionError{};
-    double secondaryAngleErrorDeg{};
-
-    double maximumPositionError() const
-    {
-        return std::max( primaryPositionError, Solution::maximumPositionError() );
-    }
-    double maximumAngleError() const
-    {
-        return std::max( primaryAngleErrorDeg, secondaryAngleErrorDeg );
-    }
-    Solution finish() &&
-    {
-        primaryPositionError_ = primaryPositionError;
-        secondaryAngleErrorDeg_ = secondaryAngleErrorDeg;
-        return std::move( *this );
-    }
-};
-} // namespace MR::detail
-
 namespace MR::FeatureAlignment
 {
 namespace
 {
-using WorkingSolution = MR::detail::FeatureAlignmentWorkingSolution;
 constexpr double cEpsilon = 1e-10, cDegrees = 180. / std::numbers::pi;
 bool finite( Vector3d v )
 {
@@ -73,9 +48,15 @@ Vector3d project( Vector3d v, Vector3d n )
 {
     return Plane3d{ n, 0 }.project( v );
 }
+struct RadialDirection
+{
+    Vector3d unit;
+    double radius{};
+};
+
 // A collinear locator leaves spin free. Bound cancellation relative to the length
 // of its lever in its own frame, before rotating it into the other frame.
-Expected<Vector3d> radialDirection( Vector3d lever, Vector3d unitAxis )
+Expected<RadialDirection> radialDirection( Vector3d lever, Vector3d unitAxis )
 {
     const auto length = lever.length();
     const auto normal = cross( unitAxis, lever );
@@ -83,8 +64,8 @@ Expected<Vector3d> radialDirection( Vector3d lever, Vector3d unitAxis )
     if ( !std::isfinite( length ) || !std::isfinite( radius ) )
         return unexpected( std::string( _t( "Locator lever arm exceeds the supported numeric range." ) ) );
     if ( radius <= std::max( cEpsilon, 16 * std::numeric_limits<double>::epsilon() * length ) )
-        return Vector3d{};
-    return cross( normal / radius, unitAxis );
+        return RadialDirection{};
+    return RadialDirection{ cross( normal / radius, unitAxis ), radius };
 }
 double angleDeg( Vector3d a, Vector3d b, bool unoriented = false )
 {
@@ -116,7 +97,7 @@ Expected<void> valid( const Constraints &c )
             return unexpected( std::string( _t( "Feature centers must be finite." ) ) );
     return {};
 }
-void measureCenterResiduals( const Constraints &c, WorkingSolution &r, Vector3d offset = {} )
+void measureCenterResiduals( const Constraints &c, Solution &r, Vector3d offset = {} )
 {
     for ( size_t i = 0; i < c.centers.size(); ++i )
     {
@@ -132,13 +113,12 @@ void measureCenterResiduals( const Constraints &c, WorkingSolution &r, Vector3d 
 struct Orientation
 {
     Matrix3d rotation;
-    double yaw = 0;
     int remaining = 3;
     RotationSource source = RotationSource::Unconstrained;
-    bool spinLocked = false;
+    int shortLeverIndex = -1;
 };
 
-Expected<WorkingSolution> checkedSolution( WorkingSolution result, const Constraints &constraints )
+Expected<Solution> checkedSolution( Solution result, const Constraints &constraints )
 {
     if ( !isProperRigid( result.delta ) )
         return unexpected( std::string( _t( "Failed to produce or measure a finite rigid transform." ) ) );
@@ -161,13 +141,16 @@ Expected<WorkingSolution> checkedSolution( WorkingSolution result, const Constra
         for ( const auto &hole : constraints.holes )
             if ( !finitePair( hole.moving.center, hole.fixed.center ) )
                 return unexpected( std::string( _t( "Hole placement exceeds the supported numeric range." ) ) );
-    for ( const double value : { result.primaryPositionError, result.primaryAngleErrorDeg,
-                                 result.secondaryAngleErrorDeg, result.yawDeg } )
+    for ( const double value : { result.maxPositionError, result.primaryAngleErrorDeg, result.maxAngleErrorDeg } )
         if ( !std::isfinite( value ) )
             return unexpected( std::string( _t( "Alignment residuals exceed the supported numeric range." ) ) );
+    result.maxAngleErrorDeg = std::max( result.maxAngleErrorDeg, result.primaryAngleErrorDeg );
     for ( const auto &hole : result.holes )
+    {
         if ( !std::isfinite( hole.position ) )
             return unexpected( std::string( _t( "Locator residuals exceed the supported numeric range." ) ) );
+        result.maxPositionError = std::max( result.maxPositionError, hole.position );
+    }
     return result;
 }
 
@@ -198,19 +181,19 @@ Vector3d directedTarget( const Constraints &c )
         target = -target;
     return target;
 }
-WorkingSolution measuredAxis( const Constraints &c, const AffineXf3d &delta )
+Solution measuredAxis( const Constraints &c, const AffineXf3d &delta )
 {
     const auto &s = c.settings;
     const auto n = c.fixedAxis.direction;
-    WorkingSolution r;
+    Solution r;
     r.delta = delta;
     const auto displacement = delta( c.movingAxis.center ) - c.fixedAxis.center;
-    r.primaryPositionError = s.matchAxialCenters ? ( displacement - s.offset * n ).length()
+    r.maxPositionError = s.matchAxialCenters ? ( displacement - s.offset * n ).length()
                              : s.coaxial         ? project( displacement, n ).length()
                                                  : 0.;
     r.primaryAngleErrorDeg =
         angleDeg( delta.A * c.movingAxis.direction, directedTarget( c ), s.axisDirection == AxisDirection::Closest );
-    if ( r.primaryPositionError > s.linearTolerance )
+    if ( r.maxPositionError > s.linearTolerance )
         r.conflicts.push_back( { s.matchAxialCenters ? DiagnosticCode::PrimaryCenterMismatch
                                                  : DiagnosticCode::PrimaryAxisNotCoaxial } );
     if ( r.primaryAngleErrorDeg > s.angularToleranceDeg )
@@ -224,7 +207,7 @@ WorkingSolution measuredAxis( const Constraints &c, const AffineXf3d &delta )
         else
         {
             const auto clockingError = angleDeg( a, b );
-            r.secondaryAngleErrorDeg = std::max( r.secondaryAngleErrorDeg, clockingError );
+            r.maxAngleErrorDeg = std::max( r.maxAngleErrorDeg, clockingError );
             if ( clockingError > s.angularToleranceDeg )
                 r.conflicts.push_back( { DiagnosticCode::ClockingConflict } );
         }
@@ -237,7 +220,7 @@ Expected<Orientation> orientAxis( const Constraints &c )
     const auto n = c.fixedAxis.direction;
     const auto initial = Matrix3d::rotation( c.movingAxis.direction, directedTarget( c ) );
     double yaw = 0;
-    bool spinLocked = false;
+    int shortLeverIndex = -1;
     RotationSource source = RotationSource::Unconstrained;
     Vector3d sourceOrigin = c.movingAxis.center, targetOrigin = c.fixedAxis.center;
     size_t first = 0;
@@ -253,35 +236,37 @@ Expected<Orientation> orientAxis( const Constraints &c )
         const auto b = radialDirection( c.centers[i].fixed - targetOrigin, n );
         if ( !a || !b )
             return unexpected( !a ? a.error() : b.error() );
-        if ( *a != Vector3d{} && *b != Vector3d{} )
+        if ( a->radius > 0 && b->radius > 0 )
         {
-            yaw = dihedralAngle( initial * *a, *b, n );
-            spinLocked = true;
+            yaw = dihedralAngle( initial * a->unit, b->unit, n );
+            if ( std::min( a->radius, b->radius ) < s.linearTolerance )
+                shortLeverIndex = int( i );
             source = RotationSource::OffAxisCenterLocator;
             break;
         }
     }
-    if ( !spinLocked && c.clocking )
+    if ( source == RotationSource::Unconstrained && c.clocking )
     {
         auto angle = spin( initial * c.clocking->moving, c.clocking->fixed, n );
         if ( !angle )
             return unexpected( angle.error() );
         yaw = *angle;
-        spinLocked = true;
         source = RotationSource::DirectedReference;
     }
     const auto rotation = Matrix3d::rotation( n, yaw ) * initial;
-    return Orientation{ rotation, yaw, 0, source, spinLocked };
+    return Orientation{ rotation, 0, source, shortLeverIndex };
 }
 
-void describeAxisMotion( WorkingSolution &result, const Constraints &c, const Orientation &orientation )
+void describeAxisMotion( Solution &result, const Constraints &c, const Orientation &orientation )
 {
     const auto &s = c.settings;
     const bool positionLocked = s.matchAxialCenters || !c.centers.empty();
-    const bool spinLocked = orientation.spinLocked;
+    const bool spinLocked = orientation.source != RotationSource::Unconstrained;
     const auto &source = orientation.source;
     result.remainingDof = ( spinLocked ? 0 : 1 ) + ( positionLocked ? 0 : s.coaxial ? 1 : 3 );
     result.rotationSource = source;
+    if ( orientation.shortLeverIndex >= 0 )
+        result.warnings.push_back( { DiagnosticCode::ShortLocatorLeverArm, orientation.shortLeverIndex } );
     result.freeMotion = positionLocked ? ( spinLocked ? FreeMotion::FullyConstrained : FreeMotion::PrimarySpin )
                         : s.coaxial ? ( spinLocked ? FreeMotion::PrimarySlide : FreeMotion::PrimarySlideAndSpin )
                                     : ( spinLocked ? FreeMotion::Translations : FreeMotion::TranslationsAndSpin );
@@ -291,7 +276,7 @@ void describeAxisMotion( WorkingSolution &result, const Constraints &c, const Or
         result.warnings.push_back( { DiagnosticCode::FittedAxialCenters } );
 }
 
-Expected<WorkingSolution> measureAxis( Constraints c, const AffineXf3d &delta )
+Expected<Solution> measureAxis( Constraints c, const AffineXf3d &delta )
 {
     if ( !isProperRigid( delta ) )
         return unexpected( std::string( _t( "The proposed transform is not rigid." ) ) );
@@ -305,7 +290,7 @@ Expected<WorkingSolution> measureAxis( Constraints c, const AffineXf3d &delta )
     describeAxisMotion( result, *value, *orientation );
     return checkedSolution( std::move( result ), *value );
 }
-Expected<WorkingSolution> solveAxis( Constraints c )
+Expected<Solution> solveAxis( Constraints c )
 {
     auto value = preparedAxis( std::move( c ) );
     if ( !value )
@@ -325,8 +310,8 @@ Expected<WorkingSolution> solveAxis( Constraints c )
         {
             return std::abs( x - y ) > cEpsilon * std::max( { 1., x, y } );
         };
-        const auto positionA = a->maximumPositionError(), positionB = b->maximumPositionError();
-        const auto angleA = a->maximumAngleError(), angleB = b->maximumAngleError();
+        const auto positionA = a->maxPositionError, positionB = b->maxPositionError;
+        const auto angleA = a->maxAngleErrorDeg, angleB = b->maxAngleErrorDeg;
         // Compare geometry in separate units; acceptance thresholds never choose the placement.
         bool takeA;
         if ( different( positionA, positionB ) )
@@ -365,7 +350,6 @@ Expected<WorkingSolution> solveAxis( Constraints c )
         translation = c.movingAxis.center - rotation * c.movingAxis.center;
     auto result = measuredAxis( c, { rotation, translation } );
     describeAxisMotion( result, c, *orientation );
-    result.yawDeg = orientation->yaw * cDegrees;
     return checkedSolution( std::move( result ), c );
 }
 
@@ -389,17 +373,17 @@ Expected<void> validateCenters( const Constraints &c )
     }
     return {};
 }
-WorkingSolution measuredCenters( const Constraints &c, const AffineXf3d &delta )
+Solution measuredCenters( const Constraints &c, const AffineXf3d &delta )
 {
-    WorkingSolution result;
+    Solution result;
     result.delta = delta;
     measureCenterResiduals( c, result );
-    result.primaryPositionError = result.holes.front().position;
     return result;
 }
 Expected<Orientation> orientCenters( const Constraints &c )
 {
     Matrix3d rotation;
+    int shortLeverIndex = -1;
     int remaining = 3;
     RotationSource source = RotationSource::Unconstrained;
     if ( c.centers.size() > 1 )
@@ -415,24 +399,28 @@ Expected<Orientation> orientCenters( const Constraints &c )
             const auto b = radialDirection( c.centers[2].fixed - c.centers[0].fixed, fixed );
             if ( !a || !b )
                 return unexpected( !a ? a.error() : b.error() );
-            if ( *a != Vector3d{} && *b != Vector3d{} )
+            if ( a->radius > 0 && b->radius > 0 )
             {
-                const auto yaw = dihedralAngle( rotation * *a, *b, fixed );
+                const auto yaw = dihedralAngle( rotation * a->unit, b->unit, fixed );
                 rotation = Matrix3d::rotation( fixed, yaw ) * rotation;
                 remaining = 0;
                 source = RotationSource::ThirdCenter;
+                if ( std::min( a->radius, b->radius ) < c.settings.linearTolerance )
+                    shortLeverIndex = 2;
             }
         }
     }
-    return Orientation{ rotation, 0, remaining, source };
+    return Orientation{ rotation, remaining, source, shortLeverIndex };
 }
 
-void describeCenterMotion( WorkingSolution &result, const Constraints &c, const Orientation &orientation )
+void describeCenterMotion( Solution &result, const Constraints &c, const Orientation &orientation )
 {
     const int remaining = orientation.remaining;
     const auto &source = orientation.source;
     result.remainingDof = remaining;
     result.rotationSource = source;
+    if ( orientation.shortLeverIndex >= 0 )
+        result.warnings.push_back( { DiagnosticCode::ShortLocatorLeverArm, orientation.shortLeverIndex } );
     result.freeMotion = remaining == 3 ? FreeMotion::Rotations
                         : remaining == 1 ? FreeMotion::BaselineSpin
                                          : FreeMotion::FullyConstrained;
@@ -442,7 +430,7 @@ void describeCenterMotion( WorkingSolution &result, const Constraints &c, const 
         result.warnings.push_back( { DiagnosticCode::CollinearCenters } );
 }
 
-Expected<WorkingSolution> measureCenters( Constraints c, const AffineXf3d &delta )
+Expected<Solution> measureCenters( Constraints c, const AffineXf3d &delta )
 {
     auto good = validateCenters( c );
     if ( !good )
@@ -456,7 +444,7 @@ Expected<WorkingSolution> measureCenters( Constraints c, const AffineXf3d &delta
     describeCenterMotion( result, c, *orientation );
     return checkedSolution( std::move( result ), c );
 }
-Expected<WorkingSolution> solveCenters( Constraints c )
+Expected<Solution> solveCenters( Constraints c )
 {
     auto good = validateCenters( c );
     if ( !good )
@@ -536,16 +524,16 @@ Expected<PreparedPlane> preparePlane( Constraints c )
     }
     return p;
 }
-WorkingSolution measuredPlane( const PreparedPlane &p, const AffineXf3d &delta )
+Solution measuredPlane( const PreparedPlane &p, const AffineXf3d &delta )
 {
     const auto &c = p.c;
     const auto &n = c.fixedPlane.normal;
     const auto &s = c.settings;
-    WorkingSolution r;
+    Solution r;
     r.delta = delta;
-    r.primaryPositionError = std::abs( dot( n, delta( c.movingPlane.center ) - c.fixedPlane.center ) - s.offset );
+    r.maxPositionError = std::abs( dot( n, delta( c.movingPlane.center ) - c.fixedPlane.center ) - s.offset );
     r.primaryAngleErrorDeg = angleDeg( delta.A * c.movingPlane.normal, double( int( s.normals ) ) * n );
-    if ( r.primaryPositionError > s.linearTolerance || r.primaryAngleErrorDeg > s.angularToleranceDeg )
+    if ( r.maxPositionError > s.linearTolerance || r.primaryAngleErrorDeg > s.angularToleranceDeg )
         r.conflicts.push_back( { DiagnosticCode::PlaneSeatingMismatch } );
     for ( size_t i = 0; i < c.holes.size(); ++i )
     {
@@ -560,7 +548,7 @@ WorkingSolution measuredPlane( const PreparedPlane &p, const AffineXf3d &delta )
         if ( s.holeMode == HoleMode::Axes )
         {
             const auto axisAngle = angleDeg( delta.A * pair.moving.axis, pair.fixed.axis, true );
-            r.secondaryAngleErrorDeg = std::max( r.secondaryAngleErrorDeg, axisAngle );
+            r.maxAngleErrorDeg = std::max( r.maxAngleErrorDeg, axisAngle );
             if ( axisAngle > s.angularToleranceDeg )
                 r.conflicts.push_back( { DiagnosticCode::HoleAxisAngleMismatch, int( i ) } );
         }
@@ -576,7 +564,7 @@ WorkingSolution measuredPlane( const PreparedPlane &p, const AffineXf3d &delta )
         else
         {
             const auto clockingError = angleDeg( a, b );
-            r.secondaryAngleErrorDeg = std::max( r.secondaryAngleErrorDeg, clockingError );
+            r.maxAngleErrorDeg = std::max( r.maxAngleErrorDeg, clockingError );
             if ( clockingError > s.angularToleranceDeg )
                 r.conflicts.push_back( { DiagnosticCode::ClockingConflict } );
         }
@@ -632,10 +620,10 @@ Expected<Orientation> orientPlane( const PreparedPlane &p )
     else if ( !p.anchors.empty() )
         remaining = 1;
     const auto rotation = Matrix3d::rotation( n, yaw ) * r0;
-    return Orientation{ rotation, yaw, remaining, source };
+    return Orientation{ rotation, remaining, source };
 }
 
-void describePlaneMotion( WorkingSolution &r, const PreparedPlane &p, const Orientation &orientation )
+void describePlaneMotion( Solution &r, const PreparedPlane &p, const Orientation &orientation )
 {
     const int remaining = orientation.remaining;
     const auto &source = orientation.source;
@@ -658,7 +646,7 @@ void describePlaneMotion( WorkingSolution &r, const PreparedPlane &p, const Orie
         r.warnings.push_back( { DiagnosticCode::OppositePlaneNormalsConvention } );
 }
 
-Expected<WorkingSolution> measurePlane( Constraints c, const AffineXf3d &delta )
+Expected<Solution> measurePlane( Constraints c, const AffineXf3d &delta )
 {
     if ( !isProperRigid( delta ) )
         return unexpected( std::string( _t( "The proposed transform contains scale, shear or reflection." ) ) );
@@ -672,7 +660,7 @@ Expected<WorkingSolution> measurePlane( Constraints c, const AffineXf3d &delta )
     describePlaneMotion( result, *p, *orientation );
     return checkedSolution( std::move( result ), p->c );
 }
-Expected<WorkingSolution> solvePlane( Constraints c )
+Expected<Solution> solvePlane( Constraints c )
 {
     auto prepared = preparePlane( std::move( c ) );
     if ( !prepared )
@@ -698,9 +686,8 @@ Expected<WorkingSolution> solvePlane( Constraints c )
         }
         translation += tangential;
     }
-    WorkingSolution r = measuredPlane( p, { rotation, translation } );
+    Solution r = measuredPlane( p, { rotation, translation } );
     describePlaneMotion( r, p, *orientation );
-    r.yawDeg = orientation->yaw * cDegrees;
     return checkedSolution( std::move( r ), p.c );
 }
 
@@ -844,54 +831,31 @@ Expected<void> validatePair( const FeaturePair &pair, bool required = false )
 }
 } // namespace
 
-double Solution::maximumPositionError() const
-{
-    double result = primaryPositionError_;
-    for ( const auto &hole : holes )
-        result = std::max( result, hole.position );
-    return result;
-}
-double Solution::maximumAngleError() const
-{
-    return std::max( primaryAngleErrorDeg, secondaryAngleErrorDeg_ );
-}
 Expected<Solution> solve( Constraints c )
 {
-    auto result = [&]() -> Expected<WorkingSolution>
+    switch ( c.settings.mode )
     {
-        switch ( c.settings.mode )
-        {
-        case PrimaryMode::Plane:
-            return solvePlane( std::move( c ) );
-        case PrimaryMode::Axis:
-            return solveAxis( std::move( c ) );
-        case PrimaryMode::Centers:
-            return solveCenters( std::move( c ) );
-        }
-        return unexpected( std::string( _t( "Choose plane, axis or center alignment." ) ) );
-    }();
-    if ( !result )
-        return unexpected( result.error() );
-    return std::move( *result ).finish();
+    case PrimaryMode::Plane:
+        return solvePlane( std::move( c ) );
+    case PrimaryMode::Axis:
+        return solveAxis( std::move( c ) );
+    case PrimaryMode::Centers:
+        return solveCenters( std::move( c ) );
+    }
+    return unexpected( std::string( _t( "Choose plane, axis or center alignment." ) ) );
 }
 Expected<Solution> measure( Constraints c, const AffineXf3d &delta )
 {
-    auto result = [&]() -> Expected<WorkingSolution>
+    switch ( c.settings.mode )
     {
-        switch ( c.settings.mode )
-        {
-        case PrimaryMode::Plane:
-            return measurePlane( std::move( c ), delta );
-        case PrimaryMode::Axis:
-            return measureAxis( std::move( c ), delta );
-        case PrimaryMode::Centers:
-            return measureCenters( std::move( c ), delta );
-        }
-        return unexpected( std::string( _t( "Choose plane, axis or center alignment." ) ) );
-    }();
-    if ( !result )
-        return unexpected( result.error() );
-    return std::move( *result ).finish();
+    case PrimaryMode::Plane:
+        return measurePlane( std::move( c ), delta );
+    case PrimaryMode::Axis:
+        return measureAxis( std::move( c ), delta );
+    case PrimaryMode::Centers:
+        return measureCenters( std::move( c ), delta );
+    }
+    return unexpected( std::string( _t( "Choose plane, axis or center alignment." ) ) );
 }
 
 Expected<Constraints> readConstraints( const FeatureReferences &references, const Settings &settings )

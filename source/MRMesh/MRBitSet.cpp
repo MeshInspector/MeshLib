@@ -67,11 +67,14 @@ MR_FORCE_INLINE Counts countBitsAndBlocksT( const Block* blocks, size_t numBlock
 size_t countSw( const Block* blocks, size_t numBlocks ) noexcept { return countT<false>( blocks, numBlocks ); }
 Counts countBitsAndBlocksSw( const Block* blocks, size_t numBlocks, size_t maxBits ) noexcept { return countBitsAndBlocksT<false>( blocks, numBlocks, maxBits ); }
 
+#ifndef MR_POPCNT_DISPATCH
+constexpr auto countImpl = &countSw;
+constexpr auto countBitsAndBlocksImpl = &countBitsAndBlocksSw;
+#else
 // constant-initialized, so the portable versions serve calls from static initializers that run before selectPopcnt
 auto countImpl = &countSw;
 auto countBitsAndBlocksImpl = &countBitsAndBlocksSw;
 
-#ifdef MR_POPCNT_DISPATCH
 MR_TARGET_POPCNT size_t countHw( const Block* blocks, size_t numBlocks ) noexcept { return countT<true>( blocks, numBlocks ); }
 MR_TARGET_POPCNT Counts countBitsAndBlocksHw( const Block* blocks, size_t numBlocks, size_t maxBits ) noexcept { return countBitsAndBlocksT<true>( blocks, numBlocks, maxBits ); }
 

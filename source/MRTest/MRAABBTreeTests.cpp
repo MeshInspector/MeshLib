@@ -23,6 +23,7 @@
 #include <iterator>
 #include <limits>
 #include <optional>
+#include <random>
 #include <sstream>
 
 namespace MR
@@ -780,6 +781,30 @@ TEST( MRMesh, ProjectionToTriMesh )
     const auto [a, b, c] = tmesh.tris[proj.proj.face];
     const Vector3f p = proj.tp.interpolate( tmesh.points[a], tmesh.points[b], tmesh.points[c] );
     EXPECT_NEAR( ( p - proj.proj.point ).length(), 0.f, 1e-6f );
+}
+
+// the projections without the boxes of the leaves are the same as with them, also with a region and in the tree of a triangulation
+TEST( MRMesh, AABBTreeProjectionWithoutLeafBoxes )
+{
+    const Mesh mesh = makeSphere( { .radius = 1, .numMeshVertices = 3000 } );
+    FaceBitSet region( mesh.topology.faceSize() );
+    for ( FaceId f : mesh.topology.getValidFaces() )
+        region.set( f, f % 3 != 0 );
+    const TriMesh tmesh{ mesh.topology.getTriangulation(), mesh.points };
+    const AABBTree tree( tmesh );
+    auto same = []( const MeshProjectionResult & a, const MeshProjectionResult & b )
+    {
+        return a.proj.face == b.proj.face && a.proj.point == b.proj.point && a.tp == b.tp && a.distSq == b.distSq;
+    };
+    std::mt19937 rng( 3 );
+    std::uniform_real_distribution<float> u( -1.5f, 1.5f );
+    for ( int i = 0; i < 1000; ++i )
+    {
+        const Vector3f pt( u( rng ), u( rng ), u( rng ) );
+        EXPECT_TRUE( same( findProjection( pt, mesh ), findProjection( pt, mesh, FLT_MAX, nullptr, 0, {}, {}, false ) ) );
+        EXPECT_TRUE( same( findProjection( pt, { mesh, &region } ), findProjection( pt, { mesh, &region }, FLT_MAX, nullptr, 0, {}, {}, false ) ) );
+        EXPECT_TRUE( same( findProjection( pt, tmesh.points, tree ), findProjection( pt, tmesh.points, tree, FLT_MAX, nullptr, 0, {}, {}, nullptr, false ) ) );
+    }
 }
 
 } //namespace MR

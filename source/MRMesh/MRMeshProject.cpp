@@ -51,7 +51,7 @@ namespace
 // Plain: no transformation, region, validFaces or validProjections, so the hot loops skip their checks
 template <bool Plain>
 MeshProjectionResult findProjectionWide( const Vector3f & pt, const VertCoords & points, const FaceBitSet * region, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
-    const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections )
+    const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections, bool useLeafBoxes )
 {
     using namespace Simd4;
     MeshProjectionResult res;
@@ -122,12 +122,24 @@ MeshProjectionResult findProjectionWide( const Vector3f & pt, const VertCoords &
         // without transformation, the triangles that cannot be closer than the found point are skipped before the precise computation:
         // the projection rounded to float is in the box of its triangle, so it is not closer than the box (up to the rounding of the distances)
         alignas( 16 ) float lowerDistSq[4];
-        bool useLower = true;
+        bool useLower = useLeafBoxes;
         if constexpr ( !Plain )
-            useLower = !xf;
+            useLower = useLower && !xf;
+        int used = 0;
         if ( useLower )
-            store( lowerDistSq, mul( boxDistSq( tree.leafBoxes( l ).box, px, py, pz ), set1( 1 - 1e-6f ) ) );
-        for ( int m = leafUsedSlots( tree.leafBoxes( l ) ); m; m &= m - 1 )
+        {
+            const auto & boxes = tree.leafBoxes( l );
+            store( lowerDistSq, mul( boxDistSq( boxes.box, px, py, pz ), set1( 1 - 1e-6f ) ) );
+            used = leafUsedSlots( boxes );
+        }
+        else
+        {
+            // the used slots from the triangles of the leaf, without reading its boxes
+            for ( int i = 0; i < AABBTree::MaxLeafTris; ++i )
+                if ( leafTris[l * AABBTree::MaxLeafTris + i].face )
+                    used |= 1 << i;
+        }
+        for ( int m = used; m; m &= m - 1 )
         {
             const int i = lowestBit( m );
             if ( useLower && !( lowerDistSq[i] < distSq ) )
@@ -235,25 +247,25 @@ MeshProjectionResult findProjectionWide( const Vector3f & pt, const VertCoords &
 } // anonymous namespace
 
 MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
-    const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections )
+    const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections, bool useLeafBoxes )
 {
-    return findProjectionSubtree( pt, mp, mp.mesh.getAABBTree(), upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
+    return findProjectionSubtree( pt, mp, mp.mesh.getAABBTree(), upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections, useLeafBoxes );
 }
 
 MeshProjectionResult findProjectionSubtree( const Vector3f & pt, const MeshPart & mp, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
-    const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections )
+    const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections, bool useLeafBoxes )
 {
     if ( !xf && !mp.region && !validFaces && !validProjections )
-        return findProjectionWide<true>( pt, mp.mesh.points, nullptr, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
-    return findProjectionWide<false>( pt, mp.mesh.points, mp.region, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
+        return findProjectionWide<true>( pt, mp.mesh.points, nullptr, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections, useLeafBoxes );
+    return findProjectionWide<false>( pt, mp.mesh.points, mp.region, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections, useLeafBoxes );
 }
 
 MeshProjectionResult findProjection( const Vector3f & pt, const VertCoords & points, const AABBTree & tree, float upDistLimitSq, const AffineXf3f * xf, float loDistLimitSq,
-    const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections, const FaceBitSet * region )
+    const FacePredicate & validFaces, const std::function<bool(const MeshProjectionResult&)> & validProjections, const FaceBitSet * region, bool useLeafBoxes )
 {
     if ( !xf && !region && !validFaces && !validProjections )
-        return findProjectionWide<true>( pt, points, nullptr, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
-    return findProjectionWide<false>( pt, points, region, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections );
+        return findProjectionWide<true>( pt, points, nullptr, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections, useLeafBoxes );
+    return findProjectionWide<false>( pt, points, region, tree, upDistLimitSq, xf, loDistLimitSq, validFaces, validProjections, useLeafBoxes );
 }
 
 namespace

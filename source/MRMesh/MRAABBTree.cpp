@@ -728,7 +728,7 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
     {
         const auto * lts = leafTris_.data() + l * MaxLeafTris;
         Box3f box;
-        Box3f tb[MaxLeafTris];
+        Box3f tb[MaxLeafTris] = { Box3f( noInit ), Box3f( noInit ), Box3f( noInit ), Box3f( noInit ) }; // every slot is written below
         for ( int i = 0; i < MaxLeafTris; ++i )
         {
             if ( !lts[i].face )

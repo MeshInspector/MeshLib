@@ -743,7 +743,9 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
         return box;
     };
     BitSet changedLeaves;
-    Buffer<Box3f> leafBox( leafBoxes_.size() );
+    // the unions of the boxes of the leaves, made with them when all leaves change; otherwise each changed one is made from its boxes when needed
+    Buffer<Box3f> leafBox( changedVerts ? 0 : leafBoxes_.size() );
+    auto leafUnion = [&]( int l ) { return changedVerts ? leafBoxes_[l].getUnion() : leafBox[l]; };
     if ( !changedVerts )
     {
         tbb::parallel_for( tbb::blocked_range<size_t>( 0, leafBoxes_.size(), 1024 ), [&]( const tbb::blocked_range<size_t> & range )
@@ -793,7 +795,6 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
             if ( !changed )
                 return;
             changedLeaves.set( l );
-            leafBox[l] = leafBoxes_[l].getUnion();
         } );
     }
 
@@ -816,7 +817,7 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
                 const int c = sn.child[i];
                 if ( c < 0 ? changedVerts && !changedLeaves.test( ~c ) : !changedNodes.test( c ) )
                     continue;
-                sn.set( i, c < 0 ? leafBox[~c] : simdNodes_[c].getUnion() );
+                sn.set( i, c < 0 ? leafUnion( ~c ) : simdNodes_[c].getUnion() );
                 changed = true;
             }
             if ( changed )
@@ -850,7 +851,7 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
             if ( !changedCh[i] )
                 continue;
             const int c = sn.child[i];
-            sn.set( i, c < 0 ? leafBox[~c] : simdNodes_[c].getUnion() );
+            sn.set( i, c < 0 ? leafUnion( ~c ) : simdNodes_[c].getUnion() );
             changed = true;
         }
         return changed;

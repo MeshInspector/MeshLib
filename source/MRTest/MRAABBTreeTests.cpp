@@ -638,16 +638,17 @@ void withSixteenThreads( F && f )
 
 } //anonymous namespace
 
-// the trees of meshes with exactly representable coordinates are pinned by their hashes, the same as the tree maker before ML#7479 gave:
+// the trees of meshes with exactly representable coordinates are pinned by their hashes (for 1000 and 150000 triangles, an even number of binary levels,
+// the same as the tree maker before ML#7479 gave; for 20000 and 300000 the levels are grouped differently, with the root of 2 children):
 // small ranges, many equal centers, almost all centers in one bucket (split again in parallel for 150000 triangles), the parallel splits
 TEST( MRMesh, AABBTreeGoldenHashes )
 {
     struct Case { int numTris, range; bool farOutlier; std::uint64_t hash; };
     const Case cases[] = {
         { 1000, 1 << 20, false, 0x34b0ae3e1963543dull },
-        { 20000, 4, false, 0x35cd81ed6d39cd05ull },
+        { 20000, 4, false, 0x8c32dbd435abc2b4ull },
         { 150000, 1024, true, 0xb4c853ba04bdc510ull },
-        { 300000, 1 << 16, false, 0x0cc9a28f326dd6dcull }
+        { 300000, 1 << 16, false, 0x1a2a1535e9c2259bull }
     };
     for ( const auto & c : cases )
     {

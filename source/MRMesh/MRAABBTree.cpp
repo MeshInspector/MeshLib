@@ -11,6 +11,7 @@
 #include "MRAABBTreeCenters.hpp"
 #include "MRTriBox.hpp"
 #include "MRTriMesh.h"
+#include <bit>
 #include <algorithm>
 #include <cstring>
 #include <limits>
@@ -257,7 +258,7 @@ private:
         const int halves[2] = { num / 2, num - num / 2 };
         for ( int h : halves )
         {
-            if ( h <= AABBTree::MaxLeafTris )
+            if ( !splitHalf_( h ) )
                 add( count_( d + 1, h ) );
             else
             {
@@ -268,6 +269,16 @@ private:
         return res = r;
     }
     Cnt cntOf_( const Child & c ) const { return cnt_[c.depth][c.r.num - ( numTris_ >> c.depth )]; }
+
+    // the number of binary splits from a range of num triangles down to its leaves (of at most MaxLeafTris triangles)
+    static int leafDepth_( int num )
+    {
+        static_assert( AABBTree::MaxLeafTris == 4 );
+        return num <= AABBTree::MaxLeafTris ? 0 : std::bit_width( unsigned( num - 1 ) ) - 2;
+    }
+    // a half becomes a child of the node directly if its subtree has an even number of binary levels (in particular if it is a leaf),
+    // otherwise its quarters do; so the internal nodes have 4 children, and if the tree has an odd number of levels, the root has 2
+    static bool splitHalf_( int num ) { return leafDepth_( num ) % 2 != 0; }
 
     Box3f centersBox_( const Range & r ) const
     {
@@ -389,13 +400,19 @@ private:
         const auto halves = split_( c.r );
         std::array<Range, 2> quarters[2];
         const bool parallel = num >= 4096;
-        if ( parallel )
+        if ( parallel && splitHalf_( halves[0].num ) && splitHalf_( halves[1].num ) )
             tbb::parallel_invoke( [&] { quarters[0] = split_( halves[0] ); }, [&] { quarters[1] = split_( halves[1] ); } );
+        else if ( parallel )
+        {
+            for ( int j = 0; j < 2; ++j )
+                if ( splitHalf_( halves[j].num ) )
+                    quarters[j] = split_( halves[j] );
+        }
         Child ch[AABBTree::MaxChildren];
         int k = 0;
         for ( int j = 0; j < 2; ++j )
         {
-            if ( halves[j].num <= AABBTree::MaxLeafTris )
+            if ( !splitHalf_( halves[j].num ) )
             {
                 ch[k++] = { c.depth + 1, halves[j] };
                 continue;

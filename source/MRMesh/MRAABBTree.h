@@ -29,7 +29,7 @@ struct AABBTreeWideLeafTri
     AABBTreeWideLeafTri() = default;
     AABBTreeWideLeafTri( FaceId face, const ThreeVertIds & verts ) noexcept : face( face ), verts( verts ) {}
     /// all members uninitialized, e.g. for the triangles written by the tree builder
-    explicit AABBTreeWideLeafTri( NoInit ) noexcept : face( noInit ), verts{ VertId( noInit ), VertId( noInit ), VertId( noInit ) } {}
+    explicit AABBTreeWideLeafTri( NoInit ) noexcept : face( noInit ), verts( noInit ) {}
 };
 
 /// four boxes in SoA order: [0..2][i] - min x,y,z of i-th box, [3..5][i] - its max x,y,z;

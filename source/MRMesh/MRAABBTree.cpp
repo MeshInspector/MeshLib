@@ -400,14 +400,9 @@ private:
         const auto halves = split_( c.r );
         std::array<Range, 2> quarters[2];
         const bool parallel = num >= 4096;
-        if ( parallel && splitHalf_( halves[0].num ) && splitHalf_( halves[1].num ) )
+        const bool parallelQuarters = parallel && splitHalf_( halves[0].num ) && splitHalf_( halves[1].num );
+        if ( parallelQuarters )
             tbb::parallel_invoke( [&] { quarters[0] = split_( halves[0] ); }, [&] { quarters[1] = split_( halves[1] ); } );
-        else if ( parallel )
-        {
-            for ( int j = 0; j < 2; ++j )
-                if ( splitHalf_( halves[j].num ) )
-                    quarters[j] = split_( halves[j] );
-        }
         Child ch[AABBTree::MaxChildren];
         int k = 0;
         for ( int j = 0; j < 2; ++j )
@@ -417,7 +412,7 @@ private:
                 ch[k++] = { c.depth + 1, halves[j] };
                 continue;
             }
-            if ( !parallel )
+            if ( !parallelQuarters )
                 quarters[j] = split_( halves[j] );
             ch[k++] = { c.depth + 2, quarters[j][0] };
             ch[k++] = { c.depth + 2, quarters[j][1] };

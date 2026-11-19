@@ -29,6 +29,24 @@ Box3f wideTriBox( const VertCoords & points, const AABBTree::LeafTri & lt )
     return insignificantlyExpandedTriBox( points[lt.verts[0]], points[lt.verts[1]], points[lt.verts[2]] );
 }
 
+/// the box of an unused slot of AABBTree::SimdBoxes, as setEmpty makes it
+inline Box3f emptySlotBox()
+{
+    constexpr float inf = std::numeric_limits<float>::infinity();
+    return { Vector3f::diagonal( inf ), Vector3f::diagonal( -inf ) };
+}
+
+/// writes the four boxes (emptySlotBox() in the unused slots) by one store per row
+template <typename SimdBoxes> // a template: unused with non-temporal stores
+void setBoxRows( SimdBoxes & sb, const Box3f ( &b )[4] )
+{
+    for ( int c = 0; c < 3; ++c )
+    {
+        Simd4::store( sb.box[c], Simd4::make( b[0].min[c], b[1].min[c], b[2].min[c], b[3].min[c] ) );
+        Simd4::store( sb.box[c + 3], Simd4::make( b[0].max[c], b[1].max[c], b[2].max[c], b[3].max[c] ) );
+    }
+}
+
 /// a triangle with its vertices and box, both found in one pass over the topology
 struct BoxedTri
 {
@@ -301,13 +319,14 @@ private:
         SimdBoxes & sl = Simd4::cStreamStores ? tmpBoxes : leaves_[l];
         LeafTri * const lts = streamTris ? tmpTris : leafTris_ + l * AABBTree::MaxLeafTris;
         Box3f box;
+        Box3f triBoxes[AABBTree::MaxLeafTris];
         for ( int i = 0; i < AABBTree::MaxLeafTris; ++i )
         {
             auto & lt = lts[i];
             if ( i >= num )
             {
                 lt = LeafTri{}; // invalid
-                sl.setEmpty( i );
+                triBoxes[i] = emptySlotBox();
                 continue;
             }
             const auto & ft = faceTris_[leaf[i].i];
@@ -322,8 +341,15 @@ private:
             box.include( triBox );
             lt.face = ft.tri.face;
             lt.verts = ft.tri.verts;
-            sl.set( i, triBox );
+            triBoxes[i] = triBox;
         }
+        if constexpr ( Simd4::cStreamStores )
+        {
+            for ( int i = 0; i < AABBTree::MaxLeafTris; ++i )
+                sl.set( i, triBoxes[i] );
+        }
+        else
+            setBoxRows( sl, triBoxes );
         // the arrays are larger than caches, and every leaf is written once
         if constexpr ( Simd4::cStreamStores )
             Simd4::streamCopy( leaves_[l], tmpBoxes );
@@ -427,18 +453,19 @@ private:
         Box3f box;
         for ( int j = 0; j < AABBTree::MaxChildren; ++j )
         {
+            sn.child[j] = j < k ? childRef[j] : 0;
             if ( j < k )
-            {
-                sn.child[j] = childRef[j];
-                sn.set( j, boxes[j] );
                 box.include( boxes[j] );
-            }
             else
-            {
-                sn.child[j] = 0;
-                sn.setEmpty( j );
-            }
+                boxes[j] = emptySlotBox();
         }
+        if constexpr ( Simd4::cStreamStores )
+        {
+            for ( int j = 0; j < AABBTree::MaxChildren; ++j )
+                sn.set( j, boxes[j] );
+        }
+        else
+            setBoxRows( sn, boxes );
         if constexpr ( Simd4::cStreamStores )
             Simd4::streamCopy( nodes_[ref], tmpNode );
         return box;

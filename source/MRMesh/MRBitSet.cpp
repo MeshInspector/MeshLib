@@ -18,6 +18,11 @@
 #endif
 #endif
 
+#ifdef __wasm_simd128__
+#include <wasm_simd128.h>
+#include <algorithm>
+#endif
+
 namespace MR
 {
 
@@ -64,7 +69,29 @@ MR_FORCE_INLINE Counts countBitsAndBlocksT( const Block* blocks, size_t numBlock
     return { bits, nonEmptyBlocks };
 }
 
+#ifdef __wasm_simd128__
+// i8x16.popcnt on 4 blocks per step; much faster than i64.popcnt on arm64 and equal on x64 (clang's auto-vectorized scalar loop is slower on both)
+size_t countDefault( const Block* blocks, size_t numBlocks ) noexcept
+{
+    size_t res = 0, i = 0;
+    while ( i + 4 <= numBlocks )
+    {
+        // a u16 lane grows by at most 16 per step
+        v128_t accA = wasm_i16x8_splat( 0 ), accB = wasm_i16x8_splat( 0 );
+        for ( const auto end = std::min( i + 4 * 2048, numBlocks ); i + 4 <= end; i += 4 )
+        {
+            accA = wasm_i16x8_add( accA, wasm_u16x8_extadd_pairwise_u8x16( wasm_i8x16_popcnt( wasm_v128_load( blocks + i ) ) ) );
+            accB = wasm_i16x8_add( accB, wasm_u16x8_extadd_pairwise_u8x16( wasm_i8x16_popcnt( wasm_v128_load( blocks + i + 2 ) ) ) );
+        }
+        const auto acc32 = wasm_i32x4_add( wasm_u32x4_extadd_pairwise_u16x8( accA ), wasm_u32x4_extadd_pairwise_u16x8( accB ) );
+        res += size_t( wasm_u32x4_extract_lane( acc32, 0 ) ) + wasm_u32x4_extract_lane( acc32, 1 )
+             + wasm_u32x4_extract_lane( acc32, 2 ) + wasm_u32x4_extract_lane( acc32, 3 );
+    }
+    return res + countT<false>( blocks + i, numBlocks - i );
+}
+#else
 size_t countDefault( const Block* blocks, size_t numBlocks ) noexcept { return countT<false>( blocks, numBlocks ); }
+#endif
 Counts countBitsAndBlocksDefault( const Block* blocks, size_t numBlocks, size_t maxBits ) noexcept { return countBitsAndBlocksT<false>( blocks, numBlocks, maxBits ); }
 
 #ifndef MR_POPCNT_DISPATCH

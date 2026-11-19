@@ -2,7 +2,7 @@ name: 'Install CUDA Toolkit (subset)'
 description: 'Restore the cached CUDA toolkit (or install the nvcc/cudart/visual_studio_integration sub-packages on miss) at the standard NVIDIA install path.'
 inputs:
   cuda-version:
-    description: 'CUDA version as major.minor.patch (e.g. 12.0.1), passed as-is to Jimver/cuda-toolkit.'
+    description: 'CUDA version as major.minor.patch (e.g. 12.9.1), passed as-is to Jimver/cuda-toolkit.'
     required: true
   cuda-major:
     description: 'CUDA major version (e.g. 12).'

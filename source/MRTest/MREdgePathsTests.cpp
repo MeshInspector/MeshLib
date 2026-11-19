@@ -49,7 +49,9 @@ TEST( MRMesh, BuildSmallestMetricPathBiDirTriPoints )
     {
         EXPECT_NE( topology.dest( restricted[i] ), mid );
         if ( i + 1 < restricted.size() )
+        {
             EXPECT_EQ( topology.dest( restricted[i] ), topology.org( restricted[i + 1] ) );
+        }
     }
     EXPECT_GE( calcPathMetric( restricted, euclid ), calcPathMetric( path, euclid ) );
 }

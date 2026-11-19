@@ -27,27 +27,27 @@ namespace
 using Block = BitSet::block_type;
 using Counts = BitSet::Counts;
 
-template <bool hw>
+template <bool withPopcnt>
 MR_FORCE_INLINE int popcount( Block b ) noexcept
 {
 #if defined( _MSC_VER ) && !defined( __clang__ ) && defined( MR_POPCNT_DISPATCH )
-    if constexpr ( hw )
+    if constexpr ( withPopcnt )
         return int( __popcnt64( b ) );
     else
 #endif
     return std::popcount( b );
 }
 
-template <bool hw>
+template <bool withPopcnt>
 MR_FORCE_INLINE size_t countT( const Block* blocks, size_t numBlocks ) noexcept
 {
     size_t res = 0;
     for ( size_t i = 0; i < numBlocks; ++i )
-        res += popcount<hw>( blocks[i] );
+        res += popcount<withPopcnt>( blocks[i] );
     return res;
 }
 
-template <bool hw>
+template <bool withPopcnt>
 MR_FORCE_INLINE Counts countBitsAndBlocksT( const Block* blocks, size_t numBlocks, size_t maxBits ) noexcept
 {
     size_t bits = 0, nonEmptyBlocks = 0; // not Counts members, which MSVC keeps in memory
@@ -57,26 +57,26 @@ MR_FORCE_INLINE Counts countBitsAndBlocksT( const Block* blocks, size_t numBlock
         if ( !b )
             continue;
         ++nonEmptyBlocks;
-        bits += popcount<hw>( b );
+        bits += popcount<withPopcnt>( b );
         if ( bits > maxBits )
             break;
     }
     return { bits, nonEmptyBlocks };
 }
 
-size_t countSw( const Block* blocks, size_t numBlocks ) noexcept { return countT<false>( blocks, numBlocks ); }
-Counts countBitsAndBlocksSw( const Block* blocks, size_t numBlocks, size_t maxBits ) noexcept { return countBitsAndBlocksT<false>( blocks, numBlocks, maxBits ); }
+size_t countDefault( const Block* blocks, size_t numBlocks ) noexcept { return countT<false>( blocks, numBlocks ); }
+Counts countBitsAndBlocksDefault( const Block* blocks, size_t numBlocks, size_t maxBits ) noexcept { return countBitsAndBlocksT<false>( blocks, numBlocks, maxBits ); }
 
 #ifndef MR_POPCNT_DISPATCH
-constexpr auto countImpl = &countSw;
-constexpr auto countBitsAndBlocksImpl = &countBitsAndBlocksSw;
+constexpr auto countImpl = &countDefault;
+constexpr auto countBitsAndBlocksImpl = &countBitsAndBlocksDefault;
 #else
-// constant-initialized, so the portable versions serve calls from static initializers that run before selectPopcnt
-auto countImpl = &countSw;
-auto countBitsAndBlocksImpl = &countBitsAndBlocksSw;
+// constant-initialized, so the default versions serve calls from static initializers that run before selectPopcnt
+auto countImpl = &countDefault;
+auto countBitsAndBlocksImpl = &countBitsAndBlocksDefault;
 
-MR_TARGET_POPCNT size_t countHw( const Block* blocks, size_t numBlocks ) noexcept { return countT<true>( blocks, numBlocks ); }
-MR_TARGET_POPCNT Counts countBitsAndBlocksHw( const Block* blocks, size_t numBlocks, size_t maxBits ) noexcept { return countBitsAndBlocksT<true>( blocks, numBlocks, maxBits ); }
+MR_TARGET_POPCNT size_t countPopcnt( const Block* blocks, size_t numBlocks ) noexcept { return countT<true>( blocks, numBlocks ); }
+MR_TARGET_POPCNT Counts countBitsAndBlocksPopcnt( const Block* blocks, size_t numBlocks, size_t maxBits ) noexcept { return countBitsAndBlocksT<true>( blocks, numBlocks, maxBits ); }
 
 bool cpuHasPopcnt()
 {
@@ -94,8 +94,8 @@ bool cpuHasPopcnt()
 {
     if ( !cpuHasPopcnt() )
         return false;
-    countImpl = &countHw;
-    countBitsAndBlocksImpl = &countBitsAndBlocksHw;
+    countImpl = &countPopcnt;
+    countBitsAndBlocksImpl = &countBitsAndBlocksPopcnt;
     return true;
 }();
 #endif

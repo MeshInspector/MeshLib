@@ -1,9 +1,108 @@
 #include "MRBitSet.h"
+#include "MRMacros.h"
 #include <bit>
 #include <iostream>
 
+#if defined( __x86_64__ ) || defined( _M_X64 )
+#define MR_POPCNT_DISPATCH
+#if defined( _MSC_VER ) && !defined( __clang__ )
+#include <intrin.h>
+#define MR_TARGET_POPCNT
+#else
+#ifdef _MSC_VER
+#include <intrin.h>
+#else
+#include <cpuid.h>
+#endif
+#define MR_TARGET_POPCNT __attribute__(( target( "popcnt" ) ))
+#endif
+#endif
+
 namespace MR
 {
+
+namespace
+{
+
+using Block = BitSet::block_type;
+using Counts = BitSet::Counts;
+
+template <bool hw>
+MR_FORCE_INLINE int popcount( Block b ) noexcept
+{
+#if defined( _MSC_VER ) && !defined( __clang__ ) && defined( MR_POPCNT_DISPATCH )
+    if constexpr ( hw )
+        return int( __popcnt64( b ) );
+    else
+#endif
+    return std::popcount( b );
+}
+
+template <bool hw>
+MR_FORCE_INLINE size_t countT( const Block* blocks, size_t numBlocks ) noexcept
+{
+    size_t res = 0;
+    for ( size_t i = 0; i < numBlocks; ++i )
+        res += popcount<hw>( blocks[i] );
+    return res;
+}
+
+template <bool hw>
+MR_FORCE_INLINE Counts countBitsAndBlocksT( const Block* blocks, size_t numBlocks, size_t maxBits ) noexcept
+{
+    size_t bits = 0, nonEmptyBlocks = 0; // not Counts members, which MSVC keeps in memory
+    for ( size_t i = 0; i < numBlocks; ++i )
+    {
+        const auto b = blocks[i];
+        if ( !b )
+            continue;
+        ++nonEmptyBlocks;
+        bits += popcount<hw>( b );
+        if ( bits > maxBits )
+            break;
+    }
+    return { bits, nonEmptyBlocks };
+}
+
+size_t countSw( const Block* blocks, size_t numBlocks ) noexcept { return countT<false>( blocks, numBlocks ); }
+Counts countBitsAndBlocksSw( const Block* blocks, size_t numBlocks, size_t maxBits ) noexcept { return countBitsAndBlocksT<false>( blocks, numBlocks, maxBits ); }
+
+// constant-initialized, so the portable versions serve calls from static initializers that run before selectPopcnt
+auto countImpl = &countSw;
+auto countBitsAndBlocksImpl = &countBitsAndBlocksSw;
+
+#ifdef MR_POPCNT_DISPATCH
+MR_TARGET_POPCNT size_t countHw( const Block* blocks, size_t numBlocks ) noexcept { return countT<true>( blocks, numBlocks ); }
+MR_TARGET_POPCNT Counts countBitsAndBlocksHw( const Block* blocks, size_t numBlocks, size_t maxBits ) noexcept { return countBitsAndBlocksT<true>( blocks, numBlocks, maxBits ); }
+
+bool cpuHasPopcnt()
+{
+#ifdef _MSC_VER
+    int info[4];
+    __cpuid( info, 1 );
+    return info[2] & ( 1 << 23 );
+#else
+    unsigned a, b, c, d;
+    return __get_cpuid( 1, &a, &b, &c, &d ) && ( c & bit_POPCNT );
+#endif
+}
+
+[[maybe_unused]] const bool selectPopcnt = []
+{
+    if ( !cpuHasPopcnt() )
+        return false;
+    countImpl = &countHw;
+    countBitsAndBlocksImpl = &countBitsAndBlocksHw;
+    return true;
+}();
+#endif
+
+} // anonymous namespace
+
+size_t countSetBits( const BitSet::block_type* blocks, size_t numBlocks ) noexcept
+{
+    return countImpl( blocks, numBlocks );
+}
 
 bool BitSet::any() const
 {
@@ -26,25 +125,12 @@ bool BitSet::all() const
 
 auto BitSet::count() const noexcept -> size_type
 {
-    size_type res = 0;
-    for ( const auto b : blocks_ )
-        res += std::popcount( b );
-    return res;
+    return countImpl( blocks_.data(), blocks_.size() );
 }
 
 auto BitSet::countBitsAndBlocks( size_type maxBits ) const noexcept -> Counts
 {
-    Counts res;
-    for ( const auto b : blocks_ )
-    {
-        if ( !b )
-            continue;
-        ++res.blocks;
-        res.bits += std::popcount( b );
-        if ( res.bits > maxBits )
-            break;
-    }
-    return res;
+    return countBitsAndBlocksImpl( blocks_.data(), blocks_.size(), maxBits );
 }
 
 void BitSet::setUnusedBits_()

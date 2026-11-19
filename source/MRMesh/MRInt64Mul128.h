@@ -44,6 +44,18 @@ public:
 #elif defined _MSC_VER && defined _M_ARM64
         const auto hi = __mulh( a.v_, b.v_ );
         return FastInt128( std::uint64_t( a.v_ ) * std::uint64_t( b.v_ ), std::uint64_t( hi ) );
+#elif defined __wasm__
+        // WebAssembly has no instruction for the higher word of a 64-bit product, and the built-in product below would call
+        // __multi3, the general product of 128-bit values through memory; here the higher word is the sum of four 32-bit
+        // products (as mulhs in Hacker's Delight), and the lower word is one more multiplication independent of them
+        const std::int64_t x = a.v_, y = b.v_; // FastInt128 is __int128_t here
+        const std::uint64_t al = std::uint32_t( x ), bl = std::uint32_t( y );
+        const std::int64_t ah = x >> 32, bh = y >> 32;
+        const std::uint64_t ll = al * bl;
+        const std::int64_t t = ah * std::int64_t( bl ) + std::int64_t( ll >> 32 ); // |ah * bl| < 2^63
+        const std::int64_t w = std::int64_t( al ) * bh + std::int64_t( std::uint32_t( t ) ); // |al * bh| < 2^63
+        const std::int64_t hi = ah * bh + ( t >> 32 ) + ( w >> 32 );
+        return ( FastInt128( hi ) << 64 ) | FastInt128( std::uint64_t( x ) * std::uint64_t( y ) );
 #else
         // FastInt128 is __int128_t: both arguments are extensions of 64-bit values, which the compiler recognizes
         return FastInt128( a.v_ ) * b.v_;

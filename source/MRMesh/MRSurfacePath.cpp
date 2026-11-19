@@ -12,6 +12,7 @@
 #include "MRRingIterator.h"
 #include "MRSurfaceDistance.h"
 #include "MRTimer.h"
+#include "MRPch/MRSpdlog.h"
 #include "MRTriMath.h"
 
 namespace MR
@@ -347,49 +348,37 @@ MeshEdgePoint findSteepestDescentPoint( const MeshPart & mp, const VertScalars &
 namespace
 {
 
-// the shortest path along mesh edges from a vertex of start triangle to a vertex of end triangle,
-// using only the vertices from vertRegion (if given)
-EdgePath buildShortestPathInRegion( const Mesh & mesh, const MeshTriPoint & start, const MeshTriPoint & end,
-    const VertBitSet & vertRegion, VertId * outPathStart, VertId * outPathFinish )
-{
-    auto terminals = [&]( const MeshTriPoint & p, TerminalVertex ( &ts )[3] )
-    {
-        const auto pt = mesh.triPoint( p );
-        int n = 0;
-        mesh.topology.forEachVertex( p, [&]( VertId v )
-        {
-            if ( vertRegion.test( v ) )
-                ts[n++] = { v, ( mesh.points[v] - pt ).length() };
-        } );
-        return n;
-    };
-    TerminalVertex starts[3], finishes[3];
-    const int numStarts = terminals( start, starts );
-    const int numFinishes = terminals( end, finishes );
-
-    // the edges with an end outside of the region get infinite metric and are never passed
-    auto metric = [&, len = edgeLengthMetric( mesh )]( EdgeId e )
-    {
-        return vertRegion.test( mesh.topology.org( e ) ) && vertRegion.test( mesh.topology.dest( e ) ) ? len( e ) : FLT_MAX;
-    };
-    return buildSmallestMetricPathBiDir( mesh.topology, metric, starts, numStarts, finishes, numFinishes, outPathStart, outPathFinish );
-}
-
 // computes the path along mesh edges by Dijkstra or A* method, and converts it in SurfacePath;
-// vertRegion is supported only by DijkstraBiDir
-Expected<SurfacePath, PathError> computeEdgeGeodesicPathApprox( const Mesh & mesh,
+// the region (by faces in mp or by vertices) is supported only by DijkstraBiDir
+Expected<SurfacePath, PathError> computeEdgeGeodesicPathApprox( const MeshPart & mp,
     const MeshTriPoint & start, const MeshTriPoint & end, GeodesicPathApprox atype, const VertBitSet * vertRegion = nullptr )
 {
     assert( atype != GeodesicPathApprox::FastMarching );
-    assert( !vertRegion || atype == GeodesicPathApprox::DijkstraBiDir );
+    assert( !( mp.region || vertRegion ) || atype == GeodesicPathApprox::DijkstraBiDir );
+    const auto & mesh = mp.mesh;
+    const auto & topology = mesh.topology;
     SurfacePath res;
-    if ( !fromSameTriangle( mesh.topology, MeshTriPoint{ start }, MeshTriPoint{ end } ) )
+    if ( !fromSameTriangle( topology, MeshTriPoint{ start }, MeshTriPoint{ end } ) )
     {
         VertId v1, v2;
-        EdgePath edgePath = vertRegion ? buildShortestPathInRegion( mesh, start, end, *vertRegion, &v1, &v2 ) :
-            ( atype == GeodesicPathApprox::DijkstraBiDir ) ?
-            buildShortestPathBiDir( mesh, start, end, &v1, &v2 ) :
-            buildShortestPathAStar( mesh, start, end, &v1, &v2 );
+        EdgePath edgePath;
+        if ( mp.region || vertRegion )
+        {
+            // the edges outside of the region get infinite metric and are never passed
+            auto inRegion = [&]( EdgeId e )
+            {
+                if ( !mp.region )
+                    return vertRegion->test( topology.org( e ) ) && vertRegion->test( topology.dest( e ) );
+                const auto l = topology.left( e ), r = topology.right( e );
+                return ( l && mp.region->test( l ) ) || ( r && mp.region->test( r ) );
+            };
+            edgePath = buildSmallestMetricPathBiDir( mesh, [&, len = edgeLengthMetric( mesh )]( EdgeId e )
+                { return inRegion( e ) ? len( e ) : FLT_MAX; }, start, end, &v1, &v2 );
+        }
+        else
+            edgePath = ( atype == GeodesicPathApprox::DijkstraBiDir ) ?
+                buildShortestPathBiDir( mesh, start, end, &v1, &v2 ) :
+                buildShortestPathAStar( mesh, start, end, &v1, &v2 );
         if ( !v1 || !v2 )
             return unexpected( PathError::StartEndNotConnected );
 
@@ -436,7 +425,7 @@ Expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mesh,
         auto res = computeFastMarchingPath( mesh, start, end );
         if ( res.has_value() || res.error() != PathError::InternalError )
             return res;
-        // the descent got stuck before reaching end, Dijkstra paths always reach it
+        spdlog::warn( "computeGeodesicPathApprox: fast-marching descent stopped before reaching end, using the shortest edge path" );
         atype = GeodesicPathApprox::DijkstraBiDir;
     }
     return computeEdgeGeodesicPathApprox( mesh, start, end, atype );
@@ -561,12 +550,27 @@ Expected<SurfacePath, PathError> computeFastMarchingPath( const MeshPart & mp,
     if ( !connected )
         return unexpected( PathError::StartEndNotConnected );
 
+    const auto & topology = mp.mesh.topology;
     res = computeSteepestDescentPath( mp.mesh, distances, start, { .end = end } );
+    // the descent stops in a triangle or on an edge with equal distances in all vertices,
+    // then it continues from the vertex there with the smallest distance, which has a neighbor with even smaller distance
+    for ( auto curr = res.empty() ? start : MeshTriPoint( res.back() );
+        !fromSameTriangle( topology, MeshTriPoint{ end }, MeshTriPoint{ curr } ) && !curr.inVertex( topology ); )
+    {
+        VertId best;
+        topology.forEachVertex( curr, [&]( VertId v ) { if ( !best || distances[v] < distances[best] ) best = v; } );
+        res.emplace_back( topology.edgeWithOrg( best ), 0.0f );
+        const auto size = res.size();
+        computeSteepestDescentPath( mp.mesh, distances, MeshTriPoint( topology, best ), &res, { .end = end } );
+        if ( res.size() == size )
+            break;
+        curr = MeshTriPoint( res.back() );
+    }
     if ( outSurfaceDistances )
         *outSurfaceDistances = std::move( distances );
     // no edge is crossed only if start and end are from the same triangle;
-    // the descent can stop before reaching end, e.g. in a triangle with equal distances in all vertices
-    if ( res.empty() || !fromSameTriangle( mp.mesh.topology, MeshTriPoint{ end }, MeshTriPoint{ res.back() } ) )
+    // the descent can stop in a vertex without neighbors having smaller distances
+    if ( res.empty() || !fromSameTriangle( topology, MeshTriPoint{ end }, MeshTriPoint{ res.back() } ) )
         return unexpected( PathError::InternalError );
     return res;
 }
@@ -577,19 +581,20 @@ Expected<SurfacePath, PathError> computeSurfacePath( const MeshPart & mp,
 {
     MR_TIMER;
     auto res = computeFastMarchingPath( mp, start, end, vertRegion, outSurfaceDistances );
-    if ( !res.has_value() && res.error() == PathError::InternalError )
+    if ( res.has_value() )
     {
-        // the descent got stuck before reaching end, Dijkstra paths in the same region always reach it
-        VertBitSet myVertRegion;
-        if ( mp.region )
-        {
-            myVertRegion = getIncidentVerts( mp.mesh.topology, *mp.region );
-            vertRegion = &myVertRegion;
-        }
-        res = computeEdgeGeodesicPathApprox( mp.mesh, start, end, GeodesicPathApprox::DijkstraBiDir, vertRegion );
+        if ( !res.value().empty() )
+            reducePath( mp.mesh, start, res.value(), end, maxGeodesicIters );
+        return res;
     }
+    if ( res.error() != PathError::InternalError )
+        return res;
+
+    spdlog::warn( "computeSurfacePath: fast-marching descent stopped before reaching end, using the shortest edge path in the region" );
+    res = computeEdgeGeodesicPathApprox( mp, start, end, GeodesicPathApprox::DijkstraBiDir, vertRegion );
+    // a path along edges needs more iterations to become as straight as fast-marching paths
     if ( res.has_value() && !res.value().empty() )
-        reducePath( mp.mesh, start, res.value(), end, maxGeodesicIters );
+        reducePath( mp.mesh, start, res.value(), end, maxGeodesicIters > 0 ? std::max( maxGeodesicIters, 100 ) : 0 );
     return res;
 }
 

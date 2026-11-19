@@ -133,60 +133,42 @@ TEST( MRMesh, SurfacePathTargets )
     }
 }
 
-TEST( MRMesh, GeodesicPathFastMarchingFallback )
+TEST( MRMesh, FastMarchingPathFlatTriangles )
 {
     // on this symmetric torus some triangles get equal distances in all vertices,
-    // and the steepest descent from a point inside of such triangle cannot start
+    // and the steepest descent inside of such triangle has no direction
     const auto mesh = makeTorus( 1.0f, 0.3f, 3, 3 );
-    // the region without one vertex, so the paths cannot pass it
-    VertBitSet region = mesh.topology.getValidVerts();
-    region.reset( 0_v );
-    const VertBitSet * regions[] = { nullptr, &region };
-    for ( const auto * vertRegion : regions )
+    // the regions without one vertex, given by vertices and by faces
+    VertBitSet verts = mesh.topology.getValidVerts();
+    verts.reset( 0_v );
+    FaceBitSet faces( mesh.topology.faceSize() );
+    for ( auto f : mesh.topology.getValidFaces() )
     {
-        int stuck = 0;
-        for ( auto f : mesh.topology.getValidFaces() )
+        const auto vs = mesh.topology.getTriVerts( f );
+        if ( verts.test( vs[0] ) && verts.test( vs[1] ) && verts.test( vs[2] ) )
+            faces.set( f );
+    }
+    const VertBitSet * vertRegions[] = { nullptr, &verts, nullptr };
+    const FaceBitSet * faceRegions[] = { nullptr, nullptr, &faces };
+    for ( int i = 0; i < 3; ++i )
+    {
+        const MeshPart mp( mesh, faceRegions[i] );
+        for ( auto f : faces )
         {
             const MeshTriPoint start( mesh.topology.edgeWithLeft( f ), { 1 / 3.f, 1 / 3.f } );
-            for ( auto v : mesh.topology.getValidVerts() )
+            for ( auto v : verts )
             {
                 const MeshTriPoint end( mesh.topology, v );
-                bool skip = fromSameTriangle( mesh.topology, MeshTriPoint( start ), MeshTriPoint( end ) );
-                if ( vertRegion )
-                    mesh.topology.forEachVertex( start, [&]( VertId sv ) { skip = skip || !vertRegion->test( sv ); } );
-                if ( skip || ( vertRegion && !vertRegion->test( v ) ) )
+                if ( fromSameTriangle( mesh.topology, MeshTriPoint( start ), MeshTriPoint( end ) ) )
                     continue;
-                const auto fm = computeFastMarchingPath( mesh, start, end, vertRegion );
-                const bool fmStuck = !fm.has_value() && fm.error() == PathError::InternalError;
-                stuck += fmStuck;
-
-                if ( !vertRegion )
-                {
-                    const auto path = computeGeodesicPath( mesh, start, end, GeodesicPathApprox::FastMarching );
-                    ASSERT_TRUE( path.has_value() );
-                    EXPECT_TRUE( isConnectedPath( mesh.topology, start, *path, end ) );
-                }
-
-                const auto path = computeSurfacePath( mesh, start, end, 5, vertRegion );
+                const auto fm = computeFastMarchingPath( mp, start, end, vertRegions[i] );
+                ASSERT_TRUE( fm.has_value() ) << "region " << i << " face " << int( f ) << " vert " << int( v );
+                EXPECT_TRUE( isConnectedPath( mesh.topology, start, *fm, end ) );
+                const auto path = computeSurfacePath( mp, start, end, 5, vertRegions[i] );
                 ASSERT_TRUE( path.has_value() );
                 EXPECT_TRUE( isConnectedPath( mesh.topology, start, *path, end ) );
-
-                if ( vertRegion && fmStuck )
-                {
-                    // without reduction, the fallback path along edges stays in the region
-                    const auto edgePath = computeSurfacePath( mesh, start, end, 0, vertRegion );
-                    ASSERT_TRUE( edgePath.has_value() );
-                    EXPECT_TRUE( isConnectedPath( mesh.topology, start, *edgePath, end ) );
-                    for ( const auto & ep : *edgePath )
-                        if ( auto pv = ep.inVertex( mesh.topology ) )
-                            EXPECT_TRUE( vertRegion->test( pv ) );
-                        else
-                            EXPECT_TRUE( vertRegion->test( mesh.topology.org( ep.e ) ) && vertRegion->test( mesh.topology.dest( ep.e ) ) );
-                }
             }
         }
-        // the fallback was actually used
-        EXPECT_GT( stuck, 0 ) << ( vertRegion ? "in region" : "whole mesh" );
     }
 }
 

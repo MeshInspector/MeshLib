@@ -278,8 +278,9 @@ MeshIntersectionResult meshRayIntersectSimd_( const VertCoords & points, const A
                     for ( int crossed = tested; crossed; crossed &= crossed - 1 )
                     {
                         const auto & lt = leafTris[first + lowestBit( crossed )];
-                        if ( !cRayTestsLeafBoxes && !lt.face )
-                            break;
+                        if constexpr ( !cRayTestsLeafBoxes )
+                            if ( !lt.face )
+                                break;
                         if constexpr ( Filtered )
                         {
                             if ( ( region && !region->test( lt.face ) ) || ( validFaces && !validFaces( lt.face ) ) )

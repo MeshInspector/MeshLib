@@ -92,9 +92,9 @@ xcopy C:\meshlib-built\install\app\$(Configuration)\*.dll $(TargetDir)
  3. **CUDA Toolkit**
   - Recommended CUDA versions (the ones the build selects for your Visual Studio toolset, see `source/platform.props`):
    - For **Visual Studio 2019**: Install [CUDA v11.4](https://developer.nvidia.com/cuda-11-4-0-download-archive)
-   - For **Visual Studio 2022**: Install [CUDA v12.9](https://developer.nvidia.com/cuda-12-9-1-download-archive)
+   - For **Visual Studio 2022**: Install [CUDA v12.4](https://developer.nvidia.com/cuda-12-4-1-download-archive)
    - For **Visual Studio 2026**: Install [CUDA v13.4](https://developer.nvidia.com/cuda-13-4-1-download-archive)
-    - If your GPU or driver predates CUDA 13, install [CUDA v12.9](https://developer.nvidia.com/cuda-12-9-1-download-archive) instead and build the solution with `-p:MRCudaPlatformToolset=v143`: CUDA 12.9 supports a wider range of GPUs but not the Visual Studio 2026 host compiler, so it needs the 2022 one. This is the combination MeshLib's own Windows binaries and Python wheels are built with.
+    - If your GPU or driver predates CUDA 13, install [CUDA v12.4](https://developer.nvidia.com/cuda-12-4-1-download-archive) instead and build the solution with `-p:MRCudaPlatformToolset=v143`: CUDA 12.4 supports a wider range of GPUs but not the Visual Studio 2026 host compiler, so it needs the 2022 one. This is the combination MeshLib's own Windows binaries and Python wheels are built with.
   - Other CUDA versions work as well, if new enough for your Visual Studio (an older one fails with `STL1002: Unexpected compiler version`): if the recommended one is not installed, the build automatically falls back to the toolkit pointed to by the `CUDA_PATH` environment variable, which the NVIDIA installer keeps at the latest installed version.
   - In the CUDA installer, keep the **Visual Studio Integration** component enabled: the Visual Studio build needs it.
  4. **vcpkg**

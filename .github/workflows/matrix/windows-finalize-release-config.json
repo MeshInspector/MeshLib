@@ -22,7 +22,7 @@
       "build_system": "CMake",
       "vcpkg_triplet": "x64-windows-vs2022-meshlib",
       "runner": ["windows-2025"],
-      "cuda_version": "12.9.1"
+      "cuda_version": "12.4.1"
     },
     {
       "cxx_compiler": "msvc-2022",
@@ -30,7 +30,7 @@
       "build_system": "CMake",
       "vcpkg_triplet": "x64-windows-vs2022-meshlib",
       "runner": ["windows-2025"],
-      "cuda_version": "12.9.1"
+      "cuda_version": "12.4.1"
     },
     {
       "cxx_compiler": "msvc-2026",
@@ -38,7 +38,7 @@
       "build_system": "MSBuild",
       "vcpkg_triplet": "x64-windows-meshlib",
       "runner": ["windows-2025"],
-      "cuda_version": "12.9.1",
+      "cuda_version": "12.4.1",
       "mrcuda_platform_toolset": "v143"
     },
     {
@@ -47,7 +47,7 @@
       "build_system": "MSBuild",
       "vcpkg_triplet": "x64-windows-meshlib",
       "runner": ["windows-2025"],
-      "cuda_version": "12.9.1",
+      "cuda_version": "12.4.1",
       "mrcuda_platform_toolset": "v143"
     },
     {
@@ -84,7 +84,7 @@
       "vcpkg_triplet": "x64-windows-vs2022-meshlib",
       "vcvars_ver": "14.4",
       "runner": ["windows-2025"],
-      "cuda_version": "12.9.1"
+      "cuda_version": "12.4.1"
     },
     {
       "cxx_compiler": "clang-cl",

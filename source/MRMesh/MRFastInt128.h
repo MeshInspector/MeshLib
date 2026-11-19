@@ -1,5 +1,6 @@
 #pragma once
 
+#include <MRPch/MRBindingMacros.h>
 #include <cstdint>
 
 #if __has_include(<__msvc_int128.hpp>) && !defined(__SIZEOF_INT128__)
@@ -34,7 +35,7 @@ namespace MR
 {
 
 /// n / d rounded toward zero, as the built-in division of integers
-[[nodiscard]] inline FastInt128 divFastInt128( FastInt128 n, FastInt128 d ) noexcept
+[[nodiscard]] MR_BIND_IGNORE inline FastInt128 divFastInt128( FastInt128 n, FastInt128 d ) noexcept
 {
 #ifdef MR_BUILTIN_INT128_NO_RUNTIME
     // by the division of std::_Signed128, which calls nothing outside the header

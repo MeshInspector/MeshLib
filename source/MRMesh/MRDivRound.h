@@ -15,7 +15,7 @@ inline T divRound( T n, T d )
 }
 
 /// the same for FastInt128, divided by divFastInt128, since its built-in division is unavailable in clang-cl builds
-inline FastInt128 divRound( FastInt128 n, FastInt128 d )
+MR_BIND_IGNORE inline FastInt128 divRound( FastInt128 n, FastInt128 d )
 {
     const FastInt128 h = d / 2; // by a constant, so without a call
     return divFastInt128( ( n < 0 ) == ( d < 0 ) ? n + h : n - h, d );

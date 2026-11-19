@@ -9,9 +9,13 @@
 #include "MRSimd4.hpp"
 #include "MRTriBox.hpp"
 #include "MRVector.h"
+#include <tbb/blocked_range.h>
+#include <tbb/parallel_for.h>
+#include <algorithm>
 #include <atomic>
 #include <concepts>
 #include <utility>
+#include <vector>
 #include <cstdint>
 
 namespace MR
@@ -179,12 +183,44 @@ bool forWideLeafTris( const AABBTree & aTree, const AABBTree & bTree, const Wide
 template<typename Split>
 Vector<WideNodePair> makeWideSubtasks( Vector<WideNodePair> subtasks, int levels, Split && split )
 {
+    // a big level is split by chunks in parallel, each into its own vectors, which are then joined in the order of the chunks:
+    // the subtasks are the same and in the same order as on one thread, while this serial phase does not hold back many threads
+    constexpr size_t cChunk = 1024;
     Vector<WideNodePair> next, leafTasks;
+    std::vector<std::pair<Vector<WideNodePair>, Vector<WideNodePair>>> chunks; // next and leaf tasks of each chunk
     for ( int i = 0; i < levels && !subtasks.empty(); ++i )
     {
-        for ( const auto & s : subtasks )
-            if ( !split( s, [&next]( const WideNodePair & c ) { next.push_back( c ); } ) )
-                leafTasks.push_back( s );
+        if ( subtasks.size() < 2 * cChunk )
+        {
+            for ( const auto & s : subtasks )
+                if ( !split( s, [&next]( const WideNodePair & c ) { next.push_back( c ); } ) )
+                    leafTasks.push_back( s );
+        }
+        else
+        {
+            chunks.resize( ( subtasks.size() + cChunk - 1 ) / cChunk );
+            tbb::parallel_for( tbb::blocked_range<size_t>( 0, chunks.size(), 1 ), [&]( const tbb::blocked_range<size_t> & range )
+            {
+                for ( size_t c = range.begin(); c < range.end(); ++c )
+                {
+                    auto & [cNext, cLeaf] = chunks[c];
+                    cNext.clear();
+                    cLeaf.clear();
+                    for ( size_t j = c * cChunk, end = std::min( subtasks.size(), j + cChunk ); j < end; ++j )
+                        if ( !split( subtasks[j], [&cNext]( const WideNodePair & x ) { cNext.push_back( x ); } ) )
+                            cLeaf.push_back( subtasks[j] );
+                }
+            } );
+            size_t numNext = 0;
+            for ( const auto & ch : chunks )
+                numNext += ch.first.size();
+            next.reserve( numNext );
+            for ( const auto & ch : chunks )
+            {
+                next.insert( next.end(), ch.first.begin(), ch.first.end() );
+                leafTasks.insert( leafTasks.end(), ch.second.begin(), ch.second.end() );
+            }
+        }
         subtasks.swap( next );
         next.clear();
     }

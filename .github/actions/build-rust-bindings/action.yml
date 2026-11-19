@@ -11,6 +11,14 @@ inputs:
     description: >
       Absolute path of the directory with the MeshLib and MeshLibC2 shared
       libraries, for linking and for the dynamic loader when running.
+  target:
+    required: false
+    default: ''
+    description: >
+      Not on Windows: a Rust target triple to cross-compile for, such as
+      `x86_64-apple-darwin` on an arm64 macOS host whose MeshLib libraries
+      are x86_64. The examples and tests then run under the host's
+      emulation (Rosetta). Empty: the host.
   windows-vsdevcmd:
     required: false
     default: ''
@@ -23,6 +31,8 @@ runs:
   steps:
     - name: Install Rust
       uses: ./.github/actions/setup-rust
+      with:
+        target: ${{ inputs.target }}
 
     - name: Build and run Rust examples and tests
       if: runner.os != 'Windows'
@@ -30,12 +40,22 @@ runs:
       env:
         MESHLIB_LIB_DIR: ${{ inputs.lib-dir }}
         LD_LIBRARY_PATH: ${{ inputs.lib-dir }}
-        DYLD_LIBRARY_PATH: ${{ inputs.lib-dir }}
+        TARGET: ${{ inputs.target }}
       run: |
         set -eu
+        # Exported here, not in `env`: with System Integrity Protection on (the
+        # self-hosted Macs), dyld strips DYLD_* from the environment of a platform
+        # binary such as the /bin/bash that runs this step, so nothing below would
+        # inherit it. Set after bash has started, it reaches cargo and the examples.
+        export DYLD_LIBRARY_PATH="$MESHLIB_LIB_DIR"
         export CARGO_TARGET_DIR="$PWD/source/MeshLibRust/target"
+        # With a target, cargo compiles and links the crates for it (the build
+        # scripts still for the host) and puts the output under target/<triple>/.
+        if [ -n "$TARGET" ]; then
+          export CARGO_BUILD_TARGET="$TARGET"
+        fi
         cargo build --manifest-path examples/rust-examples/Cargo.toml
-        "$CARGO_TARGET_DIR/debug/MeshBoolean"
+        "$CARGO_TARGET_DIR/${TARGET:+$TARGET/}debug/MeshBoolean"
         cargo test --manifest-path source/MRTestRust/Cargo.toml
 
     - name: Build and run Rust examples and tests (Windows)

@@ -7,6 +7,14 @@ inputs:
   build-bin-dir:
     description: 'Directory containing the meshlib/ package (e.g. build/Release/bin on Linux/macOS, source\x64\Release on Windows)'
     required: true
+  arch:
+    description: >-
+      Machine architecture the modules were built for, as Python's platform.machine()
+      reports it (x86_64 or arm64). When set, interpreters of another architecture are
+      skipped: on the macOS x86_64 cross build the PATH also carries the host's native
+      arm64 interpreters, which cannot load the x86_64 modules.
+    required: false
+    default: ''
 
 runs:
   using: composite
@@ -50,6 +58,7 @@ runs:
       shell: bash
       env:
         PYTHONPATH: ${{ inputs.build-bin-dir }}
+        TARGET_ARCH: ${{ inputs.arch }}
       run: |
         attempted=0
         failed=0
@@ -68,6 +77,14 @@ runs:
             echo "SKIP: $py_cmd not on PATH"
             skipped+=( "$ver" )
             continue
+          fi
+          if [ -n "$TARGET_ARCH" ]; then
+            py_arch=$("$py_cmd" -c 'import platform; print(platform.machine())' 2>/dev/null || echo unknown)
+            if [ "$py_arch" != "$TARGET_ARCH" ]; then
+              echo "SKIP: $py_cmd is $py_arch, the modules are $TARGET_ARCH"
+              skipped+=( "$ver" )
+              continue
+            fi
           fi
           attempted=$((attempted + 1))
           if ! "$py_cmd" -u "$GITHUB_WORKSPACE/scripts/ci/verify_meshlib_import.py"; then

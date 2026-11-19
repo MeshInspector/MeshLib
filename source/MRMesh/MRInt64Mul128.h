@@ -5,7 +5,7 @@
 #include <MRPch/MRBindingMacros.h>
 #include <cstdint>
 
-#if defined _MSC_VER && !defined __clang__
+#if defined _MSC_VER
 #include <intrin.h>
 #endif
 
@@ -34,15 +34,18 @@ public:
 
     [[nodiscard]] friend FastInt128 operator *( Int64Mul128 a, Int64Mul128 b ) noexcept
     {
-#if defined _MSC_VER && !defined __clang__ && defined _M_X64
+        // MSVC and clang-cl: FastInt128 is std::_Signed128 there, whose product of two values is general
+        // (signs stripped by branches, three 64-bit multiplications, the result negated), so a single
+        // widening multiplication by the intrinsic is several times faster
+#if defined _MSC_VER && defined _M_X64
         std::int64_t hi = 0;
         const auto lo = _mul128( a.v_, b.v_, &hi );
         return FastInt128( std::uint64_t( lo ), std::uint64_t( hi ) );
-#elif defined _MSC_VER && !defined __clang__ && defined _M_ARM64
+#elif defined _MSC_VER && defined _M_ARM64
         const auto hi = __mulh( a.v_, b.v_ );
         return FastInt128( std::uint64_t( a.v_ ) * std::uint64_t( b.v_ ), std::uint64_t( hi ) );
 #else
-        // both arguments are extensions of 64-bit values, which the compiler recognizes
+        // FastInt128 is __int128_t: both arguments are extensions of 64-bit values, which the compiler recognizes
         return FastInt128( a.v_ ) * b.v_;
 #endif
     }

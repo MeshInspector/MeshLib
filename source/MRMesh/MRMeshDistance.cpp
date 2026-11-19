@@ -67,9 +67,13 @@ void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rang
     Box3f tbox;
     for ( const auto & p : t )
         tbox.include( p );
-    auto isClose = [&]( const Box3f & box ) { return box.getDistanceSq( tbox ) < rangeSq; };
+    auto isClose = WideBoxTest
+    {
+        [&]( const Box3f & box ) { return box.getDistanceSq( tbox ) < rangeSq; },
+        [&]( const AABBTree::SimdBoxes & sb ) { return Simd4::bits( Simd4::lt( boxBoxDistSq( sb, tbox ), Simd4::set1( rangeSq ) ) ); }
+    };
 
-    forWideTris( tree, isClose, isClose, [&]( int i )
+    forWideTris( tree, isClose, [&]( int i )
     {
         const auto & lt = tree.leafTris()[i];
         if ( mp.region && !mp.region->test( lt.face ) )

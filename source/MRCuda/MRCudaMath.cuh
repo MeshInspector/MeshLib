@@ -139,20 +139,19 @@ struct FaceToThreeVerts
     int verts[3];
 };
 
-// struct similar to AABBTreeWideNode: a node of the mesh's AABBTree with up to 4 children or triangles
-struct WideNode3
+// GPU analog of AABBTreeSimdNode: an internal node of the mesh's AABBTree with the boxes of its (up to 4) children in SoA order;
+// aligned as on CPU, so a copy of a node to registers is loaded by 16-byte loads
+struct alignas( 16 ) SimdNode3
 {
-    Box3 box;
-    int first; ///< the first child node, or for a leaf, the first of its triangles
-    int count; ///< the number of children, or for a leaf, minus the number of its triangles
+    float box[6][4]; ///< [0..2][i] - min x, y, z of the box of child i, [3..5][i] - its max x, y, z
+    int child[4]; ///< child i: the index of an internal node if > 0, ~(the index of a leaf) if < 0, no child if 0
 
-    __device__ bool leaf() const
+    __device__ Box3 childBox( int i ) const
     {
-        return count < 0;
-    }
-    __device__ int numLeafTris() const
-    {
-        return -count;
+        Box3 res;
+        res.min = make_float3( box[0][i], box[1][i], box[2][i] );
+        res.max = make_float3( box[3][i], box[4][i], box[5][i] );
+        return res;
     }
 };
 
@@ -161,6 +160,29 @@ struct LeafTri3
 {
     int face;
     int verts[3];
+};
+
+/// the number of triangle slots in a leaf of the mesh's AABBTree
+constexpr int cMaxLeafTris = 4;
+
+// the mesh's AABBTree in its own layout (as in AABBTree::simdNodes() and AABBTree::leafTris())
+struct MeshTree3
+{
+    const SimdNode3* nodes = nullptr; ///< the internal nodes, the root is the first one (if the tree has more than one leaf)
+    const LeafTri3* leafTris = nullptr; ///< cMaxLeafTris slots per leaf, the unused slots have negative faces
+    Box3 rootBox; ///< the box of the whole tree
+    int rootRef = 0; ///< the reference to the root as in SimdNode3::child: 0, or ~0 if the tree has one leaf only
+    int numInternal = 0; ///< the number of internal nodes: the id of a node (as in the dipoles) is its index if internal, otherwise numInternal + the index of the leaf
+
+    __device__ int nodeId( int ref ) const
+    {
+        return ref >= 0 ? ref : numInternal + ~ref;
+    }
+    /// the triangle slots of a leaf
+    __device__ const LeafTri3* leafSlots( int ref ) const
+    {
+        return leafTris + size_t( ~ref ) * cMaxLeafTris;
+    }
 };
 
 // GPU analog of CPU PointOnFace struct
@@ -359,14 +381,14 @@ __device__ inline TriIntersectResult rayTriangleIntersect(const float* oriA, con
     return res;
 }
 
-__device__ inline MeshIntersectionResult rayMeshIntersect( const WideNode3* nodes, const float3* meshPoints, const LeafTri3* leafTris,
+__device__ inline MeshIntersectionResult rayMeshIntersect( const MeshTree3& tree, const float3* meshPoints,
                                                            const float3& rayOrigin, float rayStart, float rayEnd, const IntersectionPrecomputes& prec, bool closestIntersect = true )
 {
     MeshIntersectionResult res;
 
     float start = rayStart;
     float end = rayEnd;
-    if ( !rayBoxIntersect( nodes[0].box, rayOrigin, start, end, prec ) )
+    if ( !rayBoxIntersect( tree.rootBox, rayOrigin, start, end, prec ) )
         return res;
 
     struct SubTask
@@ -381,22 +403,22 @@ __device__ inline MeshIntersectionResult rayMeshIntersect( const WideNode3* node
     float baryB = 0;
 
     // the node to visit next is not pushed in the stack
-    SubTask s{ 0, rayStart };
+    SubTask s{ tree.rootRef, rayStart };
     while ( true )
     {
         if ( s.rayStart < rayEnd )
         {
-            const auto& node = nodes[s.n];
-            if ( !node.leaf() )
+            if ( s.n >= 0 )
             {
+                const auto& node = tree.nodes[s.n];
                 // the children crossed by the ray ordered by the entry, the farthest first
                 SubTask ch[4];
                 int numCh = 0;
-                for ( int c = 0; c < node.count; ++c )
+                for ( int c = 0; c < 4 && node.child[c]; ++c )
                 {
-                    const int n = node.first + c;
+                    const int n = node.child[c];
                     float cStart = rayStart, cEnd = rayEnd;
-                    if ( !rayBoxIntersect( nodes[n].box, rayOrigin, cStart, cEnd, prec ) )
+                    if ( !rayBoxIntersect( node.childBox( c ), rayOrigin, cStart, cEnd, prec ) )
                         continue;
                     int k = numCh++;
                     for ( ; k > 0 && ch[k - 1].rayStart < cStart; --k )
@@ -415,9 +437,10 @@ __device__ inline MeshIntersectionResult rayMeshIntersect( const WideNode3* node
             else
             {
                 bool stop = false;
-                for ( int i = node.first, e = node.first + node.numLeafTris(); i < e; ++i )
+                const auto* lts = tree.leafSlots( s.n );
+                for ( int i = 0; i < cMaxLeafTris && lts[i].face >= 0; ++i )
                 {
-                    const auto& lt = leafTris[i];
+                    const auto& lt = lts[i];
                     float3 a = meshPoints[lt.verts[0]] - rayOrigin;
                     float3 b = meshPoints[lt.verts[1]] - rayOrigin;
                     float3 c = meshPoints[lt.verts[2]] - rayOrigin;

@@ -745,9 +745,15 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
     BitSet changedLeaves;
     // the unions of the boxes of the changed leaves, made with them; with few changed leaves and non-temporal stores available (x64, Arm with clang)
     // they are made again from the boxes when needed instead: the buffer for all leaves costs more there (Apple M1: releasing its pages)
-    const bool keepLeafUnions = !changedVerts || !Simd4::cStreamStores;
-    Buffer<Box3f> leafBox( keepLeafUnions ? leafBoxes_.size() : 0 );
-    auto leafUnion = [&]( int l ) { return keepLeafUnions ? leafBox[l] : leafBoxes_[l].getUnion(); };
+    Buffer<Box3f> leafBox( !changedVerts || !Simd4::cStreamStores ? leafBoxes_.size() : 0 );
+    // the union of changed leaf l when some vertices changed
+    auto changedLeafUnion = [&]( int l )
+    {
+        if constexpr ( Simd4::cStreamStores )
+            return leafBoxes_[l].getUnion();
+        else
+            return leafBox[l];
+    };
     if ( !changedVerts )
     {
         tbb::parallel_for( tbb::blocked_range<size_t>( 0, leafBoxes_.size(), 1024 ), [&]( const tbb::blocked_range<size_t> & range )
@@ -797,7 +803,7 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
             if ( !changed )
                 return;
             changedLeaves.set( l );
-            if ( keepLeafUnions )
+            if constexpr ( !Simd4::cStreamStores )
                 leafBox[l] = leafBoxes_[l].getUnion();
         } );
     }
@@ -835,7 +841,7 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
                 const int c = sn.child[i];
                 if ( c < 0 ? !changedLeaves.test( ~c ) : !changedNodes.test( c ) )
                     continue;
-                sn.set( i, c < 0 ? leafUnion( ~c ) : simdNodes_[c].getUnion() );
+                sn.set( i, c < 0 ? changedLeafUnion( ~c ) : simdNodes_[c].getUnion() );
                 changed = true;
             }
             if ( changed )
@@ -869,7 +875,7 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
             if ( !changedCh[i] )
                 continue;
             const int c = sn.child[i];
-            sn.set( i, c < 0 ? leafUnion( ~c ) : simdNodes_[c].getUnion() );
+            sn.set( i, c < 0 ? ( changedVerts ? changedLeafUnion( ~c ) : leafBox[~c] ) : simdNodes_[c].getUnion() );
             changed = true;
         }
         return changed;

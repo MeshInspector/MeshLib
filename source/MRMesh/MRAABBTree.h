@@ -149,10 +149,10 @@ public:
     [[nodiscard]] int numTris() const { return numTris_; }
 
     /// the internal nodes, the root is the first one (if the tree has more than MaxLeafTris triangles)
-    [[nodiscard]] MR_BIND_IGNORE const std::vector<SimdNode, Allocator<SimdNode>> & simdNodes() const { return simdNodes_; }
+    [[nodiscard]] MR_BIND_IGNORE const Vector<SimdNode> & simdNodes() const { return simdNodes_; }
 
     /// the leaves
-    [[nodiscard]] MR_BIND_IGNORE const std::vector<SimdLeaf, Allocator<SimdLeaf>> & simdLeaves() const { return simdLeaves_; }
+    [[nodiscard]] MR_BIND_IGNORE const Vector<SimdLeaf> & simdLeaves() const { return simdLeaves_; }
 
     /// the bounding boxes of the triangles of given leaf, slightly expanded for robust searches, computed from its coordinates
     [[nodiscard]] MR_BIND_IGNORE MRMESH_API SimdBoxes leafBoxes( int leaf ) const;
@@ -241,9 +241,8 @@ private:
     friend class UniqueThreadSafeOwner<AABBTree>;
     friend class SharedThreadSafeOwner<AABBTree>;
 
-    // std::vector and not MR::Vector, which the bindings would bind with these types not in the bindings; allocated by mimalloc as MR::Vector
-    std::vector<SimdNode, Allocator<SimdNode>> simdNodes_; ///< the children follow their parent
-    std::vector<SimdLeaf, Allocator<SimdLeaf>> simdLeaves_;
+    Vector<SimdNode> simdNodes_; ///< the children follow their parent
+    Vector<SimdLeaf> simdLeaves_;
     Vector<LeafTri> leafTris_;
     int numTris_ = 0;
 

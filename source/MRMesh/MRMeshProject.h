@@ -55,13 +55,16 @@ MRMESH_API MeshProjectionTransforms createProjectionTransforms( AffineXf3f& stor
  * \param loDistLimitSq low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
  * \param validFaces if provided then only faces from there will be considered as projections
  * \param validProjections if provided then only projections passed this test can be returned
+ * \param useLeafBoxes whether to skip the triangles of a leaf whose boxes are not closer than the found point (without xf only);
+ * the boxes are computed from the coordinates in the leaf, so they read no memory, and skipping saves the precise computations
  */
 [[nodiscard]] MRMESH_API MeshProjectionResult findProjection( const Vector3f & pt, const MeshPart & mp,
     float upDistLimitSq = FLT_MAX,
     const AffineXf3f * xf = nullptr,
     float loDistLimitSq = 0,
     const FacePredicate & validFaces = {},
-    const std::function<bool(const MeshProjectionResult&)> & validProjections = {} );
+    const std::function<bool(const MeshProjectionResult&)> & validProjections = {},
+    bool useLeafBoxes = true );
 
 /**
  * \brief computes the closest point on mesh (or its region) to given point
@@ -71,6 +74,8 @@ MRMESH_API MeshProjectionTransforms createProjectionTransforms( AffineXf3f& stor
  * \param loDistLimitSq low limit on the distance in question, if a point is found within this distance then it is immediately returned without searching for a closer one
  * \param validFaces if provided then only faces from there will be considered as projections
  * \param validProjections if provided then only projections passed this test can be returned
+ * \param useLeafBoxes whether to skip the triangles of a leaf whose boxes are not closer than the found point (without xf only);
+ * the boxes are computed from the coordinates in the leaf, so they read no memory, and skipping saves the precise computations
  */
 [[nodiscard]] MRMESH_API MeshProjectionResult findProjectionSubtree( const Vector3f & pt,
     const MeshPart & mp, const AABBTree & tree,
@@ -78,7 +83,8 @@ MRMESH_API MeshProjectionTransforms createProjectionTransforms( AffineXf3f& stor
     const AffineXf3f * xf = nullptr,
     float loDistLimitSq = 0,
     const FacePredicate & validFaces = {},
-    const std::function<bool(const MeshProjectionResult&)> & validProjections = {} );
+    const std::function<bool(const MeshProjectionResult&)> & validProjections = {},
+    bool useLeafBoxes = true );
 
 /**
  * \brief computes the closest point on the triangles of the given tree to given point;
@@ -91,6 +97,8 @@ MRMESH_API MeshProjectionTransforms createProjectionTransforms( AffineXf3f& stor
  * \param validFaces if provided then only faces from there will be considered as projections
  * \param validProjections if provided then only projections passed this test can be returned
  * \param region if provided then only the triangles from there are searched; building the tree only from them is faster
+ * \param useLeafBoxes whether to skip the triangles of a leaf whose boxes are not closer than the found point (without xf only);
+ * the boxes are computed from the coordinates in the leaf, so they read no memory, and skipping saves the precise computations
  */
 [[nodiscard]] MRMESH_API MeshProjectionResult findProjection( const Vector3f & pt,
     const AABBTree & tree,
@@ -99,7 +107,8 @@ MRMESH_API MeshProjectionTransforms createProjectionTransforms( AffineXf3f& stor
     float loDistLimitSq = 0,
     const FacePredicate & validFaces = {},
     const std::function<bool(const MeshProjectionResult&)> & validProjections = {},
-    const FaceBitSet * region = nullptr );
+    const FaceBitSet * region = nullptr,
+    bool useLeafBoxes = true );
 
 /// this callback is invoked on every triangle with bounding box at least partially in the ball (the triangle itself can be fully out of ball),
 /// and allows changing (shrinking only) the ball

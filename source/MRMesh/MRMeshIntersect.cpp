@@ -4,6 +4,7 @@
 #include "MRInplaceStack.h"
 #include "MRMesh.h"
 #include "MRMeshPart.h"
+#include "MRPrefetch.h"
 #include "MRRayBoxIntersection.h"
 #include "MRTriangleIntersection.h"
 #include "MRPrecisePredicates3.h"
@@ -746,7 +747,13 @@ void rayMeshIntersectAll_( const AABBTree & tree, const FaceBitSet * region, con
             if constexpr ( std::is_same_v<T, float> )
             {
                 for ( int m = simdCrossed( node ); m; m &= m - 1 )
-                    subtasks.push( node.child[Simd4::lowestBit( m )] );
+                {
+                    // all crossed nodes are visited: the first lines of the internal ones are read ahead
+                    const int c = node.child[Simd4::lowestBit( m )];
+                    if ( c > 0 )
+                        MR_PREFETCH( &tree.simdNodes()[c] );
+                    subtasks.push( c );
+                }
             }
             else
             {

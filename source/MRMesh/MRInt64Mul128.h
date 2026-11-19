@@ -5,7 +5,7 @@
 #include <MRPch/MRBindingMacros.h>
 #include <cstdint>
 
-#if defined _MSC_VER && !defined __clang__
+#if defined _MSC_VER
 #include <intrin.h>
 #endif
 
@@ -34,15 +34,30 @@ public:
 
     [[nodiscard]] friend FastInt128 operator *( Int64Mul128 a, Int64Mul128 b ) noexcept
     {
-#if defined _MSC_VER && !defined __clang__ && defined _M_X64
+        // MSVC and clang-cl: FastInt128 is std::_Signed128 there, whose product of two values is general
+        // (signs stripped by branches, three 64-bit multiplications, the result negated), so a single
+        // widening multiplication by the intrinsic is several times faster
+#if defined _MSC_VER && defined _M_X64
         std::int64_t hi = 0;
         const auto lo = _mul128( a.v_, b.v_, &hi );
         return FastInt128( std::uint64_t( lo ), std::uint64_t( hi ) );
-#elif defined _MSC_VER && !defined __clang__ && defined _M_ARM64
+#elif defined _MSC_VER && defined _M_ARM64
         const auto hi = __mulh( a.v_, b.v_ );
         return FastInt128( std::uint64_t( a.v_ ) * std::uint64_t( b.v_ ), std::uint64_t( hi ) );
+#elif defined __wasm__
+        // WebAssembly has no instruction for the higher word of a 64-bit product, and the built-in product below would call
+        // __multi3, the general product of 128-bit values through memory; here the higher word is the sum of four 32-bit
+        // products (as mulhs in Hacker's Delight), and the lower word is one more multiplication independent of them
+        const std::int64_t x = a.v_, y = b.v_; // FastInt128 is __int128_t here
+        const std::uint64_t al = std::uint32_t( x ), bl = std::uint32_t( y );
+        const std::int64_t ah = x >> 32, bh = y >> 32;
+        const std::uint64_t ll = al * bl;
+        const std::int64_t t = ah * std::int64_t( bl ) + std::int64_t( ll >> 32 ); // |ah * bl| < 2^63
+        const std::int64_t w = std::int64_t( al ) * bh + std::int64_t( std::uint32_t( t ) ); // |al * bh| < 2^63
+        const std::int64_t hi = ah * bh + ( t >> 32 ) + ( w >> 32 );
+        return ( FastInt128( hi ) << 64 ) | FastInt128( std::uint64_t( x ) * std::uint64_t( y ) );
 #else
-        // both arguments are extensions of 64-bit values, which the compiler recognizes
+        // FastInt128 is __int128_t: both arguments are extensions of 64-bit values, which the compiler recognizes
         return FastInt128( a.v_ ) * b.v_;
 #endif
     }

@@ -23,6 +23,7 @@
 #include <iterator>
 #include <limits>
 #include <optional>
+#include <random>
 #include <sstream>
 
 namespace MR
@@ -206,7 +207,7 @@ static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
 
     if ( tree.empty() )
         return;
-    std::vector<int> numParents( tree.numNodes(), 0 );
+    Vector<int> numParents( tree.numNodes(), 0 );
     for ( int n = 0; n < numInternal; ++n )
     {
         const auto & sn = tree.simdNodes()[n];
@@ -385,7 +386,7 @@ TEST( MRMesh, AABBTreeDeepSplits )
     auto treeDepth = []( const AABBTree & tree )
     {
         // the children follow their parent
-        std::vector<int> depth( tree.numNodes(), 0 );
+        Vector<int> depth( tree.numNodes(), 0 );
         int res = 0;
         for ( int n = 0; n < (int)tree.simdNodes().size(); ++n )
             for ( int c : tree.simdNodes()[n].child )
@@ -583,7 +584,7 @@ std::uint64_t treeHash( const AABBTree & tree )
 {
     const auto flat = makeFlatAABBTree( tree );
     // the boxes of the triangles in the order of flat.leafTris
-    std::vector<Box3f> leafBoxes( flat.leafTris.size() );
+    Vector<Box3f> leafBoxes( flat.leafTris.size() );
     for ( NodeId n( 0 ); n < flat.nodes.size(); ++n )
     {
         const auto & node = flat.nodes[n];
@@ -649,16 +650,17 @@ void withSixteenThreads( F && f )
 
 } //anonymous namespace
 
-// the trees of meshes with exactly representable coordinates are pinned by their hashes, the same as the tree maker before ML#7479 gave:
+// the trees of meshes with exactly representable coordinates are pinned by their hashes (for 1000 and 150000 triangles, an even number of binary levels,
+// the same as the tree maker before ML#7479 gave; for 20000 and 300000 the levels are grouped differently, with the root of 2 children):
 // small ranges, many equal centers, almost all centers in one bucket (split again in parallel for 150000 triangles), the parallel splits
 TEST( MRMesh, AABBTreeGoldenHashes )
 {
     struct Case { int numTris, range; bool farOutlier; std::uint64_t hash; };
     const Case cases[] = {
         { 1000, 1 << 20, false, 0x34b0ae3e1963543dull },
-        { 20000, 4, false, 0x35cd81ed6d39cd05ull },
+        { 20000, 4, false, 0x8c32dbd435abc2b4ull },
         { 150000, 1024, true, 0xb4c853ba04bdc510ull },
-        { 300000, 1 << 16, false, 0x0cc9a28f326dd6dcull }
+        { 300000, 1 << 16, false, 0x1a2a1535e9c2259bull }
     };
     for ( const auto & c : cases )
     {
@@ -788,6 +790,30 @@ TEST( MRMesh, ProjectionToTriMesh )
     const auto [a, b, c] = tmesh.tris[proj.proj.face];
     const Vector3f p = proj.tp.interpolate( tmesh.points[a], tmesh.points[b], tmesh.points[c] );
     EXPECT_NEAR( ( p - proj.proj.point ).length(), 0.f, 1e-6f );
+}
+
+// the projections without the test of the boxes of the triangles of a leaf are the same as with it, also with a region and in the tree of a triangulation
+TEST( MRMesh, AABBTreeProjectionWithoutLeafBoxes )
+{
+    const Mesh mesh = makeSphere( { .radius = 1, .numMeshVertices = 3000 } );
+    FaceBitSet region( mesh.topology.faceSize() );
+    for ( FaceId f : mesh.topology.getValidFaces() )
+        region.set( f, f % 3 != 0 );
+    const TriMesh tmesh{ mesh.topology.getTriangulation(), mesh.points };
+    const AABBTree tree( tmesh );
+    auto same = []( const MeshProjectionResult & a, const MeshProjectionResult & b )
+    {
+        return a.proj.face == b.proj.face && a.proj.point == b.proj.point && a.tp == b.tp && a.distSq == b.distSq;
+    };
+    std::mt19937 rng( 3 );
+    std::uniform_real_distribution<float> u( -1.5f, 1.5f );
+    for ( int i = 0; i < 1000; ++i )
+    {
+        const Vector3f pt( u( rng ), u( rng ), u( rng ) );
+        EXPECT_TRUE( same( findProjection( pt, mesh ), findProjection( pt, mesh, FLT_MAX, nullptr, 0, {}, {}, false ) ) );
+        EXPECT_TRUE( same( findProjection( pt, { mesh, &region } ), findProjection( pt, { mesh, &region }, FLT_MAX, nullptr, 0, {}, {}, false ) ) );
+        EXPECT_TRUE( same( findProjection( pt, tree ), findProjection( pt, tree, FLT_MAX, nullptr, 0, {}, {}, nullptr, false ) ) );
+    }
 }
 
 } //namespace MR

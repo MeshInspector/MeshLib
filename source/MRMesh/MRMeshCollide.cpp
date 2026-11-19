@@ -246,10 +246,12 @@ Expected<bool> findSelfCollidingTriangles(
             // returns false to stop the search
             auto onTris = [&tree, &mp, &myRes, regionMap, outCollidingPairs, &keepGoing, touchIsIntersection]( int ia, int ib )
                 {
-                    const auto aFace = tree.leafTris()[ia].face;
+                    const auto & aLt = tree.leafTris()[ia];
+                    const auto aFace = aLt.face;
                     if ( mp.region && !mp.region->test( aFace ) )
                         return true;
-                    const auto bFace = tree.leafTris()[ib].face;
+                    const auto & bLt = tree.leafTris()[ib];
+                    const auto bFace = bLt.face;
                     if ( mp.region && !mp.region->test( bFace ) )
                         return true;
                     if ( regionMap && ( *regionMap )[aFace] != ( *regionMap )[bFace] )
@@ -258,7 +260,12 @@ Expected<bool> findSelfCollidingTriangles(
                     VertId av[3], bv[3];
                     Triangle3d ap, bp;
 
-                    auto se = mp.mesh.topology.sharedEdge( aFace, bFace );
+                    // the triangles can share an edge only if they share two vertices (the tree has the vertices of its triangles)
+                    int numSharedVerts = 0;
+                    for ( auto va : aLt.verts )
+                        for ( auto vb : bLt.verts )
+                            numSharedVerts += va == vb;
+                    const auto se = numSharedVerts >= 2 ? mp.mesh.topology.sharedEdge( aFace, bFace ) : EdgeId{};
                     if ( se )
                     {
                         mp.mesh.topology.getLeftTriVerts( se, av[0], av[1], av[2] );
@@ -266,8 +273,12 @@ Expected<bool> findSelfCollidingTriangles(
                     }
                     else
                     {
-                        mp.mesh.topology.getTriVerts( aFace, av[0], av[1], av[2] );
-                        mp.mesh.topology.getTriVerts( bFace, bv[0], bv[1], bv[2] );
+                        // the same as getTriVerts of the faces: the tree of the mesh keeps the vertices in this order
+                        for ( int j = 0; j < 3; ++j )
+                        {
+                            av[j] = aLt.verts[j];
+                            bv[j] = bLt.verts[j];
+                        }
                     }
                     for ( int j = 0; j < 3; ++j )
                     {

@@ -2374,10 +2374,8 @@ I assignNewIds( const TypedBitSet<I> & from, TypedBitSet<I> * vacant, I end, boo
         std::vector<size_t> starts( ( blocks.size() + chunkBlocks - 1 ) / chunkBlocks + 1, 0 );
         ParallelFor( size_t( 0 ), starts.size() - 1, [&] ( size_t c )
         {
-            size_t n = 0;
-            for ( size_t b = c * chunkBlocks, bEnd = std::min( b + chunkBlocks, blocks.size() ); b < bEnd; ++b )
-                n += std::popcount( blocks[b] );
-            starts[c + 1] = n;
+            const auto b = c * chunkBlocks;
+            starts[c + 1] = countSetBits( blocks.data() + b, std::min( chunkBlocks, blocks.size() - b ) );
         } );
         std::partial_sum( starts.begin(), starts.end(), starts.begin() );
         return starts;

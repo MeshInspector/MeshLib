@@ -8,6 +8,7 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cmath>
 
 using namespace MR;
@@ -41,23 +42,22 @@ void testPointsToDistanceVolume( const PointCloud& cloud, const PointsToDistance
     }, 1 );
     ASSERT_TRUE( partsRes.has_value() ) << partsRes.error();
 
-    // only the voxels having a value in all volumes are compared: the weight of a voxel can be just at minWeight;
-    // and a point on the very border of the ball of a voxel may be taken or not, changing the value
+    // a few voxels may differ: the weight of a voxel can be just at minWeight,
+    // and a point on the very border of the ball of a voxel may be taken or not
     const float eps = 1e-4f * params.sigma;
-    size_t numValid = 0, numCompared = 0, numDifferent = 0;
+    size_t numValid = 0, numMismatched = 0, numDifferent = 0;
     for ( auto v = 0_vox; v < cpu.size(); ++v )
     {
-        if ( std::isnan( cpu[v] ) )
-            continue;
-        ++numValid;
-        if ( std::isnan( cuda[v] ) || std::isnan( parts[v] ) )
-            continue;
-        ++numCompared;
-        if ( std::abs( cuda[v] - cpu[v] ) > eps || std::abs( parts[v] - cpu[v] ) > eps )
+        const bool cpuNan = std::isnan( cpu[v] );
+        if ( !cpuNan )
+            ++numValid;
+        if ( std::isnan( cuda[v] ) != cpuNan || std::isnan( parts[v] ) != cpuNan )
+            ++numMismatched;
+        else if ( !cpuNan && ( std::abs( cuda[v] - cpu[v] ) > eps || std::abs( parts[v] - cpu[v] ) > eps ) )
             ++numDifferent;
     }
     ASSERT_GT( numValid, cpu.size() / 100 );
-    ASSERT_GE( numCompared, numValid - numValid / 1000 );
+    ASSERT_LE( numMismatched, numValid / 1000 );
     ASSERT_LE( numDifferent, numValid / 1000 );
 }
 

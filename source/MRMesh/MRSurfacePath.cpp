@@ -416,6 +416,13 @@ Expected<SurfacePath, PathError> computeEdgeGeodesicPathApprox( const MeshPart &
 
 } // anonymous namespace
 
+Expected<SurfacePath, PathError> computeShortestEdgePath( const MeshPart & mp,
+    const MeshTriPoint & start, const MeshTriPoint & end, const VertBitSet* vertRegion )
+{
+    MR_TIMER;
+    return computeEdgeGeodesicPathApprox( mp, start, end, GeodesicPathApprox::DijkstraBiDir, vertRegion );
+}
+
 Expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mesh,
     const MeshTriPoint & start, const MeshTriPoint & end, GeodesicPathApprox atype )
 {
@@ -586,7 +593,7 @@ Expected<SurfacePath, PathError> computeSurfacePath( const MeshPart & mp,
         return res;
 
     spdlog::warn( "computeSurfacePath: fast-marching descent stopped before reaching end, using the shortest edge path in the region" );
-    res = computeEdgeGeodesicPathApprox( mp, start, end, GeodesicPathApprox::DijkstraBiDir, vertRegion );
+    res = computeShortestEdgePath( mp, start, end, vertRegion );
     // a path along edges needs more iterations to become as straight as fast-marching paths
     if ( res.has_value() && !res.value().empty() )
         reducePath( mp.mesh, start, res.value(), end, maxGeodesicIters > 0 ? std::max( maxGeodesicIters, 100 ) : 0 );

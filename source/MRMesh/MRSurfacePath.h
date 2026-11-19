@@ -73,6 +73,13 @@ MRMESH_API Expected<SurfacePath, PathError> computeGeodesicPath( const Mesh & me
     const MeshTriPoint & start, const MeshTriPoint & end, GeodesicPathApprox atype = GeodesicPathApprox::FastMarching,
     int maxGeodesicIters = 100 ); ///< the maximum number of iterations to reduce approximate path length and convert it in geodesic path
 
+/// returns intermediate points of the shortest path along mesh edges (by DijkstraBiDir) from start to end,
+/// every next point is located in the same triangle with the previous point;
+/// the path can be limited to given region: in face-format inside mp (only the edges with a region face on a side are passed),
+/// or in vert-format in vertRegion argument (only the edges with both ends in it are passed)
+MRMESH_API Expected<SurfacePath, PathError> computeShortestEdgePath( const MeshPart & mp,
+    const MeshTriPoint & start, const MeshTriPoint & end, const VertBitSet* vertRegion = nullptr );
+
 /// computes by given method and returns intermediate points of approximately geodesic path from start to end,
 /// every next point is located in the same triangle with the previous point;
 /// if FastMarching fails with PathError::InternalError, then falls back to DijkstraBiDir

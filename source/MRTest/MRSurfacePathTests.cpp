@@ -172,4 +172,77 @@ TEST( MRMesh, FastMarchingPathFlatTriangles )
     }
 }
 
+TEST( MRMesh, ShortestEdgePathInRegion )
+{
+    // a planar grid 8x8, the region of cells is U-shaped: two arms separated by the gap column 4 and joined by the bottom row;
+    // the edges across the gap have both ends in the region vertices, but no region face
+    const int n = 8;
+    Mesh mesh;
+    for ( int y = 0; y <= n; ++y )
+        for ( int x = 0; x <= n; ++x )
+            mesh.points.emplace_back( float( x ), float( y ), 0.f );
+    Triangulation t;
+    FaceBitSet faces;
+    for ( int y = 0; y < n; ++y )
+    {
+        for ( int x = 0; x < n; ++x )
+        {
+            const VertId a( y * ( n + 1 ) + x ), b( a + 1 ), c( a + n + 1 ), d( c + 1 );
+            t.push_back( { a, b, d } );
+            t.push_back( { a, d, c } );
+            const bool inRegion = x != 4 || y == 0;
+            faces.autoResizeSet( FaceId( int( t.size() ) - 2 ), inRegion );
+            faces.autoResizeSet( FaceId( int( t.size() ) - 1 ), inRegion );
+        }
+    }
+    mesh.topology = MeshBuilder::fromTriangles( t );
+    const auto verts = getIncidentVerts( mesh.topology, faces );
+    const MeshTriPoint start( mesh.topology, VertId( 7 * ( n + 1 ) + 1 ) ), end( mesh.topology, VertId( 7 * ( n + 1 ) + 7 ) );
+
+    // the length of the path and whether every its step passes an edge with a region face on a side
+    auto measure = [&]( const SurfacePath & path, float & len )
+    {
+        std::vector<VertId> vs{ start.inVertex( mesh.topology ) };
+        for ( const auto & ep : path )
+        {
+            const auto v = ep.inVertex( mesh.topology );
+            EXPECT_TRUE( v );
+            if ( v != vs.back() )
+                vs.push_back( v );
+        }
+        if ( vs.back() != end.inVertex( mesh.topology ) )
+            vs.push_back( end.inVertex( mesh.topology ) );
+        len = 0;
+        bool byFaces = true;
+        for ( size_t i = 0; i + 1 < vs.size(); ++i )
+        {
+            const auto e = mesh.topology.findEdge( vs[i], vs[i + 1] );
+            EXPECT_TRUE( e );
+            if ( !e )
+                return false;
+            len += ( mesh.points[vs[i + 1]] - mesh.points[vs[i]] ).length();
+            const auto l = mesh.topology.left( e ), r = mesh.topology.right( e );
+            byFaces = byFaces && ( ( l && faces.test( l ) ) || ( r && faces.test( r ) ) );
+        }
+        return byFaces;
+    };
+
+    const auto byFaces = computeShortestEdgePath( { mesh, &faces }, start, end );
+    ASSERT_TRUE( byFaces.has_value() );
+    EXPECT_TRUE( isConnectedPath( mesh.topology, start, *byFaces, end ) );
+    float lenFaces = 0;
+    EXPECT_TRUE( measure( *byFaces, lenFaces ) );
+
+    const auto byVerts = computeShortestEdgePath( mesh, start, end, &verts );
+    ASSERT_TRUE( byVerts.has_value() );
+    EXPECT_TRUE( isConnectedPath( mesh.topology, start, *byVerts, end ) );
+    float lenVerts = 0;
+    EXPECT_FALSE( measure( *byVerts, lenVerts ) ); // crosses the gap
+    for ( const auto & ep : *byVerts )
+        EXPECT_TRUE( verts.test( ep.inVertex( mesh.topology ) ) );
+
+    // the face region forces the path around the gap through the bottom row
+    EXPECT_GT( lenFaces, lenVerts + 10 );
+}
+
 } //namespace MR

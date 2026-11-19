@@ -33,7 +33,7 @@ inline void childDistSq( const AABBTreePoints::SimdNode & node, const Vector3f &
             return;
         }
     }
-    Simd4::store( d, Simd4::boxDistSq( node.box, px, py, pz ) );
+    Simd4::store( d, Simd4::mul( Simd4::boxDistSq( node.box, px, py, pz ), Simd4::set1( cSimdDistLow ) ) );
 }
 
 /// visits the leaves of not-empty tree nearest first, while their boxes are closer than limit();
@@ -110,14 +110,13 @@ PointsProjectionResult findProjectionOnPointsT( const Vector3f& pt, const AABBTr
         {
             for ( ; first + 4 <= last; first += 4 )
             {
-                alignas( 16 ) float d[4];
-                const auto dv = pointsDistSq( orderedPoints.data() + first, px, py, pz );
-                if ( !Simd4::bits( Simd4::lt( dv, Simd4::set1( res.distSq ) ) ) )
-                    continue;
-                Simd4::store( d, dv );
-                for ( int i = 0; i < 4; ++i )
-                    if ( tryPoint( first + i, d[i] ) )
+                const auto dv = Simd4::mul( pointsDistSq( orderedPoints.data() + first, px, py, pz ), Simd4::set1( cSimdDistLow ) );
+                for ( int m = Simd4::bits( Simd4::lt( dv, Simd4::set1( res.distSq ) ) ); m; m &= m - 1 )
+                {
+                    const int i = first + Simd4::lowestBit( m );
+                    if ( tryPoint( i, ( orderedPoints[i].coord - pt ).lengthSq() ) )
                         return true;
+                }
             }
         }
         for ( int i = first; i < last; ++i )
@@ -186,14 +185,13 @@ void findFewClosestPoints( const Vector3f& pt, const PointCloud& pc, FewSmallest
         {
             for ( ; first + 4 <= last; first += 4 )
             {
-                alignas( 16 ) float d[4];
-                const auto dv = pointsDistSq( orderedPoints.data() + first, px, py, pz );
-                if ( !Simd4::bits( Simd4::lt( dv, Simd4::set1( topDistSq() ) ) ) )
-                    continue;
-                Simd4::store( d, dv );
-                for ( int i = 0; i < 4; ++i )
-                    if ( tryPoint( first + i, d[i] ) )
+                const auto dv = Simd4::mul( pointsDistSq( orderedPoints.data() + first, px, py, pz ), Simd4::set1( cSimdDistLow ) );
+                for ( int m = Simd4::bits( Simd4::lt( dv, Simd4::set1( topDistSq() ) ) ); m; m &= m - 1 )
+                {
+                    const int i = first + Simd4::lowestBit( m );
+                    if ( tryPoint( i, ( orderedPoints[i].coord - pt ).lengthSq() ) )
                         return true;
+                }
             }
         }
         for ( int i = first; i < last; ++i )

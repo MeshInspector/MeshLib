@@ -6,7 +6,8 @@
 namespace MR
 {
 
-/// the squared distances from (px, py, pz) to the four points starting from p, computed exactly as ( p[i].coord - pt ).lengthSq()
+/// the squared distances from (px, py, pz) to the four points starting from p, as ( p[i].coord - pt ).lengthSq() but maybe without FMA,
+/// so they only select the candidates, multiplied by cSimdDistLow, and the exact distances are computed again by the scalar formula
 inline Simd4::F pointsDistSq( const AABBTreePoints::Point * p, Simd4::F px, Simd4::F py, Simd4::F pz )
 {
     using namespace Simd4;
@@ -16,6 +17,9 @@ inline Simd4::F pointsDistSq( const AABBTreePoints::Point * p, Simd4::F px, Simd
     const F dx = sub( r[0], px ), dy = sub( r[1], py ), dz = sub( r[2], pz );
     return add( add( mul( dx, dx ), mul( dy, dy ) ), mul( dz, dz ) );
 }
+
+/// the factor of SIMD distances (or of the bound of their rounding) to never miss a point that the scalar formula finds closer
+constexpr float cSimdDistLow = 1 - 1e-6f;
 
 /// a node of AABBTreePoints in a traversal: its reference as in AABBTreePoints::SimdNode::child and the value deciding its order
 struct PointsSubTask

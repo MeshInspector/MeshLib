@@ -93,20 +93,22 @@ void findPointsInBall( const AABBTreePoints& tree, Ball3f ball,
             {
                 if ( !xf && i + 4 <= last )
                 {
-                    // the distances to four points at once, while the ball stays the same
+                    // the candidates among four points at once, while the ball stays the same
                     const Ball3f ball0 = ball;
-                    alignas( 16 ) float d[4];
-                    const F dv = pointsDistSq( orderedPoints.data() + i, set1( ball0.center.x ), set1( ball0.center.y ), set1( ball0.center.z ) );
+                    const F dv = mul( pointsDistSq( orderedPoints.data() + i, set1( ball0.center.x ), set1( ball0.center.y ), set1( ball0.center.z ) ),
+                        set1( cSimdDistLow ) );
                     const int m = bits( le( dv, set1( ball0.radiusSq ) ) );
-                    store( d, dv );
                     int j = 0;
                     while ( j < 4 )
                     {
                         const int k = j++;
                         if ( !( m & ( 1 << k ) ) )
                             continue;
-                        const PointsProjectionResult candidate{ .distSq = d[k], .vId = orderedPoints[i + k].id };
-                        if ( foundCallback( candidate, orderedPoints[i + k].coord, ball ) == Processing::Stop )
+                        const auto & p = orderedPoints[i + k];
+                        const PointsProjectionResult candidate{ .distSq = distanceSq( p.coord, ball.center ), .vId = p.id };
+                        if ( !( candidate.distSq <= ball.radiusSq ) )
+                            continue;
+                        if ( foundCallback( candidate, p.coord, ball ) == Processing::Stop )
                             return;
                         if ( ball.center != ball0.center || ball.radiusSq != ball0.radiusSq )
                         {
@@ -146,7 +148,7 @@ void findPointsInBall( const AABBTreePoints& tree, Ball3f ball,
                 d[i] = node.child[i] ? boxDistSq( node.get( i ) ) : std::numeric_limits<float>::infinity();
         }
         else
-            store( d, Simd4::boxDistSq( node.box, set1( ball.center.x ), set1( ball.center.y ), set1( ball.center.z ) ) );
+            store( d, mul( Simd4::boxDistSq( node.box, set1( ball.center.x ), set1( ball.center.y ), set1( ball.center.z ) ), set1( cSimdDistLow ) ) );
         // the children in the ball in the order of increasing distance (the first child first for equal ones), pushed from the farthest
         int order[4];
         int numCh = 0;

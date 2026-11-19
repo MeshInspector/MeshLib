@@ -159,17 +159,9 @@ namespace
 /// 1 / line.d as stored in IntersectionPrecomputes
 Vector3f invDirOf( const IntersectionPrecomputes<float>& prec )
 {
-#if defined(__x86_64__) || defined(_M_X64)
+#ifdef MR_SIMD4_HW
     alignas( 16 ) float v[4];
-    _mm_store_ps( v, prec.invDir );
-    return { v[0], v[1], v[2] };
-#elif defined(__aarch64__) || defined(_M_ARM64)
-    float v[4];
-    vst1q_f32( v, prec.invDir );
-    return { v[0], v[1], v[2] };
-#elif defined(__wasm_simd128__)
-    float v[4];
-    wasm_v128_store( v, prec.invDir );
+    Simd4::store( v, prec.invDir );
     return { v[0], v[1], v[2] };
 #else
     return prec.invDir;

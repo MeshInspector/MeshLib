@@ -319,14 +319,18 @@ private:
         SimdBoxes & sl = Simd4::cStreamStores ? tmpBoxes : leaves_[l];
         LeafTri * const lts = streamTris ? tmpTris : leafTris_ + l * AABBTree::MaxLeafTris;
         Box3f box;
-        Box3f triBoxes[AABBTree::MaxLeafTris];
+        // the boxes written by rows without non-temporal stores
+        [[maybe_unused]] Box3f triBoxes[AABBTree::MaxLeafTris] = { Box3f( noInit ), Box3f( noInit ), Box3f( noInit ), Box3f( noInit ) };
         for ( int i = 0; i < AABBTree::MaxLeafTris; ++i )
         {
             auto & lt = lts[i];
             if ( i >= num )
             {
                 lt = LeafTri{}; // invalid
-                triBoxes[i] = emptySlotBox();
+                if constexpr ( Simd4::cStreamStores )
+                    sl.setEmpty( i );
+                else
+                    triBoxes[i] = emptySlotBox();
                 continue;
             }
             const auto & ft = faceTris_[leaf[i].i];
@@ -341,14 +345,12 @@ private:
             box.include( triBox );
             lt.face = ft.tri.face;
             lt.verts = ft.tri.verts;
-            triBoxes[i] = triBox;
+            if constexpr ( Simd4::cStreamStores )
+                sl.set( i, triBox );
+            else
+                triBoxes[i] = triBox;
         }
-        if constexpr ( Simd4::cStreamStores )
-        {
-            for ( int i = 0; i < AABBTree::MaxLeafTris; ++i )
-                sl.set( i, triBoxes[i] );
-        }
-        else
+        if constexpr ( !Simd4::cStreamStores )
             setBoxRows( sl, triBoxes );
         // the arrays are larger than caches, and every leaf is written once
         if constexpr ( Simd4::cStreamStores )
@@ -453,19 +455,24 @@ private:
         Box3f box;
         for ( int j = 0; j < AABBTree::MaxChildren; ++j )
         {
-            sn.child[j] = j < k ? childRef[j] : 0;
             if ( j < k )
+            {
+                sn.child[j] = childRef[j];
+                if constexpr ( Simd4::cStreamStores )
+                    sn.set( j, boxes[j] );
                 box.include( boxes[j] );
+            }
             else
-                boxes[j] = emptySlotBox();
+            {
+                sn.child[j] = 0;
+                if constexpr ( Simd4::cStreamStores )
+                    sn.setEmpty( j );
+                else
+                    boxes[j] = emptySlotBox();
+            }
         }
-        if constexpr ( Simd4::cStreamStores )
-        {
-            for ( int j = 0; j < AABBTree::MaxChildren; ++j )
-                sn.set( j, boxes[j] );
-        }
-        else
-            setBoxRows( sn, boxes );
+        if constexpr ( !Simd4::cStreamStores )
+            setBoxRows( sn, boxes ); // by rows without non-temporal stores
         if constexpr ( Simd4::cStreamStores )
             Simd4::streamCopy( nodes_[ref], tmpNode );
         return box;

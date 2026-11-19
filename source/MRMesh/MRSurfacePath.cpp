@@ -552,24 +552,19 @@ Expected<SurfacePath, PathError> computeFastMarchingPath( const MeshPart & mp,
 
     const auto & topology = mp.mesh.topology;
     res = computeSteepestDescentPath( mp.mesh, distances, start, { .end = end } );
-    // the descent stops in a triangle or on an edge with equal distances in all vertices,
-    // then it continues from the vertex there with the smallest distance, which has a neighbor with even smaller distance
-    for ( auto curr = res.empty() ? start : MeshTriPoint( res.back() );
-        !fromSameTriangle( topology, MeshTriPoint{ end }, MeshTriPoint{ curr } ) && !curr.inVertex( topology ); )
+    if ( res.empty() && !start.inVertex( topology ) )
     {
+        // the descent cannot start inside a triangle (or on an edge) with equal distances in all its vertices,
+        // then it starts from the vertex there with the smallest distance, which has a neighbor with even smaller distance
         VertId best;
-        topology.forEachVertex( curr, [&]( VertId v ) { if ( !best || distances[v] < distances[best] ) best = v; } );
+        topology.forEachVertex( start, [&]( VertId v ) { if ( !best || distances[v] < distances[best] ) best = v; } );
         res.emplace_back( topology.edgeWithOrg( best ), 0.0f );
-        const auto size = res.size();
         computeSteepestDescentPath( mp.mesh, distances, MeshTriPoint( topology, best ), &res, { .end = end } );
-        if ( res.size() == size )
-            break;
-        curr = MeshTriPoint( res.back() );
     }
     if ( outSurfaceDistances )
         *outSurfaceDistances = std::move( distances );
     // no edge is crossed only if start and end are from the same triangle;
-    // the descent can stop in a vertex without neighbors having smaller distances
+    // the descent can stop before reaching end only if the distances have local minima, which setNoLocalMinima prevents
     if ( res.empty() || !fromSameTriangle( topology, MeshTriPoint{ end }, MeshTriPoint{ res.back() } ) )
         return unexpected( PathError::InternalError );
     return res;

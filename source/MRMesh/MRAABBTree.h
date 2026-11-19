@@ -120,7 +120,7 @@ public:
     [[nodiscard]] int numTris() const { return numTris_; }
 
     /// the internal nodes, the root is the first one (if the tree has more than MaxLeafTris triangles)
-    [[nodiscard]] MR_BIND_IGNORE const std::vector<SimdNode, Allocator<SimdNode>> & simdNodes() const { return simdNodes_; }
+    [[nodiscard]] MR_BIND_IGNORE const Vector<SimdNode> & simdNodes() const { return simdNodes_; }
 
     /// the number of leaves
     [[nodiscard]] int numLeaves() const { return (int)leafBoxes_.size(); }
@@ -203,9 +203,8 @@ private:
     friend class UniqueThreadSafeOwner<AABBTree>;
     friend class SharedThreadSafeOwner<AABBTree>;
 
-    // std::vector and not MR::Vector, which the bindings would bind with these types not in the bindings; allocated by mimalloc as MR::Vector
-    std::vector<SimdNode, Allocator<SimdNode>> simdNodes_; ///< the children follow their parent
-    std::vector<SimdBoxes, Allocator<SimdBoxes>> leafBoxes_; ///< the boxes of the triangles of each leaf
+    Vector<SimdNode> simdNodes_; ///< the children follow their parent
+    Vector<SimdBoxes> leafBoxes_; ///< the boxes of the triangles of each leaf
     Vector<LeafTri> leafTris_;
     Box3f box_; ///< the union of the boxes of the root, kept for the queries starting with it
 

@@ -497,24 +497,24 @@ private:
 
 /// makes the tree of numTris triangles with their records T given by makeFaceTris( std::type_identity<T>{}, centers, centersBox )
 template <typename T, typename MakeFaceTris>
-void makeTreeOf( int numTris, const VertCoords & points, const MakeFaceTris & makeFaceTris, std::vector<AABBTree::SimdNode, Allocator<AABBTree::SimdNode>> & nodes,
-    std::vector<AABBTree::SimdBoxes, Allocator<AABBTree::SimdBoxes>> & leaves, Vector<AABBTree::LeafTri> & leafTris )
+void makeTreeOf( int numTris, const VertCoords & points, const MakeFaceTris & makeFaceTris, Vector<AABBTree::SimdNode> & nodes,
+    Vector<AABBTree::SimdBoxes> & leaves, Vector<AABBTree::LeafTri> & leafTris )
 {
     AABBTreeWideMaker<T> maker( numTris );
     Buffer<TreeCenter> centers;
     Box3f centersBox;
     const auto faceTris = makeFaceTris( std::type_identity<T>{}, centers, centersBox );
     // the pages are touched first by the parallel filling
-    resizeNoInit( nodes, maker.numInternal() );
-    resizeNoInit( leaves, maker.numLeaves() );
+    nodes.resizeNoInit( size_t( maker.numInternal() ) );
+    leaves.resizeNoInit( size_t( maker.numLeaves() ) );
     leafTris.resizeNoInit( size_t( maker.numLeaves() ) * AABBTree::MaxLeafTris );
     maker.make( faceTris, centers, centersBox, points, nodes.data(), leaves.data(), leafTris.data() );
 }
 
 /// makes the tree of numTris triangles given by makeFaceTris( std::type_identity<T>{}, centers, centersBox ) with T = BoxedTri or UnboxedTri
 template <typename MakeFaceTris>
-void makeTree( int numTris, const VertCoords & points, const MakeFaceTris & makeFaceTris, std::vector<AABBTree::SimdNode, Allocator<AABBTree::SimdNode>> & nodes,
-    std::vector<AABBTree::SimdBoxes, Allocator<AABBTree::SimdBoxes>> & leaves, Vector<AABBTree::LeafTri> & leafTris )
+void makeTree( int numTris, const VertCoords & points, const MakeFaceTris & makeFaceTris, Vector<AABBTree::SimdNode> & nodes,
+    Vector<AABBTree::SimdBoxes> & leaves, Vector<AABBTree::LeafTri> & leafTris )
 {
     if ( numTris <= 0 )
         return;
@@ -587,7 +587,7 @@ std::vector<NodeId> AABBTree::getSubtrees( int minNum ) const
     std::vector<NodeId> res;
     if ( empty() )
         return res;
-    std::vector<int> refs{ rootRef() }, tmp;
+    Vector<int> refs{ rootRef() }, tmp;
     while ( refs.size() < minNum )
     {
         bool split = false;
@@ -900,7 +900,7 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
     oldFaces.reserve( splitFaces.count() );
     for ( auto f : splitFaces )
         oldFaces.push_back( f );
-    std::vector<int> leafOfOld( oldFaces.size(), -1 );
+    Vector<int> leafOfOld( oldFaces.size(), -1 );
     ParallelFor( size_t( 0 ), leafBoxes_.size(), [&]( size_t l )
     {
         for ( int i = 0; i < MaxLeafTris; ++i )
@@ -919,7 +919,7 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
     } );
 
     // the new faces grouped by the leaf of their old face, in a deterministic order
-    std::vector<std::pair<int, FaceId>> leafNew;
+    Vector<std::pair<int, FaceId>> leafNew;
     leafNew.reserve( new2Old.size() );
     for ( const auto & [newFace, oldFace] : new2Old )
     {
@@ -937,7 +937,7 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
     BitSet splitLeaves( leafBoxes_.size() );
     for ( const auto & ln : leafNew )
         splitLeaves.set( ln.first );
-    std::vector<std::pair<int, int>> parentOf( leafBoxes_.size(), { -1, -1 } );
+    Vector<std::pair<int, int>> parentOf( leafBoxes_.size(), { -1, -1 } );
     ParallelFor( size_t( 0 ), simdNodes_.size(), [&]( size_t n )
     {
         const auto & sn = simdNodes_[n];
@@ -969,7 +969,7 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
     auto boxOf = [&]( int ref ) { return ref < 0 ? leafBoxes_[~ref].getUnion() : simdNodes_[ref].getUnion(); };
     // appends a node with given children, more than MaxChildren of them are grouped in subtrees; the new nodes are appended,
     // so children have larger ids than their parents as in a constructed tree; returns the reference to the node and its box
-    auto makeNode = [&]( const std::vector<int> & refs, auto && self ) -> std::pair<int, Box3f>
+    auto makeNode = [&]( const Vector<int> & refs, auto && self ) -> std::pair<int, Box3f>
     {
         const int n = (int)refs.size();
         const int numCh = std::min( n, MaxChildren );
@@ -994,7 +994,7 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
             }
             else
             {
-                std::vector<int> part( refs.begin() + c * n / numCh, refs.begin() + ( c + 1 ) * n / numCh );
+                Vector<int> part( refs.begin() + c * n / numCh, refs.begin() + ( c + 1 ) * n / numCh );
                 if ( part.size() == 1 )
                 {
                     ref = part.front();
@@ -1016,7 +1016,7 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
     for ( size_t k = 0; k < leafNew.size(); )
     {
         const int leaf = leafNew[k].first;
-        std::vector<int> refs{ ~leaf }; // the old leaf keeps its triangles
+        Vector<int> refs{ ~leaf }; // the old leaf keeps its triangles
         for ( ; k < leafNew.size() && leafNew[k].first == leaf; )
         {
             int num = 0;
@@ -1056,7 +1056,7 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
 
     // every split leaf went one level deeper: the stacks of the traversals hold the nodes of MaxDepth levels only
     int maxDepth = 0;
-    std::vector<std::pair<int, int>> stack{ { rootRef(), 0 } }; // reference and depth
+    Vector<std::pair<int, int>> stack{ { rootRef(), 0 } }; // reference and depth
     while ( !stack.empty() )
     {
         const auto [r, d] = stack.back();

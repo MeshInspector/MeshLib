@@ -195,7 +195,7 @@ static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
 
     if ( tree.empty() )
         return;
-    std::vector<int> numParents( tree.numNodes(), 0 );
+    Vector<int> numParents( tree.numNodes(), 0 );
     for ( int n = 0; n < numInternal; ++n )
     {
         const auto & sn = tree.simdNodes()[n];
@@ -374,7 +374,7 @@ TEST( MRMesh, AABBTreeDeepSplits )
     auto treeDepth = []( const AABBTree & tree )
     {
         // the children follow their parent
-        std::vector<int> depth( tree.numNodes(), 0 );
+        Vector<int> depth( tree.numNodes(), 0 );
         int res = 0;
         for ( int n = 0; n < (int)tree.simdNodes().size(); ++n )
             for ( int c : tree.simdNodes()[n].child )
@@ -572,7 +572,7 @@ std::uint64_t treeHash( const AABBTree & tree )
 {
     const auto flat = makeFlatAABBTree( tree );
     // the boxes of the triangles in the order of flat.leafTris
-    std::vector<Box3f> leafBoxes( flat.leafTris.size() );
+    Vector<Box3f> leafBoxes( flat.leafTris.size() );
     for ( NodeId n( 0 ); n < flat.nodes.size(); ++n )
     {
         const auto & node = flat.nodes[n];

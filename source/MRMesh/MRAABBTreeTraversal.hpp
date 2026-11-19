@@ -186,7 +186,7 @@ Vector<WideNodePair> makeWideSubtasks( Vector<WideNodePair> subtasks, int levels
     // the subtasks are the same and in the same order as on one thread, while this serial phase does not hold back many threads
     constexpr size_t cChunk = 1024;
     Vector<WideNodePair> next, leafTasks;
-    std::vector<std::pair<Vector<WideNodePair>, Vector<WideNodePair>>> chunks; // next and leaf tasks of each chunk
+    Vector<std::pair<Vector<WideNodePair>, Vector<WideNodePair>>> chunks; // next and leaf tasks of each chunk
     for ( int i = 0; i < levels && !subtasks.empty(); ++i )
     {
         if ( subtasks.size() < 2 * cChunk )

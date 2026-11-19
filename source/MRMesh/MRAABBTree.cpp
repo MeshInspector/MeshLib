@@ -715,6 +715,26 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
 
     // the triangles with changed vertices in the leaves, and the boxes of the changed leaves
     const auto & points = mesh.points;
+    // without non-temporal stores, makes all boxes of leaf l from the points in place by one store per row, returns their union
+    // (a separate function is faster in WebAssembly than the same code in the loop)
+    [[maybe_unused]] auto refitLeafInPlace = [&]( size_t l )
+    {
+        const auto * lts = leafTris_.data() + l * MaxLeafTris;
+        Box3f box;
+        Box3f tb[MaxLeafTris];
+        for ( int i = 0; i < MaxLeafTris; ++i )
+        {
+            if ( !lts[i].face )
+            {
+                tb[i] = emptySlotBox();
+                continue;
+            }
+            tb[i] = wideTriBox( points, lts[i] );
+            box.include( tb[i] );
+        }
+        setBoxRows( leafBoxes_[l], tb );
+        return box;
+    };
     BitSet changedLeaves;
     Buffer<Box3f> leafBox( leafBoxes_.size() );
     if ( !changedVerts )
@@ -743,21 +763,7 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
                     Simd4::streamCopy( leafBoxes_[l], sl );
                 }
                 else
-                {
-                    // in place, by one store per row
-                    Box3f tb[MaxLeafTris]; // empty in the unused slots, which are the last ones
-                    for ( int i = 0; i < MaxLeafTris && lts[i].face; ++i )
-                    {
-                        tb[i] = wideTriBox( points, lts[i] );
-                        box.include( tb[i] );
-                    }
-                    auto & sl = leafBoxes_[l];
-                    for ( int c = 0; c < 3; ++c )
-                    {
-                        Simd4::store( sl.box[c], Simd4::make( tb[0].min[c], tb[1].min[c], tb[2].min[c], tb[3].min[c] ) );
-                        Simd4::store( sl.box[c + 3], Simd4::make( tb[0].max[c], tb[1].max[c], tb[2].max[c], tb[3].max[c] ) );
-                    }
-                }
+                    box = refitLeafInPlace( l );
                 leafBox[l] = box;
             }
             Simd4::streamFence();

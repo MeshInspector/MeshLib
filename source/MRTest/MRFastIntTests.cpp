@@ -1,3 +1,4 @@
+#include <MRMesh/MRDivRound.h>
 #include <MRMesh/MRFastInt.h>
 #include <MRMesh/MRNextUpDown.h>
 #include <MRMesh/MRVector3.h>
@@ -768,6 +769,42 @@ TEST( MRMesh, DISABLED_FastIntMulWordsBench )
 
     runAB( "small(hi=0)", small );
     runAB( "full-width", full );
+}
+
+// divFastInt128 truncates toward zero as the built-in division (in clang-cl builds it divides by std::_Signed128),
+// and divRound of FastInt128 rounds to the nearest
+TEST( MRMesh, FastInt128Division )
+{
+    auto absU = []( FastInt128 x ) { return x < 0 ? FastUInt128( -x ) : FastUInt128( x ); };
+    auto check = [&]( FastInt128 n, FastInt128 d )
+    {
+        const FastInt128 q = divFastInt128( n, d );
+        const FastInt128 r = n - q * d;
+        EXPECT_TRUE( absU( r ) < absU( d ) );
+        EXPECT_TRUE( r == 0 || ( r < 0 ) == ( n < 0 ) );
+        const FastInt128 qr = divRound( n, d );
+        const FastUInt128 err = absU( n - qr * d );
+        EXPECT_TRUE( 2 * err <= absU( d ) );
+    };
+    EXPECT_TRUE( divFastInt128( 7, 2 ) == 3 && divFastInt128( -7, 2 ) == -3 && divFastInt128( 7, -2 ) == -3 && divFastInt128( -7, -2 ) == 3 );
+    EXPECT_TRUE( divRound( FastInt128( 7 ), FastInt128( 2 ) ) == 4 && divRound( FastInt128( -7 ), FastInt128( 2 ) ) == -4 );
+    const FastInt128 big = FastInt128( 1 ) << 120;
+    EXPECT_TRUE( divFastInt128( big, FastInt128( 1 ) << 60 ) == FastInt128( 1 ) << 60 );
+    std::mt19937_64 rng( 7 );
+    for ( int i = 0; i < 20000; ++i )
+    {
+        auto rnd = [&]( int bits )
+        {
+            FastUInt128 u = ( FastUInt128( rng() ) << 64 ) | rng();
+            u >>= 128 - bits;
+            return ( rng() & 1 ) ? -FastInt128( u ) : FastInt128( u );
+        };
+        const int nb = 1 + int( rng() % 126 ), db = 1 + int( rng() % std::min( nb + 1, 126 ) );
+        FastInt128 d = rnd( db );
+        if ( d == 0 )
+            d = 1;
+        check( rnd( nb ), d );
+    }
 }
 
 } // namespace MR

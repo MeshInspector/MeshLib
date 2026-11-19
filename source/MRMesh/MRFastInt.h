@@ -120,12 +120,13 @@ template <typename T>
 /// only safe against a stated error of the conversion feeding them
 [[nodiscard]] MR_BIND_IGNORE inline double toDouble( FastInt128 v ) noexcept
 {
-#ifdef MR_HAS_BUILTIN_INT128
+#if defined( MR_HAS_BUILTIN_INT128 ) && !defined( MR_BUILTIN_INT128_NO_RUNTIME )
     return double( v ); // faster than the code below, and correctly rounded as well, which the
                         // FastIntToDouble tests check on each platform rather than assume
 #else
     // std::_Signed128 has no conversion in double at all, so MSVC takes the same code as the
-    // wider types below, and its results are the built-in ones above bit for bit
+    // wider types below, and its results are the built-in ones above bit for bit; so does clang-cl,
+    // whose built-in conversion calls a function absent in the MSVC runtime
     const FastUInt128 u( v );
     const std::uint64_t w[2] = { std::uint64_t( u ), std::uint64_t( u >> 64 ) };
     return detail::doubleFromWords( w, 2 );

@@ -298,20 +298,20 @@ VertId findDirMax( const Vector3f & dir, const AABBTreePoints & tree, const Vert
             const F err = mul( add( add( mul( abs( cx ), abs( dx ) ), mul( abs( cy ), abs( dy ) ) ), mul( abs( cz ), abs( dz ) ) ), set1( 1 - cSimdDistLow ) );
             store( projs, add( add( add( mul( dx, cx ), mul( dy, cy ) ), mul( dz, cz ) ), err ) );
         }
-        SubTask ch[AABBTreePoints::MaxChildren];
-        int numCh = 0;
+        // the child with the largest projection is pushed last to be visited first, the others in their order
+        int best = -1;
+        float bestProj = furthestProj;
         for ( int i = 0; i < AABBTreePoints::MaxChildren && node.child[i]; ++i )
-        {
-            const float proj = projs[i];
-            if ( !( proj > furthestProj ) )
-                continue;
-            int k = numCh++;
-            for ( ; k > 0 && ch[k - 1].furthestBoxProj > proj; --k )
-                ch[k] = ch[k - 1];
-            ch[k] = { node.child[i], proj };
-        }
-        for ( int i = 0; i < numCh; ++i )
-            subtasks.push( ch[i] );
+            if ( projs[i] > bestProj )
+            {
+                bestProj = projs[i];
+                best = i;
+            }
+        for ( int i = 0; i < AABBTreePoints::MaxChildren && node.child[i]; ++i )
+            if ( i != best && projs[i] > furthestProj )
+                subtasks.push( { node.child[i], projs[i] } );
+        if ( best >= 0 )
+            subtasks.push( { node.child[best], bestProj } );
     }
     return res;
 

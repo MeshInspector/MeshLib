@@ -156,6 +156,37 @@ TEST( MRMesh, BitSetCountBitsAndBlocks )
     EXPECT_EQ( c.blocks, 3 );
 }
 
+TEST( MRMesh, BitSetCount )
+{
+    // sizes around the unrolled and the chunked loops of the SIMD and popcnt versions; all-set blocks give the largest partial sums
+    for ( size_t numBlocks : { 0, 1, 2, 3, 4, 5, 7, 8, 9, 8191, 8192, 8193, 8197, 3 * 8192 + 3 } )
+    {
+        for ( bool all : { true, false } )
+        {
+            BitSet bs( numBlocks * BitSet::bits_per_block );
+            size_t expected = 0;
+            for ( size_t i = 0; i < bs.size(); ++i )
+            {
+                if ( all || ( ( i * 2654435761u ) >> 7 ) % 3 == 0 )
+                {
+                    bs.set( i );
+                    ++expected;
+                }
+            }
+            EXPECT_EQ( bs.count(), expected );
+            EXPECT_EQ( bs.countBitsAndBlocks().bits, expected );
+            if ( numBlocks > 1 )
+            {
+                // unaligned start
+                size_t expectedTail = 0;
+                for ( size_t i = BitSet::bits_per_block; i < bs.size(); ++i )
+                    expectedTail += bs.test( i );
+                EXPECT_EQ( countSetBits( bs.bits().data() + 1, numBlocks - 1 ), expectedTail );
+            }
+        }
+    }
+}
+
 TEST( MRMesh, BitSetAtomicTestSet )
 {
     // odd multiplier scatters consecutive indices, so different threads hit bits of the same blocks

@@ -7,10 +7,6 @@ IF(NOT CUDAToolkit_FOUND AND NOT CUDA_FOUND)
 
       # Right now we only seem have the old Cuda 11 in VS 2019 in CI.
       find_package(CUDAToolkit 11 REQUIRED)
-
-      # For our VS2022 CI:
-      # 20011: VS2026's <cmath> calls the __host__-only __copysignf intrinsic from __host__ __device__ copysign
-      set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -allow-unsupported-compiler -diag-suppress 20011" CACHE STRING "")
     ELSE()
       # https://cmake.org/cmake/help/latest/release/3.25.html#id2
       IF(CMAKE_VERSION VERSION_LESS 3.25.2)

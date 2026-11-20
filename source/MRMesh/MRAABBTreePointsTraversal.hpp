@@ -33,7 +33,7 @@ struct PointsSubTask
 inline int sortedChildren( const AABBTreePoints::SimdNode & node, const float ( &d )[4], float limit, PointsSubTask ( &ch )[4] )
 {
     int numCh = 0;
-    for ( int i = 0; i < AABBTreePoints::MaxChildren; ++i )
+    for ( int i = 0; i < AABBTreePoints::MaxChildren && node.child[i]; ++i )
     {
         if ( !( d[i] < limit ) )
             continue;

@@ -15,6 +15,7 @@
 #include <MRMesh/MRVector.h>
 #include <gtest/gtest.h>
 #include <algorithm>
+#include <limits>
 #include <random>
 #include <vector>
 
@@ -241,6 +242,37 @@ TEST( MRMesh, AABBTreePointsSearches )
         const auto v = findDirMax( dir, tree );
         ASSERT_TRUE( v.valid() );
         EXPECT_EQ( dot( pc.points[v], dir ), maxProj );
+    }
+}
+
+TEST( MRMesh, AABBTreePointsNonFiniteQueries )
+{
+    PointCloud pc;
+    pc.points = randomPoints( 3000, 3 );
+    pc.validPoints.resize( pc.points.size(), true );
+    const auto & tree = pc.getAABBTree();
+    // the unused slots of a node refer to 0, the root, and must never be visited
+    bool hasUnusedSlot = false;
+    for ( const auto & n : tree.simdNodes() )
+        hasUnusedSlot = hasUnusedSlot || n.child[AABBTreePoints::MaxChildren - 1] == 0;
+    ASSERT_TRUE( hasUnusedSlot );
+
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+    for ( const Vector3f pt : { Vector3f( nan, 0, 0 ), Vector3f( 0, 0, nan ), Vector3f::diagonal( nan ) } )
+    {
+        EXPECT_FALSE( findProjectionOnPoints( pt, tree ).vId.valid() );
+        FewSmallest<PointsProjectionResult> few( 5 );
+        findFewClosestPoints( pt, pc, few );
+        EXPECT_TRUE( few.empty() );
+    }
+
+    const float inf = std::numeric_limits<float>::infinity();
+    const AffineXf3f xf( Matrix3f::rotation( Vector3f( 1, 2, 3 ).normalized(), 0.7f ), Vector3f( 0.1f, -0.2f, 0.3f ) );
+    for ( const AffineXf3f * pxf : { (const AffineXf3f *)nullptr, &xf } )
+    {
+        size_t num = 0;
+        findPointsInBox( tree, Box3f( Vector3f::diagonal( -inf ), Vector3f::diagonal( inf ) ), [&] ( VertId, const Vector3f & ) { ++num; }, pxf );
+        EXPECT_EQ( num, pc.points.size() );
     }
 }
 

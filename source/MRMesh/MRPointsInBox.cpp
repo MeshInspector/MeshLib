@@ -92,7 +92,7 @@ void findPointsInBox( const AABBTreePoints& tree, const Box3f& box,
             m = simdBoxesIntersect( node, box );
         // the first child is looked at first
         for ( int i = AABBTreePoints::MaxChildren - 1; i >= 0; --i )
-            if ( m & ( 1 << i ) )
+            if ( ( m & ( 1 << i ) ) && node.child[i] ) // an empty box of an unused slot is in an infinite box
                 subtasks.push( node.child[i] );
     }
 }

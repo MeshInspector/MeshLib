@@ -313,7 +313,7 @@ VertId findDirMax( const Vector3f & dir, const AABBTreePoints & tree, const Vert
         alignas( 16 ) float projs[AABBTreePoints::MaxChildren];
         {
             const F cx = load( node.box[cornerRow[0]] ), cy = load( node.box[cornerRow[1]] ), cz = load( node.box[cornerRow[2]] );
-            store( projs, add( add( add( mul( dx, cx ), mul( dy, cy ) ), mul( dz, cz ) ), err ) );
+            store( projs, add( add( mul( dx, cx ), mul( dy, cy ) ), add( mul( dz, cz ), err ) ) );
         }
         // the child with the largest projection is pushed last to be visited first, the others in their order
         int best = -1;

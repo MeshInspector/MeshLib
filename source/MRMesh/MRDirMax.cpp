@@ -238,31 +238,48 @@ VertId findDirMax( const Vector3f & dir, const AABBTreePoints & tree, const Vert
     // the rows of the coordinates of the corner in AABBTreePoints::SimdNode
     const int cornerRow[3] = { maxCorner.x ? 3 : 0, maxCorner.y ? 4 : 1, maxCorner.z ? 5 : 2 };
     const F dx = set1( dir.x ), dy = set1( dir.y ), dz = set1( dir.z );
+    // a bound of the rounding of the 4-wide projections of all boxes and points, from the largest coordinate in the tree
+    const auto rootBox = tree.getBoundingBox();
+    const float maxAbs = std::max( std::max( std::max( std::abs( rootBox.min.x ), std::abs( rootBox.max.x ) ), std::max( std::abs( rootBox.min.y ), std::abs( rootBox.max.y ) ) ),
+        std::max( std::abs( rootBox.min.z ), std::abs( rootBox.max.z ) ) );
+    const F err = set1( maxAbs * ( std::abs( dir.x ) + std::abs( dir.y ) + std::abs( dir.z ) ) * ( 1 - cSimdDistLow ) );
     float furthestProj = -FLT_MAX;
     // every level adds at most MaxChildren - 1 tasks
     InplaceStack<SubTask, 3 * AABBTreePoints::MaxDepth + 1> subtasks;
-    subtasks.push( { tree.rootRef(), dot( dir, tree.getBoundingBox().corner( maxCorner ) ) } );
-    while ( !subtasks.empty() )
+    // the next task to visit, not in the stack
+    SubTask next{ tree.rootRef(), dot( dir, rootBox.corner( maxCorner ) ) };
+    bool hasNext = true;
+    for ( ;; )
     {
-        const auto s = subtasks.top();
-        subtasks.pop();
+        SubTask s;
+        if ( hasNext )
+        {
+            s = next;
+            hasNext = false;
+        }
+        else if ( subtasks.empty() )
+            break;
+        else
+        {
+            s = subtasks.top();
+            subtasks.pop();
+        }
         if ( s.furthestBoxProj < furthestProj )
             continue;
         if ( s.ref < 0 )
         {
             auto [first, last] = tree.leafPointRange( ~s.ref );
+#if defined( __x86_64__ ) || defined( _M_X64 ) // on Arm and in Wasm the scalar loop below is faster
             if ( !region )
             {
                 // the candidates among four points at once by their projections as dot( coord, dir ) but maybe without FMA,
-                // increased by a bound of the rounding; the exact projections are computed again by the scalar formula
-                const F adx = abs( dx ), ady = abs( dy ), adz = abs( dz );
+                // increased by the bound of the rounding; the exact projections are computed again by the scalar formula
                 for ( ; first + 4 <= last; first += 4 )
                 {
                     F r[4] = { loadu( &orderedPoints[first].coord.x ), loadu( &orderedPoints[first + 1].coord.x ),
                         loadu( &orderedPoints[first + 2].coord.x ), loadu( &orderedPoints[first + 3].coord.x ) };
                     transpose( r );
                     const F pv = add( add( mul( r[0], dx ), mul( r[1], dy ) ), mul( r[2], dz ) );
-                    const F err = mul( add( add( mul( abs( r[0] ), adx ), mul( abs( r[1] ), ady ) ), mul( abs( r[2] ), adz ) ), set1( 1 - cSimdDistLow ) );
                     for ( int m = bits( gt( add( pv, err ), set1( furthestProj ) ) ); m; m &= m - 1 )
                     {
                         const auto & p = orderedPoints[first + lowestBit( m )];
@@ -275,6 +292,7 @@ VertId findDirMax( const Vector3f & dir, const AABBTreePoints & tree, const Vert
                     }
                 }
             }
+#endif
             for ( int i = first; i < last; ++i )
             {
                 if ( region && !region->test( orderedPoints[i].id ) )
@@ -295,7 +313,6 @@ VertId findDirMax( const Vector3f & dir, const AABBTreePoints & tree, const Vert
         alignas( 16 ) float projs[AABBTreePoints::MaxChildren];
         {
             const F cx = load( node.box[cornerRow[0]] ), cy = load( node.box[cornerRow[1]] ), cz = load( node.box[cornerRow[2]] );
-            const F err = mul( add( add( mul( abs( cx ), abs( dx ) ), mul( abs( cy ), abs( dy ) ) ), mul( abs( cz ), abs( dz ) ) ), set1( 1 - cSimdDistLow ) );
             store( projs, add( add( add( mul( dx, cx ), mul( dy, cy ) ), mul( dz, cz ) ), err ) );
         }
         // the child with the largest projection is pushed last to be visited first, the others in their order
@@ -311,7 +328,10 @@ VertId findDirMax( const Vector3f & dir, const AABBTreePoints & tree, const Vert
             if ( i != best && projs[i] > furthestProj )
                 subtasks.push( { node.child[i], projs[i] } );
         if ( best >= 0 )
-            subtasks.push( { node.child[best], bestProj } );
+        {
+            next = { node.child[best], bestProj };
+            hasNext = true;
+        }
     }
     return res;
 

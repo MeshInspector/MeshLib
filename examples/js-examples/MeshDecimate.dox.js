@@ -1,6 +1,6 @@
-import createMeshLib from '@meshinspector/meshlib';
+import * as ml from '@meshinspector/meshlib';
 
-const ml = await createMeshLib();
+await ml.init();
 
 // Load mesh
 using mesh = ml.MeshLoad.fromAnySupportedFormat('mesh.stl');
@@ -24,4 +24,4 @@ settings.subdivideParts = 16;
 ml.decimateMesh(mesh, settings);
 
 // Save result
-ml.MeshSave.toAnySupportedFormat(mesh, 'decimated_mesh.stl');
+ml.MeshSave.toAnySupportedFormat(mesh, 'decimatedMesh.stl');

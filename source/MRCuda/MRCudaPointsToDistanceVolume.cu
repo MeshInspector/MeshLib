@@ -73,7 +73,7 @@ namespace Cuda
                         if ( !params.sqrtAngleWeight )
                             sumDist += dt * w;
                         else
-                            sumDist += copysign( sqrt( abs( dt ) ), dt ) * w;
+                            sumDist += copysignf( sqrt( abs( dt ) ), dt ) * w;
                     }
                 }
                 continue;

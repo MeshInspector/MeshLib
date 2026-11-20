@@ -428,9 +428,9 @@ jobs:
             msys2-env: clang64
             msys2-pkgs: _clang22
             mrbind-cache-prefix: windows-clang22
-            cuda-version: '12.0.1'
+            cuda-version: '12.4.1'
             cuda-major: '12'
-            cuda-minor: '0'
+            cuda-minor: '4'
           - platform: arm64
             runner: windows-11-vs2026-arm
             vcpkg-triplet: arm64-windows-meshlib

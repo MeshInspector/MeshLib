@@ -30,7 +30,7 @@ struct AABBTreeWideLeafTri
     AABBTreeWideLeafTri() = default;
     AABBTreeWideLeafTri( FaceId face, const ThreeVertIds & verts ) noexcept : face( face ), verts( verts ) {}
     /// all members uninitialized, e.g. for the triangles written by the tree builder
-    explicit AABBTreeWideLeafTri( NoInit ) noexcept : face( noInit ), verts{ VertId( noInit ), VertId( noInit ), VertId( noInit ) } {}
+    explicit AABBTreeWideLeafTri( NoInit ) noexcept : face( noInit ), verts( noInit ) {}
 };
 
 /// bounding volume hierarchy of mesh triangles with up to 4 children per node and up to 4 triangles per leaf

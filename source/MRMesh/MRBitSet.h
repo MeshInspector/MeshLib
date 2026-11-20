@@ -284,6 +284,9 @@ private:
     size_type numBits_ = 0;
 };
 
+/// returns the number of set bits in given blocks; uses the popcnt instruction on x86-64 CPUs having it
+[[nodiscard]] MR_BIND_IGNORE MRMESH_API size_t countSetBits( const BitSet::block_type* blocks, size_t numBlocks ) noexcept;
+
 /// Vector<bool, I> like container (random-access, I - index type, bool - value type)
 /// with all bits after size() considered off during testing
 template <typename I>

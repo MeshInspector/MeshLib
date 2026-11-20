@@ -46,7 +46,7 @@ __global__ void kernel( PointsProjectionResult* __restrict__ res, PointCloudData
                 const auto range = pc.leafPointRange( ~s.ref );
                 for ( int i = range.x; i < range.y; ++i )
                 {
-                    if ( skipSameIndex && i == globalIndex )
+                    if ( skipSameIndex && size_t( pc.points[i].id ) == globalIndex )
                         continue;
 
                     const auto proj = pc.points[i].coord;

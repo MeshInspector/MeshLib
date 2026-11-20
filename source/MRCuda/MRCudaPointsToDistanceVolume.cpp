@@ -31,21 +31,14 @@ Expected<MR::SimpleVolumeMinMax> pointsToDistanceVolume( const PointCloud& cloud
 
     PointsToDistanceVolumeParams cudaParams
     {
+        .origin = fromVec( params.origin ),
+        .voxelSize = fromVec( params.voxelSize ),
+        .dimensions = fromVec( params.dimensions ),
         .sigma = params.sigma,
-        .minWeight = params.minWeight
+        .minWeight = params.minWeight,
+        .invSigmaModifier = params.invSigmaModifier,
+        .sqrtAngleWeight = params.sqrtAngleWeight
     };
-
-    cudaParams.origin.x = params.origin.x;
-    cudaParams.origin.y = params.origin.y;
-    cudaParams.origin.z = params.origin.z;
-
-    cudaParams.voxelSize.x = params.voxelSize.x;
-    cudaParams.voxelSize.y = params.voxelSize.y;
-    cudaParams.voxelSize.z = params.voxelSize.z;
-
-    cudaParams.dimensions.x = params.dimensions.x;
-    cudaParams.dimensions.y = params.dimensions.y;
-    cudaParams.dimensions.z = params.dimensions.z;
 
     const auto totalSize = (size_t)params.dimensions.x * params.dimensions.y * params.dimensions.z;
     const auto bufferSize = maxBufferSizeAlignedByBlock( getCudaSafeMemoryLimit(), params.dimensions, sizeof( float ) );

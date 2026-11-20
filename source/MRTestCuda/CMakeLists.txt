@@ -11,6 +11,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   GTest::gtest
 )
 
+IF(MESHLIB_BUILD_VOXELS AND NOT MRCUDA_NO_VOXELS)
+  target_link_libraries(${PROJECT_NAME} PRIVATE MRVoxels)
+ENDIF()
+
 add_test(
   NAME ${PROJECT_NAME}
   COMMAND ${PROJECT_NAME}

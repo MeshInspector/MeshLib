@@ -35,8 +35,8 @@ inline int firstHalf( int n )
 class Shape
 {
 public:
-    /// fills the cache for all nodes of the tree of n points
-    explicit Shape( int n ) { count( n ); }
+    /// fills the cache for all nodes of the tree of n points; afterwards it is only read, so the parallel build can share it
+    explicit Shape( int n ) { height( n ); count( n ); }
 
     /// the sizes of the children of a node of n > cLeaf points
     int slots( int n, int ( &s )[4] ) const
@@ -58,21 +58,20 @@ public:
     }
 
     /// whether the binary node of n points is skipped, and its children are put in the slots of its parent
-    bool expand( int n ) const { return n > cLeaf && height( n ) % 2 != 0; }
+    bool expand( int n ) const { return n > cLeaf && info_.at( n ).height % 2 != 0; }
 
     /// the number of nodes in the subtree of the node of n > cLeaf points, including itself
     int count( int n ) const { return info_.at( n ).count; }
 
 private:
     struct Info { int height = 0; int count = 0; };
-    mutable std::unordered_map<int, Info> info_;
+    std::unordered_map<int, Info> info_;
 
-    int height( int n ) const
+    int height( int n )
     {
         if ( n <= cLeaf )
             return 0;
-        auto it = info_.find( n );
-        if ( it != info_.end() && it->second.height > 0 )
+        if ( auto it = info_.find( n ); it != info_.end() )
             return it->second.height;
         const int a = firstHalf( n );
         const int h = 1 + std::max( height( a ), height( n - a ) );

@@ -245,6 +245,81 @@ TEST( MRMesh, AABBTreePointsSearches )
     }
 }
 
+TEST( MRMesh, AABBTreePointsSearchOptions )
+{
+    PointCloud pc;
+    pc.points = randomPoints( 3000, 4 );
+    pc.validPoints.resize( pc.points.size(), true );
+    const auto & tree = pc.getAABBTree();
+    VertBitSet region( pc.points.size() );
+    for ( int i = 0; i < 3000; i += 3 )
+        region.set( VertId( i ) );
+    const AffineXf3f xf( Matrix3f::rotation( Vector3f( 3, -1, 2 ).normalized(), 1.1f ), Vector3f( -0.2f, 0.1f, 0.4f ) );
+
+    std::mt19937 rng( 5 );
+    std::uniform_real_distribution<float> u( -1.5f, 1.5f );
+    for ( int q = 0; q < 200; ++q )
+    {
+        const Vector3f pt( u( rng ), u( rng ), u( rng ) );
+        for ( const AffineXf3f * pxf : { (const AffineXf3f *)nullptr, &xf } )
+        {
+            auto pos = [&] ( VertId v ) { return pxf ? ( *pxf )( pc.points[v] ) : pc.points[v]; };
+
+            // the points in a ball with the transformation
+            const float r = 0.3f;
+            std::vector<int> inBall, inBallExp;
+            findPointsInBall( tree, Ball3f( pt, r * r ), [&] ( const PointsProjectionResult & p, const Vector3f & xfPos, Ball3f & )
+            {
+                EXPECT_EQ( xfPos, pos( p.vId ) );
+                EXPECT_EQ( p.distSq, ( xfPos - pt ).lengthSq() );
+                inBall.push_back( p.vId );
+                return Processing::Continue;
+            }, pxf );
+            for ( auto v : pc.validPoints )
+                if ( ( pos( v ) - pt ).lengthSq() <= r * r )
+                    inBallExp.push_back( v );
+            std::sort( inBall.begin(), inBall.end() );
+            EXPECT_EQ( inBall, inBallExp );
+
+            // the closest point by a ball shrinking to every found point
+            float bestBall = FLT_MAX;
+            findPointsInBall( tree, Ball3f( pt, 1.0f ), [&] ( const PointsProjectionResult & p, const Vector3f &, Ball3f & ball )
+            {
+                EXPECT_LE( p.distSq, ball.radiusSq );
+                bestBall = std::min( bestBall, p.distSq );
+                ball.radiusSq = p.distSq;
+                return Processing::Continue;
+            }, pxf );
+            float best = FLT_MAX;
+            for ( auto v : pc.validPoints )
+                best = std::min( best, ( pos( v ) - pt ).lengthSq() );
+            if ( best <= 1.0f )
+                EXPECT_EQ( bestBall, best );
+            else
+                EXPECT_EQ( bestBall, FLT_MAX );
+
+            // the projection skipping the points out of the region by the callback
+            float bestSkip = FLT_MAX;
+            for ( auto v : region )
+                bestSkip = std::min( bestSkip, ( pos( v ) - pt ).lengthSq() );
+            const auto res = findProjectionOnPoints( pt, tree, FLT_MAX, pxf, 0, nullptr, [&] ( VertId v ) { return !region.test( v ); } );
+            ASSERT_TRUE( res.vId.valid() );
+            EXPECT_TRUE( region.test( res.vId ) );
+            EXPECT_EQ( res.distSq, bestSkip );
+        }
+
+        // the extreme point in the region
+        const Vector3f dir( u( rng ), u( rng ), u( rng ) );
+        float maxProj = -FLT_MAX;
+        for ( auto v : region )
+            maxProj = std::max( maxProj, dot( pc.points[v], dir ) );
+        const auto v = findDirMax( dir, tree, &region );
+        ASSERT_TRUE( v.valid() );
+        EXPECT_TRUE( region.test( v ) );
+        EXPECT_EQ( dot( pc.points[v], dir ), maxProj );
+    }
+}
+
 TEST( MRMesh, AABBTreePointsNonFiniteQueries )
 {
     PointCloud pc;

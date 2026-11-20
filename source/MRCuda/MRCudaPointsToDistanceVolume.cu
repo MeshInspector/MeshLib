@@ -44,7 +44,6 @@ namespace Cuda
         const float radiusSq = radius * radius;
 
         InplaceStack<int, 32> subtasks;
-        subtasks.push( 0 );
 
         auto addSubTask = [&] ( int n )
         {

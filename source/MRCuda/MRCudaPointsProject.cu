@@ -59,7 +59,7 @@ __global__ void kernel( PointsProjectionResult* __restrict__ res, PointCloudData
             auto begin = range.x, end = range.y;
             for ( int i = begin; i < end; ++i )
             {
-                if ( skipSameIndex && i == globalIndex )
+                if ( skipSameIndex && size_t( pc.points[i].id ) == globalIndex )
                     continue;
 
                 const auto proj = pc.points[i].coord;

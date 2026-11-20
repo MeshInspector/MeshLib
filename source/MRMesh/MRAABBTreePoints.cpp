@@ -5,9 +5,11 @@
 #include "MRHeapBytes.h"
 #include "MRBuffer.h"
 #include "MRParallelFor.h"
+#include "MRSimd4.hpp"
 #include "MRPch/MRTBB.h"
 #include <tbb/parallel_invoke.h>
 #include <algorithm>
+#include <cfloat>
 #include <unordered_map>
 
 namespace MR
@@ -19,6 +21,25 @@ namespace
 using Point = AABBTreePoints::Point;
 using SimdNode = AABBTreePoints::SimdNode;
 constexpr int cLeaf = AABBTreePoints::MaxNumPointsInLeaf;
+
+/// the box of n points as Box3f::include( coord ) of each one, but with whole points in SIMD registers (their ids are in the unused lanes);
+/// otherwise clang vectorizes the six float bounds with a long chain of shuffles from point to point
+Box3f boxOfPoints( const Point * p, int n )
+{
+    using namespace Simd4;
+    static_assert( sizeof( Point ) == 4 * sizeof( float ) );
+    F lo = set1( FLT_MAX ), hi = set1( -FLT_MAX );
+    for ( int i = 0; i < n; ++i )
+    {
+        const F v = loadu( &p[i].coord.x );
+        lo = min( v, lo ); // as in Box3f::include, a NaN coordinate is skipped
+        hi = max( v, hi );
+    }
+    alignas( 16 ) float l[4], h[4];
+    store( l, lo );
+    store( h, hi );
+    return Box3f( Vector3f( l[0], l[1], l[2] ), Vector3f( h[0], h[1], h[2] ) );
+}
 /// the nodes of at least this many points are made in parallel
 constexpr int cParallelPoints = 8192;
 
@@ -99,13 +120,7 @@ class Maker
 public:
     Maker( std::vector<Point> & points, Vector<SimdNode> & nodes, const Shape & shape ) : points_( points ), nodes_( nodes ), shape_( shape ) {}
 
-    Box3f boxOf( int first, int n ) const
-    {
-        Box3f box;
-        for ( int i = first; i < first + n; ++i )
-            box.include( points_[i].coord );
-        return box;
-    }
+    Box3f boxOf( int first, int n ) const { return boxOfPoints( points_.data() + first, n ); }
 
     /// restores the original order of the points of a leaf
     void sortLeaf( int first, int n )
@@ -320,9 +335,7 @@ void AABBTreePoints::refit( const VertCoords & newCoords, const VertBitSet * cha
         }
         if ( !changed )
             return false;
-        box = Box3f();
-        for ( int i = first; i < last; ++i )
-            box.include( orderedPoints_[i].coord );
+        box = boxOfPoints( orderedPoints_.data() + first, last - first );
         return true;
     };
 

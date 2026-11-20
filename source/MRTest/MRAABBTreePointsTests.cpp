@@ -320,6 +320,39 @@ TEST( MRMesh, AABBTreePointsSearchOptions )
     }
 }
 
+TEST( MRMesh, AABBTreePointsDirMaxAlongAxes )
+{
+    // a zero component of the direction makes NaN projections of the empty boxes in the unused slots of a node;
+    // 17 and 40 points give a root with 2 and 3 children
+    for ( int n : { 17, 40, 300, 3000 } )
+    {
+        PointCloud pc;
+        pc.points = randomPoints( n, 5 );
+        pc.validPoints.resize( pc.points.size(), true );
+        const auto & tree = pc.getAABBTree();
+        // the region without the first leaf of every node, so the search has to return to the other children
+        VertBitSet region( pc.points.size() );
+        for ( int i = 0; i < n; i += 7 )
+            region.set( VertId( i ) );
+        for ( const VertBitSet * r : { (const VertBitSet *)nullptr, (const VertBitSet *)&region } )
+            for ( const Vector3f & dir : { Vector3f( 1, 0, 0 ), Vector3f( -1, 0, 0 ), Vector3f( 0, 1, 0 ), Vector3f( 0, -1, 0 ),
+                Vector3f( 0, 0, 1 ), Vector3f( 0, 0, -1 ), Vector3f( 1, 1, 0 ), Vector3f( 0, -1, 1 ) } )
+            {
+                float maxProj = -FLT_MAX;
+                for ( auto v : r ? *r : pc.validPoints )
+                    maxProj = std::max( maxProj, dot( pc.points[v], dir ) );
+                const auto v = findDirMax( dir, tree, r );
+                ASSERT_TRUE( v.valid() );
+                EXPECT_TRUE( !r || r->test( v ) );
+                EXPECT_EQ( dot( pc.points[v], dir ), maxProj );
+            }
+        // any point of the region is the furthest one in the zero direction
+        const auto v = findDirMax( Vector3f(), tree, &region );
+        ASSERT_TRUE( v.valid() );
+        EXPECT_TRUE( region.test( v ) );
+    }
+}
+
 TEST( MRMesh, AABBTreePointsNonFiniteQueries )
 {
     PointCloud pc;

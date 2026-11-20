@@ -220,6 +220,169 @@ VertId findDirMax( const Vector3f & dir, const PointCloud & cloud, const VertBit
     return findDirMax( dir, cloud.getAABBTree(), region );
 }
 
+#if defined( MR_SIMD4_WASM )
+
+// In Wasm the queries visiting few leaves spend most of the time on the way to the first leaf, where V8 pays a lot for the wrong predictions
+// of the branches choosing the next child, and then on taking the tasks of all other children from the stack. So here, until a point is found,
+// the next child is chosen without branches, and all other children of a node get one task. In native builds it is not faster.
+VertId findDirMax( const Vector3f & dir, const AABBTreePoints & tree, const VertBitSet * region )
+{
+    VertId res;
+    if ( tree.empty() )
+        return res;
+    using namespace Simd4;
+    const auto & orderedPoints = tree.orderedPoints();
+    const auto * simdNodes = tree.simdNodes().data();
+
+    struct SubTask
+    {
+        int ref;  // as in AABBTreePoints::SimdNode::child
+        int skip; // if not negative then the task is all children of the node ref except this one, which is visited already
+        float furthestBoxProj;
+    };
+    const auto maxCorner = Box3f::getMaxBoxCorner( dir );
+    // the rows of the coordinates of the corner in AABBTreePoints::SimdNode
+    const int cornerRow[3] = { maxCorner.x ? 3 : 0, maxCorner.y ? 4 : 1, maxCorner.z ? 5 : 2 };
+    const F dx = set1( dir.x ), dy = set1( dir.y ), dz = set1( dir.z );
+    // a bound of the rounding of the 4-wide projections of all boxes, from the largest coordinate in the tree
+    const auto rootBox = tree.getBoundingBox();
+    const float maxAbs = std::max( std::max( std::max( std::abs( rootBox.min.x ), std::abs( rootBox.max.x ) ), std::max( std::abs( rootBox.min.y ), std::abs( rootBox.max.y ) ) ),
+        std::max( std::abs( rootBox.min.z ), std::abs( rootBox.max.z ) ) );
+    const float err = maxAbs * ( std::abs( dir.x ) + std::abs( dir.y ) + std::abs( dir.z ) ) * ( 1 - cSimdDistLow );
+    const F verr = set1( err );
+    float furthestProj = -FLT_MAX;
+    // every level adds at most MaxChildren - 1 tasks
+    SubTask stack[3 * AABBTreePoints::MaxDepth + 1];
+    int top = 0;
+    // the node (or the leaf) to visit
+    int ref = tree.rootRef();
+    for ( ;; )
+    {
+        if ( ref < 0 )
+        {
+            auto [first, last] = tree.leafPointRange( ~ref );
+            if ( region )
+            {
+                for ( int i = first; i < last; ++i )
+                {
+                    if ( !region->test( orderedPoints[i].id ) )
+                        continue;
+                    const auto proj = dot( orderedPoints[i].coord, dir );
+                    if ( proj > furthestProj )
+                    {
+                        furthestProj = proj;
+                        res = orderedPoints[i].id;
+                    }
+                }
+            }
+            else
+            {
+                for ( int i = first; i < last; ++i )
+                {
+                    const auto proj = dot( orderedPoints[i].coord, dir );
+                    if ( proj > furthestProj )
+                    {
+                        furthestProj = proj;
+                        res = orderedPoints[i].id;
+                    }
+                }
+            }
+        }
+        else
+        {
+            const auto & node = simdNodes[ref];
+            // the projections of the corners of all children at once as dot( dir, box.corner( maxCorner ) ) but maybe without FMA
+            // and without the bound of the rounding; the unused slots have empty boxes, and their projections are -inf or NaN, not above anything
+            const F pv = add( add( mul( dx, load( node.box[cornerRow[0]] ) ), mul( dy, load( node.box[cornerRow[1]] ) ) ), mul( dz, load( node.box[cornerRow[2]] ) ) );
+            if ( furthestProj > -FLT_MAX )
+            {
+                // the child with the largest projection is visited next, the others later in their order
+                alignas( 16 ) float projs[AABBTreePoints::MaxChildren];
+                store( projs, add( pv, verr ) );
+                int best = -1;
+                float bestProj = furthestProj;
+                for ( int i = 0; i < AABBTreePoints::MaxChildren; ++i )
+                    if ( projs[i] > bestProj )
+                    {
+                        bestProj = projs[i];
+                        best = i;
+                    }
+                for ( int i = 0; i < AABBTreePoints::MaxChildren; ++i )
+                    if ( i != best && projs[i] > furthestProj )
+                        stack[top++] = { node.child[i], -1, projs[i] };
+                if ( best >= 0 )
+                {
+                    ref = node.child[best];
+                    continue;
+                }
+            }
+            else
+            {
+                // nothing is found yet, so no child can be skipped now, the choice of the next child is hard to predict, and the next node
+                // cannot be read before it: the child with the largest projection (the first of equal ones) is found without branches and
+                // without waiting for node.child[best]; the bound of the rounding does not change the order of the children
+                alignas( 16 ) float p[AABBTreePoints::MaxChildren];
+                store( p, pv );
+                // all references are read before the comparisons, not one of them after
+                const int c0 = node.child[0], c1 = node.child[1], c2 = node.child[2], c3 = node.child[3];
+                const bool c01 = p[1] > p[0], c23 = p[3] > p[2];
+                const float m01 = c01 ? p[1] : p[0], m23 = c23 ? p[3] : p[2];
+                const int r01 = c01 ? c1 : c0, r23 = c23 ? c3 : c2;
+                const bool c = m23 > m01;
+                const int bestRef = c ? r23 : r01;
+                const float bestProj = ( c ? m23 : m01 ) + err;
+                // most of the other children will be skipped when something is found, so they get one task with the largest of their projections;
+                // the first two slots of a node are always used, and NaN of an unused slot never replaces a number in these comparisons
+                const float l01 = c01 ? p[0] : p[1], l23 = c23 ? p[2] : p[3], lf = c ? m01 : m23;
+                float rest = lf > l01 ? lf : l01;
+                rest = ( l23 > rest ? l23 : rest ) + err;
+                if ( rest > furthestProj )
+                    stack[top++] = { ref, c ? ( c23 ? 3 : 2 ) : ( c01 ? 1 : 0 ), rest };
+                if ( bestProj > furthestProj )
+                {
+                    ref = bestRef;
+                    continue;
+                }
+            }
+        }
+        // the next task from the stack
+        for ( ;; )
+        {
+            if ( top == 0 )
+                return res;
+            const SubTask t = stack[--top];
+            if ( t.furthestBoxProj < furthestProj )
+                continue;
+            if ( t.skip < 0 )
+            {
+                ref = t.ref;
+                break;
+            }
+            // the other children of the node: the one with the largest projection is visited now
+            const auto & node = simdNodes[t.ref];
+            alignas( 16 ) float projs[AABBTreePoints::MaxChildren];
+            store( projs, add( add( add( mul( dx, load( node.box[cornerRow[0]] ) ), mul( dy, load( node.box[cornerRow[1]] ) ) ), mul( dz, load( node.box[cornerRow[2]] ) ) ), verr ) );
+            int best = -1;
+            float bestProj = furthestProj;
+            for ( int i = 0; i < AABBTreePoints::MaxChildren; ++i )
+                if ( i != t.skip && projs[i] > bestProj )
+                {
+                    bestProj = projs[i];
+                    best = i;
+                }
+            if ( best < 0 )
+                continue;
+            for ( int i = 0; i < AABBTreePoints::MaxChildren; ++i )
+                if ( i != t.skip && i != best && projs[i] > furthestProj )
+                    stack[top++] = { node.child[i], -1, projs[i] };
+            ref = node.child[best];
+            break;
+        }
+    }
+}
+
+#else // !MR_SIMD4_WASM
+
 VertId findDirMax( const Vector3f & dir, const AABBTreePoints & tree, const VertBitSet * region )
 {
     VertId res;
@@ -336,5 +499,7 @@ VertId findDirMax( const Vector3f & dir, const AABBTreePoints & tree, const Vert
     return res;
 
 }
+
+#endif // !MR_SIMD4_WASM
 
 } //namespace MR

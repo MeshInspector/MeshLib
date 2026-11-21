@@ -42,7 +42,10 @@ function(mr_add_wasm_module TARGET_NAME)
     "-sALLOW_MEMORY_GROWTH=1"
     "-sEXIT_RUNTIME=0"
     "-sINVOKE_RUN=0"
+    # closure warns about the runtime JS emscripten itself generates (FS.init, FS.stat and
+    # friends); -Werror from the C++ flags would otherwise make those fatal
     "--closure=1"
+    "-Wno-error=closure"
     ${ARG_LINK_OPTIONS}
   )
 

@@ -210,7 +210,10 @@ public:
         leaves_ = leaves;
         leafTris_ = leafTris;
         streamLeafTris_ = reinterpret_cast<std::uintptr_t>( leafTris ) % 16 == 0;
-        parallelSplits_ = numTris_ >= cParallelSplitNum
+        // only the ranges with at least a quarter of the triangles are too few to occupy the threads
+        parallelSplitNum_ = std::clamp( numTris_ / 4, cMinParallelSplitNum, cMaxParallelSplitNum );
+        chunk_ = std::clamp( numTris_ / 32, cMinChunk, cMaxChunk );
+        parallelSplits_ = numTris_ >= parallelSplitNum_
             && tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) > 1
             && tbb::this_task_arena::max_concurrency() > 1;
         if ( numTris_ >= cBucketSplitNum )
@@ -283,9 +286,9 @@ private:
     Box3f centersBox_( const Range & r ) const
     {
         const TreeCenter * d = data_( r );
-        if ( !parallelSplits_ || r.num < cParallelSplitNum )
+        if ( !parallelSplits_ || r.num < parallelSplitNum_ )
             return includeCenters( Box3f(), d, r.num );
-        return tbb::parallel_reduce( tbb::blocked_range<int>( 0, r.num, 1 << 14 ), Box3f(),
+        return tbb::parallel_reduce( tbb::blocked_range<int>( 0, r.num, chunk_ ), Box3f(),
             [d]( const tbb::blocked_range<int> & br, Box3f b ) { return includeCenters( b, d + br.begin(), (int)br.size() ); },
             []( Box3f a, const Box3f & b ) { a.include( b ); return a; } );
     }
@@ -299,7 +302,7 @@ private:
         TreeCenter * const data = data_( r );
         if ( r.num >= cBucketSplitNum )
         {
-            const int chunkSize = parallelSplits_ && r.num >= cParallelSplitNum ? cChunk : r.num;
+            const int chunkSize = parallelSplits_ && r.num >= parallelSplitNum_ ? chunk_ : r.num;
             Box3f halfBoxes[2];
             if ( splitCentersByBuckets( data, data_( { r.first, r.num, !r.inScratch, false, {} } ), r.num, axis, box.min[axis], box.max[axis], chunkSize, halfBoxes ) )
                 return { Range{ r.first, r.num / 2, !r.inScratch, true, halfBoxes[0] }, Range{ r.first + r.num / 2, r.num - r.num / 2, !r.inScratch, true, halfBoxes[1] } };
@@ -495,8 +498,11 @@ private:
     TreeCenter * centers_ = nullptr;
     Buffer<TreeCenter> scratch_; // the centers of a range move between centers_ and scratch_ by each split of the range by buckets
     static constexpr int cBucketSplitNum = 1024; // smaller ranges are split by selectCenter
-    static constexpr int cParallelSplitNum = 1 << 17;
-    static constexpr int cChunk = 1 << 14; // the centers counted and moved by one thread in a parallel split
+    // a range of at least parallelSplitNum_ centers is split in parallel, by chunks of chunk_ centers counted and moved by one thread
+    static constexpr int cMinParallelSplitNum = 1 << 14, cMaxParallelSplitNum = 1 << 17;
+    static constexpr int cMinChunk = 1 << 12, cMaxChunk = 1 << 14;
+    int parallelSplitNum_ = cMaxParallelSplitNum;
+    int chunk_ = cMaxChunk;
     bool parallelSplits_ = false; // on one thread the parallel split only adds passes over the range
     SimdNode * nodes_ = nullptr;
     SimdBoxes * leaves_ = nullptr;

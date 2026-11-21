@@ -40,6 +40,7 @@
     <ClInclude Include="MRAABBTreeBase.hpp" />
     <ClInclude Include="MRAABBTreeMaker.hpp" />
     <ClInclude Include="MRAABBTreeCenters.hpp" />
+    <ClInclude Include="MRSelectByKey.hpp" />
     <ClInclude Include="MRTriBox.hpp" />
     <ClInclude Include="MRAABBTreeObjects.h" />
     <ClInclude Include="MRAddNoise.h" />

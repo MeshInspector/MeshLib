@@ -2,6 +2,7 @@
 #include "MRBitCast.h"
 #include "MRNoDefInit.h"
 #include "MRParallelFor.h"
+#include "MRSelectByKey.hpp"
 #include "MRVector.h"
 #include <algorithm>
 #include <cassert>
@@ -107,60 +108,11 @@ inline std::int32_t orderedBits( float c )
     return std::int32_t( u ^ ( std::uint32_t( std::int32_t( u ) >> 31 ) & 0x7fffffffu ) );
 }
 
-/// returns the first of the centers in [l, r) not satisfying pred after moving all satisfying ones before it:
-/// blocks of centers are scanned for misplaced ones without branches, then the misplaced ones are swapped in pairs
-template<typename P>
-TreeCenter * partition( TreeCenter * l, TreeCenter * r, P pred )
-{
-    constexpr int B = 64;
-    unsigned char offL[B], offR[B];
-    int nL = 0, nR = 0, sL = 0, sR = 0;
-    while ( r - l > 2 * B )
-    {
-        if ( nL == 0 )
-        {
-            sL = 0;
-            for ( int i = 0; i < B; ++i )
-            {
-                offL[nL] = (unsigned char)i;
-                nL += !pred( l[i] );
-            }
-        }
-        if ( nR == 0 )
-        {
-            sR = 0;
-            for ( int i = 0; i < B; ++i )
-            {
-                offR[nR] = (unsigned char)( i + 1 );
-                nR += pred( *( r - ( i + 1 ) ) );
-            }
-        }
-        const int n = std::min( nL, nR );
-        for ( int j = 0; j < n; ++j )
-            std::swap( l[offL[sL + j]], *( r - offR[sR + j] ) );
-        nL -= n;
-        nR -= n;
-        sL += n;
-        sR += n;
-        if ( nL == 0 )
-            l += B;
-        if ( nR == 0 )
-            r -= B;
-    }
-    // at most two blocks are left
-    for ( TreeCenter * i = l; i != r; ++i )
-    {
-        const bool lt = pred( *i );
-        std::swap( *i, *l );
-        l += lt;
-    }
-    return l;
-}
-
 /// sorts up to 16 centers by counting for each one the centers before it, without branches;
 /// the keys are the bits of the coordinate ordered as signed integers, then the index
 void sortSmall( TreeCenter * data, int n, int axis )
 {
+    static_assert( SelectByKey::cSmall == 16 );
     assert( n <= 16 );
     alignas( 16 ) std::int32_t key[16], id[16];
     for ( int j = 0; j < 16; ++j )
@@ -220,86 +172,12 @@ void sortSmall( TreeCenter * data, int n, int axis )
     }
 }
 
-void select( TreeCenter * first, TreeCenter * nth, TreeCenter * last, int axis, bool linear );
-
-/// returns the median of the medians of the groups of 5 centers of [first, last), which are moved to the beginning of the range:
-/// at least 3 of every 10 centers are not bigger than it, and at least 3 are not smaller
-TreeCenter * medianOfMedians( TreeCenter * first, TreeCenter * last, int axis )
-{
-    const auto numGroups = ( last - first ) / 5;
-    for ( std::ptrdiff_t g = 0; g < numGroups; ++g )
-    {
-        TreeCenter * const d = first + 5 * g;
-        for ( int i = 1; i < 5; ++i )
-            for ( int j = i; j > 0 && d[j].c[axis] < d[j - 1].c[axis]; --j )
-                std::swap( d[j], d[j - 1] );
-        std::swap( first[g], d[2] );
-    }
-    TreeCenter * const mid = first + numGroups / 2;
-    select( first, mid, first + numGroups, axis, true );
-    return mid;
-}
-
-/// selectCenter; linear makes every pivot the median of medians, which bounds the time whatever the centers are
-void select( TreeCenter * first, TreeCenter * nth, TreeCenter * last, int axis, bool linear )
-{
-    // equal coordinates are not ordered: the centers are placed by the moves below only, the same ones on every platform
-    const auto less = [axis]( const TreeCenter & a, const TreeCenter & b ) { return a.c[axis] < b.c[axis]; };
-    constexpr int cSmall = 16;
-    int budget = 2; // partitions with the cheap pivots, about twice the expected number
-    for ( auto n = last - first; n > cSmall; n >>= 1 )
-        budget += 2;
-    while ( last - first > cSmall )
-    {
-        // unlucky pivots
-        linear = linear || --budget < 0;
-        const auto med3 = [less]( TreeCenter * a, TreeCenter * b, TreeCenter * c )
-        {
-            if ( less( *b, *a ) )
-                std::swap( a, b );
-            return less( *c, *b ) ? ( less( *c, *a ) ? a : c ) : b;
-        };
-        const auto n = last - first;
-        TreeCenter * const m = first + n / 2;
-        TreeCenter * pivot;
-        if ( linear )
-            pivot = medianOfMedians( first, last, axis );
-        else if ( n > 128 )
-        {
-            const auto s = n / 8;
-            pivot = med3( med3( first, first + s, first + 2 * s ), med3( m - s, m, m + s ), med3( last - 1 - 2 * s, last - 1 - s, last - 1 ) );
-        }
-        else
-            pivot = med3( first, m, last - 1 );
-        std::swap( *first, *pivot );
-        const float p = first->c[axis];
-        TreeCenter * const mid = partition( first + 1, last, [p, axis]( const TreeCenter & x ) { return x.c[axis] < p; } ) - 1;
-        std::swap( *first, *mid );
-        if ( mid == nth )
-            return;
-        if ( nth < mid )
-        {
-            last = mid;
-            continue;
-        }
-        const bool noneLess = mid == first;
-        first = mid + 1;
-        if ( noneLess || linear )
-        {
-            // the pivot can be one of many equal centers, which would leave the range one per partition: all of them leave now
-            first = partition( first, last, [p, axis]( const TreeCenter & x ) { return !( p < x.c[axis] ); } );
-            if ( nth < first )
-                return;
-        }
-    }
-    sortSmall( first, int( last - first ), axis );
-}
-
 } //anonymous namespace
 
 void selectCenter( TreeCenter * first, TreeCenter * nth, TreeCenter * last, int axis )
 {
-    select( first, nth, last, axis, false );
+    selectByKey( first, nth, last, [axis]( const TreeCenter & x ) { return x.c[axis]; },
+        [axis]( TreeCenter * data, int n ) { sortSmall( data, n, axis ); } );
 }
 
 namespace

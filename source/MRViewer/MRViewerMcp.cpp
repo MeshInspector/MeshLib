@@ -14,6 +14,8 @@
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRVector3.h"
 #include "MRPch/MRFmt.h"
+#include "MRPch/MRSpdlog.h"
+#include "MRPch/MRWinapi.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRViewer/MRFitData.h"
 #include "MRViewer/MRMcpCommon.h"
@@ -26,6 +28,7 @@
 
 #include <array>
 #include <cctype>
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -429,13 +432,36 @@ static nlohmann::json mcpViewerSendKeyboardEvent( const nlohmann::json& args )
     return inputResult( waitFramesAfterInput() );
 }
 
+// how long `viewer_shutdown` with `kill` waits for the main thread before terminating the process
+constexpr std::chrono::seconds cKillStartTimeout{ 5 };
+
 static nlohmann::json mcpViewerShutdown( const nlohmann::json& args )
 {
-    const bool force = args.value( "force", false );
-    runOnMainThread( [&]
+    const bool kill = args.value( "kill", false );
+    const bool force = kill || args.value( "force", false );
+    try
     {
-        MR::getViewerInstance().stopEventLoop( 0, !force );
-    } );
+        CommandLoop::runCommandFromGUIThread( [force]
+        {
+            MR::getViewerInstance().stopEventLoop( 0, !force );
+        }, kill ? cKillStartTimeout : cMainThreadTimeout );
+    }
+    catch ( const CommandLoop::StartTimeout& e )
+    {
+        if ( !kill )
+            throw busyError( e.what() );
+        spdlog::warn( "MCP viewer_shutdown: terminating the process: {}", e.what() );
+        spdlog::default_logger()->flush();
+        std::thread( [] // delayed, so that the response reaches the client first
+        {
+            std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
+#ifdef _WIN32
+            TerminateProcess( GetCurrentProcess(), EXIT_FAILURE ); // unlike std::_Exit, skips DLL detach, which may wait for the stuck thread
+#endif
+            std::_Exit( EXIT_FAILURE );
+        } ).detach();
+        return nlohmann::json::object( { { "status", "terminating: the main thread did not start the shutdown within 5 seconds" } } );
+    }
     return nlohmann::json::object();
 }
 
@@ -604,9 +630,14 @@ MR_ON_INIT{
                 "says `not started`, the gateway's `launch` tool can bring MeshInspector back up. "
                 "If the scene has unsaved changes, an `Application Close` modal is raised instead of exiting; "
                 "check `ui_listEntries` for the modal and dismiss it with the `Cancel` / `Don't Save` / `Save` buttons. "
-                "Pass `force: true` to discard unsaved changes and exit without the modal.",
-        /*input_schema*/Schema::Object{}.addMemberOpt( "force", Schema::Bool{} ),
-        /*output_schema*/Schema::Object{},
+                "Pass `force: true` to discard unsaved changes and exit without the modal. "
+                "`kill: true` is the last resort when the main thread is stuck, i.e. `ui_progressStatus` keeps reporting `busy` "
+                "with a growing `busyFor` and `active` false: it implies `force`, and if the main thread does not start the shutdown "
+                "within 5 seconds, the process is terminated without saving anything, not even the settings, and `status` says so.",
+        /*input_schema*/Schema::Object{}
+            .addMemberOpt( "force", Schema::Bool{} )
+            .addMemberOpt( "kill",  Schema::Bool{} ),
+        /*output_schema*/Schema::Object{}.addMemberOpt( "status", Schema::String{} ),
         /*func*/mcpViewerShutdown
     );
 }; // MR_ON_INIT

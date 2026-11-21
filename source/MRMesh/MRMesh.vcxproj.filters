@@ -1053,6 +1053,9 @@
     <ClInclude Include="MRRigidXfRansac.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRGlobalRegistration.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
     <ClInclude Include="MRPointToPlaneAligningTransform.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
@@ -2163,6 +2166,9 @@
       <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRRigidXfRansac.cpp">
+      <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MRGlobalRegistration.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRPointToPlaneAligningTransform.cpp">

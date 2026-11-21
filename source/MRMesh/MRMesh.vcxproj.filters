@@ -1919,6 +1919,9 @@
     <ClCompile Include="MRPointCloudTriangulation.cpp">
       <Filter>Source Files\Triangulation</Filter>
     </ClCompile>
+    <ClCompile Include="MRAllocator.cpp">
+      <Filter>Source Files\Basic</Filter>
+    </ClCompile>
     <ClCompile Include="MRAlphaShape.cpp">
       <Filter>Source Files\Triangulation</Filter>
     </ClCompile>

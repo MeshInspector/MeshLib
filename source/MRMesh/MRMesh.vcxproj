@@ -511,6 +511,7 @@
       <ExcludedFromBuild Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'!='ON'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="MRAlignContoursToMesh.cpp" />
+    <ClCompile Include="MRAllocator.cpp" />
     <ClCompile Include="MRAlphaShape.cpp" />
     <ClCompile Include="MRBoxNesting.cpp" />
     <ClCompile Include="MRChangeMeshDataAction.cpp" />

@@ -11,20 +11,24 @@
 #define MR_ALLOCATOR_IS_MIMALLOC
 #endif
 
-#ifdef MR_ALLOCATOR_IS_MIMALLOC
-#include <mimalloc.h>
-#if defined( _MSC_VER ) && !defined( MR_USE_CMAKE_CONFIGURE_FILE )
-// the inline Allocator calls mimalloc from every binary using MRMesh; MeshLib's CMake targets link it instead
-#ifdef _DEBUG
-#pragma comment( lib, "mimalloc-debug.dll.lib" )
-#else
-#pragma comment( lib, "mimalloc.dll.lib" )
-#endif
-#endif
-#endif
-
 namespace MR
 {
+
+#ifdef MR_ALLOCATOR_IS_MIMALLOC
+// mimalloc is called inside MRMesh, so code using MeshLib does not link mimalloc itself;
+// not MRMESH_API: the shared precompiled header would fix it as dllimport also in MRMesh, MRAllocator.cpp exports them
+#ifdef _WIN32
+#define MR_ALLOCATOR_API
+#else
+#define MR_ALLOCATOR_API __attribute__( ( visibility( "default" ) ) )
+#endif
+extern "C"
+{
+[[nodiscard]] MR_BIND_IGNORE MR_ALLOCATOR_API void * mrMimallocNewN( std::size_t count, std::size_t size );
+[[nodiscard]] MR_BIND_IGNORE MR_ALLOCATOR_API void * mrMimallocNewAligned( std::size_t size, std::size_t alignment );
+MR_BIND_IGNORE MR_ALLOCATOR_API void mrMimallocFree( void * p ) noexcept;
+}
+#endif
 
 /// the alignment of the memory Allocator<T> allocates: alignof( T ), or T::cAllocAlignment if T defines a greater one
 template <typename T, typename = void>
@@ -59,12 +63,12 @@ struct MR_BIND_IGNORE Allocator
         {
             if ( n > std::size_t( -1 ) / sizeof( T ) )
                 throw std::bad_array_new_length();
-            return static_cast<T *>( mi_new_aligned( n * sizeof( T ), cAllocatorAlignment<T> ) );
+            return static_cast<T *>( mrMimallocNewAligned( n * sizeof( T ), cAllocatorAlignment<T> ) );
         }
         else
-            return static_cast<T *>( mi_new_n( n, sizeof( T ) ) );
+            return static_cast<T *>( mrMimallocNewN( n, sizeof( T ) ) );
     }
-    void deallocate( T * p, std::size_t ) noexcept { mi_free( p ); }
+    void deallocate( T * p, std::size_t ) noexcept { mrMimallocFree( p ); }
 #else
     [[nodiscard]] T * allocate( std::size_t n )
     {

@@ -1,7 +1,6 @@
 #pragma once
 
-#include "config.h"
-#include "MRPch/MRBindingMacros.h"
+#include "MRMeshFwd.h"
 #include <memory>
 #include <new>
 #include <type_traits>
@@ -11,20 +10,19 @@
 #define MR_ALLOCATOR_IS_MIMALLOC
 #endif
 
-#ifdef MR_ALLOCATOR_IS_MIMALLOC
-#include <mimalloc.h>
-#if defined( _MSC_VER ) && !defined( MR_USE_CMAKE_CONFIGURE_FILE )
-// the inline Allocator calls mimalloc from every binary using MRMesh; MeshLib's CMake targets link it instead
-#ifdef _DEBUG
-#pragma comment( lib, "mimalloc-debug.dll.lib" )
-#else
-#pragma comment( lib, "mimalloc.dll.lib" )
-#endif
-#endif
-#endif
-
 namespace MR
 {
+
+#ifdef MR_ALLOCATOR_IS_MIMALLOC
+// mimalloc is called inside MRMesh, so code using MeshLib does not link mimalloc itself;
+// keep this header out of MRPch.h, else MRMESH_API is fixed there as dllimport also for MRMesh
+namespace detail
+{
+[[nodiscard]] MR_BIND_IGNORE MRMESH_API void * mimallocNewN( std::size_t count, std::size_t size );
+[[nodiscard]] MR_BIND_IGNORE MRMESH_API void * mimallocNewAligned( std::size_t size, std::size_t alignment );
+MR_BIND_IGNORE MRMESH_API void mimallocFree( void * p ) noexcept;
+} // namespace detail
+#endif
 
 /// the alignment of the memory Allocator<T> allocates: alignof( T ), or T::cAllocAlignment if T defines a greater one
 template <typename T, typename = void>
@@ -59,12 +57,12 @@ struct MR_BIND_IGNORE Allocator
         {
             if ( n > std::size_t( -1 ) / sizeof( T ) )
                 throw std::bad_array_new_length();
-            return static_cast<T *>( mi_new_aligned( n * sizeof( T ), cAllocatorAlignment<T> ) );
+            return static_cast<T *>( detail::mimallocNewAligned( n * sizeof( T ), cAllocatorAlignment<T> ) );
         }
         else
-            return static_cast<T *>( mi_new_n( n, sizeof( T ) ) );
+            return static_cast<T *>( detail::mimallocNewN( n, sizeof( T ) ) );
     }
-    void deallocate( T * p, std::size_t ) noexcept { mi_free( p ); }
+    void deallocate( T * p, std::size_t ) noexcept { detail::mimallocFree( p ); }
 #else
     [[nodiscard]] T * allocate( std::size_t n )
     {

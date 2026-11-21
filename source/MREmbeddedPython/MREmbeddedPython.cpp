@@ -9,6 +9,7 @@
 #include "MRPython/MRUnifiedPythonStream.h"
 
 #include <fstream>
+#include <utility>
 
 #ifdef __linux__
 // avoid macro redefinitions
@@ -286,6 +287,9 @@ void EmbeddedPython::ensureInterpreterThreadIsRunning_()
         {
             std::unique_lock guard( cvMutex_ );
 
+            // set while waiting for the next script with the GIL released, so the Python threads scripts started keep running
+            PyThreadState* idleThreadState = nullptr;
+
             while ( true )
             {
                 { // Wait for python code.
@@ -306,6 +310,9 @@ void EmbeddedPython::ensureInterpreterThreadIsRunning_()
                 }
                 else
                 {
+                    if ( idleThreadState ) // null before the first script: then `init_()` has just taken the GIL
+                        PyEval_RestoreThread( std::exchange( idleThreadState, nullptr ) );
+
                     auto libDir = SystemPath::getPythonModulesDirectory();
                     auto libDirStr = utf8string( libDir );
                     MR::replaceInplace( libDirStr, "\\", "\\\\" ); // double protect first for C++ second for Python
@@ -327,6 +334,8 @@ void EmbeddedPython::ensureInterpreterThreadIsRunning_()
                     // We used to reset globals using `Py_FinalizeEx()`, but that beaks some modules (including ours at one point,
                     //   and apparently numpy too (https://stackoverflow.com/q/7676314/2752075), so it's not necessarily our bug).
                     PyDict_Clear( PyModule_GetDict( PyImport_AddModule( "__main__" ) ) );
+
+                    idleThreadState = PyEval_SaveThread();
                 }
 
                 { // Signal that we're done.
@@ -344,6 +353,8 @@ void EmbeddedPython::ensureInterpreterThreadIsRunning_()
                 }
             }
 
+            if ( idleThreadState )
+                PyEval_RestoreThread( idleThreadState ); // `Py_FinalizeEx()` needs the GIL
             if ( Py_IsInitialized() )
                 Py_FinalizeEx();
         } );

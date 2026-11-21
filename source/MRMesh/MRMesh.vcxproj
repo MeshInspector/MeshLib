@@ -318,6 +318,8 @@
     <ClInclude Include="MRMeshToPointCloud.h" />
     <ClInclude Include="miniply.h" />
     <ClInclude Include="MRAABBTree.h" />
+    <ClInclude Include="MRAABBTreeSimd.h" />
+    <ClInclude Include="MRAABBTreePointsTraversal.hpp" />
     <ClInclude Include="MRAABBTreeTraversal.hpp" />
     <ClInclude Include="MRSimd4.hpp" />
     <ClInclude Include="MRBitSetParallelFor.h" />

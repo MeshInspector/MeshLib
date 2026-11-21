@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <utility>
 
 #if defined(__x86_64__) || defined(_M_X64)
 #include <emmintrin.h>
@@ -60,6 +61,8 @@ inline int bits( M m ) { return _mm_movemask_ps( m ); }
 inline F select( M m, F a, F b ) { return _mm_or_ps( _mm_and_ps( m, a ), _mm_andnot_ps( m, b ) ); }
 /// lanes 1, 2, 3 of a in lanes 0, 1, 2; lane 3 is unspecified
 inline F shiftDown( F a ) { return _mm_shuffle_ps( a, a, _MM_SHUFFLE( 3, 3, 2, 1 ) ); }
+/// transposes the 4x4 matrix with rows r[0..3]
+inline void transpose( F ( &r )[4] ) { _MM_TRANSPOSE4_PS( r[0], r[1], r[2], r[3] ); }
 /// the maximum of x and lanes 0, 1, 2 of a
 inline float max3( F a, float x )
 {
@@ -106,6 +109,14 @@ inline int bits( M m )
 }
 inline F select( M m, F a, F b ) { return vbslq_f32( m, a, b ); }
 inline F shiftDown( F a ) { return vextq_f32( a, a, 1 ); }
+inline void transpose( F ( &r )[4] )
+{
+    const float32x4x2_t a = vtrnq_f32( r[0], r[1] ), b = vtrnq_f32( r[2], r[3] );
+    r[0] = vcombine_f32( vget_low_f32( a.val[0] ), vget_low_f32( b.val[0] ) );
+    r[1] = vcombine_f32( vget_low_f32( a.val[1] ), vget_low_f32( b.val[1] ) );
+    r[2] = vcombine_f32( vget_high_f32( a.val[0] ), vget_high_f32( b.val[0] ) );
+    r[3] = vcombine_f32( vget_high_f32( a.val[1] ), vget_high_f32( b.val[1] ) );
+}
 inline float max3( F a, float x ) { return vmaxvq_f32( vsetq_lane_f32( x, a, 3 ) ); }
 inline float min3( F a, float x ) { return vminvq_f32( vsetq_lane_f32( x, a, 3 ) ); }
 
@@ -138,6 +149,15 @@ inline M xorm( M a, M b ) { return wasm_v128_xor( a, b ); }
 inline int bits( M m ) { return int( wasm_i32x4_bitmask( m ) ); }
 inline F select( M m, F a, F b ) { return wasm_v128_bitselect( a, b, m ); }
 inline F shiftDown( F a ) { return wasm_i32x4_shuffle( a, a, 1, 2, 3, 3 ); }
+inline void transpose( F ( &r )[4] )
+{
+    const F t0 = wasm_i32x4_shuffle( r[0], r[1], 0, 4, 1, 5 ), t1 = wasm_i32x4_shuffle( r[2], r[3], 0, 4, 1, 5 );
+    const F t2 = wasm_i32x4_shuffle( r[0], r[1], 2, 6, 3, 7 ), t3 = wasm_i32x4_shuffle( r[2], r[3], 2, 6, 3, 7 );
+    r[0] = wasm_i32x4_shuffle( t0, t1, 0, 1, 4, 5 );
+    r[1] = wasm_i32x4_shuffle( t0, t1, 2, 3, 6, 7 );
+    r[2] = wasm_i32x4_shuffle( t2, t3, 0, 1, 4, 5 );
+    r[3] = wasm_i32x4_shuffle( t2, t3, 2, 3, 6, 7 );
+}
 // Wasm has neither a cross-lane reduction nor an operation on the first lane alone
 inline float max3( F a, float x )
 {
@@ -182,6 +202,12 @@ inline F select( M m, F a, F b ) { MR_SIMD4_LANES( F, m.v[i] ? a.v[i] : b.v[i] )
 #undef MR_SIMD4_LANES
 inline int bits( M m ) { return int( m.v[0] ) | int( m.v[1] ) << 1 | int( m.v[2] ) << 2 | int( m.v[3] ) << 3; }
 inline F shiftDown( F a ) { return { { a.v[1], a.v[2], a.v[3], a.v[3] } }; }
+inline void transpose( F ( &r )[4] )
+{
+    for ( int i = 0; i < 4; ++i )
+        for ( int j = i + 1; j < 4; ++j )
+            std::swap( r[i].v[j], r[j].v[i] );
+}
 inline float max3( F a, float x ) { for ( int i = 0; i < 3; ++i ) x = x < a.v[i] ? a.v[i] : x; return x; }
 inline float min3( F a, float x ) { for ( int i = 0; i < 3; ++i ) x = a.v[i] < x ? a.v[i] : x; return x; }
 

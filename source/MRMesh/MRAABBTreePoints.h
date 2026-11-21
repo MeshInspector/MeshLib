@@ -1,9 +1,12 @@
 #pragma once
 
+#include "MRAABBTreeSimd.h"
 #include "MRBox.h"
 #include "MRId.h"
 #include "MRVector.h"
 #include "MRVector3.h"
+#include <algorithm>
+#include <utility>
 
 namespace MR
 {
@@ -11,29 +14,19 @@ namespace MR
 /// \addtogroup AABBTreeGroup
 /// \{
 
-/// bounding volume hierarchy for point cloud structure
+/// bounding volume hierarchy of a point cloud with up to 4 children per node in SIMD layout: every internal node keeps
+/// the boxes of its children; the points of leaf l are orderedPoints() [MaxNumPointsInLeaf * l, MaxNumPointsInLeaf * ( l + 1 ) ),
+/// all leaves are full except the last one
 class AABBTreePoints
 {
 public:
-    struct Node
-    {
-        Box3f box; ///< bounding box of whole subtree
-        NodeId l;  ///< left child node for an inner node, or -(l+1) is the index of the first point in a leaf node
-        NodeId r;  ///< right child node for an inner node, or -(r+1) is the index of the last point in a leaf node
-        /// returns true if node represent real points, false if it has child nodes
-        bool leaf() const { return !l.valid(); }
-        /// returns [first,last) indices of leaf points
-        std::pair<int, int> getLeafPointRange() const { assert( leaf() ); return { -( l + 1 ),-( r + 1 ) }; }
-        /// sets [first,last) to this node (leaf)
-        void setLeafPointRange( int first, int last ) { l = NodeId( -( first + 1 ) ); r = NodeId( -( last + 1 ) ); }
-    };
-    using NodeVec = Vector<Node, NodeId>;
-    using NodeBitSet = TaggedBitSet<NodeTag>;
-    [[nodiscard]] const NodeVec& nodes() const { return nodes_; }
-    [[nodiscard]] const Node& operator[]( NodeId nid ) const { return nodes_[nid]; }
-    [[nodiscard]] static NodeId rootNodeId() { return NodeId{0}; }
-    /// returns the root node bounding box
-    [[nodiscard]] Box3f getBoundingBox() const { return nodes_.empty() ? Box3f{} : nodes_[rootNodeId()].box; }
+    static constexpr int MaxChildren = 4;
+    /// maximum number of points in leaf node of tree (all of leafs should have this number of points except last one)
+    constexpr static int MaxNumPointsInLeaf = 16;
+    /// the deepest level of a node (the root is at 0): the stacks of the traversals are sized for it
+    static constexpr int MaxDepth = 16;
+
+    using SimdNode = AABBTreeSimdNode;
 
     struct Point
     {
@@ -41,6 +34,25 @@ public:
         VertId id;
     };
     [[nodiscard]] const std::vector<Point>& orderedPoints() const { return orderedPoints_; }
+
+    /// returns true if the tree has no points
+    [[nodiscard]] bool empty() const { return orderedPoints_.empty(); }
+
+    /// the internal nodes, the root is the first one (if the tree has more than MaxNumPointsInLeaf points); the children follow their parent
+    [[nodiscard]] MR_BIND_IGNORE const Vector<SimdNode> & simdNodes() const { return simdNodes_; }
+
+    /// the number of leaves
+    [[nodiscard]] int numLeaves() const { return ( int( orderedPoints_.size() ) + MaxNumPointsInLeaf - 1 ) / MaxNumPointsInLeaf; }
+
+    /// returns [first,last) indices of the points of given leaf in orderedPoints()
+    [[nodiscard]] std::pair<int, int> leafPointRange( int leaf ) const
+        { return { leaf * MaxNumPointsInLeaf, std::min( ( leaf + 1 ) * MaxNumPointsInLeaf, int( orderedPoints_.size() ) ) }; }
+
+    /// the reference to the root as in SimdNode::child: 0, or ~0 if the tree has one leaf only
+    [[nodiscard]] int rootRef() const { return simdNodes_.empty() ? ~0 : 0; }
+
+    /// returns the bounding box of all points
+    [[nodiscard]] Box3f getBoundingBox() const { return box_; }
 
     /// creates tree for given point cloud
     MRMESH_API AABBTreePoints( const PointCloud& pointCloud );
@@ -52,9 +64,6 @@ public:
     /// creates tree from given valid points
     /// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
     MR_BIND_IGNORE AABBTreePoints( const VertCoords & points, const VertBitSet & validPoints ) : AABBTreePoints( points, &validPoints ) {}
-
-    /// maximum number of points in leaf node of tree (all of leafs should have this number of points except last one)
-    constexpr static int MaxNumPointsInLeaf = 16;
 
     AABBTreePoints( AABBTreePoints && ) noexcept = default;
     AABBTreePoints & operator =( AABBTreePoints && ) noexcept = default;
@@ -78,20 +87,14 @@ public:
 
 private:
     std::vector<Point> orderedPoints_;
-    NodeVec nodes_;
+    Vector<SimdNode> simdNodes_;
+    Box3f box_;
 
     AABBTreePoints( const AABBTreePoints & ) = default;
     AABBTreePoints & operator =( const AABBTreePoints & ) = default;
     friend class UniqueThreadSafeOwner<AABBTreePoints>;
     friend class SharedThreadSafeOwner<AABBTreePoints>;
 };
-
-// returns the number of nodes in the binary tree with given number of points
-inline int getNumNodesPoints( int numPoints )
-{
-    assert( numPoints > 0 );
-    return 2 * ( ( numPoints + AABBTreePoints::MaxNumPointsInLeaf - 1 ) / AABBTreePoints::MaxNumPointsInLeaf ) - 1;
-}
 
 /// \}
 

@@ -237,6 +237,12 @@
     <ClInclude Include="MRAABBTree.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
+    <ClInclude Include="MRAABBTreeSimd.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAABBTreePointsTraversal.hpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
     <ClInclude Include="MRAABBTreeTraversal.hpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>

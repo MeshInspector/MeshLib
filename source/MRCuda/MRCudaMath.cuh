@@ -114,32 +114,12 @@ struct LineLeaf3
     Box3 box;
 };
 
-// AABB tree of points with leaf nodes, similar to AABBTreeNode<ObjTreeTraits> with minimal needed functions
-struct Node3
-{
-    Box3 box;
-    int l, r;
-
-    __device__ bool leaf() const
-    {
-        return r < 0;
-    }
-    __device__ int leafId() const
-    {
-        return l;
-    }
-    __device__ int2 getLeafPointRange() const
-    { 
-        return { -(l + 1), -(r + 1) };
-    }
-};
-
 struct FaceToThreeVerts
 {
     int verts[3];
 };
 
-// GPU analog of AABBTreeSimdNode: an internal node of the mesh's AABBTree with the boxes of its (up to 4) children in SoA order;
+// GPU analog of AABBTreeSimdNode: an internal node of the mesh's AABBTree or of AABBTreePoints with the boxes of its (up to 4) children in SoA order;
 // aligned as on CPU, so a copy of a node to registers is loaded by 16-byte loads
 struct alignas( 16 ) SimdNode3
 {

@@ -220,28 +220,39 @@ void sortSmall( TreeCenter * data, int n, int axis )
     }
 }
 
-} //anonymous namespace
+void select( TreeCenter * first, TreeCenter * nth, TreeCenter * last, int axis, bool linear );
 
-void selectCenter( TreeCenter * first, TreeCenter * nth, TreeCenter * last, int axis )
+/// returns the median of the medians of the groups of 5 centers of [first, last), which are moved to the beginning of the range:
+/// at least 3 of every 10 centers are not bigger than it, and at least 3 are not smaller
+TreeCenter * medianOfMedians( TreeCenter * first, TreeCenter * last, int axis )
+{
+    const auto numGroups = ( last - first ) / 5;
+    for ( std::ptrdiff_t g = 0; g < numGroups; ++g )
+    {
+        TreeCenter * const d = first + 5 * g;
+        for ( int i = 1; i < 5; ++i )
+            for ( int j = i; j > 0 && d[j].c[axis] < d[j - 1].c[axis]; --j )
+                std::swap( d[j], d[j - 1] );
+        std::swap( first[g], d[2] );
+    }
+    TreeCenter * const mid = first + numGroups / 2;
+    select( first, mid, first + numGroups, axis, true );
+    return mid;
+}
+
+/// selectCenter; linear makes every pivot the median of medians, which bounds the time whatever the centers are
+void select( TreeCenter * first, TreeCenter * nth, TreeCenter * last, int axis, bool linear )
 {
     // equal coordinates are not ordered: the centers are placed by the moves below only, the same ones on every platform
     const auto less = [axis]( const TreeCenter & a, const TreeCenter & b ) { return a.c[axis] < b.c[axis]; };
     constexpr int cSmall = 16;
-    int budget = 2; // partitions before the sort, about twice the expected number
+    int budget = 2; // partitions with the cheap pivots, about twice the expected number
     for ( auto n = last - first; n > cSmall; n >>= 1 )
         budget += 2;
     while ( last - first > cSmall )
     {
-        if ( --budget < 0 )
-        {
-            // unlucky pivots; the order with ties by index leaves one arrangement to any std::sort
-            std::sort( first, last, [axis]( const TreeCenter & a, const TreeCenter & b )
-            {
-                const auto ka = orderedBits( a.c[axis] ), kb = orderedBits( b.c[axis] );
-                return ka != kb ? ka < kb : a.i < b.i;
-            } );
-            return;
-        }
+        // unlucky pivots
+        linear = linear || --budget < 0;
         const auto med3 = [less]( TreeCenter * a, TreeCenter * b, TreeCenter * c )
         {
             if ( less( *b, *a ) )
@@ -251,7 +262,9 @@ void selectCenter( TreeCenter * first, TreeCenter * nth, TreeCenter * last, int 
         const auto n = last - first;
         TreeCenter * const m = first + n / 2;
         TreeCenter * pivot;
-        if ( n > 128 )
+        if ( linear )
+            pivot = medianOfMedians( first, last, axis );
+        else if ( n > 128 )
         {
             const auto s = n / 8;
             pivot = med3( med3( first, first + s, first + 2 * s ), med3( m - s, m, m + s ), med3( last - 1 - 2 * s, last - 1 - s, last - 1 ) );
@@ -271,7 +284,7 @@ void selectCenter( TreeCenter * first, TreeCenter * nth, TreeCenter * last, int 
         }
         const bool noneLess = mid == first;
         first = mid + 1;
-        if ( noneLess )
+        if ( noneLess || linear )
         {
             // the pivot can be one of many equal centers, which would leave the range one per partition: all of them leave now
             first = partition( first, last, [p, axis]( const TreeCenter & x ) { return !( p < x.c[axis] ); } );
@@ -280,6 +293,13 @@ void selectCenter( TreeCenter * first, TreeCenter * nth, TreeCenter * last, int 
         }
     }
     sortSmall( first, int( last - first ), axis );
+}
+
+} //anonymous namespace
+
+void selectCenter( TreeCenter * first, TreeCenter * nth, TreeCenter * last, int axis )
+{
+    select( first, nth, last, axis, false );
 }
 
 namespace

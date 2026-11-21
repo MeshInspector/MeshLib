@@ -641,13 +641,15 @@ void withSixteenThreads( F && f )
 
 // the trees of meshes with exactly representable coordinates are pinned by their hashes, the same on all platforms and with all standard libraries
 // (equal centers are not ordered by index, their places come from the moves of the splits only):
-// small ranges, many equal centers, almost all centers in one bucket (split again in parallel for 150000 triangles), the parallel splits
+// small ranges, many equal centers, the median-of-medians pivots after unlucky ones (30000 triangles),
+// almost all centers in one bucket (split again in parallel for 150000 triangles), the parallel splits
 TEST( MRMesh, AABBTreeGoldenHashes )
 {
     struct Case { int numTris, range; bool farOutlier; std::uint64_t hash; };
     const Case cases[] = {
         { 1000, 1 << 20, false, 0x34b0ae3e1963543dull },
         { 20000, 4, false, 0x786b0830f8a9212cull },
+        { 30000, 256, false, 0x3819f23635633a52ull },
         { 150000, 1024, true, 0x05290ed3f009ca64ull },
         { 300000, 1 << 16, false, 0x1e2fee457bdd6a43ull }
     };

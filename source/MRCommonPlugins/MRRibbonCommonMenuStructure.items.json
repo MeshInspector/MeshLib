@@ -1,6 +1,11 @@
 {
   "Items": [
     {
+      "Name": "Feature Alignment",
+      "Tooltip": "Align existing fitted planes, axes or centers. Keep the Reference object fixed. Apply moves the Floating object; Undo reverts the placement.",
+      "Icon": "\uf0b2"
+    },
+    {
       "Name": "Undo",
       "Tooltip": "Undo the last action.",
       "Icon": "\uF0E2",

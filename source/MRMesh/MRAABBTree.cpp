@@ -216,7 +216,7 @@ public:
         parallelSplits_ = numTris_ >= parallelSplitNum_
             && tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) > 1
             && tbb::this_task_arena::max_concurrency() > 1;
-        if ( numTris_ >= cBucketSplitNum )
+        if ( numTris_ >= parallelSplitNum_ )
             scratch_ = Buffer<TreeCenter>( numTris_ );
         const Child root{ 0, { 0, numTris_, false, true, centersBox } };
         if ( numTris_ <= AABBTree::MaxLeafTris )
@@ -300,9 +300,11 @@ private:
         const auto sz = box.size();
         const int axis = sz.x >= sz.y ? ( sz.x >= sz.z ? 0 : 2 ) : ( sz.y >= sz.z ? 1 : 2 );
         TreeCenter * const data = data_( r );
-        if ( r.num >= cBucketSplitNum )
+        // by buckets only the ranges split in parallel on many threads: on one thread selectCenter is faster,
+        // but the choice must not depend on the number of threads for the tree to be the same
+        if ( r.num >= parallelSplitNum_ )
         {
-            const int chunkSize = parallelSplits_ && r.num >= parallelSplitNum_ ? chunk_ : r.num;
+            const int chunkSize = parallelSplits_ ? chunk_ : r.num;
             Box3f halfBoxes[2];
             if ( splitCentersByBuckets( data, data_( { r.first, r.num, !r.inScratch, false, {} } ), r.num, axis, box.min[axis], box.max[axis], chunkSize, halfBoxes ) )
                 return { Range{ r.first, r.num / 2, !r.inScratch, true, halfBoxes[0] }, Range{ r.first + r.num / 2, r.num - r.num / 2, !r.inScratch, true, halfBoxes[1] } };
@@ -497,8 +499,8 @@ private:
     const VertCoords * points_ = nullptr;
     TreeCenter * centers_ = nullptr;
     Buffer<TreeCenter> scratch_; // the centers of a range move between centers_ and scratch_ by each split of the range by buckets
-    static constexpr int cBucketSplitNum = 1024; // smaller ranges are split by selectCenter
-    // a range of at least parallelSplitNum_ centers is split in parallel, by chunks of chunk_ centers counted and moved by one thread
+    // a range of at least parallelSplitNum_ centers is split by buckets, in parallel by chunks of chunk_ centers counted and moved by one thread;
+    // smaller ranges are split by selectCenter
     static constexpr int cMinParallelSplitNum = 1 << 14, cMaxParallelSplitNum = 1 << 17;
     static constexpr int cMinChunk = 1 << 12, cMaxChunk = 1 << 14;
     int parallelSplitNum_ = cMaxParallelSplitNum;

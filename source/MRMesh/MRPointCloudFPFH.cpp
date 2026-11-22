@@ -57,16 +57,6 @@ void addPair( FPFHDescriptor & h, const Vector3f & p, const Vector3f & n, const 
     h[2 * FPFHBins + binIndex( phi, -1.0f, 1.0f )] += 1;
 }
 
-Vector<VertId> bitSetIds( const VertBitSet & bs )
-{
-    Vector<VertId> res;
-    res.resizeNoInit( bs.count() );
-    size_t n = 0;
-    for ( auto v : bs )
-        res[n++] = v;
-    return res;
-}
-
 // the closest descriptor found so far: the smallest distance, and the smallest index among equal distances
 struct Closest
 {
@@ -92,7 +82,7 @@ bool findClosestDescriptors( const FPFHDescriptors & fromDescriptors, const Vert
     // the target descriptors are transposed in blocks of DescBlock, so that the distances to a block are computed in parallel lanes,
     // each summed over the descriptor values in order
     constexpr int DescBlock = 64;
-    const auto toPoints = bitSetIds( to );
+    const auto toPoints = listSetBits( to );
     const auto numBlocks = ( toPoints.size() + DescBlock - 1 ) / DescBlock;
     // the padding gets infinite distances
     Vector<float> blocks( numBlocks * FPFHDescriptorSize * DescBlock, FLT_MAX );
@@ -103,7 +93,7 @@ bool findClosestDescriptors( const FPFHDescriptors & fromDescriptors, const Vert
             b[i * DescBlock] = toDescriptors[toPoints[j]][i];
     }
 
-    const auto fromPoints = bitSetIds( from );
+    const auto fromPoints = listSetBits( from );
     tbb::enumerable_thread_specific<Vector<Closest>> threadToClosest;
     // each block of target descriptors is compared with a chunk of source descriptors while it is in L1 cache
     constexpr size_t FromChunk = 32;

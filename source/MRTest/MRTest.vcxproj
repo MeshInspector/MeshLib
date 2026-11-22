@@ -145,6 +145,7 @@
     <ClCompile Include="MRNormalDenoisingTests.cpp" />
     <ClCompile Include="MRPointCloudFPFHTests.cpp" />
     <ClCompile Include="MRRigidXfRansacTests.cpp" />
+    <ClCompile Include="MRGlobalRegistrationTests.cpp" />
     <ClCompile Include="MRPositionVertsSmoothlyTests.cpp" />
     <ClCompile Include="MRQuadraticFormTests.cpp" />
     <ClCompile Include="MRRasterTests.cpp" />

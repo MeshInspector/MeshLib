@@ -20,7 +20,7 @@ struct GlobalRegistrationParams
     /// of the smaller object lies on the other object after it
     float minOverlap = 0.1f;
 
-    /// the number of RANSAC runs with different seeds for each pair of objects, the one with the largest overlap is kept
+    /// the number of RANSAC runs with different seeds for each pair of objects (at least 1), the one with the largest overlap is kept
     int pairAttempts = 3;
 
     /// the seed of the first RANSAC run, see RigidXfRansacParams::seed

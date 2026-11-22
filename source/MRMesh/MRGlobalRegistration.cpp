@@ -8,6 +8,7 @@
 #include "MRUnionFind.h"
 #include "MRTimer.h"
 #include <algorithm>
+#include <optional>
 
 namespace MR
 {
@@ -25,9 +26,10 @@ Expected<PointCloud> sampleSurface( const MeshOrPointsXf & obj, float voxelSize 
     if ( !normals )
         return unexpected( "Point cloud without normals" );
     const auto & points = src.points();
+    const auto normalA = obj.xf.A.inverse().transposed();
     PointCloud res;
     for ( auto v : ids )
-        res.addPoint( obj.xf( points[v] ), ( obj.xf.A * normals( v ) ).normalized() );
+        res.addPoint( obj.xf( points[v] ), ( normalA * normals( v ) ).normalized() );
     return res;
 }
 
@@ -64,7 +66,10 @@ Expected<GlobalRegistrationResult> globalRegistration( const Vector<MeshOrPoints
     const auto n = objects.size();
     float diag = 0;
     for ( const auto & o : objects )
-        diag = std::max( diag, o.obj.computeBoundingBox( &o.xf ).diagonal() );
+        if ( const auto box = o.obj.computeBoundingBox( &o.xf ); box.valid() )
+            diag = std::max( diag, box.diagonal() );
+    if ( !( diag > 0 ) )
+        return unexpected( "No object has points" );
     const float spacing = params.samplingVoxelSize > 0 ? params.samplingVoxelSize : 0.005f * diag;
 
     Vector<PointCloud, ObjId> samples;
@@ -85,10 +90,12 @@ Expected<GlobalRegistrationResult> globalRegistration( const Vector<MeshOrPoints
     }
 
     ICPProperties icpParams;
-    icpParams.distThresholdSq = sqr( diag );
+    // after RANSAC the pose is within a few samples; a larger threshold lets the non-overlapping parts of point clouds drag it away
+    icpParams.distThresholdSq = sqr( 5 * spacing );
     icpParams.iterLimit = 100;
     icpParams.badIterStopCount = 20;
 
+    const int attempts = std::max( 1, params.pairAttempts );
     std::vector<PairXf> pairs;
     const float numPairs = std::max( 1.0f, n * ( n - 1 ) / 2.0f );
     size_t pairIndex = 0;
@@ -96,16 +103,21 @@ Expected<GlobalRegistrationResult> globalRegistration( const Vector<MeshOrPoints
     {
         for ( ObjId b( a + 1 ); b < n; ++b )
         {
-            if ( !reportProgress( progress, 0.1f + 0.9f * pairIndex++ / numPairs ) )
+            const float p0 = 0.1f + 0.9f * pairIndex / numPairs;
+            const float p1 = 0.1f + 0.9f * ++pairIndex / numPairs;
+            if ( !reportProgress( progress, p0 ) )
                 return unexpectedOperationCanceled();
             const auto & sa = samples[a];
             const auto & sb = samples[b];
             auto matches = findFPFHMatches( descriptors[b], sb.validPoints, descriptors[a], sa.validPoints );
             if ( !matches )
                 return unexpected( std::move( matches.error() ) );
+            if ( matches->size() < 3 )
+                continue;
             const bool bSmaller = sb.validPoints.count() <= sa.validPoints.count();
             PairXf best{ a, b };
-            for ( int i = 0; i < params.pairAttempts; ++i )
+            std::optional<ICP> icp; // sampled once per pair
+            for ( int i = 0; i < attempts; ++i )
             {
                 RigidXfRansacParams rp;
                 rp.inlierDistance = 1.5f * spacing;
@@ -120,13 +132,25 @@ Expected<GlobalRegistrationResult> globalRegistration( const Vector<MeshOrPoints
                     rp.overlapTgtPoints = &sa.points;
                     rp.overlapSrcCloud = &sb;
                 }
-                const auto bMotion = findRigidXfRansac( sb.points, sa.points, *matches, rp );
+                const auto bMotion = findRigidXfRansac( sb.points, sa.points, *matches, rp,
+                    subprogress( progress, p0 + ( p1 - p0 ) * i / attempts, p0 + ( p1 - p0 ) * ( i + 0.5f ) / attempts ) );
                 if ( !bMotion )
-                    break; // too few matches, other seeds will not help
+                {
+                    if ( bMotion.error() == stringOperationCanceled() )
+                        return unexpectedOperationCanceled();
+                    continue;
+                }
+                if ( !reportProgress( progress, p0 + ( p1 - p0 ) * ( i + 0.5f ) / attempts ) )
+                    return unexpectedOperationCanceled();
 
-                ICP icp( { objects[b].obj, *bMotion * objects[b].xf }, objects[a], 3 * spacing );
-                icp.setParams( icpParams );
-                const auto bXf = icp.calculateTransformation();
+                if ( icp )
+                    icp->setFloatXf( *bMotion * objects[b].xf );
+                else
+                {
+                    icp.emplace( MeshOrPointsXf{ objects[b].obj, *bMotion * objects[b].xf }, objects[a], 3 * spacing );
+                    icp->setParams( icpParams );
+                }
+                const auto bXf = icp->calculateTransformation();
                 const auto refined = bXf * objects[b].xf.inverse();
                 const float overlap = bSmaller
                     ? overlapFraction( sb, refined, objects[a], 0.5f * spacing )

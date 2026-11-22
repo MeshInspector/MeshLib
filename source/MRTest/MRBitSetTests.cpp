@@ -94,6 +94,12 @@ TEST(MRMesh, TaggedBitSet)
     EXPECT_EQ( VertBitSet( VertBitSet( bs0 ) -= bs1 ).count(), 1 );
     EXPECT_EQ( VertBitSet( VertBitSet( bs1 ) -= bs0 ).count(), 1 );
     EXPECT_EQ( VertBitSet( VertBitSet( bs0 ) ^= bs1 ).count(), 2 );
+
+    const auto ids = listSetBits( bs0 );
+    ASSERT_EQ( ids.size(), 2 );
+    EXPECT_EQ( ids[0], 0_v );
+    EXPECT_EQ( ids[1], 2_v );
+    EXPECT_TRUE( listSetBits( FaceBitSet( 5 ) ).empty() );
 }
 
 TEST( MRMesh, BitSetParallelForCancel )

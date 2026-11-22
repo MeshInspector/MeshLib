@@ -450,6 +450,18 @@ template <typename I>
     return res;
 }
 
+/// returns the ids of all set bits in increasing order, i.e. the inverse of makeVectorWithSeqNums(...)
+template <typename I>
+[[nodiscard]] Vector<I> listSetBits( const TypedBitSet<I> & bs )
+{
+    Vector<I> res;
+    res.resizeNoInit( bs.count() );
+    size_t n = 0;
+    for ( auto v : bs )
+        res[n++] = v;
+    return res;
+}
+
 /// creates a HashMap where for each set bit of input bitset its sequential number starting from 0 is returned
 [[nodiscard]] MRMESH_API HashMap<size_t, size_t> makeHashMapWithSeqNums( const BitSet & bs );
 

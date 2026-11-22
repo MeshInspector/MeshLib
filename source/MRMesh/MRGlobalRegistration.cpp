@@ -4,11 +4,17 @@
 #include "MRICP.h"
 #include "MRPointCloud.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRBox.h"
 #include "MRUnionFind.h"
+#include "MRFinally.h"
 #include "MRTimer.h"
+#include "MRPch/MRTBB.h"
 #include <algorithm>
+#include <atomic>
+#include <chrono>
 #include <optional>
+#include <thread>
 
 namespace MR
 {
@@ -95,81 +101,123 @@ Expected<GlobalRegistrationResult> globalRegistration( const Vector<MeshOrPoints
     icpParams.iterLimit = 100;
     icpParams.badIterStopCount = 20;
 
-    const int attempts = std::max( 1, params.pairAttempts );
-    std::vector<PairXf> pairs;
-    const float numPairs = std::max( 1.0f, n * ( n - 1 ) / 2.0f );
-    size_t pairIndex = 0;
+    Vector<PairXf> pairs;
+    pairs.reserve( n * ( n - 1 ) / 2 );
     for ( ObjId a( 0 ); a < n; ++a )
-    {
         for ( ObjId b( a + 1 ); b < n; ++b )
-        {
-            const float p0 = 0.1f + 0.9f * pairIndex / numPairs;
-            const float p1 = 0.1f + 0.9f * ++pairIndex / numPairs;
-            if ( !reportProgress( progress, p0 ) )
-                return unexpectedOperationCanceled();
-            const auto & sa = samples[a];
-            const auto & sb = samples[b];
-            auto matches = findFPFHMatches( descriptors[b], sb.validPoints, descriptors[a], sa.validPoints );
-            if ( !matches )
-                return unexpected( std::move( matches.error() ) );
-            if ( matches->size() < 3 )
-                continue;
-            const bool bSmaller = sb.validPoints.count() <= sa.validPoints.count();
-            PairXf best{ a, b };
-            std::optional<ICP> icp; // sampled once per pair
-            for ( int i = 0; i < attempts; ++i )
-            {
-                RigidXfRansacParams rp;
-                rp.inlierDistance = 1.5f * spacing;
-                rp.seed = params.seed + std::uint32_t( i );
-                if ( bSmaller )
-                {
-                    rp.overlapSrcPoints = &sb.points;
-                    rp.overlapTgtCloud = &sa;
-                }
-                else
-                {
-                    rp.overlapTgtPoints = &sa.points;
-                    rp.overlapSrcCloud = &sb;
-                }
-                const auto bMotion = findRigidXfRansac( sb.points, sa.points, *matches, rp,
-                    subprogress( progress, p0 + ( p1 - p0 ) * i / attempts, p0 + ( p1 - p0 ) * ( i + 0.5f ) / attempts ) );
-                if ( !bMotion )
-                {
-                    if ( bMotion.error() == stringOperationCanceled() )
-                        return unexpectedOperationCanceled();
-                    continue;
-                }
-                if ( !reportProgress( progress, p0 + ( p1 - p0 ) * ( i + 0.5f ) / attempts ) )
-                    return unexpectedOperationCanceled();
+            pairs.push_back( { a, b } );
+    for ( const auto & s : samples )
+        s.getAABBTree();
 
-                if ( icp )
-                    icp->setFloatXf( *bMotion * objects[b].xf );
-                else
-                {
-                    icp.emplace( MeshOrPointsXf{ objects[b].obj, *bMotion * objects[b].xf }, objects[a], 3 * spacing );
-                    icp->setParams( icpParams );
-                }
-                const auto bXf = icp->calculateTransformation();
-                const auto refined = bXf * objects[b].xf.inverse();
-                const float overlap = bSmaller
-                    ? overlapFraction( sb, refined, objects[a], 0.5f * spacing )
-                    : overlapFraction( sa, refined.inverse(), objects[b], 0.5f * spacing );
-                if ( overlap > best.overlap )
-                {
-                    best.overlap = overlap;
-                    best.bInA = objects[a].xf.inverse() * bXf;
-                }
-            }
-            if ( best.overlap >= params.minOverlap )
-                pairs.push_back( best );
+    // the pairs are processed in parallel, since the work inside one pair is too small to occupy all threads;
+    // the steps done in all pairs are reported as progress, only from the calling thread, which keeps reporting after its last pair
+    const int attempts = std::max( 1, params.pairAttempts );
+    const size_t stepsPerPair = 1 + 2 * attempts; // matching, then RANSAC and ICP in each attempt
+    const float numSteps = float( std::max( size_t( 1 ), pairs.size() * stepsPerPair ) );
+    std::atomic<size_t> stepsDone{ 0 };
+    std::atomic<bool> canceled{ false };
+    const auto callingThread = std::this_thread::get_id();
+    const ProgressCallback insidePair = progress ? ProgressCallback( [&]( float )
+    {
+        if ( canceled.load( std::memory_order_relaxed ) )
+            return false;
+        if ( std::this_thread::get_id() == callingThread && !progress( 0.1f + 0.9f * stepsDone.load( std::memory_order_relaxed ) / numSteps ) )
+            canceled = true;
+        return !canceled.load( std::memory_order_relaxed );
+    } ) : ProgressCallback{};
+    auto processPair = [&]( size_t pairIndex )
+    {
+        if ( !reportProgress( insidePair, 0.0f ) )
+            return;
+        auto & best = pairs[pairIndex];
+        const auto a = best.a;
+        const auto b = best.b;
+        const auto & sa = samples[a];
+        const auto & sb = samples[b];
+        auto matches = findFPFHMatches( descriptors[b], sb.validPoints, descriptors[a], sa.validPoints, true, insidePair );
+        if ( !matches || matches->size() < 3 )
+        {
+            stepsDone += stepsPerPair;
+            return;
         }
+        ++stepsDone;
+        const bool bSmaller = sb.validPoints.count() <= sa.validPoints.count();
+        std::optional<ICP> icp; // sampled once per pair
+        for ( int i = 0; i < attempts; ++i )
+        {
+            RigidXfRansacParams rp;
+            rp.inlierDistance = 1.5f * spacing;
+            rp.seed = params.seed + std::uint32_t( i );
+            if ( bSmaller )
+            {
+                rp.overlapSrcPoints = &sb.points;
+                rp.overlapTgtCloud = &sa;
+            }
+            else
+            {
+                rp.overlapTgtPoints = &sa.points;
+                rp.overlapSrcCloud = &sb;
+            }
+            const auto bMotion = findRigidXfRansac( sb.points, sa.points, *matches, rp, insidePair );
+            if ( canceled )
+                return;
+            ++stepsDone;
+            if ( !bMotion )
+            {
+                ++stepsDone;
+                continue;
+            }
+
+            if ( icp )
+                icp->setFloatXf( *bMotion * objects[b].xf );
+            else
+            {
+                icp.emplace( MeshOrPointsXf{ objects[b].obj, *bMotion * objects[b].xf }, objects[a], 3 * spacing );
+                icp->setParams( icpParams );
+            }
+            const auto bXf = icp->calculateTransformation();
+            ++stepsDone;
+            const auto refined = bXf * objects[b].xf.inverse();
+            const float overlap = bSmaller
+                ? overlapFraction( sb, refined, objects[a], 0.5f * spacing )
+                : overlapFraction( sa, refined.inverse(), objects[b], 0.5f * spacing );
+            if ( overlap > best.overlap )
+            {
+                best.overlap = overlap;
+                best.bInA = objects[a].xf.inverse() * bXf;
+            }
+        }
+    };
+    // each thread takes the next unprocessed pair; a pair is taken only by a running task, so the wait below always ends
+    std::atomic<size_t> nextPair{ 0 }, pairsDone{ 0 };
+    auto processPairs = [&]
+    {
+        for ( size_t i; ( i = nextPair++ ) < pairs.size(); )
+        {
+            MR_FINALLY{ ++pairsDone; }; // also after an exception, so the wait ends and group.wait() rethrows it
+            processPair( i );
+        }
+    };
+    tbb::task_group group;
+    for ( int t = 1; t < tbb::this_task_arena::max_concurrency(); ++t )
+        group.run( processPairs );
+    processPairs();
+    while ( progress && pairsDone < pairs.size() )
+    {
+        if ( !canceled && !progress( 0.1f + 0.9f * stepsDone.load( std::memory_order_relaxed ) / numSteps ) )
+            canceled = true;
+        std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
     }
+    group.wait();
+    if ( canceled || !reportProgress( progress, 1.0f ) )
+        return unexpectedOperationCanceled();
+    // pairs with too few matches or without any RANSAC result have zero overlap
+    erase_if( pairs, [&]( const PairXf & p ) { return !( p.overlap > 0 ) || p.overlap < params.minOverlap; } );
 
     // maximum spanning forest of the pairs by overlap
     std::sort( pairs.begin(), pairs.end(), []( const PairXf & x, const PairXf & y ) { return x.overlap > y.overlap; } );
     UnionFind<ObjId> uf( n );
-    Vector<std::vector<std::pair<ObjId, AffineXf3f>>, ObjId> neighbours( n ); // neighbour and its transformation to local space
+    Vector<Vector<std::pair<ObjId, AffineXf3f>>, ObjId> neighbours( n ); // neighbour and its transformation to local space
     for ( const auto & p : pairs )
     {
         if ( !uf.unite( p.a, p.b ).second )
@@ -181,7 +229,7 @@ Expected<GlobalRegistrationResult> globalRegistration( const Vector<MeshOrPoints
     GlobalRegistrationResult res;
     res.xfs.resize( n );
     res.groupRoots.resize( n );
-    std::vector<ObjId> stack;
+    Vector<ObjId> stack;
     for ( ObjId r( 0 ); r < n; ++r )
     {
         if ( res.groupRoots[r] )
@@ -203,7 +251,6 @@ Expected<GlobalRegistrationResult> globalRegistration( const Vector<MeshOrPoints
             }
         }
     }
-    reportProgress( progress, 1.0f );
     return res;
 }
 

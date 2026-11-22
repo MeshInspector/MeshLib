@@ -8,8 +8,10 @@
 #include "MRBox.h"
 #include "MRUnionFind.h"
 #include "MRTimer.h"
+#include "MRPch/MRTBB.h"
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <optional>
 #include <thread>
 
@@ -107,7 +109,7 @@ Expected<GlobalRegistrationResult> globalRegistration( const Vector<MeshOrPoints
         s.getAABBTree();
 
     // the pairs are processed in parallel, since the work inside one pair is too small to occupy all threads;
-    // the steps done in all pairs are reported as progress, only from the calling thread
+    // the steps done in all pairs are reported as progress, only from the calling thread, which keeps reporting after its last pair
     const int attempts = std::max( 1, params.pairAttempts );
     const size_t stepsPerPair = 1 + 2 * attempts; // matching, then RANSAC and ICP in each attempt
     const float numSteps = float( std::max( size_t( 1 ), pairs.size() * stepsPerPair ) );
@@ -122,7 +124,7 @@ Expected<GlobalRegistrationResult> globalRegistration( const Vector<MeshOrPoints
             canceled = true;
         return !canceled.load( std::memory_order_relaxed );
     } ) : ProgressCallback{};
-    ParallelFor( size_t( 0 ), pairs.size(), [&]( size_t pairIndex )
+    auto processPair = [&]( size_t pairIndex )
     {
         if ( !reportProgress( insidePair, 0.0f ) )
             return;
@@ -184,13 +186,32 @@ Expected<GlobalRegistrationResult> globalRegistration( const Vector<MeshOrPoints
                 best.bInA = objects[a].xf.inverse() * bXf;
             }
         }
-    } );
-    if ( canceled )
+    };
+    // each thread takes the next unprocessed pair; a pair is taken only by a running task, so the wait below always ends
+    std::atomic<size_t> nextPair{ 0 }, pairsDone{ 0 };
+    auto processPairs = [&]
+    {
+        for ( size_t i; ( i = nextPair++ ) < pairs.size(); ++pairsDone )
+            processPair( i );
+    };
+    tbb::task_group group;
+    for ( int t = 1; t < tbb::this_task_arena::max_concurrency(); ++t )
+        group.run( processPairs );
+    processPairs();
+    while ( progress && pairsDone < pairs.size() )
+    {
+        if ( !canceled && !progress( 0.1f + 0.9f * stepsDone.load( std::memory_order_relaxed ) / numSteps ) )
+            canceled = true;
+        std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
+    }
+    group.wait();
+    if ( canceled || !reportProgress( progress, 1.0f ) )
         return unexpectedOperationCanceled();
-    erase_if( pairs, [&]( const PairXf & p ) { return p.overlap < params.minOverlap; } );
+    // pairs with too few matches or without any RANSAC result have zero overlap
+    erase_if( pairs, [&]( const PairXf & p ) { return !( p.overlap > 0 ) || p.overlap < params.minOverlap; } );
 
     // maximum spanning forest of the pairs by overlap
-    std::stable_sort( pairs.begin(), pairs.end(), []( const PairXf & x, const PairXf & y ) { return x.overlap > y.overlap; } );
+    std::sort( pairs.begin(), pairs.end(), []( const PairXf & x, const PairXf & y ) { return x.overlap > y.overlap; } );
     UnionFind<ObjId> uf( n );
     Vector<Vector<std::pair<ObjId, AffineXf3f>>, ObjId> neighbours( n ); // neighbour and its transformation to local space
     for ( const auto & p : pairs )
@@ -226,7 +247,6 @@ Expected<GlobalRegistrationResult> globalRegistration( const Vector<MeshOrPoints
             }
         }
     }
-    reportProgress( progress, 1.0f );
     return res;
 }
 

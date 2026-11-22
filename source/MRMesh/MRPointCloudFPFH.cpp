@@ -11,6 +11,7 @@
 #include <cassert>
 #include <cfloat>
 #include <cmath>
+#include <cstdint>
 #include <numeric>
 
 namespace MR
@@ -61,14 +62,14 @@ void addPair( FPFHDescriptor & h, const Vector3f & p, const Vector3f & n, const 
 struct Closest
 {
     float distSq = FLT_MAX;
-    size_t index = SIZE_MAX;
+    std::uint32_t index = UINT32_MAX;
 
     void include( float d, size_t i )
     {
         if ( d < distSq || ( d == distSq && i < index ) )
         {
             distSq = d;
-            index = i;
+            index = std::uint32_t( i );
         }
     }
 };
@@ -94,18 +95,13 @@ bool findClosestDescriptors( const FPFHDescriptors & fromDescriptors, const Vert
     }
 
     const auto fromPoints = listSetBits( from );
-    tbb::enumerable_thread_specific<Vector<Closest>> threadToClosest;
+    tbb::enumerable_thread_specific<Vector<Closest>> threadToClosest( toClosest ? numBlocks * DescBlock : 0 );
     // each block of target descriptors is compared with a chunk of source descriptors while it is in L1 cache
     constexpr size_t FromChunk = 32;
     closest.resize( from.find_last() + 1 );
-    if ( !ParallelFor( size_t( 0 ), ( fromPoints.size() + FromChunk - 1 ) / FromChunk, [&]( size_t c )
+    if ( !ParallelFor( size_t( 0 ), ( fromPoints.size() + FromChunk - 1 ) / FromChunk, threadToClosest, [&]( size_t c, Vector<Closest> & localToClosest )
     {
-        Vector<Closest> * myToClosest = nullptr;
-        if ( toClosest )
-        {
-            myToClosest = &threadToClosest.local();
-            myToClosest->resize( numBlocks * DescBlock );
-        }
+        auto * myToClosest = toClosest ? &localToClosest : nullptr;
         const auto first = c * FromChunk;
         const auto num = std::min( FromChunk, fromPoints.size() - first );
         Closest best[FromChunk];

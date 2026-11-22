@@ -60,9 +60,10 @@ void addPair( FPFHDescriptor & h, const Vector3f & p, const Vector3f & n, const 
 Vector<VertId> bitSetIds( const VertBitSet & bs )
 {
     Vector<VertId> res;
-    res.reserve( bs.count() );
+    res.resizeNoInit( bs.count() );
+    size_t n = 0;
     for ( auto v : bs )
-        res.push_back( v );
+        res[n++] = v;
     return res;
 }
 

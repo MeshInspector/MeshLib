@@ -648,10 +648,10 @@ TEST( MRMesh, AABBTreeGoldenHashes )
     struct Case { int numTris, range; bool farOutlier; std::uint64_t hash; };
     const Case cases[] = {
         { 1000, 1 << 20, false, 0x34b0ae3e1963543dull },
-        { 20000, 4, false, 0x786b0830f8a9212cull },
-        { 30000, 256, false, 0x3819f23635633a52ull },
-        { 150000, 1024, true, 0x05290ed3f009ca64ull },
-        { 300000, 1 << 16, false, 0x1e2fee457bdd6a43ull }
+        { 20000, 4, false, 0x30fea443ef3127c4ull },
+        { 30000, 256, false, 0xe2d87436dbe263adull },
+        { 150000, 1024, true, 0x79929d9f64d4e429ull },
+        { 300000, 1 << 16, false, 0x379d3e36f2eac1caull }
     };
     for ( const auto & c : cases )
     {

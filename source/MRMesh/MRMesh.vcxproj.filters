@@ -1197,6 +1197,9 @@
     <ClInclude Include="MRAABBTreeCenters.hpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
+    <ClInclude Include="MRSelectByKey.hpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
     <ClInclude Include="MRTriBox.hpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>

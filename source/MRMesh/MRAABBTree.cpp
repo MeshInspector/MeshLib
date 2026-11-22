@@ -293,7 +293,7 @@ private:
             []( Box3f a, const Box3f & b ) { a.include( b ); return a; } );
     }
 
-    // [first, first + num / 2) get the smaller centers along the largest extent of the centers (ties are ordered by index); returns the two halves
+    // [first, first + num / 2) get the smaller centers along the largest extent of the centers; returns the two halves
     std::array<Range, 2> split_( const Range & r )
     {
         const auto box = r.hasBox ? r.box : centersBox_( r );

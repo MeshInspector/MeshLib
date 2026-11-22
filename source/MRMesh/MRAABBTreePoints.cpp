@@ -5,6 +5,7 @@
 #include "MRHeapBytes.h"
 #include "MRBuffer.h"
 #include "MRParallelFor.h"
+#include "MRSelectByKey.hpp"
 #include "MRSimd4.hpp"
 #include "MRPch/MRTBB.h"
 #include <tbb/parallel_invoke.h>
@@ -113,8 +114,7 @@ private:
     }
 };
 
-/// splits each node in two (or four) at the median of the points along the largest dimension of their box,
-/// as the binary tree did before, so the points of each leaf are the same
+/// splits each node in two (or four) at the median of the points along the largest dimension of their box
 class Maker
 {
 public:
@@ -213,23 +213,11 @@ private:
     int split_( const Box3f & box, int first, int n )
     {
         assert( n > cLeaf && first % cLeaf == 0 );
-        // define total order of Points: no two distinct points are equivalent
-        auto less = [sortedDims = findSortedBoxDims( box )]( const Point & a, const Point & b )
-        {
-            // first compare (and split later) by the largest box dimension
-            for ( int i = decltype( sortedDims )::elements - 1; i >= 0; --i )
-            {
-                const int splitDim = sortedDims[i];
-                const auto aDim = a.coord[splitDim];
-                const auto bDim = b.coord[splitDim];
-                if ( aDim != bDim )
-                    return aDim < bDim;
-            }
-            // if two points have equal coordinates then compare by id to distinguish them
-            return a.id < b.id;
-        };
+        // the points with equal coordinates are not ordered, selectByKey places them the same with any standard library
+        const int splitDim = findSortedBoxDims( box )[Vector3i::elements - 1];
         const int a = firstHalf( n );
-        std::nth_element( points_.data() + first, points_.data() + first + a, points_.data() + first + n, less );
+        selectByKey( points_.data() + first, points_.data() + first + a, points_.data() + first + n,
+            [splitDim]( const Point & p ) { return p.coord[splitDim]; } );
         return a;
     }
 };

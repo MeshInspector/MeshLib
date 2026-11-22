@@ -2,6 +2,7 @@
 #include "MRBitCast.h"
 #include "MRNoDefInit.h"
 #include "MRParallelFor.h"
+#include "MRSelectByKey.hpp"
 #include "MRVector.h"
 #include <algorithm>
 #include <cassert>
@@ -100,78 +101,25 @@ Box3f includeCenters( Box3f box, const TreeCenter * d, int num )
 namespace
 {
 
-/// the order of centers along an axis, ties by index; without branches to be fast on unordered centers
-struct CenterLess
+/// the bits of a coordinate ordered as signed integers the way the coordinates are ordered; + 0.0f makes -0 equal to +0
+inline std::int32_t orderedBits( float c )
 {
-    int axis;
-    bool operator()( const TreeCenter & a, const TreeCenter & b ) const
-    {
-        return bool( int( a.c[axis] < b.c[axis] ) | ( int( !( b.c[axis] < a.c[axis] ) ) & int( a.i < b.i ) ) );
-    }
-};
-
-/// returns the first of the centers in [l, r) not less than p after moving all less ones before it:
-/// blocks of centers are scanned for misplaced ones without branches, then the misplaced ones are swapped in pairs
-TreeCenter * partition( TreeCenter * l, TreeCenter * r, const TreeCenter & p, CenterLess less )
-{
-    constexpr int B = 64;
-    unsigned char offL[B], offR[B];
-    int nL = 0, nR = 0, sL = 0, sR = 0;
-    while ( r - l > 2 * B )
-    {
-        if ( nL == 0 )
-        {
-            sL = 0;
-            for ( int i = 0; i < B; ++i )
-            {
-                offL[nL] = (unsigned char)i;
-                nL += !less( l[i], p );
-            }
-        }
-        if ( nR == 0 )
-        {
-            sR = 0;
-            for ( int i = 0; i < B; ++i )
-            {
-                offR[nR] = (unsigned char)( i + 1 );
-                nR += less( *( r - ( i + 1 ) ), p );
-            }
-        }
-        const int n = std::min( nL, nR );
-        for ( int j = 0; j < n; ++j )
-            std::swap( l[offL[sL + j]], *( r - offR[sR + j] ) );
-        nL -= n;
-        nR -= n;
-        sL += n;
-        sR += n;
-        if ( nL == 0 )
-            l += B;
-        if ( nR == 0 )
-            r -= B;
-    }
-    // at most two blocks are left
-    for ( TreeCenter * i = l; i != r; ++i )
-    {
-        const bool lt = less( *i, p );
-        std::swap( *i, *l );
-        l += lt;
-    }
-    return l;
+    const auto u = bit_cast<std::uint32_t>( c + 0.0f );
+    return std::int32_t( u ^ ( std::uint32_t( std::int32_t( u ) >> 31 ) & 0x7fffffffu ) );
 }
 
 /// sorts up to 16 centers by counting for each one the centers before it, without branches;
 /// the keys are the bits of the coordinate ordered as signed integers, then the index
 void sortSmall( TreeCenter * data, int n, int axis )
 {
+    static_assert( SelectByKey::cSmall == 16 );
     assert( n <= 16 );
     alignas( 16 ) std::int32_t key[16], id[16];
     for ( int j = 0; j < 16; ++j )
     {
         if ( j < n )
         {
-            // + 0.0f makes -0 equal to +0
-            const auto u = bit_cast<std::uint32_t>( data[j].c[axis] + 0.0f );
-            key[j] = std::int32_t( u ^ ( std::uint32_t( std::int32_t( u ) >> 31 ) & 0x7fffffffu ) );
+            key[j] = orderedBits( data[j].c[axis] );
             id[j] = data[j].i;
         }
         else
@@ -228,46 +176,8 @@ void sortSmall( TreeCenter * data, int n, int axis )
 
 void selectCenter( TreeCenter * first, TreeCenter * nth, TreeCenter * last, int axis )
 {
-    const CenterLess less{ axis };
-    constexpr int cSmall = 16;
-    int budget = 2; // partitions before std::nth_element, about twice the expected number
-    for ( auto n = last - first; n > cSmall; n >>= 1 )
-        budget += 2;
-    while ( last - first > cSmall )
-    {
-        if ( --budget < 0 )
-        {
-            // unlucky pivots
-            std::nth_element( first, nth, last, less );
-            return;
-        }
-        const auto med3 = [less]( TreeCenter * a, TreeCenter * b, TreeCenter * c )
-        {
-            if ( less( *b, *a ) )
-                std::swap( a, b );
-            return less( *c, *b ) ? ( less( *c, *a ) ? a : c ) : b;
-        };
-        const auto n = last - first;
-        TreeCenter * const m = first + n / 2;
-        TreeCenter * pivot;
-        if ( n > 128 )
-        {
-            const auto s = n / 8;
-            pivot = med3( med3( first, first + s, first + 2 * s ), med3( m - s, m, m + s ), med3( last - 1 - 2 * s, last - 1 - s, last - 1 ) );
-        }
-        else
-            pivot = med3( first, m, last - 1 );
-        std::swap( *first, *pivot );
-        TreeCenter * const mid = partition( first + 1, last, *first, less ) - 1;
-        std::swap( *first, *mid );
-        if ( mid == nth )
-            return;
-        if ( nth < mid )
-            last = mid;
-        else
-            first = mid + 1;
-    }
-    sortSmall( first, int( last - first ), axis );
+    selectByKey( first, nth, last, [axis]( const TreeCenter & x ) { return x.c[axis]; },
+        [axis]( TreeCenter * data, int n ) { sortSmall( data, n, axis ); } );
 }
 
 namespace

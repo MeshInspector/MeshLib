@@ -3,8 +3,10 @@
 #include "MRVector3.h"
 #include "MRPointsInBall.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRConstants.h"
 #include "MRTimer.h"
+#include "MRPch/MRTBB.h"
 #include <algorithm>
 #include <cassert>
 #include <cfloat>
@@ -55,35 +57,109 @@ void addPair( FPFHDescriptor & h, const Vector3f & p, const Vector3f & n, const 
     h[2 * FPFHBins + binIndex( phi, -1.0f, 1.0f )] += 1;
 }
 
-float distanceSq( const FPFHDescriptor & a, const FPFHDescriptor & b )
+std::vector<VertId> bitSetIds( const VertBitSet & bs )
 {
-    float res = 0;
-    for ( int i = 0; i < FPFHDescriptorSize; ++i )
-        res += sqr( a[i] - b[i] );
+    std::vector<VertId> res;
+    res.reserve( bs.count() );
+    for ( auto v : bs )
+        res.push_back( v );
     return res;
 }
 
-// for every point in `from` finds the point in `to` with the closest descriptor
+// the closest descriptor found so far: the smallest distance, and the smallest index among equal distances
+struct Closest
+{
+    float distSq = FLT_MAX;
+    size_t index = SIZE_MAX;
+
+    void include( float d, size_t i )
+    {
+        if ( d < distSq || ( d == distSq && i < index ) )
+        {
+            distSq = d;
+            index = i;
+        }
+    }
+};
+
+// for every point in `from` finds the point in `to` with the closest descriptor,
+// and if toClosest is given, also for every point in `to` the point in `from` from the same distances
 bool findClosestDescriptors( const FPFHDescriptors & fromDescriptors, const VertBitSet & from,
-    const FPFHDescriptors & toDescriptors, const VertBitSet & to, VertMap & closest, const ProgressCallback & progress )
+    const FPFHDescriptors & toDescriptors, const VertBitSet & to, VertMap & closest, VertMap * toClosest, const ProgressCallback & progress )
 {
     MR_TIMER;
-    closest.resize( from.find_last() + 1 );
-    return BitSetParallelFor( from, [&]( VertId v )
+    // the target descriptors are transposed in blocks of DescBlock, so that the distances to a block are computed in parallel lanes,
+    // each summed over the descriptor values in order
+    constexpr int DescBlock = 64;
+    const auto toPoints = bitSetIds( to );
+    const auto numBlocks = ( toPoints.size() + DescBlock - 1 ) / DescBlock;
+    // the padding gets infinite distances
+    std::vector<float> blocks( numBlocks * FPFHDescriptorSize * DescBlock, FLT_MAX );
+    for ( size_t j = 0; j < toPoints.size(); ++j )
     {
-        const auto & d = fromDescriptors[v];
-        auto bestDistSq = FLT_MAX;
-        VertId best;
-        for ( auto u : to )
+        auto * b = blocks.data() + j / DescBlock * FPFHDescriptorSize * DescBlock + j % DescBlock;
+        for ( int i = 0; i < FPFHDescriptorSize; ++i )
+            b[i * DescBlock] = toDescriptors[toPoints[j]][i];
+    }
+
+    const auto fromPoints = bitSetIds( from );
+    tbb::enumerable_thread_specific<std::vector<Closest>> threadToClosest;
+    // each block of target descriptors is compared with a chunk of source descriptors while it is in L1 cache
+    constexpr size_t FromChunk = 32;
+    closest.resize( from.find_last() + 1 );
+    if ( !ParallelFor( size_t( 0 ), ( fromPoints.size() + FromChunk - 1 ) / FromChunk, [&]( size_t c )
+    {
+        std::vector<Closest> * myToClosest = nullptr;
+        if ( toClosest )
         {
-            if ( const auto distSq = distanceSq( d, toDescriptors[u] ); distSq < bestDistSq )
+            myToClosest = &threadToClosest.local();
+            myToClosest->resize( numBlocks * DescBlock );
+        }
+        const auto first = c * FromChunk;
+        const auto num = std::min( FromChunk, fromPoints.size() - first );
+        Closest best[FromChunk];
+        for ( size_t bi = 0; bi < numBlocks; ++bi )
+        {
+            const auto * b = blocks.data() + bi * FPFHDescriptorSize * DescBlock;
+            for ( size_t f = 0; f < num; ++f )
             {
-                bestDistSq = distSq;
-                best = u;
+                const auto & d = fromDescriptors[fromPoints[first + f]];
+                float distSq[DescBlock] = {};
+                for ( int i = 0; i < FPFHDescriptorSize; ++i )
+                {
+                    const float di = d[i];
+                    const float * bRow = b + i * DescBlock;
+                    for ( int k = 0; k < DescBlock; ++k )
+                    {
+                        const float x = di - bRow[k];
+                        distSq[k] += x * x;
+                    }
+                }
+                for ( int k = 0; k < DescBlock; ++k )
+                {
+                    best[f].include( distSq[k], bi * DescBlock + k );
+                    if ( myToClosest )
+                        ( *myToClosest )[bi * DescBlock + k].include( distSq[k], first + f );
+                }
             }
         }
-        closest[v] = best;
-    }, progress );
+        for ( size_t f = 0; f < num; ++f )
+            closest[fromPoints[first + f]] = best[f].index < toPoints.size() ? toPoints[best[f].index] : VertId();
+    }, progress, 1 ) )
+        return false;
+
+    if ( toClosest )
+    {
+        toClosest->resize( to.find_last() + 1 );
+        ParallelFor( size_t( 0 ), toPoints.size(), [&]( size_t j )
+        {
+            Closest best;
+            for ( const auto & t : threadToClosest )
+                best.include( t[j].distSq, t[j].index );
+            ( *toClosest )[toPoints[j]] = best.index < fromPoints.size() ? fromPoints[best.index] : VertId();
+        } );
+    }
+    return true;
 }
 
 // makes each of three histograms sum to 1, or leaves it zero
@@ -222,13 +298,8 @@ Expected<std::vector<VertPair>> findFPFHMatches(
     if ( srcPoints.none() || tgtPoints.none() )
         return res;
 
-    auto [srcProgress, tgtProgress] = splitProgress( progress, mutual ? 0.5f : 1.0f );
-    VertMap src2tgt;
-    if ( !findClosestDescriptors( srcDescriptors, srcPoints, tgtDescriptors, tgtPoints, src2tgt, srcProgress ) )
-        return unexpectedOperationCanceled();
-
-    VertMap tgt2src;
-    if ( mutual && !findClosestDescriptors( tgtDescriptors, tgtPoints, srcDescriptors, srcPoints, tgt2src, tgtProgress ) )
+    VertMap src2tgt, tgt2src;
+    if ( !findClosestDescriptors( srcDescriptors, srcPoints, tgtDescriptors, tgtPoints, src2tgt, mutual ? &tgt2src : nullptr, progress ) )
         return unexpectedOperationCanceled();
 
     for ( auto v : srcPoints )

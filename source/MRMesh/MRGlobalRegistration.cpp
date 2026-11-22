@@ -7,6 +7,7 @@
 #include "MRParallelFor.h"
 #include "MRBox.h"
 #include "MRUnionFind.h"
+#include "MRFinally.h"
 #include "MRTimer.h"
 #include "MRPch/MRTBB.h"
 #include <algorithm>
@@ -191,8 +192,11 @@ Expected<GlobalRegistrationResult> globalRegistration( const Vector<MeshOrPoints
     std::atomic<size_t> nextPair{ 0 }, pairsDone{ 0 };
     auto processPairs = [&]
     {
-        for ( size_t i; ( i = nextPair++ ) < pairs.size(); ++pairsDone )
+        for ( size_t i; ( i = nextPair++ ) < pairs.size(); )
+        {
+            MR_FINALLY{ ++pairsDone; }; // also after an exception, so the wait ends and group.wait() rethrows it
             processPair( i );
+        }
     };
     tbb::task_group group;
     for ( int t = 1; t < tbb::this_task_arena::max_concurrency(); ++t )

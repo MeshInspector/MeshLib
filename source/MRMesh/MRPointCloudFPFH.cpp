@@ -57,9 +57,9 @@ void addPair( FPFHDescriptor & h, const Vector3f & p, const Vector3f & n, const 
     h[2 * FPFHBins + binIndex( phi, -1.0f, 1.0f )] += 1;
 }
 
-std::vector<VertId> bitSetIds( const VertBitSet & bs )
+Vector<VertId> bitSetIds( const VertBitSet & bs )
 {
-    std::vector<VertId> res;
+    Vector<VertId> res;
     res.reserve( bs.count() );
     for ( auto v : bs )
         res.push_back( v );
@@ -94,7 +94,7 @@ bool findClosestDescriptors( const FPFHDescriptors & fromDescriptors, const Vert
     const auto toPoints = bitSetIds( to );
     const auto numBlocks = ( toPoints.size() + DescBlock - 1 ) / DescBlock;
     // the padding gets infinite distances
-    std::vector<float> blocks( numBlocks * FPFHDescriptorSize * DescBlock, FLT_MAX );
+    Vector<float> blocks( numBlocks * FPFHDescriptorSize * DescBlock, FLT_MAX );
     for ( size_t j = 0; j < toPoints.size(); ++j )
     {
         auto * b = blocks.data() + j / DescBlock * FPFHDescriptorSize * DescBlock + j % DescBlock;
@@ -103,13 +103,13 @@ bool findClosestDescriptors( const FPFHDescriptors & fromDescriptors, const Vert
     }
 
     const auto fromPoints = bitSetIds( from );
-    tbb::enumerable_thread_specific<std::vector<Closest>> threadToClosest;
+    tbb::enumerable_thread_specific<Vector<Closest>> threadToClosest;
     // each block of target descriptors is compared with a chunk of source descriptors while it is in L1 cache
     constexpr size_t FromChunk = 32;
     closest.resize( from.find_last() + 1 );
     if ( !ParallelFor( size_t( 0 ), ( fromPoints.size() + FromChunk - 1 ) / FromChunk, [&]( size_t c )
     {
-        std::vector<Closest> * myToClosest = nullptr;
+        Vector<Closest> * myToClosest = nullptr;
         if ( toClosest )
         {
             myToClosest = &threadToClosest.local();

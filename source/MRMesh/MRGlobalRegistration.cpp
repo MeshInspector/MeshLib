@@ -98,7 +98,7 @@ Expected<GlobalRegistrationResult> globalRegistration( const Vector<MeshOrPoints
     icpParams.iterLimit = 100;
     icpParams.badIterStopCount = 20;
 
-    std::vector<PairXf> pairs;
+    Vector<PairXf> pairs;
     pairs.reserve( n * ( n - 1 ) / 2 );
     for ( ObjId a( 0 ); a < n; ++a )
         for ( ObjId b( a + 1 ); b < n; ++b )
@@ -187,12 +187,12 @@ Expected<GlobalRegistrationResult> globalRegistration( const Vector<MeshOrPoints
     } );
     if ( canceled )
         return unexpectedOperationCanceled();
-    std::erase_if( pairs, [&]( const PairXf & p ) { return p.overlap < params.minOverlap; } );
+    erase_if( pairs, [&]( const PairXf & p ) { return p.overlap < params.minOverlap; } );
 
     // maximum spanning forest of the pairs by overlap
     std::stable_sort( pairs.begin(), pairs.end(), []( const PairXf & x, const PairXf & y ) { return x.overlap > y.overlap; } );
     UnionFind<ObjId> uf( n );
-    Vector<std::vector<std::pair<ObjId, AffineXf3f>>, ObjId> neighbours( n ); // neighbour and its transformation to local space
+    Vector<Vector<std::pair<ObjId, AffineXf3f>>, ObjId> neighbours( n ); // neighbour and its transformation to local space
     for ( const auto & p : pairs )
     {
         if ( !uf.unite( p.a, p.b ).second )
@@ -204,7 +204,7 @@ Expected<GlobalRegistrationResult> globalRegistration( const Vector<MeshOrPoints
     GlobalRegistrationResult res;
     res.xfs.resize( n );
     res.groupRoots.resize( n );
-    std::vector<ObjId> stack;
+    Vector<ObjId> stack;
     for ( ObjId r( 0 ); r < n; ++r )
     {
         if ( res.groupRoots[r] )

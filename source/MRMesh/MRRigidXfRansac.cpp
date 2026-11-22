@@ -111,8 +111,8 @@ Expected<AffineXf3f> findRigidXfRansac( const VertCoords & srcPoints, const Vert
     // samples are processed in batches, and the best one is taken from each batch in the order of indices,
     // so the result does not depend on the number of threads
     constexpr int batchSize = 1024;
-    std::vector<size_t> counts( batchSize );
-    std::vector<AffineXf3f> xfs( batchSize );
+    Vector<size_t> counts( batchSize );
+    Vector<AffineXf3f> xfs( batchSize );
     size_t bestScore = 0;
     size_t bestCount = 0; // the number of inlier matches of the best transformation
     AffineXf3f bestXf;

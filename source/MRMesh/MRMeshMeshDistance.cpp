@@ -14,7 +14,7 @@
 namespace MR
 {
 
-MeshTriPoint MeshMeshDistancePoint::mtp( const MeshTopology & topology ) const
+MeshTriPoint PointOnFaceBary::mtp( const MeshTopology & topology ) const
 {
     if ( !proj.valid() )
         return {};
@@ -22,7 +22,7 @@ MeshTriPoint MeshMeshDistancePoint::mtp( const MeshTopology & topology ) const
 }
 
 /// the point as the projection of the other point located at given squared distance
-static MeshProjectionResult toProjection( const MeshMeshDistancePoint& p, float distSq )
+static MeshProjectionResult toProjection( const PointOnFaceBary& p, float distSq )
 {
     return { .proj = p.proj, .tp = p.tp, .distSq = p ? distSq : 0 };
 }

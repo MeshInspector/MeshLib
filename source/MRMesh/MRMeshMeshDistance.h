@@ -14,7 +14,7 @@ namespace MR
 /// \{
 
 /// a point on mesh given both by its position and by its barycentric coordinates
-struct MeshMeshDistancePoint
+struct PointOnFaceBary
 {
     /// the point, and the triangle containing it
     PointOnFace proj;
@@ -34,7 +34,7 @@ struct MeshMeshDistancePoint
 struct MeshMeshDistanceResult
 {
     /// two closest points: from meshes A and B respectively
-    MeshMeshDistancePoint a, b;
+    PointOnFaceBary a, b;
     /// squared distance between a and b
     float distSq = 0;
 };

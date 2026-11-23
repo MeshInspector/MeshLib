@@ -76,7 +76,7 @@ TEST( MRMesh, FormatSafeTranslationPrintf )
 /// makes the contents of .mo file with given translations (without hash table)
 static std::string makeMoFile( std::vector<std::pair<std::string, std::string>> entries )
 {
-    entries.emplace_back( "", "Content-Type: text/plain; charset=UTF-8\n" );
+    entries.emplace_back( "", "Content-Type: text/plain; charset=UTF-8\nPlural-Forms: nplurals=2; plural=(n%100!=1);\n" );
     std::sort( entries.begin(), entries.end() );
     const auto n = std::uint32_t( entries.size() );
     // magic, revision, number of strings, offsets of two tables, size and offset of hash table
@@ -100,6 +100,7 @@ static std::string makeMoFile( std::vector<std::pair<std::string, std::string>> 
 
 TEST( MRViewer, UnsafeTranslationsAreIgnored )
 {
+    using namespace std::string_literals;
     const char* cDomain = "MRTranslationFormatTest";
     UniqueTemporaryFolder folder;
     ASSERT_TRUE( bool( folder ) );
@@ -113,6 +114,12 @@ TEST( MRViewer, UnsafeTranslationsAreIgnored )
             { "Loaded {} of {}", "Geladen {} von {} {}" },
             { "%d holes", "%s Loecher" },
             { "%d points", "%d Punkte" },
+            // with context
+            { "Menu\x04" "Open {}", "Oeffnen {}" },
+            { "Menu\x04" "Close {}", "Schliessen {} {}" },
+            // with plural forms
+            { "{} file\0{} files"s, "eine Datei\0{} Dateien"s },
+            { "{} hole\0{} holes"s, "{} Loch\0{} Loecher {}"s },
         } );
         ASSERT_TRUE( out.good() );
     }
@@ -125,9 +132,15 @@ TEST( MRViewer, UnsafeTranslationsAreIgnored )
 
     EXPECT_EQ( Locale::translate( "Object {}", domain ), "Objekt {}" );
     EXPECT_EQ( Locale::translate( "%d points", domain ), "%d Punkte" );
-    // these translations would throw from fmt::format and crash in printf
+    EXPECT_EQ( Locale::translate( "Menu", "Open {}", domain ), "Oeffnen {}" );
+    EXPECT_EQ( Locale::translate( "{} file", "{} files", 1, domain ), "eine Datei" );
+    EXPECT_EQ( Locale::translate( "{} file", "{} files", 5, domain ), "{} Dateien" );
+    // these translations would throw from fmt::format and crash in printf, so they are removed when the file is loaded
     EXPECT_EQ( Locale::translate( "Loaded {} of {}", domain ), "Loaded {} of {}" );
     EXPECT_EQ( Locale::translate( "%d holes", domain ), "%d holes" );
+    EXPECT_EQ( Locale::translate( "Menu", "Close {}", domain ), "Close {}" );
+    EXPECT_EQ( Locale::translate( "{} hole", "{} holes", 1, domain ), "{} hole" );
+    EXPECT_EQ( Locale::translate( "{} hole", "{} holes", 5, domain ), "{} holes" );
 
     Locale::set( prevLocale );
 }

@@ -1,6 +1,11 @@
 {
   "Items": [
     {
+      "Name": "Feature Alignment",
+      "Tooltip": "Move one object so that its fitted features meet the matching features of another object.",
+      "Icon": ""
+    },
+    {
       "Name": "Undo",
       "Tooltip": "Undo the last action.",
       "Icon": "\uF0E2",

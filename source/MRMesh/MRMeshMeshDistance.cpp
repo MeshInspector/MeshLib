@@ -432,54 +432,78 @@ float findMaxDistanceSq( const MeshPart& a, const MeshPart& b, const AffineXf3f*
     return findMaxDistance( a, b, rigidB2A, maxDistanceSq ).distSq;
 }
 
+namespace
+{
+
+// a point of B in A's space, with the closest triangle of A and the squared distance to it
+struct SurfCorner
+{
+    Vector3f p;
+    float distSq = 0;
+    FaceId f;
+    TriPointf bary; // in the triangle of B
+};
+
+SurfCorner projectCorner( const Vector3f& p, const TriPointf& bary, const MeshPart& a, float maxDistanceSq )
+{
+    const auto r = findProjection( p, a, maxDistanceSq );
+    return { p, r.distSq, r.proj.face, bary };
+}
+
+// all vertices of B projected on A
+struct VertsOnMesh
+{
+    Vector<SurfCorner, VertId> corners;
+    VertId maxVert; // the most distant vertex, or the first one farther than the limit; invalid if B has no vertices
+    float maxSq = 0;
+};
+
+VertsOnMesh projectVerts( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float maxDistanceSq )
+{
+    VertsOnMesh res;
+    const auto bVerts = getIncidentVerts( b.mesh.topology, b.mesh.topology.getFaceIds( b.region ) );
+    if ( !bVerts.any() )
+        return res;
+
+    res.corners.resize( bVerts.find_last() + 1 );
+    BitSetParallelFor( bVerts, [&]( VertId v )
+    {
+        res.corners[v] = projectCorner( rigidB2A ? ( *rigidB2A )( b.mesh.points[v] ) : b.mesh.points[v], {}, a, maxDistanceSq );
+    } );
+    res.maxSq = -1;
+    for ( auto v : bVerts )
+    {
+        if ( !res.corners[v].f )
+        {
+            res.maxVert = v;
+            res.maxSq = maxDistanceSq;
+            break;
+        }
+        if ( res.corners[v].distSq > res.maxSq )
+        {
+            res.maxVert = v;
+            res.maxSq = res.corners[v].distSq;
+        }
+    }
+    return res;
+}
+
+// bv - the vertices of B projected on A;
 // startDistSq - the points of B not farther from A than this (plus tolerance) are of no interest, except for the most distant vertex
-static MeshMeshDistanceResult findMaxSurfaceDistanceOneWayImpl( const MeshPart& a, const MeshPart& b, float tolerance, const AffineXf3f* rigidB2A, float maxDistanceSq,
-    float startDistSq )
+MeshMeshDistanceResult findMaxSurfaceDistanceFromVerts( const MeshPart& a, const MeshPart& b, float tolerance, float maxDistanceSq,
+    const VertsOnMesh& bv, float startDistSq )
 {
     assert( tolerance > 0 );
 
     MeshMeshDistanceResult res;
-    const auto& bFaces = b.mesh.topology.getFaceIds( b.region );
-    const auto bVerts = getIncidentVerts( b.mesh.topology, bFaces );
-    if ( !bVerts.any() )
+    if ( !bv.maxVert )
         return res;
-
-    // a point of B in A's space, with the closest triangle of A and the squared distance to it
-    struct Corner
-    {
-        Vector3f p;
-        float distSq = 0;
-        FaceId f;
-        TriPointf bary; // in the triangle of B
-    };
-    auto project = [&]( const Vector3f& p, const TriPointf& bary )
-    {
-        const auto r = findProjection( p, a, maxDistanceSq );
-        return Corner{ p, r.distSq, r.proj.face, bary };
-    };
-
-    Vector<Corner, VertId> vertCorners( bVerts.find_last() + 1 );
-    BitSetParallelFor( bVerts, [&]( VertId v )
-    {
-        vertCorners[v] = project( rigidB2A ? ( *rigidB2A )( b.mesh.points[v] ) : b.mesh.points[v], {} );
-    } );
-    // the most distant vertex, or the first one farther than the limit
-    VertId maxVert;
-    float vertMaxSq = -1;
-    for ( auto v : bVerts )
-    {
-        if ( !vertCorners[v].f )
-        {
-            maxVert = v;
-            vertMaxSq = maxDistanceSq;
-            break;
-        }
-        if ( vertCorners[v].distSq > vertMaxSq )
-        {
-            maxVert = v;
-            vertMaxSq = vertCorners[v].distSq;
-        }
-    }
+    const auto& bFaces = b.mesh.topology.getFaceIds( b.region );
+    const auto& vertCorners = bv.corners;
+    const auto maxVert = bv.maxVert;
+    const float vertMaxSq = bv.maxSq;
+    using Corner = SurfCorner;
+    auto project = [&]( const Vector3f& p, const TriPointf& bary ) { return projectCorner( p, bary, a, maxDistanceSq ); };
 
     using Tri = std::array<Corner, 3>;
     // no point of the triangle is farther from A than from one triangle of A, and the latter distance is maximal in a corner
@@ -585,22 +609,25 @@ static MeshMeshDistanceResult findMaxSurfaceDistanceOneWayImpl( const MeshPart& 
     return res;
 }
 
+} // anonymous namespace
+
 MeshMeshDistanceResult findMaxSurfaceDistanceOneWay( const MeshPart& a, const MeshPart& b, float tolerance, const AffineXf3f* rigidB2A, float maxDistanceSq )
 {
     MR_TIMER;
-    return findMaxSurfaceDistanceOneWayImpl( a, b, tolerance, rigidB2A, maxDistanceSq, 0 );
+    return findMaxSurfaceDistanceFromVerts( a, b, tolerance, maxDistanceSq, projectVerts( a, b, rigidB2A, maxDistanceSq ), 0 );
 }
 
 MeshMeshDistanceResult findMaxSurfaceDistance( const MeshPart& a, const MeshPart& b, float tolerance, const AffineXf3f* rigidB2A, float maxDistanceSq )
 {
+    MR_TIMER;
     std::optional<AffineXf3f> rigidA2B;
     if ( rigidB2A )
         rigidA2B = rigidB2A->inverse();
-    const auto* a2b = rigidA2B ? &*rigidA2B : nullptr;
+    const auto bVerts = projectVerts( a, b, rigidB2A, maxDistanceSq );
+    const auto aVerts = projectVerts( b, a, rigidA2B ? &*rigidA2B : nullptr, maxDistanceSq );
     // each direction skips the triangles, which cannot be farther than the distance already found in the other direction
-    const float vertsSq = findMaxDistanceOneWay( b, a, a2b, maxDistanceSq ).distSq;
-    auto res = findMaxSurfaceDistanceOneWayImpl( a, b, tolerance, rigidB2A, maxDistanceSq, vertsSq );
-    const auto ba = findMaxSurfaceDistanceOneWayImpl( b, a, tolerance, a2b, maxDistanceSq, std::max( vertsSq, res.distSq ) );
+    auto res = findMaxSurfaceDistanceFromVerts( a, b, tolerance, maxDistanceSq, bVerts, aVerts.maxSq );
+    const auto ba = findMaxSurfaceDistanceFromVerts( b, a, tolerance, maxDistanceSq, aVerts, res.distSq );
     if ( ba.distSq > res.distSq )
         res = { ba.b, ba.a, ba.distSq };
     return res;

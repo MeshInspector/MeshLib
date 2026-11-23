@@ -1157,15 +1157,15 @@ AffineXf3d align( const AlignPair& primary, const AlignParams& params )
     const auto& locators = params.locators;
     const bool planes = std::holds_alternative<Primitives::Plane>( primary.fixed );
     const auto cm = alignCenter( primary.moving ), cf = alignCenter( primary.fixed );
-    auto dm = alignDirection( primary.moving ), n = alignDirection( primary.fixed );
-    const bool axes = !planes && dm != Vector3d() && n != Vector3d();
-    const auto seat = cf + params.gap * n;
+    auto dm = alignDirection( primary.moving ), df = alignDirection( primary.fixed );
+    const bool axes = !planes && dm != Vector3d() && df != Vector3d();
+    const auto seat = cf + params.gap * df;
     if ( !planes && !axes && !locators.empty() ) // points: the first locator sets the direction
     {
-        dm = alignCenter( locators[0].moving ) - cm;
-        n = ( alignCenter( locators[0].fixed ) - cf ).normalized();
+        dm = ( alignCenter( locators[0].moving ) - cm ).normalized();
+        df = ( alignCenter( locators[0].fixed ) - cf ).normalized();
     }
-    if ( dm == Vector3d() || n == Vector3d() )
+    if ( dm == Vector3d() || df == Vector3d() )
     {
         if ( params.freeDofs )
             *params.freeDofs = 3; // rotations about the matched point
@@ -1173,10 +1173,10 @@ AffineXf3d align( const AlignPair& primary, const AlignParams& params )
     }
 
     // planes face each other, axes take the closer direction
-    const bool opposite = planes ? !params.flip : axes && ( dot( dm, n ) < 0 ) != params.flip;
-    auto rot = Matrix3d::rotation( dm, opposite ? -n : n );
+    const bool opposite = planes ? !params.flip : axes && ( dot( dm, df ) < 0 ) != params.flip;
+    auto rot = Matrix3d::rotation( dm, opposite ? -df : df );
 
-    // spin about n: least squares over the locators turning about the primary center (planes: about their centroid)
+    // spin about df: least squares over the locators turning about the primary center (planes: about their centroid)
     auto om = cm, of = planes ? cm : cf;
     if ( planes && !locators.empty() )
     {
@@ -1187,15 +1187,15 @@ AffineXf3d align( const AlignPair& primary, const AlignParams& params )
             of += alignCenter( l.fixed ) / double( locators.size() );
         }
     }
-    const auto onPlane = [&] ( const Vector3d& v ) { return v - dot( v, n ) * n; };
+    const auto onPlane = [&] ( const Vector3d& v ) { return v - dot( v, df ) * df; };
     double s = 0, c = 0;
     bool spinSet = false;
     const auto addSpin = [&] ( const Vector3d& a0, const Vector3d& b0 )
     {
         const auto a = onPlane( rot * a0 ), b = onPlane( b0 );
         if ( a.lengthSq() * b.lengthSq() <= 1e-12 * a0.lengthSq() * b0.lengthSq() )
-            return; // ignore references (almost) parallel to n
-        s += dot( n, cross( a, b ) );
+            return; // ignore references (almost) parallel to df
+        s += dot( df, cross( a, b ) );
         c += dot( a, b );
         spinSet = true;
     };
@@ -1204,14 +1204,14 @@ AffineXf3d align( const AlignPair& primary, const AlignParams& params )
     else
         for ( const auto& l : locators )
             addSpin( alignCenter( l.moving ) - om, alignCenter( l.fixed ) - of );
-    rot = Matrix3d::rotation( n, std::atan2( s, c ) ) * rot;
+    rot = Matrix3d::rotation( df, std::atan2( s, c ) ) * rot;
     if ( params.freeDofs ) // free spin, and translation along planes without locators
         *params.freeDofs = ( spinSet ? 0 : 1 ) + ( planes && locators.empty() ? 2 : 0 );
 
     if ( !planes ) // axes and points coincide
         return { rot, seat - rot * cm };
     // planes: seated at the gap; along them the locator centroids coincide, without locators the moving plane center stays
-    return { rot, dot( seat - rot * cm, n ) * n + onPlane( of - rot * om ) };
+    return { rot, dot( seat - rot * cm, df ) * df + onPlane( of - rot * om ) };
 }
 
 } // namespace MR::Features

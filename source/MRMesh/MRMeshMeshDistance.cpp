@@ -14,17 +14,10 @@
 namespace MR
 {
 
-MeshTriPoint PointOnFaceBary::mtp( const MeshTopology & topology ) const
-{
-    if ( !proj.valid() )
-        return {};
-    return { topology.edgeWithLeft( proj.face ), tp };
-}
-
 /// the point as the projection of the other point located at given squared distance
 static MeshProjectionResult toProjection( const PointOnFaceBary& p, float distSq )
 {
-    return { .proj = p.proj, .tp = p.tp, .distSq = p ? distSq : 0 };
+    return { p, p ? distSq : 0 };
 }
 
 MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float upDistLimitSq )
@@ -317,13 +310,13 @@ MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshP
     {
         for ( auto e : orgRing( mesh.topology, bestV ) )
             if ( auto f = mesh.topology.left( e ) )
-                return { .proj = { f, mesh.points[bestV] }, .tp = MeshTriPoint( e, {} ).canonical( mesh.topology ).bary, .distSq = sqr( bestDist ) };
+                return { { .proj = { f, mesh.points[bestV] }, .tp = MeshTriPoint( e, {} ).canonical( mesh.topology ).bary }, sqr( bestDist ) };
         return {};
     };
     // the projection of the vertex on the other mesh
     auto otherProj = [&]( const Mesh& mesh, const MeshTriPoint& mtp ) -> MeshProjectionResult
     {
-        return { .proj = { mesh.topology.left( mtp.e ), mesh.triPoint( mtp ) }, .tp = mtp.canonical( mesh.topology ).bary, .distSq = sqr( bestDist ) };
+        return { { .proj = { mesh.topology.left( mtp.e ), mesh.triPoint( mtp ) }, .tp = mtp.canonical( mesh.topology ).bary }, sqr( bestDist ) };
     };
     if ( bestInB )
         return { otherProj( a.mesh, zoneAndDistancesBA.projectons[bestV].first ), vertProj( b.mesh ), status, bestDist };

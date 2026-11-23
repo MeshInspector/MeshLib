@@ -13,27 +13,10 @@ namespace MR
 /// \addtogroup AABBTreeGroup
 /// \{
 
-/// a point on mesh given both by its position and by its barycentric coordinates
-struct PointOnFaceBary
-{
-    /// the point, and the triangle containing it
-    PointOnFace proj;
-
-    /// barycentric coordinates of proj relative to the vertices of proj.face in the order of MeshTopology::getTriVerts( proj.face );
-    /// unlike the conversion of proj.point, they place the point exactly on the edge or in the vertex where it was found
-    TriPointf tp;
-
-    /// check for validity, otherwise the point was not found
-    [[nodiscard]] bool valid() const { return proj.valid(); }
-    [[nodiscard]] explicit operator bool() const { return proj.valid(); }
-
-    /// returns the point as MeshTriPoint relative to topology.edgeWithLeft( proj.face ), or invalid MeshTriPoint if the point was not found
-    [[nodiscard]] MRMESH_API MeshTriPoint mtp( const MeshTopology & topology ) const;
-};
-
 struct MeshMeshDistanceResult
 {
-    /// two closest points: from meshes A and B respectively
+    /// two closest points: from meshes A and B respectively;
+    /// unlike the conversion of a point's position, its barycentric coordinates place it exactly on the edge or in the vertex where it was found
     PointOnFaceBary a, b;
     /// squared distance between a and b
     float distSq = 0;

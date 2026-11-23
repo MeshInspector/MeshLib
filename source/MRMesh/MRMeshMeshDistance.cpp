@@ -532,6 +532,8 @@ MeshMeshDistanceResult findMaxSurfaceDistanceFromVerts( const MeshPart& a, const
         Corner c;
     };
     const float startSq = std::max( vertMaxSq, startDistSq );
+    // a triangle is not subdivided if none of its points can be farther than this; updated only when a farther point is found
+    const float startStopSq = sqr( std::sqrt( startSq ) + tolerance );
     Best best{ .distSq = startSq };
     if ( startSq < maxDistanceSq )
     {
@@ -546,6 +548,7 @@ MeshMeshDistanceResult findMaxSurfaceDistanceFromVerts( const MeshPart& a, const
                         continue;
                     // every triangle starts from the same distance, so the result does not depend on the order of triangles
                     Best cur{ .distSq = startSq };
+                    float stopSq = startStopSq;
                     const auto vs = b.mesh.topology.getTriVerts( bf );
                     stack.push_back( { vertCorners[vs[0]], vertCorners[vs[1]], vertCorners[vs[2]] } );
                     stack.back()[1].bary = { 1, 0 };
@@ -554,7 +557,7 @@ MeshMeshDistanceResult findMaxSurfaceDistanceFromVerts( const MeshPart& a, const
                     {
                         const auto t = stack.back();
                         stack.pop_back();
-                        if ( upperBoundSq( t ) <= sqr( std::sqrt( cur.distSq ) + tolerance ) )
+                        if ( upperBoundSq( t ) <= stopSq )
                             continue;
                         // m[i] is the middle of the edge opposite to t[i]
                         Tri m;
@@ -575,7 +578,10 @@ MeshMeshDistanceResult findMaxSurfaceDistanceFromVerts( const MeshPart& a, const
                             if ( !m[i].f )
                                 cur = { maxDistanceSq, bf, m[i] };
                             else if ( m[i].distSq > cur.distSq )
+                            {
                                 cur = { m[i].distSq, bf, m[i] };
+                                stopSq = sqr( std::sqrt( cur.distSq ) + tolerance );
+                            }
                         }
                         if ( cur.distSq >= maxDistanceSq )
                         {

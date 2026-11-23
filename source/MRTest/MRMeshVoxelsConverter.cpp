@@ -5,6 +5,8 @@
 #include "MRVoxels/MRVDBConversions.h"
 #include "MRVoxels/MRVDBFloatGrid.h"
 #include "MRVoxels/MRVoxelsVolume.h"
+#include "MRVoxels/MRVoxelsLoad.h"
+#include "MRVoxels/MRVoxelsSave.h"
 #include "MRMesh/MRMakeSphereMesh.h"
 #include "MRMesh/MRVolumeIndexer.h"
 #include "MRMesh/MRMeshDistance.h"
@@ -14,6 +16,8 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
 #include <openvdb/version.h>
+
+#include <sstream>
 
 namespace MR
 {
@@ -175,6 +179,25 @@ TEST( MRMesh, PutSimpleVolumeInDenseGrid )
         EXPECT_EQ( vdbGrid.tree().getValue( openvdb::Coord( 1, y, 0 ) ), 2.f );
     }
 }
+
+#ifdef OPENVDB_USE_DELAYED_LOADING
+TEST( MRMesh, GridsFromVdbLoadsAllLeaves )
+{
+    FloatGrid grid = MakeFloatGrid( openvdb::FloatGrid::create( 0.f ) );
+    grid->tree().setValue( openvdb::Coord( 1, 2, 3 ), 5.f );
+    std::stringstream ss;
+    auto saveRes = VoxelsSave::gridToVdb( grid, ss );
+    ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
+
+    auto grids = VoxelsLoad::gridsFromVdb( ss );
+    ASSERT_TRUE( grids.has_value() ) << grids.error();
+    ASSERT_EQ( grids->size(), size_t( 1 ) );
+    const auto& tree = ( *grids )[0]->tree();
+    for ( auto leaf = tree.cbeginLeaf(); leaf; ++leaf )
+        EXPECT_FALSE( leaf->buffer().isOutOfCore() );
+    EXPECT_EQ( tree.getValue( openvdb::Coord( 1, 2, 3 ) ), 5.f );
+}
+#endif
 
 } //namespace MR
 

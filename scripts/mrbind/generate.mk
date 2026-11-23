@@ -377,15 +377,21 @@ override PYTHON_VERSIONS := $(subst $(comma), ,$(PYTHON_VERSIONS))
 override PYTHON_VERSIONS := $(call safe_shell,echo $(call quote,$(PYTHON_VERSIONS)) | tr ' ' '\n' | sort -V)
 $(info Found Python versions: $(PYTHON_VERSIONS))
 
-# Pick a Python version to use the headers from. Normally it doesn't matter which one we use, since defining `Py_LIMITED_API` should make them almost equivalent.
-# Here we use the smallest version from `PYTHON_VERSIONS`.
+# Pick a Python version to use the headers from: the smallest version from `PYTHON_VERSIONS`.
+# Even with `Py_LIMITED_API`, newer headers can compile code that breaks on older Pythons.
 PYTHON_HEADER_VERSION := $(firstword $(PYTHON_VERSIONS))
 $(info Using Python headers from version: $(PYTHON_HEADER_VERSION))
+# `python3.lib` on Windows, from the header version if it's installed (it isn't on win-arm64), otherwise from the smallest one.
+override python_lib_version := $(firstword $(filter $(PYTHON_HEADER_VERSION),$(PYTHON_VERSIONS)) $(PYTHON_VERSIONS))
 
 # The min Python version to support. We use this to compute the value of the `Py_LIMITED_API` macro.
 PYTHON_MIN_VERSION := 3.8
 override python_min_version_hex := 0x$(call safe_shell,printf "%02x%02x" $(subst ., ,$(PYTHON_MIN_VERSION)))00f0
 $(info Python min version: $(PYTHON_MIN_VERSION) (Py_LIMITED_API=$(python_min_version_hex)))
+ifneq ($(FOR_WHEEL),)
+# The 3.12 headers' `Py_RETURN_NONE` dropped a reference to `None` on Python 3.8-3.11 (#7510).
+$(if $(filter $(PYTHON_MIN_VERSION),$(PYTHON_HEADER_VERSION)),,$(error A wheel must be built with the Python $(PYTHON_MIN_VERSION) headers, not $(PYTHON_HEADER_VERSION)))
+endif
 
 # Python compilation flags.
 # Normally we guess the flags using pkg-config, in an OS-dependent way.
@@ -849,7 +855,7 @@ PY_LINKER_FLAGS := $(EXTRA_LDFLAGS) -L$(MESHLIB_SHLIB_DIR) $(if $(IS_MACOS),-dyn
 ifneq ($(IS_WINDOWS),)
 PY_COMPILER_FLAGS += --target=$(MSVC_TARGET_ARCH)-pc-windows-msvc -D_DLL -D_MT -DNOMINMAX -Xclang --dependent-lib=$(if $(filter Debug,$(VS_MODE)),msvcrtd -D_DEBUG -D_ITERATOR_DEBUG_LEVEL=0,msvcrt)
 # `python3.lib` is the import library of the limited API.
-PY_LINKER_FLAGS += --target=$(MSVC_TARGET_ARCH)-pc-windows-msvc -rtlib=platform -Wl,-noimplib $(filter -L%,$(call get_python_ldflags,$(PYTHON_HEADER_VERSION))) -lpython3
+PY_LINKER_FLAGS += --target=$(MSVC_TARGET_ARCH)-pc-windows-msvc -rtlib=platform -Wl,-noimplib $(filter -L%,$(call get_python_ldflags,$(python_lib_version))) -lpython3
 else
 PY_COMPILER_FLAGS += -fPIC -fvisibility=hidden
 PY_LINKER_FLAGS += -Wl,-rpath,'$(rpath_origin)' -Wl,-rpath,'$(rpath_origin)/..' -Wl,-rpath,$(call quote,$(abspath $(MESHLIB_SHLIB_DIR)))

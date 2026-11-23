@@ -7,6 +7,8 @@
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRMeshTriPoint.h>
 #include <MRMesh/MRRegionBoundary.h>
+#include <MRMesh/MRRingIterator.h>
+#include <MRMesh/MRTorus.h>
 #include <MRMesh/MRVector3.h>
 #include <MRMesh/MRphmap.h>
 #include <gtest/gtest.h>
@@ -426,6 +428,95 @@ TEST( MRMesh, SurfaceDistanceSphereLines )
     EXPECT_LT( arc.mean, 4e-3f );
     EXPECT_LT( arc.over, 1e-3f );
     EXPECT_LT( arc.under, 2e-2f );
+}
+
+// the number of reached vertices, except starts, without a neighbor with smaller distance
+static int countLocalMinima( const Mesh & mesh, const VertScalars & dist, const VertBitSet & starts )
+{
+    int res = 0;
+    for ( auto v : mesh.topology.getValidVerts() )
+    {
+        if ( starts.test( v ) || dist[v] == FLT_MAX )
+            continue;
+        bool lower = false;
+        for ( auto e : orgRing( mesh.topology, v ) )
+            lower = lower || dist[mesh.topology.dest( e )] < dist[v];
+        res += !lower;
+    }
+    return res;
+}
+
+TEST( MRMesh, SurfaceDistanceNoLocalMinima )
+{
+    // a jittered grid and coarse tori with thin triangles
+    for ( const auto & mesh : { makePlanarGrid( 21, true ), makeTorus( 1, 0.3f, 4, 24 ), makeTorus( 1, 0.3f, 3, 40 ), makeTorus( 1, 0.3f, 8, 4 ) } )
+    {
+        const auto & topology = mesh.topology;
+        const int numVerts = topology.numValidVerts();
+        const VertId v0( 0 ), v1( numVerts / 3 ), v2( 2 * numVerts / 3 );
+        const auto ring1 = [&] { VertBitSet r( topology.vertSize() ); r.set( v1 ); for ( auto e : orgRing( topology, v1 ) ) r.set( topology.dest( e ) ); return r; }();
+        const EdgeId e2 = topology.edgeWithOrg( v2 );
+        const VertId v2next = topology.dest( e2 );
+
+        // each test case gives the starts to the builder and returns the start vertices
+        const std::function<VertBitSet( SurfaceDistanceBuilder & )> cases[] = {
+            // point starts inside triangles: the distances from each point
+            [&]( SurfaceDistanceBuilder & b )
+            {
+                VertBitSet s( topology.vertSize() );
+                for ( auto f : { 0_f, FaceId( int( topology.faceSize() ) / 2 ) } )
+                {
+                    const MeshTriPoint p( topology.edgeWithLeft( f ), { 0.2f, 0.3f } );
+                    b.addStart( p );
+                    topology.forEachVertex( p, [&]( VertId v ) { s.set( v ); } );
+                }
+                return s;
+            },
+            // two start vertices far from each other: the fronts of separate start groups meet
+            [&]( SurfaceDistanceBuilder & b )
+            {
+                VertBitSet s( topology.vertSize() );
+                s.set( v0 );
+                s.set( v2 );
+                b.addStartRegion( s, 0 );
+                return s;
+            },
+            // a region of start vertices and a start edge with a separate start point
+            [&]( SurfaceDistanceBuilder & b )
+            {
+                VertBitSet s = ring1;
+                b.addStartRegion( s, 0 );
+                UndirectedEdgeBitSet edges( topology.undirectedEdgeSize() );
+                edges.set( e2.undirected() );
+                VertBitSet points( topology.vertSize() );
+                points.set( v0 );
+                b.addStartEdgesAndPoints( edges, points, 0 );
+                s.set( v0 );
+                s.set( v2 );
+                s.set( v2next );
+                return s;
+            },
+            // a start edge with different values in its ends
+            [&]( SurfaceDistanceBuilder & b )
+            {
+                b.addStartVertices( { { v2, 0.f }, { v2next, 0.1f } } );
+                VertBitSet s( topology.vertSize() );
+                s.set( v2 );
+                s.set( v2next );
+                return s;
+            },
+        };
+        for ( int i = 0; i < std::ssize( cases ); ++i )
+        {
+            const auto & startsOf = cases[i];
+            SurfaceDistanceBuilder b( mesh, nullptr );
+            b.setNoLocalMinima( true );
+            const auto starts = startsOf( b );
+            while ( !b.done() )
+                b.growOne();
+            EXPECT_EQ( countLocalMinima( mesh, b.takeDistanceMap(), starts ), 0 ) << "case " << i << ", " << numVerts << " vertices";
+        }
+    }
 }
 
 } //namespace MR

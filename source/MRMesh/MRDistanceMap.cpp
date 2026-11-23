@@ -306,7 +306,7 @@ DistanceMap computeDistanceMap_( const MeshPart& mp, const MeshToDistanceMapPara
                     const auto i = distMap.toIndex( { x, y } );
                     distMap.set( i, meshIntersectionRes.distanceAlongLine );
                     if ( outSamples )
-                        (*outSamples)[i] = meshIntersectionRes.mtp;
+                        (*outSamples)[i] = meshIntersectionRes.mtp( mp.mesh.topology );
                 }
             }
         }

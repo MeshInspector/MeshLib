@@ -1762,7 +1762,7 @@ Expected<FaceBitSet> cutMeshByContours( Mesh& mesh, const Contours3f& contours, 
         ParallelFor( surfaceLine, [&] ( size_t i )
         {
             auto proj = findProjection( xf( contour[i] ), mesh );
-            surfaceLine[i] = proj.mtp;
+            surfaceLine[i] = proj.mtp( mesh.topology );
         } );
         maybeOneMeshContours[ic] = surfaceLineToMeshContour( mesh, surfaceLine );
     } );
@@ -1811,7 +1811,7 @@ Expected<std::vector<MR::EdgePath>> cutMeshByProjection( Mesh& mesh, const Conto
                     error = "Some contour points have missed the mesh";
                 return;
             }
-            mtps[j] = intRes.mtp;
+            mtps[j] = intRes.mtp( mesh.topology );
         } );
         if ( ctx.is_group_execution_cancelled() )
             return; // do not continue if projecting failed

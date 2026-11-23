@@ -1,5 +1,5 @@
 #include "MRMeshMeshDistance.h"
-#include "MRAABBTree.h"
+#include "MRAABBTreeTraversal.hpp"
 #include "MRInplaceStack.h"
 #include "MRMesh.h"
 #include "MRTriDist.h"
@@ -9,6 +9,7 @@
 #include "MRBitSetParallelFor.h"
 #include "MRRingIterator.h"
 #include "MRTriangleIntersection.h"
+#include <optional>
 
 namespace MR
 {
@@ -30,34 +31,26 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
 
     NodeBitSet aNodes, bNodes;
     if ( a.region )
-        aNodes = aTree.getNodesFromLeaves( *a.region );
+        aNodes = aTree.getNodesFromFaces( *a.region );
     if ( b.region )
-        bNodes = bTree.getNodesFromLeaves( *b.region );
-    auto inRegion = []( const AABBTree & tree, const FaceBitSet * region, const NodeBitSet & nodes, NodeId n )
-    {
-        return !region || ( tree.isLeaf( n ) ? region->test( tree.leafId( n ) ) : nodes.test( n ) );
-    };
+        bNodes = bTree.getNodesFromFaces( *b.region );
 
     struct SubTask
     {
-        NoInitNodeId a, b;
+        WideNode a, b;
         float distSq;
     };
+    // every split adds at most MaxChildren - 1 tasks, and two trees of 2^31 triangles have 32 levels together
     InplaceStack<SubTask, 128> subtasks;
 
-    auto addSubTask = [&]( const SubTask& s )
+    auto bBox = [&]( const Box3f & box ) { return rigidB2A ? transformed( box, *rigidB2A ) : box; };
+    auto getSubTask = [&]( const WideNode & an, const WideNode & bn )
     {
-        if ( s.distSq < res.distSq )
-            subtasks.push( s );
+        return SubTask { an, bn, an.box.getDistanceSq( bBox( bn.box ) ) };
     };
 
-    auto getSubTask = [&]( NodeId an, NodeId bn )
-    {
-        float distSq = aTree.box( an ).getDistanceSq( transformed( bTree.box( bn ), rigidB2A ) );
-        return SubTask { an, bn, distSq };
-    };
-
-    addSubTask( getSubTask( aTree.rootNodeId(), bTree.rootNodeId() ) );
+    if ( ( !a.region || aNodes.test( NodeId( 0 ) ) ) && ( !b.region || bNodes.test( NodeId( 0 ) ) ) )
+        subtasks.push( getSubTask( rootWideNode( aTree ), rootWideNode( bTree ) ) );
     // the closest triangles found so far, their points are computed at the end
     TriTriDistanceResultf bestTd;
     Triangle3f bestAv, bestBv;
@@ -66,69 +59,95 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
     {
         const auto s = subtasks.top();
         subtasks.pop();
-        if ( !inRegion( aTree, a.region, aNodes, s.a ) )
-            continue;
-        if ( !inRegion( bTree, b.region, bNodes, s.b ) )
+        if ( !( s.distSq < res.distSq ) )
             continue;
 
-        if ( s.distSq >= res.distSq )
-            continue;
-
-        const bool aLeaf = aTree.isLeaf( s.a );
-        const bool bLeaf = bTree.isLeaf( s.b );
-        if ( aLeaf && bLeaf )
+        if ( s.a.leaf() && s.b.leaf() )
         {
-            const auto aFace = aTree.leafId( s.a );
-            const auto bFace = bTree.leafId( s.b );
-
-            const auto av = aTree.leafTriPoints( a.mesh.points, s.a );
-            auto bv = bTree.leafTriPoints( b.mesh.points, s.b );
-            if ( rigidB2A )
+            const int aFirst = ~s.a.ref * AABBTree::MaxLeafTris;
+            const int bFirst = ~s.b.ref * AABBTree::MaxLeafTris;
+            const int bNum = bTree.numLeafTris( ~s.b.ref );
+            const auto & bLeafBoxes = bTree.leafBoxes( ~s.b.ref );
+            const auto & aLeafBoxes = aTree.leafBoxes( ~s.a.ref );
+            Box3f bBoxes[AABBTree::MaxLeafTris];
+            Triangle3f bTris[AABBTree::MaxLeafTris];
+            for ( int j = 0; j < bNum; ++j )
             {
-                bv[0] = ( *rigidB2A )( bv[0] );
-                bv[1] = ( *rigidB2A )( bv[1] );
-                bv[2] = ( *rigidB2A )( bv[2] );
+                const auto & bt = bTree.leafTris()[bFirst + j];
+                bBoxes[j] = bBox( bLeafBoxes.get( j ) );
+                // not a single line with rigidB2A ? xf( p ) : p: MSVC writes the transformed point to a temporary as three floats
+                // and copies it out with an 8-byte load, a store-forwarding stall
+                for ( int k = 0; k < 3; ++k )
+                {
+                    bTris[j][k] = b.mesh.points[bt.verts[k]];
+                    if ( rigidB2A )
+                        bTris[j][k] = ( *rigidB2A )( bTris[j][k] );
+                }
             }
-
-            const auto td = findTriTriDistance( av, bv, { .upDistLimitSq = res.distSq, .upLimitCheck = UpLimitCheck::GreaterOrEqual } );
-            if ( td.distSq < res.distSq )
+            for ( int i = aFirst, aEnd = aFirst + aTree.numLeafTris( ~s.a.ref ); i < aEnd; ++i )
             {
-                res.distSq = td.distSq;
-                res.a.proj.face = aFace;
-                res.b.proj.face = bFace;
-                bestTd = td;
-                bestAv = av;
-                bestBv = bv;
+                const auto & at = aTree.leafTris()[i];
+                if ( a.region && !a.region->test( at.face ) )
+                    continue;
+                const auto aBox = aLeafBoxes.get( i - aFirst );
+                const Triangle3f av{ a.mesh.points[at.verts[0]], a.mesh.points[at.verts[1]], a.mesh.points[at.verts[2]] };
+                for ( int j = 0; j < bNum; ++j )
+                {
+                    const auto bFace = bTree.leafTris()[bFirst + j].face;
+                    if ( b.region && !b.region->test( bFace ) )
+                        continue;
+                    if ( !( aBox.getDistanceSq( bBoxes[j] ) < res.distSq ) )
+                        continue;
+                    const auto td = findTriTriDistance( av, bTris[j], { .upDistLimitSq = res.distSq, .upLimitCheck = UpLimitCheck::GreaterOrEqual } );
+                    if ( td.distSq < res.distSq )
+                    {
+                        res.distSq = td.distSq;
+                        res.a.proj.face = at.face;
+                        res.b.proj.face = bFace;
+                        bestTd = td;
+                        bestAv = av;
+                        bestBv = bTris[j];
+                    }
+                }
             }
             continue;
         }
 
-        SubTask s1, s2;
-        if ( !aLeaf && ( bLeaf || aTree.box( s.a ).volume() >= bTree.box( s.b ).volume() ) )
-        {
-            // split aNode
-            const auto& aNode = aTree[s.a];
-            s1 = getSubTask( aNode.l, s.b );
-            s2 = getSubTask( aNode.r, s.b );
-        }
+        // split the bigger non-leaf node, and add the children with smaller distance last to descend there first
+        const bool splitA = !s.a.leaf() && ( s.b.leaf() || s.a.box.volume() >= s.b.box.volume() );
+        assert( splitA || !s.b.leaf() );
+        const auto & tree = splitA ? aTree : bTree;
+        const auto & sn = tree.simdNodes()[splitA ? s.a.ref : s.b.ref];
+        // the distances to the children, computed for all of them at once as getSubTask does
+        alignas( 16 ) float d[AABBTree::MaxChildren];
+        if ( splitA )
+            Simd4::store( d, boxBoxDistSq( sn, bBox( s.b.box ) ) );
+        else if ( !rigidB2A )
+            Simd4::store( d, boxBoxDistSq( sn, s.a.box ) );
         else
         {
-            assert( !bLeaf );
-            // split bNode
-            const auto& bNode = bTree[s.b];
-            s1 = getSubTask( s.a, bNode.l );
-            s2 = getSubTask( s.a, bNode.r );
+            for ( int i = 0; i < AABBTree::MaxChildren; ++i )
+                d[i] = sn.child[i] ? s.a.box.getDistanceSq( bBox( sn.get( i ) ) ) : FLT_MAX;
         }
-        // add task with smaller distance last to descend there first
-        if ( s1.distSq < s2.distSq )
+        const auto * regionNodes = splitA ? ( a.region ? &aNodes : nullptr ) : ( b.region ? &bNodes : nullptr );
+        int ch[AABBTree::MaxChildren];
+        int numCh = 0;
+        for ( int i = 0; i < AABBTree::MaxChildren && sn.child[i]; ++i )
         {
-            addSubTask( s2 );
-            addSubTask( s1 );
+            if ( !( d[i] < res.distSq ) )
+                continue;
+            if ( regionNodes && !regionNodes->test( tree.nodeId( sn.child[i] ) ) )
+                continue;
+            int k = numCh++;
+            for ( ; k > 0 && d[ch[k - 1]] < d[i]; --k )
+                ch[k] = ch[k - 1];
+            ch[k] = i;
         }
-        else
+        for ( int k = 0; k < numCh; ++k )
         {
-            addSubTask( s1 );
-            addSubTask( s2 );
+            const int i = ch[k];
+            const auto c = childWideNode( sn, i );
+            subtasks.push( splitA ? SubTask{ c, s.b, d[i] } : SubTask{ s.a, c, d[i] } );
         }
     }
 
@@ -156,10 +175,10 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
             bBary = bestTd.bBary( bestBv );
         }
         res.a.proj.point = aPt;
-        res.a.mtp = MeshTriPoint( a.mesh.topology.edgeWithLeft( res.a.proj.face ), aBary );
+        res.a.tp = aBary;
         res.a.distSq = res.distSq;
         res.b.proj.point = rigidB2A ? rigidB2A->inverse()( bPt ) : bPt;
-        res.b.mtp = MeshTriPoint( b.mesh.topology.edgeWithLeft( res.b.proj.face ), bBary );
+        res.b.tp = bBary;
         res.b.distSq = res.distSq;
     }
 
@@ -207,7 +226,7 @@ InternalZoneWithProjections findSignedDistanceOneWay( const MeshPart & a, const 
             const auto distance = test.mesh.signedDistance( point, projectRes );
             if ( distance > 0.0f )
                 return;
-            res.projectons[id] = std::make_pair( projectRes.mtp, distance );
+            res.projectons[id] = std::make_pair( projectRes.mtp( test.mesh.topology ), distance );
 
             for ( EdgeId e : orgRing( ref.mesh.topology, id ) )
             {
@@ -285,13 +304,13 @@ MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshP
     {
         for ( auto e : orgRing( mesh.topology, bestV ) )
             if ( auto f = mesh.topology.left( e ) )
-                return { .proj = { f, mesh.points[bestV] }, .mtp = { e, {} }, .distSq = sqr( bestDist ) };
+                return { .proj = { f, mesh.points[bestV] }, .tp = MeshTriPoint( e, {} ).canonical( mesh.topology ).bary, .distSq = sqr( bestDist ) };
         return {};
     };
     // the projection of the vertex on the other mesh
     auto otherProj = [&]( const Mesh& mesh, const MeshTriPoint& mtp ) -> MeshProjectionResult
     {
-        return { .proj = { mesh.topology.left( mtp.e ), mesh.triPoint( mtp ) }, .mtp = mtp, .distSq = sqr( bestDist ) };
+        return { .proj = { mesh.topology.left( mtp.e ), mesh.triPoint( mtp ) }, .tp = mtp.canonical( mesh.topology ).bary, .distSq = sqr( bestDist ) };
     };
     if ( bestInB )
         return { otherProj( a.mesh, zoneAndDistancesBA.projectons[bestV].first ), vertProj( b.mesh ), status, bestDist };
@@ -367,8 +386,10 @@ float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, const Affin
 
 float findMaxDistanceSq( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float maxDistanceSq )
 {
-    std::unique_ptr<AffineXf3f> rigidA2B = rigidB2A ? std::make_unique<AffineXf3f>( rigidB2A->inverse() ) : nullptr;
-    return std::max( findMaxDistanceSqOneWay( a, b, rigidB2A, maxDistanceSq ), findMaxDistanceSqOneWay( b, a, rigidA2B.get(), maxDistanceSq ) );
+    std::optional<AffineXf3f> rigidA2B;
+    if ( rigidB2A )
+        rigidA2B = rigidB2A->inverse();
+    return std::max( findMaxDistanceSqOneWay( a, b, rigidB2A, maxDistanceSq ), findMaxDistanceSqOneWay( b, a, rigidA2B ? &*rigidA2B : nullptr, maxDistanceSq ) );
 }
 
 } //namespace MR

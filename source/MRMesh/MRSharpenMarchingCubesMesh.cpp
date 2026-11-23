@@ -158,7 +158,7 @@ void sharpenMarchingCubesMesh( const MeshPart& ref, Mesh& vox, Vector<VoxelId, F
                 const auto rayStart = dot( latticeSegm.a - p, d ) / d.lengthSq();
                 if ( const auto isect = rayMeshIntersect( ref, Line3f{ p, d }, rayStart, rayStart + 1 ) )
                 {
-                    rp = isect.mtp;
+                    rp = isect.mtp( ref.mesh.topology );
                     refPt = ref.mesh.triPoint( rp );
                 }
             }
@@ -166,7 +166,7 @@ void sharpenMarchingCubesMesh( const MeshPart& ref, Mesh& vox, Vector<VoxelId, F
         if ( !rp.valid() )
         {
             const auto proj = findProjection( vox.points[v], ref );
-            rp = proj.mtp;
+            rp = proj.mtp( ref.mesh.topology );
             refPt = proj.proj.point;
         }
 

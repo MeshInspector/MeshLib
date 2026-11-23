@@ -284,6 +284,9 @@ private:
     size_type numBits_ = 0;
 };
 
+/// returns the number of set bits in given blocks; uses the popcnt instruction on x86-64 CPUs having it
+[[nodiscard]] MR_BIND_IGNORE MRMESH_API size_t countSetBits( const BitSet::block_type* blocks, size_t numBlocks ) noexcept;
+
 /// Vector<bool, I> like container (random-access, I - index type, bool - value type)
 /// with all bits after size() considered off during testing
 template <typename I>
@@ -444,6 +447,18 @@ template <typename I>
 {
     Vector<int, I> res( bs.size(), -1 );
     fillVectorWithSeqNums( bs, res );
+    return res;
+}
+
+/// returns the ids of all set bits in increasing order, i.e. the inverse of makeVectorWithSeqNums(...)
+template <typename I>
+[[nodiscard]] Vector<I> listSetBits( const TypedBitSet<I> & bs )
+{
+    Vector<I> res;
+    res.resizeNoInit( bs.count() );
+    size_t n = 0;
+    for ( auto v : bs )
+        res[n++] = v;
     return res;
 }
 

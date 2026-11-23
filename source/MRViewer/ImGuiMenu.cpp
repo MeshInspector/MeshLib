@@ -863,7 +863,7 @@ void ImGuiMenu::updateScaling()
 #elif defined __APPLE__
     newScaling *= pixelRatio_;
 #else
-    newScaling *= hidpiScale_ / pixelRatio_;
+    newScaling *= viewer->hasScaledFramebuffer() ? hidpiScale_ : hidpiScale_ / pixelRatio_;
 #endif
 
     UI::detail::setScale( newScaling ); // Send the menu scale to the UI.
@@ -882,7 +882,7 @@ float ImGuiMenu::menu_scaling() const
 #elif defined __APPLE__
     newScaling *= pixelRatio_;
 #else
-    newScaling *= hidpiScale_ / pixelRatio_;
+    newScaling *= viewer->hasScaledFramebuffer() ? hidpiScale_ : hidpiScale_ / pixelRatio_;
 #endif
 
     return newScaling;
@@ -1687,7 +1687,7 @@ float ImGuiMenu::drawSelectionInformation_()
 
     if ( selectedObjs.size() == 1 )
     {
-        UI::inputTextCenteredReadOnly( _tr( "Object Type" ), selectedObjs.front()->className(), itemWidth, textColor, labelColor );
+        UI::inputTextCenteredReadOnly( _tr( "Object Type" ), _tr( selectedObjs.front()->className() ), itemWidth, textColor, labelColor );
     }
     else if ( selectedObjs.size() > 1 )
     {

@@ -4,7 +4,7 @@ from helpers.meshlib_helpers import compare_meshes_similarity
 from module_helper import *
 from pytest_check import check
 from pathlib import Path
-from constants import test_files_path
+from constants import test_files_path, DEFAULT_RHAUSDORF_THRESHOLD
 
 
 @pytest.mark.parametrize("test_params", [
@@ -210,6 +210,7 @@ def test_offset_shell(tmp_path, test_params):
                   }, id="general_Standard_WindingRule"),
     pytest.param({"name": "general_Standard_open_HoleWindingRule",
                   "mesh": "open.ctm",
+                  "rhsdr_thresh": 0.99,  # the winding numbers near the holes depend on how the tree groups the triangles
                   "params": {
                       "signDetectionMode": "HoleWindingRule",
                       "offset": 1,
@@ -252,7 +253,7 @@ def test_offset_general(tmp_path, test_params):
     ref_mesh = mrmeshpy.loadMesh(ref_mesh_path)
 
     with check:
-        compare_meshes_similarity(new_mesh, ref_mesh)
+        compare_meshes_similarity(new_mesh, ref_mesh, rhsdr_thresh=test_params.get("rhsdr_thresh", DEFAULT_RHAUSDORF_THRESHOLD))
 
     with check:
         if "skip_self-intsc_verif" in test_params.keys() and not test_params["skip_self-intsc_verif"]:

@@ -16,6 +16,9 @@
     <ClCompile Include="MRRigidXfRansacTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRGlobalRegistrationTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRSpdlog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -212,6 +215,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshCollideTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointsToMeshProjectorTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRShrinkwrapTests.cpp">

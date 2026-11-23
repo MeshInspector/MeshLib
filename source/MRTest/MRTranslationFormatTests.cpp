@@ -4,7 +4,6 @@
 #include <MRViewer/MRLocale.h>
 #include <gtest/gtest.h>
 
-#include <algorithm>
 #include <cstdint>
 #include <fstream>
 #include <vector>
@@ -73,43 +72,64 @@ TEST( MRMesh, FormatSafeTranslationPrintf )
 }
 
 #ifndef MRVIEWER_NO_LOCALE
-/// makes the contents of .mo file with given translations (without hash table)
-static std::string makeMoFile( std::vector<std::pair<std::string, std::string>> entries )
+/// makes the contents of .mo file with given entries, the first one must be the header with empty key
+static std::string makeMoFile( const std::vector<std::pair<std::string, std::string>>& entries )
 {
-    entries.emplace_back( "", "Content-Type: text/plain; charset=UTF-8\nPlural-Forms: nplurals=2; plural=(n%100!=1);\n" );
-    std::sort( entries.begin(), entries.end() );
     const auto n = std::uint32_t( entries.size() );
+    // hash table as msgfmt makes it; without it boost converts all strings, which Wasm build cannot do
+    constexpr std::uint32_t cHashSize = 31;
+    std::uint32_t hashTable[cHashSize] = {};
+    for ( std::uint32_t i = 0; i < n; ++i )
+    {
+        std::uint32_t hash = 0;
+        for ( const char* c = entries[i].first.c_str(); *c; ++c ) // plural original is not hashed
+        {
+            hash = ( hash << 4 ) + ( unsigned char )*c;
+            if ( const auto high = hash & 0xf0000000 )
+                hash ^= ( high >> 24 ) ^ high;
+        }
+        auto pos = hash % cHashSize;
+        while ( hashTable[pos] != 0 )
+            pos = ( pos + 1 + hash % ( cHashSize - 2 ) ) % cHashSize;
+        hashTable[pos] = i + 1;
+    }
+    const auto hashOffset = 28 + 16 * n;
+    const auto stringsOffset = hashOffset + std::uint32_t( sizeof( hashTable ) );
     // magic, revision, number of strings, offsets of two tables, size and offset of hash table
-    const std::uint32_t header[7] = { 0x950412de, 0, n, 28, 28 + 8 * n, 0, 28 + 16 * n };
+    const std::uint32_t header[7] = { 0x950412de, 0, n, 28, 28 + 8 * n, cHashSize, hashOffset };
     std::string res( ( const char* )header, sizeof( header ) ), strings;
     auto addTable = [&]( auto member )
     {
         for ( const auto& e : entries )
         {
             const std::string& str = e.*member;
-            const std::uint32_t lengthAndOffset[2] = { std::uint32_t( str.size() ), std::uint32_t( 28 + 16 * n + strings.size() ) };
+            const std::uint32_t lengthAndOffset[2] = { std::uint32_t( str.size() ), stringsOffset + std::uint32_t( strings.size() ) };
             res.append( ( const char* )lengthAndOffset, sizeof( lengthAndOffset ) );
-            strings += str;
-            strings += '\0';
+            strings.append( str );
+            strings.push_back( '\0' );
         }
     };
     addTable( &std::pair<std::string, std::string>::first );
     addTable( &std::pair<std::string, std::string>::second );
-    return res + strings;
+    res.append( ( const char* )hashTable, sizeof( hashTable ) );
+    res.append( strings );
+    return res;
 }
 
 TEST( MRViewer, UnsafeTranslationsAreIgnored )
 {
     using namespace std::string_literals;
     const char* cDomain = "MRTranslationFormatTest";
+    const char* cFileName = "MRTranslationFormatTest.mo";
     UniqueTemporaryFolder folder;
     ASSERT_TRUE( bool( folder ) );
     const auto dir = folder / "xx" / "LC_MESSAGES";
     std::error_code ec;
     std::filesystem::create_directories( dir, ec );
     {
-        std::ofstream out( dir / ( std::string( cDomain ) + ".mo" ), std::ofstream::binary );
+        std::ofstream out( dir / cFileName, std::ofstream::binary );
         out << makeMoFile( {
+            { "", "Content-Type: text/plain; charset=UTF-8\nPlural-Forms: nplurals=2; plural=(n%100!=1);\n" },
             { "Object {}", "Objekt {}" },
             { "Loaded {} of {}", "Geladen {} von {} {}" },
             { "%d holes", "%s Loecher" },

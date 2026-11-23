@@ -30,7 +30,6 @@
 #endif
 
 #include <algorithm>
-#include <array>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -69,12 +68,11 @@ std::uint32_t swapBytes( std::uint32_t v )
     return ( v >> 24 ) | ( ( v >> 8 ) & 0xff00 ) | ( ( v << 8 ) & 0xff0000 ) | ( v << 24 );
 }
 
-/// removes from the contents of .mo file the translations that cannot replace their originals in fmt::format or printf call
-void removeUnsafeTranslations( std::vector<char>& file, const std::string& fileName )
+/// makes not findable in the contents of .mo file the translations that cannot replace their originals in fmt::format or printf call
+void disableUnsafeTranslations( std::vector<char>& file, const std::string& fileName )
 {
-    constexpr std::uint64_t cHeaderSize = 28;
     constexpr std::uint32_t cMagic = 0x950412de;
-    if ( file.size() < cHeaderSize )
+    if ( file.size() < 28 ) // header
         return;
     bool swapped = false; // the file was written with another byte order
     auto get = [&]( size_t offset )
@@ -94,12 +92,9 @@ void removeUnsafeTranslations( std::vector<char>& file, const std::string& fileN
     if ( tables[0] + num * 8 > file.size() || tables[1] + num * 8 > file.size() )
         return; // an invalid file is rejected by boost
 
-    using Entry = std::array<std::string_view, 2>;
-    std::vector<Entry> kept;
-    kept.reserve( size_t( num ) );
     for ( std::uint64_t i = 0; i < num; ++i )
     {
-        Entry entry;
+        std::string_view entry[2];
         for ( int k = 0; k < 2; ++k )
         {
             const auto record = size_t( tables[k] + i * 8 );
@@ -123,48 +118,24 @@ void removeUnsafeTranslations( std::vector<char>& file, const std::string& fileN
             const auto pos = forms.find( '\0' );
             const auto form = forms.substr( 0, pos );
             safe = Locale::isFormatSafeTranslation( original, form ) || ( !plural.empty() && Locale::isFormatSafeTranslation( plural, form ) );
-            static std::unordered_set<std::string> reported;
-            if ( !safe && reported.insert( fileName + '\n' + std::string( entry[0] ) ).second )
-                spdlog::warn( "{}: translation \"{}\" of \"{}\" is ignored: its format placeholders do not match the original", fileName, form, original );
+            if ( !safe )
+            {
+                // reported once, although the catalogs are loaded again with every new domain
+                static std::unordered_set<std::string> reported;
+                std::string id( fileName );
+                id.push_back( '\n' );
+                id.append( entry[0] );
+                if ( reported.insert( std::move( id ) ).second )
+                    spdlog::warn( "{}: translation \"{}\" of \"{}\" is ignored: its format placeholders do not match the original", fileName, form, original );
+            }
             if ( pos == std::string_view::npos )
                 break;
             forms = forms.substr( pos + 1 );
         }
-        if ( safe )
-            kept.push_back( entry );
+        // no string to translate starts with this character, and the hash table of the file stays valid
+        if ( !safe )
+            file[size_t( entry[0].data() - file.data() )] = '\x01';
     }
-    if ( kept.size() == num )
-        return;
-
-    // the same file without removed entries and without hash table
-    std::vector<char> res;
-    auto put = [&]( std::uint64_t v )
-    {
-        const auto u = swapped ? swapBytes( std::uint32_t( v ) ) : std::uint32_t( v );
-        res.insert( res.end(), ( const char* )&u, ( const char* )&u + sizeof( u ) );
-    };
-    const std::uint64_t stringsOffset = cHeaderSize + 16 * kept.size();
-    for ( std::uint64_t v : { std::uint64_t( cMagic ), std::uint64_t( get( 4 ) ), std::uint64_t( kept.size() ), cHeaderSize, cHeaderSize + 8 * kept.size(), std::uint64_t( 0 ), stringsOffset } )
-        put( v );
-    auto offset = stringsOffset;
-    for ( int k = 0; k < 2; ++k )
-    {
-        for ( const auto& entry : kept )
-        {
-            put( entry[k].size() );
-            put( offset );
-            offset += entry[k].size() + 1;
-        }
-    }
-    for ( int k = 0; k < 2; ++k )
-    {
-        for ( const auto& entry : kept )
-        {
-            res.insert( res.end(), entry[k].begin(), entry[k].end() );
-            res.push_back( '\0' );
-        }
-    }
-    file = std::move( res );
 }
 
 /// reads .mo file for boost, returns empty vector if there is no such file
@@ -180,7 +151,7 @@ std::vector<char> loadCatalog( const std::string& fileName, const std::string& )
     in.seekg( 0 );
     if ( !in.read( res.data(), size ) )
         return {};
-    removeUnsafeTranslations( res, fileName );
+    disableUnsafeTranslations( res, fileName );
     return res;
 }
 

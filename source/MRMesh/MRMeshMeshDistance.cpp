@@ -622,13 +622,13 @@ MeshMeshDistanceResult findMaxDistanceInsideTriangles( const MeshPart& a, const 
 
 } // anonymous namespace
 
-MeshMeshDistanceResult findMaxSurfaceDistanceOneWay( const MeshPart& a, const MeshPart& b, float tolerance, const AffineXf3f* rigidB2A, float maxDistanceSq )
+MeshMeshDistanceResult findHausdorffDistanceOneWay( const MeshPart& a, const MeshPart& b, float tolerance, const AffineXf3f* rigidB2A, float maxDistanceSq )
 {
     MR_TIMER;
     return findMaxDistanceInsideTriangles( a, b, tolerance, maxDistanceSq, projectVerts( a, b, rigidB2A, maxDistanceSq ), 0 );
 }
 
-MeshMeshDistanceResult findMaxSurfaceDistance( const MeshPart& a, const MeshPart& b, float tolerance, const AffineXf3f* rigidB2A, float maxDistanceSq )
+MeshMeshDistanceResult findHausdorffDistance( const MeshPart& a, const MeshPart& b, float tolerance, const AffineXf3f* rigidB2A, float maxDistanceSq )
 {
     MR_TIMER;
     std::optional<AffineXf3f> rigidA2B;

@@ -44,7 +44,7 @@ TEST( MRMesh, MeshMeshClosestPoint )
     EXPECT_TRUE( findProjection( usd.b.proj.point, cube2 ).distSq < 1e-6f );
 }
 
-TEST( MRMesh, MaxSurfaceDistance )
+TEST( MRMesh, HausdorffDistance )
 {
     // all vertices of the triangle are on the cube, and the center of the cube inside the triangle is the farthest from it
     const Mesh cube = makeCube( Vector3f::diagonal( 1 ), Vector3f() );
@@ -55,7 +55,7 @@ TEST( MRMesh, MaxSurfaceDistance )
     const Vector3f center( 0.5f, 0.5f, 0.5f );
 
     EXPECT_EQ( findMaxDistanceSqOneWay( cube, tri ), 0 );
-    auto res = findMaxSurfaceDistanceOneWay( cube, tri, tol );
+    auto res = findHausdorffDistanceOneWay( cube, tri, tol );
     EXPECT_LE( std::sqrt( res.distSq ), 0.5f );
     EXPECT_GE( std::sqrt( res.distSq ), 0.5f - tol );
     ASSERT_TRUE( res.a.valid() && res.b.valid() );
@@ -66,14 +66,14 @@ TEST( MRMesh, MaxSurfaceDistance )
 
     // the farthest points of the cube from the triangle are its two vertices with x=1, y=1
     const auto cubeMaxSq = 0.25f + 0.49f / 1.49f;
-    res = findMaxSurfaceDistanceOneWay( tri, cube, tol );
+    res = findHausdorffDistanceOneWay( tri, cube, tol );
     EXPECT_NEAR( res.distSq, cubeMaxSq, 1e-6f );
     EXPECT_EQ( res.b.proj.point.x, 1 );
     EXPECT_EQ( res.b.proj.point.y, 1 );
     EXPECT_EQ( res.a.proj.point.z, 0.5f );
 
     // the farthest point is in the second mesh
-    res = findMaxSurfaceDistance( cube, tri, tol );
+    res = findHausdorffDistance( cube, tri, tol );
     EXPECT_NEAR( res.distSq, cubeMaxSq, 1e-6f );
     EXPECT_EQ( res.a.proj.point.x, 1 );
     EXPECT_EQ( res.b.proj.point.z, 0.5f );
@@ -83,20 +83,20 @@ TEST( MRMesh, MaxSurfaceDistance )
     const auto xfInv = xf.inverse();
     Mesh movedTri = tri;
     movedTri.transform( xfInv );
-    res = findMaxSurfaceDistanceOneWay( cube, movedTri, tol, &xf );
+    res = findHausdorffDistanceOneWay( cube, movedTri, tol, &xf );
     EXPECT_LE( std::sqrt( res.distSq ), 0.5f + 1e-5f );
     EXPECT_GE( std::sqrt( res.distSq ), 0.5f - tol );
     // the point of B is returned in its own space
     EXPECT_LE( ( xf( res.b.proj.point ) - center ).length(), 2 * tol );
-    EXPECT_NEAR( findMaxSurfaceDistance( cube, movedTri, tol, &xf ).distSq, cubeMaxSq, 1e-5f );
-    EXPECT_NEAR( findMaxSurfaceDistance( movedTri, cube, tol, &xfInv ).distSq, cubeMaxSq, 1e-5f );
+    EXPECT_NEAR( findHausdorffDistance( cube, movedTri, tol, &xf ).distSq, cubeMaxSq, 1e-5f );
+    EXPECT_NEAR( findHausdorffDistance( movedTri, cube, tol, &xfInv ).distSq, cubeMaxSq, 1e-5f );
 
-    res = findMaxSurfaceDistanceOneWay( cube, tri, tol, nullptr, 0.01f );
+    res = findHausdorffDistanceOneWay( cube, tri, tol, nullptr, 0.01f );
     EXPECT_EQ( res.distSq, 0.01f );
     EXPECT_FALSE( res.a.valid() );
     EXPECT_TRUE( res.b.valid() );
 
-    EXPECT_EQ( findMaxSurfaceDistance( cube, cube, tol ).distSq, 0 );
+    EXPECT_EQ( findHausdorffDistance( cube, cube, tol ).distSq, 0 );
 }
 
 TEST( MRMesh, MaxDistancePoints )

@@ -79,9 +79,26 @@ MRMESH_API MeshMeshCollisionStatus findCollisionStatus( const MeshPart& a, const
     const MeshMeshDistanceResult& distRes, const AffineXf3f* rigidB2A = nullptr, std::vector<FaceFace>* collisions = nullptr );
 
 /**
+ * \brief finds the vertex of B-mesh most distant from A-mesh
+ * \return the found vertex in b, its projection on A-mesh in a, and the squared distance between them
+ * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
+ * \param maxDistanceSq upper limit on the positive distance in question, if the real distance is larger than the function exists returning maxDistanceSq and no valid point in a
+ */
+MRMESH_API MeshMeshDistanceResult findMaxDistanceOneWay( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A = nullptr, float maxDistanceSq = FLT_MAX );
+
+/**
+ * \brief finds the vertex of one mesh most distant from the other mesh (in both directions)
+ * \return the found vertex in a or in b, its projection on the other mesh in the remaining field, and the squared distance between them
+ * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
+ * \param maxDistanceSq upper limit on the positive distance in question, if the real distance is larger than the function exists returning maxDistanceSq and one valid point only
+ */
+MRMESH_API MeshMeshDistanceResult findMaxDistance( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A = nullptr, float maxDistanceSq = FLT_MAX );
+
+/**
  * \brief returns the maximum of the squared distances from each B-mesh vertex to A-mesh
  * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
  * \param maxDistanceSq upper limit on the positive distance in question, if the real distance is larger than the function exists returning maxDistanceSq
+ * \sa \ref findMaxDistanceOneWay returning the points as well
  */
 MRMESH_API float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A = nullptr, float maxDistanceSq = FLT_MAX );
 
@@ -90,6 +107,7 @@ MRMESH_API float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, 
           the maximum of squared distances from each mesh vertex to the other mesh (in both directions)
  * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
  * \param maxDistanceSq upper limit on the positive distance in question, if the real distance is larger than the function exists returning maxDistanceSq
+ * \sa \ref findMaxDistance returning the points as well
  */
 MRMESH_API float findMaxDistanceSq( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A = nullptr, float maxDistanceSq = FLT_MAX );
 

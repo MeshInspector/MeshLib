@@ -350,46 +350,78 @@ MeshMeshCollisionStatus findCollisionStatus( const MeshPart& a, const MeshPart& 
     return findCollisionStatus( a, b, res, rigidB2A );
 }
 
-float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float maxDistanceSq )
+MeshMeshDistanceResult findMaxDistanceOneWay( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float maxDistanceSq )
 {
     MR_TIMER;
 
+    MeshMeshDistanceResult res;
     const auto& bMeshVerts = b.mesh.points;
-    auto vertBitSet = getIncidentVerts( b.mesh.topology, b.mesh.topology.getFaceIds( b.region ) );
+    const auto& bFaces = b.mesh.topology.getFaceIds( b.region );
+    auto vertBitSet = getIncidentVerts( b.mesh.topology, bFaces );
     if ( !vertBitSet.any() )
-        return 0.0f;
+        return res;
 
-    return tbb::parallel_reduce
+    auto inA = [&]( VertId v ) { return rigidB2A ? ( *rigidB2A )( bMeshVerts[v] ) : bMeshVerts[v]; };
+
+    struct VertDist
+    {
+        VertId v;
+        float distSq = -1;
+    };
+    // of several equally distant vertices, the one with the smallest id is taken
+    const auto best = tbb::parallel_reduce
     (
         tbb::blocked_range( vertBitSet.find_first(), vertBitSet.find_last() + 1 ),
-        0.0f,
-        [&] ( const tbb::blocked_range<VertId>& range, float init )
+        VertDist{},
+        [&] ( const tbb::blocked_range<VertId>& range, VertDist init )
         {
-        for ( VertId i = range.begin(); i < range.end(); ++i )
-        {
-            if ( !vertBitSet.test( i ) )
-                continue;
-
-            auto distSq = findProjection( rigidB2A ? (*rigidB2A)( bMeshVerts[i] ) : bMeshVerts[i], a, maxDistanceSq ).distSq;
-            if ( distSq > init )
-                init = distSq;
-        }
-
-        return  init;
+            for ( VertId i = range.begin(); i < range.end(); ++i )
+            {
+                if ( !vertBitSet.test( i ) )
+                    continue;
+                const auto distSq = findProjection( inA( i ), a, maxDistanceSq ).distSq;
+                if ( distSq > init.distSq )
+                    init = { i, distSq };
+            }
+            return init;
         },
-        [] ( float a, float b ) -> float
-        {
-            return a > b ? a : b;
-        }
+        [] ( const VertDist& x, const VertDist& y ) { return y.distSq > x.distSq ? y : x; }
     );
+
+    res.a = findProjection( inA( best.v ), a, maxDistanceSq );
+    res.distSq = res.a.distSq;
+    // the vertex as a point of one of its triangles
+    for ( auto e : orgRing( b.mesh.topology, best.v ) )
+    {
+        if ( auto f = b.mesh.topology.left( e ); f && bFaces.test( f ) )
+        {
+            res.b = { .proj = { f, bMeshVerts[best.v] }, .tp = MeshTriPoint( e, {} ).canonical( b.mesh.topology ).bary, .distSq = res.distSq };
+            break;
+        }
+    }
+    return res;
 }
 
-float findMaxDistanceSq( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float maxDistanceSq )
+MeshMeshDistanceResult findMaxDistance( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float maxDistanceSq )
 {
     std::optional<AffineXf3f> rigidA2B;
     if ( rigidB2A )
         rigidA2B = rigidB2A->inverse();
-    return std::max( findMaxDistanceSqOneWay( a, b, rigidB2A, maxDistanceSq ), findMaxDistanceSqOneWay( b, a, rigidA2B ? &*rigidA2B : nullptr, maxDistanceSq ) );
+    auto res = findMaxDistanceOneWay( a, b, rigidB2A, maxDistanceSq );
+    const auto ba = findMaxDistanceOneWay( b, a, rigidA2B ? &*rigidA2B : nullptr, maxDistanceSq );
+    if ( ba.distSq > res.distSq )
+        res = { ba.b, ba.a, ba.distSq };
+    return res;
+}
+
+float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float maxDistanceSq )
+{
+    return findMaxDistanceOneWay( a, b, rigidB2A, maxDistanceSq ).distSq;
+}
+
+float findMaxDistanceSq( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float maxDistanceSq )
+{
+    return findMaxDistance( a, b, rigidB2A, maxDistanceSq ).distSq;
 }
 
 } //namespace MR

@@ -539,7 +539,7 @@ MeshMeshDistanceResult findMaxSurfaceDistanceFromVerts( const MeshPart& a, const
         best = tbb::parallel_reduce( tbb::blocked_range( 0_f, FaceId( b.mesh.topology.faceSize() ) ), best,
             [&]( const tbb::blocked_range<FaceId>& range, Best init )
             {
-                std::vector<Tri> stack;
+                Vector<Tri> stack;
                 for ( FaceId bf = range.begin(); bf < range.end() && init.distSq < maxDistanceSq; ++bf )
                 {
                     if ( !bFaces.test( bf ) )

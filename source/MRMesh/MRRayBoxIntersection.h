@@ -20,31 +20,12 @@ struct RayOrigin
     RayOrigin( const Vector3<T> & ro ) : p( ro ) { }
 };
 
-/* CPU(X86_64) - AMD64 / Intel64 / x86_64 64-bit */
-#if defined(__x86_64__) || defined(_M_X64)
+#ifdef MR_SIMD4_HW
 template<>
 struct RayOrigin<float>
 {
-    MR_BIND_IGNORE __m128 p;
-    RayOrigin( const Vector3f & ro ) { p = _mm_set_ps( 0, ro.z, ro.y, ro.x ); }
-};
-
-/* CPU(ARM64) - AArch64 */
-#elif defined(__aarch64__) || defined(_M_ARM64)
-template<>
-struct RayOrigin<float>
-{
-    MR_BIND_IGNORE float32x4_t p;
-    RayOrigin( const Vector3f & ro ) { p = toFloat32x4( ro.x, ro.y, ro.z, 0 ); }
-};
-
-/* Wasm SIMD */
-#elif defined(__wasm_simd128__)
-template<>
-struct RayOrigin<float>
-{
-    MR_BIND_IGNORE v128_t p;
-    RayOrigin( const Vector3f & ro ) { p = wasm_f32x4_make( ro.x, ro.y, ro.z, 0 ); }
+    MR_BIND_IGNORE Simd4::F p;
+    RayOrigin( const Vector3f & ro ) : p( Simd4::make( ro.x, ro.y, ro.z, 0 ) ) { }
 };
 #endif
 
@@ -57,86 +38,22 @@ bool rayBoxIntersect( const Box3<T>& box, const RayOrigin<T> & rayOrigin, T & t0
 {
     assert( box.valid() );
 
-    #if defined(__x86_64__) || defined(_M_X64)
-    if constexpr (std::is_same_v<T, float>)
+#ifdef MR_SIMD4_HW
+    if constexpr ( std::is_same_v<T, float> )
     {
+        using namespace Simd4;
         // both loads stay within the box, and the second one is the max corner shifted by one lane
         static_assert( sizeof( Box3f ) == 6 * sizeof( float ) );
         const float * const c = &box.min.x;
-        __m128 l = _mm_loadu_ps( c );
-        __m128 h = _mm_loadu_ps( c + 2 );
-        __m128 r = _mm_shuffle_ps( h, h, _MM_SHUFFLE( 3, 3, 2, 1 ) );
-
-        l = _mm_mul_ps( _mm_sub_ps( l, rayOrigin.p ), prec.invDir );
-        r = _mm_mul_ps( _mm_sub_ps( r, rayOrigin.p ), prec.invDir );
-
-        __m128 a = _mm_min_ps( l, r );
-        __m128 b = _mm_max_ps( l, r );
-
+        const F l = mul( sub( loadu( c ), rayOrigin.p ), prec.invDir );
+        const F r = mul( sub( shiftDown( loadu( c + 2 ) ), rayOrigin.p ), prec.invDir );
         // the 4-th lane holds garbage, so only the first three are reduced
-        __m128 az = _mm_shuffle_ps( a, a, _MM_SHUFFLE( 2, 2, 2, 2 ) );
-        __m128 ay = _mm_shuffle_ps( a, a, _MM_SHUFFLE( 1, 1, 1, 1 ) );
-        t0 = _mm_cvtss_f32( _mm_max_ss( _mm_max_ss( _mm_max_ss( a, az ), ay ), _mm_load_ss( &t0 ) ) );
-
-        __m128 bz = _mm_shuffle_ps( b, b, _MM_SHUFFLE( 2, 2, 2, 2 ) );
-        __m128 by = _mm_shuffle_ps( b, b, _MM_SHUFFLE( 1, 1, 1, 1 ) );
-        t1 = _mm_cvtss_f32( _mm_min_ss( _mm_min_ss( _mm_min_ss( b, bz ), by ), _mm_load_ss( &t1 ) ) );
-
+        t0 = max3( minFast( l, r ), t0 );
+        t1 = min3( maxFast( l, r ), t1 );
         return t0 <= t1;
     }
     else
-    #elif defined(__aarch64__) || defined(_M_ARM64)
-    if constexpr (std::is_same_v<T, float>)
-    {
-        // both loads stay within the box, and the second one is the max corner shifted by one lane;
-        // the 4-th lane carries t0/t1 itself, since the origin is 0 and the inverted direction is 1 there
-        static_assert( sizeof( Box3f ) == 6 * sizeof( float ) );
-        const float * const c = &box.min.x;
-        float32x4_t h = vld1q_f32( c + 2 );
-        float32x4_t l = vsetq_lane_f32( t0, vld1q_f32( c ), 3 );
-        float32x4_t r = vsetq_lane_f32( t1, vextq_f32( h, h, 1 ), 3 );
-
-        l = vmulq_f32( vsubq_f32( l, rayOrigin.p ), prec.invDir );
-        r = vmulq_f32( vsubq_f32( r, rayOrigin.p ), prec.invDir );
-
-        t0 = vmaxvq_f32( vminq_f32( l, r ) );
-        t1 = vminvq_f32( vmaxq_f32( l, r ) );
-
-        return t0 <= t1;
-    }
-    else
-    #elif defined(__wasm_simd128__)
-    if constexpr (std::is_same_v<T, float>)
-    {
-        // both loads stay within the box, and the second one is the max corner shifted by one lane
-        static_assert( sizeof( Box3f ) == 6 * sizeof( float ) );
-        const float * const c = &box.min.x;
-        v128_t l = wasm_v128_load( c );
-        v128_t h = wasm_v128_load( c + 2 );
-        v128_t r = wasm_i32x4_shuffle( h, h, 1, 2, 3, 3 );
-
-        l = wasm_f32x4_mul( wasm_f32x4_sub( l, rayOrigin.p ), prec.invDir );
-        r = wasm_f32x4_mul( wasm_f32x4_sub( r, rayOrigin.p ), prec.invDir );
-
-        v128_t a = wasm_f32x4_pmin( l, r );
-        v128_t b = wasm_f32x4_pmax( l, r );
-
-        // Wasm has neither a cross-lane reduction nor an operation on the first lane alone,
-        // so the three lanes are reduced at full width and the 4-th one is left out
-        v128_t az = wasm_i32x4_shuffle( a, a, 2, 2, 2, 2 );
-        v128_t ay = wasm_i32x4_shuffle( a, a, 1, 1, 1, 1 );
-        v128_t bz = wasm_i32x4_shuffle( b, b, 2, 2, 2, 2 );
-        v128_t by = wasm_i32x4_shuffle( b, b, 1, 1, 1, 1 );
-
-        t0 = std::max( t0, wasm_f32x4_extract_lane( wasm_f32x4_pmax( wasm_f32x4_pmax( a, az ), ay ), 0 ) );
-        t1 = std::min( t1, wasm_f32x4_extract_lane( wasm_f32x4_pmin( wasm_f32x4_pmin( b, bz ), by ), 0 ) );
-
-        return t0 <= t1;
-    }
-    else
-    #else
-    #pragma message("rayBoxIntersect: no hardware optimized instructions")
-    #endif
+#endif
     {
         const Vector3i& sign = prec.sign;
 

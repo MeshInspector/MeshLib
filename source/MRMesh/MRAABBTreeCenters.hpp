@@ -19,8 +19,7 @@ static_assert( sizeof( TreeCenter ) == 16 );
 /// returns given box including the centers d[0..num); a NaN coordinate is skipped as by Box::include
 [[nodiscard]] Box3f includeCenters( Box3f box, const TreeCenter * d, int num );
 
-/// moves the center of order nth along the axis (ties are ordered by index) to its place, the smaller centers before it and the bigger ones after it,
-/// as std::nth_element does
+/// selectByKey of the centers by their coordinate along the axis
 void selectCenter( TreeCenter * first, TreeCenter * nth, TreeCenter * last, int axis );
 
 /// places the centers src[0..num) to dst[0..num) so that the first num / 2 of them are the smaller ones along the axis, as selectCenter does in place:

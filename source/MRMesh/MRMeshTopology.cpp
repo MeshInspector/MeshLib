@@ -431,18 +431,22 @@ void MeshTopology::getLeftTriEdges( EdgeId e0, EdgeId & e1, EdgeId & e2 ) const
     assert( e0 == prev( e2.sym() ) );
 }
 
-std::vector<ThreeVertIds> MeshTopology::getAllTriVerts() const
+Vector<ThreeVertIds> MeshTopology::getAllTriVerts() const
 {
     MR_TIMER;
-    std::vector<ThreeVertIds> res;
     assert( updateValids_ );
-    res.reserve( numValidFaces_ );
-    for ( auto f : validFaces_ )
+    Vector<ThreeVertIds> res;
+    if ( numValidFaces_ == (int)edgePerFace_.size() ) // no invalid faces: the triangle of face f goes to position f
     {
-        VertId vs[3];
-        getTriVerts( f, vs );
-        res.push_back( { vs[0], vs[1], vs[2] } );
+        res.vec = std::move( getTriangulation().vec );
+        return res;
     }
+    res.resizeNoInit( numValidFaces_ );
+    size_t i = 0;
+    for ( auto e : edgePerFace_ )
+        if ( e ) // a face is valid if and only if it has an edge
+            getLeftTriVerts( e, res[i++] );
+    assert( i == res.size() );
 
     return res;
 }
@@ -451,11 +455,14 @@ Triangulation MeshTopology::getTriangulation() const
 {
     MR_TIMER;
     Triangulation res;
-    res.resize( faceSize() ); //TODO: resizeNoInit
-    assert( updateValids_ );
-    BitSetParallelFor( validFaces_, [&]( FaceId f )
+    res.resizeNoInit( faceSize() );
+    ParallelFor( res, [&]( FaceId f )
     {
-        getTriVerts( f, res[f] );
+        // a face is valid if and only if it has an edge
+        if ( auto e = edgePerFace_[f] )
+            getLeftTriVerts( e, res[f] );
+        else
+            res[f] = {};
     } );
 
     return res;
@@ -2335,7 +2342,9 @@ namespace
 template <typename I, typename F>
 I assignNewIds( const TypedBitSet<I> & from, TypedBitSet<I> * vacant, I end, bool parallel, F && set )
 {
-    if ( !parallel )
+    static constexpr size_t chunkBlocks = 1024;
+    // a set of one chunk has nothing to split between threads, and the parallel passes cost more than this loop
+    if ( !parallel || from.size() <= chunkBlocks * BitSet::bits_per_block )
     {
         I last = vacant ? I{} : end - 1;
         for ( auto fromId : from )
@@ -2360,16 +2369,13 @@ I assignNewIds( const TypedBitSet<I> & from, TypedBitSet<I> * vacant, I end, boo
     }
 
     // the rank of a set bit is found from the numbers of set bits in all preceding chunks of blocks
-    static constexpr size_t chunkBlocks = 1024;
     auto chunkStarts = [] ( const auto & blocks )
     {
         std::vector<size_t> starts( ( blocks.size() + chunkBlocks - 1 ) / chunkBlocks + 1, 0 );
         ParallelFor( size_t( 0 ), starts.size() - 1, [&] ( size_t c )
         {
-            size_t n = 0;
-            for ( size_t b = c * chunkBlocks, bEnd = std::min( b + chunkBlocks, blocks.size() ); b < bEnd; ++b )
-                n += std::popcount( blocks[b] );
-            starts[c + 1] = n;
+            const auto b = c * chunkBlocks;
+            starts[c + 1] = countSetBits( blocks.data() + b, std::min( chunkBlocks, blocks.size() - b ) );
         } );
         std::partial_sum( starts.begin(), starts.end(), starts.begin() );
         return starts;

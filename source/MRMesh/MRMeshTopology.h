@@ -166,7 +166,7 @@ public:
     [[nodiscard]] bool isTriVert( FaceId f, VertId v ) const { auto vs = getTriVerts( f ); return v == vs[0] || v == vs[1] || v == vs[2]; }
 
     /// returns three vertex ids for valid triangles, invalid triangles are skipped
-    [[nodiscard]] MRMESH_API std::vector<ThreeVertIds> getAllTriVerts() const;
+    [[nodiscard]] MRMESH_API Vector<ThreeVertIds> getAllTriVerts() const;
 
     /// returns three vertex ids for valid triangles (which can be accessed by FaceId),
     /// vertex ids for invalid triangles are undefined, and shall not be read

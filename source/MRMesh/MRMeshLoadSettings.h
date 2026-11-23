@@ -13,6 +13,7 @@ struct MeshLoadSettings
     VertColors* colors = nullptr;    ///< optional load artifact: per-vertex color map
     FaceColors* faceColors = nullptr;///< optional load artifact: per-face color map
     VertUVCoords* uvCoords = nullptr;///< optional load artifact: per-vertex uv-coordinates
+    TriCornerUVCoords* triCornerUvCoords = nullptr; ///< optional load artifact: per-corner uv-coordinates for each triangle
     VertNormals* normals = nullptr;  ///< optional load artifact: per-vertex normals
     MeshTexture* texture = nullptr;  ///< optional load artifact: texture image
     std::optional<Color>* solidColor = nullptr; ///< optional load artifact: the color of whole object, if the format has it

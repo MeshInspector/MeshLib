@@ -26,6 +26,7 @@
 #include "MRIdentifyVertices.h"
 #include "MRMeshFillHole.h"
 #include "MRTriMesh.h"
+#include "MRFaceSoup.h"
 #include "MRDipole.h"
 #include "MRPartMappingAdapters.h"
 
@@ -101,15 +102,12 @@ Mesh Mesh::fromTriMeshDuplicatingNonManifoldVertices(
     return fromTrianglesDuplicatingNonManifoldVertices( std::move( triMesh.points ), triMesh.tris, dups, settings, betterCont );
 }
 
-Mesh Mesh::fromFaceSoup(
-    VertCoords vertexCoordinates,
-    const std::vector<VertId> & verts, const Vector<MeshBuilder::VertSpan, FaceId> & faces,
-    const MeshBuilder::BuildSettings& settings, ProgressCallback cb /*= {}*/ )
+Mesh Mesh::fromFaceSoup( FaceSoup && soup, const MeshBuilder::BuildSettings& settings, ProgressCallback cb /*= {}*/ )
 {
     MR_TIMER;
     Mesh res;
-    res.points = std::move( vertexCoordinates );
-    res.topology = MeshBuilder::fromFaceSoup( verts, faces, settings, subprogress( cb, 0.0f, 0.8f ) );
+    res.points = std::move( soup.points );
+    res.topology = MeshBuilder::fromFaceSoup( soup.verts, soup.faces, settings, subprogress( cb, 0.0f, 0.8f ) );
 
     std::vector<EdgeId> holeRepresentativeEdges;
     for ( auto f : res.topology.getValidFaces() )
@@ -553,7 +551,7 @@ MeshProjectionResult Mesh::projectPoint( const Vector3f& point, float maxDistSq,
 const AABBTree & Mesh::getAABBTree() const
 {
     const auto & res = AABBTreeOwner_.getOrCreate( [this]{ return AABBTree( *this ); } );
-    assert( res.leafTris().size() == topology.numValidFaces() );
+    assert( res.numTris() == topology.numValidFaces() );
     return res;
 }
 
@@ -573,7 +571,7 @@ const Dipoles & Mesh::getDipoles() const
         [this, &tree] {
             return calcDipoles( tree, *this );
         } );
-    assert( res.size() == tree.nodes().size() );
+    assert( res.size() == tree.numNodes() );
     return res;
 }
 
@@ -589,7 +587,7 @@ void Mesh::updateCaches( const VertBitSet * changedVerts )
 {
     AABBTreeOwner_.update( [&]( AABBTree & tree )
     {
-        assert( tree.leafTris().size() == topology.numValidFaces() );
+        assert( tree.numTris() == topology.numValidFaces() );
         tree.refit( *this, changedVerts );
     } );
     AABBTreePointsOwner_.update( [&]( AABBTreePoints & tree )
@@ -607,7 +605,7 @@ void Mesh::updateCachesAfterSplits( const FaceHashMap & new2Old )
     AABBTreeOwner_.update( [&]( AABBTree & tree )
     {
         tree.addSplitFaces( *this, new2Old );
-        assert( tree.leafTris().size() == topology.numValidFaces() );
+        assert( tree.numTris() == topology.numValidFaces() );
     } );
     AABBTreePointsOwner_.reset(); // new vertices appeared
     dipolesOwner_.reset();

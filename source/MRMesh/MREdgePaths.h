@@ -65,6 +65,14 @@ struct TerminalVertex
     VertId * outPathStart = nullptr,  // if the path is found then its start vertex will be written here (even if start vertex is the same as finish vertex and the path is empty)
     VertId * outPathFinish = nullptr, // if the path is found then its finish vertex will be written here (even if start vertex is the same as finish vertex and the path is empty)
     float maxPathLen = FLT_MAX );
+/// finds the path from a vertex in start-triangle to a vertex in finish-triangle with the smallest sum of given metric along the path
+/// and euclidean distances from start to the first vertex and from the last vertex to finish, so the metric shall be comparable with edge lengths;
+/// using bidirectional modification of Dijkstra algorithm; if no path can be found then empty path is returned
+[[nodiscard]] MRMESH_API EdgePath buildSmallestMetricPathBiDir( const Mesh & mesh, const EdgeMetric & metric,
+    const MeshTriPoint & start, const MeshTriPoint & finish,
+    VertId * outPathStart = nullptr,  // if the path is found then its start vertex will be written here (even if start vertex is the same as finish vertex and the path is empty)
+    VertId * outPathFinish = nullptr, // if the path is found then its finish vertex will be written here (even if start vertex is the same as finish vertex and the path is empty)
+    float maxPathMetric = FLT_MAX );
 /// finds the shortest path in euclidean metric from start to finish vertices using A* modification of Dijkstra algorithm,
 /// which is faster for near linear path;
 /// if no path can be found then empty path is returned

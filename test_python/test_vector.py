@@ -26,6 +26,6 @@ def test_vector_from_list():
 
 def test_vector_list_argument():
     # a list is implicitly converted to Triangulation
-    topology = mrmesh.topologyFromTriangles([mrmesh.ThreeVertIds([mrmesh.VertId(0), mrmesh.VertId(1), mrmesh.VertId(2)])])
+    topology = mrmesh.topologyFromTriangles([mrmesh.ThreeVertIds(mrmesh.VertId(0), mrmesh.VertId(1), mrmesh.VertId(2))])
     assert topology.numValidFaces() == 1
     assert topology.numValidVerts() == 3

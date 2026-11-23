@@ -20,6 +20,18 @@ struct VertDuplication
     VertId dupVert; ///< new vertex after duplication
 };
 
+/// if attributes have a value for each of numSrcVerts vertices before duplication, then resizes them to numVerts
+/// and copies the values of source vertices to their duplicates; otherwise (e.g. empty attributes) leaves them unchanged
+template <typename V>
+void copyAttributesToDuplicates( V & attributes, const std::vector<VertDuplication> & dups, size_t numSrcVerts, size_t numVerts )
+{
+    if ( dups.empty() || attributes.size() != numSrcVerts )
+        return;
+    attributes.resize( numVerts );
+    for ( const auto & [src, dup] : dups )
+        attributes[dup] = attributes[src];
+}
+
 /// decides which of the two continuation triangles is better during a walk around a non-manifold vertex;
 /// all 5 arguments are original vertices (before duplication), and one of e0, e1 is the central vertex:
 /// e0, e1 - the vertices of the shared edge between the reference triangle and both continuation candidates,

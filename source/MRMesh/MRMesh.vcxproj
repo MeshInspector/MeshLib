@@ -40,6 +40,7 @@
     <ClInclude Include="MRAABBTreeBase.hpp" />
     <ClInclude Include="MRAABBTreeMaker.hpp" />
     <ClInclude Include="MRAABBTreeCenters.hpp" />
+    <ClInclude Include="MRSelectByKey.hpp" />
     <ClInclude Include="MRTriBox.hpp" />
     <ClInclude Include="MRAABBTreeObjects.h" />
     <ClInclude Include="MRAddNoise.h" />
@@ -145,6 +146,7 @@
     <ClInclude Include="MRFile.h" />
     <ClInclude Include="MRFillContour.h" />
     <ClInclude Include="MRFaceFace.h" />
+    <ClInclude Include="MRFaceSoup.h" />
     <ClInclude Include="MRFillContourByGraphCut.h" />
     <ClInclude Include="MRFillContours2D.h" />
     <ClInclude Include="MRGcodeProcessor.h" />
@@ -250,6 +252,7 @@
     <ClInclude Include="MRPointToPlaneAligningTransform.h" />
     <ClInclude Include="MRPointToPointAligningTransform.h" />
     <ClInclude Include="MRRigidXfRansac.h" />
+    <ClInclude Include="MRGlobalRegistration.h" />
     <ClInclude Include="MRPolyline.h" />
     <ClInclude Include="MRPolyline2Collide.h" />
     <ClInclude Include="MRPolyline2Intersect.h" />
@@ -317,7 +320,10 @@
     <ClInclude Include="MRMeshToPointCloud.h" />
     <ClInclude Include="miniply.h" />
     <ClInclude Include="MRAABBTree.h" />
+    <ClInclude Include="MRAABBTreeSimd.h" />
+    <ClInclude Include="MRAABBTreePointsTraversal.hpp" />
     <ClInclude Include="MRAABBTreeTraversal.hpp" />
+    <ClInclude Include="MRSimd4.hpp" />
     <ClInclude Include="MRBitSetParallelFor.h" />
     <ClInclude Include="MRClosestPointInTriangle.h" />
     <ClInclude Include="MRArrow.h" />
@@ -507,6 +513,7 @@
       <ExcludedFromBuild Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'!='ON'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="MRAlignContoursToMesh.cpp" />
+    <ClCompile Include="MRAllocator.cpp" />
     <ClCompile Include="MRAlphaShape.cpp" />
     <ClCompile Include="MRBoxNesting.cpp" />
     <ClCompile Include="MRChangeMeshDataAction.cpp" />
@@ -681,6 +688,7 @@
     <ClCompile Include="MRPointToPlaneAligningTransform.cpp" />
     <ClCompile Include="MRPointToPointAligningTransform.cpp" />
     <ClCompile Include="MRRigidXfRansac.cpp" />
+    <ClCompile Include="MRGlobalRegistration.cpp" />
     <ClCompile Include="MRPolyline.cpp" />
     <ClCompile Include="MRPolyline2Collide.cpp" />
     <ClCompile Include="MRPolyline2Intersect.cpp" />

@@ -1,9 +1,138 @@
 #include "MRBitSet.h"
+#include "MRMacros.h"
 #include <bit>
 #include <iostream>
 
+#if defined( __x86_64__ ) || defined( _M_X64 )
+#define MR_POPCNT_DISPATCH
+#if defined( _MSC_VER ) && !defined( __clang__ )
+#include <intrin.h>
+#define MR_TARGET_POPCNT
+#else
+#ifdef _MSC_VER
+#include <intrin.h>
+#else
+#include <cpuid.h>
+#endif
+#define MR_TARGET_POPCNT __attribute__(( target( "popcnt" ) ))
+#endif
+#endif
+
+#ifdef __wasm_simd128__
+#include <wasm_simd128.h>
+#include <algorithm>
+#endif
+
 namespace MR
 {
+
+namespace
+{
+
+using Block = BitSet::block_type;
+using Counts = BitSet::Counts;
+
+template <bool withPopcnt>
+MR_FORCE_INLINE int popcount( Block b ) noexcept
+{
+#if defined( _MSC_VER ) && !defined( __clang__ ) && defined( MR_POPCNT_DISPATCH )
+    if constexpr ( withPopcnt )
+        return int( __popcnt64( b ) );
+    else
+#endif
+    return std::popcount( b );
+}
+
+template <bool withPopcnt>
+MR_FORCE_INLINE size_t countT( const Block* blocks, size_t numBlocks ) noexcept
+{
+    size_t res = 0;
+    for ( size_t i = 0; i < numBlocks; ++i )
+        res += popcount<withPopcnt>( blocks[i] );
+    return res;
+}
+
+template <bool withPopcnt>
+MR_FORCE_INLINE Counts countBitsAndBlocksT( const Block* blocks, size_t numBlocks, size_t maxBits ) noexcept
+{
+    size_t bits = 0, nonEmptyBlocks = 0; // not Counts members, which MSVC keeps in memory
+    for ( size_t i = 0; i < numBlocks; ++i )
+    {
+        const auto b = blocks[i];
+        if ( !b )
+            continue;
+        ++nonEmptyBlocks;
+        bits += popcount<withPopcnt>( b );
+        if ( bits > maxBits )
+            break;
+    }
+    return { bits, nonEmptyBlocks };
+}
+
+#ifdef __wasm_simd128__
+// i8x16.popcnt on 4 blocks per step; much faster than i64.popcnt on arm64 and equal on x64 (clang's auto-vectorized scalar loop is slower on both)
+size_t countDefault( const Block* blocks, size_t numBlocks ) noexcept
+{
+    size_t res = 0, i = 0;
+    while ( i + 4 <= numBlocks )
+    {
+        // a u16 lane grows by at most 16 per step
+        v128_t accA = wasm_i16x8_splat( 0 ), accB = wasm_i16x8_splat( 0 );
+        for ( const auto end = std::min( i + 4 * 2048, numBlocks ); i + 4 <= end; i += 4 )
+        {
+            accA = wasm_i16x8_add( accA, wasm_u16x8_extadd_pairwise_u8x16( wasm_i8x16_popcnt( wasm_v128_load( blocks + i ) ) ) );
+            accB = wasm_i16x8_add( accB, wasm_u16x8_extadd_pairwise_u8x16( wasm_i8x16_popcnt( wasm_v128_load( blocks + i + 2 ) ) ) );
+        }
+        const auto acc32 = wasm_i32x4_add( wasm_u32x4_extadd_pairwise_u16x8( accA ), wasm_u32x4_extadd_pairwise_u16x8( accB ) );
+        res += size_t( wasm_u32x4_extract_lane( acc32, 0 ) ) + wasm_u32x4_extract_lane( acc32, 1 )
+             + wasm_u32x4_extract_lane( acc32, 2 ) + wasm_u32x4_extract_lane( acc32, 3 );
+    }
+    return res + countT<false>( blocks + i, numBlocks - i );
+}
+#else
+size_t countDefault( const Block* blocks, size_t numBlocks ) noexcept { return countT<false>( blocks, numBlocks ); }
+#endif
+Counts countBitsAndBlocksDefault( const Block* blocks, size_t numBlocks, size_t maxBits ) noexcept { return countBitsAndBlocksT<false>( blocks, numBlocks, maxBits ); }
+
+#ifndef MR_POPCNT_DISPATCH
+constexpr auto countImpl = &countDefault;
+constexpr auto countBitsAndBlocksImpl = &countBitsAndBlocksDefault;
+#else
+// constant-initialized, so the default versions serve calls from static initializers that run before selectPopcnt
+auto countImpl = &countDefault;
+auto countBitsAndBlocksImpl = &countBitsAndBlocksDefault;
+
+MR_TARGET_POPCNT size_t countPopcnt( const Block* blocks, size_t numBlocks ) noexcept { return countT<true>( blocks, numBlocks ); }
+MR_TARGET_POPCNT Counts countBitsAndBlocksPopcnt( const Block* blocks, size_t numBlocks, size_t maxBits ) noexcept { return countBitsAndBlocksT<true>( blocks, numBlocks, maxBits ); }
+
+bool cpuHasPopcnt()
+{
+#ifdef _MSC_VER
+    int info[4];
+    __cpuid( info, 1 );
+    return info[2] & ( 1 << 23 );
+#else
+    unsigned a, b, c, d;
+    return __get_cpuid( 1, &a, &b, &c, &d ) && ( c & bit_POPCNT );
+#endif
+}
+
+[[maybe_unused]] const bool selectPopcnt = []
+{
+    if ( !cpuHasPopcnt() )
+        return false;
+    countImpl = &countPopcnt;
+    countBitsAndBlocksImpl = &countBitsAndBlocksPopcnt;
+    return true;
+}();
+#endif
+
+} // anonymous namespace
+
+size_t countSetBits( const BitSet::block_type* blocks, size_t numBlocks ) noexcept
+{
+    return countImpl( blocks, numBlocks );
+}
 
 bool BitSet::any() const
 {
@@ -26,25 +155,12 @@ bool BitSet::all() const
 
 auto BitSet::count() const noexcept -> size_type
 {
-    size_type res = 0;
-    for ( const auto b : blocks_ )
-        res += std::popcount( b );
-    return res;
+    return countImpl( blocks_.data(), blocks_.size() );
 }
 
 auto BitSet::countBitsAndBlocks( size_type maxBits ) const noexcept -> Counts
 {
-    Counts res;
-    for ( const auto b : blocks_ )
-    {
-        if ( !b )
-            continue;
-        ++res.blocks;
-        res.bits += std::popcount( b );
-        if ( res.bits > maxBits )
-            break;
-    }
-    return res;
+    return countBitsAndBlocksImpl( blocks_.data(), blocks_.size(), maxBits );
 }
 
 void BitSet::setUnusedBits_()

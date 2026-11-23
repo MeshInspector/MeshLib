@@ -1011,29 +1011,11 @@ Expected<void> Node::loadMesh_( ThreeMFLoader& loader, const tinyxml2::XMLElemen
         fColorMap.resize( tris.size(), loader.filamentColors_[0] );
     }
 
+    const auto numLoadedPoints = vertexCoordinates.size();
     auto resMesh = std::make_shared<Mesh>( Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( vertexCoordinates ), tris, &dups, buildSettings ) );
-    
-    if ( !dups.empty() )
-    {
-        loader.duplicatedVertexCountAccum_ += int( dups.size() );
-        if ( !vUVCoords.empty() )
-        {
-            vUVCoords.resize( resMesh->topology.lastValidVert() + 1 );
-            for ( auto& dup : dups )
-            {
-                vUVCoords[dup.dupVert] = vUVCoords[dup.srcVert];
-            }
-        }
-
-        if ( !vColorMap.empty() )
-        {
-            vColorMap.resize( resMesh->topology.lastValidVert() + 1 );
-            for ( auto& dup : dups )
-            {
-                vColorMap[dup.dupVert] = vColorMap[dup.srcVert];
-            }
-        }
-    }
+    loader.duplicatedVertexCountAccum_ += int( dups.size() );
+    MeshBuilder::copyAttributesToDuplicates( vUVCoords, dups, numLoadedPoints, resMesh->points.size() );
+    MeshBuilder::copyAttributesToDuplicates( vColorMap, dups, numLoadedPoints, resMesh->points.size() );
 
     loader.skippedFaceCountAccum_ += skippedFaceCount;
 

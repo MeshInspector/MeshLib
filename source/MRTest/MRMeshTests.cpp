@@ -478,7 +478,7 @@ TEST( MRMesh, BasicExport )
 {
     Mesh mesh = makeCube();
 
-    const std::vector<ThreeVertIds> triangles = mesh.topology.getAllTriVerts();
+    const Vector<ThreeVertIds> triangles = mesh.topology.getAllTriVerts();
 
     const VertCoords & points = mesh.points;
     const int * vertexTripples = reinterpret_cast<const int*>( triangles.data() );

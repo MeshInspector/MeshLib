@@ -52,30 +52,51 @@ TEST( MRMesh, MaxSurfaceDistance )
     t.push_back( { 0_v, 1_v, 2_v } );
     const Mesh tri = Mesh::fromTriangles( { Vector3f( 0, 0, 0.5f ), Vector3f( 1, 0, 0.5f ), Vector3f( 0.3f, 1, 0.5f ) }, t );
     const float tol = 1e-3f;
+    const Vector3f center( 0.5f, 0.5f, 0.5f );
 
     EXPECT_EQ( findMaxDistanceSqOneWay( cube, tri ), 0 );
-    const auto d = std::sqrt( findMaxSurfaceDistanceSqOneWay( cube, tri, tol ) );
-    EXPECT_LE( d, 0.5f );
-    EXPECT_GE( d, 0.5f - tol );
+    auto res = findMaxSurfaceDistanceOneWay( cube, tri, tol );
+    EXPECT_LE( std::sqrt( res.distSq ), 0.5f );
+    EXPECT_GE( std::sqrt( res.distSq ), 0.5f - tol );
+    ASSERT_TRUE( res.a.valid() && res.b.valid() );
+    EXPECT_LE( ( res.b.proj.point - center ).length(), 2 * tol );
+    EXPECT_NEAR( ( res.a.proj.point - res.b.proj.point ).lengthSq(), res.distSq, 1e-6f );
+    EXPECT_LE( ( tri.triPoint( res.b.mtp( tri.topology ) ) - res.b.proj.point ).length(), 1e-6f );
+    EXPECT_LE( ( cube.triPoint( res.a.mtp( cube.topology ) ) - res.a.proj.point ).length(), 1e-6f );
 
     // the farthest points of the cube from the triangle are its two vertices with x=1, y=1
     const auto cubeMaxSq = 0.25f + 0.49f / 1.49f;
-    EXPECT_NEAR( findMaxSurfaceDistanceSqOneWay( tri, cube, tol ), cubeMaxSq, 1e-6f );
-    EXPECT_NEAR( findMaxSurfaceDistanceSq( cube, tri, tol ), cubeMaxSq, 1e-6f );
+    res = findMaxSurfaceDistanceOneWay( tri, cube, tol );
+    EXPECT_NEAR( res.distSq, cubeMaxSq, 1e-6f );
+    EXPECT_EQ( res.b.proj.point.x, 1 );
+    EXPECT_EQ( res.b.proj.point.y, 1 );
+    EXPECT_EQ( res.a.proj.point.z, 0.5f );
+
+    // the farthest point is in the second mesh
+    res = findMaxSurfaceDistance( cube, tri, tol );
+    EXPECT_NEAR( res.distSq, cubeMaxSq, 1e-6f );
+    EXPECT_EQ( res.a.proj.point.x, 1 );
+    EXPECT_EQ( res.b.proj.point.z, 0.5f );
 
     // the triangle moved away, and the transformation returning it back
     const auto xf = AffineXf3f::translation( Vector3f( 3, 2, 1 ) ) * AffineXf3f::linear( Matrix3f::rotation( Vector3f( 1, 2, 3 ), 1.0f ) );
     const auto xfInv = xf.inverse();
     Mesh movedTri = tri;
     movedTri.transform( xfInv );
-    const auto dXf = std::sqrt( findMaxSurfaceDistanceSqOneWay( cube, movedTri, tol, &xf ) );
-    EXPECT_LE( dXf, 0.5f + 1e-5f );
-    EXPECT_GE( dXf, 0.5f - tol );
-    EXPECT_NEAR( findMaxSurfaceDistanceSq( cube, movedTri, tol, &xf ), cubeMaxSq, 1e-5f );
-    EXPECT_NEAR( findMaxSurfaceDistanceSq( movedTri, cube, tol, &xfInv ), cubeMaxSq, 1e-5f );
+    res = findMaxSurfaceDistanceOneWay( cube, movedTri, tol, &xf );
+    EXPECT_LE( std::sqrt( res.distSq ), 0.5f + 1e-5f );
+    EXPECT_GE( std::sqrt( res.distSq ), 0.5f - tol );
+    // the point of B is returned in its own space
+    EXPECT_LE( ( xf( res.b.proj.point ) - center ).length(), 2 * tol );
+    EXPECT_NEAR( findMaxSurfaceDistance( cube, movedTri, tol, &xf ).distSq, cubeMaxSq, 1e-5f );
+    EXPECT_NEAR( findMaxSurfaceDistance( movedTri, cube, tol, &xfInv ).distSq, cubeMaxSq, 1e-5f );
 
-    EXPECT_EQ( findMaxSurfaceDistanceSqOneWay( cube, tri, tol, nullptr, 0.01f ), 0.01f );
-    EXPECT_EQ( findMaxSurfaceDistanceSq( cube, cube, tol ), 0 );
+    res = findMaxSurfaceDistanceOneWay( cube, tri, tol, nullptr, 0.01f );
+    EXPECT_EQ( res.distSq, 0.01f );
+    EXPECT_FALSE( res.a.valid() );
+    EXPECT_TRUE( res.b.valid() );
+
+    EXPECT_EQ( findMaxSurfaceDistance( cube, cube, tol ).distSq, 0 );
 }
 
 TEST( MRMesh, MaxDistancePoints )

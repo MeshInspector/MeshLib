@@ -490,7 +490,7 @@ VertsOnMesh projectVerts( const MeshPart& a, const MeshPart& b, const AffineXf3f
 
 // bv - the vertices of B projected on A;
 // startDistSq - the points of B not farther from A than this (plus tolerance) are of no interest, except for the most distant vertex
-MeshMeshDistanceResult findMaxSurfaceDistanceFromVerts( const MeshPart& a, const MeshPart& b, float tolerance, float maxDistanceSq,
+MeshMeshDistanceResult findMaxDistanceInsideTriangles( const MeshPart& a, const MeshPart& b, float tolerance, float maxDistanceSq,
     const VertsOnMesh& bv, float startDistSq )
 {
     assert( tolerance > 0 );
@@ -620,7 +620,7 @@ MeshMeshDistanceResult findMaxSurfaceDistanceFromVerts( const MeshPart& a, const
 MeshMeshDistanceResult findMaxSurfaceDistanceOneWay( const MeshPart& a, const MeshPart& b, float tolerance, const AffineXf3f* rigidB2A, float maxDistanceSq )
 {
     MR_TIMER;
-    return findMaxSurfaceDistanceFromVerts( a, b, tolerance, maxDistanceSq, projectVerts( a, b, rigidB2A, maxDistanceSq ), 0 );
+    return findMaxDistanceInsideTriangles( a, b, tolerance, maxDistanceSq, projectVerts( a, b, rigidB2A, maxDistanceSq ), 0 );
 }
 
 MeshMeshDistanceResult findMaxSurfaceDistance( const MeshPart& a, const MeshPart& b, float tolerance, const AffineXf3f* rigidB2A, float maxDistanceSq )
@@ -632,8 +632,8 @@ MeshMeshDistanceResult findMaxSurfaceDistance( const MeshPart& a, const MeshPart
     const auto bVerts = projectVerts( a, b, rigidB2A, maxDistanceSq );
     const auto aVerts = projectVerts( b, a, rigidA2B ? &*rigidA2B : nullptr, maxDistanceSq );
     // each direction skips the triangles, which cannot be farther than the distance already found in the other direction
-    auto res = findMaxSurfaceDistanceFromVerts( a, b, tolerance, maxDistanceSq, bVerts, aVerts.maxSq );
-    const auto ba = findMaxSurfaceDistanceFromVerts( b, a, tolerance, maxDistanceSq, aVerts, res.distSq );
+    auto res = findMaxDistanceInsideTriangles( a, b, tolerance, maxDistanceSq, bVerts, aVerts.maxSq );
+    const auto ba = findMaxDistanceInsideTriangles( b, a, tolerance, maxDistanceSq, aVerts, res.distSq );
     if ( ba.distSq > res.distSq )
         res = { ba.b, ba.a, ba.distSq };
     return res;

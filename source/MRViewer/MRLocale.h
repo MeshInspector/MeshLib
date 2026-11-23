@@ -69,6 +69,15 @@ MRVIEWER_API std::string getDisplayName( const std::string& localeName );
 /// \brief Adds or updates a display name for the given locale.
 MRVIEWER_API void setDisplayName( const std::string& localeName, const std::string& displayName );
 
+/// \brief Enables or disables the check of translations when their catalogs are loaded (disabled by default).
+/// With the check, .mo files are read by MeshLib, and a translation is ignored if it cannot replace
+/// the original string in fmt::format or printf-like call; without it, the files are read by boost as they are.
+/// The active locale is reloaded on every change.
+/// \ref isFormatSafeTranslation
+MRVIEWER_API void enableTranslationCheck( bool on = true );
+/// \brief Returns true if the translations are checked when their catalogs are loaded.
+MRVIEWER_API bool isTranslationCheckEnabled();
+
 /// \brief Returns a list of system locales.
 /// The first one in the list is always the active system locale.
 MRVIEWER_API std::vector<std::string> getSystemLocales();

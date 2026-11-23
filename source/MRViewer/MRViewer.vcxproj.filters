@@ -550,6 +550,9 @@
     <ClCompile Include="MRI18n.cpp">
       <Filter>Localization</Filter>
     </ClCompile>
+    <ClCompile Include="MRTranslationFormat.cpp">
+      <Filter>Localization</Filter>
+    </ClCompile>
     <ClCompile Include="MRViewerMcp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -1065,6 +1068,9 @@
       <Filter>SpaceMouse</Filter>
     </ClInclude>
     <ClInclude Include="MRI18n.h">
+      <Filter>Localization</Filter>
+    </ClInclude>
+    <ClInclude Include="MRTranslationFormat.h">
       <Filter>Localization</Filter>
     </ClInclude>
     <ClInclude Include="MRLocale.h">

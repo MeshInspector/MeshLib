@@ -1,5 +1,6 @@
 #include "MRLocale.h"
 #ifndef MRVIEWER_NO_LOCALE
+#include "MRTranslationFormat.h"
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRId.h"
@@ -8,18 +9,19 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystemPath.h"
 #include "MRMesh/MRTelemetry.h"
-#include "MRMesh/MRTranslationFormat.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
 
 #pragma warning( push )
 #pragma warning( disable: 4619 ) // #pragma warning: there is no warning number 'N'
+#include <boost/locale/generator.hpp>
 #include <boost/locale/gnu_gettext.hpp>
 #include <boost/locale/info.hpp>
 #include <boost/locale/message.hpp>
 #include <boost/locale/util.hpp>
 #pragma warning( pop )
 #include <boost/signals2/signal.hpp>
+#include <boost/version.hpp>
 
 #ifdef _WIN32
 #include <WinNls.h>
@@ -48,8 +50,10 @@ std::locale gLocale = {};
 std::string gLocaleName = "en";
 std::string gLocaleCanonicalName = "en.UTF-8";
 boost::signals2::signal<void ( const std::string& )> gLocaleNameChanged = {};
+boost::locale::generator gLocaleGen = {};
 std::vector<std::string> gLocaleDomains = {};
 std::vector<std::filesystem::path> gLocaleDirs = {};
+bool gCheckTranslations = false;
 std::vector<LocaleDomainId> gGenericDomains = {};
 
 std::filesystem::path getLocaleDir()
@@ -139,7 +143,7 @@ void disableUnsafeTranslations( std::vector<char>& file, const std::string& file
 }
 
 /// reads .mo file for boost, returns empty vector if there is no such file
-std::vector<char> loadCatalog( const std::string& fileName, const std::string& )
+std::vector<char> loadCheckedCatalog( const std::string& fileName, const std::string& )
 {
     std::ifstream in( pathFromUtf8( fileName ), std::ifstream::binary | std::ifstream::ate );
     if ( !in )
@@ -155,9 +159,15 @@ std::vector<char> loadCatalog( const std::string& fileName, const std::string& )
     return res;
 }
 
-/// makes the active locale with messages of all domains found in all catalog paths (and no other facets)
+/// makes the active locale again after a change of its name, domains, catalog paths or the way of loading
 void updateLocale()
 {
+    if ( !gCheckTranslations )
+    {
+        gLocale = gLocaleGen.generate( gLocaleCanonicalName );
+        return;
+    }
+    // the same message facet as the generator makes, but with the files read by our function
     const auto infoLocale = boost::locale::util::create_info( std::locale::classic(), gLocaleCanonicalName );
     const auto& data = std::use_facet<boost::locale::info>( infoLocale );
     boost::locale::gnu_gettext::messages_info info;
@@ -169,7 +179,7 @@ void updateLocale()
         info.domains.emplace_back( domain );
     for ( const auto& dir : gLocaleDirs )
         info.paths.push_back( utf8string( dir ) );
-    info.callback = loadCatalog;
+    info.callback = loadCheckedCatalog;
     gLocale = std::locale( std::locale::classic(), boost::locale::gnu_gettext::create_messages_facet<char>( info ) );
 }
 
@@ -178,6 +188,7 @@ void addLocaleDomain( const std::string& domainName )
 {
     if ( std::find( gLocaleDomains.begin(), gLocaleDomains.end(), domainName ) == gLocaleDomains.end() )
         gLocaleDomains.push_back( domainName );
+    gLocaleGen.add_messages_domain( domainName );
     updateLocale();
 }
 
@@ -234,6 +245,7 @@ void Locale::addCatalogPath( const std::filesystem::path& path )
     if ( std::find( gLocaleDirs.begin(), gLocaleDirs.end(), path ) != gLocaleDirs.end() )
         return;
     gLocaleDirs.emplace_back( path );
+    gLocaleGen.add_messages_path( utf8string( path ) );
     updateLocale();
 }
 
@@ -299,6 +311,19 @@ std::string Locale::getDisplayName( const std::string& localeName )
 void Locale::setDisplayName( const std::string& localeName, const std::string& displayName )
 {
     gKnownLocales[localeName] = displayName;
+}
+
+void Locale::enableTranslationCheck( bool on )
+{
+    if ( gCheckTranslations == on )
+        return;
+    gCheckTranslations = on;
+    updateLocale();
+}
+
+bool Locale::isTranslationCheckEnabled()
+{
+    return gCheckTranslations;
 }
 
 std::vector<std::string> Locale::getSystemLocales()
@@ -394,6 +419,22 @@ std::vector<std::string> Locale::getSystemLocales()
 
 MR_ON_INIT
 {
+    // generate message facets only
+    gLocaleGen.categories(
+#if BOOST_VERSION >= 108100
+        boost::locale::category_t::message
+#else
+        boost::locale::message_facet
+#endif
+    );
+    // do not generate wide-character facets (this is crucial for Wasm support as we don't use ICU or iconv)
+    gLocaleGen.characters(
+#if BOOST_VERSION >= 108100
+        boost::locale::char_facet_t::char_f
+#else
+        boost::locale::char_facet
+#endif
+    );
     // set MeshLib domain by default
     Locale::addDomain( "MeshLib" );
     Locale::addCatalogPath( getLocaleDir() );

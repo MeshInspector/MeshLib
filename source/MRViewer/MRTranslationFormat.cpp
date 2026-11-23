@@ -200,7 +200,7 @@ bool parsePrintfArgs( std::string_view s, bool strict, std::vector<PrintfArg>& a
 bool isPrintfSafe( std::string_view original, std::string_view translation )
 {
     std::vector<PrintfArg> origArgs, args;
-    if ( !parsePrintfArgs( original, true, origArgs ) )
+    if ( original.find( '%' ) == std::string_view::npos || !parsePrintfArgs( original, true, origArgs ) )
         return true; // the original is not a format string
     if ( !parsePrintfArgs( translation, false, args ) )
         return false;
@@ -215,7 +215,8 @@ bool isFormatSafeTranslation( std::string_view original, std::string_view transl
     if ( translation.find_first_of( "%{}" ) == std::string_view::npos || translation == original )
         return true;
     std::vector<FmtField> origFields, fields;
-    if ( parseFmtFields( original, origFields ) )
+    // the original without braces or with wrong ones is not a format string
+    if ( original.find_first_of( "{}" ) != std::string_view::npos && parseFmtFields( original, origFields ) )
     {
         if ( !parseFmtFields( translation, fields ) )
             return false;

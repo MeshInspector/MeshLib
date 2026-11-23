@@ -35,8 +35,8 @@ enum class MeshMeshCollisionStatus
 
 struct MeshMeshSignedDistanceResult
 {
-    /// two closest points: from meshes A and B respectively, each one as the projection of the other point
-    MeshProjectionResult a, b;
+    /// two closest points: from meshes A and B respectively
+    PointOnFaceBary a, b;
 
     /// mutual status of two meshes
     MeshMeshCollisionStatus status{ MeshMeshCollisionStatus::BothOutside };

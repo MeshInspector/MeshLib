@@ -256,22 +256,20 @@ MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshP
     auto res = findDistance( a, b, rigidB2A, upDistLimitSq > 0.0f ? upDistLimitSq : FLT_TRUE_MIN );
     if ( res.distSq == FLT_TRUE_MIN )
         res.distSq = 0.0f;
-    const auto resA = toProjection( res.a, res.distSq );
-    const auto resB = toProjection( res.b, res.distSq );
     if ( !res.a || !res.b )
     {   // findDistance returns the limit sentinel when nothing closer was found
         assert( res.distSq == upDistLimitSq );
-        return { resA, resB, MeshMeshCollisionStatus::NotColliding, std::sqrt( res.distSq ) };
+        return { res.a, res.b, MeshMeshCollisionStatus::NotColliding, std::sqrt( res.distSq ) };
     }
     assert( res.distSq == 0.0f || res.distSq < upDistLimitSq );
     std::vector<FaceFace> collisions;
     auto status = findCollisionStatus( a, b, res, rigidB2A, &collisions );
     if ( status == MeshMeshCollisionStatus::Touching )
-        return { resA, resB, status, 0 }; // two meshes touch one another but do not intersect
+        return { res.a, res.b, status, 0 }; // two meshes touch one another but do not intersect
     if ( status != MeshMeshCollisionStatus::Colliding )
     {
         auto dist = status == MeshMeshCollisionStatus::BothOutside ? std::sqrt( res.distSq ) : -std::sqrt( res.distSq );
-        return { resA, resB, status, dist };
+        return { res.a, res.b, status, dist };
     }
 
     // colliding
@@ -303,20 +301,20 @@ MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshP
         }
     }
     if ( bestDist > 0.0f )
-        return { resA, resB, status, 0.0f };
+        return { res.a, res.b, status, 0.0f };
 
     // the vertex as a point of one of its faces
-    auto vertProj = [&]( const Mesh& mesh ) -> MeshProjectionResult
+    auto vertProj = [&]( const Mesh& mesh ) -> PointOnFaceBary
     {
         for ( auto e : orgRing( mesh.topology, bestV ) )
             if ( auto f = mesh.topology.left( e ) )
-                return { { .proj = { f, mesh.points[bestV] }, .tp = MeshTriPoint( e, {} ).canonical( mesh.topology ).bary }, sqr( bestDist ) };
+                return { .proj = { f, mesh.points[bestV] }, .tp = MeshTriPoint( e, {} ).canonical( mesh.topology ).bary };
         return {};
     };
     // the projection of the vertex on the other mesh
-    auto otherProj = [&]( const Mesh& mesh, const MeshTriPoint& mtp ) -> MeshProjectionResult
+    auto otherProj = [&]( const Mesh& mesh, const MeshTriPoint& mtp ) -> PointOnFaceBary
     {
-        return { { .proj = { mesh.topology.left( mtp.e ), mesh.triPoint( mtp ) }, .tp = mtp.canonical( mesh.topology ).bary }, sqr( bestDist ) };
+        return { .proj = { mesh.topology.left( mtp.e ), mesh.triPoint( mtp ) }, .tp = mtp.canonical( mesh.topology ).bary };
     };
     if ( bestInB )
         return { otherProj( a.mesh, zoneAndDistancesBA.projectons[bestV].first ), vertProj( b.mesh ), status, bestDist };

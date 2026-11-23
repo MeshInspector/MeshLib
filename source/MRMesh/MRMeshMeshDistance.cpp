@@ -392,14 +392,15 @@ MeshMeshDistanceResult findMaxDistanceOneWay( const MeshPart& a, const MeshPart&
         [] ( const VertDist& x, const VertDist& y ) { return y.distSq > x.distSq ? y : x; }
     );
 
-    res.a = findProjection( inA( best.v ), a, maxDistanceSq );
-    res.distSq = res.a.distSq;
+    const auto proj = findProjection( inA( best.v ), a, maxDistanceSq );
+    res.a = proj;
+    res.distSq = proj.distSq;
     // the vertex as a point of one of its triangles
     for ( auto e : orgRing( b.mesh.topology, best.v ) )
     {
         if ( auto f = b.mesh.topology.left( e ); f && bFaces.test( f ) )
         {
-            res.b = { .proj = { f, bMeshVerts[best.v] }, .tp = MeshTriPoint( e, {} ).canonical( b.mesh.topology ).bary, .distSq = res.distSq };
+            res.b = { .proj = { f, bMeshVerts[best.v] }, .tp = MeshTriPoint( e, {} ).canonical( b.mesh.topology ).bary };
             break;
         }
     }

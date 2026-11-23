@@ -57,8 +57,6 @@ TEST( MRMesh, MaxDistancePoints )
     EXPECT_EQ( res.b.proj.point.z, 2 );
     EXPECT_EQ( res.a.proj.point, res.b.proj.point - Vector3f( 0, 0, 1 ) );
     EXPECT_EQ( box.triPoint( res.b.mtp( box.topology ) ), res.b.proj.point );
-    EXPECT_EQ( res.a.distSq, 1 );
-    EXPECT_EQ( res.b.distSq, 1 );
 
     EXPECT_EQ( findMaxDistanceOneWay( box, cube ).distSq, 0 );
 

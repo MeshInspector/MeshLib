@@ -432,9 +432,10 @@ float findMaxDistanceSq( const MeshPart& a, const MeshPart& b, const AffineXf3f*
     return findMaxDistance( a, b, rigidB2A, maxDistanceSq ).distSq;
 }
 
-MeshMeshDistanceResult findMaxSurfaceDistanceOneWay( const MeshPart& a, const MeshPart& b, float tolerance, const AffineXf3f* rigidB2A, float maxDistanceSq )
+// startDistSq - the points of B not farther from A than this (plus tolerance) are of no interest, except for the most distant vertex
+static MeshMeshDistanceResult findMaxSurfaceDistanceOneWayImpl( const MeshPart& a, const MeshPart& b, float tolerance, const AffineXf3f* rigidB2A, float maxDistanceSq,
+    float startDistSq )
 {
-    MR_TIMER;
     assert( tolerance > 0 );
 
     MeshMeshDistanceResult res;
@@ -506,8 +507,9 @@ MeshMeshDistanceResult findMaxSurfaceDistanceOneWay( const MeshPart& a, const Me
         FaceId bf;
         Corner c;
     };
-    Best best{ .distSq = vertMaxSq };
-    if ( vertMaxSq < maxDistanceSq )
+    const float startSq = std::max( vertMaxSq, startDistSq );
+    Best best{ .distSq = startSq };
+    if ( startSq < maxDistanceSq )
     {
         // of several equally distant points, the one in the triangle with the smallest id is taken
         best = tbb::parallel_reduce( tbb::blocked_range( 0_f, FaceId( b.mesh.topology.faceSize() ) ), best,
@@ -518,8 +520,8 @@ MeshMeshDistanceResult findMaxSurfaceDistanceOneWay( const MeshPart& a, const Me
                 {
                     if ( !bFaces.test( bf ) )
                         continue;
-                    // every triangle starts from the maximum in the vertices, so the result does not depend on the order of triangles
-                    Best cur{ .distSq = vertMaxSq };
+                    // every triangle starts from the same distance, so the result does not depend on the order of triangles
+                    Best cur{ .distSq = startSq };
                     const auto vs = b.mesh.topology.getTriVerts( bf );
                     stack.push_back( { vertCorners[vs[0]], vertCorners[vs[1]], vertCorners[vs[2]] } );
                     stack.back()[1].bary = { 1, 0 };
@@ -583,13 +585,22 @@ MeshMeshDistanceResult findMaxSurfaceDistanceOneWay( const MeshPart& a, const Me
     return res;
 }
 
+MeshMeshDistanceResult findMaxSurfaceDistanceOneWay( const MeshPart& a, const MeshPart& b, float tolerance, const AffineXf3f* rigidB2A, float maxDistanceSq )
+{
+    MR_TIMER;
+    return findMaxSurfaceDistanceOneWayImpl( a, b, tolerance, rigidB2A, maxDistanceSq, 0 );
+}
+
 MeshMeshDistanceResult findMaxSurfaceDistance( const MeshPart& a, const MeshPart& b, float tolerance, const AffineXf3f* rigidB2A, float maxDistanceSq )
 {
     std::optional<AffineXf3f> rigidA2B;
     if ( rigidB2A )
         rigidA2B = rigidB2A->inverse();
-    auto res = findMaxSurfaceDistanceOneWay( a, b, tolerance, rigidB2A, maxDistanceSq );
-    const auto ba = findMaxSurfaceDistanceOneWay( b, a, tolerance, rigidA2B ? &*rigidA2B : nullptr, maxDistanceSq );
+    const auto* a2b = rigidA2B ? &*rigidA2B : nullptr;
+    // each direction skips the triangles, which cannot be farther than the distance already found in the other direction
+    const float vertsSq = findMaxDistanceOneWay( b, a, a2b, maxDistanceSq ).distSq;
+    auto res = findMaxSurfaceDistanceOneWayImpl( a, b, tolerance, rigidB2A, maxDistanceSq, vertsSq );
+    const auto ba = findMaxSurfaceDistanceOneWayImpl( b, a, tolerance, a2b, maxDistanceSq, std::max( vertsSq, res.distSq ) );
     if ( ba.distSq > res.distSq )
         res = { ba.b, ba.a, ba.distSq };
     return res;

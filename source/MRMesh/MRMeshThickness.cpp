@@ -86,7 +86,7 @@ InSphere findInSphereImpl( const Mesh& mesh, const MeshPoint & m, const InSphere
     {
         .center = m.pt + m.inDir * settings.maxRadius,
         .radius = settings.maxRadius,
-        .oppositeTouchPoint = { .distSq = sqr( res.radius ) }
+        .oppositeTouchPoint = { {}, sqr( res.radius ) }
     };
 
     // check candidate point, and if the sphere though it is smaller than current res, then replaces res;
@@ -136,7 +136,7 @@ InSphere findInSphereImpl( const Mesh& mesh, const MeshPoint & m, const InSphere
         {
             const auto d = mesh.topology.dest( e );
             // delay face setting till candidate is actually selected
-            if ( processCandidate( { .proj = { .point = mesh.points[d] } } ) )
+            if ( processCandidate( { { .proj = { .point = mesh.points[d] } }, 0.0f } ) )
                 setTouchInVertex( d );
         }
     }
@@ -147,14 +147,14 @@ InSphere findInSphereImpl( const Mesh& mesh, const MeshPoint & m, const InSphere
         {
             const auto ne = mesh.topology.next( e );
             const auto d = mesh.topology.dest( ne );
-            if ( processCandidate( { .proj = { .point = mesh.points[d] } } ) )
+            if ( processCandidate( { { .proj = { .point = mesh.points[d] } }, 0.0f } ) )
                 setTouchInVertex( d );
         }
         if ( auto r = mesh.topology.right( e ) )
         {
             const auto pe = mesh.topology.prev( e );
             const auto d = mesh.topology.dest( pe );
-            if ( processCandidate( { .proj = { .point = mesh.points[d] } } ) )
+            if ( processCandidate( { { .proj = { .point = mesh.points[d] } }, 0.0f } ) )
                 setTouchInVertex( d );
         }
     }
@@ -166,7 +166,7 @@ InSphere findInSphereImpl( const Mesh& mesh, const MeshPoint & m, const InSphere
         res.center = 0.5f * ( isec.proj.point + m.pt );
         assert( isec.distanceAlongLine >= 0 );
         res.radius = 0.5f * isec.distanceAlongLine;
-        res.oppositeTouchPoint = MeshProjectionResult{ .proj = isec.proj, .tp = isec.tp, .distSq = sqr( res.radius ) };
+        res.oppositeTouchPoint = MeshProjectionResult{ { .proj = isec.proj, .tp = isec.tp }, sqr( res.radius ) };
     }
 
     findTrisInBall( mesh, Ball3f{ res.center, res.oppositeTouchPoint.distSq },

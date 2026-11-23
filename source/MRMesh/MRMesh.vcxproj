@@ -394,6 +394,7 @@
     <ClInclude Include="MRSerializer.h" />
     <ClInclude Include="MRSurfaceDistance.h" />
     <ClInclude Include="MRStringConvert.h" />
+    <ClInclude Include="MRTranslationFormat.h" />
     <ClInclude Include="MRSurfacePath.h" />
     <ClInclude Include="MRSymMatrix3.h" />
     <ClInclude Include="MRFreeFormDeformer.h" />
@@ -761,6 +762,7 @@
     <ClCompile Include="MRFreeFormDeformer.cpp" />
     <ClCompile Include="MRSurfaceDistance.cpp" />
     <ClCompile Include="MRStringConvert.cpp" />
+    <ClCompile Include="MRTranslationFormat.cpp" />
     <ClCompile Include="MRSurfacePath.cpp" />
     <ClCompile Include="MRTriDist.cpp" />
     <ClCompile Include="MRUnitInfo.cpp" />

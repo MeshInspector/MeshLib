@@ -270,6 +270,9 @@
     <ClInclude Include="MRStringConvert.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MRTranslationFormat.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
     <ClInclude Include="MRMeshTexture.h">
       <Filter>Source Files\BaseStructures</Filter>
     </ClInclude>
@@ -1635,6 +1638,9 @@
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRStringConvert.cpp">
+      <Filter>Source Files\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="MRTranslationFormat.cpp">
       <Filter>Source Files\Basic</Filter>
     </ClCompile>
     <ClCompile Include="MREdgePaths.cpp">

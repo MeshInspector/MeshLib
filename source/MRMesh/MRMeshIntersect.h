@@ -14,23 +14,11 @@ namespace MR
 /// \addtogroup AABBTreeGroup
 /// \{
 
-struct MeshIntersectionResult
+/// the intersection point (proj stores intersected face and global coordinates) with its position on the ray
+struct MeshIntersectionResult : PointOnFaceBary
 {
-    /// stores intersected face and global coordinates
-    PointOnFace proj;
-
-    /// barycentric coordinates of proj relative to the vertices of proj.face in the order of MeshTopology::getTriVerts( proj.face )
-    TriPointf tp;
-
     /// stores the distance from ray origin to the intersection point in direction units
     float distanceAlongLine = 0;
-
-    /// check for validity
-    [[nodiscard]] bool valid() const { return proj.face.valid(); }
-    [[nodiscard]] explicit operator bool() const { return proj.face.valid(); }
-
-    /// returns the intersection point as MeshTriPoint relative to topology.edgeWithLeft( proj.face ), or invalid MeshTriPoint if no intersection was found
-    [[nodiscard]] MRMESH_API MeshTriPoint mtp( const MeshTopology & topology ) const;
 };
 
 /// Finds ray and mesh intersection in float-precision.

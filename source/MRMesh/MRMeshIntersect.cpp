@@ -22,13 +22,6 @@
 namespace MR
 {
 
-MeshTriPoint MeshIntersectionResult::mtp( const MeshTopology & topology ) const
-{
-    if ( !proj.valid() )
-        return {};
-    return { topology.edgeWithLeft( proj.face ), tp };
-}
-
 // Filtered: region or validFaces is given, otherwise the leaves skip their checks
 template<typename T, bool Filtered>
 MeshIntersectionResult meshRayIntersectT_( const VertCoords & points, const AABBTree & tree, const FaceBitSet * region, const Line3<T>& line,

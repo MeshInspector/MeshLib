@@ -9,6 +9,8 @@
 #include "MRBitSetParallelFor.h"
 #include "MRRingIterator.h"
 #include "MRTriangleIntersection.h"
+#include "MRClosestPointInTriangle.h"
+#include "MRVector.h"
 #include <optional>
 
 namespace MR
@@ -390,6 +392,123 @@ float findMaxDistanceSq( const MeshPart& a, const MeshPart& b, const AffineXf3f*
     if ( rigidB2A )
         rigidA2B = rigidB2A->inverse();
     return std::max( findMaxDistanceSqOneWay( a, b, rigidB2A, maxDistanceSq ), findMaxDistanceSqOneWay( b, a, rigidA2B ? &*rigidA2B : nullptr, maxDistanceSq ) );
+}
+
+float findMaxSurfaceDistanceSqOneWay( const MeshPart& a, const MeshPart& b, float tolerance, const AffineXf3f* rigidB2A, float maxDistanceSq )
+{
+    MR_TIMER;
+    assert( tolerance > 0 );
+
+    const auto& bFaces = b.mesh.topology.getFaceIds( b.region );
+    const auto bVerts = getIncidentVerts( b.mesh.topology, bFaces );
+    if ( !bVerts.any() )
+        return 0.0f;
+
+    // a point of B in A's space, with the closest triangle of A and the squared distance to it
+    struct Corner
+    {
+        Vector3f p;
+        float distSq = 0;
+        FaceId f;
+    };
+    auto project = [&]( const Vector3f& p )
+    {
+        const auto r = findProjection( p, a, maxDistanceSq );
+        return Corner{ p, r.distSq, r.proj.face };
+    };
+
+    Vector<Corner, VertId> vertCorners( bVerts.find_last() + 1 );
+    BitSetParallelFor( bVerts, [&]( VertId v )
+    {
+        vertCorners[v] = project( rigidB2A ? ( *rigidB2A )( b.mesh.points[v] ) : b.mesh.points[v] );
+    } );
+    float vertMaxSq = 0;
+    for ( auto v : bVerts )
+    {
+        if ( !vertCorners[v].f )
+            return maxDistanceSq;
+        vertMaxSq = std::max( vertMaxSq, vertCorners[v].distSq );
+    }
+
+    using Tri = std::array<Corner, 3>;
+    // no point of the triangle is farther from A than from one triangle of A, and the latter distance is maximal in a corner
+    auto upperBoundSq = [&]( const Tri& t )
+    {
+        float res = FLT_MAX;
+        for ( int k = 0; k < 3; ++k )
+        {
+            if ( ( k > 0 && t[k].f == t[0].f ) || ( k > 1 && t[k].f == t[1].f ) )
+                continue;
+            const auto s = a.mesh.getTriPoints( t[k].f );
+            float maxSq = t[k].distSq;
+            for ( int i = 0; i < 3; ++i )
+                if ( i != k )
+                    maxSq = std::max( maxSq, ( closestPointInTriangle( t[i].p, s[0], s[1], s[2] ).first - t[i].p ).lengthSq() );
+            res = std::min( res, maxSq );
+        }
+        return res;
+    };
+
+    return tbb::parallel_reduce( tbb::blocked_range( 0_f, FaceId( b.mesh.topology.faceSize() ) ), vertMaxSq,
+        [&]( const tbb::blocked_range<FaceId>& range, float init )
+        {
+            std::vector<Tri> stack;
+            for ( FaceId bf = range.begin(); bf < range.end() && init < maxDistanceSq; ++bf )
+            {
+                if ( !bFaces.test( bf ) )
+                    continue;
+                // every triangle starts from the maximum in the vertices, so the result does not depend on the order of triangles
+                float bestSq = vertMaxSq;
+                const auto vs = b.mesh.topology.getTriVerts( bf );
+                stack.push_back( { vertCorners[vs[0]], vertCorners[vs[1]], vertCorners[vs[2]] } );
+                while ( !stack.empty() )
+                {
+                    const auto t = stack.back();
+                    stack.pop_back();
+                    if ( upperBoundSq( t ) <= sqr( std::sqrt( bestSq ) + tolerance ) )
+                        continue;
+                    // m[i] is the middle of the edge opposite to t[i]
+                    Tri m;
+                    bool tooSmall = false;
+                    for ( int i = 0; i < 3; ++i )
+                    {
+                        const auto& p0 = t[( i + 1 ) % 3].p;
+                        const auto& p1 = t[( i + 2 ) % 3].p;
+                        m[i].p = 0.5f * ( p0 + p1 );
+                        tooSmall = tooSmall || m[i].p == p0 || m[i].p == p1;
+                    }
+                    if ( tooSmall )
+                        continue; // cannot be subdivided in floats
+                    for ( int i = 0; i < 3; ++i )
+                    {
+                        m[i] = project( m[i].p );
+                        bestSq = m[i].f ? std::max( bestSq, m[i].distSq ) : maxDistanceSq;
+                    }
+                    if ( bestSq >= maxDistanceSq )
+                    {
+                        stack.clear();
+                        break;
+                    }
+                    stack.push_back( { t[0], m[2], m[1] } );
+                    stack.push_back( { m[2], t[1], m[0] } );
+                    stack.push_back( { m[1], m[0], t[2] } );
+                    stack.push_back( m );
+                }
+                init = std::max( init, bestSq );
+            }
+            return init;
+        },
+        [] ( float x, float y ) { return std::max( x, y ); }
+    );
+}
+
+float findMaxSurfaceDistanceSq( const MeshPart& a, const MeshPart& b, float tolerance, const AffineXf3f* rigidB2A, float maxDistanceSq )
+{
+    std::optional<AffineXf3f> rigidA2B;
+    if ( rigidB2A )
+        rigidA2B = rigidB2A->inverse();
+    return std::max( findMaxSurfaceDistanceSqOneWay( a, b, tolerance, rigidB2A, maxDistanceSq ),
+        findMaxSurfaceDistanceSqOneWay( b, a, tolerance, rigidA2B ? &*rigidA2B : nullptr, maxDistanceSq ) );
 }
 
 } //namespace MR

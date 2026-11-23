@@ -79,19 +79,42 @@ MRMESH_API MeshMeshCollisionStatus findCollisionStatus( const MeshPart& a, const
     const MeshMeshDistanceResult& distRes, const AffineXf3f* rigidB2A = nullptr, std::vector<FaceFace>* collisions = nullptr );
 
 /**
- * \brief returns the maximum of the squared distances from each B-mesh vertex to A-mesh
+ * \brief returns the maximum of the squared distances from each B-mesh vertex to A-mesh;
+ *        please see \ref findMaxSurfaceDistanceSqOneWay, which considers all points of B-mesh and not only its vertices
  * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
  * \param maxDistanceSq upper limit on the positive distance in question, if the real distance is larger than the function exists returning maxDistanceSq
  */
 MRMESH_API float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A = nullptr, float maxDistanceSq = FLT_MAX );
 
 /**
- * \brief returns the squared Hausdorff distance between two meshes, that is
-          the maximum of squared distances from each mesh vertex to the other mesh (in both directions)
+ * \brief returns the maximum of squared distances from each mesh vertex to the other mesh (in both directions);
+ *        please see \ref findMaxSurfaceDistanceSq, which considers all points of the meshes and not only their vertices
  * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
  * \param maxDistanceSq upper limit on the positive distance in question, if the real distance is larger than the function exists returning maxDistanceSq
  */
 MRMESH_API float findMaxDistanceSq( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A = nullptr, float maxDistanceSq = FLT_MAX );
+
+/**
+ * \brief returns the maximum of the squared distances from each point of B-mesh (inside its triangles as well, not only vertices) to A-mesh,
+ *        which is the squared one-sided Hausdorff distance from B to A
+ * \details the maximum can be reached inside a triangle of B, where several triangles of A are equally close,
+ *          so the triangles of B are subdivided there till the given tolerance is reached
+ * \param tolerance positive value, the returned distance (not squared) is never above the exact one, and is below it by at most this value;
+ *        the smaller the value, the longer the computation
+ * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
+ * \param maxDistanceSq upper limit on the positive distance in question, if the real distance is larger than the function exists returning maxDistanceSq
+ */
+MRMESH_API float findMaxSurfaceDistanceSqOneWay( const MeshPart& a, const MeshPart& b, float tolerance, const AffineXf3f* rigidB2A = nullptr, float maxDistanceSq = FLT_MAX );
+
+/**
+ * \brief returns the squared Hausdorff distance between two meshes, that is
+ *        the maximum of squared distances from each point of one mesh (not only vertices) to the other mesh (in both directions)
+ * \param tolerance positive value, the returned distance (not squared) is never above the exact one, and is below it by at most this value;
+ *        the smaller the value, the longer the computation
+ * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
+ * \param maxDistanceSq upper limit on the positive distance in question, if the real distance is larger than the function exists returning maxDistanceSq
+ */
+MRMESH_API float findMaxSurfaceDistanceSq( const MeshPart& a, const MeshPart& b, float tolerance, const AffineXf3f* rigidB2A = nullptr, float maxDistanceSq = FLT_MAX );
 
 /// \}
 

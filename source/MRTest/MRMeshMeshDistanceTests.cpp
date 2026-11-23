@@ -44,4 +44,38 @@ TEST( MRMesh, MeshMeshClosestPoint )
     EXPECT_TRUE( findProjection( usd.b.proj.point, cube2 ).distSq < 1e-6f );
 }
 
+TEST( MRMesh, MaxSurfaceDistance )
+{
+    // all vertices of the triangle are on the cube, and the center of the cube inside the triangle is the farthest from it
+    const Mesh cube = makeCube( Vector3f::diagonal( 1 ), Vector3f() );
+    Triangulation t;
+    t.push_back( { 0_v, 1_v, 2_v } );
+    const Mesh tri = Mesh::fromTriangles( { Vector3f( 0, 0, 0.5f ), Vector3f( 1, 0, 0.5f ), Vector3f( 0.3f, 1, 0.5f ) }, t );
+    const float tol = 1e-3f;
+
+    EXPECT_EQ( findMaxDistanceSqOneWay( cube, tri ), 0 );
+    const auto d = std::sqrt( findMaxSurfaceDistanceSqOneWay( cube, tri, tol ) );
+    EXPECT_LE( d, 0.5f );
+    EXPECT_GE( d, 0.5f - tol );
+
+    // the farthest points of the cube from the triangle are its two vertices with x=1, y=1
+    const auto cubeMaxSq = 0.25f + 0.49f / 1.49f;
+    EXPECT_NEAR( findMaxSurfaceDistanceSqOneWay( tri, cube, tol ), cubeMaxSq, 1e-6f );
+    EXPECT_NEAR( findMaxSurfaceDistanceSq( cube, tri, tol ), cubeMaxSq, 1e-6f );
+
+    // the triangle moved away, and the transformation returning it back
+    const auto xf = AffineXf3f::translation( Vector3f( 3, 2, 1 ) ) * AffineXf3f::linear( Matrix3f::rotation( Vector3f( 1, 2, 3 ), 1.0f ) );
+    const auto xfInv = xf.inverse();
+    Mesh movedTri = tri;
+    movedTri.transform( xfInv );
+    const auto dXf = std::sqrt( findMaxSurfaceDistanceSqOneWay( cube, movedTri, tol, &xf ) );
+    EXPECT_LE( dXf, 0.5f + 1e-5f );
+    EXPECT_GE( dXf, 0.5f - tol );
+    EXPECT_NEAR( findMaxSurfaceDistanceSq( cube, movedTri, tol, &xf ), cubeMaxSq, 1e-5f );
+    EXPECT_NEAR( findMaxSurfaceDistanceSq( movedTri, cube, tol, &xfInv ), cubeMaxSq, 1e-5f );
+
+    EXPECT_EQ( findMaxSurfaceDistanceSqOneWay( cube, tri, tol, nullptr, 0.01f ), 0.01f );
+    EXPECT_EQ( findMaxSurfaceDistanceSq( cube, cube, tol ), 0 );
+}
+
 } //namespace MR

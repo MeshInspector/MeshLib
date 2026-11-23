@@ -23,7 +23,7 @@ public:
     {
         if ( objs.size() == 2 && !objs[0]->isAncestor( objs[1].get() ) && !objs[1]->isAncestor( objs[0].get() ) )
             return {};
-        return "Select two separate objects: the upper one stays, the lower one moves";
+        return _tr( "Select two separate objects: the upper one stays, the lower one moves" );
     }
 
     void drawDialog( ImGuiContext* ) override;
@@ -45,19 +45,12 @@ private:
         return true;
     }
 
-    // feature of the given row and side (0 - fixed, 1 - moving) in world space
-    std::optional<Features::Primitives::Variant> primitive_( int row, int side ) const
-    {
-        const auto& f = rows_[row][side];
-        auto res = f ? Features::primitiveFromObject( *f ) : std::nullopt;
-        if ( res && f->parent() ) // feature getters are in the parent space
-            res = Features::transformPrimitive( f->parent()->worldXf(), *res );
-        return res;
-    }
-
+    // features of the given row in world space
     std::optional<Features::AlignPair> pair_( int row ) const
     {
-        auto f = primitive_( row, 0 ), m = primitive_( row, 1 );
+        const auto& [fixed, moving] = rows_[row];
+        auto f = fixed ? Features::primitiveFromObjectWithWorldXf( *fixed ) : std::nullopt;
+        auto m = moving ? Features::primitiveFromObjectWithWorldXf( *moving ) : std::nullopt;
         if ( !f || !m )
             return {};
         return Features::AlignPair{ *m, *f };
@@ -83,7 +76,7 @@ void FeatureAlignment::drawDialog( ImGuiContext* )
             std::swap( row[0], row[1] );
     }
 
-    const char* rowNames[] = { "Primary", "Locator 1", "Locator 2", "Clocking" };
+    constexpr const char* rowNames[] = { _t( "Primary" ), _t( "Locator 1" ), _t( "Locator 2" ), _t( "Clocking" ) };
     std::array<std::vector<std::shared_ptr<FeatureObject>>, 2> features;
     std::array<std::vector<std::string>, 2> names;
     for ( int side = 0; side < 2; ++side )
@@ -115,6 +108,8 @@ void FeatureAlignment::drawDialog( ImGuiContext* )
     const auto primary = pair_( 0 );
     if ( !primary )
         UI::transparentTextWrapped( "%s", _tr( "Choose the primary features of both objects." ) );
+    else if ( primary->moving.index() != primary->fixed.index() )
+        UI::transparentTextWrapped( "%s", _tr( "The primary features must both be planes, axes or points." ) );
     else
     {
         Features::AlignParams params{ .primary = *primary, .clocking = pair_( 3 ), .flip = flip_, .gap = gap_ };

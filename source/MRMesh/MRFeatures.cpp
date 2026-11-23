@@ -222,8 +222,8 @@ std::optional<Primitives::Variant> primitiveFromObject( const Object& object )
 std::optional<Primitives::Variant> primitiveFromObjectWithWorldXf( const Object& object )
 {
     auto ret = primitiveFromObject( object );
-    if ( ret )
-        *ret = transformPrimitive( object.worldXf(), *ret );
+    if ( ret && object.parent() ) // the feature getters already include the object's own xf
+        *ret = transformPrimitive( object.parent()->worldXf(), *ret );
     return ret;
 }
 

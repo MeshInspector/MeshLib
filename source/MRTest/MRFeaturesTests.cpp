@@ -1,4 +1,5 @@
 #include <MRMesh/MRFeatures.h>
+#include <MRMesh/MRCircleObject.h>
 #include <MRMesh/MRConstants.h>
 #include <MRMesh/MRLineSegm3.h>
 #include <gtest/gtest.h>
@@ -945,6 +946,19 @@ TEST( Features, Angle_Plane_Plane )
         ASSERT_TRUE( r.isSurfaceNormalA );
         ASSERT_TRUE( r.isSurfaceNormalB );
     }
+}
+
+TEST( Features, PrimitiveFromObjectWithWorldXf )
+{
+    Object parent;
+    parent.setXf( AffineXf3f::translation( { 10, 0, 0 } ) );
+    auto circle = std::make_shared<CircleObject>();
+    circle->setCenter( { 1, 2, 3 } );
+    circle->setRadius( 2 );
+    parent.addChild( circle );
+    const auto c = std::get<Primitives::ConeSegment>( *primitiveFromObjectWithWorldXf( *circle ) );
+    EXPECT_LE( ( c.centerPoint().center - Vector3f( 11, 2, 3 ) ).length(), testEps );
+    EXPECT_NEAR( c.positiveSideRadius, 2, testEps );
 }
 
 static void expectNear( const AffineXf3d& a, const AffineXf3f& b )

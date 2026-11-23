@@ -392,6 +392,8 @@ struct AlignParams
     //! Their centers are matched in the least squares sense by the motion the primary pair leaves free:
     //! spin about the primary direction and, for planes, translation along them.
     //! For a point primary, the first locator sets the direction to spin about.
+    //! A locator's lever arm (its distance from the primary axis, or for planes from the locator centroid)
+    //! should be well above its fitting noise, otherwise the noise sets the spin.
     std::vector<AlignPair> locators;
     //! If set, its directions (projected on the plane orthogonal to the primary direction) set the spin instead of the locators.
     std::optional<AlignPair> clocking;

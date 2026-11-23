@@ -1166,7 +1166,11 @@ AffineXf3d align( const AlignPair& primary, const AlignParams& params )
         n = ( alignCenter( locators[0].fixed ) - cf ).normalized();
     }
     if ( dm == Vector3d() || n == Vector3d() )
+    {
+        if ( params.freeDofs )
+            *params.freeDofs = 3; // rotations about the matched point
         return AffineXf3d::translation( cf - cm );
+    }
 
     // planes face each other, axes take the closer direction
     const bool opposite = planes ? !params.flip : axes && ( dot( dm, n ) < 0 ) != params.flip;
@@ -1185,6 +1189,7 @@ AffineXf3d align( const AlignPair& primary, const AlignParams& params )
     }
     const auto onPlane = [&] ( const Vector3d& v ) { return v - dot( v, n ) * n; };
     double s = 0, c = 0;
+    bool spinSet = false;
     const auto addSpin = [&] ( const Vector3d& a0, const Vector3d& b0 )
     {
         const auto a = onPlane( rot * a0 ), b = onPlane( b0 );
@@ -1192,6 +1197,7 @@ AffineXf3d align( const AlignPair& primary, const AlignParams& params )
             return; // ignore references (almost) parallel to n
         s += dot( n, cross( a, b ) );
         c += dot( a, b );
+        spinSet = true;
     };
     if ( params.clocking )
         addSpin( alignDirection( params.clocking->moving ), alignDirection( params.clocking->fixed ) );
@@ -1199,6 +1205,8 @@ AffineXf3d align( const AlignPair& primary, const AlignParams& params )
         for ( const auto& l : locators )
             addSpin( alignCenter( l.moving ) - om, alignCenter( l.fixed ) - of );
     rot = Matrix3d::rotation( n, std::atan2( s, c ) ) * rot;
+    if ( params.freeDofs ) // free spin, and translation along planes without locators
+        *params.freeDofs = ( spinSet ? 0 : 1 ) + ( planes && locators.empty() ? 2 : 0 );
 
     if ( !planes ) // axes and points coincide
         return { rot, seat - rot * cm };

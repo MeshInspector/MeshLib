@@ -10,6 +10,7 @@
 #include "MRMesh/MRFeatures.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRSceneRoot.h"
+#include "MRPch/MRFmt.h"
 
 namespace MR
 {
@@ -112,7 +113,8 @@ void FeatureAlignment::drawDialog( ImGuiContext* )
         UI::transparentTextWrapped( "%s", _tr( "The primary features must both be planes, axes or points." ) );
     else
     {
-        Features::AlignParams params{ .clocking = pair_( 3 ), .flip = flip_, .gap = gap_ };
+        int freeDofs = 0;
+        Features::AlignParams params{ .clocking = pair_( 3 ), .flip = flip_, .gap = gap_, .freeDofs = &freeDofs };
         for ( int row : { 1, 2 } )
             if ( auto l = pair_( row ) )
                 params.locators.push_back( *l );
@@ -133,6 +135,8 @@ void FeatureAlignment::drawDialog( ImGuiContext* )
                 ImGui::Text( "%s %s: %s", s_tr( rowNames[row] ).c_str(), _tr( "mismatch" ), valueToString<LengthUnit>( d.length() ).c_str() );
             }
         }
+        if ( freeDofs )
+            UI::transparentTextWrapped( "%s", fmt::format( f_tr( "Remaining degrees of freedom: {}. Add locators or a clocking pair to fix them." ), freeDofs ).c_str() );
         if ( UI::button( _tr( "Apply" ), !parts_[1]->isLocked(), Vector2f( -1, 0 ) ) )
         {
             AppendHistory<ChangeXfAction>( s_tr( "Feature Alignment" ), parts_[1] );

@@ -1011,6 +1011,31 @@ TEST( Features, AlignBalancesHoleMismatch )
     EXPECT_LT( ( xf.A * Vector3d( 0, 0, -1 ) - Vector3d( 0, 0, -1 ) ).length(), 1e-6 );
 }
 
+TEST( Features, AlignFreeDofs )
+{
+    const Primitives::Plane plane{ .center = {}, .normal = { 0, 0, 1 } }, mating{ .center = {}, .normal = { 0, 0, -1 } };
+    const auto pin = primitiveCylinder( { 0, 0, -5 }, { 0, 0, 5 }, 2 );
+    const auto line = toPrimitive( LineSegm3f( { 0, 0, 0 }, { 1, 0, 0 } ) );
+    const Primitives::Sphere p0( Vector3f(), 0 ), p1( Vector3f( 5, 0, 0 ), 0 ), p2( Vector3f( 0, 5, 0 ), 0 ), onAxis( Vector3f( 0, 0, 7 ), 0 );
+    const auto freeDofs = [] ( const AlignPair& primary, AlignParams params )
+    {
+        int res = -1;
+        params.freeDofs = &res;
+        (void)align( primary, params );
+        return res;
+    };
+    EXPECT_EQ( freeDofs( { mating, plane }, {} ), 3 );
+    EXPECT_EQ( freeDofs( { mating, plane }, { .clocking = AlignPair{ line, line } } ), 2 );
+    EXPECT_EQ( freeDofs( { mating, plane }, { .locators = { { p1, p1 } } } ), 1 );
+    EXPECT_EQ( freeDofs( { mating, plane }, { .locators = { { p1, p1 } }, .clocking = AlignPair{ line, line } } ), 0 );
+    EXPECT_EQ( freeDofs( { mating, plane }, { .locators = { { p1, p1 }, { p2, p2 } } } ), 0 );
+    EXPECT_EQ( freeDofs( { pin, pin }, { .locators = { { onAxis, onAxis } } } ), 1 );
+    EXPECT_EQ( freeDofs( { pin, pin }, { .locators = { { p1, p1 } } } ), 0 );
+    EXPECT_EQ( freeDofs( { p0, p0 }, {} ), 3 );
+    EXPECT_EQ( freeDofs( { p0, p0 }, { .locators = { { p1, p1 } } } ), 1 );
+    EXPECT_EQ( freeDofs( { p0, p0 }, { .locators = { { p1, p1 }, { p2, p2 } } } ), 0 );
+}
+
 TEST( Features, AlignOnAxisLocatorKeepsSpinFree )
 {
     const auto pin = primitiveCylinder( { 0, 0, -5 }, { 0, 0, 5 }, 2 );

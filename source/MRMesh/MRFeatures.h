@@ -398,6 +398,8 @@ struct AlignParams
     bool flip = false;
     //! Signed distance between the matched planes or axis centers along the fixed primary normal or axis.
     double gap = 0;
+    //! Optional output: the number of rigid degrees of freedom the features leave free (0 - the placement is fully defined).
+    int* freeDofs = nullptr;
 };
 
 //! Returns the rigid transformation in world space that moves the moving features onto the fixed ones.

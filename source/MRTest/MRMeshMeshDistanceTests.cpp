@@ -97,6 +97,36 @@ TEST( MRMesh, HausdorffDistance )
     EXPECT_TRUE( res.b.valid() );
 
     EXPECT_EQ( findHausdorffDistance( cube, cube, tol ).distSq, 0 );
+
+    // without positive tolerance only the vertices are considered
+    for ( float badTol : { 0.f, -1.f, std::numeric_limits<float>::quiet_NaN() } )
+    {
+        EXPECT_EQ( findHausdorffDistanceOneWay( cube, tri, badTol ).distSq, 0 );
+        EXPECT_EQ( findHausdorffDistance( cube, tri, badTol ).distSq, findMaxDistanceSq( cube, tri ) );
+    }
+}
+
+TEST( MRMesh, HausdorffDistanceSlivers )
+{
+    // the farthest point of the long thin strip is in the middle between two small triangles;
+    // away from zero the short edges of the strip cannot be halved in floats many times
+    Triangulation tb;
+    tb.push_back( { 0_v, 1_v, 2_v } );
+    tb.push_back( { 0_v, 2_v, 3_v } );
+    const Mesh strip = Mesh::fromTriangles( { Vector3f( 0, 1, 0 ), Vector3f( 1, 1, 0 ), Vector3f( 1, 1 + 1e-5f, 0 ), Vector3f( 0, 1 + 1e-5f, 0 ) }, tb );
+    Triangulation ta;
+    ta.push_back( { 0_v, 1_v, 2_v } );
+    ta.push_back( { 3_v, 4_v, 5_v } );
+    const Mesh ends = Mesh::fromTriangles( {
+        Vector3f( -0.1f, 1, 0 ), Vector3f( -0.1f, 1.001f, 0 ), Vector3f( -0.101f, 1, 0 ),
+        Vector3f( 1.2f, 1, 0 ), Vector3f( 1.201f, 1, 0 ), Vector3f( 1.2f, 1.001f, 0 ) }, ta );
+
+    for ( float tol : { 1e-3f, 1e-5f } )
+    {
+        const auto res = findHausdorffDistanceOneWay( ends, strip, tol );
+        EXPECT_LE( std::sqrt( res.distSq ), 0.65f + 1e-6f );
+        EXPECT_GE( std::sqrt( res.distSq ), 0.65f - tol - 1e-6f );
+    }
 }
 
 TEST( MRMesh, MaxDistancePoints )

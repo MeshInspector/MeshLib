@@ -119,7 +119,7 @@ MRMESH_API float findMaxDistanceSq( const MeshPart& a, const MeshPart& b, const 
  *          so the triangles of B are subdivided there till the given tolerance is reached
  * \return the found point in b, its projection on A-mesh in a, and the squared distance between them
  * \param tolerance positive value, the returned distance (not squared) is never above the exact one, and is below it by at most this value;
- *        the smaller the value, the longer the computation
+ *        the smaller the value, the longer the computation; if it is not positive then only the vertices are considered
  * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
  * \param maxDistanceSq upper limit on the positive distance in question, if the real distance is larger than the function exists returning maxDistanceSq and no valid point in a
  */
@@ -130,7 +130,7 @@ MRMESH_API MeshMeshDistanceResult findHausdorffDistanceOneWay( const MeshPart& a
  *        the distance to it is the Hausdorff distance between two meshes
  * \return the found point in a or in b, its projection on the other mesh in the remaining field, and the squared distance between them
  * \param tolerance positive value, the returned distance (not squared) is never above the exact one, and is below it by at most this value;
- *        the smaller the value, the longer the computation
+ *        the smaller the value, the longer the computation; if it is not positive then only the vertices are considered
  * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
  * \param maxDistanceSq upper limit on the positive distance in question, if the real distance is larger than the function exists returning maxDistanceSq and one valid point only
  */

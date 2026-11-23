@@ -475,15 +475,10 @@ VertsOnMesh projectVerts( const MeshPart& a, const MeshPart& b, const AffineXf3f
     {
         res.corners[v] = projectCorner( rigidB2A ? ( *rigidB2A )( b.mesh.points[v] ) : b.mesh.points[v], {}, a, maxDistanceSq );
     } );
+    // a vertex farther than the limit has distSq equal to the limit
     res.maxSq = -1;
     for ( auto v : bVerts )
     {
-        if ( !res.corners[v].f )
-        {
-            res.maxVert = v;
-            res.maxSq = maxDistanceSq;
-            break;
-        }
         if ( res.corners[v].distSq > res.maxSq )
         {
             res.maxVert = v;
@@ -498,19 +493,12 @@ VertsOnMesh projectVerts( const MeshPart& a, const MeshPart& b, const AffineXf3f
 MeshMeshDistanceResult findMaxDistanceInsideTriangles( const MeshPart& a, const MeshPart& b, float tolerance, float maxDistanceSq,
     const VertsOnMesh& bv, float startDistSq )
 {
-    assert( tolerance > 0 );
-
     MeshMeshDistanceResult res;
     if ( !bv.maxVert )
         return res;
     const auto& bFaces = b.mesh.topology.getFaceIds( b.region );
-    const auto& vertCorners = bv.corners;
-    const auto maxVert = bv.maxVert;
-    const float vertMaxSq = bv.maxSq;
-    using Corner = SurfCorner;
-    auto project = [&]( const Vector3f& p, const TriPointf& bary ) { return projectCorner( p, bary, a, maxDistanceSq ); };
 
-    using Tri = std::array<Corner, 3>;
+    using Tri = std::array<SurfCorner, 3>;
     // no point of the triangle is farther from A than from one triangle of A, and the latter distance is maximal in a corner
     auto upperBoundSq = [&]( const Tri& t )
     {
@@ -522,8 +510,13 @@ MeshMeshDistanceResult findMaxDistanceInsideTriangles( const MeshPart& a, const 
             const auto s = a.mesh.getTriPoints( t[k].f );
             float maxSq = t[k].distSq;
             for ( int i = 0; i < 3; ++i )
-                if ( i != k )
-                    maxSq = std::max( maxSq, ( closestPointInTriangle( t[i].p, s[0], s[1], s[2] ).first - t[i].p ).lengthSq() );
+            {
+                if ( i == k )
+                    continue;
+                const float dSq = ( closestPointInTriangle( t[i].p, s[0], s[1], s[2] ).first - t[i].p ).lengthSq();
+                // NaN is possible for a degenerate triangle of A, which gives no bound then
+                maxSq = std::isnan( dSq ) ? FLT_MAX : std::max( maxSq, dSq );
+            }
             ubSq = std::min( ubSq, maxSq );
         }
         return ubSq;
@@ -532,30 +525,32 @@ MeshMeshDistanceResult findMaxDistanceInsideTriangles( const MeshPart& a, const 
     // the most distant point found inside the triangles, if it is farther than all vertices
     struct Best
     {
-        float distSq = 0;
         FaceId bf;
-        Corner c;
+        SurfCorner c;
     };
-    const float startSq = std::max( vertMaxSq, startDistSq );
+    const float startSq = std::max( bv.maxSq, startDistSq );
     // a triangle is not subdivided if none of its points can be farther than this; updated only when a farther point is found
     const float startStopSq = sqr( std::sqrt( startSq ) + tolerance );
-    Best best{ .distSq = startSq };
-    if ( startSq < maxDistanceSq )
+    Best start;
+    start.c.distSq = startSq;
+    Best best = start;
+    // zero, negative or NaN tolerance would mean endless subdivision or wrong pruning
+    if ( startSq < maxDistanceSq && tolerance > 0 )
     {
         // of several equally distant points, the one in the triangle with the smallest id is taken
         best = tbb::parallel_reduce( tbb::blocked_range( 0_f, FaceId( b.mesh.topology.faceSize() ) ), best,
             [&]( const tbb::blocked_range<FaceId>& range, Best init )
             {
                 Vector<Tri> stack;
-                for ( FaceId bf = range.begin(); bf < range.end() && init.distSq < maxDistanceSq; ++bf )
+                for ( FaceId bf = range.begin(); bf < range.end() && init.c.distSq < maxDistanceSq; ++bf )
                 {
                     if ( !bFaces.test( bf ) )
                         continue;
                     // every triangle starts from the same distance, so the result does not depend on the order of triangles
-                    Best cur{ .distSq = startSq };
+                    Best cur = start;
                     float stopSq = startStopSq;
                     const auto vs = b.mesh.topology.getTriVerts( bf );
-                    stack.push_back( { vertCorners[vs[0]], vertCorners[vs[1]], vertCorners[vs[2]] } );
+                    stack.push_back( { bv.corners[vs[0]], bv.corners[vs[1]], bv.corners[vs[2]] } );
                     stack.back()[1].bary = { 1, 0 };
                     stack.back()[2].bary = { 0, 1 };
                     while ( !stack.empty() )
@@ -566,48 +561,65 @@ MeshMeshDistanceResult findMaxDistanceInsideTriangles( const MeshPart& a, const 
                             continue;
                         // m[i] is the middle of the edge opposite to t[i]
                         Tri m;
-                        bool tooSmall = false;
+                        bool halved[3];
+                        int longest = 0;
+                        float longestSq = -1;
                         for ( int i = 0; i < 3; ++i )
                         {
                             const auto& c0 = t[( i + 1 ) % 3];
                             const auto& c1 = t[( i + 2 ) % 3];
                             m[i].p = 0.5f * ( c0.p + c1.p );
                             m[i].bary = { 0.5f * ( c0.bary.a + c1.bary.a ), 0.5f * ( c0.bary.b + c1.bary.b ) };
-                            tooSmall = tooSmall || m[i].p == c0.p || m[i].p == c1.p;
-                        }
-                        if ( tooSmall )
-                            continue; // cannot be subdivided in floats
-                        for ( int i = 0; i < 3 && cur.distSq < maxDistanceSq; ++i )
-                        {
-                            m[i] = project( m[i].p, m[i].bary );
-                            if ( !m[i].f )
-                                cur = { maxDistanceSq, bf, m[i] };
-                            else if ( m[i].distSq > cur.distSq )
+                            halved[i] = m[i].p != c0.p && m[i].p != c1.p;
+                            if ( const float lenSq = ( c1.p - c0.p ).lengthSq(); lenSq > longestSq )
                             {
-                                cur = { m[i].distSq, bf, m[i] };
-                                stopSq = sqr( std::sqrt( cur.distSq ) + tolerance );
+                                longest = i;
+                                longestSq = lenSq;
                             }
                         }
-                        if ( cur.distSq >= maxDistanceSq )
+                        // if a short edge cannot be halved in floats, then the triangle is split in two at the middle of its longest edge
+                        const bool inFour = halved[0] && halved[1] && halved[2];
+                        if ( !halved[longest] )
+                            continue; // cannot be subdivided in floats
+                        for ( int i = 0; i < 3 && cur.c.distSq < maxDistanceSq; ++i )
+                        {
+                            if ( !inFour && i != longest )
+                                continue;
+                            m[i] = projectCorner( m[i].p, m[i].bary, a, maxDistanceSq );
+                            if ( m[i].distSq > cur.c.distSq )
+                            {
+                                cur = { bf, m[i] };
+                                stopSq = sqr( std::sqrt( cur.c.distSq ) + tolerance );
+                            }
+                        }
+                        if ( cur.c.distSq >= maxDistanceSq )
                         {
                             stack.clear();
                             break;
                         }
-                        stack.push_back( { t[0], m[2], m[1] } );
-                        stack.push_back( { m[2], t[1], m[0] } );
-                        stack.push_back( { m[1], m[0], t[2] } );
-                        stack.push_back( m );
+                        if ( inFour )
+                        {
+                            stack.push_back( { t[0], m[2], m[1] } );
+                            stack.push_back( { m[2], t[1], m[0] } );
+                            stack.push_back( { m[1], m[0], t[2] } );
+                            stack.push_back( m );
+                        }
+                        else
+                        {
+                            stack.push_back( { t[longest], t[( longest + 1 ) % 3], m[longest] } );
+                            stack.push_back( { t[longest], m[longest], t[( longest + 2 ) % 3] } );
+                        }
                     }
-                    if ( cur.distSq > init.distSq )
+                    if ( cur.c.distSq > init.c.distSq )
                         init = cur;
                 }
                 return init;
             },
-            [] ( const Best& x, const Best& y ) { return y.distSq > x.distSq ? y : x; }
+            [] ( const Best& x, const Best& y ) { return y.c.distSq > x.c.distSq ? y : x; }
         );
     }
 
-    const auto proj = findProjection( best.bf ? best.c.p : vertCorners[maxVert].p, a, maxDistanceSq );
+    const auto proj = findProjection( best.bf ? best.c.p : bv.corners[bv.maxVert].p, a, maxDistanceSq );
     res.a = proj;
     res.distSq = proj.distSq;
     if ( best.bf )
@@ -616,7 +628,7 @@ MeshMeshDistanceResult findMaxDistanceInsideTriangles( const MeshPart& a, const 
         res.b = { .proj = { best.bf, best.c.bary.interpolate( ps[0], ps[1], ps[2] ) }, .tp = best.c.bary };
     }
     else
-        res.b = vertAsPoint( b.mesh, bFaces, maxVert );
+        res.b = vertAsPoint( b.mesh, bFaces, bv.maxVert );
     return res;
 }
 

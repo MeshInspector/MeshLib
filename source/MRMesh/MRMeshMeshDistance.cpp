@@ -14,6 +14,12 @@
 namespace MR
 {
 
+/// the point as the projection of the other point located at given squared distance
+static MeshProjectionResult toProjection( const PointOnFaceBary& p, float distSq )
+{
+    return { p, p ? distSq : 0 };
+}
+
 MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A, float upDistLimitSq )
 {
     MR_TIMER;
@@ -176,10 +182,8 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
         }
         res.a.proj.point = aPt;
         res.a.tp = aBary;
-        res.a.distSq = res.distSq;
         res.b.proj.point = rigidB2A ? rigidB2A->inverse()( bPt ) : bPt;
         res.b.tp = bBary;
-        res.b.distSq = res.distSq;
     }
 
     return res;
@@ -300,17 +304,17 @@ MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshP
         return { res.a, res.b, status, 0.0f };
 
     // the vertex as a point of one of its faces
-    auto vertProj = [&]( const Mesh& mesh ) -> MeshProjectionResult
+    auto vertProj = [&]( const Mesh& mesh ) -> PointOnFaceBary
     {
         for ( auto e : orgRing( mesh.topology, bestV ) )
             if ( auto f = mesh.topology.left( e ) )
-                return { .proj = { f, mesh.points[bestV] }, .tp = MeshTriPoint( e, {} ).canonical( mesh.topology ).bary, .distSq = sqr( bestDist ) };
+                return { .proj = { f, mesh.points[bestV] }, .tp = MeshTriPoint( e, {} ).canonical( mesh.topology ).bary };
         return {};
     };
     // the projection of the vertex on the other mesh
-    auto otherProj = [&]( const Mesh& mesh, const MeshTriPoint& mtp ) -> MeshProjectionResult
+    auto otherProj = [&]( const Mesh& mesh, const MeshTriPoint& mtp ) -> PointOnFaceBary
     {
-        return { .proj = { mesh.topology.left( mtp.e ), mesh.triPoint( mtp ) }, .tp = mtp.canonical( mesh.topology ).bary, .distSq = sqr( bestDist ) };
+        return { .proj = { mesh.topology.left( mtp.e ), mesh.triPoint( mtp ) }, .tp = mtp.canonical( mesh.topology ).bary };
     };
     if ( bestInB )
         return { otherProj( a.mesh, zoneAndDistancesBA.projectons[bestV].first ), vertProj( b.mesh ), status, bestDist };
@@ -330,8 +334,8 @@ MeshMeshCollisionStatus findCollisionStatus( const MeshPart& a, const MeshPart& 
             *collisions = std::move( thisCollisions );
         return status;
     }
-    bool isBOutside = a.mesh.isOutsideByProjNorm( rigidB2A ? ( *rigidB2A )( distRes.b.proj.point ) : distRes.b.proj.point, distRes.a, a.region );
-    bool isAOutside = b.mesh.isOutsideByProjNorm( rigidB2A ? rigidB2A->inverse()( distRes.a.proj.point ) : distRes.a.proj.point, distRes.b, b.region );
+    bool isBOutside = a.mesh.isOutsideByProjNorm( rigidB2A ? ( *rigidB2A )( distRes.b.proj.point ) : distRes.b.proj.point, toProjection( distRes.a, distRes.distSq ), a.region );
+    bool isAOutside = b.mesh.isOutsideByProjNorm( rigidB2A ? rigidB2A->inverse()( distRes.a.proj.point ) : distRes.a.proj.point, toProjection( distRes.b, distRes.distSq ), b.region );
     if ( isBOutside && isAOutside )
         status = MeshMeshCollisionStatus::BothOutside;
     else if ( !isBOutside && !isAOutside )

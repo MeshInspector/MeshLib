@@ -386,9 +386,6 @@ struct AlignPair
 
 struct AlignParams
 {
-    //! Matched exactly: planes are seated against each other, axes (line, circle, cylinder, cone) become coaxial
-    //! with coinciding centers, points (point, sphere) coincide.
-    AlignPair primary;
     //! Their centers are matched in the least squares sense by the motion the primary pair leaves free:
     //! spin about the primary direction and, for planes, translation along them.
     //! For a point primary, the first locator sets the direction to spin about.
@@ -403,7 +400,9 @@ struct AlignParams
     double gap = 0;
 };
 
-//! Returns the rigid transformation in world space that moves the moving features onto the fixed ones, see `AlignParams`.
-[[nodiscard]] MRMESH_API AffineXf3d align( const AlignParams& params );
+//! Returns the rigid transformation in world space that moves the moving features onto the fixed ones.
+//! The `primary` pair is matched exactly: planes are seated against each other, axes (line, circle, cylinder, cone)
+//! become coaxial with coinciding centers, points (point, sphere) coincide; see `AlignParams` for the rest.
+[[nodiscard]] MRMESH_API AffineXf3d align( const AlignPair& primary, const AlignParams& params = {} );
 
 }

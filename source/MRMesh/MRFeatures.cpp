@@ -1143,29 +1143,27 @@ static Vector3d alignCenter( const Primitives::Variant& v )
     }, v ) );
 }
 
-// zero for points
 static Vector3d alignDirection( const Primitives::Variant& v )
 {
     return Vector3d( std::visit( overloaded{
-        []( const Primitives::Sphere& ) { return Vector3f(); },
+        []( const Primitives::Sphere& ) { return Vector3f(); }, // points have no direction
         []( const Primitives::ConeSegment& c ) { return c.dir; },
         []( const Primitives::Plane& p ) { return p.normal; },
     }, v ) ).normalized();
 }
 
-AffineXf3d align( const AlignParams& params )
+AffineXf3d align( const AlignPair& primary, const AlignParams& params )
 {
-    const auto& p = params.primary;
-    const auto& locs = params.locators;
-    const bool planes = std::holds_alternative<Primitives::Plane>( p.fixed );
-    const auto cm = alignCenter( p.moving ), cf = alignCenter( p.fixed );
-    auto dm = alignDirection( p.moving ), n = alignDirection( p.fixed );
+    const auto& locators = params.locators;
+    const bool planes = std::holds_alternative<Primitives::Plane>( primary.fixed );
+    const auto cm = alignCenter( primary.moving ), cf = alignCenter( primary.fixed );
+    auto dm = alignDirection( primary.moving ), n = alignDirection( primary.fixed );
     const bool axes = !planes && dm != Vector3d() && n != Vector3d();
     const auto seat = cf + params.gap * n;
-    if ( !planes && !axes && !locs.empty() ) // points: the first locator sets the direction
+    if ( !planes && !axes && !locators.empty() ) // points: the first locator sets the direction
     {
-        dm = alignCenter( locs[0].moving ) - cm;
-        n = ( alignCenter( locs[0].fixed ) - cf ).normalized();
+        dm = alignCenter( locators[0].moving ) - cm;
+        n = ( alignCenter( locators[0].fixed ) - cf ).normalized();
     }
     if ( dm == Vector3d() || n == Vector3d() )
         return AffineXf3d::translation( cf - cm );
@@ -1176,13 +1174,13 @@ AffineXf3d align( const AlignParams& params )
 
     // spin about n: least squares over the locators turning about the primary center (planes: about their centroid)
     auto om = cm, of = planes ? cm : cf;
-    if ( planes && !locs.empty() )
+    if ( planes && !locators.empty() )
     {
         om = of = {};
-        for ( const auto& l : locs )
+        for ( const auto& l : locators )
         {
-            om += alignCenter( l.moving ) / double( locs.size() );
-            of += alignCenter( l.fixed ) / double( locs.size() );
+            om += alignCenter( l.moving ) / double( locators.size() );
+            of += alignCenter( l.fixed ) / double( locators.size() );
         }
     }
     const auto onPlane = [&] ( const Vector3d& v ) { return v - dot( v, n ) * n; };
@@ -1198,7 +1196,7 @@ AffineXf3d align( const AlignParams& params )
     if ( params.clocking )
         addSpin( alignDirection( params.clocking->moving ), alignDirection( params.clocking->fixed ) );
     else
-        for ( const auto& l : locs )
+        for ( const auto& l : locators )
             addSpin( alignCenter( l.moving ) - om, alignCenter( l.fixed ) - of );
     rot = Matrix3d::rotation( n, std::atan2( s, c ) ) * rot;
 

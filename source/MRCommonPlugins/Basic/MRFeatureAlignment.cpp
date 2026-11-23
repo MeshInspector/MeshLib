@@ -112,11 +112,11 @@ void FeatureAlignment::drawDialog( ImGuiContext* )
         UI::transparentTextWrapped( "%s", _tr( "The primary features must both be planes, axes or points." ) );
     else
     {
-        Features::AlignParams params{ .primary = *primary, .clocking = pair_( 3 ), .flip = flip_, .gap = gap_ };
+        Features::AlignParams params{ .clocking = pair_( 3 ), .flip = flip_, .gap = gap_ };
         for ( int row : { 1, 2 } )
             if ( auto l = pair_( row ) )
                 params.locators.push_back( *l );
-        const auto xf = Features::align( params );
+        const auto xf = Features::align( *primary, params );
         const auto center = [] ( const Features::Primitives::Variant& v )
         {
             return std::visit( overloaded{ [] ( const Features::Primitives::ConeSegment& c ) { return c.centerPoint().center; },

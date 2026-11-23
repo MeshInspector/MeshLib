@@ -439,9 +439,13 @@ namespace
 struct SurfCorner
 {
     Vector3f p;
-    float distSq = 0;
+    float distSq;
     FaceId f;
     TriPointf bary; // in the triangle of B
+
+    SurfCorner() noexcept : distSq( 0 ) {}
+    explicit SurfCorner( NoInit ) noexcept : p( noInit ), f( noInit ), bary( noInit ) {}
+    SurfCorner( const Vector3f& pt, float dSq, FaceId face, const TriPointf& tp ) noexcept : p( pt ), distSq( dSq ), f( face ), bary( tp ) {}
 };
 
 SurfCorner projectCorner( const Vector3f& p, const TriPointf& bary, const MeshPart& a, float maxDistanceSq )
@@ -465,7 +469,8 @@ VertsOnMesh projectVerts( const MeshPart& a, const MeshPart& b, const AffineXf3f
     if ( !bVerts.any() )
         return res;
 
-    res.corners.resize( bVerts.find_last() + 1 );
+    // only the elements of bVerts are filled and then read
+    res.corners.resizeNoInit( bVerts.find_last() + 1 );
     BitSetParallelFor( bVerts, [&]( VertId v )
     {
         res.corners[v] = projectCorner( rigidB2A ? ( *rigidB2A )( b.mesh.points[v] ) : b.mesh.points[v], {}, a, maxDistanceSq );

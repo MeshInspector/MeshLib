@@ -19,14 +19,12 @@ TEST( MRViewer, FormatSafeTranslationFmt )
     EXPECT_TRUE( isFormatSafeTranslation( "Done", "Fertig {}" ) );
     EXPECT_TRUE( isFormatSafeTranslation( "Set {a, b}", "Menge {a, b" ) );
     EXPECT_TRUE( isFormatSafeTranslation( "Loaded {} of {} files", "Geladen {} von {}" ) );
-    // arguments may be reordered by their numbers, and not all of them have to be used
+    // the fields may be reordered
     EXPECT_TRUE( isFormatSafeTranslation( "{0} of {1}", "{1} von {0}" ) );
     EXPECT_TRUE( isFormatSafeTranslation( "{} of {}", "{1} von {0}" ) );
-    EXPECT_TRUE( isFormatSafeTranslation( "{} holes", "ein Loch" ) );
     EXPECT_TRUE( isFormatSafeTranslation( "{name} is {}", "{} ist {name}" ) );
-    // the format spec of an argument is kept or dropped
+    EXPECT_TRUE( isFormatSafeTranslation( "Value {0:.2f} in {1}", "In {1} Wert {0:.2f}" ) );
     EXPECT_TRUE( isFormatSafeTranslation( "Value {:.2f}", "Wert {:.2f}" ) );
-    EXPECT_TRUE( isFormatSafeTranslation( "Value {:.2f}", "Wert {}" ) );
     EXPECT_TRUE( isFormatSafeTranslation( "Width {:>{}}", "Breite {:>{}}" ) );
     EXPECT_TRUE( isFormatSafeTranslation( "at {:%H:%M}", "um {:%H:%M}" ) );
     EXPECT_TRUE( isFormatSafeTranslation( "Set {{}} as {}", "Setze {{}} als {}" ) );
@@ -34,11 +32,15 @@ TEST( MRViewer, FormatSafeTranslationFmt )
     EXPECT_TRUE( isFormatSafeTranslation( "{}% of {}", "{} % sur {}" ) );
 
     EXPECT_FALSE( isFormatSafeTranslation( "Object {}", "Objekt {} {}" ) );
+    // not all fields of the original
+    EXPECT_FALSE( isFormatSafeTranslation( "{} holes", "ein Loch" ) );
+    EXPECT_FALSE( isFormatSafeTranslation( "{} of {}", "{0} von {0}" ) );
     EXPECT_FALSE( isFormatSafeTranslation( "{0} of {1}", "{0} von {2}" ) );
     EXPECT_FALSE( isFormatSafeTranslation( "Done {{}}", "Fertig {}" ) );
     EXPECT_FALSE( isFormatSafeTranslation( "{name}", "{nom}" ) );
-    // format specs moved to other arguments
+    // other format specs of the arguments
     EXPECT_FALSE( isFormatSafeTranslation( "Value {:.2f} in {}", "In {} Wert {:.2f}" ) );
+    EXPECT_FALSE( isFormatSafeTranslation( "Value {:.2f}", "Wert {}" ) );
     EXPECT_FALSE( isFormatSafeTranslation( "Angle {:.1f}", "Winkel {:d}" ) );
     EXPECT_FALSE( isFormatSafeTranslation( "Width {:>{}}", "Breite {} {}" ) );
     // not a valid format string
@@ -52,9 +54,7 @@ TEST( MRViewer, FormatSafeTranslationPrintf )
     using Locale::isFormatSafeTranslation;
     EXPECT_TRUE( isFormatSafeTranslation( "%d holes", "%d Loecher" ) );
     EXPECT_TRUE( isFormatSafeTranslation( "%s has %d points", "%s hat %d Punkte" ) );
-    // the last arguments may be not used, flags, width and precision may differ
-    EXPECT_TRUE( isFormatSafeTranslation( "%d of %s", "%d" ) );
-    EXPECT_TRUE( isFormatSafeTranslation( "%.2f mm, %5d", "%.3f mm, %-5u" ) );
+    EXPECT_TRUE( isFormatSafeTranslation( "%.2f mm, %-5lu", "%.2f Millimeter, %-5lu" ) );
     EXPECT_TRUE( isFormatSafeTranslation( "%*d", "%*d" ) );
     EXPECT_TRUE( isFormatSafeTranslation( "Progress %d%%", "Fortschritt %d %%" ) );
     // the original is not a format string: it has no percent sign or the sign is not doubled
@@ -66,6 +66,10 @@ TEST( MRViewer, FormatSafeTranslationPrintf )
     EXPECT_FALSE( isFormatSafeTranslation( "%d holes", "%s Loecher" ) );
     EXPECT_FALSE( isFormatSafeTranslation( "%s has %d points", "%d Punkte in %s" ) );
     EXPECT_FALSE( isFormatSafeTranslation( "%d holes", "%d von %d" ) );
+    EXPECT_FALSE( isFormatSafeTranslation( "%d holes", "ein Loch" ) );
+    EXPECT_FALSE( isFormatSafeTranslation( "%d of %s", "%d" ) );
+    EXPECT_FALSE( isFormatSafeTranslation( "%.2f mm", "%.3f mm" ) );
+    EXPECT_FALSE( isFormatSafeTranslation( "%5d", "%-5d" ) );
     EXPECT_FALSE( isFormatSafeTranslation( "%d", "%ld" ) );
     EXPECT_FALSE( isFormatSafeTranslation( "%d", "%f" ) );
     EXPECT_FALSE( isFormatSafeTranslation( "%5d", "%*d" ) );
@@ -124,15 +128,18 @@ static std::string makeMoFile( const std::vector<std::pair<std::string, std::str
 TEST( MRViewer, UnsafeTranslationsAreIgnored )
 {
     using namespace std::string_literals;
-    const char* cDomain = "MRTranslationFormatTest";
-    const char* cFileName = "MRTranslationFormatTest.mo";
+    // two domains with the same catalog, only the second one is validated
+    const std::string cDomains[2] = { "MRTranslationFormatTest", "MRTranslationFormatTestValidated" };
     UniqueTemporaryFolder folder;
     ASSERT_TRUE( bool( folder ) );
     const auto dir = folder / "xx" / "LC_MESSAGES";
     std::error_code ec;
     std::filesystem::create_directories( dir, ec );
+    for ( const auto& name : cDomains )
     {
-        std::ofstream out( dir / cFileName, std::ofstream::binary );
+        std::string fileName = name;
+        fileName.append( ".mo" ); // not operator +, which gives false warnings in GCC
+        std::ofstream out( dir / fileName, std::ofstream::binary );
         out << makeMoFile( {
             { "", "Content-Type: text/plain; charset=UTF-8\nPlural-Forms: nplurals=2; plural=(n%100!=1);\n" },
             { "Object {}", "Objekt {}" },
@@ -143,39 +150,41 @@ TEST( MRViewer, UnsafeTranslationsAreIgnored )
             { "Menu\x04" "Open {}", "Oeffnen {}" },
             { "Menu\x04" "Close {}", "Schliessen {} {}" },
             // with plural forms
-            { "{} file\0{} files"s, "eine Datei\0{} Dateien"s },
+            { "One file\0{} files"s, "eine Datei\0{} Dateien"s },
             { "{} hole\0{} holes"s, "{} Loch\0{} Loecher {}"s },
+            { "One point\0{} points"s, "{} {} Punkt\0{} Punkte"s },
         } );
         ASSERT_TRUE( out.good() );
     }
 
     const auto prevLocale = Locale::getName();
-    const bool prevCheck = Locale::isTranslationCheckEnabled();
     Locale::addCatalogPath( folder );
-    const auto domain = Locale::addDomain( std::string( cDomain ) );
+    auto domain = Locale::addDomain( cDomains[0] );
     ASSERT_TRUE( domain.valid() );
     Locale::set( "xx" );
 
-    // without the check the catalog is used as it is
-    Locale::enableTranslationCheck( false );
+    // without the validation the catalog is used as it is
     EXPECT_EQ( Locale::translate( "Object {}", domain ), "Objekt {}" );
     EXPECT_EQ( Locale::translate( "Loaded {} of {}", domain ), "Geladen {} von {} {}" );
     EXPECT_EQ( Locale::translate( "%d holes", domain ), "%s Loecher" );
 
-    Locale::enableTranslationCheck( true );
+    domain = Locale::addDomain( cDomains[1], false, true );
+    ASSERT_TRUE( domain.valid() );
     EXPECT_EQ( Locale::translate( "Object {}", domain ), "Objekt {}" );
     EXPECT_EQ( Locale::translate( "%d points", domain ), "%d Punkte" );
     EXPECT_EQ( Locale::translate( "Menu", "Open {}", domain ), "Oeffnen {}" );
-    EXPECT_EQ( Locale::translate( "{} file", "{} files", 1, domain ), "eine Datei" );
-    EXPECT_EQ( Locale::translate( "{} file", "{} files", 5, domain ), "{} Dateien" );
+    EXPECT_EQ( Locale::translate( "One file", "{} files", 1, domain ), "eine Datei" );
+    EXPECT_EQ( Locale::translate( "One file", "{} files", 5, domain ), "{} Dateien" );
     // these translations would throw from fmt::format and crash in printf
     EXPECT_EQ( Locale::translate( "Loaded {} of {}", domain ), "Loaded {} of {}" );
     EXPECT_EQ( Locale::translate( "%d holes", domain ), "%d holes" );
     EXPECT_EQ( Locale::translate( "Menu", "Close {}", domain ), "Close {}" );
     EXPECT_EQ( Locale::translate( "{} hole", "{} holes", 1, domain ), "{} hole" );
     EXPECT_EQ( Locale::translate( "{} hole", "{} holes", 5, domain ), "{} holes" );
+    EXPECT_EQ( Locale::translate( "One point", "{} points", 1, domain ), "One point" );
+    // the first domain is not affected
+    EXPECT_EQ( Locale::translate( "Loaded {} of {}", Locale::findDomain( cDomains[0] ) ), "Geladen {} von {} {}" );
 
-    Locale::enableTranslationCheck( prevCheck );
     Locale::set( prevLocale );
 }
 #endif

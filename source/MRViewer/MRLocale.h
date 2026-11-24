@@ -39,13 +39,17 @@ MRVIEWER_API void addCatalogPath( const std::filesystem::path& path );
 /// The active locale is reloaded on every call.
 /// \note This overload is meant to be used with string literals for faster lookups.
 /// \param generic - whether the domain is generic, i.e. should be used for cross-domain translations (false by default).
+/// \param validateFormatStrings - whether to ignore the translations of the domain that cannot replace their originals
+/// in fmt::format or printf-like calls; they are found when .mo files are loaded (false by default), \ref isFormatSafeTranslation
 /// \returns The id of the added domain.
-MRVIEWER_API LocaleDomainId addDomain( const char* domainName, bool generic = false );
+MRVIEWER_API LocaleDomainId addDomain( const char* domainName, bool generic = false, bool validateFormatStrings = false );
 /// \brief Adds a new domain.
 /// The active locale is reloaded on every call.
 /// \param generic - whether the domain is generic, i.e. should be used for cross-domain translations (false by default).
+/// \param validateFormatStrings - whether to ignore the translations of the domain that cannot replace their originals
+/// in fmt::format or printf-like calls; they are found when .mo files are loaded (false by default), \ref isFormatSafeTranslation
 /// \returns The id of the added domain.
-MRVIEWER_API LocaleDomainId addDomain( const std::string& domainName, bool generic = false );
+MRVIEWER_API LocaleDomainId addDomain( const std::string& domainName, bool generic = false, bool validateFormatStrings = false );
 /// \brief Find an id for the given domain that can be passed to the `translate` functions.
 /// \returns The domain id if the domain is previously added and invalid id otherwise.
 /// \note This overload is meant to be used with string literals for faster lookups.
@@ -68,15 +72,6 @@ MRVIEWER_API const std::vector<LocaleDomainId>& getGenericDomains();
 MRVIEWER_API std::string getDisplayName( const std::string& localeName );
 /// \brief Adds or updates a display name for the given locale.
 MRVIEWER_API void setDisplayName( const std::string& localeName, const std::string& displayName );
-
-/// \brief Enables or disables the check of translations when their catalogs are loaded (disabled by default).
-/// With the check, .mo files are read by MeshLib, and a translation is ignored if it cannot replace
-/// the original string in fmt::format or printf-like call; without it, the files are read by boost as they are.
-/// The active locale is reloaded on every change.
-/// \ref isFormatSafeTranslation
-MRVIEWER_API void enableTranslationCheck( bool on = true );
-/// \brief Returns true if the translations are checked when their catalogs are loaded.
-MRVIEWER_API bool isTranslationCheckEnabled();
 
 /// \brief Returns a list of system locales.
 /// The first one in the list is always the active system locale.

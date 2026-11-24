@@ -1,5 +1,5 @@
 #include <MRMesh/MRMeshSegmenter.h>
-#include <MRMesh/MRHoleAwareSegmentPolicy.h>
+#include <MRMesh/MRNarrowNeckSegmentPolicy.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRCube.h>
 #include <MRMesh/MRMakePlane.h>
@@ -54,16 +54,16 @@ TEST( MRMesh, MeshSegmenter )
     EXPECT_EQ( findSegmentBoundaries( cube.topology, *order, 6 ).count(), 12 );
 }
 
-TEST( MRMesh, HoleAwareSegmentPolicy )
+TEST( MRMesh, NarrowNeckSegmentPolicy )
 {
     // without holes the result is the same as with SimpleSegmentPolicy
     const Mesh cube = makeCube();
     const auto curvMetric = edgeDihedralAngleMetric( cube );
     const auto simpleOrder = MeshSegmenter<SimpleSegmentPolicy>::run( cube.topology, { cube, curvMetric } );
-    const auto holeAwareOrder = MeshSegmenter<HoleAwareSegmentPolicy>::run( cube.topology, { cube, curvMetric, 100 } );
+    const auto narrowNeckOrder = MeshSegmenter<NarrowNeckSegmentPolicy>::run( cube.topology, { cube, curvMetric, 100 } );
     ASSERT_TRUE( simpleOrder.has_value() );
-    ASSERT_TRUE( holeAwareOrder.has_value() );
-    EXPECT_EQ( *simpleOrder, *holeAwareOrder );
+    ASSERT_TRUE( narrowNeckOrder.has_value() );
+    EXPECT_EQ( *simpleOrder, *narrowNeckOrder );
 
     // two triangles, each with two boundary edges, sharing the diagonal
     const Mesh plane = makePlane();
@@ -75,17 +75,17 @@ TEST( MRMesh, HoleAwareSegmentPolicy )
             diagonal = plane.edgeLength( ue );
     ASSERT_GT( diagonal, 0 );
 
-    const HoleAwareSegmentPolicy policy{ plane, unitMetric };
+    const NarrowNeckSegmentPolicy policy{ plane, unitMetric };
     const auto d0 = policy.segmentFromTri( 0_f );
     EXPECT_NEAR( d0.holeBdLength, diagonal * std::sqrt( 2.0 ), 1e-6 );
 
     // the diagonal is not short: merge
-    auto order = MeshSegmenter<HoleAwareSegmentPolicy>::run( plane.topology, { plane, unitMetric, diagonal / 2 } );
+    auto order = MeshSegmenter<NarrowNeckSegmentPolicy>::run( plane.topology, { plane, unitMetric, diagonal / 2 } );
     ASSERT_TRUE( order.has_value() );
     EXPECT_EQ( order->size(), 1 );
 
     // the diagonal is short, and shorter than the hole boundary of each triangle: no merge
-    order = MeshSegmenter<HoleAwareSegmentPolicy>::run( plane.topology, { plane, unitMetric, diagonal * 2 } );
+    order = MeshSegmenter<NarrowNeckSegmentPolicy>::run( plane.topology, { plane, unitMetric, diagonal * 2 } );
     ASSERT_TRUE( order.has_value() );
     EXPECT_EQ( order->size(), 0 );
 }

@@ -20,15 +20,16 @@ struct HoleAwareSegmentData : SimpleSegmentData
 };
 
 /// policy for MeshSegmenter with the same preferences as in SimpleSegmentPolicy, which additionally
-/// prohibits merging of two segments over a short common boundary if one of them has longer boundary with mesh holes
-struct HoleAwareSegmentPolicy
+/// prohibits merging of two segments over a narrow neck: a short common boundary, when one of the segments has longer boundary with mesh holes;
+/// it keeps the parts weakly attached to the main surface (e.g. scanning artifacts) as separate segments
+struct NarrowNeckSegmentPolicy
 {
     const Mesh& mesh;
     const EdgeMetric& curvMetric;
 
-    /// two segments are not merged if their common boundary is shorter than this value,
-    /// and at least one of them has the boundary with mesh holes longer than their common boundary
-    double shortBdLength = 0;
+    /// two segments are not merged if their common boundary (neck) is shorter than this value,
+    /// and at least one of them has the boundary with mesh holes longer than the neck
+    double maxNeckLength = 0;
 
     using SegmentData = HoleAwareSegmentData;
     using SegmentBdData = SimpleSegmentBdData;
@@ -47,7 +48,7 @@ struct HoleAwareSegmentPolicy
 
     double mergePenalty( const SegmentData& a, const SegmentData& b, const SegmentBdData& bd ) const
     {
-        if ( bd.length < shortBdLength && std::max( a.holeBdLength, b.holeBdLength ) > bd.length )
+        if ( bd.length < maxNeckLength && std::max( a.holeBdLength, b.holeBdLength ) > bd.length )
             return prohibitMergePenalty;
         return SimpleSegmentPolicy::mergePenalty( a, b, bd );
     }

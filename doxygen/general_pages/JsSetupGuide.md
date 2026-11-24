@@ -94,7 +94,7 @@ MeshLib is a WebAssembly build of the full geometry library with its complete AP
 Consequences for a browser application:
 
  - The `.wasm` is a sidecar file fetched as a **second request**, separate from the `.mjs` modules. Serve it as `application/wasm` with compression enabled, or the download is several times larger than it needs to be.
- - The JavaScript side is many small modules (one per C++ header); a bundler merges them, and since the package declares `"sideEffects": false` it can drop the ones you don't use.
+ - The JavaScript side is a few dozen ES modules (all the wrappers in one `lib/_all.mjs`, plus a small module per namespace); a bundler merges them, and since the package declares `"sideEffects": false` it can drop the classes and functions you don't use.
  - `npm install` unpacks the browser and the Node.js wasm side by side. Only one of them ever reaches the browser; the rest is bundler input, not payload.
 
 If the geometry is not needed on first paint, load the module lazily instead of at the top level, so the wasm download does not block startup:
@@ -170,9 +170,9 @@ The bindings follow the C++ API: the same classes, functions, parameters and def
  - **Overloads** keep their names and are resolved by the argument types at runtime. The few overloads that JavaScript can't tell apart (`int` vs `float` parameters) are exported under the names of their C bindings as well, e.g. `foo_float`.
  - **Default arguments**: trailing parameters with defaults can be omitted, any parameter with a default takes `null` to use it.
  - **Return values**: `std::string` results are strings, `Expected` results are unwrapped and an error throws `UnexpectedResultException` with the message, C++ exceptions throw `CppException`. Functions returning references give you references that keep their owner alive.
- - **Callbacks**: `std::function` parameters (progress callbacks and such) take a plain JavaScript function.
+ - **Callbacks**: `std::function` parameters (progress callbacks and such) take a plain JavaScript function. In `@meshinspector/meshlib-mt` the function can only run on the thread that called `init()`, so a callback that MeshLib calls from its worker threads aborts the module, e.g. `preCollapse` and `adjustCollapse` of `DecimateSettings` with `subdivideParts > 1` (keep it at 1 when passing them) or the `data` of a `FunctionVolume` in `marchingCubes()` (use `@meshinspector/meshlib` for that); progress callbacks are safe, MeshLib reports progress only from the calling thread.
  - **Containers**: `VertCoords`, `Triangulation`, `std::vector`s and the other contiguous containers have `toArray()` (a typed array copy), `view()` (a typed array over the wasm memory, valid until the next allocation), `setFromArray()` and `static fromArray()`.
- - **Mesh parts**: the functions taking `MeshPart` in C++ take a `new ml.MeshPart(mesh)` (optionally with a face region).
+ - **Mesh parts**: the functions taking `MeshPart` in C++ take a `new ml.MeshPart(mesh)` (optionally with a face region). The part doesn't keep the mesh alive (an object storing a reference doesn't keep its target alive): declare the mesh and the region with `using`, or `.delete()` them after the last use of the part, rather than passing temporaries like `new ml.MeshPart(ml.makeCube(...))`, which the garbage collector can free under the part.
  - **Enums** are plain numbers with named constants: `ml.BooleanOperation.Union`.
 
 ## TypeScript

@@ -38,6 +38,11 @@ ml.decimateMesh(mesh, settings);
 console.log('faces after decimation =', mesh.topology.numValidFaces());
 ```
 
+JS callbacks can only run on the thread that called `init()`, and MeshLib calls some of them from its worker threads,
+which aborts the module: `preCollapse` and `adjustCollapse` of `DecimateSettings` with `subdivideParts > 1` (keep it
+at 1 when passing them), the `data` of a `FunctionVolume` in `marchingCubes()` (use `@meshinspector/meshlib` there).
+Progress callbacks are safe, MeshLib reports progress only from the calling thread.
+
 ## Browser: cross-origin isolation
 
 The multi-threaded build relies on `SharedArrayBuffer`, which browsers only enable on cross-origin isolated
@@ -77,8 +82,8 @@ The packages up to 3.1.x shipped a hand-written Embind module with a part of the
 package and file names (`meshlib-light-mt.mjs`, `meshlib-light-mt.wasm`). This package has a different, generated API:
 
 - The default export (`import createMeshLib`, `const ml = await createMeshLib()`) became a namespace import and an `init()` call:
-  `import * as ml from '@meshinspector/meshlib'; await ml.init();`.
-- On the CDN the entry point is `index.mjs` instead of `meshlib.mjs`.
+  `import * as ml from '@meshinspector/meshlib-mt'; await ml.init();`.
+- On the CDN the entry point is `index.mjs` instead of `meshlib-mt.mjs`.
 - The classes, functions and fields now follow the C++ API one to one (the same names, parameters and defaults as in the C++
   reference), so the hand-written helpers of the old module have no direct counterparts: look up the C++ function instead.
 - Objects are still freed with `.delete()` (or `using`), and the typed-array conversions are `toArray()`/`view()`/`fromArray()`.

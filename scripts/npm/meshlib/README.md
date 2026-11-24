@@ -65,7 +65,10 @@ same classes, functions, parameters and defaults. What's different:
   argument types, `std::string` results are strings, `Expected` results are unwrapped (an error throws
   `UnexpectedResultException`), C++ exceptions throw `CppException`.
 - Parameters with defaults can be omitted or passed as `null`; `std::function` parameters (progress
-  callbacks) take a plain JS function.
+  callbacks) take a plain JS function. In `@meshinspector/meshlib-mt` it can only run on the thread that called
+  `init()`, so a callback that MeshLib calls from its worker threads aborts the module (`DecimateSettings.preCollapse`
+  with `subdivideParts > 1`, the `data` of a `FunctionVolume` in `marchingCubes()`): keep `subdivideParts = 1` when
+  passing decimation callbacks, or use this package. Progress callbacks are safe.
 - The contiguous containers (`VertCoords`, `Triangulation`, `std::vector`s, ...) have `toArray()`,
   `view()`, `setFromArray()` and `fromArray()` for typed arrays.
 - Every `.d.mts` carries the doc comments of the C++ API, so editors show them.
@@ -88,6 +91,8 @@ mesh.delete();
 ```
 
 References into other objects (`mesh.points`, `mesh.topology`) don't own anything and keep their owner alive.
+Objects don't keep alive what they reference: a `MeshPart` points at its mesh (and face region), so declare those with
+`using` or `.delete()` them after the last use of the part, rather than passing a temporary like `ml.makeCube(...)`.
 
 ## Node.js and the browser
 
@@ -115,7 +120,7 @@ bundled into one `index.mjs`, the Emscripten glue `MeshLibC2.mjs` and the wasm.
 
 ## Using with bundlers
 
-The package is many small ES modules plus the wasm sidecar. Vite and webpack 5 resolve the `.wasm` from
+The package is a few dozen ES modules plus the wasm sidecar. Vite and webpack 5 resolve the `.wasm` from
 the module and emit it as an asset, so a plain `import` needs no configuration. For other bundlers, import
 the wasm as an asset URL and hand it to the loader via `locateFile`:
 

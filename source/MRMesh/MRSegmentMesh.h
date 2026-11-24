@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 #include "MRExpected.h"
 #include "MRFaceFace.h"
+#include <cfloat>
 
 namespace MR
 {
@@ -10,6 +11,9 @@ namespace MR
 /// the order of segments construction starting from individual faces;
 /// each pair of faces are representatives of two distinct segments to be merged together
 using GroupOrder = std::vector<FaceFace>;
+
+/// the value to return from Policy::mergePenalty of MeshSegmenter to forbid merging of two segments
+inline constexpr double prohibitMergePenalty = DBL_MAX;
 
 /// starting from individual faces, merge them in progressively larger segments until every connected component contains only 1 segment;
 /// merge order is guided by the preferences:

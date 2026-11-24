@@ -1,7 +1,8 @@
 #pragma once
 
-#include "MRMeshSegmenter.h"
+#include "MRSegmentMesh.h"
 #include "MRMesh.h"
+#include <algorithm>
 
 namespace MR
 {

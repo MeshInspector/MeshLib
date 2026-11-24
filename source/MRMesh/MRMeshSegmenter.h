@@ -10,14 +10,10 @@
 #include "MRProgressCallback.h"
 #include "MRTimer.h"
 #include <algorithm>
-#include <cfloat>
 #include <optional>
 
 namespace MR
 {
-
-/// the value to return from Policy::mergePenalty of MeshSegmenter to forbid merging of two segments
-inline constexpr double prohibitMergePenalty = DBL_MAX;
 
 /// starting from individual faces, merges them in progressively larger segments in the order of increasing merge penalty,
 /// until every connected component contains only 1 segment or all remaining merges are prohibited

@@ -79,7 +79,8 @@ runs:
             continue
           fi
           if [ -n "$TARGET_ARCH" ]; then
-            py_arch=$("$py_cmd" -c 'import platform; print(platform.machine())' 2>/dev/null || echo unknown)
+            py_arch=$("$py_cmd" -c 'import platform; print(platform.machine())' 2>/dev/null) ||
+              py_arch=unknown
             if [ "$py_arch" != "$TARGET_ARCH" ]; then
               echo "SKIP: $py_cmd is $py_arch, the modules are $TARGET_ARCH"
               skipped+=( "$ver" )

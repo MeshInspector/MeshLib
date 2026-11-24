@@ -9,8 +9,9 @@ runner.
 
 ## Where it lives in CI
 
-- The `x64-cross` leg of [`matrix/macos-config.json`](../../.github/workflows/matrix/macos-config.json),
-  run by the `macos-build-test` job of
+- The `x64-cross` leg of
+  [`matrix/macos-config.json`](../../.github/workflows/matrix/macos-config.json), run by the
+  `macos-build-test` job of
   [`build-test-macos.yml`](../../.github/workflows/build-test-macos.yml) on a runner labelled
   `[self-hosted, macos, arm64, crossplatform-build]`. The cross-only steps (the shim setup,
   `-DMR_PLATFORM=APPLE_x86_64`, `Verify x86_64 output`) are gated on `matrix.cross-osx-arch`.

@@ -8,19 +8,31 @@ import subprocess
 import sys
 
 
+# First four bytes of a Mach-O file: 32- and 64-bit thin binaries and universal
+# (fat) ones, each in both byte orders.
+MACH_O_MAGICS = (
+    b'\xfe\xed\xfa\xce', b'\xce\xfa\xed\xfe',
+    b'\xfe\xed\xfa\xcf', b'\xcf\xfa\xed\xfe',
+    b'\xca\xfe\xba\xbe', b'\xbe\xba\xfe\xca',
+    b'\xca\xfe\xba\xbf', b'\xbf\xba\xfe\xca',
+)
+
+
 def output(*args):
+    """Run a command and return its stdout."""
     return subprocess.check_output(args, text=True).strip()
 
 
 def version(value):
+    """'12.7' -> (12, 7, 0), so that versions compare numerically."""
     parts = tuple(map(int, value.split('.')))
     return parts + (0,) * (3 - len(parts))
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('framework', type=Path)
-    parser.add_argument('--arch', required=True)
+    parser.add_argument('framework', type=Path, help='directory to scan recursively')
+    parser.add_argument('--arch', required=True, help='architecture every binary must have')
     parser.add_argument(
         '--floor',
         help='highest macOS deployment target any binary may require; '
@@ -38,12 +50,7 @@ def main():
             continue
         with path.open('rb') as binary:
             magic = binary.read(4)
-        if magic not in (
-            b'\xfe\xed\xfa\xce', b'\xce\xfa\xed\xfe',
-            b'\xfe\xed\xfa\xcf', b'\xcf\xfa\xed\xfe',
-            b'\xca\xfe\xba\xbe', b'\xbe\xba\xfe\xca',
-            b'\xca\xfe\xba\xbf', b'\xbf\xba\xfe\xca',
-        ):
+        if magic not in MACH_O_MAGICS:
             continue
         count += 1
         name = path.relative_to(root)
@@ -51,6 +58,8 @@ def main():
         if args.arch not in arches:
             failures.append(f'{name}: missing {args.arch}; found {arches}')
             continue
+        # The deployment target is in LC_VERSION_MIN_MACOSX (old linkers) or in
+        # LC_BUILD_VERSION.
         commands = output('otool', '-arch', args.arch, '-l', str(path))
         minimums = re.findall(
             r'cmd LC_VERSION_MIN_MACOSX\s+cmdsize \d+\s+version ([\d.]+)',
@@ -66,7 +75,9 @@ def main():
             if highest is None or version(minimum) > version(highest[0]):
                 highest = (minimum, name)
             if version(minimum) > version(floor):
-                failures.append(f'{name}: needs macOS {minimum}, allowed {floor} (host {host_version})')
+                failures.append(
+                    f'{name}: needs macOS {minimum}, allowed {floor} (host {host_version})'
+                )
     if not count:
         failures.append('No Mach-O binaries found')
     print(f'Checked {count} Mach-O files for {args.arch} on macOS {host_version}, floor {floor}')

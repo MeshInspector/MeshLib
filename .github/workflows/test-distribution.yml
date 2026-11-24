@@ -249,9 +249,16 @@ jobs:
           sparse-checkout: .github/workflows/matrix
       - name: Set matrix
         id: matrix
+        env:
+          TEST_CROSS: ${{ inputs.test_macos_crossplatform }}
+          MATRIX_FILE: .github/workflows/matrix/macos-test-config.json
         run: |
-          FILTER='${{ inputs.test_macos_crossplatform && '.' || 'del(.include[] | select(.arch == "x64-cross"))' }}'
-          echo "matrix=$(jq -c "$FILTER" .github/workflows/matrix/macos-test-config.json)" >> "$GITHUB_OUTPUT"
+          if [[ "$TEST_CROSS" == "true" ]]; then
+            FILTER='.'
+          else
+            FILTER='del(.include[] | select(.arch == "x64-cross"))'
+          fi
+          echo "matrix=$(jq -c "$FILTER" "$MATRIX_FILE")" >> "$GITHUB_OUTPUT"
 
   macos-test:
     needs: macos-test-matrix
@@ -291,16 +298,19 @@ jobs:
         run: |
           if [ "${{ runner.environment }}" = "github-hosted" ]; then
             sudo installer -pkg meshlib_*.pkg -target /
-            MESHLIB_FW=/Library/Frameworks/MeshLib.framework/Versions/Current
+            MESHLIB_FW_DIR=/Library/Frameworks
           else
             installer -pkg meshlib_*.pkg -target CurrentUserHomeDirectory
-            MESHLIB_FW="${HOME}/Library/Frameworks/MeshLib.framework/Versions/Current"
+            MESHLIB_FW_DIR="${HOME}/Library/Frameworks"
           fi
+          MESHLIB_FW="${MESHLIB_FW_DIR}/MeshLib.framework/Versions/Current"
           # aws/tap ships untrusted in GH images and warns on every brew command
           brew untap aws/tap 2>/dev/null || true
           if [ -f "${MESHLIB_FW}/requirements/macos.txt" ]; then
             xargs brew install --quiet --overwrite < "${MESHLIB_FW}/requirements/macos.txt"
           fi
+          # MESHLIB_FW_DIR lets CMake find the framework also in the home directory
+          echo "MESHLIB_FW_DIR=${MESHLIB_FW_DIR}" >> "${GITHUB_ENV}"
           echo "MESHLIB_FW=${MESHLIB_FW}" >> "${GITHUB_ENV}"
           echo "${MESHLIB_FW}/bin" >> "${GITHUB_PATH}"
 
@@ -311,7 +321,9 @@ jobs:
       # bundled bottles carry the target of the macOS they were built on.)
       - name: Check package binary compatibility
         if: ${{ matrix.arch != 'arm64' }}
-        run: python3 scripts/check_macos_binary_compatibility.py "$MESHLIB_FW" --arch x86_64 --floor 12.0
+        run: >-
+          python3 scripts/check_macos_binary_compatibility.py "$MESHLIB_FW"
+          --arch x86_64 --floor 12.0
 
       # [error] NSGL: Failed to find a suitable pixel format
       - name: Run MeshViewer
@@ -331,7 +343,9 @@ jobs:
           fi
           mkdir build && \
           cd build && \
-          cmake .. -DCMAKE_CXX_COMPILER=/usr/bin/clang++ -DCMAKE_FRAMEWORK_PATH="$(dirname "$(dirname "$(dirname "$MESHLIB_FW")")")" && \
+          cmake .. \
+            -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
+            -DCMAKE_FRAMEWORK_PATH="$MESHLIB_FW_DIR" && \
           cmake --build . && \
           ./MeshModification
 
@@ -341,7 +355,9 @@ jobs:
           if [ "$(sw_vers -productVersion | cut -d. -f1)" -lt 13 ]; then
             export MACOSX_DEPLOYMENT_TARGET=12.7
           fi
-          cmake -S . -B build -DCMAKE_C_COMPILER=/usr/bin/clang -DCMAKE_FRAMEWORK_PATH="$(dirname "$(dirname "$(dirname "$MESHLIB_FW")")")" && \
+          cmake -S . -B build \
+            -DCMAKE_C_COMPILER=/usr/bin/clang \
+            -DCMAKE_FRAMEWORK_PATH="$MESHLIB_FW_DIR" && \
           cmake --build build
           ./build/MeshModification
 

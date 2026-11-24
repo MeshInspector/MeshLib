@@ -39,7 +39,7 @@ on:
         description: "Config matrix for Windows builds"
         value: ${{ jobs.prepare-config.outputs.windows_x64_config_matrix }}
       macos_config_matrix:
-        description: "Config matrix for macOS builds; the self-hosted x64-cross leg is dropped when disabled"
+        description: "Config matrix for macOS builds, without the x64-cross leg when it is disabled"
         value: ${{ jobs.prepare-config.outputs.macos_config_matrix }}
       update_doc:
         description:
@@ -79,8 +79,14 @@ on:
         description:
         value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true' || jobs.prepare-config.outputs.tag-disable-macos == 'true' ) }}
       build_enable_macos_crossplatform:
-        description: "macOS native x86_64 cross leg (label disable-build-macos-crossplatform); also off whenever macOS is disabled. Gates its distro test; the build leg itself is dropped from macos_config_matrix"
-        value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true' || jobs.prepare-config.outputs.tag-disable-macos == 'true' || jobs.prepare-config.outputs.tag-disable-macos-crossplatform == 'true' ) }}
+        description: >-
+          The macOS x64-cross leg: off with the label disable-build-macos-crossplatform
+          and whenever macOS is off. Gates the distribution tests of its package; the
+          build leg itself is dropped from macos_config_matrix.
+        value: >-
+          ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true'
+          || jobs.prepare-config.outputs.tag-disable-macos == 'true'
+          || jobs.prepare-config.outputs.tag-disable-macos-crossplatform == 'true' ) }}
       build_enable_emscripten:
         description:
         value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true' || jobs.prepare-config.outputs.tag-disable-emscripten == 'true' ) }}
@@ -412,12 +418,15 @@ jobs:
 
       - name: Set matrix for macos builds
         id: set-macos-matrix
+        env:
+          DISABLE_CROSS: ${{ steps.live-labels.outputs.tag-disable-macos-crossplatform }}
+          MATRIX_FILE: .github/workflows/matrix/macos-config.json
         run: |
-          # The x64-cross leg needs the self-hosted crossplatform-build runner; drop it
-          # (never scheduled) when the disable-build-macos-crossplatform label is set.
-          if [[ "${{ steps.live-labels.outputs.tag-disable-macos-crossplatform }}" == "true" ]]; then
+          # The x64-cross leg needs the self-hosted crossplatform-build runner; the
+          # label disable-build-macos-crossplatform drops it, so it is never scheduled.
+          if [[ "$DISABLE_CROSS" == "true" ]]; then
             FILTER='del(.include[] | select(.arch == "x64-cross"))'
           else
             FILTER='.'
           fi
-          echo "matrix=$(jq -c "$FILTER" .github/workflows/matrix/macos-config.json)" >> "$GITHUB_OUTPUT"
+          echo "matrix=$(jq -c "$FILTER" "$MATRIX_FILE")" >> "$GITHUB_OUTPUT"

@@ -73,6 +73,7 @@ jobs:
       - name: Configure native x86_64 cross-build environment
         if: ${{ matrix.cross-osx-arch == 'x86_64' }}
         run: |
+          fail() { echo "::error::x86_64 cross setup: $1"; exit 1; }
           SHIM="$RUNNER_TEMP/x86_64-cross-shim"
           mkdir -p "$SHIM"
           # The native arm64 Homebrew prefix varies across the self-hosted fleet; find
@@ -81,10 +82,13 @@ jobs:
           ARM_BREW=""
           for p in /opt/homebrew "$HOME/.homebrew"; do
             if file -b "$p/bin/cmake" 2>/dev/null | grep -q arm64 &&
-               file -b "$p/bin/ninja" 2>/dev/null | grep -q arm64; then ARM_BREW="$p"; break; fi
+               file -b "$p/bin/ninja" 2>/dev/null | grep -q arm64; then
+              ARM_BREW="$p"
+              break
+            fi
           done
-          [ -n "$ARM_BREW" ] || { echo "::error::x86_64 cross setup: no arm64 Homebrew cmake and ninja found"; exit 1; }
-          [ -x /usr/local/bin/brew ] || { echo "::error::x86_64 cross setup: missing /usr/local/bin/brew"; exit 1; }
+          [ -n "$ARM_BREW" ] || fail "no arm64 Homebrew cmake and ninja found"
+          [ -x /usr/local/bin/brew ] || fail "missing /usr/local/bin/brew"
           ln -sf "$ARM_BREW/bin/cmake" "$SHIM/cmake"
           ln -sf "$ARM_BREW/bin/ninja" "$SHIM/ninja"
           # A symlink-to-a-symlink breaks Homebrew's self-location, so wrap brew.
@@ -347,7 +351,9 @@ jobs:
       # Not on the cross leg: the JVM of the arm64 host loads arm64 libraries only
       # (an x86_64 JDK under Rosetta would be needed).
       - name: Build and test Java bindings
-        if: ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' && matrix.arch != 'x64-cross' }}
+        if: >-
+          ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.lib-source == 'vcpkg'
+          && matrix.arch != 'x64-cross' }}
         uses: ./.github/actions/build-java-bindings
         with:
           lib-dir: ${{ github.workspace }}/build/${{ matrix.config }}/bin
@@ -391,7 +397,9 @@ jobs:
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
 
       - name: Create and fix fake Wheel for NuGet
-        if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' && matrix.arch != 'x64-cross' }}
+        if: >-
+          ${{ inputs.nuget_build_patch && matrix.config == 'Release' && matrix.lib-source == 'vcpkg'
+          && matrix.arch != 'x64-cross' }}
         shell: bash
         run: |
           python3 -m venv ./wheel_venv
@@ -401,7 +409,9 @@ jobs:
           ./scripts/nuget_patch/fix_macos_rpath.sh ./patched_content/lib{MeshLibC2,MeshLibC2Cuda}.dylib
 
       - name: Upload NuGet files to Artifacts
-        if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' && matrix.arch != 'x64-cross' }}
+        if: >-
+          ${{ inputs.nuget_build_patch && matrix.config == 'Release' && matrix.lib-source == 'vcpkg'
+          && matrix.arch != 'x64-cross' }}
         uses: actions/upload-artifact@v7
         with:
           name: DotNetPatchArchiveMacOs-${{ matrix.arch }}

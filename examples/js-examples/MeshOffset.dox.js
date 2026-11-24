@@ -1,22 +1,27 @@
-import createMeshLib from '@meshinspector/meshlib';
+import * as ml from '@meshinspector/meshlib';
 
-const ml = await createMeshLib();
+await ml.init();
 
-// Create mesh
-using mesh = ml.makeCube();
+// Load mesh
+using mesh = ml.MeshLoad.fromAnySupportedFormat('mesh.stl');
 
 // Setup parameters
-using params = new ml.GeneralOffsetParameters();
-// calculate voxel size depending on desired accuracy and/or memory consumption
-params.voxelSize = ml.suggestVoxelSize(mesh, 10000000.0);
-using topology = mesh.topology;
-if (ml.findRightBoundary(topology).length > 0)
+using params = new ml.OffsetParameters();
+params.voxelSize = mesh.computeBoundingBox().diagonal() * 5e-3; // offset grid precision (algorithm is voxel based)
+using boundaries = ml.findRightBoundary(mesh.topology);
+if (!boundaries.empty())
   params.signDetectionMode = ml.SignDetectionMode.HoleWindingRule; // use if you have holes in mesh
 
 // Make offset mesh
-using box = mesh.computeBoundingBox();
-const offset = box.diagonal() * 0.1;
-using result = ml.generalOffsetMesh(mesh, offset, params);
+const offset = mesh.computeBoundingBox().diagonal() * 0.05;
+let resultMesh;
+try {
+  resultMesh = ml.offsetMesh(new ml.MeshPart(mesh), offset, params);
+} catch (e) {
+  console.log(e.message);
+  process.exit(1);
+}
 
 // Save result
-ml.MeshSave.toAnySupportedFormat(result, 'mesh_offset.stl');
+ml.MeshSave.toAnySupportedFormat(resultMesh, 'offsetMesh.stl');
+resultMesh.delete();

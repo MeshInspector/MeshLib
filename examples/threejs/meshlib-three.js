@@ -1,3 +1,5 @@
+// Converts between Three.js `BufferGeometry` and MeshLib meshes through typed arrays.
+
 export function meshFromThree( ml, THREE, geometry, { mergeVertices } = {} ) {
   let geo = geometry.clone();
   for ( const name of Object.keys( geo.attributes ) )
@@ -12,15 +14,10 @@ export function meshFromThree( ml, THREE, geometry, { mergeVertices } = {} ) {
     geo.setIndex( new THREE.BufferAttribute( trivial, 1 ) );
   }
 
-  const posAttr = geo.getAttribute( 'position' );
-  const positions = posAttr.array instanceof Float32Array
-    ? posAttr.array
-    : Float32Array.from( posAttr.array );
-  const idxArr = geo.index.array;
-  const indices = idxArr instanceof Uint32Array
-    ? idxArr
-    : Uint32Array.from( idxArr );
+  const positions = geo.getAttribute( 'position' ).array;
+  const indices = geo.index.array;
 
+  // `fromArray()` copies the scalars into the MeshLib containers: x, y, z per vertex, three vertex ids per triangle.
   const coords = ml.VertCoords.fromArray( positions );
   const tris = ml.Triangulation.fromArray( indices );
   const mesh = ml.Mesh.fromTriangles( coords, tris );
@@ -42,16 +39,15 @@ export function geometryToThree( THREE, exported ) {
 
 export function meshToThree( ml, THREE, mesh, { normals = false } = {} ) {
   mesh.pack(); // getTriangulation() is undefined on deleted faces; pack removes them
-  const points = mesh.points;
-  const topology = mesh.topology;
-  const tris = topology.getTriangulation();
-  const exported = {
-    positions: points.toArray(),
-    indices: tris.toArray(),
-  };
-  points.delete();
-  topology.delete();
+  // `toArray()` returns copies (Float32Array of the coordinates, Int32Array of the vertex ids), safe to keep.
+  const tris = mesh.topology.getTriangulation();
+  const ids = tris.toArray();
   tris.delete();
+  const exported = {
+    positions: mesh.points.toArray(),
+    // three.js draws an Int32Array index as gl.INT, which drawElements rejects: reinterpret the ids as unsigned, without a copy.
+    indices: new Uint32Array( ids.buffer, ids.byteOffset, ids.length ),
+  };
   if ( normals ) {
     const vertNormals = ml.computePerVertNormals( mesh );
     exported.normals = vertNormals.toArray();

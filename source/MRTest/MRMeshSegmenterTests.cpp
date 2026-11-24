@@ -1,6 +1,9 @@
 #include <MRMesh/MRMeshSegmenter.h>
+#include <MRMesh/MRHoleAwareSegmentPolicy.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRCube.h>
+#include <MRMesh/MRMakePlane.h>
+#include <MRMesh/MREdgeIterator.h>
 #include <MRMesh/MREdgeMetric.h>
 #include <gtest/gtest.h>
 
@@ -49,6 +52,42 @@ TEST( MRMesh, MeshSegmenter )
     ASSERT_TRUE( order.has_value() );
     EXPECT_EQ( order->size(), 6 );
     EXPECT_EQ( findSegmentBoundaries( cube.topology, *order, 6 ).count(), 12 );
+}
+
+TEST( MRMesh, HoleAwareSegmentPolicy )
+{
+    // without holes the result is the same as with SimpleSegmentPolicy
+    const Mesh cube = makeCube();
+    const auto curvMetric = edgeDihedralAngleMetric( cube );
+    const auto simpleOrder = MeshSegmenter<SimpleSegmentPolicy>::run( cube.topology, { cube, curvMetric } );
+    const auto holeAwareOrder = MeshSegmenter<HoleAwareSegmentPolicy>::run( cube.topology, { cube, curvMetric, 100 } );
+    ASSERT_TRUE( simpleOrder.has_value() );
+    ASSERT_TRUE( holeAwareOrder.has_value() );
+    EXPECT_EQ( *simpleOrder, *holeAwareOrder );
+
+    // two triangles, each with two boundary edges, sharing the diagonal
+    const Mesh plane = makePlane();
+    ASSERT_EQ( plane.topology.numValidFaces(), 2 );
+    const EdgeMetric unitMetric = []( EdgeId ) { return 1.0f; };
+    double diagonal = 0;
+    for ( auto ue : undirectedEdges( plane.topology ) )
+        if ( plane.topology.left( ue ) && plane.topology.right( ue ) )
+            diagonal = plane.edgeLength( ue );
+    ASSERT_GT( diagonal, 0 );
+
+    const HoleAwareSegmentPolicy policy{ plane, unitMetric };
+    const auto d0 = policy.segmentFromTri( 0_f );
+    EXPECT_NEAR( d0.holeBdLength, diagonal * std::sqrt( 2.0 ), 1e-6 );
+
+    // the diagonal is not short: merge
+    auto order = MeshSegmenter<HoleAwareSegmentPolicy>::run( plane.topology, { plane, unitMetric, diagonal / 2 } );
+    ASSERT_TRUE( order.has_value() );
+    EXPECT_EQ( order->size(), 1 );
+
+    // the diagonal is short, and shorter than the hole boundary of each triangle: no merge
+    order = MeshSegmenter<HoleAwareSegmentPolicy>::run( plane.topology, { plane, unitMetric, diagonal * 2 } );
+    ASSERT_TRUE( order.has_value() );
+    EXPECT_EQ( order->size(), 0 );
 }
 
 } //namespace MR

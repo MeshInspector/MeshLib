@@ -181,6 +181,7 @@
     <ClInclude Include="MRSegmentMesh.h" />
     <ClInclude Include="MRMeshSegmenter.h" />
     <ClInclude Include="MRSimpleSegmentPolicy.h" />
+    <ClInclude Include="MRHoleAwareSegmentPolicy.h" />
     <ClInclude Include="MRMeshSubdivideCallbacks.h" />
     <ClInclude Include="MRMeshThickness.h" />
     <ClInclude Include="MRMeshTopologyDiff.h" />

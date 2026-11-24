@@ -1521,6 +1521,9 @@
     <ClInclude Include="MRSimpleSegmentPolicy.h">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
+    <ClInclude Include="MRHoleAwareSegmentPolicy.h">
+      <Filter>Source Files\Algorithms</Filter>
+    </ClInclude>
     <ClInclude Include="MRHexPalette.h">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>

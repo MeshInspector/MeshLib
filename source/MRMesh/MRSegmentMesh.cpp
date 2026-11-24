@@ -3,6 +3,7 @@
 #include "MRSimpleSegmentPolicy.h"
 #include "MRNarrowNeckSegmentPolicy.h"
 #include "MRMesh.h"
+#include "MRMeshComponents.h"
 #include "MRBitSetParallelFor.h"
 #include "MRUnionFind.h"
 #include "MRColor.h"
@@ -32,29 +33,9 @@ Expected<FaceBitSet> findLargestNarrowNeckSegment( const Mesh& mesh, const EdgeM
     if ( !maybeOrder )
         return unexpected( std::move( maybeOrder.error() ) );
 
-    UnionFind<FaceId> unionFindStruct( mesh.topology.faceSize() );
-    for ( const auto& ff : *maybeOrder )
-        unionFindStruct.unite( ff.aFace, ff.bFace );
-    const auto & roots = unionFindStruct.roots();
-
-    Vector<double, FaceId> rootAreas( mesh.topology.faceSize() );
-    for ( auto f : mesh.topology.getValidFaces() )
-        rootAreas[roots[f]] += mesh.area( f );
-
-    FaceId largestRoot;
-    for ( auto f : mesh.topology.getValidFaces() )
-        if ( roots[f] == f && ( !largestRoot || rootAreas[f] > rootAreas[largestRoot] ) )
-            largestRoot = f;
-
-    FaceBitSet res( mesh.topology.faceSize() );
-    if ( largestRoot )
-    {
-        BitSetParallelForAll( res, [&]( FaceId f )
-        {
-            if ( roots[f] == largestRoot )
-                res.set( f );
-        } );
-    }
+    const auto segmentBds = findSegmentBoundaries( mesh.topology, *maybeOrder,
+        mesh.topology.numValidFaces() - (int)maybeOrder->size() );
+    auto res = MeshComponents::getLargestComponent( mesh, MeshComponents::PerEdge, &segmentBds );
 
     if ( !reportProgress( progress, 1.0f ) )
         return unexpectedOperationCanceled();

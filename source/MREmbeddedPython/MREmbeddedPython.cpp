@@ -9,6 +9,7 @@
 #include "MRPython/MRUnifiedPythonStream.h"
 
 #include <fstream>
+#include <sstream>
 #include <utility>
 
 #ifdef __linux__

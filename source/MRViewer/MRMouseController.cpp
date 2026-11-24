@@ -125,6 +125,8 @@ void MouseController::connect()
     viewer.signals().mouseDownSignal.connect( MAKE_SLOT( &MouseController::mouseDown_ ) );
     viewer.signals().mouseUpSignal.connect( MAKE_SLOT( &MouseController::preMouseUp_ ), boost::signals2::at_front );
     viewer.signals().dragDropSignal.connect( MAKE_SLOT( &MouseController::preDragDrop_ ), boost::signals2::at_front );
+    viewer.signals().dragEntranceSignal.connect( [this] ( bool ) { dragOverPos_.reset(); } );
+    viewer.signals().dragOverSignal.connect( [this] ( int x, int y ) { dragOverPos_ = Vector2i( x, y ); return false; }, boost::signals2::at_front );
     viewer.signals().mouseMoveSignal.connect( MAKE_SLOT( &MouseController::preMouseMove_ ), boost::signals2::at_front );
     viewer.signals().mouseScrollSignal.connect( MAKE_SLOT( &MouseController::mouseScroll_ ) );
     viewer.signals().cursorEntranceSignal.connect( MAKE_SLOT( &MouseController::cursorEntrance_ ) );
@@ -351,6 +353,11 @@ bool MouseController::preMouseMove_( int x, int y )
 
 bool MouseController::preDragDrop_( const std::vector<std::filesystem::path>& )
 {
+    if ( dragOverPos_ )
+    {
+        currentMousePos_ = *std::exchange( dragOverPos_, std::nullopt );
+        return false;
+    }
     const auto& v = getViewerInstance();
     if ( !v.window )
         return false;

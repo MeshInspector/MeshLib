@@ -94,6 +94,8 @@ private:
     Vector2i downMousePos_;
     Vector2i prevMousePos_;
     Vector2i currentMousePos_;
+    // the last position of the current file drag over the window, where the platform (or MCP) reports drag moves
+    std::optional<Vector2i> dragOverPos_;
 
     BitSet downState_;
     MouseMode currentMode_{ MouseMode::None };

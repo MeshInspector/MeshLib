@@ -4,6 +4,7 @@
 #include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRBase64.h"
 #include "MRMesh/MRBox.h"
+#include "MRMesh/MRFinally.h"
 #include "MRMesh/MRImage.h"
 #include "MRMesh/MRImageLoad.h"
 #include "MRMesh/MRImageSave.h"
@@ -19,7 +20,9 @@
 #include "MRViewer/MRMcpCommon.h"
 #include "MRViewer/MRMouse.h"
 #include "MRViewer/MRShortcutManager.h"
+#include "MRViewer/MRUITestEngineControl.h"
 #include "MRViewer/MRViewer.h"
+#include "MRViewer/MRViewerSignals.h"
 #include "MRViewer/MRViewport.h"
 
 #include <GLFW/glfw3.h>
@@ -29,7 +32,9 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <future>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <thread>
@@ -103,7 +108,22 @@ int parseKey( const std::string& s )
 {
     if ( auto key = ShortcutManager::parseKey( s ) )
         return *key;
-    throw std::runtime_error( fmt::format( "Unknown key `{}` (use a single printable char or a name like `Escape`, `Enter`, `ArrowUp`, `F5`, `Num7`, `Delete`, `ForwardDelete`)", s ) );
+    if ( auto mod = ShortcutManager::parseModifier( s ) ) // the left key of a modifier
+        return *mod == GLFW_MOD_CONTROL ? GLFW_KEY_LEFT_CONTROL : *mod == GLFW_MOD_SHIFT ? GLFW_KEY_LEFT_SHIFT
+            : *mod == GLFW_MOD_ALT ? GLFW_KEY_LEFT_ALT : GLFW_KEY_LEFT_SUPER;
+    throw std::runtime_error( fmt::format( "Unknown key `{}` (use a single printable char or a name like `Escape`, `Enter`, `ArrowUp`, `F5`, `Num7`, `Delete`, `ForwardDelete`, `Ctrl`, `Shift`)", s ) );
+}
+
+// sets the modifiers (GLFW_MOD_* bits) that ImGui sees held in addition to the real keyboard to f( old bits ), and returns the old bits:
+// ImGui reads the real keyboard, not the injected key events; call on the main thread
+int updateImGuiModifiers( const std::function<int( int )>& f )
+{
+    const std::vector<std::string> path{ "##key_modifiers" }; // ImGuiMenu::testKeyModifiers_
+    auto old = UI::TestEngine::Control::readValue<std::int64_t>( path );
+    if ( !old )
+        return 0;
+    (void)UI::TestEngine::Control::writeValue<std::int64_t>( path, f( int( old->value ) ) );
+    return int( old->value );
 }
 
 } // namespace
@@ -342,6 +362,15 @@ static nlohmann::json mcpViewerSendMouseEvent( const nlohmann::json& args )
     // mouseMove between hover-resolve and click matters for many plugins; follow the pattern used
     // by Python UI tests in test_ui/scenarios/scenario_helpers.py.
     const bool hasXY = args.contains( "x" ) && args.contains( "y" );
+    // ImGui widgets see the modifiers during this call's events too, e.g. Ctrl+click in the scene list
+    auto added = std::make_shared<int>( 0 ); // not held before this call
+    if ( mods )
+        v.emplaceEvent( "mcp hold modifiers", [mods, added] { *added = mods & ~updateImGuiModifiers( [mods] ( int m ) { return m | mods; } ); } );
+    MR_FINALLY
+    {
+        if ( mods )
+            v.emplaceEvent( "mcp release modifiers", [added] { updateImGuiModifiers( [added] ( int m ) { return m & ~*added; } ); } );
+    };
     // the events are queued in order even if the main thread gets busy, then only waiting for it stops
     std::string busy;
     auto waitFrames = [&busy]
@@ -415,6 +444,10 @@ static nlohmann::json mcpViewerSendKeyboardEvent( const nlohmann::json& args )
     else if ( type == "down" || type == "up" || type == "repeat" )
     {
         const int glfwKey = parseKey( keyStr );
+        // a modifier key stays held for ImGui widgets until its `up`
+        if ( const auto mod = ShortcutManager::parseModifier( keyStr ); mod && type != "repeat" )
+            v.emplaceEvent( "mcp key modifiers", [mod = *mod, down = type == "down"]
+                { updateImGuiModifiers( [mod, down] ( int m ) { return down ? m | mod : m & ~mod; } ); } );
         if ( type == "down" )
             v.emplaceEvent( "mcp keyDown", [&v, glfwKey, mods]{ v.keyDown( glfwKey, mods ); } );
         else if ( type == "up" )
@@ -426,6 +459,53 @@ static nlohmann::json mcpViewerSendKeyboardEvent( const nlohmann::json& args )
     {
         throw std::runtime_error( fmt::format( "Unknown `type` `{}` (expected `down`/`up`/`press`/`repeat`).", type ) );
     }
+    return inputResult( waitFramesAfterInput() );
+}
+
+static nlohmann::json mcpViewerSendDragDropEvent( const nlohmann::json& args )
+{
+    const std::string type = args.at( "type" ).get<std::string>();
+    const bool hasXY = args.contains( "x" ) && args.contains( "y" );
+    if ( type != "enter" && type != "over" && type != "leave" && type != "drop" )
+        throw std::runtime_error( fmt::format( "Unknown `type` `{}` (expected `enter`/`over`/`leave`/`drop`).", type ) );
+    if ( type == "over" && !hasXY )
+        throw std::runtime_error( "`over` requires `x` and `y`." );
+    std::vector<std::filesystem::path> paths;
+    if ( type == "drop" )
+        for ( const auto& p : args.at( "paths" ) )
+            paths.push_back( pathFromUtf8( p.get<std::string>() ) );
+
+    auto& v = getViewerInstance();
+    if ( hasXY ) // the drop lands at the last drag-over position, see MouseController::preDragDrop_
+        v.emplaceEvent( "mcp drag over", [&v, x = args["x"].get<int>(), y = args["y"].get<int>()] { v.signals().dragOverSignal( x, y ); } );
+    if ( type == "drop" )
+        v.emplaceEvent( "mcp drop", [&v, paths = std::move( paths )] { v.dragDrop( paths ); } );
+    else if ( type != "over" )
+        v.emplaceEvent( "mcp drag entrance", [&v, entered = type == "enter"] { v.signals().dragEntranceSignal( entered ); } );
+    return inputResult( waitFramesAfterInput() );
+}
+
+static nlohmann::json mcpViewerSendTouchpadEvent( const nlohmann::json& args )
+{
+    const std::string gesture = args.at( "gesture" ).get<std::string>();
+    const std::string phase = args.at( "phase" ).get<std::string>();
+    const int i = phase == "begin" ? 0 : phase == "update" ? 1 : phase == "end" ? 2 : -1;
+    if ( i < 0 )
+        throw std::runtime_error( fmt::format( "Unknown `phase` `{}` (expected `begin`/`update`/`end`).", phase ) );
+    const float angle = args.value( "angle", 0.f ), dx = args.value( "dx", 0.f ), dy = args.value( "dy", 0.f ), scale = args.value( "scale", 1.f );
+    const bool kinetic = args.value( "kinetic", false );
+
+    auto& v = getViewerInstance();
+    std::array<ViewerEventCallback, 3> events;
+    if ( gesture == "rotate" )
+        events = { [&v] { v.touchpadRotateGestureBegin(); }, [&v, angle] { v.touchpadRotateGestureUpdate( angle ); }, [&v] { v.touchpadRotateGestureEnd(); } };
+    else if ( gesture == "swipe" )
+        events = { [&v] { v.touchpadSwipeGestureBegin(); }, [&v, dx, dy, kinetic] { v.touchpadSwipeGestureUpdate( dx, dy, kinetic ); }, [&v] { v.touchpadSwipeGestureEnd(); } };
+    else if ( gesture == "zoom" )
+        events = { [&v] { v.touchpadZoomGestureBegin(); }, [&v, scale, kinetic] { v.touchpadZoomGestureUpdate( scale, kinetic ); }, [&v] { v.touchpadZoomGestureEnd(); } };
+    else
+        throw std::runtime_error( fmt::format( "Unknown `gesture` `{}` (expected `rotate`/`swipe`/`zoom`).", gesture ) );
+    v.emplaceEvent( "mcp touchpad " + gesture + " " + phase, std::move( events[i] ) );
     return inputResult( waitFramesAfterInput() );
 }
 
@@ -560,7 +640,9 @@ MR_ON_INIT{
                 "`button` is `left`/`right`/`middle` (required for `down`/`up`/`click`). `x`/`y` are window pixels, "
                 "top-left origin (required for `move`; optional for `down`/`up`/`click` — if given, a mouseMove is "
                 "sent first so hover state resolves before the button event). `scrollDelta` is required for `scroll` "
-                "(positive = scroll up). `modifiers` is an array of any of `ctrl`/`shift`/`alt`/`super`. "
+                "(positive = scroll up). `modifiers` is an array of any of `ctrl`/`shift`/`alt`/`super`, held during this "
+                "call's events, also for UI widgets (e.g. Ctrl+click in the scene list); to hold a modifier across calls "
+                "(e.g. Ctrl during a drag), send `viewer_sendKeyboardEvent` `down`/`up` of that key around them. "
                 "`click` is shorthand for `down` + `up` at the same position. "
                 "Waits until the UI has processed the events, at most 20 seconds; if an action they started keeps "
                 "MeshInspector busy longer, returns `busy` with an explanation, see `ui_progressStatus`.",
@@ -581,7 +663,9 @@ MR_ON_INIT{
         /*desc*/"Queue a keyboard event on the viewer's event loop. `type` is one of `down`, `up`, `press`, `repeat`. "
                 "`key` is either a single printable character (e.g. `\"a\"`, `\"A\"`, `\"5\"`) or a named key "
                 "(`Escape`, `Enter`, `Space`, `Tab`, `Backspace`, `Delete`, `Home`, `End`, `PageUp`, `PageDown`, "
-                "`ArrowUp`/`ArrowDown`/`ArrowLeft`/`ArrowRight`, `F1`…`F25`). `press` is for text input — it emits a "
+                "`ArrowUp`/`ArrowDown`/`ArrowLeft`/`ArrowRight`, `F1`…`F25`) or a modifier key (`Ctrl`/`Shift`/`Alt`/`Super`: "
+                "the left one; `down` holds it for UI widgets too, until its `up`). "
+                "`press` is for text input — it emits a "
                 "unicode character event and requires a single printable character. `down`/`up`/`repeat` send raw "
                 "key events (use these for shortcuts like Ctrl+S, or for keys that don't produce text). `modifiers` "
                 "is an array of any of `ctrl`/`shift`/`alt`/`super`. "
@@ -593,6 +677,50 @@ MR_ON_INIT{
             .addMemberOpt( "modifiers", Schema::Array( Schema::String{} ) ),
         /*output_schema*/Schema::Object{}.addMemberOpt( "busy", Schema::String{} ),
         /*func*/mcpViewerSendKeyboardEvent
+    );
+
+    server.addTool(
+        /*id*/  "viewer_sendDragDropEvent",
+        /*name*/"Inject a file drag-and-drop event",
+        /*desc*/"Queue an event of files dragged from the OS over the viewer's window, as the OS sends it. `type` is one of "
+                "`enter` (a drag enters the window), `over` (it moves to `x`/`y`), `leave` (it leaves without dropping), "
+                "`drop` (drops `paths`, an array of file paths). `x`/`y` are window pixels, top-left origin, as in "
+                "`viewer_sendMouseEvent`: required for `over`; with any other `type` an `over` to them is sent first. "
+                "The drop lands where the last `over` was, e.g. on the scene list (files are added) or on the viewport "
+                "(the scene is replaced). Between `enter` and `drop`/`leave` the drop zones are highlighted. "
+                "Waits until the UI has processed the events, at most 20 seconds; if an action they started keeps "
+                "MeshInspector busy longer, returns `busy` with an explanation, see `ui_progressStatus`.",
+        /*input_schema*/Schema::Object{}
+            .addMember(    "type",  Schema::String( std::vector<std::string>{ "enter", "over", "leave", "drop" } ) )
+            .addMemberOpt( "x",     Schema::Number{} )
+            .addMemberOpt( "y",     Schema::Number{} )
+            .addMemberOpt( "paths", Schema::Array( Schema::String{} ) ),
+        /*output_schema*/Schema::Object{}.addMemberOpt( "busy", Schema::String{} ),
+        /*func*/mcpViewerSendDragDropEvent
+    );
+
+    server.addTool(
+        /*id*/  "viewer_sendTouchpadEvent",
+        /*name*/"Inject a touchpad gesture event",
+        /*desc*/"Queue a touchpad gesture event, as a precision touchpad or a Mac trackpad sends it. `gesture` is `rotate` "
+                "(two fingers turning), `swipe` (two fingers moving) or `zoom` (pinch); `phase` is `begin`, `update` or `end`: "
+                "send one `begin`, any number of `update`s, one `end`. `begin` acts on the viewport under the mouse, so send a "
+                "`viewer_sendMouseEvent` `move` there first. `update` takes: for `rotate`, `angle` in radians since `begin`; "
+                "for `swipe`, the move `dx`/`dy` in pixels since the previous `update`; for `zoom`, `scale` relative to "
+                "`begin` (1 = unchanged, above 1 zooms in). `kinetic` (default false) marks momentum `update`s sent after "
+                "the fingers left the touchpad (ignored by default settings). "
+                "Waits until the UI has processed the event, at most 20 seconds; if an action it started keeps "
+                "MeshInspector busy longer, returns `busy` with an explanation, see `ui_progressStatus`.",
+        /*input_schema*/Schema::Object{}
+            .addMember(    "gesture", Schema::String( std::vector<std::string>{ "rotate", "swipe", "zoom" } ) )
+            .addMember(    "phase",   Schema::String( std::vector<std::string>{ "begin", "update", "end" } ) )
+            .addMemberOpt( "angle",   Schema::Number{} )
+            .addMemberOpt( "dx",      Schema::Number{} )
+            .addMemberOpt( "dy",      Schema::Number{} )
+            .addMemberOpt( "scale",   Schema::Number{} )
+            .addMemberOpt( "kinetic", Schema::Bool{} ),
+        /*output_schema*/Schema::Object{}.addMemberOpt( "busy", Schema::String{} ),
+        /*func*/mcpViewerSendTouchpadEvent
     );
 
     server.addTool(

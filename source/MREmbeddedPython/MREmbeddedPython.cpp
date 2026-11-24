@@ -9,6 +9,7 @@
 #include "MRPython/MRUnifiedPythonStream.h"
 
 #include <fstream>
+#include <sstream>
 #include <utility>
 
 #ifdef __linux__
@@ -120,7 +121,7 @@ bool execPython( const std::string& code )
     }
     const auto error = fetchPythonError();
     spdlog::error( error );
-    UnifiedPythonStream::get() << error; // add to unified python stream
+    UnifiedPythonStream::append( error ); // add to unified python stream
     return false;
 }
 
@@ -241,7 +242,7 @@ bool EmbeddedPython::init_()
             return false;
         const char* message = status.err_msg ? status.err_msg : "Unknown error while initializing Python.";
         spdlog::error( message );
-        UnifiedPythonStream::get() << message; // add to unified python stream
+        UnifiedPythonStream::append( message ); // add to unified python stream
         return true;
     };
 

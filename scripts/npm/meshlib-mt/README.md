@@ -72,7 +72,9 @@ directory holds the module files.
 
 ## Migrating from the 3.x packages
 
-The packages up to 3.1.x shipped a hand-written Embind module with a part of the API; this is a different, generated API:
+The packages up to 3.1.x shipped a hand-written Embind module with a part of the API. That module is still published, as
+`@meshinspector/meshlib-light-mt`: to keep the old API, switch to it, replacing `meshlib-mt` with `meshlib-light-mt` in the
+package and file names (`meshlib-light-mt.mjs`, `meshlib-light-mt.wasm`). This package has a different, generated API:
 
 - The default export (`import createMeshLib`, `const ml = await createMeshLib()`) became a namespace import and an `init()` call:
   `import * as ml from '@meshinspector/meshlib'; await ml.init();`.

@@ -41,7 +41,7 @@ npm pkg set type=module
 ```
 
 ### Migrating from the 3.x Packages
-The packages up to 3.1.x shipped a hand-written Embind module with a part of the API; the generated API is different:
+The packages up to 3.1.x shipped a hand-written Embind module with a part of the API. That module is still published, as `@meshinspector/meshlib-light` and `@meshinspector/meshlib-light-mt`: to keep the old API, switch to them, replacing `meshlib` with `meshlib-light` in the package and file names (`meshlib-light.mjs`, `meshlib-light.wasm`). The generated API is different:
  - The default export (`import createMeshLib`, `const ml = await createMeshLib()`) became a namespace import and an `init()` call: `import * as ml from "@meshinspector/meshlib"; await ml.init();`.
  - On the CDN the entry point is `index.mjs` instead of `meshlib.mjs`.
  - The classes, functions and fields follow the C++ API one to one (see [How the API Maps to C++](#MeshLibJsApiMapping) below), so the helpers of the old module have no direct counterparts: look up the C++ function instead.

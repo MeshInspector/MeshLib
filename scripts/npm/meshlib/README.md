@@ -147,7 +147,9 @@ Also make sure to add `"type": "module"` to your package.json.
 
 ## Migrating from the 3.x packages
 
-The packages up to 3.1.x shipped a hand-written Embind module with a part of the API; this is a different, generated API:
+The packages up to 3.1.x shipped a hand-written Embind module with a part of the API. That module is still published, as
+`@meshinspector/meshlib-light`: to keep the old API, switch to it, replacing `meshlib` with `meshlib-light` in the package
+and file names (`meshlib-light.mjs`, `meshlib-light.wasm`). This package has a different, generated API:
 
 - The default export (`import createMeshLib`, `const ml = await createMeshLib()`) became a namespace import and an `init()` call:
   `import * as ml from '@meshinspector/meshlib'; await ml.init();`.

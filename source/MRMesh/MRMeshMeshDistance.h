@@ -79,19 +79,66 @@ MRMESH_API MeshMeshCollisionStatus findCollisionStatus( const MeshPart& a, const
     const MeshMeshDistanceResult& distRes, const AffineXf3f* rigidB2A = nullptr, std::vector<FaceFace>* collisions = nullptr );
 
 /**
- * \brief returns the maximum of the squared distances from each B-mesh vertex to A-mesh
+ * \brief finds the vertex of B-mesh most distant from A-mesh
+ * \return the found vertex in b, its projection on A-mesh in a, and the squared distance between them
+ * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
+ * \param maxDistanceSq upper limit on the positive distance in question, if the real distance is larger than the function exists returning maxDistanceSq and no valid point in a
+ */
+MRMESH_API MeshMeshDistanceResult findMaxDistanceOneWay( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A = nullptr, float maxDistanceSq = FLT_MAX );
+
+/**
+ * \brief finds the vertex of one mesh most distant from the other mesh (in both directions)
+ * \return the found vertex in a or in b, its projection on the other mesh in the remaining field, and the squared distance between them
+ * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
+ * \param maxDistanceSq upper limit on the positive distance in question, if the real distance is larger than the function exists returning maxDistanceSq and one valid point only
+ */
+MRMESH_API MeshMeshDistanceResult findMaxDistance( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A = nullptr, float maxDistanceSq = FLT_MAX );
+
+/**
+ * \brief returns the maximum of the squared distances from each B-mesh vertex to A-mesh;
+ *        please see \ref findHausdorffDistanceOneWay, which considers all points of B-mesh and not only its vertices
  * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
  * \param maxDistanceSq upper limit on the positive distance in question, if the real distance is larger than the function exists returning maxDistanceSq
+ * \sa \ref findMaxDistanceOneWay returning the points as well
  */
 MRMESH_API float findMaxDistanceSqOneWay( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A = nullptr, float maxDistanceSq = FLT_MAX );
 
 /**
- * \brief returns the squared Hausdorff distance between two meshes, that is
-          the maximum of squared distances from each mesh vertex to the other mesh (in both directions)
+ * \brief returns the maximum of squared distances from each mesh vertex to the other mesh (in both directions);
+ *        please see \ref findHausdorffDistance, which considers all points of the meshes and not only their vertices
  * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
  * \param maxDistanceSq upper limit on the positive distance in question, if the real distance is larger than the function exists returning maxDistanceSq
+ * \sa \ref findMaxDistance returning the points as well
  */
 MRMESH_API float findMaxDistanceSq( const MeshPart& a, const MeshPart& b, const AffineXf3f* rigidB2A = nullptr, float maxDistanceSq = FLT_MAX );
+
+/**
+ * \brief finds the point of B-mesh (inside its triangles as well, not only in vertices) most distant from A-mesh;
+ *        the distance to it is the one-sided Hausdorff distance from B to A
+ * \details the maximum can be reached inside a triangle of B, where several triangles of A are equally close,
+ *          so the triangles of B are subdivided there till the given tolerance is reached;
+ *          the time grows as 1/sqrt(tolerance) for smooth offset surfaces, but as 1/tolerance where the surfaces coincide
+ *          and their triangulations differ: there the triangles of B crossing the edges of A are subdivided down to the tolerance
+ * \return the found point in b, its projection on A-mesh in a, and the squared distance between them
+ * \param tolerance positive value, the returned distance (not squared) is never above the exact one, and is below it by at most this value
+ *        (both up to rounding errors in floats); the smaller the value, the longer the computation;
+ *        if it is not positive then only the vertices are considered
+ * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
+ * \param maxDistanceSq upper limit on the positive distance in question, if the real distance is larger than the function exists returning maxDistanceSq and no valid point in a
+ */
+MRMESH_API MeshMeshDistanceResult findHausdorffDistanceOneWay( const MeshPart& a, const MeshPart& b, float tolerance, const AffineXf3f* rigidB2A = nullptr, float maxDistanceSq = FLT_MAX );
+
+/**
+ * \brief finds the point of one mesh (not only in vertices) most distant from the other mesh (in both directions);
+ *        the distance to it is the Hausdorff distance between two meshes
+ * \return the found point in a or in b, its projection on the other mesh in the remaining field, and the squared distance between them
+ * \param tolerance positive value, the returned distance (not squared) is never above the exact one, and is below it by at most this value
+ *        (both up to rounding errors in floats); the smaller the value, the longer the computation;
+ *        if it is not positive then only the vertices are considered
+ * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
+ * \param maxDistanceSq upper limit on the positive distance in question, if the real distance is larger than the function exists returning maxDistanceSq and one valid point only
+ */
+MRMESH_API MeshMeshDistanceResult findHausdorffDistance( const MeshPart& a, const MeshPart& b, float tolerance, const AffineXf3f* rigidB2A = nullptr, float maxDistanceSq = FLT_MAX );
 
 /// \}
 

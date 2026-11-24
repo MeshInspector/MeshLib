@@ -32,9 +32,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
-#include <functional>
 #include <future>
-#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <thread>
@@ -114,16 +112,14 @@ int parseKey( const std::string& s )
     throw std::runtime_error( fmt::format( "Unknown key `{}` (use a single printable char or a name like `Escape`, `Enter`, `ArrowUp`, `F5`, `Num7`, `Delete`, `ForwardDelete`, `Ctrl`, `Shift`)", s ) );
 }
 
-// sets the modifiers (GLFW_MOD_* bits) that ImGui sees held in addition to the real keyboard to f( old bits ), and returns the old bits:
-// ImGui reads the real keyboard, not the injected key events; call on the main thread
-int updateImGuiModifiers( const std::function<int( int )>& f )
+// modifier keys (GLFW_MOD_* bits) held down by `viewer_sendKeyboardEvent`; main thread only
+int gKeyboardMods = 0;
+
+// makes ImGui see `mods` held in addition to the real keyboard, since it reads the real keyboard, not the injected key events;
+// only writes the test-engine value, whose read-back lags by up to two frames; call on the main thread
+void setImGuiModifiers( int mods )
 {
-    const std::vector<std::string> path{ "##key_modifiers" }; // ImGuiMenu::testKeyModifiers_
-    auto old = UI::TestEngine::Control::readValue<std::int64_t>( path );
-    if ( !old )
-        return 0;
-    (void)UI::TestEngine::Control::writeValue<std::int64_t>( path, f( int( old->value ) ) );
-    return int( old->value );
+    (void)UI::TestEngine::Control::writeValue<std::int64_t>( { "##key_modifiers" }, mods ); // ImGuiMenu::testKeyModifiers_
 }
 
 } // namespace
@@ -363,13 +359,12 @@ static nlohmann::json mcpViewerSendMouseEvent( const nlohmann::json& args )
     // by Python UI tests in test_ui/scenarios/scenario_helpers.py.
     const bool hasXY = args.contains( "x" ) && args.contains( "y" );
     // ImGui widgets see the modifiers during this call's events too, e.g. Ctrl+click in the scene list
-    auto added = std::make_shared<int>( 0 ); // not held before this call
     if ( mods )
-        v.emplaceEvent( "mcp hold modifiers", [mods, added] { *added = mods & ~updateImGuiModifiers( [mods] ( int m ) { return m | mods; } ); } );
+        v.emplaceEvent( "mcp hold modifiers", [mods] { setImGuiModifiers( gKeyboardMods | mods ); } );
     MR_FINALLY
     {
         if ( mods )
-            v.emplaceEvent( "mcp release modifiers", [added] { updateImGuiModifiers( [added] ( int m ) { return m & ~*added; } ); } );
+            v.emplaceEvent( "mcp release modifiers", [] { setImGuiModifiers( gKeyboardMods ); } );
     };
     // the events are queued in order even if the main thread gets busy, then only waiting for it stops
     std::string busy;
@@ -409,12 +404,12 @@ static nlohmann::json mcpViewerSendMouseEvent( const nlohmann::json& args )
             doMove();
         if ( type == "down" || type == "click" )
         {
-            v.emplaceEvent( "mcp mouseDown", [&v, btn, mods]{ v.mouseDown( btn, mods ); } );
+            v.emplaceEvent( "mcp mouseDown", [&v, btn, mods]{ v.mouseDown( btn, mods | gKeyboardMods ); } );
             waitFrames();
         }
         if ( type == "up" || type == "click" )
         {
-            v.emplaceEvent( "mcp mouseUp", [&v, btn, mods]{ v.mouseUp( btn, mods ); } );
+            v.emplaceEvent( "mcp mouseUp", [&v, btn, mods]{ v.mouseUp( btn, mods | gKeyboardMods ); } );
             waitFrames();
         }
     }
@@ -439,21 +434,21 @@ static nlohmann::json mcpViewerSendKeyboardEvent( const nlohmann::json& args )
         if ( keyStr.size() != 1 || !std::isprint( static_cast<unsigned char>( keyStr[0] ) ) )
             throw std::runtime_error( "`press` requires a single printable ASCII character as `key` (for text input)." );
         const unsigned int unicode = static_cast<unsigned char>( keyStr[0] );
-        v.emplaceEvent( "mcp keyPressed", [&v, unicode, mods]{ v.keyPressed( unicode, mods ); } );
+        v.emplaceEvent( "mcp keyPressed", [&v, unicode, mods]{ v.keyPressed( unicode, mods | gKeyboardMods ); } );
     }
     else if ( type == "down" || type == "up" || type == "repeat" )
     {
         const int glfwKey = parseKey( keyStr );
-        // a modifier key stays held for ImGui widgets until its `up`
+        // a modifier key stays held, also for ImGui widgets and later mouse and key events, until its `up`
         if ( const auto mod = ShortcutManager::parseModifier( keyStr ); mod && type != "repeat" )
             v.emplaceEvent( "mcp key modifiers", [mod = *mod, down = type == "down"]
-                { updateImGuiModifiers( [mod, down] ( int m ) { return down ? m | mod : m & ~mod; } ); } );
+                { setImGuiModifiers( gKeyboardMods = down ? gKeyboardMods | mod : gKeyboardMods & ~mod ); } );
         if ( type == "down" )
-            v.emplaceEvent( "mcp keyDown", [&v, glfwKey, mods]{ v.keyDown( glfwKey, mods ); } );
+            v.emplaceEvent( "mcp keyDown", [&v, glfwKey, mods]{ v.keyDown( glfwKey, mods | gKeyboardMods ); } );
         else if ( type == "up" )
-            v.emplaceEvent( "mcp keyUp", [&v, glfwKey, mods]{ v.keyUp( glfwKey, mods ); } );
+            v.emplaceEvent( "mcp keyUp", [&v, glfwKey, mods]{ v.keyUp( glfwKey, mods | gKeyboardMods ); } );
         else
-            v.emplaceEvent( "mcp keyRepeat", [&v, glfwKey, mods]{ v.keyRepeat( glfwKey, mods ); } );
+            v.emplaceEvent( "mcp keyRepeat", [&v, glfwKey, mods]{ v.keyRepeat( glfwKey, mods | gKeyboardMods ); } );
     }
     else
     {
@@ -476,12 +471,16 @@ static nlohmann::json mcpViewerSendDragDropEvent( const nlohmann::json& args )
             paths.push_back( pathFromUtf8( p.get<std::string>() ) );
 
     auto& v = getViewerInstance();
+    // an entrance resets the drag position, so `enter` sends it before the `over`
+    auto entrance = [&] { v.emplaceEvent( "mcp drag entrance", [&v, entered = type == "enter"] { v.signals().dragEntranceSignal( entered ); } ); };
+    if ( type == "enter" )
+        entrance();
     if ( hasXY ) // the drop lands at the last drag-over position, see MouseController::preDragDrop_
         v.emplaceEvent( "mcp drag over", [&v, x = args["x"].get<int>(), y = args["y"].get<int>()] { v.signals().dragOverSignal( x, y ); } );
     if ( type == "drop" )
         v.emplaceEvent( "mcp drop", [&v, paths = std::move( paths )] { v.dragDrop( paths ); } );
-    else if ( type != "over" )
-        v.emplaceEvent( "mcp drag entrance", [&v, entered = type == "enter"] { v.signals().dragEntranceSignal( entered ); } );
+    else if ( type == "leave" )
+        entrance();
     return inputResult( waitFramesAfterInput() );
 }
 
@@ -641,8 +640,8 @@ MR_ON_INIT{
                 "top-left origin (required for `move`; optional for `down`/`up`/`click` — if given, a mouseMove is "
                 "sent first so hover state resolves before the button event). `scrollDelta` is required for `scroll` "
                 "(positive = scroll up). `modifiers` is an array of any of `ctrl`/`shift`/`alt`/`super`, held during this "
-                "call's events, also for UI widgets (e.g. Ctrl+click in the scene list); to hold a modifier across calls "
-                "(e.g. Ctrl during a drag), send `viewer_sendKeyboardEvent` `down`/`up` of that key around them. "
+                "call's events, also for UI widgets (e.g. Ctrl+click in the scene list), in addition to the modifier keys "
+                "held by `viewer_sendKeyboardEvent` `down` (e.g. Ctrl during a drag, until its `up`). "
                 "`click` is shorthand for `down` + `up` at the same position. "
                 "Waits until the UI has processed the events, at most 20 seconds; if an action they started keeps "
                 "MeshInspector busy longer, returns `busy` with an explanation, see `ui_progressStatus`.",
@@ -664,7 +663,7 @@ MR_ON_INIT{
                 "`key` is either a single printable character (e.g. `\"a\"`, `\"A\"`, `\"5\"`) or a named key "
                 "(`Escape`, `Enter`, `Space`, `Tab`, `Backspace`, `Delete`, `Home`, `End`, `PageUp`, `PageDown`, "
                 "`ArrowUp`/`ArrowDown`/`ArrowLeft`/`ArrowRight`, `F1`…`F25`) or a modifier key (`Ctrl`/`Shift`/`Alt`/`Super`: "
-                "the left one; `down` holds it for UI widgets too, until its `up`). "
+                "the left one; `down` holds it until its `up`, for UI widgets and later mouse and key events too). "
                 "`press` is for text input — it emits a "
                 "unicode character event and requires a single printable character. `down`/`up`/`repeat` send raw "
                 "key events (use these for shortcuts like Ctrl+S, or for keys that don't produce text). `modifiers` "
@@ -685,9 +684,10 @@ MR_ON_INIT{
         /*desc*/"Queue an event of files dragged from the OS over the viewer's window, as the OS sends it. `type` is one of "
                 "`enter` (a drag enters the window), `over` (it moves to `x`/`y`), `leave` (it leaves without dropping), "
                 "`drop` (drops `paths`, an array of file paths). `x`/`y` are window pixels, top-left origin, as in "
-                "`viewer_sendMouseEvent`: required for `over`; with any other `type` an `over` to them is sent first. "
+                "`viewer_sendMouseEvent`: required for `over`; with any other `type` an `over` to them is sent too. "
                 "The drop lands where the last `over` was, e.g. on the scene list (files are added) or on the viewport "
-                "(the scene is replaced). Between `enter` and `drop`/`leave` the drop zones are highlighted. "
+                "(the scene is replaced); a mouse move in between forgets that position. Between `enter` and "
+                "`drop`/`leave` the drop zones are highlighted. "
                 "Waits until the UI has processed the events, at most 20 seconds; if an action they started keeps "
                 "MeshInspector busy longer, returns `busy` with an explanation, see `ui_progressStatus`.",
         /*input_schema*/Schema::Object{}

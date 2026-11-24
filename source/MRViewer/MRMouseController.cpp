@@ -288,7 +288,8 @@ bool MouseController::preMouseMove_( int x, int y )
 
     prevMousePos_ = currentMousePos_;
     currentMousePos_ = { x,y };
-    
+    dragOverPos_.reset(); // the cursor position is current again, e.g. after an MCP drag without `drop` or `leave`
+
     if ( dragActive_ )
         return viewer.drag( x, y );
     if ( clickButton_ != MouseButton::NoButton )

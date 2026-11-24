@@ -37,7 +37,7 @@ public:
 
     // Returns false on failure.
     // If `onDoneAsync` is set, doesn't wait for the script to finish.
-    // Will call `onDoneAsync` asynchronously when done (from the Python interpreter thread).
+    // Will call `onDoneAsync` asynchronously when done (from the Python interpreter thread, without the GIL).
     MREMBEDDEDPYTHON_API static bool runString( std::string pythonString, std::function<void( bool success )> onDoneAsync = nullptr );
 
     MREMBEDDEDPYTHON_API static bool runScript( const std::filesystem::path& path );

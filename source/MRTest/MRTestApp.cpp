@@ -11,12 +11,11 @@
 #include "MRPch/MRJson.h"
 #include "MRPch/MRSpdlog.h"
 
-#include <chrono>
-#include <thread>
-
 #ifndef MESHLIB_NO_PYTHON
 #include "MRPython/MRPython.h"
 #include "MREmbeddedPython/MREmbeddedPython.h"
+#include <chrono>
+#include <thread>
 #endif
 
 namespace MR

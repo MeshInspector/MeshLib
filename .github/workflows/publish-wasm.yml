@@ -34,6 +34,14 @@ jobs:
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
+        # For `scripts/npm/bundle_cdn.sh`.
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts/npm/bundle_cdn.sh
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
@@ -47,8 +55,8 @@ jobs:
           gh release download "${TAG}" --pattern "js-meshlib-*.tgz" --repo ${{ github.repository }} --clobber
 
         # The package is a directory of ES modules (`index.mjs`, `ffi.mjs`, `lib/`, `ns/`) importing each other, which the bundlers
-        # tree-shake; from a CDN that would be ~1100 requests, so here they're bundled into one `index.mjs` (esbuild, whitespace and
-        # syntax minified, the identifiers kept for readable stack traces). The Emscripten glue and the wasm stay separate files:
+        # tree-shake; from a CDN that would be dozens of requests, so here they're bundled into one `index.mjs` (`bundle_cdn.sh`,
+        # which the CI tests). The Emscripten glue and the wasm stay separate files:
         # the glue locates the wasm from its own URL, and the workers of the multithreaded build load it by URL. The three go
         # under `<package>@<tag>/`, compressed once into a staging tree and uploaded per content type. The Node build and the
         # declarations are useless from a CDN and are skipped.
@@ -68,8 +76,7 @@ jobs:
             tar -xzf "${TGZ}" --strip-components=1 -C "src/${NAME}"
             case "${NAME}" in
               meshlib|meshlib-mt)
-                npx --yes esbuild@0.25 "src/${NAME}/index.mjs" --bundle --format=esm --platform=neutral --minify-whitespace --minify-syntax \
-                  --external:./MeshLibC2.mjs --external:./MeshLibC2.node.mjs --log-level=warning --outfile="pkg/${NAME}/index.mjs"
+                scripts/npm/bundle_cdn.sh "src/${NAME}" "pkg/${NAME}/index.mjs"
                 cp "src/${NAME}/MeshLibC2.mjs" "src/${NAME}/MeshLibC2.wasm" "src/${NAME}/README.md" "src/${NAME}/LICENSE" "pkg/${NAME}/"
                 ;;
               meshlib-light|meshlib-light-mt)
@@ -78,7 +85,12 @@ jobs:
             esac
             # Stored compressed once, served as is: every browser that runs wasm decodes Brotli, which is a third smaller than gzip here.
             # Window 24 (16 MB) is the largest a browser accepts.
-            find "pkg/${NAME}" -type f -exec sh -c 'brotli -q 11 -w 24 -c "$1" > "$1.br" && mv "$1.br" "$1"' _ {} \;
+            # `-exec ... {} +` (not `\;`) makes `find` fail when the command does.
+            find "pkg/${NAME}" -type f -exec sh -ec 'for f ; do brotli -q 11 -w 24 -c "$f" > "$f.br" ; mv "$f.br" "$f" ; done' _ {} +
+          done
+          # All four packages are attached to every release.
+          for f in meshlib meshlib-mt meshlib-light meshlib-light-mt ; do
+            [ -d "pkg/${f}" ] || { echo "::error::js-${f}-*.tgz is missing from the release" ; exit 1 ; }
           done
           # One recursive upload per content type.
           upload() {
@@ -89,14 +101,15 @@ jobs:
             aws s3 cp "${src}" "${dest}" --recursive --only-show-errors --content-encoding br --exclude '*' --include 'LICENSE' --content-type text/plain      "$@"
           }
           for f in meshlib meshlib-mt meshlib-light meshlib-light-mt ; do
-            [ -d "pkg/${f}" ] || continue
             if [ "${IS_DRAFT}" = "true" ] ; then
               upload "pkg/${f}" "${BUCKET}/${f}-draft" --cache-control "public, max-age=300"
             else
               upload "pkg/${f}" "${BUCKET}/${f}@${TAG}" --cache-control "public, max-age=31536000, immutable"
               case "${f}" in
                 meshlib|meshlib-mt)
-                  printf 'export * from "../%s@%s/index.mjs";\n' "${f}" "${TAG}" | brotli -q 11 -w 24 -c | aws s3 cp - "${BUCKET}/${f}/index.mjs" --content-type text/javascript --content-encoding br --cache-control "public, max-age=300"
+                  # Compressed into a file first: a failing `brotli` piped into `aws` would upload an empty stub.
+                  printf 'export * from "../%s@%s/index.mjs";\n' "${f}" "${TAG}" | brotli -q 11 -w 24 -c > "stub-${f}.mjs"
+                  aws s3 cp "stub-${f}.mjs" "${BUCKET}/${f}/index.mjs" --content-type text/javascript --content-encoding br --cache-control "public, max-age=300"
                   ;;
                 meshlib-light|meshlib-light-mt)
                   upload "pkg/${f}" "${BUCKET}/${f}" --cache-control "public, max-age=300"
@@ -138,6 +151,9 @@ jobs:
         run: |
           gh release download "${TAG}" --pattern "js-meshlib-*.tgz" --repo ${{ github.repository }} --clobber
 
+        # Re-runnable: the versions already on npm are skipped (npm refuses to publish a version twice), and a failure doesn't stop
+        # the other packages. A version staged by a previous run but not approved yet isn't visible to `npm view`, and staging it
+        # again fails: approve or reject the staged versions before a re-run.
       - name: Publish npm packages
         run: |
           if [ "${IS_DRAFT}" = "true" ] ; then
@@ -145,6 +161,15 @@ jobs:
           else
             ARGS="--provenance"
           fi
+          FAILED=""
           for TGZ in js-meshlib-*.tgz ; do
-            npm stage publish "./${TGZ}" --access public --tag latest ${ARGS}
+            ID=$(tar -xzOf "${TGZ}" package/package.json | node -p 'const p = JSON.parse(require("fs").readFileSync(0)); `${p.name}@${p.version}`')
+            # Prints nothing (and fails) when the version or the whole package isn't on npm.
+            if [ -n "$(npm view "${ID}" version 2>/dev/null || true)" ] ; then
+              echo "::notice::${ID} is already published, skipped"
+            elif ! npm stage publish "./${TGZ}" --access public --tag latest ${ARGS} ; then
+              echo "::error::Failed to stage ${ID}"
+              FAILED="${FAILED} ${ID}"
+            fi
           done
+          [ -z "${FAILED}" ] || { echo "Failed:${FAILED}" ; exit 1 ; }

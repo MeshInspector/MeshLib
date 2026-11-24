@@ -295,7 +295,7 @@ jobs:
         if: ${{ matrix.wasm64 == 0 }}
         run: |
           mkdir -p bundle-check && cd bundle-check
-          npm install --no-audit --no-fund --no-save ../js-${{ matrix.wasm-module-name }}-[0-9]*.tgz esbuild@0.25
+          npm install --no-audit --no-fund --no-save ../js-${{ matrix.wasm-module-name }}-[0-9]*.tgz esbuild@0.25.12
           echo "import * as ml from '@meshinspector/${{ matrix.wasm-module-name }}'; await ml.init(); console.log(ml.makeUVSphere(1, 8, 8).volume());" > main.mjs
           npx esbuild main.mjs --bundle --format=esm --platform=browser --loader:.wasm=file --outdir=dist
           ls -l dist
@@ -304,6 +304,21 @@ jobs:
             echo "The browser bundle contains the Node module" >&2
             exit 1
           fi
+
+        # The CDN serves the generated modules bundled into one `index.mjs` (`publish-wasm.yml`): the tests run on that bundle too,
+        # with the Node build of the module next to it. The bundle is made from the packed package, or from the build tree for the
+        # 64-bit module, which has no package.
+      - name: Test the CDN bundle
+        run: |
+          SRC=build/Release/MeshLibJS/${{ matrix.js-dir }}
+          if [ ${{ matrix.wasm64 }} = 0 ] ; then
+            SRC=cdn-src
+            mkdir ${SRC}
+            tar -xzf js-${{ matrix.wasm-module-name }}-[0-9]*.tgz --strip-components=1 -C ${SRC}
+          fi
+          scripts/npm/bundle_cdn.sh ${SRC} cdn-bundle/index.mjs
+          cp ${SRC}/MeshLibC2.node.mjs ${SRC}/MeshLibC2.node.wasm cdn-bundle/
+          node source/MRTestJS/main.mjs cdn-bundle/index.mjs
 
       - name: Build light Wasm module
         if: ${{ matrix.wasm64 == 0 }}

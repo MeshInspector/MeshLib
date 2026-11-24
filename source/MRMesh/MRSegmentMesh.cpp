@@ -1,5 +1,5 @@
 #include "MRSegmentMesh.h"
-#include "MRMeshSegmenter.h"
+#include "MRSimpleSegmentPolicy.h"
 #include "MRMesh.h"
 #include "MRBitSetParallelFor.h"
 #include "MRUnionFind.h"

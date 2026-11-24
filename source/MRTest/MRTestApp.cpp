@@ -97,7 +97,7 @@ int main( int argc, char** argv )
             else
                 spdlog::error( "Embedded python run failed" );
 
-            // a thread started by one script must run before the next one: the idle interpreter must not hold the GIL
+            // a thread started by one script must run long before the next one: with the GIL held while idle, it runs only as the next one starts
             if ( ok )
             {
                 spdlog::info( "Checking that embedded python releases the GIL between scripts" );
@@ -112,7 +112,7 @@ int main( int argc, char** argv )
                     "import sys, time\n"
                     "startedAt = time.monotonic()\n"
                     "ranAt = getattr( sys, 'mrRanWhileIdleAt', None )\n"
-                    "assert ranAt is not None and ranAt < startedAt, 'a Python thread did not run between the scripts: the GIL is held while idle'\n" );
+                    "assert ranAt is not None and startedAt - ranAt > 0.25, 'a Python thread did not run between the scripts: the GIL is held while idle'\n" );
                 if ( ok )
                     spdlog::info( "Embedded python releases the GIL between scripts" );
                 else

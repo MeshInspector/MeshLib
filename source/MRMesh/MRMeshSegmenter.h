@@ -10,6 +10,7 @@
 #include "MRProgressCallback.h"
 #include "MRTimer.h"
 #include <cfloat>
+#include <algorithm>
 #include <optional>
 
 namespace MR
@@ -197,5 +198,34 @@ Expected<GroupOrder> MeshSegmenter<SegmentData, SegmentBdData, MergePenalty>::ru
     }
     return res;
 }
+
+/// simple data of one segment for MeshSegmenter: its area
+struct SimpleSegmentData
+{
+    double area = 0;
+    SimpleSegmentData& operator +=( const SimpleSegmentData& r ) { area += r.area; return * this; }
+};
+
+/// simple data of the common boundary of two segments for MeshSegmenter
+struct SimpleSegmentBdData
+{
+    /// the length of the boundary
+    double length = 0;
+    /// the integral of some curvature metric along the boundary
+    double lengthCurv = 0;
+    SimpleSegmentBdData& operator +=( const SimpleSegmentBdData& r ) { length += r.length; lengthCurv += r.lengthCurv; return * this; }
+};
+
+/// simple merge penalty for MeshSegmenter, which prefers merging
+/// smaller by area segments, with long common boundary, and with low average curvature metric on it
+struct SimpleMergePenalty
+{
+    double operator()( const SimpleSegmentData& a, const SimpleSegmentData& b, const SimpleSegmentBdData& bd ) const
+    {
+        if ( bd.length <= 0 )
+            return prohibitMergePenalty;
+        return std::min( a.area, b.area ) * bd.lengthCurv / ( bd.length * bd.length );
+    }
+};
 
 } //namespace MR

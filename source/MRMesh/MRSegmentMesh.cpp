@@ -10,48 +10,23 @@
 namespace MR
 {
 
-namespace
-{
-
-struct SegmentData
-{
-    double area = 0;
-    SegmentData& operator +=( const SegmentData& r ) { area += r.area; return * this; }
-};
-
-struct SegmentBdData
-{
-    double length = 0;
-    double lengthCurv = 0;
-    SegmentBdData& operator +=( const SegmentBdData& r ) { length += r.length; lengthCurv += r.lengthCurv; return * this; }
-};
-
-} //anonymous namespace
-
 Expected<GroupOrder> segmentMesh( const Mesh& mesh, const EdgeMetric& curvMetric, const ProgressCallback& progress )
 {
     MR_TIMER;
     if ( !curvMetric )
         return unexpected( "no curvMetric given" );
 
-    auto mergePenalty = []( const SegmentData& a, const SegmentData& b, const SegmentBdData& bd )
-    {
-        if ( bd.length <= 0 )
-            return prohibitMergePenalty;
-        return std::min( a.area, b.area ) * bd.lengthCurv / sqr( bd.length );
-    };
-
-    return MeshSegmenter<SegmentData, SegmentBdData, decltype( mergePenalty )>::run( mesh.topology,
+    return MeshSegmenter<SimpleSegmentData, SimpleSegmentBdData, SimpleMergePenalty>::run( mesh.topology,
         [&]( FaceId f )
         {
-            return SegmentData{ .area = mesh.area( f ) };
+            return SimpleSegmentData{ .area = mesh.area( f ) };
         },
         [&]( UndirectedEdgeId ue )
         {
             const auto len = mesh.edgeLength( ue );
-            return SegmentBdData{ .length = len, .lengthCurv = len * curvMetric( ue ) };
+            return SimpleSegmentBdData{ .length = len, .lengthCurv = len * curvMetric( ue ) };
         },
-        mergePenalty, progress );
+        SimpleMergePenalty{}, progress );
 }
 
 UndirectedEdgeBitSet findSegmentBoundaries( const MeshTopology& topology,

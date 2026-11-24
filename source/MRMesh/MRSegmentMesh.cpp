@@ -1,6 +1,7 @@
 #include "MRSegmentMesh.h"
 #include "MRMeshSegmenter.h"
 #include "MRSimpleSegmentPolicy.h"
+#include "MRNarrowNeckSegmentPolicy.h"
 #include "MRMesh.h"
 #include "MRBitSetParallelFor.h"
 #include "MRUnionFind.h"
@@ -18,6 +19,46 @@ Expected<GroupOrder> segmentMesh( const Mesh& mesh, const EdgeMetric& curvMetric
         return unexpected( "no curvMetric given" );
 
     return MeshSegmenter<SimpleSegmentPolicy>::run( mesh.topology, { mesh, curvMetric }, progress );
+}
+
+Expected<FaceBitSet> findLargestSegment( const Mesh& mesh, const EdgeMetric& curvMetric, double maxNeckLength, const ProgressCallback& progress )
+{
+    MR_TIMER;
+    if ( !curvMetric )
+        return unexpected( "no curvMetric given" );
+
+    auto maybeOrder = MeshSegmenter<NarrowNeckSegmentPolicy>::run( mesh.topology,
+        { mesh, curvMetric, maxNeckLength }, subprogress( progress, 0.0f, 0.9f ) );
+    if ( !maybeOrder )
+        return unexpected( std::move( maybeOrder.error() ) );
+
+    UnionFind<FaceId> unionFindStruct( mesh.topology.faceSize() );
+    for ( const auto& ff : *maybeOrder )
+        unionFindStruct.unite( ff.aFace, ff.bFace );
+    const auto & roots = unionFindStruct.roots();
+
+    Vector<double, FaceId> rootAreas( mesh.topology.faceSize() );
+    for ( auto f : mesh.topology.getValidFaces() )
+        rootAreas[roots[f]] += mesh.area( f );
+
+    FaceId largestRoot;
+    for ( auto f : mesh.topology.getValidFaces() )
+        if ( roots[f] == f && ( !largestRoot || rootAreas[f] > rootAreas[largestRoot] ) )
+            largestRoot = f;
+
+    FaceBitSet res( mesh.topology.faceSize() );
+    if ( largestRoot )
+    {
+        BitSetParallelForAll( res, [&]( FaceId f )
+        {
+            if ( roots[f] == largestRoot )
+                res.set( f );
+        } );
+    }
+
+    if ( !reportProgress( progress, 1.0f ) )
+        return unexpectedOperationCanceled();
+    return res;
 }
 
 UndirectedEdgeBitSet findSegmentBoundaries( const MeshTopology& topology,

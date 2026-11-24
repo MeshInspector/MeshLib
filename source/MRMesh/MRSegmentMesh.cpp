@@ -21,7 +21,7 @@ Expected<GroupOrder> segmentMesh( const Mesh& mesh, const EdgeMetric& curvMetric
     return MeshSegmenter<SimpleSegmentPolicy>::run( mesh.topology, { mesh, curvMetric }, progress );
 }
 
-Expected<FaceBitSet> findLargestSegment( const Mesh& mesh, const EdgeMetric& curvMetric, double maxNeckLength, const ProgressCallback& progress )
+Expected<FaceBitSet> findLargestNarrowNeckSegment( const Mesh& mesh, const EdgeMetric& curvMetric, double maxNeckLength, const ProgressCallback& progress )
 {
     MR_TIMER;
     if ( !curvMetric )

@@ -30,7 +30,7 @@ MRMESH_API Expected<GroupOrder> segmentMesh( const Mesh& mesh,
 /// the parts attached to it only by a narrow neck (e.g. scanning artifacts) are not included in the result
 /// \param maxNeckLength two segments are not merged if their common boundary (neck) is shorter than this value,
 ///        and at least one of them has the boundary with mesh holes longer than the neck
-[[nodiscard]] MRMESH_API Expected<FaceBitSet> findLargestSegment( const Mesh& mesh,
+[[nodiscard]] MRMESH_API Expected<FaceBitSet> findLargestNarrowNeckSegment( const Mesh& mesh,
     const EdgeMetric& curvMetric, double maxNeckLength,
     const ProgressCallback& progress = {} );
 

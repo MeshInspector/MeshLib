@@ -89,15 +89,15 @@ TEST( MRMesh, NarrowNeckSegmentPolicy )
     ASSERT_TRUE( order.has_value() );
     EXPECT_EQ( order->size(), 0 );
 
-    auto largest = findLargestSegment( cube, curvMetric, 100 );
+    auto largest = findLargestNarrowNeckSegment( cube, curvMetric, 100 );
     ASSERT_TRUE( largest.has_value() );
     EXPECT_EQ( largest->count(), 12 );
 
-    largest = findLargestSegment( plane, unitMetric, diagonal / 2 );
+    largest = findLargestNarrowNeckSegment( plane, unitMetric, diagonal / 2 );
     ASSERT_TRUE( largest.has_value() );
     EXPECT_EQ( largest->count(), 2 );
 
-    largest = findLargestSegment( plane, unitMetric, diagonal * 2 );
+    largest = findLargestNarrowNeckSegment( plane, unitMetric, diagonal * 2 );
     ASSERT_TRUE( largest.has_value() );
     EXPECT_EQ( largest->count(), 1 );
 }

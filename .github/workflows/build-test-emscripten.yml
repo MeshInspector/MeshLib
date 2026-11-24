@@ -309,6 +309,24 @@ jobs:
         if: ${{ matrix.wasm64 == 0 }}
         run: cmake --build build/Release --target MRWasmModuleBrowser MRWasmModuleNode --parallel $(nproc)
 
+      - name: Print compressed sizes
+        run: |
+          cat > /tmp/sizes.mjs <<'JS'
+          import fs from "node:fs";
+          import zlib from "node:zlib";
+          for (const f of process.argv.slice(2)) {
+            if (!fs.existsSync(f)) continue;
+            const b = fs.readFileSync(f);
+            const gz = zlib.gzipSync(b, { level: 9 }).length;
+            const br = zlib.brotliCompressSync(b, { params: {
+              [zlib.constants.BROTLI_PARAM_QUALITY]: 11,
+              [zlib.constants.BROTLI_PARAM_LGWIN]: 24,
+              [zlib.constants.BROTLI_PARAM_SIZE_HINT]: b.length } }).length;
+            console.log(`SIZES ${f} raw ${b.length} gz ${gz} br ${br}`);
+          }
+          JS
+          node /tmp/sizes.mjs build/Release/MeshLibJS/${{ matrix.js-dir }}/MeshLibC2.mjs build/Release/MeshLibJS/${{ matrix.js-dir }}/MeshLibC2.wasm             build/Release/bin/meshlib-light.mjs build/Release/bin/meshlib-light.wasm build/Release/bin/meshlib-light-mt.mjs build/Release/bin/meshlib-light-mt.wasm
+
       - name: Test light Wasm module
         if: ${{ matrix.wasm64 == 0 }}
         env:

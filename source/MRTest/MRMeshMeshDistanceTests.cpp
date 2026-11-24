@@ -98,6 +98,12 @@ TEST( MRMesh, HausdorffDistance )
 
     EXPECT_EQ( findHausdorffDistance( cube, cube, tol ).distSq, 0 );
 
+    // the limit is reached in the second direction only, where the vertices of the cube are too far
+    res = findHausdorffDistance( cube, tri, tol, nullptr, 0.01f );
+    EXPECT_EQ( res.distSq, 0.01f );
+    EXPECT_TRUE( res.a.valid() );
+    EXPECT_FALSE( res.b.valid() );
+
     // without positive tolerance only the vertices are considered
     for ( float badTol : { 0.f, -1.f, std::numeric_limits<float>::quiet_NaN() } )
     {
@@ -127,6 +133,138 @@ TEST( MRMesh, HausdorffDistanceSlivers )
         EXPECT_LE( std::sqrt( res.distSq ), 0.65f + 1e-6f );
         EXPECT_GE( std::sqrt( res.distSq ), 0.65f - tol - 1e-6f );
     }
+}
+
+TEST( MRMesh, HausdorffDistanceRegions )
+{
+    const Mesh cube = makeCube( Vector3f::diagonal( 1 ), Vector3f() );
+    Triangulation t;
+    t.push_back( { 0_v, 1_v, 2_v } );
+    t.push_back( { 3_v, 4_v, 5_v } );
+    // the second triangle is far away
+    const Mesh tris = Mesh::fromTriangles( { Vector3f( 0, 0, 0.5f ), Vector3f( 1, 0, 0.5f ), Vector3f( 0.3f, 1, 0.5f ),
+        Vector3f( 5, 0, 0 ), Vector3f( 6, 0, 0 ), Vector3f( 5, 1, 0 ) }, t );
+    const float tol = 1e-3f;
+
+    auto cubeFaces = [&]( int axis, float value )
+    {
+        FaceBitSet res( cube.topology.faceSize() );
+        for ( auto f : cube.topology.getValidFaces() )
+        {
+            const auto ps = cube.getTriPoints( f );
+            if ( ps[0][axis] == value && ps[1][axis] == value && ps[2][axis] == value )
+                res.set( f );
+        }
+        return res;
+    };
+    const auto bottom = cubeFaces( 2, 0 );
+    const auto front = cubeFaces( 1, 0 );
+    ASSERT_EQ( bottom.count(), 2 );
+    ASSERT_EQ( front.count(), 2 );
+    FaceBitSet firstTri( 2 );
+    firstTri.set( 0_f );
+
+    // region in B: the far triangle is ignored
+    EXPECT_GT( findHausdorffDistanceOneWay( cube, tris, tol ).distSq, 16 );
+    auto res = findHausdorffDistanceOneWay( cube, { tris, &firstTri }, tol );
+    EXPECT_LE( std::sqrt( res.distSq ), 0.5f );
+    EXPECT_GE( std::sqrt( res.distSq ), 0.5f - tol );
+    EXPECT_EQ( res.b.proj.face, 0_f );
+
+    // region in A: only the bottom of the cube, and all points of the first triangle are 0.5 away from it
+    res = findHausdorffDistanceOneWay( { cube, &bottom }, { tris, &firstTri }, tol );
+    EXPECT_EQ( res.distSq, 0.25f );
+    EXPECT_TRUE( bottom.test( res.a.proj.face ) );
+
+    // the first triangle has an edge in the front side of the cube, the farthest points of that side are 0.5 away from it
+    res = findHausdorffDistanceOneWay( { tris, &firstTri }, { cube, &front }, tol );
+    EXPECT_EQ( res.distSq, 0.25f );
+    EXPECT_TRUE( front.test( res.b.proj.face ) );
+    // and the third vertex of the triangle is 1 away from the front side
+    EXPECT_EQ( findHausdorffDistance( { tris, &firstTri }, { cube, &front }, tol ).distSq, 1 );
+    EXPECT_EQ( findHausdorffDistance( { cube, &front }, { tris, &firstTri }, tol ).distSq, 1 );
+}
+
+TEST( MRMesh, HausdorffDistanceInsideTriangleXf )
+{
+    // the farthest point is on the long side of the strip in the middle between two small triangles, not in a vertex
+    Triangulation tb;
+    tb.push_back( { 0_v, 1_v, 2_v } );
+    tb.push_back( { 0_v, 2_v, 3_v } );
+    const Mesh strip = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 1, 0, 0 ), Vector3f( 1, 0.3f, 0 ), Vector3f( 0, 0.3f, 0 ) }, tb );
+    Triangulation ta;
+    ta.push_back( { 0_v, 1_v, 2_v } );
+    ta.push_back( { 3_v, 4_v, 5_v } );
+    const Mesh ends = Mesh::fromTriangles( {
+        Vector3f( -0.1f, 0, 0 ), Vector3f( -0.1f, 0.001f, 0 ), Vector3f( -0.101f, 0, 0 ),
+        Vector3f( 1.2f, 0, 0 ), Vector3f( 1.201f, 0, 0 ), Vector3f( 1.2f, 0.001f, 0 ) }, ta );
+    const float tol = 1e-3f;
+    const Vector3f farthest( 0.55f, 0.3f, 0 );
+    const float dist = std::sqrt( sqr( 0.65f ) + sqr( 0.299f ) );
+
+    const auto xf = AffineXf3f::translation( Vector3f( 3, 2, 1 ) ) * AffineXf3f::linear( Matrix3f::rotation( Vector3f( 1, 2, 3 ), 1.0f ) );
+    const auto xfInv = xf.inverse();
+    Mesh movedStrip = strip;
+    movedStrip.transform( xfInv );
+
+    auto check = [&]( const PointOnFaceBary& onStrip, const PointOnFaceBary& onEnds, float distSq )
+    {
+        EXPECT_LE( std::sqrt( distSq ), dist + 1e-5f );
+        EXPECT_GE( std::sqrt( distSq ), dist - tol );
+        ASSERT_TRUE( onStrip.valid() && onEnds.valid() );
+        // each point is in the space of its own mesh
+        EXPECT_LE( ( xf( onStrip.proj.point ) - farthest ).length(), 5 * tol );
+        EXPECT_LE( ( movedStrip.triPoint( onStrip.mtp( movedStrip.topology ) ) - onStrip.proj.point ).length(), 1e-6f );
+        EXPECT_LE( ( ends.triPoint( onEnds.mtp( ends.topology ) ) - onEnds.proj.point ).length(), 1e-6f );
+        EXPECT_NEAR( ( xf( onStrip.proj.point ) - onEnds.proj.point ).length(), std::sqrt( distSq ), 1e-5f );
+    };
+    auto res = findHausdorffDistanceOneWay( ends, movedStrip, tol, &xf );
+    check( res.b, res.a, res.distSq );
+    res = findHausdorffDistance( ends, movedStrip, tol, &xf );
+    check( res.b, res.a, res.distSq );
+    // the farthest point is found in the second direction
+    res = findHausdorffDistance( movedStrip, ends, tol, &xfInv );
+    check( res.a, res.b, res.distSq );
+}
+
+TEST( MRMesh, HausdorffDistanceDegenerateTriangles )
+{
+    const Mesh cube = makeCube( Vector3f::diagonal( 1 ), Vector3f() );
+    const float tol = 1e-3f;
+    Triangulation t;
+    t.push_back( { 0_v, 1_v, 2_v } );
+    // both triangles are segments through the center of the cube: with zero area, and with two coinciding vertices
+    for ( const auto& third : { Vector3f( 0.25f, 0.5f, 0.5f ), Vector3f( 0, 0.5f, 0.5f ) } )
+    {
+        const Mesh seg = Mesh::fromTriangles( { Vector3f( 0, 0.5f, 0.5f ), Vector3f( 1, 0.5f, 0.5f ), third }, t );
+        const auto res = findHausdorffDistanceOneWay( cube, seg, tol );
+        EXPECT_LE( std::sqrt( res.distSq ), 0.5f );
+        EXPECT_GE( std::sqrt( res.distSq ), 0.5f - tol );
+        EXPECT_LE( ( res.b.proj.point - Vector3f::diagonal( 0.5f ) ).length(), 2 * tol );
+    }
+}
+
+TEST( MRMesh, HausdorffDistanceRounding )
+{
+    // two triangulations of the same tilted square far from the origin, with the tolerance below the resolution of floats there
+    const Vector3f c( 100, 100, 100 );
+    const Vector3f u = 0.0005f / 3 * Vector3f( 1, 2, 2 );
+    const Vector3f v = 0.0005f / 3 * Vector3f( 2, 1, -2 );
+    const VertCoords ps{ c - u - v, c + u - v, c + u + v, c - u + v };
+    Triangulation t1;
+    t1.push_back( { 0_v, 1_v, 2_v } );
+    t1.push_back( { 0_v, 2_v, 3_v } );
+    Triangulation t2;
+    t2.push_back( { 0_v, 1_v, 3_v } );
+    t2.push_back( { 1_v, 2_v, 3_v } );
+    const Mesh m1 = Mesh::fromTriangles( ps, t1 );
+    const Mesh m2 = Mesh::fromTriangles( ps, t2 );
+
+    const auto res = findHausdorffDistanceOneWay( m1, m2, 1e-6f );
+    const float ulp = 7.63e-6f; // of 100
+    // the returned distance is the one from the returned point, and rounding errors do not accumulate in that point
+    EXPECT_NEAR( std::sqrt( res.distSq ), std::sqrt( findProjection( res.b.proj.point, m1 ).distSq ), ulp );
+    EXPECT_LE( std::sqrt( res.distSq ), 3 * ulp );
 }
 
 TEST( MRMesh, MaxDistancePoints )

@@ -550,7 +550,8 @@ MeshMeshDistanceResult findMaxDistanceInsideTriangles( const MeshPart& a, const 
                     Best cur = start;
                     float stopSq = startStopSq;
                     const auto vs = b.mesh.topology.getTriVerts( bf );
-                    stack.push_back( { bv.corners[vs[0]], bv.corners[vs[1]], bv.corners[vs[2]] } );
+                    const Tri root{ bv.corners[vs[0]], bv.corners[vs[1]], bv.corners[vs[2]] };
+                    stack.push_back( root );
                     stack.back()[1].bary = { 1, 0 };
                     stack.back()[2].bary = { 0, 1 };
                     while ( !stack.empty() )
@@ -568,8 +569,9 @@ MeshMeshDistanceResult findMaxDistanceInsideTriangles( const MeshPart& a, const 
                         {
                             const auto& c0 = t[( i + 1 ) % 3];
                             const auto& c1 = t[( i + 2 ) % 3];
-                            m[i].p = 0.5f * ( c0.p + c1.p );
                             m[i].bary = { 0.5f * ( c0.bary.a + c1.bary.a ), 0.5f * ( c0.bary.b + c1.bary.b ) };
+                            // not the middle of c0.p and c1.p, where rounding errors would accumulate with the depth of subdivision
+                            m[i].p = m[i].bary.interpolate( root[0].p, root[1].p, root[2].p );
                             halved[i] = m[i].p != c0.p && m[i].p != c1.p;
                             if ( const float lenSq = ( c1.p - c0.p ).lengthSq(); lenSq > longestSq )
                             {

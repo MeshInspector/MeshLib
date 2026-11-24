@@ -260,7 +260,7 @@
       "Tooltip": "Selects objects by clicking them in the scene",
       "Icon": "\uF245",
       "HelpLink": "https://meshinspector.com/inappvideo/selectobjects",
-      "Shortcut": { "Keys": "Primary+Q", "Category": "Objects" }
+      "Shortcut": { "Keys": "Ctrl+Q", "Category": "Objects" }
     },
     {
       "Name": "Move object",

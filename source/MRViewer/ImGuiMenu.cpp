@@ -234,6 +234,13 @@ bool isKeyEventReserved( ImGuiKey key )
     return getOrderedKeys()[key];
 }
 
+// ImGui's GLFW backend is initialized only with OpenGL (see ImGuiMenu::initBackend), not in -noWindow mode,
+// and its event callbacks crash without it
+static bool hasGlfwBackend()
+{
+    return ImGui::GetIO().BackendPlatformUserData != nullptr;
+}
+
 // makes ImGui see `mods` (GLFW_MOD_* bits) held in this frame, in addition to the real keyboard; call right after ImGui::NewFrame()
 static void forceKeyModifiers( int mods, std::vector<std::pair<ImGuiKey, bool>>& realKeyModifiers )
 {
@@ -588,7 +595,7 @@ bool ImGuiMenu::touchpadSwipeGestureUpdate_( float, float deltaY, bool )
     if ( ImGui::GetIO().WantCaptureMouse )
     {
         // allow ImGui to process the touchpad swipe gesture as a scroll exclusively
-        if ( viewer->isGLInitialized() )
+        if ( hasGlfwBackend() )
             ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, deltaY * cTouchpadScrollCoef );
         // do extra frames to prevent imgui calculations ping
         viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, viewer->swapOnLastPostEventsRedraw );
@@ -660,7 +667,7 @@ bool ImGuiMenu::onMouseDown_( Viewer::MouseButton button, int modifier)
 {
     capturedMouse_ = ImGui::GetIO().WantCaptureMouse || anyUiObjectIsHovered();
 
-    if ( viewer->isGLInitialized() ) // ImGui's GLFW backend exists only with OpenGL, its callbacks crash without it (-noWindow)
+    if ( hasGlfwBackend() )
         ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_PRESS, modifier );
 
     if ( !capturedMouse_ )
@@ -675,14 +682,14 @@ bool ImGuiMenu::onMouseDown_( Viewer::MouseButton button, int modifier)
 
 bool ImGuiMenu::onMouseUp_( Viewer::MouseButton button, int modifier )
 {
-    if ( viewer->isGLInitialized() )
+    if ( hasGlfwBackend() )
         ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_RELEASE, modifier );
     return capturedMouse_;
 }
 
 bool ImGuiMenu::onMouseMove_( int mouse_x, int mouse_y )
 {
-    if ( viewer->isGLInitialized() )
+    if ( hasGlfwBackend() )
         ImGui_ImplGlfw_CursorPosCallback( viewer->window, double( mouse_x ), double( mouse_y ) );
     return false;
 }
@@ -693,7 +700,7 @@ bool ImGuiMenu::onMouseScroll_( float delta_y )
     if ( ImGui::GetIO().WantCaptureMouse || ( uiRenderManager_ && bool( uiRenderManager_->consumedInteractions & BasicUiRenderTask::InteractionMask::mouseScroll ) ) )
     {
         // allow ImGui to process the scroll exclusively
-        if ( viewer->isGLInitialized() )
+        if ( hasGlfwBackend() )
             ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, delta_y );
         // do extra frames to prevent imgui calculations ping
         viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, viewer->swapOnLastPostEventsRedraw );
@@ -734,28 +741,28 @@ void ImGuiMenu::cursorEntrance_( [[maybe_unused]] bool entered )
 // Keyboard IO
 bool ImGuiMenu::onCharPressed_( unsigned  key, int /*modifiers*/ )
 {
-    if ( viewer->isGLInitialized() )
+    if ( hasGlfwBackend() )
         ImGui_ImplGlfw_CharCallback( viewer->window, key );
     return ImGui::GetIO().WantCaptureKeyboard;
 }
 
 bool ImGuiMenu::onKeyDown_( int key, int modifiers )
 {
-    if ( viewer->isGLInitialized() )
+    if ( hasGlfwBackend() )
         ImGui_ImplGlfw_KeyCallback( viewer->window, key, 0, GLFW_PRESS, modifiers );
     return ImGui::GetIO().WantCaptureKeyboard || getOrderedKeys()[GlfwToImGuiKey_Duplicate( key )];
 }
 
 bool ImGuiMenu::onKeyUp_( int key, int modifiers )
 {
-    if ( viewer->isGLInitialized() )
+    if ( hasGlfwBackend() )
         ImGui_ImplGlfw_KeyCallback( viewer->window, key, 0, GLFW_RELEASE, modifiers );
     return ImGui::GetIO().WantCaptureKeyboard;
 }
 
 bool ImGuiMenu::onKeyRepeat_( int key, int modifiers )
 {
-    if ( viewer->isGLInitialized() )
+    if ( hasGlfwBackend() )
         ImGui_ImplGlfw_KeyCallback( viewer->window, key, 0, GLFW_REPEAT, modifiers );
     return ImGui::GetIO().WantCaptureKeyboard;
 }

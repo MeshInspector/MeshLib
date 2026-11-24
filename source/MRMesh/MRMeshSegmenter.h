@@ -9,36 +9,37 @@
 #include "MRRingIterator.h"
 #include "MRProgressCallback.h"
 #include "MRTimer.h"
-#include <cfloat>
 #include <algorithm>
+#include <cfloat>
 #include <optional>
 
 namespace MR
 {
 
-/// the value to return from MergePenalty of MeshSegmenter to forbid merging of two segments
+/// the value to return from Policy::mergePenalty of MeshSegmenter to forbid merging of two segments
 inline constexpr double prohibitMergePenalty = DBL_MAX;
 
 /// starting from individual faces, merges them in progressively larger segments in the order of increasing merge penalty,
 /// until every connected component contains only 1 segment or all remaining merges are prohibited
-/// \tparam SegmentData data of one segment; `a += b` must make from the data of two segments the data of their union;
-///         `static SegmentData fromTri( const Mesh&, FaceId )` must return the data of a single-triangle segment
-/// \tparam SegmentBdData data of the common boundary of two segments; `a += b` must make from the data of two boundary parts the data of their union;
-///         `static SegmentBdData fromUndirectedEdge( const Mesh&, const EdgeMetric&, UndirectedEdgeId )` must return the data of an edge having triangles from both sides
-/// \tparam MergePenalty functor `double( const SegmentData& a, const SegmentData& b, const SegmentBdData& bd )` returning
-///         the penalty of merging the segments (a) and (b) with the common boundary (bd), or prohibitMergePenalty to forbid the merge
-template<typename SegmentData, typename SegmentBdData, typename MergePenalty>
+/// \tparam Policy must have (see SimpleSegmentPolicy as an example):
+///  - type `SegmentData`, data of one segment; `a += b` must make from the data of two segments the data of their union;
+///  - type `SegmentBdData`, data of the common boundary of two segments; `a += b` must make from the data of two boundary parts the data of their union;
+///  - `SegmentData fromTri( FaceId ) const`, returns the data of a single-triangle segment;
+///  - `SegmentBdData fromUndirectedEdge( UndirectedEdgeId ) const`, returns the data of an edge having triangles from both sides;
+///  - `double mergePenalty( const SegmentData& a, const SegmentData& b, const SegmentBdData& bd ) const`, returns
+///    the penalty of merging the segments (a) and (b) with the common boundary (bd), or prohibitMergePenalty to forbid the merge
+template<typename Policy>
 class MeshSegmenter
 {
 public:
-    /// \param curvMetric passed in SegmentBdData::fromUndirectedEdge, which is free to ignore it
-    /// \details SegmentData::fromTri and SegmentBdData::fromUndirectedEdge are called in parallel
-    static Expected<GroupOrder> run( const Mesh& mesh, const EdgeMetric& curvMetric,
-        MergePenalty mergePenalty = {}, const ProgressCallback& progress = {} );
+    using SegmentData = typename Policy::SegmentData;
+    using SegmentBdData = typename Policy::SegmentBdData;
+
+    /// \details policy.fromTri and policy.fromUndirectedEdge are called in parallel
+    static Expected<GroupOrder> run( const MeshTopology& topology, const Policy& policy, const ProgressCallback& progress = {} );
 
 private:
-    MeshSegmenter( const Mesh& mesh, const EdgeMetric& curvMetric, MergePenalty&& mergePenalty )
-        : mesh_( mesh ), curvMetric_( curvMetric ), mergePenalty_( std::move( mergePenalty ) ) {}
+    MeshSegmenter( const MeshTopology& topology, const Policy& policy ) : topology_( topology ), policy_( policy ) {}
     Expected<GroupOrder> run_( const ProgressCallback& progress );
 
     double penalty_( Graph::EdgeId ge ) const;
@@ -48,9 +49,8 @@ private:
     std::optional<Graph::EndVertices> mergeNext_();
 
 private:
-    const Mesh& mesh_;
-    const EdgeMetric& curvMetric_;
-    MergePenalty mergePenalty_;
+    const MeshTopology& topology_;
+    const Policy& policy_;
 
     Graph graph_;
     Vector<SegmentData, Graph::VertId> graphVertData_;
@@ -60,13 +60,12 @@ private:
     Heap heap_;
 };
 
-template<typename SegmentData, typename SegmentBdData, typename MergePenalty>
-Expected<GroupOrder> MeshSegmenter<SegmentData, SegmentBdData, MergePenalty>::run( const Mesh& mesh, const EdgeMetric& curvMetric,
-    MergePenalty mergePenalty, const ProgressCallback& progress )
+template<typename Policy>
+Expected<GroupOrder> MeshSegmenter<Policy>::run( const MeshTopology& topology, const Policy& policy, const ProgressCallback& progress )
 {
     MR_TIMER;
 
-    MeshSegmenter s( mesh, curvMetric, std::move( mergePenalty ) );
+    MeshSegmenter s( topology, policy );
 
     s.constructGraph_();
     if ( !reportProgress( progress, 0.1f ) )
@@ -79,15 +78,15 @@ Expected<GroupOrder> MeshSegmenter<SegmentData, SegmentBdData, MergePenalty>::ru
     return s.run_( subprogress( progress, 0.2f, 1.0f ) );
 }
 
-template<typename SegmentData, typename SegmentBdData, typename MergePenalty>
-inline double MeshSegmenter<SegmentData, SegmentBdData, MergePenalty>::penalty_( Graph::EdgeId ge ) const
+template<typename Policy>
+inline double MeshSegmenter<Policy>::penalty_( Graph::EdgeId ge ) const
 {
     const auto & vv = graph_.ends( ge );
-    return mergePenalty_( graphVertData_[vv.v0], graphVertData_[vv.v1], graphEdgeData_[ge] );
+    return policy_.mergePenalty( graphVertData_[vv.v0], graphVertData_[vv.v1], graphEdgeData_[ge] );
 }
 
-template<typename SegmentData, typename SegmentBdData, typename MergePenalty>
-void MeshSegmenter<SegmentData, SegmentBdData, MergePenalty>::constructGraph_()
+template<typename Policy>
+void MeshSegmenter<Policy>::constructGraph_()
 {
     MR_TIMER;
 
@@ -95,17 +94,17 @@ void MeshSegmenter<SegmentData, SegmentBdData, MergePenalty>::constructGraph_()
     //   Graph::VertId = Mesh::FaceId
     //   Graph::EdgeId = Mesh::UndirectedEdgeId
 
-    graphEdgeData_.resize( mesh_.topology.undirectedEdgeSize() );
-    Graph::EndsPerEdge ends( mesh_.topology.undirectedEdgeSize() );
+    graphEdgeData_.resize( topology_.undirectedEdgeSize() );
+    Graph::EndsPerEdge ends( topology_.undirectedEdgeSize() );
     Graph::EdgeBitSet validGraphEdges;
-    static_cast<BitSet&>( validGraphEdges ) = mesh_.topology.findNotLoneUndirectedEdges();
+    static_cast<BitSet&>( validGraphEdges ) = topology_.findNotLoneUndirectedEdges();
     BitSetParallelFor( validGraphEdges, [&]( Graph::EdgeId ge )
     {
         UndirectedEdgeId ue( (int)ge );
 
         Graph::EndVertices vv;
-        vv.v0 = Graph::VertId( (int)mesh_.topology.left( ue ) );
-        vv.v1 = Graph::VertId( (int)mesh_.topology.right( ue ) );
+        vv.v0 = Graph::VertId( (int)topology_.left( ue ) );
+        vv.v1 = Graph::VertId( (int)topology_.right( ue ) );
         if ( !vv.v0 || !vv.v1 )
         {
             validGraphEdges.reset( ge );
@@ -116,38 +115,38 @@ void MeshSegmenter<SegmentData, SegmentBdData, MergePenalty>::constructGraph_()
         if ( vv.v1 < vv.v0 )
             std::swap( vv.v0, vv.v1 );
         ends[ge] = vv;
-        graphEdgeData_[ge] = SegmentBdData::fromUndirectedEdge( mesh_, curvMetric_, ue );
+        graphEdgeData_[ge] = policy_.fromUndirectedEdge( ue );
     } );
 
-    graphVertData_.resize( mesh_.topology.faceSize() );
-    Graph::NeighboursPerVertex neis( mesh_.topology.faceSize() );
+    graphVertData_.resize( topology_.faceSize() );
+    Graph::NeighboursPerVertex neis( topology_.faceSize() );
     Graph::VertBitSet validGraphVerts;
-    static_cast<BitSet&>( validGraphVerts ) = mesh_.topology.getValidFaces();
+    static_cast<BitSet&>( validGraphVerts ) = topology_.getValidFaces();
     BitSetParallelFor( validGraphVerts, [&]( Graph::VertId gv )
     {
         FaceId f( (int)gv );
         Graph::Neighbours n;
-        n.reserve( mesh_.topology.getFaceDegree( f ) );
-        for ( auto e : leftRing( mesh_.topology, f ) )
+        n.reserve( topology_.getFaceDegree( f ) );
+        for ( auto e : leftRing( topology_, f ) )
         {
             Graph::EdgeId ge( int( e.undirected() ) );
-            assert( mesh_.topology.left( e ) == f );
-            if ( mesh_.topology.right( e ) )
+            assert( topology_.left( e ) == f );
+            if ( topology_.right( e ) )
                 n.push_back( ge );
         }
-        graphVertData_[gv] = SegmentData::fromTri( mesh_, f );
+        graphVertData_[gv] = policy_.fromTri( f );
         std::sort( n.begin(), n.end() );
         neis[gv] = std::move( n );
     } );
     graph_.construct( std::move( neis ), std::move( validGraphVerts ), std::move( ends ), std::move( validGraphEdges ) );
 }
 
-template<typename SegmentData, typename SegmentBdData, typename MergePenalty>
-void MeshSegmenter<SegmentData, SegmentBdData, MergePenalty>::constructHeap_()
+template<typename Policy>
+void MeshSegmenter<Policy>::constructHeap_()
 {
     MR_TIMER;
 
-    std::vector<typename Heap::Element> elements( mesh_.topology.undirectedEdgeSize(), { .val = prohibitMergePenalty } );
+    std::vector<typename Heap::Element> elements( topology_.undirectedEdgeSize(), { .val = prohibitMergePenalty } );
     ParallelFor( graphEdgeData_, [&]( Graph::EdgeId ge )
     {
         elements[ge].id = ge;
@@ -158,8 +157,8 @@ void MeshSegmenter<SegmentData, SegmentBdData, MergePenalty>::constructHeap_()
     heap_ = Heap( std::move( elements ) );
 }
 
-template<typename SegmentData, typename SegmentBdData, typename MergePenalty>
-std::optional<Graph::EndVertices> MeshSegmenter<SegmentData, SegmentBdData, MergePenalty>::mergeNext_()
+template<typename Policy>
+std::optional<Graph::EndVertices> MeshSegmenter<Policy>::mergeNext_()
 {
     const auto [ge, penalty] = heap_.top();
     if ( penalty == prohibitMergePenalty )
@@ -182,8 +181,8 @@ std::optional<Graph::EndVertices> MeshSegmenter<SegmentData, SegmentBdData, Merg
     return ends;
 }
 
-template<typename SegmentData, typename SegmentBdData, typename MergePenalty>
-Expected<GroupOrder> MeshSegmenter<SegmentData, SegmentBdData, MergePenalty>::run_( const ProgressCallback& progress )
+template<typename Policy>
+Expected<GroupOrder> MeshSegmenter<Policy>::run_( const ProgressCallback& progress )
 {
     MR_TIMER;
     GroupOrder res;
@@ -203,7 +202,6 @@ struct SimpleSegmentData
 {
     double area = 0;
     SimpleSegmentData& operator +=( const SimpleSegmentData& r ) { area += r.area; return * this; }
-    static SimpleSegmentData fromTri( const Mesh& mesh, FaceId f ) { return { .area = mesh.area( f ) }; }
 };
 
 /// simple data of the common boundary of two segments for MeshSegmenter
@@ -214,18 +212,27 @@ struct SimpleSegmentBdData
     /// the integral of some curvature metric along the boundary
     double lengthCurv = 0;
     SimpleSegmentBdData& operator +=( const SimpleSegmentBdData& r ) { length += r.length; lengthCurv += r.lengthCurv; return * this; }
-    static SimpleSegmentBdData fromUndirectedEdge( const Mesh& mesh, const EdgeMetric& curvMetric, UndirectedEdgeId ue )
+};
+
+/// simple policy for MeshSegmenter, which prefers merging
+/// smaller by area segments, with long common boundary, and with low average curvature metric on it
+struct SimpleSegmentPolicy
+{
+    const Mesh& mesh;
+    const EdgeMetric& curvMetric;
+
+    using SegmentData = SimpleSegmentData;
+    using SegmentBdData = SimpleSegmentBdData;
+
+    SegmentData fromTri( FaceId f ) const { return { .area = mesh.area( f ) }; }
+
+    SegmentBdData fromUndirectedEdge( UndirectedEdgeId ue ) const
     {
         const auto len = mesh.edgeLength( ue );
         return { .length = len, .lengthCurv = len * curvMetric( ue ) };
     }
-};
 
-/// simple merge penalty for MeshSegmenter, which prefers merging
-/// smaller by area segments, with long common boundary, and with low average curvature metric on it
-struct SimpleMergePenalty
-{
-    double operator()( const SimpleSegmentData& a, const SimpleSegmentData& b, const SimpleSegmentBdData& bd ) const
+    double mergePenalty( const SegmentData& a, const SegmentData& b, const SegmentBdData& bd ) const
     {
         if ( bd.length <= 0 )
             return prohibitMergePenalty;

@@ -21,28 +21,31 @@ TEST( MRMesh, MeshSegmenter )
 {
     const Mesh cube = makeCube();
 
-    struct SegmentData
+    // never merge over sharp edges
+    struct Policy
     {
-        int numFaces = 0;
-        SegmentData& operator +=( const SegmentData& r ) { numFaces += r.numFaces; return *this; }
-        static SegmentData fromTri( const Mesh&, FaceId ) { return { .numFaces = 1 }; }
-    };
-    struct SegmentBdData
-    {
-        bool sharp = false;
-        SegmentBdData& operator +=( const SegmentBdData& r ) { sharp = sharp || r.sharp; return *this; }
-        static SegmentBdData fromUndirectedEdge( const Mesh& mesh, const EdgeMetric&, UndirectedEdgeId ue )
+        const Mesh& mesh;
+
+        struct SegmentData
         {
-            return { .sharp = std::abs( mesh.dihedralAngle( ue ) ) > 0.1f };
+            int numFaces = 0;
+            SegmentData& operator +=( const SegmentData& r ) { numFaces += r.numFaces; return *this; }
+        };
+        struct SegmentBdData
+        {
+            bool sharp = false;
+            SegmentBdData& operator +=( const SegmentBdData& r ) { sharp = sharp || r.sharp; return *this; }
+        };
+
+        SegmentData fromTri( FaceId ) const { return { .numFaces = 1 }; }
+        SegmentBdData fromUndirectedEdge( UndirectedEdgeId ue ) const { return { .sharp = std::abs( mesh.dihedralAngle( ue ) ) > 0.1f }; }
+        double mergePenalty( const SegmentData& a, const SegmentData& b, const SegmentBdData& bd ) const
+        {
+            return bd.sharp ? prohibitMergePenalty : double( a.numFaces + b.numFaces );
         }
     };
-    // never merge over sharp edges
-    auto mergePenalty = []( const SegmentData& a, const SegmentData& b, const SegmentBdData& bd )
-    {
-        return bd.sharp ? prohibitMergePenalty : double( a.numFaces + b.numFaces );
-    };
 
-    const auto order = MeshSegmenter<SegmentData, SegmentBdData, decltype( mergePenalty )>::run( cube, {}, mergePenalty );
+    const auto order = MeshSegmenter<Policy>::run( cube.topology, Policy{ cube } );
     ASSERT_TRUE( order.has_value() );
     EXPECT_EQ( order->size(), 6 );
     EXPECT_EQ( findSegmentBoundaries( cube.topology, *order, 6 ).count(), 12 );

@@ -122,6 +122,13 @@ void setImGuiModifiers( int mods )
     (void)UI::TestEngine::Control::writeValue<std::int64_t>( { "##key_modifiers" }, mods ); // ImGuiMenu::testKeyModifiers_
 }
 
+// the UI gets mouse and keyboard input, and screenshots are rendered, only with OpenGL, which -noWindow mode lacks
+void requireOpenGL( const char* toolId )
+{
+    if ( !getViewerInstance().isGLInitialized() )
+        throw std::runtime_error( fmt::format( "`{}` needs a window with OpenGL, it is not available in -noWindow mode.", toolId ) );
+}
+
 } // namespace
 
 static nlohmann::json mcpViewerFit( const nlohmann::json& args )
@@ -285,6 +292,7 @@ static nlohmann::json mcpViewerGetCamera( const nlohmann::json& )
 
 static nlohmann::json mcpViewerCaptureScreenshot( const nlohmann::json& args )
 {
+    requireOpenGL( "viewer_captureScreenshot" );
     const bool includeUi = args.value( "includeUi", true );
     const int width = args.value( "width", 0 );
     const int height = args.value( "height", 0 );
@@ -351,6 +359,7 @@ static nlohmann::json mcpViewerCaptureScreenshot( const nlohmann::json& args )
 
 static nlohmann::json mcpViewerSendMouseEvent( const nlohmann::json& args )
 {
+    requireOpenGL( "viewer_sendMouseEvent" );
     const std::string type = args.at( "type" ).get<std::string>();
     const int mods = parseModifiers( args );
     auto& v = getViewerInstance();
@@ -422,6 +431,7 @@ static nlohmann::json mcpViewerSendMouseEvent( const nlohmann::json& args )
 
 static nlohmann::json mcpViewerSendKeyboardEvent( const nlohmann::json& args )
 {
+    requireOpenGL( "viewer_sendKeyboardEvent" );
     const std::string type = args.at( "type" ).get<std::string>();
     const std::string keyStr = args.at( "key" ).get<std::string>();
     const int mods = parseModifiers( args );
@@ -459,6 +469,7 @@ static nlohmann::json mcpViewerSendKeyboardEvent( const nlohmann::json& args )
 
 static nlohmann::json mcpViewerSendDragDropEvent( const nlohmann::json& args )
 {
+    requireOpenGL( "viewer_sendDragDropEvent" );
     const std::string type = args.at( "type" ).get<std::string>();
     const bool hasXY = args.contains( "x" ) && args.contains( "y" );
     if ( type != "enter" && type != "over" && type != "leave" && type != "drop" )
@@ -486,6 +497,7 @@ static nlohmann::json mcpViewerSendDragDropEvent( const nlohmann::json& args )
 
 static nlohmann::json mcpViewerSendTouchpadEvent( const nlohmann::json& args )
 {
+    requireOpenGL( "viewer_sendTouchpadEvent" );
     const std::string gesture = args.at( "gesture" ).get<std::string>();
     const std::string phase = args.at( "phase" ).get<std::string>();
     const int i = phase == "begin" ? 0 : phase == "update" ? 1 : phase == "end" ? 2 : -1;
@@ -617,7 +629,8 @@ MR_ON_INIT{
                 "are ignored when `includeUi` is true (window capture always uses the current framebuffer with its "
                 "normal background). "
                 "Pass `filePath` to save server-side; response is `{path, width, height}`. Omit `filePath` to "
-                "receive the PNG inline as an MCP image content block; `structuredContent` carries `{width, height}`.",
+                "receive the PNG inline as an MCP image content block; `structuredContent` carries `{width, height}`. "
+                "Not available in -noWindow mode.",
         /*input_schema*/Schema::Object{}
             .addMemberOpt( "includeUi",     Schema::Bool{} )
             .addMemberOpt( "width",         Schema::Number{} )
@@ -644,7 +657,8 @@ MR_ON_INIT{
                 "held by `viewer_sendKeyboardEvent` `down` (e.g. Ctrl during a drag, until its `up`). "
                 "`click` is shorthand for `down` + `up` at the same position. "
                 "Waits until the UI has processed the events, at most 20 seconds; if an action they started keeps "
-                "MeshInspector busy longer, returns `busy` with an explanation, see `ui_progressStatus`.",
+                "MeshInspector busy longer, returns `busy` with an explanation, see `ui_progressStatus`. "
+                "Not available in -noWindow mode.",
         /*input_schema*/Schema::Object{}
             .addMember(    "type",        Schema::String{} )
             .addMemberOpt( "button",      Schema::String{} )
@@ -669,7 +683,8 @@ MR_ON_INIT{
                 "key events (use these for shortcuts like Ctrl+S, or for keys that don't produce text). `modifiers` "
                 "is an array of any of `ctrl`/`shift`/`alt`/`super`. "
                 "Waits until the UI has processed the event, at most 20 seconds; if an action it started keeps "
-                "MeshInspector busy longer, returns `busy` with an explanation, see `ui_progressStatus`.",
+                "MeshInspector busy longer, returns `busy` with an explanation, see `ui_progressStatus`. "
+                "Not available in -noWindow mode.",
         /*input_schema*/Schema::Object{}
             .addMember(    "type",      Schema::String{} )
             .addMember(    "key",       Schema::String{} )
@@ -689,7 +704,8 @@ MR_ON_INIT{
                 "(the scene is replaced); a mouse move in between forgets that position. Between `enter` and "
                 "`drop`/`leave` the drop zones are highlighted. "
                 "Waits until the UI has processed the events, at most 20 seconds; if an action they started keeps "
-                "MeshInspector busy longer, returns `busy` with an explanation, see `ui_progressStatus`.",
+                "MeshInspector busy longer, returns `busy` with an explanation, see `ui_progressStatus`. "
+                "Not available in -noWindow mode.",
         /*input_schema*/Schema::Object{}
             .addMember(    "type",  Schema::String( std::vector<std::string>{ "enter", "over", "leave", "drop" } ) )
             .addMemberOpt( "x",     Schema::Number{} )
@@ -710,7 +726,8 @@ MR_ON_INIT{
                 "`begin` (1 = unchanged, above 1 zooms in). `kinetic` (default false) marks momentum `update`s sent after "
                 "the fingers left the touchpad (ignored by default settings). "
                 "Waits until the UI has processed the event, at most 20 seconds; if an action it started keeps "
-                "MeshInspector busy longer, returns `busy` with an explanation, see `ui_progressStatus`.",
+                "MeshInspector busy longer, returns `busy` with an explanation, see `ui_progressStatus`. "
+                "Not available in -noWindow mode.",
         /*input_schema*/Schema::Object{}
             .addMember(    "gesture", Schema::String( std::vector<std::string>{ "rotate", "swipe", "zoom" } ) )
             .addMember(    "phase",   Schema::String( std::vector<std::string>{ "begin", "update", "end" } ) )

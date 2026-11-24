@@ -14,23 +14,10 @@ namespace MR
 /// \addtogroup AABBTreeGroup
 /// \{
 
-struct MeshProjectionResult
+struct MeshProjectionResult : PointOnFaceBary
 {
-    /// the closest point on mesh, transformed by xf if it is given
-    PointOnFace proj;
-
-    /// barycentric coordinates of proj relative to the vertices of proj.face in the order of MeshTopology::getTriVerts( proj.face )
-    TriPointf tp;
-
     /// squared distance from original projected point to proj
     float distSq = 0;
-
-    /// check for validity, otherwise the projection was not found
-    [[nodiscard]] bool valid() const { return proj.valid(); }
-    [[nodiscard]] explicit operator bool() const { return proj.valid(); }
-
-    /// returns the closest point on mesh as MeshTriPoint relative to topology.edgeWithLeft( proj.face ), or invalid MeshTriPoint if the projection was not found
-    [[nodiscard]] MRMESH_API MeshTriPoint mtp( const MeshTopology & topology ) const;
 };
 
 struct MeshProjectionTransforms
@@ -139,17 +126,11 @@ MRMESH_API void findTrisInBall( const MeshPart & mp, const Ball3f& ball, const F
 MRMESH_API void findTrisInBall( const VertCoords & points, const AABBTree & tree, const Ball3f& ball, const FoundTriCallback& foundCallback, const FacePredicate & validFaces = {},
     const FaceBitSet * region = nullptr );
 
-struct SignedDistanceToMeshResult
+/// the closest point on mesh with the signed distance to it
+struct SignedDistanceToMeshResult : PointOnFaceBary
 {
-    /// the closest point on mesh
-    PointOnFace proj;
-    /// barycentric coordinates of proj relative to the vertices of proj.face in the order of MeshTopology::getTriVerts( proj.face )
-    TriPointf tp;
     /// distance from pt to proj (positive - outside, negative - inside the mesh)
     float dist = 0;
-
-    /// returns the closest point on mesh as MeshTriPoint relative to topology.edgeWithLeft( proj.face ), or invalid MeshTriPoint if proj.face is invalid
-    [[nodiscard]] MRMESH_API MeshTriPoint mtp( const MeshTopology & topology ) const;
 };
 
 /**

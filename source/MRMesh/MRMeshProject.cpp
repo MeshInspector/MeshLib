@@ -13,20 +13,6 @@
 namespace MR
 {
 
-MeshTriPoint MeshProjectionResult::mtp( const MeshTopology & topology ) const
-{
-    if ( !proj.valid() )
-        return {};
-    return { topology.edgeWithLeft( proj.face ), tp };
-}
-
-MeshTriPoint SignedDistanceToMeshResult::mtp( const MeshTopology & topology ) const
-{
-    if ( !proj.valid() )
-        return {};
-    return { topology.edgeWithLeft( proj.face ), tp };
-}
-
 MeshProjectionTransforms createProjectionTransforms( AffineXf3f& storageXf, const AffineXf3f* pointXf, const AffineXf3f* treeXf )
 {
     MeshProjectionTransforms res;
@@ -175,9 +161,8 @@ MeshProjectionResult findProjectionWide( const Vector3f & pt, const VertCoords &
             {
                 if ( validProjections && !validProjections( MeshProjectionResult
                     {
-                        .proj = PointOnFace{ lt.face, p },
-                        .tp = TriPointf( baryD ),
-                        .distSq = d
+                        { .proj = PointOnFace{ lt.face, p }, .tp = TriPointf( baryD ) },
+                        d
                     } ) )
                     continue;
             }
@@ -356,9 +341,8 @@ void trisInBall( const VertCoords & points, const AABBTree & tree, const FaceBit
             return Processing::Continue;
         const MeshProjectionResult candidate
         {
-            .proj = PointOnFace{ lt.face, proj },
-            .tp = TriPointf( baryD ),
-            .distSq = distSq
+            { .proj = PointOnFace{ lt.face, proj }, .tp = TriPointf( baryD ) },
+            distSq
         };
         return foundCallback( candidate, b );
     } );

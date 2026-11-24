@@ -1002,6 +1002,12 @@ int Viewer::launchInit_( const LaunchParams& params )
 
     if ( windowMode && !setupWindow_( params ) )
         return -1;
+    if ( params.windowMode == LaunchParams::NoWindow )
+    {
+        // no window sets the size, but the menu lays out its UI in it, and mouse events from MCP or tests aim at that UI
+        postResize( params.width > 0 ? params.width : 1280, params.height > 0 ? params.height : 800 );
+        windowSaveSize = {}; // not a window size to restore in the next run
+    }
 
     CommandLoop::setState( CommandLoop::StartPosition::AfterWindowInit );
     CommandLoop::processCommands();

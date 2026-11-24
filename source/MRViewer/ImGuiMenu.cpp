@@ -234,6 +234,20 @@ bool isKeyEventReserved( ImGuiKey key )
     return getOrderedKeys()[key];
 }
 
+// ImGui's GLFW backend is initialized only with OpenGL (not with -noWindow), and its input callbacks crash without it;
+// then the input goes to ImGui directly: this holds `mods` (GLFW_MOD_* bits) as the backend reads them from the keyboard;
+// events from MCP or tests carry their modifiers without key events of them, so ioWithModifiers( 0 ) releases them after a release
+// (else e.g. Ctrl would stay held and block the mouse wheel)
+static ImGuiIO& ioWithModifiers( int mods )
+{
+    auto& io = ImGui::GetIO();
+    io.AddKeyEvent( ImGuiMod_Ctrl, ( mods & GLFW_MOD_CONTROL ) != 0 );
+    io.AddKeyEvent( ImGuiMod_Shift, ( mods & GLFW_MOD_SHIFT ) != 0 );
+    io.AddKeyEvent( ImGuiMod_Alt, ( mods & GLFW_MOD_ALT ) != 0 );
+    io.AddKeyEvent( ImGuiMod_Super, ( mods & GLFW_MOD_SUPER ) != 0 );
+    return io;
+}
+
 // makes ImGui see `mods` (GLFW_MOD_* bits) held in this frame, in addition to the real keyboard; call right after ImGui::NewFrame()
 static void forceKeyModifiers( int mods, std::vector<std::pair<ImGuiKey, bool>>& realKeyModifiers )
 {
@@ -318,6 +332,12 @@ void ImGuiMenu::startFrame()
         ImGui::GetIO().DisplaySize = ImVec2( float( viewer->framebufferSize.x ), float( viewer->framebufferSize.y ) );
         // no renderer backend to set it: without it NewFrame requires a prebuilt font atlas (as in ImGui's example_null)
         ImGui::GetIO().BackendFlags |= ImGuiBackendFlags_RendererHasTextures;
+        // nor a platform backend to set it: else ImGui counts 1/60 s per frame, but frames run much faster without rendering,
+        // so e.g. a key repeats between its down and up events
+        static auto prevFrameTime = std::chrono::steady_clock::now();
+        const auto now = std::chrono::steady_clock::now();
+        ImGui::GetIO().DeltaTime = std::max( std::chrono::duration<float>( now - prevFrameTime ).count(), 1e-6f );
+        prevFrameTime = now;
     }
     auto& style = ImGui::GetStyle();
     if ( !needModalBgChange_ )
@@ -588,7 +608,10 @@ bool ImGuiMenu::touchpadSwipeGestureUpdate_( float, float deltaY, bool )
     if ( ImGui::GetIO().WantCaptureMouse )
     {
         // allow ImGui to process the touchpad swipe gesture as a scroll exclusively
-        ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, deltaY * cTouchpadScrollCoef );
+        if ( viewer->isGLInitialized() )
+            ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, deltaY * cTouchpadScrollCoef );
+        else
+            ImGui::GetIO().AddMouseWheelEvent( 0.f, deltaY * cTouchpadScrollCoef );
         // do extra frames to prevent imgui calculations ping
         viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, viewer->swapOnLastPostEventsRedraw );
         return true;
@@ -657,10 +680,12 @@ void ImGuiMenu::rescaleStyle_()
 // Mouse IO
 bool ImGuiMenu::onMouseDown_( Viewer::MouseButton button, int modifier)
 {
-    capturedMouse_ = ImGui::GetIO().WantCaptureMouse
-        || bool( uiRenderManager_->consumedInteractions & BasicUiRenderTask::InteractionMask::mouseHover );
+    capturedMouse_ = ImGui::GetIO().WantCaptureMouse || anyUiObjectIsHovered();
 
-    ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_PRESS, modifier );
+    if ( viewer->isGLInitialized() )
+        ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_PRESS, modifier );
+    else
+        ioWithModifiers( modifier ).AddMouseButtonEvent( int( button ), true );
 
     if ( !capturedMouse_ )
     {
@@ -674,25 +699,38 @@ bool ImGuiMenu::onMouseDown_( Viewer::MouseButton button, int modifier)
 
 bool ImGuiMenu::onMouseUp_( Viewer::MouseButton button, int modifier )
 {
-    ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_RELEASE, modifier );
+    if ( viewer->isGLInitialized() )
+        ImGui_ImplGlfw_MouseButtonCallback( viewer->window, int( button ), GLFW_RELEASE, modifier );
+    else
+    {
+        ioWithModifiers( modifier ).AddMouseButtonEvent( int( button ), false );
+        ioWithModifiers( 0 );
+    }
     return capturedMouse_;
 }
 
 bool ImGuiMenu::onMouseMove_( int mouse_x, int mouse_y )
 {
-    ImGui_ImplGlfw_CursorPosCallback( viewer->window, double( mouse_x ), double( mouse_y ) );
+    if ( viewer->isGLInitialized() )
+        ImGui_ImplGlfw_CursorPosCallback( viewer->window, double( mouse_x ), double( mouse_y ) );
+    else
+        ImGui::GetIO().AddMousePosEvent( float( mouse_x ), float( mouse_y ) );
     return false;
 }
 
 bool ImGuiMenu::onMouseScroll_( float delta_y )
 {
-    if ( ImGui::GetIO().WantCaptureMouse || bool( uiRenderManager_->consumedInteractions & BasicUiRenderTask::InteractionMask::mouseScroll ) )
+    // the manager is null without OpenGL, see anyUiObjectIsHovered()
+    if ( ImGui::GetIO().WantCaptureMouse || ( uiRenderManager_ && bool( uiRenderManager_->consumedInteractions & BasicUiRenderTask::InteractionMask::mouseScroll ) ) )
     {
         // allow ImGui to process the scroll exclusively
-        ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, delta_y );
+        if ( viewer->isGLInitialized() )
+            ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, delta_y );
+        else
+            ImGui::GetIO().AddMouseWheelEvent( 0.f, delta_y );
         // do extra frames to prevent imgui calculations ping
         viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, viewer->swapOnLastPostEventsRedraw );
-        return uiRenderManager_->canConsumeEvent( BasicUiRenderTask::InteractionMask::mouseScroll );
+        return !uiRenderManager_ || uiRenderManager_->canConsumeEvent( BasicUiRenderTask::InteractionMask::mouseScroll );
     }
 
     return false;
@@ -727,27 +765,43 @@ void ImGuiMenu::cursorEntrance_( [[maybe_unused]] bool entered )
 }
 
 // Keyboard IO
-bool ImGuiMenu::onCharPressed_( unsigned  key, int /*modifiers*/ )
+bool ImGuiMenu::onCharPressed_( unsigned  key, int modifiers )
 {
-    ImGui_ImplGlfw_CharCallback( viewer->window, key );
+    if ( viewer->isGLInitialized() )
+        ImGui_ImplGlfw_CharCallback( viewer->window, key );
+    else
+    {
+        ioWithModifiers( modifiers ).AddInputCharacter( key );
+        ioWithModifiers( 0 );
+    }
     return ImGui::GetIO().WantCaptureKeyboard;
 }
 
 bool ImGuiMenu::onKeyDown_( int key, int modifiers )
 {
-    ImGui_ImplGlfw_KeyCallback( viewer->window, key, 0, GLFW_PRESS, modifiers );
+    if ( viewer->isGLInitialized() )
+        ImGui_ImplGlfw_KeyCallback( viewer->window, key, 0, GLFW_PRESS, modifiers );
+    else
+        ioWithModifiers( modifiers ).AddKeyEvent( ImGuiKey( GlfwToImGuiKey_Duplicate( key ) ), true );
     return ImGui::GetIO().WantCaptureKeyboard || getOrderedKeys()[GlfwToImGuiKey_Duplicate( key )];
 }
 
 bool ImGuiMenu::onKeyUp_( int key, int modifiers )
 {
-    ImGui_ImplGlfw_KeyCallback( viewer->window, key, 0, GLFW_RELEASE, modifiers );
+    if ( viewer->isGLInitialized() )
+        ImGui_ImplGlfw_KeyCallback( viewer->window, key, 0, GLFW_RELEASE, modifiers );
+    else
+    {
+        ioWithModifiers( modifiers ).AddKeyEvent( ImGuiKey( GlfwToImGuiKey_Duplicate( key ) ), false );
+        ioWithModifiers( 0 );
+    }
     return ImGui::GetIO().WantCaptureKeyboard;
 }
 
 bool ImGuiMenu::onKeyRepeat_( int key, int modifiers )
 {
-    ImGui_ImplGlfw_KeyCallback( viewer->window, key, 0, GLFW_REPEAT, modifiers );
+    if ( viewer->isGLInitialized() ) // ImGui ignores repeats from its GLFW backend too
+        ImGui_ImplGlfw_KeyCallback( viewer->window, key, 0, GLFW_REPEAT, modifiers );
     return ImGui::GetIO().WantCaptureKeyboard;
 }
 

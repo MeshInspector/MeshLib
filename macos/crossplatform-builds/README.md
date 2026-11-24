@@ -13,7 +13,8 @@ runner.
   [`matrix/macos-config.json`](../../.github/workflows/matrix/macos-config.json), run by the
   `macos-build-test` job of
   [`build-test-macos.yml`](../../.github/workflows/build-test-macos.yml) on a runner labelled
-  `[self-hosted, macos, arm64, crossplatform-build]`. The cross-only steps (the shim setup,
+  `[self-hosted, macos, arm64, crossplatform-build]`. The cross-only steps (the shim setup in
+  [`setup-ci-environment.sh`](setup-ci-environment.sh),
   `-DMR_PLATFORM=APPLE_x86_64`, `Verify x86_64 output`) are gated on `matrix.cross-osx-arch`.
 - The PR label `disable-build-macos-crossplatform` drops the leg
   ([`config.yml`](../../.github/workflows/config.yml), step `set-macos-matrix`), so a down or busy

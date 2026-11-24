@@ -1176,7 +1176,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth )
 
     ImGui::SetNextItemWidth( 100 * UI::scale() );
     ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, { style.FramePadding.x, cButtonPadding * UI::scale() } );
-    UI::drag<NoUnit>( _tr( "Zoom Gain" ), viewer->scrollForce, 0.01f, 0.2f, 3.0f );
+    UI::drag<NoUnit>( _tr( "Zoom Gain" ), viewer->scrollForce, 0.01f, -3.0f, 3.0f );
     ImGui::PopStyleVar();
     UI::setTooltipIfHovered( _tr( "Sensitivity for mouse wheel rotation affecting the speed of zooming." ) );
 

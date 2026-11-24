@@ -688,8 +688,8 @@ bool ImGuiMenu::onMouseScroll_( float delta_y )
 {
     if ( ImGui::GetIO().WantCaptureMouse || bool( uiRenderManager_->consumedInteractions & BasicUiRenderTask::InteractionMask::mouseScroll ) )
     {
-        // allow ImGui to process the scroll exclusively
-        ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, delta_y );
+        // allow ImGui to process the scroll exclusively; Invert Zoom must not invert scrolling of ImGui windows
+        ImGui_ImplGlfw_ScrollCallback( viewer->window, 0.f, viewer->mouseController().isZoomInverted() ? -delta_y : delta_y );
         // do extra frames to prevent imgui calculations ping
         viewer->incrementForceRedrawFrames( viewer->forceRedrawMinimumIncrementAfterEvents, viewer->swapOnLastPostEventsRedraw );
         return uiRenderManager_->canConsumeEvent( BasicUiRenderTask::InteractionMask::mouseScroll );

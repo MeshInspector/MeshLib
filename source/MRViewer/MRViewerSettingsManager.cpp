@@ -57,6 +57,7 @@ const std::string cEnableSavedDialogPositions = "enableSavedDialogPositions";
 const std::string cAutoClosePlugins = "autoClosePlugins";
 const std::string cShowExperimentalFeatures = "showExperimentalFeatures";
 const std::string cAmbientCoefSelectedObj = "ambientCoefSelectedObj";
+const std::string cPointCloudPointSize = "pointCloudPointSize";
 #ifndef MRIOEXTRAS_NO_STEP
 const std::string cStepAngularDeflection = "stepLoad.angularDeflection";
 const std::string cStepLinearDeflection = "stepLoad.linearDeflection";
@@ -488,6 +489,13 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         SceneSettings::set( SceneSettings::FloatType::AmbientCoefSelectedObj, ambientCoefSelectedObj.asFloat() );
     }
 
+    if ( cfg.hasJsonValue( cPointCloudPointSize ) )
+    {
+        const auto& pointSize = cfg.getJsonValue( cPointCloudPointSize );
+        if ( pointSize.isNumeric() && pointSize.asFloat() >= 1 )
+            SceneSettings::set( SceneSettings::FloatType::PointCloudPointSize, pointSize.asFloat() );
+    }
+
     { // Measurement units.
         UnitSettings::setShowLeadingZero( loadBool( cUnitsLeadingZero, true ) );
 
@@ -707,6 +715,8 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
 
     Json::Value ambientCoefSelectedObj = SceneSettings::get( SceneSettings::FloatType::AmbientCoefSelectedObj );
     cfg.setJsonValue( cAmbientCoefSelectedObj, ambientCoefSelectedObj);
+
+    cfg.setJsonValue( cPointCloudPointSize, SceneSettings::get( SceneSettings::FloatType::PointCloudPointSize ) );
 
     { // Measurement units.
         saveBool( cUnitsLeadingZero, UnitSettings::getShowLeadingZero() );

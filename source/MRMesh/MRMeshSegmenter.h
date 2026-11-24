@@ -26,7 +26,7 @@ inline constexpr double prohibitMergePenalty = DBL_MAX;
 ///  - type `SegmentBdData`, data of the common boundary of two segments; `a += b` must make from the data of two boundary parts the data of their union;
 ///  - `SegmentData segmentFromTri( FaceId ) const`, returns the data of a single-triangle segment;
 ///  - `SegmentBdData bdFromEdge( UndirectedEdgeId ) const`, returns the data of an edge having triangles from both sides;
-///  - `double mergePenalty( const SegmentData& a, const SegmentData& b, const SegmentBdData& bd ) const`, returns
+///  - `double mergePenalty( const SegmentData& a, const SegmentData& b, const SegmentBdData& bd ) const` (or static), returns
 ///    the penalty of merging the segments (a) and (b) with the common boundary (bd), or prohibitMergePenalty to forbid the merge
 template<typename Policy>
 class MeshSegmenter
@@ -232,7 +232,7 @@ struct SimpleSegmentPolicy
         return { .length = len, .lengthCurv = len * curvMetric( ue ) };
     }
 
-    double mergePenalty( const SegmentData& a, const SegmentData& b, const SegmentBdData& bd ) const
+    static double mergePenalty( const SegmentData& a, const SegmentData& b, const SegmentBdData& bd )
     {
         if ( bd.length <= 0 )
             return prohibitMergePenalty;

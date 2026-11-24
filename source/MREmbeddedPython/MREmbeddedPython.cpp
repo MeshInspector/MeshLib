@@ -357,7 +357,20 @@ void EmbeddedPython::ensureInterpreterThreadIsRunning_()
             if ( idleThreadState )
                 PyEval_RestoreThread( idleThreadState ); // `Py_FinalizeEx()` needs the GIL
             if ( Py_IsInitialized() )
-                Py_FinalizeEx();
+            {
+                // wait for the non-daemon threads, as `Py_FinalizeEx()` would
+                execPython( "import threading\n"
+                    "for t in threading.enumerate():\n"
+                    "    if not t.daemon and t is not threading.current_thread(): t.join()\n" );
+                // A thread retaking the GIL after `Py_FinalizeEx()` is ended with `pthread_exit()` (Linux, Python 3.13.7 and older),
+                // which aborts the process if that unwinds a C++ noexcept frame, e.g. on return from a `mrviewerpy` call.
+                // So while other threads are alive, keep the GIL instead of finalizing: they wait for it until the process exits.
+                PyThreadState* self = PyThreadState_Get();
+                if ( PyInterpreterState_ThreadHead( self->interp ) == self && !PyThreadState_Next( self ) )
+                    Py_FinalizeEx();
+                else
+                    spdlog::info( "EmbeddedPython: other Python threads are alive, the interpreter is not finalized" );
+            }
         } );
 
         return nullptr;

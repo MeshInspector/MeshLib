@@ -1,12 +1,12 @@
-import createMeshLib from '@meshinspector/meshlib';
+import * as ml from '@meshinspector/meshlib';
 
-const ml = await createMeshLib();
+await ml.init();
 
-using mesh = ml.makeTorus();
+// Create some mesh
+using mesh = ml.makeTorus(1.0, 0.1, 16, 16);
 
-// build a per-vertex weight (extra offset) from each vertex's x coordinate
-using coords = mesh.points;
-const positions = coords.toArray();
+// Create VertScalars with weights for every vertex: individual extra offset sizes for the points
+const positions = mesh.points.toArray(); // x, y, z per vertex
 const weights = new Float32Array(positions.length / 3);
 let maxWeight = 0;
 for (let v = 0; v < weights.length; ++v) {
@@ -15,16 +15,15 @@ for (let v = 0; v < weights.length; ++v) {
 }
 using scalars = ml.VertScalars.fromArray(weights);
 
-using params = new ml.WeightedShellParametersMetric();
-// the algorithm is voxel-based; the voxel size affects performance and the result shape
-params.voxelSize = ml.suggestVoxelSize(mesh, 1000);
-// a common basic offset applied to every vertex; the weighted offsets are added on top
+// ===params
+using params = new ml.WeightedShell.ParametersMetric();
+// Algorithm is voxel based, voxel size affects performance and form of result mesh
+params.voxelSize = ml.suggestVoxelSize(new ml.MeshPart(mesh), 10000);
+// common basic offset applied for all points;
+// vertex-specific weighted offsets applied after the basic one
 params.offset = 0.2;
-// the maximum weight must be an upper bound of the provided weights
-using dist = params.dist;
-dist.maxWeight = maxWeight;
-params.dist = dist;
+params.dist.maxWeight = maxWeight; // should always have maximum between weights provided
 
+// ===offset
 using result = ml.WeightedShell.meshShell(mesh, scalars, params);
-
-ml.MeshSave.toAnySupportedFormat(result, 'offset_weighted.ply');
+ml.MeshSave.toAnySupportedFormat(result, 'offset_weighted.ctm');

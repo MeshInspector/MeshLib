@@ -1515,6 +1515,15 @@
     <ClInclude Include="MRSegmentMesh.h">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshSegmenter.h">
+      <Filter>Source Files\Algorithms</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSimpleSegmentPolicy.h">
+      <Filter>Source Files\Algorithms</Filter>
+    </ClInclude>
+    <ClInclude Include="MRNarrowNeckSegmentPolicy.h">
+      <Filter>Source Files\Algorithms</Filter>
+    </ClInclude>
     <ClInclude Include="MRHexPalette.h">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>

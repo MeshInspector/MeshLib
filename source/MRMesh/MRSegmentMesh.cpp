@@ -16,17 +16,7 @@ Expected<GroupOrder> segmentMesh( const Mesh& mesh, const EdgeMetric& curvMetric
     if ( !curvMetric )
         return unexpected( "no curvMetric given" );
 
-    return MeshSegmenter<SimpleSegmentData, SimpleSegmentBdData, SimpleMergePenalty>::run( mesh.topology,
-        [&]( FaceId f )
-        {
-            return SimpleSegmentData{ .area = mesh.area( f ) };
-        },
-        [&]( UndirectedEdgeId ue )
-        {
-            const auto len = mesh.edgeLength( ue );
-            return SimpleSegmentBdData{ .length = len, .lengthCurv = len * curvMetric( ue ) };
-        },
-        SimpleMergePenalty{}, progress );
+    return MeshSegmenter<SimpleSegmentData, SimpleSegmentBdData, SimpleMergePenalty>::run( mesh, curvMetric, {}, progress );
 }
 
 UndirectedEdgeBitSet findSegmentBoundaries( const MeshTopology& topology,

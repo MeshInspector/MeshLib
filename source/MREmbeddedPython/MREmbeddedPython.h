@@ -29,6 +29,7 @@ public:
 
     // If you have used `runScript()` at least once, you should call this before terminating the program.
     // Otherwise you can get a crash in Python cleanup.
+    // Waits for the non-daemon Python threads that scripts started.
     MREMBEDDEDPYTHON_API static void shutdown();
 
     // Returns true if the interpreter is busy running something.

@@ -469,6 +469,7 @@ static nlohmann::json mcpViewerSendKeyboardEvent( const nlohmann::json& args )
 
 static nlohmann::json mcpViewerSendDragDropEvent( const nlohmann::json& args )
 {
+    requireOpenGL( "viewer_sendDragDropEvent" );
     const std::string type = args.at( "type" ).get<std::string>();
     const bool hasXY = args.contains( "x" ) && args.contains( "y" );
     if ( type != "enter" && type != "over" && type != "leave" && type != "drop" )
@@ -496,6 +497,7 @@ static nlohmann::json mcpViewerSendDragDropEvent( const nlohmann::json& args )
 
 static nlohmann::json mcpViewerSendTouchpadEvent( const nlohmann::json& args )
 {
+    requireOpenGL( "viewer_sendTouchpadEvent" );
     const std::string gesture = args.at( "gesture" ).get<std::string>();
     const std::string phase = args.at( "phase" ).get<std::string>();
     const int i = phase == "begin" ? 0 : phase == "update" ? 1 : phase == "end" ? 2 : -1;
@@ -702,7 +704,8 @@ MR_ON_INIT{
                 "(the scene is replaced); a mouse move in between forgets that position. Between `enter` and "
                 "`drop`/`leave` the drop zones are highlighted. "
                 "Waits until the UI has processed the events, at most 20 seconds; if an action they started keeps "
-                "MeshInspector busy longer, returns `busy` with an explanation, see `ui_progressStatus`.",
+                "MeshInspector busy longer, returns `busy` with an explanation, see `ui_progressStatus`. "
+                "Not available in -noWindow mode.",
         /*input_schema*/Schema::Object{}
             .addMember(    "type",  Schema::String( std::vector<std::string>{ "enter", "over", "leave", "drop" } ) )
             .addMemberOpt( "x",     Schema::Number{} )
@@ -723,7 +726,8 @@ MR_ON_INIT{
                 "`begin` (1 = unchanged, above 1 zooms in). `kinetic` (default false) marks momentum `update`s sent after "
                 "the fingers left the touchpad (ignored by default settings). "
                 "Waits until the UI has processed the event, at most 20 seconds; if an action it started keeps "
-                "MeshInspector busy longer, returns `busy` with an explanation, see `ui_progressStatus`.",
+                "MeshInspector busy longer, returns `busy` with an explanation, see `ui_progressStatus`. "
+                "Not available in -noWindow mode.",
         /*input_schema*/Schema::Object{}
             .addMember(    "gesture", Schema::String( std::vector<std::string>{ "rotate", "swipe", "zoom" } ) )
             .addMember(    "phase",   Schema::String( std::vector<std::string>{ "begin", "update", "end" } ) )

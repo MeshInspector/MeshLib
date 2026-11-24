@@ -179,6 +179,7 @@
     <ClInclude Include="MRMeshRelax.hpp" />
     <ClInclude Include="MRMeshReplicate.h" />
     <ClInclude Include="MRSegmentMesh.h" />
+    <ClInclude Include="MRMeshSegmenter.h" />
     <ClInclude Include="MRMeshSubdivideCallbacks.h" />
     <ClInclude Include="MRMeshThickness.h" />
     <ClInclude Include="MRMeshTopologyDiff.h" />

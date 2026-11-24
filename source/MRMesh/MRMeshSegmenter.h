@@ -24,8 +24,8 @@ inline constexpr double prohibitMergePenalty = DBL_MAX;
 /// \tparam Policy must have (see SimpleSegmentPolicy as an example):
 ///  - type `SegmentData`, data of one segment; `a += b` must make from the data of two segments the data of their union;
 ///  - type `SegmentBdData`, data of the common boundary of two segments; `a += b` must make from the data of two boundary parts the data of their union;
-///  - `SegmentData fromTri( FaceId ) const`, returns the data of a single-triangle segment;
-///  - `SegmentBdData fromUndirectedEdge( UndirectedEdgeId ) const`, returns the data of an edge having triangles from both sides;
+///  - `SegmentData segmentFromTri( FaceId ) const`, returns the data of a single-triangle segment;
+///  - `SegmentBdData bdFromEdge( UndirectedEdgeId ) const`, returns the data of an edge having triangles from both sides;
 ///  - `double mergePenalty( const SegmentData& a, const SegmentData& b, const SegmentBdData& bd ) const`, returns
 ///    the penalty of merging the segments (a) and (b) with the common boundary (bd), or prohibitMergePenalty to forbid the merge
 template<typename Policy>
@@ -35,7 +35,7 @@ public:
     using SegmentData = typename Policy::SegmentData;
     using SegmentBdData = typename Policy::SegmentBdData;
 
-    /// \details policy.fromTri and policy.fromUndirectedEdge are called in parallel
+    /// \details policy.segmentFromTri and policy.bdFromEdge are called in parallel
     static Expected<GroupOrder> run( const MeshTopology& topology, const Policy& policy, const ProgressCallback& progress = {} );
 
 private:
@@ -115,7 +115,7 @@ void MeshSegmenter<Policy>::constructGraph_()
         if ( vv.v1 < vv.v0 )
             std::swap( vv.v0, vv.v1 );
         ends[ge] = vv;
-        graphEdgeData_[ge] = policy_.fromUndirectedEdge( ue );
+        graphEdgeData_[ge] = policy_.bdFromEdge( ue );
     } );
 
     graphVertData_.resize( topology_.faceSize() );
@@ -134,7 +134,7 @@ void MeshSegmenter<Policy>::constructGraph_()
             if ( topology_.right( e ) )
                 n.push_back( ge );
         }
-        graphVertData_[gv] = policy_.fromTri( f );
+        graphVertData_[gv] = policy_.segmentFromTri( f );
         std::sort( n.begin(), n.end() );
         neis[gv] = std::move( n );
     } );
@@ -224,9 +224,9 @@ struct SimpleSegmentPolicy
     using SegmentData = SimpleSegmentData;
     using SegmentBdData = SimpleSegmentBdData;
 
-    SegmentData fromTri( FaceId f ) const { return { .area = mesh.area( f ) }; }
+    SegmentData segmentFromTri( FaceId f ) const { return { .area = mesh.area( f ) }; }
 
-    SegmentBdData fromUndirectedEdge( UndirectedEdgeId ue ) const
+    SegmentBdData bdFromEdge( UndirectedEdgeId ue ) const
     {
         const auto len = mesh.edgeLength( ue );
         return { .length = len, .lengthCurv = len * curvMetric( ue ) };

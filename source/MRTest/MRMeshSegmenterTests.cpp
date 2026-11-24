@@ -37,8 +37,8 @@ TEST( MRMesh, MeshSegmenter )
             SegmentBdData& operator +=( const SegmentBdData& r ) { sharp = sharp || r.sharp; return *this; }
         };
 
-        SegmentData fromTri( FaceId ) const { return { .numFaces = 1 }; }
-        SegmentBdData fromUndirectedEdge( UndirectedEdgeId ue ) const { return { .sharp = std::abs( mesh.dihedralAngle( ue ) ) > 0.1f }; }
+        SegmentData segmentFromTri( FaceId ) const { return { .numFaces = 1 }; }
+        SegmentBdData bdFromEdge( UndirectedEdgeId ue ) const { return { .sharp = std::abs( mesh.dihedralAngle( ue ) ) > 0.1f }; }
         double mergePenalty( const SegmentData& a, const SegmentData& b, const SegmentBdData& bd ) const
         {
             return bd.sharp ? prohibitMergePenalty : double( a.numFaces + b.numFaces );

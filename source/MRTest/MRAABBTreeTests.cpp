@@ -1,35 +1,117 @@
 #include <MRMesh/MRAABBTree.h>
 #include <MRMesh/MRAABBTreeMaker.h>
+#include <MRMesh/MRMeshProject.h>
+#include <MRMesh/MRClosestPointInTriangle.h>
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshCollide.h>
+#include <MRMesh/MRMeshIntersect.h>
+#include <MRMesh/MRLine.h>
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRMatrix3.h>
 #include <MRMesh/MRBitSet.h>
+#include <MRMesh/MRBuffer.h>
+#include <MRMesh/MRBitCast.h>
+#include <MRMesh/MRBall.h>
+#include <MRMesh/MRTriMesh.h>
+#include <cmath>
 #include <gtest/gtest.h>
 #include <MRPch/MRTBB.h>
 #include <algorithm>
+#include <cstdint>
+#include <cstring>
+#include <iterator>
+#include <limits>
+#include <optional>
+#include <random>
+#include <sstream>
 
 namespace MR
 {
+
+namespace
+{
+
+/// node of AABBTree in the flat layout made by makeFlatAABBTree (the layout of master before the SIMD tree), where the children of a node are contiguous
+struct AABBTreeWideNode
+{
+    Box3f box; ///< bounding box of whole subtree
+    int first = 0; ///< the first child node, or for a leaf, the first of its triangles in leafTris
+    int count = 0; ///< the number of children, or for a leaf, minus the number of its triangles
+
+    [[nodiscard]] bool leaf() const { return count < 0; }
+    [[nodiscard]] int numLeafTris() const { return -count; }
+};
+
+/// AABBTree in the flat layout, where the children of a node are contiguous
+struct AABBTreeFlat
+{
+    Vector<AABBTreeWideNode, NodeId> nodes; ///< the root is the first node, if any
+    Vector<AABBTree::LeafTri> leafTris; ///< the triangles of each leaf are contiguous
+    Vector<NodeId, NodeId> treeNodeIds; ///< the id in AABBTree of every node
+};
+
+/// makes the flat layout of given tree, to compare it with the trees of master
+AABBTreeFlat makeFlatAABBTree( const AABBTree & tree )
+{
+    AABBTreeFlat res;
+    if ( tree.empty() )
+        return res;
+    res.nodes.resize( tree.numNodes() );
+    res.treeNodeIds.resize( tree.numNodes() );
+    res.leafTris.reserve( tree.numTris() );
+    // fills node n with the subtree of ref, the children blocks of its descendants start from next
+    auto fill = [&]( NodeId n, int ref, const Box3f & box, NodeId & next, auto && self ) -> void
+    {
+        auto & node = res.nodes[n];
+        node.box = box;
+        res.treeNodeIds[n] = tree.nodeId( ref );
+        if ( ref < 0 )
+        {
+            node.first = (int)res.leafTris.size();
+            const int num = tree.numLeafTris( ~ref );
+            node.count = -num;
+            for ( int i = 0; i < num; ++i )
+                res.leafTris.push_back( tree.leafTris()[size_t( ~ref ) * AABBTree::MaxLeafTris + i] );
+            return;
+        }
+        const auto & sn = tree.simdNodes()[ref];
+        int k = 0;
+        while ( k < AABBTree::MaxChildren && sn.child[k] )
+            ++k;
+        const NodeId first = next;
+        node.first = int( first );
+        node.count = k;
+        next += k;
+        for ( int i = 0; i < k; ++i )
+            self( first + i, sn.child[i], sn.get( i ), next, self );
+    };
+    NodeId next( 1 );
+    fill( NodeId( 0 ), tree.rootRef(), tree.getBoundingBox(), next, fill );
+    assert( next == res.nodes.size() );
+    return res;
+}
+
+} // anonymous namespace
 
 TEST(MRMesh, AABBTree)
 {
     Mesh sphere = makeUVSphere( 1, 8, 8 );
     AABBTree tree( sphere );
-    EXPECT_EQ( tree.nodes().size(), getNumNodes( sphere.topology.numValidFaces() ) );
-    EXPECT_EQ( tree[AABBTree::rootNodeId()].box, sphere.computeBoundingBox().insignificantlyExpanded() );
-    EXPECT_TRUE( tree[AABBTree::rootNodeId()].l.valid() );
-    EXPECT_TRUE( tree[AABBTree::rootNodeId()].r.valid() );
+    EXPECT_EQ( tree.numTris(), sphere.topology.numValidFaces() );
+    EXPECT_EQ( tree.getBoundingBox(), sphere.computeBoundingBox().insignificantlyExpanded() );
+    EXPECT_EQ( tree.rootRef(), 0 );
 
-    assert( !tree.nodes().empty() );
+    assert( !tree.empty() );
     auto m = std::move( tree );
-    assert( tree.nodes().empty() );
+    assert( tree.empty() );
 
     FaceBitSet fs;
     fs.autoResizeSet( 1_f );
     AABBTree smallerTree( { sphere, &fs } );
-    EXPECT_EQ( smallerTree.nodes().size(), 1 );
+    EXPECT_EQ( smallerTree.numNodes(), 1 );
+    EXPECT_EQ( smallerTree.rootRef(), ~0 );
+    EXPECT_EQ( smallerTree.numTris(), 1 );
 }
 
 TEST(MRMesh, ProjectionToEmptyMesh)
@@ -39,33 +121,203 @@ TEST(MRMesh, ProjectionToEmptyMesh)
     EXPECT_FALSE( hasProjection );
 }
 
-// checks that every valid face of the mesh is in exactly one leaf, which box contains the face,
-// and the box of every other node contains the boxes of its children having larger ids
-static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
+// small triangle far from the origin, non-rigid transformation and a projected point far from the triangle:
+// the projection must be computed relative to the precisely transformed triangle
+TEST( MRMesh, ProjectionNonRigidXfFarSmallTriangle )
 {
-    const auto & nodes = tree.nodes();
-    EXPECT_EQ( tree.numLeaves(), size_t( mesh.topology.numValidFaces() ) );
-    FaceBitSet leaves( mesh.topology.faceSize() );
-    for ( NodeId n( 0 ); n < nodes.size(); ++n )
+    const Vector3f a( 1000.f, 1000.f, 1000.f );
+    const Mesh mesh = Mesh::fromTriangles( { a, a + Vector3f( 0.01f, 0.f, 0.f ), a + Vector3f( 0.f, 0.01f, 0.003f ) }, { { 0_v, 1_v, 2_v } } );
+    const AffineXf3f xf( Matrix3f::rotation( Vector3f( 1, 2, 3 ).normalized(), 0.7f ) * Matrix3f::scale( 1.3f, 0.8f, 1.1f ), Vector3f( -30.f, 70.f, 20.f ) );
+    const AffineXf3d xfd( xf );
+
+    // the exactly transformed triangle in double
+    const auto [v0, v1, v2] = mesh.topology.getTriVerts( 0_f );
+    const Vector3d da = xfd( Vector3d( mesh.points[v0] ) ), db = xfd( Vector3d( mesh.points[v1] ) ), dc = xfd( Vector3d( mesh.points[v2] ) );
+    const Vector3d n = cross( db - da, dc - da ).normalized();
+    for ( float dist : { 1.f, -1.f, 3.f } )
     {
-        const auto & node = nodes[n];
-        if ( node.leaf() )
+        for ( TriPointd tp : { TriPointd( 0.2, 0.3 ), TriPointd( 0.6, 0.1 ), TriPointd( 0.1, 0.8 ) } )
         {
-            const auto f = node.leafId();
-            ASSERT_TRUE( mesh.topology.hasFace( f ) );
-            EXPECT_FALSE( leaves.test_set( f ) );
-            Vector3f a, b, c;
-            mesh.getTriPoints( f, a, b, c );
-            EXPECT_TRUE( node.box.contains( a ) && node.box.contains( b ) && node.box.contains( c ) );
-        }
-        else
-        {
-            ASSERT_TRUE( node.l > n && node.r > n && node.l < nodes.size() && node.r < nodes.size() );
-            EXPECT_TRUE( node.box.contains( nodes[node.l].box ) );
-            EXPECT_TRUE( node.box.contains( nodes[node.r].box ) );
+            const Vector3f pt( tp.interpolate( da, db, dc ) + double( dist ) * n );
+            // exact projection of the (rounded) point on the exactly transformed triangle
+            const auto [exactProj, exactTp] = closestPointInTriangle( Vector3d( pt ), da, db, dc );
+            const auto proj = findProjection( pt, mesh, FLT_MAX, &xf );
+            ASSERT_TRUE( proj.valid() );
+            EXPECT_NEAR( proj.tp.a, exactTp.a, 1e-4 );
+            EXPECT_NEAR( proj.tp.b, exactTp.b, 1e-4 );
+            EXPECT_NEAR( std::sqrt( proj.distSq ), ( exactProj - Vector3d( pt ) ).length(), 1e-3 );
         }
     }
-    EXPECT_EQ( leaves.count(), size_t( mesh.topology.numValidFaces() ) );
+}
+
+// the cached tree of a mesh without triangles: refit and winding numbers (asserted in Debug before)
+TEST( MRMesh, AABBTreeOfEmptyMesh )
+{
+    Mesh mesh;
+    EXPECT_FALSE( mesh.getBoundingBox().valid() );
+    mesh.updateCaches( nullptr );
+    EXPECT_EQ( mesh.calcFastWindingNumber( Vector3f( 1.f, 2.f, 3.f ) ), 0.f );
+    EXPECT_TRUE( mesh.getAABBTree().getNodesFromFaces( FaceBitSet{} ).none() );
+}
+
+// checks that every valid face of the mesh is in exactly one leaf with its vertices and a box containing it,
+// that every node but the root is a child of one internal node with a smaller index, and that the box of every child in its parent
+// contains the boxes of its triangles or of its children
+static void expectValidTree( const AABBTree & tree, const Mesh & mesh )
+{
+    EXPECT_EQ( tree.numTris(), mesh.topology.numValidFaces() );
+    const int numLeaves = tree.numLeaves();
+    const int numInternal = (int)tree.simdNodes().size();
+
+    ASSERT_EQ( tree.leafTris().size(), size_t( numLeaves ) * AABBTree::MaxLeafTris );
+    EXPECT_EQ( tree.numNodes(), size_t( numLeaves + numInternal ) );
+    FaceBitSet faces( mesh.topology.faceSize() );
+    for ( int l = 0; l < numLeaves; ++l )
+    {
+        const int num = tree.numLeafTris( l );
+        for ( int i = 0; i < AABBTree::MaxLeafTris; ++i )
+        {
+            const int t = l * AABBTree::MaxLeafTris + i;
+            const auto & lt = tree.leafTris()[t];
+            if ( i >= num )
+            {
+                EXPECT_FALSE( lt.face.valid() );
+                EXPECT_FALSE( tree.leafBox( t ).valid() );
+                continue;
+            }
+            ASSERT_TRUE( mesh.topology.hasFace( lt.face ) );
+            EXPECT_FALSE( faces.test_set( lt.face ) );
+            EXPECT_EQ( lt.verts, mesh.topology.getTriVerts( lt.face ) );
+            for ( int v = 0; v < 3; ++v )
+                EXPECT_TRUE( tree.leafBox( t ).contains( mesh.points[lt.verts[v]] ) );
+        }
+    }
+    EXPECT_EQ( faces.count(), size_t( mesh.topology.numValidFaces() ) );
+
+    if ( tree.empty() )
+        return;
+    Vector<int> numParents( tree.numNodes(), 0 );
+    for ( int n = 0; n < numInternal; ++n )
+    {
+        const auto & sn = tree.simdNodes()[n];
+        EXPECT_TRUE( sn.child[0] && sn.child[1] );
+        for ( int i = 0; i < AABBTree::MaxChildren; ++i )
+        {
+            const int c = sn.child[i];
+            if ( !c )
+            {
+                EXPECT_FALSE( sn.get( i ).valid() );
+                EXPECT_TRUE( i + 1 == AABBTree::MaxChildren || !sn.child[i + 1] );
+                continue;
+            }
+            if ( c > 0 )
+            {
+                ASSERT_TRUE( c > n && c < numInternal );
+                EXPECT_TRUE( sn.get( i ).contains( tree.simdNodes()[c].getUnion() ) );
+            }
+            else
+            {
+                ASSERT_TRUE( ~c < numLeaves );
+                EXPECT_TRUE( sn.get( i ).contains( tree.leafBoxes( ~c ).getUnion() ) );
+            }
+            ++numParents[tree.nodeId( c )];
+        }
+    }
+    EXPECT_EQ( numParents[0], 0 );
+    for ( size_t n = 1; n < numParents.size(); ++n )
+        EXPECT_EQ( numParents[n], 1 );
+
+    // the flat layout of the same tree
+    const auto flat = makeFlatAABBTree( tree );
+    ASSERT_EQ( flat.nodes.size(), tree.numNodes() );
+    ASSERT_EQ( flat.leafTris.size(), size_t( tree.numTris() ) );
+    for ( NodeId n( 0 ); n < flat.nodes.size(); ++n )
+    {
+        const auto & node = flat.nodes[n];
+        EXPECT_EQ( node.leaf(), tree.nodeRef( flat.treeNodeIds[n] ) < 0 );
+        if ( node.leaf() )
+            continue;
+        for ( int i = 0; i < node.count; ++i )
+        {
+            const NodeId c( node.first + i );
+            ASSERT_TRUE( c > n && c < flat.nodes.size() );
+            EXPECT_TRUE( node.box.contains( flat.nodes[c].box ) );
+        }
+    }
+}
+
+// expects the same projections of some points on both meshes
+static void expectSameProjections( const Mesh & a, const Mesh & b )
+{
+    const auto box = a.computeBoundingBox();
+    for ( int i = 0; i < 1000; ++i )
+    {
+        const Vector3f pt = box.min + mult( box.size() * 1.4f, Vector3f( ( i * 37 % 101 ) / 100.0f, ( i * 53 % 103 ) / 102.0f, ( i * 71 % 107 ) / 106.0f ) ) - box.size() * 0.2f;
+        EXPECT_EQ( findProjection( pt, a ).distSq, findProjection( pt, b ).distSq );
+    }
+}
+
+TEST( MRMesh, AABBTreeWideRefit )
+{
+    Mesh mesh = makeSphere( { .radius = 1.0f, .numMeshVertices = 3366 } );
+    (void)mesh.getAABBTree();
+
+    // move some vertices
+    VertBitSet changed( mesh.topology.vertSize() );
+    for ( auto v : mesh.topology.getValidVerts() )
+    {
+        if ( mesh.points[v].x > 0.3f )
+        {
+            mesh.points[v] *= 1.2f;
+            changed.set( v );
+        }
+    }
+    mesh.updateCaches( &changed );
+    const auto * tree = mesh.getAABBTreeNotCreate();
+    ASSERT_TRUE( tree );
+    expectValidTree( *tree, mesh );
+    Mesh rebuilt = mesh;
+    rebuilt.invalidateCaches();
+    expectSameProjections( mesh, rebuilt );
+
+    // move all vertices
+    for ( auto & p : mesh.points )
+        p.z *= 0.5f;
+    mesh.updateCaches( nullptr );
+    tree = mesh.getAABBTreeNotCreate();
+    ASSERT_TRUE( tree );
+    expectValidTree( *tree, mesh );
+    rebuilt = mesh;
+    rebuilt.invalidateCaches();
+    expectSameProjections( mesh, rebuilt );
+}
+
+TEST( MRMesh, AABBTreeWidePackOptimally )
+{
+    Mesh mesh = makeSphere( { .radius = 1.0f, .numMeshVertices = 3366 } );
+    FaceBitSet del( mesh.topology.faceSize() );
+    for ( auto f : mesh.topology.getValidFaces() )
+        if ( mesh.triCenter( f ).y > 0.5f )
+            del.set( f );
+    mesh.deleteFaces( del );
+    (void)mesh.getAABBTree();
+    mesh.packOptimally( true );
+    ASSERT_EQ( mesh.topology.faceSize(), mesh.topology.numValidFaces() );
+    const auto * tree = mesh.getAABBTreeNotCreate();
+    ASSERT_TRUE( tree );
+    expectValidTree( *tree, mesh );
+    // the faces are numbered in the order of the leaves
+    int k = 0;
+    for ( const auto & lt : tree->leafTris() )
+    {
+        if ( lt.face )
+        {
+            EXPECT_EQ( lt.face, FaceId( k++ ) );
+        }
+    }
+    Mesh rebuilt = mesh;
+    rebuilt.invalidateCaches();
+    expectSameProjections( mesh, rebuilt );
 }
 
 TEST( MRMesh, AABBTreeAddSplitFaces )
@@ -116,6 +368,73 @@ TEST( MRMesh, AABBTreeAddSplitFaces )
     EXPECT_GT( numWithNewFaces, 0 );
 }
 
+// splitting a part of the last split face again and again puts its leaf one level deeper every time:
+// the tree is rebuilt before it gets deeper than MaxDepth, for which the stacks of the traversals are sized
+TEST( MRMesh, AABBTreeDeepSplits )
+{
+    auto treeDepth = []( const AABBTree & tree )
+    {
+        // the children follow their parent
+        Vector<int> depth( tree.numNodes(), 0 );
+        int res = 0;
+        for ( int n = 0; n < (int)tree.simdNodes().size(); ++n )
+            for ( int c : tree.simdNodes()[n].child )
+                if ( c )
+                    res = std::max( res, depth[tree.nodeId( c )] = depth[n] + 1 );
+        return res;
+    };
+    Mesh mesh = makeSphere( { .radius = 1.0f, .numMeshVertices = 1000 } );
+    (void)mesh.getAABBTree();
+    for ( int k = 0; k < 3 * AABBTree::MaxDepth; ++k )
+    {
+        FaceHashMap new2Old;
+        mesh.splitFace( mesh.topology.lastValidFace(), nullptr, &new2Old );
+        mesh.updateCachesAfterSplits( new2Old );
+        const auto * tree = mesh.getAABBTreeNotCreate();
+        ASSERT_TRUE( tree );
+        EXPECT_LE( treeDepth( *tree ), AABBTree::MaxDepth );
+    }
+    expectValidTree( mesh.getAABBTree(), mesh );
+}
+
+TEST( MRMesh, AABBTreeFlippedOrientation )
+{
+    Mesh mesh = makeSphere( { .radius = 1.0f, .numMeshVertices = 200 } );
+    const auto firstSphereEdges = mesh.topology.undirectedEdgeSize();
+    Mesh other = mesh;
+    other.transform( AffineXf3f::translation( Vector3f( 3.0f, 0.0f, 0.0f ) ) );
+    mesh.addMesh( other );
+    (void)mesh.getAABBTree();
+    auto expectRightTriPoints = [&]
+    {
+        ASSERT_TRUE( mesh.getAABBTreeNotCreate() );
+        expectValidTree( *mesh.getAABBTreeNotCreate(), mesh );
+        for ( const Vector3f pt : { Vector3f( 0.3f, 0.4f, 2.0f ), Vector3f( 3.3f, 0.4f, 2.0f ) } )
+        {
+            const auto proj = findProjection( pt, mesh );
+            ASSERT_TRUE( proj.proj.face );
+            const auto mtp = proj.mtp( mesh.topology );
+            EXPECT_EQ( mesh.topology.left( mtp.e ), proj.proj.face );
+            EXPECT_LT( ( mesh.triPoint( mtp ) - proj.proj.point ).length(), 1e-5f );
+            const auto hit = rayMeshIntersect( mesh, Line3f( pt, Vector3f( 0.0f, 0.0f, -1.0f ) ) );
+            ASSERT_TRUE( hit.proj.face );
+            const auto hitMtp = hit.mtp( mesh.topology );
+            EXPECT_EQ( mesh.topology.left( hitMtp.e ), hit.proj.face );
+            EXPECT_LT( ( mesh.triPoint( hitMtp ) - hit.proj.point ).length(), 1e-5f );
+            const auto sd = findSignedDistance( pt, mesh );
+            ASSERT_TRUE( sd );
+            EXPECT_EQ( sd->mtp( mesh.topology ), mtp );
+        }
+    };
+    mesh.flipOrientation(); // the tree is updated, not rebuilt
+    expectRightTriPoints();
+    UndirectedEdgeBitSet firstSphere( mesh.topology.undirectedEdgeSize() );
+    for ( UndirectedEdgeId ue( 0 ); ue < firstSphereEdges; ++ue )
+        firstSphere.set( ue );
+    mesh.flipOrientation( &firstSphere );
+    expectRightTriPoints();
+}
+
 TEST(MRMesh, AABBTreeCopyDuringConstruction)
 {
     Mesh mesh = makeUVSphere(); // use larger mesh to increase the probability of copying during construction
@@ -123,6 +442,371 @@ TEST(MRMesh, AABBTreeCopyDuringConstruction)
     tasks.run( [&] { mesh.getAABBTree(); } ); // construct the tree
     tasks.run( [&] { Mesh( mesh ).getAABBTree(); } ); // copy the mesh, then construct the tree for it
     tasks.wait();
+}
+
+// a triangle with a NaN coordinate does not hide the other triangles of its leaf from the projection
+TEST( MRMesh, AABBTreeProjectionPastNanTriangle )
+{
+    VertCoords points;
+    Triangulation t;
+    for ( int i = 0; i < 4; ++i )
+    {
+        const VertId v0( points.size() );
+        points.push_back( Vector3f( float( 2 * i ), 0, 0 ) );
+        points.push_back( Vector3f( float( 2 * i + 1 ), 0, 0 ) );
+        points.push_back( Vector3f( float( 2 * i ), 1, 0 ) );
+        t.push_back( { v0, v0 + 1, v0 + 2 } );
+    }
+    // the first vertex of the first triangle, so the first slot of the only leaf has NaN x
+    points[VertId( 0 )].x = std::numeric_limits<float>::quiet_NaN();
+    const Mesh mesh = Mesh::fromTriangles( std::move( points ), t );
+    const AABBTree & tree = mesh.getAABBTree();
+    ASSERT_EQ( tree.simdNodes().size(), 0 );
+    ASSERT_EQ( tree.numLeaves(), 1 );
+    for ( int i = 1; i < 4; ++i )
+    {
+        const Vector3f p( float( 2 * i ) + 0.25f, 0.25f, 1 );
+        const auto res = findProjection( p, mesh );
+        EXPECT_EQ( res.proj.face, FaceId( i ) );
+        EXPECT_FLOAT_EQ( res.distSq, 1 );
+    }
+}
+
+// the leaf box of every triangle is the same as by Box::include and insignificantlyExpanded, also for zeros, denormals, extreme and non-finite coordinates
+TEST( MRMesh, AABBTreeLeafBoxesOfSpecialValues )
+{
+    // no signaling NaN: Box::include of it depends on the compiler (clang for Arm turns a comparison with a constant into fminnm, which quiets it)
+    const float values[] = { 0.f, -0.f, std::numeric_limits<float>::denorm_min(), -std::numeric_limits<float>::denorm_min(), 1.f, -1.f,
+        std::numeric_limits<float>::max(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity(),
+        std::numeric_limits<float>::quiet_NaN() };
+    constexpr int numValues = int( std::size( values ) );
+    VertCoords points;
+    Triangulation t;
+    for ( int axis = 0; axis < 3; ++axis )
+        for ( int i = 0; i < numValues; ++i )
+            for ( int j = 0; j < numValues; ++j )
+                for ( int k = 0; k < numValues; ++k )
+                {
+                    const float vs[3] = { values[i], values[j], values[k] };
+                    if ( std::isnan( vs[0] ) && std::isnan( vs[1] ) && std::isnan( vs[2] ) )
+                        continue; // an invalid box, which insignificantlyExpanded asserts against
+                    const VertId v0( points.size() );
+                    for ( int n = 0; n < 3; ++n )
+                    {
+                        // ordinary other coordinates: only the tested one decides between the SIMD and the scalar code
+                        Vector3f p{ float( n + 1 ), float( i + 1 ), float( j + 1 ) };
+                        p[axis] = vs[n];
+                        points.push_back( p );
+                    }
+                    t.push_back( { v0, v0 + 1, v0 + 2 } );
+                }
+    const Mesh mesh = Mesh::fromTriangles( std::move( points ), t );
+    const AABBTree tree( mesh );
+    ASSERT_EQ( tree.numTris(), (int)t.size() );
+    int numDiffer = 0;
+    for ( size_t n = 0; n < tree.leafTris().size(); ++n )
+    {
+        const auto & lt = tree.leafTris()[n];
+        if ( !lt.face )
+            continue;
+        // what Box::include gives, with NaN skipped explicitly: MSVC for arm64 compiles Box::include here with NaN kept
+        Box3f box;
+        for ( auto v : lt.verts )
+            for ( int k = 0; k < 3; ++k )
+            {
+                const float x = mesh.points[v][k];
+                if ( std::isnan( x ) )
+                    continue;
+                if ( x < box.min[k] )
+                    box.min[k] = x;
+                if ( box.max[k] < x )
+                    box.max[k] = x;
+            }
+        const Box3f expected = box.insignificantlyExpanded();
+        const Box3f actual = tree.leafBox( int( n ) );
+        // compares the bits, NaN included
+        if ( std::memcmp( &expected, &actual, sizeof( Box3f ) ) == 0 || ++numDiffer > 5 )
+            continue;
+        std::ostringstream s;
+        s << std::hexfloat << "face " << int( lt.face ) << ", vertices";
+        for ( auto v : lt.verts )
+            s << " (" << mesh.points[v].x << ' ' << mesh.points[v].y << ' ' << mesh.points[v].z << ')';
+        for ( const Box3f * b : { &expected, &actual } )
+            s << ( b == &expected ? "\n  expected" : "\n  actual  " ) << " (" << b->min.x << ' ' << b->min.y << ' ' << b->min.z << ")-(" << b->max.x << ' ' << b->max.y << ' ' << b->max.z << ')';
+        ADD_FAILURE() << s.str();
+    }
+    EXPECT_EQ( numDiffer, 0 );
+}
+
+namespace
+{
+
+/// a triangle soup with pseudo-random integer coordinates in [0, range): exactly representable, so the tree is the same on all platforms;
+/// farOutlier moves the first vertex far away, which puts almost all centers in one bucket
+Mesh makeIntegerSoup( int numTris, int range, bool farOutlier )
+{
+    VertCoords points;
+    Triangulation t;
+    std::uint32_t s = 1;
+    const auto next = [&]
+    {
+        s = s * 1664525u + 1013904223u;
+        return float( ( s >> 8 ) % std::uint32_t( range ) );
+    };
+    for ( int f = 0; f < numTris; ++f )
+    {
+        const VertId v0( points.size() );
+        for ( int n = 0; n < 3; ++n )
+        {
+            const float x = next(), y = next(), z = next();
+            points.push_back( { x, y, z } );
+        }
+        t.push_back( { v0, v0 + 1, v0 + 2 } );
+    }
+    if ( farOutlier )
+        points.front() = Vector3f::diagonal( 16777216.f );
+    return Mesh::fromTriangles( std::move( points ), t );
+}
+
+/// FNV-1a of the nodes, the leaf triangles and the leaf boxes of the tree in the flat layout (the same as the layout before the SIMD one)
+std::uint64_t treeHash( const AABBTree & tree )
+{
+    const auto flat = makeFlatAABBTree( tree );
+    // the boxes of the triangles in the order of flat.leafTris
+    Vector<Box3f> leafBoxes( flat.leafTris.size() );
+    for ( NodeId n( 0 ); n < flat.nodes.size(); ++n )
+    {
+        const auto & node = flat.nodes[n];
+        if ( !node.leaf() )
+            continue;
+        const int l = ~tree.nodeRef( flat.treeNodeIds[n] );
+        for ( int i = 0; i < node.numLeafTris(); ++i )
+            leafBoxes[node.first + i] = tree.leafBox( l * AABBTree::MaxLeafTris + i );
+    }
+
+    std::uint64_t h = 14695981039346656037ull;
+    const auto add = [&h]( std::uint32_t x )
+    {
+        for ( int k = 0; k < 4; ++k )
+        {
+            h ^= ( x >> ( 8 * k ) ) & 0xff;
+            h *= 1099511628211ull;
+        }
+    };
+    const auto addBox = [&add]( const Box3f & b )
+    {
+        for ( int k = 0; k < 3; ++k )
+        {
+            add( bit_cast<std::uint32_t>( b.min[k] ) );
+            add( bit_cast<std::uint32_t>( b.max[k] ) );
+        }
+    };
+    for ( const auto & n : flat.nodes )
+    {
+        addBox( n.box );
+        add( std::uint32_t( n.first ) );
+        add( std::uint32_t( n.count ) );
+    }
+    for ( const auto & lt : flat.leafTris )
+    {
+        add( std::uint32_t( int( lt.face ) ) );
+        for ( auto v : lt.verts )
+            add( std::uint32_t( int( v ) ) );
+    }
+    for ( const auto & b : leafBoxes )
+        addBox( b );
+    return h;
+}
+
+/// calls f in a task arena of 16 threads, also where the processor has fewer; fails if a lower limit keeps the threads below 16; does nothing in Emscripten builds, where threads beyond the pool
+/// start only when the main thread returns to the event loop, so the extra TBB workers would hang later tests
+template <typename F>
+void withSixteenThreads( F && f )
+{
+#ifdef __EMSCRIPTEN__
+    (void)f;
+#else
+    tbb::global_control gc( tbb::global_control::max_allowed_parallelism, 16 );
+    tbb::task_arena( 16 ).execute( [&]
+    {
+        // the thread count of the tree build
+        const int threads = std::min( (int)tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ), tbb::this_task_arena::max_concurrency() );
+        ASSERT_GE( threads, 16 ) << "a lower limit of threads is set";
+        f();
+    } );
+#endif
+}
+
+} //anonymous namespace
+
+// the trees of meshes with exactly representable coordinates are pinned by their hashes, the same on all platforms and with all standard libraries
+// (equal centers are not ordered by index, their places come from the moves of the splits only):
+// small ranges, many equal centers, the median-of-medians pivots after unlucky ones (30000 triangles),
+// almost all centers in one bucket (split again in parallel for 150000 triangles), the parallel splits
+TEST( MRMesh, AABBTreeGoldenHashes )
+{
+    struct Case { int numTris, range; bool farOutlier; std::uint64_t hash; };
+    const Case cases[] = {
+        { 1000, 1 << 20, false, 0x34b0ae3e1963543dull },
+        { 20000, 4, false, 0x30fea443ef3127c4ull },
+        { 30000, 256, false, 0xe2d87436dbe263adull },
+        { 150000, 1024, true, 0x79929d9f64d4e429ull },
+        { 300000, 1 << 16, false, 0x379d3e36f2eac1caull }
+    };
+    for ( const auto & c : cases )
+    {
+        const Mesh mesh = makeIntegerSoup( c.numTris, c.range, c.farOutlier );
+        EXPECT_EQ( treeHash( AABBTree( mesh ) ), c.hash ) << c.numTris << " triangles";
+        EXPECT_EQ( treeHash( AABBTree( TriMesh{ mesh.topology.getTriangulation(), mesh.points }, &mesh.topology.getValidFaces() ) ), c.hash )
+            << c.numTris << " triangles from the triangulation";
+        withSixteenThreads( [&]
+        {
+            EXPECT_EQ( treeHash( AABBTree( mesh ) ), c.hash ) << c.numTris << " triangles on 16 threads";
+            EXPECT_EQ( treeHash( AABBTree( TriMesh{ mesh.topology.getTriangulation(), mesh.points }, &mesh.topology.getValidFaces() ) ), c.hash )
+                << c.numTris << " triangles from the triangulation on 16 threads";
+        } );
+    }
+}
+
+// the tree of a part of the triangles from the triangulation is the tree of that mesh part
+TEST( MRMesh, AABBTreeFromTriangulationRegion )
+{
+    const Mesh mesh = makeUVSphere( 1.f, 64, 32 );
+    FaceBitSet region( mesh.topology.faceSize() );
+    for ( FaceId f : mesh.topology.getValidFaces() )
+        region.set( f, f % 3 != 0 );
+    const TriMesh tmesh{ mesh.topology.getTriangulation(), mesh.points };
+    EXPECT_EQ( treeHash( AABBTree( tmesh, &region ) ), treeHash( AABBTree( { mesh, &region } ) ) );
+    EXPECT_TRUE( AABBTree( tmesh, &region ).numTris() == (int)region.count() );
+    EXPECT_TRUE( AABBTree( TriMesh{ {}, mesh.points } ).empty() );
+}
+
+// Mesh::fromTriangles keeps the vertex order of the triangles, so the tree of the triangulation is the tree of the mesh made from it
+TEST( MRMesh, AABBTreeFromTriangulationOfNewMesh )
+{
+    for ( int n : { 32, 200 } ) // 4K triangles added one by one, and 160K triangles by the manifold build
+    {
+        const Mesh sphere = makeUVSphere( 1.f, 2 * n, n );
+        const TriMesh tmesh{ sphere.topology.getTriangulation(), sphere.points };
+        const Mesh mesh = Mesh::fromTriangles( tmesh.points, tmesh.tris );
+        EXPECT_EQ( treeHash( AABBTree( tmesh ) ), treeHash( AABBTree( mesh ) ) ) << tmesh.tris.size() << " triangles";
+    }
+}
+
+// a big mesh, whose top ranges are split in parallel, gives the same tree on one thread as in the default arena and on 16 threads
+TEST( MRMesh, AABBTreeSameOnOneThread )
+{
+    const Mesh mesh = makeUVSphere( 1.f, 400, 200 ); // 160000 triangles: at least 2^17 for the parallel splits
+    std::optional<AABBTree> one, sixteen;
+    tbb::task_arena( 1 ).execute( [&] { one.emplace( mesh ); } );
+    withSixteenThreads( [&] { sixteen.emplace( mesh ); } );
+    const AABBTree all( mesh );
+    // compares the bits, NaN included
+    auto sameBits = []( const auto & x, const auto & y )
+    {
+        return x.size() == y.size() && std::memcmp( x.data(), y.data(), x.size() * sizeof( x[0] ) ) == 0;
+    };
+    const AABBTree * const trees[] = { &all, sixteen ? &*sixteen : nullptr };
+    for ( const AABBTree * t : trees )
+    {
+        if ( !t )
+            continue;
+        EXPECT_TRUE( sameBits( t->simdNodes(), one->simdNodes() ) );
+        ASSERT_EQ( t->numLeaves(), one->numLeaves() );
+        for ( int l = 0; l < t->numLeaves(); ++l )
+            ASSERT_EQ( 0, std::memcmp( &t->leafBoxes( l ), &one->leafBoxes( l ), sizeof( AABBTree::SimdBoxes ) ) ) << "leaf " << l;
+        ASSERT_EQ( t->leafTris().size(), one->leafTris().size() );
+        for ( size_t i = 0; i < t->leafTris().size(); ++i )
+        {
+            const auto & a = t->leafTris()[i];
+            const auto & b = one->leafTris()[i];
+            ASSERT_TRUE( a.face == b.face && a.verts == b.verts ) << "slot " << i;
+        }
+    }
+}
+
+// the searches in the tree of TriMesh with its points find the same as the searches in the mesh part with the same triangles
+TEST( MRMesh, ProjectionToTriMesh )
+{
+    const Mesh mesh = makeUVSphere( 1.f, 64, 32 );
+    FaceBitSet region( mesh.topology.faceSize() );
+    for ( FaceId f : mesh.topology.getValidFaces() )
+        region.set( f, f % 3 != 0 );
+    const TriMesh tmesh{ mesh.topology.getTriangulation(), mesh.points };
+    const AABBTree tree( tmesh, &region );
+    const MeshPart mp( mesh, &region );
+    const AABBTree mpTree( mp ); // the same tree, so the same one of equally close projections is found
+    const AABBTree fullTree( tmesh ); // the same as mesh.getAABBTree(), searched with region
+    const auto xf = AffineXf3f::translation( { 0.1f, 0.2f, 0.3f } );
+
+    auto same = []( const MeshProjectionResult & a, const MeshProjectionResult & b )
+    {
+        return a.proj.face == b.proj.face && a.proj.point == b.proj.point && a.tp == b.tp && a.distSq == b.distSq;
+    };
+    auto collect = []( auto && find )
+    {
+        std::vector<MeshProjectionResult> res;
+        find( [&]( const MeshProjectionResult & found, Ball3f & ) { res.push_back( found ); return Processing::Continue; } );
+        std::sort( res.begin(), res.end(), []( const auto & x, const auto & y ) { return x.proj.face < y.proj.face; } );
+        return res;
+    };
+    for ( const Vector3f pt : { Vector3f( 0.8f, 0.5f, -0.3f ), Vector3f( 0.3f, -0.9f, 0.4f ), Vector3f( 0, 0, 1.2f ) } )
+    {
+        EXPECT_TRUE( same( findProjection( pt, tmesh.points, tree ), findProjectionSubtree( pt, mp, mpTree ) ) );
+        EXPECT_TRUE( same( findProjection( pt, tmesh.points, tree, FLT_MAX, &xf ), findProjectionSubtree( pt, mp, mpTree, FLT_MAX, &xf ) ) );
+        EXPECT_TRUE( same( findProjection( pt, tmesh.points, fullTree, FLT_MAX, nullptr, 0, {}, {}, &region ), findProjection( pt, mp ) ) );
+        EXPECT_TRUE( same( findProjection( pt, tmesh.points, fullTree, FLT_MAX, &xf, 0, {}, {}, &region ), findProjection( pt, mp, FLT_MAX, &xf ) ) );
+
+        const Ball3f ball{ pt, 0.25f }; // radius 0.5
+        const auto a = collect( [&]( auto cb ) { findTrisInBall( tmesh.points, tree, ball, cb ); } );
+        const auto b = collect( [&]( auto cb ) { findTrisInBall( mp, ball, cb ); } );
+        const auto c = collect( [&]( auto cb ) { findTrisInBall( tmesh.points, fullTree, ball, cb, {}, &region ); } );
+        ASSERT_EQ( a.size(), b.size() );
+        ASSERT_EQ( c.size(), b.size() );
+        for ( size_t i = 0; i < a.size(); ++i )
+            EXPECT_TRUE( same( a[i], b[i] ) && same( c[i], b[i] ) );
+
+        std::vector<FaceId> boxedA, boxedB, boxedC;
+        findBoxedTrisInBall( tree, ball, [&]( FaceId f, Ball3f & ) { boxedA.push_back( f ); return Processing::Continue; } );
+        findBoxedTrisInBall( mp, ball, [&]( FaceId f, Ball3f & ) { boxedB.push_back( f ); return Processing::Continue; } );
+        findBoxedTrisInBall( fullTree, ball, [&]( FaceId f, Ball3f & ) { boxedC.push_back( f ); return Processing::Continue; }, &region );
+        std::sort( boxedA.begin(), boxedA.end() );
+        std::sort( boxedB.begin(), boxedB.end() );
+        std::sort( boxedC.begin(), boxedC.end() );
+        EXPECT_EQ( boxedA, boxedB );
+        EXPECT_EQ( boxedC, boxedB );
+        EXPECT_FALSE( a.empty() || boxedA.empty() );
+    }
+
+    const auto proj = findProjection( Vector3f( 0.3f, -0.9f, 0.4f ), tmesh.points, tree );
+    ASSERT_TRUE( proj.valid() && region.test( proj.proj.face ) );
+    const auto [a, b, c] = tmesh.tris[proj.proj.face];
+    const Vector3f p = proj.tp.interpolate( tmesh.points[a], tmesh.points[b], tmesh.points[c] );
+    EXPECT_NEAR( ( p - proj.proj.point ).length(), 0.f, 1e-6f );
+}
+
+// the projections without the boxes of the leaves are the same as with them, also with a region and in the tree of a triangulation
+TEST( MRMesh, AABBTreeProjectionWithoutLeafBoxes )
+{
+    const Mesh mesh = makeSphere( { .radius = 1, .numMeshVertices = 3000 } );
+    FaceBitSet region( mesh.topology.faceSize() );
+    for ( FaceId f : mesh.topology.getValidFaces() )
+        region.set( f, f % 3 != 0 );
+    const TriMesh tmesh{ mesh.topology.getTriangulation(), mesh.points };
+    const AABBTree tree( tmesh );
+    auto same = []( const MeshProjectionResult & a, const MeshProjectionResult & b )
+    {
+        return a.proj.face == b.proj.face && a.proj.point == b.proj.point && a.tp == b.tp && a.distSq == b.distSq;
+    };
+    std::mt19937 rng( 3 );
+    std::uniform_real_distribution<float> u( -1.5f, 1.5f );
+    for ( int i = 0; i < 1000; ++i )
+    {
+        const Vector3f pt( u( rng ), u( rng ), u( rng ) );
+        EXPECT_TRUE( same( findProjection( pt, mesh ), findProjection( pt, mesh, FLT_MAX, nullptr, 0, {}, {}, false ) ) );
+        EXPECT_TRUE( same( findProjection( pt, { mesh, &region } ), findProjection( pt, { mesh, &region }, FLT_MAX, nullptr, 0, {}, {}, false ) ) );
+        EXPECT_TRUE( same( findProjection( pt, tmesh.points, tree ), findProjection( pt, tmesh.points, tree, FLT_MAX, nullptr, 0, {}, {}, nullptr, false ) ) );
+    }
 }
 
 } //namespace MR

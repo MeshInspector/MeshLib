@@ -73,8 +73,7 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <Defines>_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH</Defines>
-      <AdditionalOptions>-std=c++17 -Xcompiler "/std:c++17" -Xcudafe "--diag_suppress=field_without_dll_interface" -Xcudafe "--diag_suppress=base_class_has_different_dll_interface" -allow-unsupported-compiler %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>-std=c++17 -Xcompiler "/std:c++17" -Xcudafe "--diag_suppress=field_without_dll_interface" -Xcudafe "--diag_suppress=base_class_has_different_dll_interface" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
@@ -98,8 +97,7 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
-      <Defines>_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH</Defines>
-      <AdditionalOptions>-std=c++17 -Xcompiler "/std:c++17" -Xcudafe "--diag_suppress=field_without_dll_interface" -Xcudafe "--diag_suppress=base_class_has_different_dll_interface" -allow-unsupported-compiler %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>-std=c++17 -Xcompiler "/std:c++17" -Xcudafe "--diag_suppress=field_without_dll_interface" -Xcudafe "--diag_suppress=base_class_has_different_dll_interface" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -115,6 +113,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
+    <ClInclude Include="MRCudaAABBTree.hpp" />
     <ClInclude Include="MRCudaBasic.cuh" />
     <ClInclude Include="MRCudaBasic.hpp" />
     <ClInclude Include="MRCudaBasic.h" />

@@ -1,8 +1,8 @@
-import createMeshLib from '@meshinspector/meshlib';
+import * as ml from '@meshinspector/meshlib';
 
-const ml = await createMeshLib();
+await ml.init();
 
-using mesh = ml.makeTorus(1.0, 0.1, 16, 16);
+using mesh = ml.makeTorus();
 
 // Relax mesh (5 iterations)
 using relaxParams = new ml.MeshRelaxParams();
@@ -15,6 +15,5 @@ subdivideSettings.maxDeviationAfterFlip = 0.5;
 ml.subdivideMesh(mesh, subdivideSettings);
 
 // Rotate mesh
-using rotation = ml.Matrix3f.rotation(ml.Vector3.plusZ(), Math.PI * 0.5);
-using rotationXf = ml.AffineXf3f.linear(rotation);
+const rotationXf = ml.AffineXf3f.linear(ml.Matrix3f.rotation(ml.Vector3f.plusZ(), Math.PI * 0.5));
 mesh.transform(rotationXf);

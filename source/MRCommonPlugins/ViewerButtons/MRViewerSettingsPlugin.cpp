@@ -372,6 +372,15 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth )
         UI::setTooltipIfHovered( _tr( "Allow tool windows to be moved outside the main window. To apply the changes, need to restart the application." ) );
     }
 
+    if ( viewer->getLaunchParams().splashWindow )
+    {
+        auto& config = Config::instance();
+        bool value = config.getBool( cShowSplashScreenKey, true );
+        if ( UI::checkbox( _tr( "Show Splash Screen" ), &value ) )
+            config.setBool( cShowSplashScreenKey, value );
+        UI::setTooltipIfHovered( _tr( "Show the splash screen while the application is starting." ) );
+    }
+
     if ( UI::button( _tr( "Toolbar Customize" ), Vector2f( btnHalfSizeX, 0 ) ) && ribbonMenu )
         ribbonMenu->openToolbarCustomize();
 
@@ -1179,6 +1188,45 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth )
     UI::setTooltipIfHovered( _tr( "Reverses the mouse wheel zoom direction." ) );
 
     UI::separator( UI::SeparatorParams{ .extraScale = cSeparatorIndentMultiplier } );
+
+    // presets of the camera controls: rotation with one mouse button, translation with another one,
+    // roll with the rotation button and the primary modifier
+    struct NavigationPreset
+    {
+        const char* name;
+        MouseButton rotate, translate;
+    };
+    static constexpr std::array<NavigationPreset, 3> cNavigationPresets = { {
+        { _t( "Middle Button (as in Blender, 3ds Max)" ), MouseButton::Middle, MouseButton::Right },
+        { _t( "Left Button (as in MeshLab, Metashape)" ), MouseButton::Left, MouseButton::Right },
+        { _t( "Right Button (as in Rhino)" ), MouseButton::Right, MouseButton::Middle },
+    } };
+    auto& mouseController = viewer->mouseController();
+    const auto hasControl = [&] ( MouseMode mode, MouseButton btn, int mod )
+    {
+        const auto ctrl = mouseController.findControlByMode( mode );
+        return ctrl && ctrl->btn == btn && ctrl->mod == mod;
+    };
+    int navigationPreset = -1; // custom controls
+    std::vector<std::string> navigationPresetNames;
+    for ( int i = 0; i < int( cNavigationPresets.size() ); ++i )
+    {
+        const auto& preset = cNavigationPresets[i];
+        navigationPresetNames.push_back( _tr( preset.name ) );
+        if ( hasControl( MouseMode::Rotation, preset.rotate, 0 ) && hasControl( MouseMode::Translation, preset.translate, 0 ) &&
+            hasControl( MouseMode::Roll, preset.rotate, getGlfwModPrimaryCtrl() ) )
+            navigationPreset = i;
+    }
+    ImGui::SetNextItemWidth( 250.0f * UI::scale() );
+    if ( UI::combo( _tr( "Rotate With" ), &navigationPreset, navigationPresetNames, true, {}, _tr( "Custom" ) ) )
+    {
+        const auto& preset = cNavigationPresets[navigationPreset];
+        mouseController.setMouseControl( { preset.translate, 0 }, MouseMode::Translation );
+        mouseController.setMouseControl( { preset.rotate, 0 }, MouseMode::Rotation );
+        mouseController.setMouseControl( { preset.rotate, getGlfwModPrimaryCtrl() }, MouseMode::Roll );
+    }
+    UI::setTooltipIfHovered( _tr( "Mouse buttons for rotating, moving and rolling the camera, as in other 3D programs. "
+        "Each control can also be changed below." ) );
 
     for ( int i = 0; i < int( MouseMode::Count ); ++i )
     {

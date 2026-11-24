@@ -3,6 +3,7 @@
 
 #include "MRCudaBasic.cuh"
 #include "MRCudaBasic.h"
+#include "MRCudaAABBTree.hpp"
 
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRChunkIterator.h"
@@ -46,18 +47,13 @@ Expected<DistanceMap> computeDistanceMap( const MR::Mesh& mesh, const MR::MeshTo
         return unexpectedOperationCanceled();
 
     const AABBTree& tree = mesh.getAABBTree();
-    const auto& nodes = tree.nodes();
     const auto& meshPoints = mesh.points;
-    const auto tris = mesh.topology.getTriangulation();
 
     DynamicArray<float3> cudaMeshPoints;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaMeshPoints.fromVector( meshPoints ) );
 
-    DynamicArray<Node3> cudaNodes;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaNodes.fromVector( nodes ) );
-
-    DynamicArray<FaceToThreeVerts> cudaFaces;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaFaces.fromVector( tris ) );
+    MeshTreeBuffers cudaTree;
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaTree.fromTree( tree ) );
 
     MeshToDistanceMapParams cudaParams {
         .xRange = { params.xRange.x, params.xRange.y, params.xRange.z },
@@ -108,7 +104,7 @@ Expected<DistanceMap> computeDistanceMap( const MR::Mesh& mesh, const MR::MeshTo
     {
         const auto cb2 = subprogress( cb1, iterIndex++, iterCount );
 
-        computeMeshDistanceMapKernel( cudaNodes.data(), cudaMeshPoints.data(), cudaFaces.data(), cudaParams, cudaPrec, shift, result.data(), outSamples ? outTriPoints.data() : nullptr, size, offset );
+        computeMeshDistanceMapKernel( cudaTree.toData(), cudaMeshPoints.data(), cudaParams, cudaPrec, shift, result.data(), outSamples ? outTriPoints.data() : nullptr, size, offset );
         CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
         if ( !reportProgress( cb2, 0.33f ) )
             return unexpectedOperationCanceled();
@@ -127,14 +123,13 @@ Expected<DistanceMap> computeDistanceMap( const MR::Mesh& mesh, const MR::MeshTo
 size_t computeDistanceMapHeapBytes( const MR::Mesh& mesh, const MR::MeshToDistanceMapParams& params, bool needOutSamples /*= false */ )
 {
     const AABBTree& tree = mesh.getAABBTree();
-    const auto& nodes = tree.nodes();
     const auto& meshPoints = mesh.points;
     constexpr size_t cMinRowCount = 10;
     size_t size = cMinRowCount * params.resolution.y;
     return
-        nodes.size() * sizeof( Cuda::Node3 ) +
+        Cuda::MeshTreeBuffers::heapBytes( tree ) +
         meshPoints.size() * sizeof( float3 ) +
-        mesh.topology.numValidFaces() * sizeof( FaceToThreeVerts ) +
+
         size * sizeof( float ) +
         ( needOutSamples ? ( size * sizeof( Cuda::MeshTriPoint ) ) : 0 );
 }

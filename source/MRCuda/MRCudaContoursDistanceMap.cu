@@ -53,22 +53,21 @@ __global__ void kernel(
 
     auto getSubTask = [&] ( int n )
     {
-        return SubTask{ n, lengthSq( polyline.nodes[n].box.getBoxClosestPointTo( pt ) - pt ) };
+        return SubTask{ n, lengthSq( polyline.box( n ).getBoxClosestPointTo( pt ) - pt ) };
     };
 
-    addSubTask( getSubTask( 0 ) );
+    addSubTask( getSubTask( polyline.root ) );
 
     while ( !subtasks.empty() )
     {
         const auto s = subtasks.top();
         subtasks.pop();
-        const auto& node = polyline.nodes[s.n];
         if ( s.distSq >= resDistSq )
             continue;
 
-        if ( node.leaf() )
+        if ( Polyline2Data::isLeaf( s.n ) )
         {
-            const auto lineId = node.leafId();
+            const auto lineId = polyline.leafId( s.n );
             float2 a = polyline.points[polyline.orgs[2 * lineId]];
             float2 b = polyline.points[polyline.orgs[2 * lineId + 1]];
             auto proj = closestPointOnLineSegm( pt, a, b );
@@ -81,6 +80,7 @@ __global__ void kernel(
             continue;
         }
 
+        const auto& node = polyline.nodes[s.n];
         auto s1 = getSubTask( node.l );
         auto s2 = getSubTask( node.r );
         if ( s1.distSq < s2.distSq )

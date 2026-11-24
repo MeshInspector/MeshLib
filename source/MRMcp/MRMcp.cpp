@@ -15,7 +15,9 @@
 #include <fstream>
 #include <optional>
 #include <string>
+#include <system_error>
 #include <type_traits>
+#include <typeinfo>
 
 
 namespace MR::Mcp
@@ -80,6 +82,69 @@ nlohmann::json toolErrorResult( const std::string& message )
     };
 }
 
+// JSON-RPC 2.0 standard error codes (https://www.jsonrpc.org/specification#error_object).
+enum class RpcErrorCode : int
+{
+    ParseError     = -32700,
+    InvalidRequest = -32600,
+    MethodNotFound = -32601,
+    InvalidParams  = -32602,
+    InternalError  = -32603,
+};
+
+struct ToolFailure
+{
+    std::string message;
+    int httpStatus = 500;
+    RpcErrorCode rpcCode = RpcErrorCode::InternalError;
+};
+
+// Call only from a catch block: sends a per-cause telemetry signal and logs the exception being handled.
+// Telemetry gets the tool id only, never the error text (unbounded, may carry object names or file paths).
+ToolFailure onToolFailure( const std::string& toolId )
+{
+    const char* telemetryName = "MCP Tool Failed: ";
+    ToolFailure res{ "Unknown exception." };
+    try
+    {
+        throw;
+    }
+    catch ( const fastmcpp::NotFoundError& e )
+    {
+        telemetryName = "MCP Tool Not Found Failed: ";
+        res = { e.what(), 404, RpcErrorCode::MethodNotFound };
+        spdlog::warn( "MCP tool `{}` not found: {}", toolId, e.what() );
+    }
+    catch ( const fastmcpp::ValidationError& e )
+    {
+        telemetryName = "MCP Tool Validation Failed: ";
+        res = { e.what(), 400, RpcErrorCode::InvalidParams };
+        spdlog::warn( "MCP tool `{}` rejected the call: {}", toolId, e.what() );
+    }
+    catch ( const std::system_error& e )
+    {
+        res.message = e.what();
+        spdlog::error( "MCP tool `{}` failed: {} ({} {}): {}", toolId, typeid( e ).name(), e.code().category().name(), e.code().value(), e.what() );
+    }
+    catch ( const std::exception& e )
+    {
+        res.message = e.what();
+        spdlog::warn( "MCP tool `{}` failed: {}: {}", toolId, typeid( e ).name(), e.what() );
+    }
+    catch ( ... )
+    {
+        spdlog::error( "MCP tool `{}` failed: unknown exception", toolId );
+    }
+    TelemetrySignal( telemetryName + toolId );
+    return res;
+}
+
+std::string stringField( const nlohmann::json& j, const char* key )
+{
+    auto it = j.find( key );
+    return it != j.end() && it->is_string() ? it->get<std::string>() : std::string();
+}
+
 } // namespace
 
 struct Server::State
@@ -104,7 +169,22 @@ struct Server::State
 void Server::State::createServer( const Params& params )
 {
     assert( !server );
-    server.emplace( fastmcpp::mcp::make_mcp_handler( params.name, params.version, toolManager, toolDescs ), params.address, params.port );
+    // Logs JSON-RPC errors made outside the tool wrapper (unknown method or tool, fastmcpp internals).
+    // Notifications (no `id`) are skipped: fastmcpp answers e.g. `notifications/initialized` with "not found".
+    auto handler = [inner = fastmcpp::mcp::make_mcp_handler( params.name, params.version, toolManager, toolDescs )]( const fastmcpp::Json& request )
+    {
+        auto response = inner( request );
+        if ( auto err = response.find( "error" ); err != response.end() && request.contains( "id" ) )
+        {
+            std::string what = "`" + stringField( request, "method" ) + "`";
+            if ( auto p = request.find( "params" ); p != request.end() )
+                if ( auto tool = stringField( *p, "name" ); !tool.empty() )
+                    what += " for tool `" + tool + "`";
+            spdlog::warn( "MCP request {} failed: {}", what, err->dump() );
+        }
+        return response;
+    };
+    server.emplace( std::move( handler ), params.address, params.port );
 
     auto onList = [this]( const httplib::Request& req, httplib::Response& res ) {
         handleToolsList( req, res );
@@ -163,16 +243,6 @@ nlohmann::json Server::State::buildToolEntryJson( const std::string& name ) cons
 
 namespace
 {
-
-// JSON-RPC 2.0 standard error codes (https://www.jsonrpc.org/specification#error_object).
-enum class RpcErrorCode : int
-{
-    ParseError     = -32700,
-    InvalidRequest = -32600,
-    MethodNotFound = -32601,
-    InvalidParams  = -32602,
-    InternalError  = -32603,
-};
 
 void writeJsonError( httplib::Response& res, int httpStatus, std::string message, RpcErrorCode rpcCode )
 {
@@ -294,26 +364,10 @@ void Server::State::handleToolsCall( const httplib::Request& req, httplib::Respo
         checkRequiredArgs( reifyStringEncodedArgs( args, schema ), schema );
         result = toolManager.invoke( toolId, args );
     }
-    catch ( const fastmcpp::NotFoundError& e )
+    catch ( ... )
     {
-        // Distinctive per-type failure signals (vs. one generic string) so analytics
-        // can break failures down by cause. Tool id only — never e.what(), which is
-        // unbounded and may carry object names or file paths (PII / high cardinality),
-        // matching the invocation event above. The text is still returned to the
-        // caller via writeJsonError below.
-        TelemetrySignal( "MCP Tool Not Found Failed: " + toolId );
-        writeJsonError( res, 404, e.what(), RpcErrorCode::MethodNotFound );
-        return;
-    }
-    catch ( const fastmcpp::ValidationError& e )
-    {
-        TelemetrySignal( "MCP Tool Validation Failed: " + toolId );
-        writeJsonError( res, 400, e.what(), RpcErrorCode::InvalidParams );
-        return;
-    }
-    catch ( const std::exception& e )
-    {
-        writeJsonError( res, 500, e.what(), RpcErrorCode::InternalError );
+        auto f = onToolFailure( toolId );
+        writeJsonError( res, f.httpStatus, std::move( f.message ), f.rpcCode );
         return;
     }
     if ( result.is_object() && result.value( "isError", false ) )
@@ -383,15 +437,9 @@ bool Server::addTool( std::string id, std::string name, std::string desc, Schema
             checkRequiredArgs( reified, schema );
             return inner( reified );
         }
-        catch ( const fastmcpp::ValidationError& e )
+        catch ( ... )
         {
-            TelemetrySignal( "MCP Tool Validation Failed: " + id );
-            return toolErrorResult( e.what() );
-        }
-        catch ( const std::exception& e )
-        {
-            TelemetrySignal( "MCP Tool Failed: " + id );
-            return toolErrorResult( e.what() );
+            return toolErrorResult( onToolFailure( id ).message );
         }
     };
     fastmcpp::tools::Tool tool( id, std::move( schemaJson ), std::move( outputSchema ).asJson(), std::move( wrapped ), name, desc, {} );

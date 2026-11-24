@@ -1,4 +1,5 @@
 #include <MRMesh/MRFastInt.h>
+#include <MRMesh/MRNextUpDown.h>
 #include <MRMesh/MRVector3.h>
 #include <gtest/gtest.h>
 #include <algorithm>
@@ -547,8 +548,8 @@ void expectNearestDouble( const Words<nWords> & w, double d )
     EXPECT_LE( err << 53, absRef ) << "value " << ref << " became " << refD;
 
     // and no other double is closer, which the bound alone does not imply
-    EXPECT_GE( refDist( ref, toRef( std::nextafter( d, -INFINITY ) ) ), err ) << ref;
-    EXPECT_GE( refDist( ref, toRef( std::nextafter( d, INFINITY ) ) ), err ) << ref;
+    EXPECT_GE( refDist( ref, toRef( nextDown( d ) ) ), err ) << ref;
+    EXPECT_GE( refDist( ref, toRef( nextUp( d ) ) ), err ) << ref;
 }
 
 // toDouble of the given width against the reference, over all magnitudes

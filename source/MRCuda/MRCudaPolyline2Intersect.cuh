@@ -2,6 +2,7 @@
 
 #include "MRCudaInplaceStack.cuh"
 #include "MRCudaMath.cuh"
+#include "MRCudaPolyline.cuh"
 
 namespace MR::Cuda
 {
@@ -17,27 +18,27 @@ __device__ inline bool rayBoxIntersect( const Box2 box, const float2 plusXRaySta
     return true;
 }
 
-__device__ bool isPointInsidePolyline( const float2 point, const Node2* __restrict__ nodes, const float2* __restrict__ points, const int* __restrict__ orgs )
+__device__ bool isPointInsidePolyline( const float2 point, const Polyline2Data& polyline )
 {
     InplaceStack<int, 32> nodesStack;
-    nodesStack.push( 0 );
+    nodesStack.push( polyline.root );
 
     int intersectionCounter = 0;
     while ( !nodesStack.empty() )
     {
-        const auto& node = nodes[nodesStack.top()];
+        const auto n = nodesStack.top();
         nodesStack.pop();
-        if ( node.leaf() )
+        if ( Polyline2Data::isLeaf( n ) )
         {
-            if ( point.x <= node.box.min.x )
+            if ( point.x <= polyline.box( n ).min.x )
             {
                 ++intersectionCounter;
                 continue;
             }
 
-            const auto ue = node.leafId();
-            const auto& org = points[orgs[2 * ue + 0]];
-            const auto& dst = points[orgs[2 * ue + 1]];
+            const auto ue = polyline.leafId( n );
+            const auto& org = polyline.points[polyline.orgs[2 * ue + 0]];
+            const auto& dst = polyline.points[polyline.orgs[2 * ue + 1]];
 
             const auto yLength = (double)dst.y - (double)org.y;
             if ( yLength != 0. )
@@ -51,9 +52,10 @@ __device__ bool isPointInsidePolyline( const float2 point, const Node2* __restri
             continue;
         }
 
-        if ( rayBoxIntersect( nodes[node.l].box, point ) )
+        const auto& node = polyline.nodes[n];
+        if ( rayBoxIntersect( polyline.box( node.l ), point ) )
             nodesStack.push( node.l );
-        if ( rayBoxIntersect( nodes[node.r].box, point ) )
+        if ( rayBoxIntersect( polyline.box( node.r ), point ) )
             nodesStack.push( node.r );
     }
 

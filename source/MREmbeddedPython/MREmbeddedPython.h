@@ -29,6 +29,7 @@ public:
 
     // If you have used `runScript()` at least once, you should call this before terminating the program.
     // Otherwise you can get a crash in Python cleanup.
+    // Waits for the non-daemon Python threads that scripts started.
     MREMBEDDEDPYTHON_API static void shutdown();
 
     // Returns true if the interpreter is busy running something.
@@ -37,7 +38,7 @@ public:
 
     // Returns false on failure.
     // If `onDoneAsync` is set, doesn't wait for the script to finish.
-    // Will call `onDoneAsync` asynchronously when done (from the Python interpreter thread).
+    // Will call `onDoneAsync` asynchronously when done (from the Python interpreter thread, without the GIL).
     MREMBEDDEDPYTHON_API static bool runString( std::string pythonString, std::function<void( bool success )> onDoneAsync = nullptr );
 
     MREMBEDDEDPYTHON_API static bool runScript( const std::filesystem::path& path );

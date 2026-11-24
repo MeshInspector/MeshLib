@@ -68,9 +68,9 @@ Expected<void> projectObjectMeshData( const ObjectMeshData& oldMeshData, ObjectM
         auto vertFunc = [&] ( VertId id, const MeshProjectionResult& res, VertId v1, VertId v2, VertId v3 )
         {
             if ( !oldVertColors.empty() )
-                newMeshData.vertColors[id] = res.mtp.bary.interpolate( oldVertColors[v1], oldVertColors[v2], oldVertColors[v3] );
+                newMeshData.vertColors[id] = res.tp.interpolate( oldVertColors[v1], oldVertColors[v2], oldVertColors[v3] );
             if ( !oldUVCoords.empty() )
-                newMeshData.uvCoordinates[id] = res.mtp.bary.interpolate( oldUVCoords[v1], oldUVCoords[v2], oldUVCoords[v3] );
+                newMeshData.uvCoordinates[id] = res.tp.interpolate( oldUVCoords[v1], oldUVCoords[v2], oldUVCoords[v3] );
         };
 
         VertBitSet vertRegion;

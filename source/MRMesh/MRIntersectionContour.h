@@ -24,6 +24,7 @@ using ContinuousContours = Vector<ContinuousContour>;
 /// 4. Orientation of contours:
 ///    a. left  of contours on mesh A is inside of mesh B (consequence of 3a),
 ///    b. right of contours on mesh B is inside of mesh A (consequence of 3b).
+/// Returns no contours if two intersections have the same next one, which only a mesh with a face that is not a triangle is known to give.
 MRMESH_API ContinuousContours orderIntersectionContours( const MeshTopology& topologyA, const MeshTopology& topologyB, const PreciseCollisionResult& intersections );
 
 /// Combines unordered input self-intersections (and flips orientation of some intersected edges) into ordered oriented contours with the properties:
@@ -42,6 +43,7 @@ MRMESH_API ContinuousContours orderIntersectionContours( const MeshTopology& top
 /// 5. Orientation of contours:
 ///    a. first element of even (0,2,...) contours has isEdgeATriB() = true, left of even contours goes inside (consequence of 3a),
 ///    b. first element of odd (1,3,...) contours has isEdgeATriB() = false, right of odd contours goes inside (consequence of 3b).
+/// Returns no contours if two intersections have the same next one, which only a mesh with a face that is not a triangle is known to give.
 MRMESH_API ContinuousContours orderSelfIntersectionContours( const MeshTopology& topology, const std::vector<EdgeTri>& intersections );
 
 /// extracts coordinates from two meshes intersection contours

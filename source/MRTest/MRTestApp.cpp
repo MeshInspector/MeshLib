@@ -14,6 +14,8 @@
 #ifndef MESHLIB_NO_PYTHON
 #include "MRPython/MRPython.h"
 #include "MREmbeddedPython/MREmbeddedPython.h"
+#include <chrono>
+#include <thread>
 #endif
 
 namespace MR
@@ -93,6 +95,28 @@ int main( int argc, char** argv )
                 spdlog::info( "Embedded python run passed" );
             else
                 spdlog::error( "Embedded python run failed" );
+
+            // a thread started by one script must run long before the next one: with the GIL held while idle, it runs only as the next one starts
+            if ( ok )
+            {
+                spdlog::info( "Checking that embedded python releases the GIL between scripts" );
+                ok = MR::EmbeddedPython::runString(
+                    "import sys, threading, time\n"
+                    "def mark( sys=sys, time=time ):\n" // bound now: the globals are cleared after the script
+                    "    time.sleep( 0.02 )\n"
+                    "    sys.mrRanWhileIdleAt = time.monotonic()\n"
+                    "threading.Thread( target=mark, daemon=True ).start()\n" );
+                std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
+                ok = ok && MR::EmbeddedPython::runString(
+                    "import sys, time\n"
+                    "startedAt = time.monotonic()\n"
+                    "ranAt = getattr( sys, 'mrRanWhileIdleAt', None )\n"
+                    "assert ranAt is not None and startedAt - ranAt > 0.25, 'a Python thread did not run between the scripts: the GIL is held while idle'\n" );
+                if ( ok )
+                    spdlog::info( "Embedded python releases the GIL between scripts" );
+                else
+                    spdlog::error( "Embedded python holds the GIL between scripts" );
+            }
             MR::EmbeddedPython::shutdown();
             spdlog::info( "Embedded python shut down" );
 

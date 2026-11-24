@@ -27,41 +27,40 @@ std::vector<EdgePointPair> findCollidingEdgePairs( const Polyline2& a, const Pol
     std::vector<EdgePointPair> res;
     const AABBTreePolyline2& aTree = a.getAABBTree();
     const AABBTreePolyline2& bTree = b.getAABBTree();
-    if ( aTree.nodes().empty() || bTree.nodes().empty() )
+    if ( aTree.empty() || bTree.empty() )
         return res;
 
-    std::vector<NodeNodePoly> subtasks{ { NodeId{ 0 }, NodeId{ 0 } } };
+    std::vector<NodeNodePoly> subtasks{ { aTree.rootNodeId(), bTree.rootNodeId() } };
 
     while ( !subtasks.empty() )
     {
         const auto s = subtasks.back();
         subtasks.pop_back();
 
-        const auto& aNode = aTree[s.aNode];
-        const auto& bNode = bTree[s.bNode];
-
-        const auto overlap = aNode.box.intersection( transformed( bNode.box, rigidB2A ) );
+        const auto overlap = aTree.box( s.aNode ).intersection( transformed( bTree.box( s.bNode ), rigidB2A ) );
         if ( !overlap.valid() )
             continue;
 
-        if ( aNode.leaf() && bNode.leaf() )
+        if ( aTree.isLeaf( s.aNode ) && bTree.isLeaf( s.bNode ) )
         {
-            const auto aUndirEdge = aNode.leafId();
-            const auto bUndirEdge = bNode.leafId();
+            const auto aUndirEdge = aTree.leafId( s.aNode );
+            const auto bUndirEdge = bTree.leafId( s.bNode );
             res.emplace_back( EdgePoint{ aUndirEdge, 0.5f }, EdgePoint{ bUndirEdge, 0.5f } );
             continue;
         }
 
-        if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
+        if ( !aTree.isLeaf( s.aNode ) && ( bTree.isLeaf( s.bNode ) || aTree.box( s.aNode ).volume() >= bTree.box( s.bNode ).volume() ) )
         {
             // split aNode
+            const auto& aNode = aTree[s.aNode];
             subtasks.emplace_back( aNode.l, s.bNode );
             subtasks.emplace_back( aNode.r, s.bNode );
         }
         else
         {
-            assert( !bNode.leaf() );
+            assert( !bTree.isLeaf( s.bNode ) );
             // split bNode
+            const auto& bNode = bTree[s.bNode];
             subtasks.emplace_back( s.aNode, bNode.l );
             subtasks.emplace_back( s.aNode, bNode.r );
         }
@@ -175,22 +174,20 @@ std::vector<EdgePointPair> findSelfCollidingEdgePairs( const Polyline2& polyline
 
     std::vector<EdgePointPair> res;
     const AABBTreePolyline2& tree = polyline.getAABBTree();
-    if ( tree.nodes().empty() )
+    if ( tree.empty() )
         return res;
 
-    std::vector<NodeNodePoly> subtasks{ { NodeId{ 0 }, NodeId{ 0 } } };
+    std::vector<NodeNodePoly> subtasks{ { tree.rootNodeId(), tree.rootNodeId() } };
 
     while ( !subtasks.empty() )
     {
         const auto s = subtasks.back();
         subtasks.pop_back();
-        const auto& aNode = tree[s.aNode];
-        const auto& bNode = tree[s.bNode];
-
         if ( s.aNode == s.bNode )
         {
-            if ( !aNode.leaf() )
+            if ( !tree.isLeaf( s.aNode ) )
             {
+                const auto& aNode = tree[s.aNode];
                 subtasks.emplace_back( aNode.l, aNode.l );
                 subtasks.emplace_back( aNode.r, aNode.r );
                 subtasks.emplace_back( aNode.l, aNode.r );
@@ -198,14 +195,14 @@ std::vector<EdgePointPair> findSelfCollidingEdgePairs( const Polyline2& polyline
             continue;
         }
 
-        const auto overlap = aNode.box.intersection( bNode.box );
+        const auto overlap = tree.box( s.aNode ).intersection( tree.box( s.bNode ) );
         if ( !overlap.valid() )
             continue;
 
-        if ( aNode.leaf() && bNode.leaf() )
+        if ( tree.isLeaf( s.aNode ) && tree.isLeaf( s.bNode ) )
         {
-            const auto aUndirEdge = aNode.leafId();
-            const auto bUndirEdge = bNode.leafId();
+            const auto aUndirEdge = tree.leafId( s.aNode );
+            const auto bUndirEdge = tree.leafId( s.bNode );
             VertId av[2], bv[2];
             av[0] = polyline.topology.org( aUndirEdge ); av[1] = polyline.topology.dest( aUndirEdge );
             bv[0] = polyline.topology.org( bUndirEdge ); bv[1] = polyline.topology.dest( bUndirEdge );
@@ -214,16 +211,18 @@ std::vector<EdgePointPair> findSelfCollidingEdgePairs( const Polyline2& polyline
             continue;
         }
 
-        if ( !aNode.leaf() && ( bNode.leaf() || aNode.box.volume() >= bNode.box.volume() ) )
+        if ( !tree.isLeaf( s.aNode ) && ( tree.isLeaf( s.bNode ) || tree.box( s.aNode ).volume() >= tree.box( s.bNode ).volume() ) )
         {
             // split aNode
+            const auto& aNode = tree[s.aNode];
             subtasks.emplace_back( aNode.l, s.bNode );
             subtasks.emplace_back( aNode.r, s.bNode );
         }
         else
         {
-            assert( !bNode.leaf() );
+            assert( !tree.isLeaf( s.bNode ) );
             // split bNode
+            const auto& bNode = tree[s.bNode];
             subtasks.emplace_back( s.aNode, bNode.l );
             subtasks.emplace_back( s.aNode, bNode.r );
         }

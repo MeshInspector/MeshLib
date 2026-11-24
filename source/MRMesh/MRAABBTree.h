@@ -1,6 +1,14 @@
 #pragma once
 
-#include "MRAABBTreeBase.h"
+#include "MRBox.h"
+#include "MRId.h"
+#include "MRVector.h"
+#include "MRResizeNoInit.h"
+#include "MRMeshPart.h"
+#include "MRAABBTreeSimd.h"
+#include <algorithm>
+#include <limits>
+#include <vector>
 
 namespace MR
 {
@@ -10,31 +18,130 @@ namespace MR
  * \brief This chapter represents documentation about AABB Tree
  */
 
-/// bounding volume hierarchy
-/// \ingroup AABBTreeGroup
-class AABBTree : public AABBTreeBase<FaceTreeTraits3>
+/// \addtogroup AABBTreeGroup
+/// \{
+
+/// triangle in a leaf of AABBTree
+struct AABBTreeWideLeafTri
+{
+    FaceId face; ///< invalid in the unused slots of a leaf
+    ThreeVertIds verts; ///< in the order of mesh.topology.getTriVerts( face )
+
+    AABBTreeWideLeafTri() = default;
+    AABBTreeWideLeafTri( FaceId face, const ThreeVertIds & verts ) noexcept : face( face ), verts( verts ) {}
+    /// all members uninitialized, e.g. for the triangles written by the tree builder
+    explicit AABBTreeWideLeafTri( NoInit ) noexcept : face( noInit ), verts( noInit ) {}
+};
+
+/// bounding volume hierarchy of mesh triangles with up to 4 children per node and up to 4 triangles per leaf
+/// in SIMD layout: every internal node keeps the boxes of its children, and every leaf the boxes of its triangles;
+/// the triangles of leaf l are in slots [4 * l, 4 * l + 4) of leafTris(), its unused slots have invalid faces;
+/// a node is referenced as in AABBTreeSimdNode::child, or by NodeId: the internal nodes first, then the leaves
+class AABBTree
 {
 public:
+    static constexpr int MaxChildren = 4;
+    static constexpr int MaxLeafTris = 4;
+    /// the deepest level of a node (the root is at 0): the stacks of the traversals are sized for it, and addSplitFaces rebuilds a deeper tree
+    static constexpr int MaxDepth = 16;
+
+    using LeafTri = AABBTreeWideLeafTri;
+    using SimdBoxes = AABBTreeSimdBoxes;
+    using SimdNode = AABBTreeSimdNode;
+
     /// creates tree for given mesh or its part
     [[nodiscard]] MRMESH_API explicit AABBTree( const MeshPart & mp );
+
+    /// creates tree for the triangles of tmesh (all if region is nullptr), faster than from a mesh;
+    /// it is the tree of a mesh with tmesh.points and mesh.topology.getTriVerts( f ) == tmesh.tris[f] for all its triangles
+    [[nodiscard]] MRMESH_API explicit AABBTree( const TriMesh & tmesh, const FaceBitSet * region = nullptr );
 
     AABBTree() = default;
     AABBTree( AABBTree && ) noexcept = default;
     AABBTree & operator =( AABBTree && ) noexcept = default;
 
-    /// updates bounding boxes of the nodes containing changed vertices;
+    /// returns true if the tree has no triangles
+    [[nodiscard]] bool empty() const { return leafBoxes_.empty(); }
+
+    /// returns the number of triangles in the tree
+    [[nodiscard]] int numTris() const { return numTris_; }
+
+    /// the internal nodes, the root is the first one (if the tree has more than MaxLeafTris triangles)
+    [[nodiscard]] MR_BIND_IGNORE const Vector<SimdNode> & simdNodes() const { return simdNodes_; }
+
+    /// the number of leaves
+    [[nodiscard]] int numLeaves() const { return (int)leafBoxes_.size(); }
+
+    /// the bounding boxes of the triangles of given leaf, slightly expanded for robust searches (empty in the unused slots)
+    [[nodiscard]] MR_BIND_IGNORE const SimdBoxes & leafBoxes( int leaf ) const { return leafBoxes_[leaf]; }
+
+    /// the triangles of all leaves, MaxLeafTris slots per leaf
+    [[nodiscard]] const Vector<LeafTri> & leafTris() const { return leafTris_; }
+
+    /// the bounding box of the triangle in slot i of leafTris(), slightly expanded for robust searches (empty for an unused slot)
+    [[nodiscard]] Box3f leafBox( int i ) const { return leafBoxes_[i / MaxLeafTris].get( i % MaxLeafTris ); }
+
+    /// the number of triangles in given leaf
+    [[nodiscard]] int numLeafTris( int leaf ) const
+    {
+        const auto * lt = leafTris_.data() + leaf * MaxLeafTris;
+        return 1 + lt[1].face.valid() + lt[2].face.valid() + lt[3].face.valid();
+    }
+
+    /// the reference to the root as in SimdNode::child: 0, or ~0 if the tree has one leaf only
+    [[nodiscard]] int rootRef() const { return simdNodes_.empty() ? ~0 : 0; }
+
+    /// returns the bounding box of the whole tree (empty for an empty tree)
+    [[nodiscard]] Box3f getBoundingBox() const { return box_; }
+
+    /// the total number of nodes: internal ones and leaves
+    [[nodiscard]] size_t numNodes() const { return simdNodes_.size() + leafBoxes_.size(); }
+
+    /// the id of the node with given reference (as in SimdNode::child): the internal nodes first, then the leaves
+    [[nodiscard]] NodeId nodeId( int ref ) const { return NodeId( ref >= 0 ? ref : int( simdNodes_.size() ) + ~ref ); }
+
+    /// the reference (as in SimdNode::child) to the node with given id
+    [[nodiscard]] int nodeRef( NodeId n ) const { return int( n ) < int( simdNodes_.size() ) ? int( n ) : ~( int( n ) - int( simdNodes_.size() ) ); }
+
+    /// returns the bounding boxes of all nodes
+    [[nodiscard]] MRMESH_API Vector<Box3f, NodeId> getNodeBoxes() const;
+
+    /// returns the amount of memory this object occupies on heap
+    [[nodiscard]] size_t heapBytes() const { return simdNodes_.capacity() * sizeof( SimdNode ) + leafBoxes_.capacity() * sizeof( SimdBoxes )
+        + leafTris_.heapBytes(); }
+
+    /// returns at least given number of top-level not-intersecting subtrees, union of which contain all tree leaves
+    [[nodiscard]] MRMESH_API std::vector<NodeId> getSubtrees( int minNum ) const;
+
+    /// returns all triangles in the subtree with given root
+    [[nodiscard]] MRMESH_API FaceBitSet getSubtreeFaces( NodeId subtreeRoot ) const;
+
+    /// returns the nodes having at least one of given triangles in their subtrees
+    [[nodiscard]] MRMESH_API NodeBitSet getNodesFromFaces( const FaceBitSet & faces ) const;
+
+    /// fills map: FaceId -> its position in the order of the triangles in the leaves;
+    /// buffer in faceMap must be resized before the call, and caller is responsible for filling missing face elements
+    MRMESH_API void getLeafOrder( FaceBMap & faceMap ) const;
+
+    /// renumbers the triangles and their vertices after the mesh was packed with given maps from old to new ids
+    MRMESH_API void renumber( const FaceBMap & faceMap, const VertBMap & vertMap );
+
+    /// changes the order of the vertices of the triangles of given faces (all if nullptr) as MeshTopology::flipOrientation() does;
+    /// shall be called after MeshTopology::flipOrientation() if this tree is kept
+    MRMESH_API void flipOrientation( const FaceBitSet * region = nullptr );
+
+    /// updates the boxes of the triangles with changed vertices and of their ancestors;
     /// this is a faster alternative to full tree rebuild (but the tree after refit might be less efficient)
     /// \param mesh same mesh for which this tree was constructed but with updated coordinates;
     /// \param changedVerts vertex ids with modified coordinates (since tree construction or last refit), nullptr means all vertices
     MRMESH_API void refit( const Mesh & mesh, const VertBitSet * changedVerts );
 
     /// adds to the tree the faces that appeared after splitting some of its faces into parts (e.g. by Mesh::splitFace or Mesh::splitEdge):
-    /// the leaf of each split face is replaced with a subtree of that face and its new parts;
+    /// the leaf of each split face gets a subtree with its old triangles and the new parts;
     /// this is a faster alternative to full tree rebuild (but the tree after the update might be less efficient)
     /// \param mesh same mesh for which this tree was constructed, but after the splits
     /// \param new2Old maps every new face (not present in the tree) to the face of this tree it was split from;
-    /// it must contain only the splits made since the tree was built or last updated: a map accumulated over several calls
-    /// would add the earlier faces to the tree once more
+    /// it must contain only the splits made since the tree was built or last updated
     MRMESH_API void addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old );
 
 private:
@@ -42,6 +149,20 @@ private:
     AABBTree & operator =( const AABBTree & ) = default;
     friend class UniqueThreadSafeOwner<AABBTree>;
     friend class SharedThreadSafeOwner<AABBTree>;
+
+    Vector<SimdNode> simdNodes_; ///< the children follow their parent
+    Vector<SimdBoxes> leafBoxes_; ///< the boxes of the triangles of each leaf
+    Vector<LeafTri> leafTris_;
+    Box3f box_; ///< the union of the boxes of the root, kept for the queries starting with it
+
+    /// sets box_ from the root
+    void updateBox_();
+    int numTris_ = 0;
+
+    /// sets triangle slot i of leaf l and its box
+    void setLeafTri_( int l, int i, const LeafTri & lt, const VertCoords & points );
 };
+
+/// \}
 
 } // namespace MR

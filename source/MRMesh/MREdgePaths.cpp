@@ -307,6 +307,13 @@ EdgePath buildShortestPathBiDir( const Mesh & mesh,
     const MeshTriPoint & start, const MeshTriPoint & finish,
     VertId * outPathStart, VertId * outPathFinish, float maxPathLen )
 {
+    return buildSmallestMetricPathBiDir( mesh, edgeLengthMetric( mesh ), start, finish, outPathStart, outPathFinish, maxPathLen );
+}
+
+EdgePath buildSmallestMetricPathBiDir( const Mesh & mesh, const EdgeMetric & metric,
+    const MeshTriPoint & start, const MeshTriPoint & finish,
+    VertId * outPathStart, VertId * outPathFinish, float maxPathMetric )
+{
     const auto startPt = mesh.triPoint( start );
     TerminalVertex starts[3];
     int numStarts = 0;
@@ -323,10 +330,10 @@ EdgePath buildShortestPathBiDir( const Mesh & mesh,
         finishes[ numFinishes++ ] = { v, ( mesh.points[v] - finishPt ).length() };
     } );
 
-    return buildSmallestMetricPathBiDir( mesh.topology, edgeLengthMetric( mesh ),
+    return buildSmallestMetricPathBiDir( mesh.topology, metric,
         starts, numStarts,
         finishes, numFinishes,
-        outPathStart, outPathFinish, maxPathLen );
+        outPathStart, outPathFinish, maxPathMetric );
 }
 
 EdgePath buildShortestPath( const Mesh& mesh, VertId start, const VertBitSet& finish, float maxPathLen /*= FLT_MAX */ )

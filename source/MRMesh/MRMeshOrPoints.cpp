@@ -146,11 +146,12 @@ auto MeshOrPoints::limitedProjector() const -> LimitedProjectorFunc
                 MeshProjectionResult mpr = findProjection( p, mp, res.distSq );
                 if ( mpr.distSq < res.distSq )
                 {
+                    const auto mtp = mpr.mtp( mp.mesh.topology );
                     res = ProjectionResult
                     {
                         .point = mpr.proj.point,
-                        .normal = mp.mesh.pseudonormal( mpr.mtp, mp.region ),
-                        .isBd = mpr.mtp.isBd( mp.mesh.topology, mp.region ),
+                        .normal = mp.mesh.pseudonormal( mtp, mp.region ),
+                        .isBd = mtp.isBd( mp.mesh.topology, mp.region ),
                         .distSq = mpr.distSq,
                         .closestVert = mp.mesh.getClosestVertex( mpr.proj )
                     };
@@ -231,14 +232,14 @@ void projectOnAll(
     const ProjectOnAllCallback & callback,
     ObjId skipObjId )
 {
-    if ( tree.nodes().empty() )
+    if ( tree.empty() )
         return;
 
     InplaceStack<NoInitNodeId, 32> subtasks;
 
     auto addSubTask = [&] ( NodeId n )
     {
-        const auto& box = tree.nodes()[n].box;
+        const auto& box = tree.box( n );
         if ( !box.valid() )
             return;
         float distSq = box.getDistanceSq( pt );
@@ -252,11 +253,10 @@ void projectOnAll(
     {
         const auto n = subtasks.top();
         subtasks.pop();
-        const auto node = tree[n];
 
-        if ( node.leaf() )
+        if ( tree.isLeaf( n ) )
         {
-            auto oid = node.leafId();
+            auto oid = tree.leafId( n );
             if ( oid == skipObjId )
                 continue;
             const auto & obj = tree.obj( oid );
@@ -271,6 +271,7 @@ void projectOnAll(
             continue;
         }
 
+        const auto node = tree[n];
         // first go in left child and then in right
         addSubTask( node.r );
         addSubTask( node.l );

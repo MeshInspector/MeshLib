@@ -19,7 +19,7 @@ namespace MR
 bool isPointInsidePolyline( const Polyline2& polyline, const Vector2f& point )
 {
     const auto& tree = polyline.getAABBTree();
-    if ( tree.nodes().size() == 0 )
+    if ( tree.empty() )
         return false;
 
     // we consider plusX ray here
@@ -33,7 +33,7 @@ bool isPointInsidePolyline( const Polyline2& polyline, const Vector2f& point )
             return false;
         return true;
     };
-    if ( !rayBoxIntersect( tree[tree.rootNodeId()].box, point ) )
+    if ( !rayBoxIntersect( tree.box( tree.rootNodeId() ), point ) )
         return false;
 
     InplaceStack<NoInitNodeId, 32> nodesStack;
@@ -42,15 +42,15 @@ bool isPointInsidePolyline( const Polyline2& polyline, const Vector2f& point )
     int intersectionCounter = 0;
     while ( !nodesStack.empty() )
     {
-        const auto& node = tree[nodesStack.top()];
+        const auto nid = nodesStack.top();
         nodesStack.pop();
-        if ( node.leaf() )
+        if ( tree.isLeaf( nid ) )
         {
-            if ( node.box.min.x >= point.x )
+            if ( tree.box( nid ).min.x >= point.x )
                 ++intersectionCounter;
             else
             {
-                auto uEId = node.leafId();
+                auto uEId = tree.leafId( nid );
                 const auto& org = polyline.orgPnt( uEId );
                 const auto& dest = polyline.destPnt( uEId );
 
@@ -66,9 +66,10 @@ bool isPointInsidePolyline( const Polyline2& polyline, const Vector2f& point )
         }
         else
         {
-            if ( rayBoxIntersect( tree[node.l].box, point ) )
+            const auto& node = tree[nid];
+            if ( rayBoxIntersect( tree.box( node.l ), point ) )
                 nodesStack.push( node.l );
-            if ( rayBoxIntersect( tree[node.r].box, point ) )
+            if ( rayBoxIntersect( tree.box( node.r ), point ) )
                 nodesStack.push( node.r );
         }
     }
@@ -85,9 +86,9 @@ BitSet findGridPointsInsidePolyline( const Polyline2& polyline, const Vector2i& 
     res.resize( size_t( dims.x ) * dims.y );
 
     const auto& tree = polyline.getAABBTree();
-    if ( tree.nodes().empty() )
+    if ( tree.empty() )
         return res;
-    const auto rootBox = tree[tree.rootNodeId()].box;
+    const auto rootBox = tree.box( tree.rootNodeId() );
 
     // the largest x in [-1, dims.x) such that the point of the row with that x is to the left of the given coordinate
     // (or at the same coordinate if !strict)
@@ -123,24 +124,25 @@ BitSet findGridPointsInsidePolyline( const Polyline2& polyline, const Vector2i& 
             nodesStack.push( tree.rootNodeId() );
             while ( !nodesStack.empty() )
             {
-                const auto& node = tree[nodesStack.top()];
+                const auto nid = nodesStack.top();
                 nodesStack.pop();
-                if ( node.leaf() )
+                if ( tree.isLeaf( nid ) )
                 {
-                    const auto uEId = node.leafId();
+                    const auto uEId = tree.leafId( nid );
                     const auto& org = polyline.orgPnt( uEId );
                     const auto& dest = polyline.destPnt( uEId );
                     const double ratio = ( double( py ) - double( org.y ) ) / ( double( dest.y ) - double( org.y ) );
                     const float x = float( ratio * double( dest.x ) + ( 1.0 - ratio ) * double( org.x ) );
                     // isPointInsidePolyline counts this crossing for a point if the point is not to the right of x
                     // and strictly to the left of the edge's box
-                    lasts.push_back( x < node.box.max.x ? lastX( x, false ) : lastX( node.box.max.x, true ) );
+                    lasts.push_back( x < tree.box( nid ).max.x ? lastX( x, false ) : lastX( tree.box( nid ).max.x, true ) );
                 }
                 else
                 {
-                    if ( const auto& box = tree[node.l].box; box.min.y <= py && py < box.max.y )
+                    const auto& node = tree[nid];
+                    if ( const auto& box = tree.box( node.l ); box.min.y <= py && py < box.max.y )
                         nodesStack.push( node.l );
-                    if ( const auto& box = tree[node.r].box; box.min.y <= py && py < box.max.y )
+                    if ( const auto& box = tree.box( node.r ); box.min.y <= py && py < box.max.y )
                         nodesStack.push( node.r );
                 }
             }
@@ -172,7 +174,7 @@ void rayPolylineIntersectAll_( const Polyline2& polyline, const Line2<T>& line, 
     }
 
     const auto& tree = polyline.getAABBTree();
-    if ( tree.nodes().empty() )
+    if ( tree.empty() )
         return;
 
     // we `insignificantlyExpand` boxes to avoid leaks due to float errors
@@ -184,7 +186,7 @@ void rayPolylineIntersectAll_( const Polyline2& polyline, const Line2<T>& line, 
     };
 
     T s = rayStart, e = rayEnd;
-    if( !rayExpBoxIntersect( Box2<T>{ tree[tree.rootNodeId()].box }, line.p, s, e, prec ) )
+    if( !rayExpBoxIntersect( Box2<T>{ tree.box( tree.rootNodeId() ) }, line.p, s, e, prec ) )
         return;
 
     constexpr int maxTreeDepth = 32;
@@ -200,12 +202,12 @@ void rayPolylineIntersectAll_( const Polyline2& polyline, const Line2<T>& line, 
             break;
         }
 
-        const auto& node = tree[nodesStack[currentNode].first];
+        const auto nid = nodesStack[currentNode].first;
         if( nodesStack[currentNode--].second < rayEnd )
         {
-            if( node.leaf() )
+            if( tree.isLeaf( nid ) )
             {
-                EdgeId edge = node.leafId();
+                EdgeId edge = tree.leafId( nid );
                 auto segm = polyline.edgeSegment( edge );
                 T segmPos = 0, rayPos = 0;
                 if ( doSegmentLineIntersect( LineSegm2<T>{ segm }, line, &segmPos, &rayPos )
@@ -217,11 +219,12 @@ void rayPolylineIntersectAll_( const Polyline2& polyline, const Line2<T>& line, 
             }
             else
             {
+                const auto& node = tree[nid];
                 T lStart = rayStart, lEnd = rayEnd;
                 T rStart = rayStart, rEnd = rayEnd;
-                if( rayExpBoxIntersect( Box2<T>{ tree[node.l].box }, line.p, lStart, lEnd, prec ) )
+                if( rayExpBoxIntersect( Box2<T>{ tree.box( node.l ) }, line.p, lStart, lEnd, prec ) )
                 {
-                    if( rayExpBoxIntersect( Box2<T>{ tree[node.r].box }, line.p, rStart, rEnd, prec ) )
+                    if( rayExpBoxIntersect( Box2<T>{ tree.box( node.r ) }, line.p, rStart, rEnd, prec ) )
                     {
                         if( lStart > rStart )
                         {
@@ -241,7 +244,7 @@ void rayPolylineIntersectAll_( const Polyline2& polyline, const Line2<T>& line, 
                 }
                 else
                 {
-                    if( rayExpBoxIntersect( Box2<T>{ tree[node.r].box }, line.p, rStart, rEnd, prec ) )
+                    if( rayExpBoxIntersect( Box2<T>{ tree.box( node.r ) }, line.p, rStart, rEnd, prec ) )
                     {
                         nodesStack[++currentNode] = { node.r,rStart };
                     }

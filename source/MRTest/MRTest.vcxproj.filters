@@ -16,6 +16,9 @@
     <ClCompile Include="MRRigidXfRansacTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRGlobalRegistrationTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRSpdlog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -112,7 +115,13 @@
     <ClCompile Include="MRLaplacianTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRPointsLoadPcdPtxTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRPolylineTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshSegmenterTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRMarchingCubesTests.cpp">
@@ -209,6 +218,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshCollideTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointsToMeshProjectorTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRShrinkwrapTests.cpp">
@@ -386,6 +398,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRViewportIdTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRViewportTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRVolumeIndexerTests.cpp">

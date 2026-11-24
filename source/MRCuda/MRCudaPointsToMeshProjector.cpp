@@ -2,12 +2,13 @@
 #include "MRCudaPointsToMeshProjector.cuh"
 
 #include "MRCudaBasic.h"
+#include "MRCudaAABBTree.hpp"
 
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRChunkIterator.h"
 #include "MRMesh/MRMatrix3Decompose.h"
 #include "MRMesh/MRMesh.h"
-#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRMeshProject.h"
 #include "MRMesh/MRTimer.h"
 
 namespace MR
@@ -16,11 +17,12 @@ namespace MR
 namespace Cuda
 {
 
+static_assert( sizeof( MR::MeshProjectionResult ) == sizeof( MeshProjectionResult ) );
+
 struct MeshProjectorData
 {
     DynamicArray<float3> cudaMeshPoints;
-    DynamicArray<Node3> cudaNodes;
-    DynamicArray<FaceToThreeVerts> cudaFaces;
+    MeshTreeBuffers tree;
 };
 
 PointsToMeshProjector::PointsToMeshProjector()
@@ -38,13 +40,10 @@ void PointsToMeshProjector::updateMeshData( const MR::Mesh* mesh )
     MR_TIMER;
 
     const AABBTree& tree = mesh->getAABBTree();
-    const auto& nodes = tree.nodes();
     const auto& meshPoints = mesh->points;
-    const auto tris = mesh->topology.getTriangulation();
 
     meshData_->cudaMeshPoints.fromVector( meshPoints );
-    meshData_->cudaNodes.fromVector( nodes );
-    meshData_->cudaFaces.fromVector( tris );
+    meshData_->tree.fromTree( tree );
 
     mesh_ = mesh;
 }
@@ -109,19 +108,11 @@ void PointsToMeshProjector::findProjections(
     {
         cudaPoints.copyFrom( points.data() + offset, size );
 
-        meshProjectionKernel( cudaPoints.data(), meshData_->cudaNodes.data(), meshData_->cudaMeshPoints.data(), meshData_->cudaFaces.data(), cudaResult.data(), cudaXf, cudaRefXf, upDistLimitSq, loDistLimitSq, size );
+        meshProjectionKernel( cudaPoints.data(), meshData_->tree.toData(), meshData_->cudaMeshPoints.data(), cudaResult.data(), cudaXf, cudaRefXf, upDistLimitSq, loDistLimitSq, size );
         CUDA_EXEC( cudaGetLastError() );
 
         cudaResult.copyTo( res.data() + offset, size );
     }
-
-    ParallelFor( res, [&] ( size_t i )
-    {
-        if ( res[i].proj.face )
-            res[i].mtp.e = mesh_->topology.edgeWithLeft( res[i].proj.face );
-        else
-            assert( !res[i].mtp.e );
-    } );
 }
 
 size_t PointsToMeshProjector::projectionsHeapBytes( size_t numProjections ) const

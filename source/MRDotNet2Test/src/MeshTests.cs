@@ -71,14 +71,9 @@ namespace MRTest
             File.Delete(tempFile);
         }
 
-        private static Std.Array_MRVertId_3 makeTri(int v0, int v1, int v2)
+        private static ThreeVertIds makeTri(int v0, int v1, int v2)
         {
-            // TODO: array constructor
-            Std.Array_MRVertId_3 tri;
-            tri.elems._0 = new VertId(v0);
-            tri.elems._1 = new VertId(v1);
-            tri.elems._2 = new VertId(v2);
-            return tri;
+            return new ThreeVertIds(new VertId(v0), new VertId(v1), new VertId(v2));
         }
 
         [Test]
@@ -200,14 +195,14 @@ namespace MRTest
         {
             var cubeMesh = makeCube(Vector3f.diagonal(1), Vector3f.diagonal(-0.5f));
             var triVerts = cubeMesh.topology.getLeftTriVerts(new EdgeId(0));
-            Assert.That(triVerts.elems[0].id, Is.EqualTo(0));
-            Assert.That(triVerts.elems[1].id, Is.EqualTo(1));
-            Assert.That(triVerts.elems[2].id, Is.EqualTo(2));
+            Assert.That(triVerts[0].id, Is.EqualTo(0));
+            Assert.That(triVerts[1].id, Is.EqualTo(1));
+            Assert.That(triVerts[2].id, Is.EqualTo(2));
 
             triVerts = cubeMesh.topology.getLeftTriVerts(new EdgeId(6));
-            Assert.That(triVerts.elems[0].id, Is.EqualTo(2));
-            Assert.That(triVerts.elems[1].id, Is.EqualTo(3));
-            Assert.That(triVerts.elems[2].id, Is.EqualTo(0));
+            Assert.That(triVerts[0].id, Is.EqualTo(2));
+            Assert.That(triVerts[1].id, Is.EqualTo(3));
+            Assert.That(triVerts[2].id, Is.EqualTo(0));
         }
 
         [Test]
@@ -270,7 +265,7 @@ namespace MRTest
         {
             var cubeMesh = makeCube(Vector3f.diagonal(1), Vector3f.diagonal(-0.5f));
             var triVerts = cubeMesh.topology.getTriVerts(new FaceId(0));
-            var centerPoint = (cubeMesh.points[triVerts.elems[1]] + cubeMesh.points[triVerts.elems[2]]) * 0.5f;
+            var centerPoint = (cubeMesh.points[triVerts[1]] + cubeMesh.points[triVerts[2]]) * 0.5f;
             var triPoint = cubeMesh.toTriPoint(new FaceId(0), centerPoint);
             Assert.That(triPoint.bary.a, Is.EqualTo(0.5f));
             Assert.That(triPoint.bary.b, Is.EqualTo(0.5f));
@@ -316,14 +311,15 @@ namespace MRTest
             var projRes = findProjection(p, mesh);
             Assert.That(projRes.distSq, Is.EqualTo(7.529f).Within(1e-3));
 
-            Assert.That(projRes.proj.face.id, Is.EqualTo(904));
+            // the closest point is shared by several triangles, and which of them is returned depends on the search order and rounding
             Assert.That(projRes.proj.point.x, Is.EqualTo(0.310).Within(1e-3));
             Assert.That(projRes.proj.point.y, Is.EqualTo(0.507).Within(1e-3));
             Assert.That(projRes.proj.point.z, Is.EqualTo(0.803).Within(1e-3));
 
             // which edge of the triangle represents the point differs with FMA instructions (clang-cl on arm64)
-            Assert.That(mesh.topology.left(projRes.mtp.e).id, Is.EqualTo(904));
-            var mtpPoint = mesh.triPoint(projRes.mtp);
+            var mtp = projRes.mtp(mesh.topology);
+            Assert.That(mesh.topology.left(mtp.e).id, Is.EqualTo(projRes.proj.face.id));
+            var mtpPoint = mesh.triPoint(mtp);
             Assert.That(mtpPoint.x, Is.EqualTo(0.310).Within(1e-3));
             Assert.That(mtpPoint.y, Is.EqualTo(0.507).Within(1e-3));
             Assert.That(mtpPoint.z, Is.EqualTo(0.803).Within(1e-3));
@@ -331,12 +327,13 @@ namespace MRTest
             var xf = AffineXf3f.translation(Vector3f.diagonal(1.0f));
             projRes = findProjection(p, mesh, float.MaxValue, xf);
 
-            Assert.That(projRes.proj.face.id, Is.EqualTo(632));
+            mtp = projRes.mtp(mesh.topology);
+            Assert.That(mesh.topology.left(mtp.e).id, Is.EqualTo(projRes.proj.face.id));
             Assert.That(projRes.proj.point.x, Is.EqualTo(1.000).Within(1e-3));
             Assert.That(projRes.proj.point.y, Is.EqualTo(1.439).Within(1e-3));
             Assert.That(projRes.proj.point.z, Is.EqualTo(1.895).Within(1e-3));
 
-            mtpPoint = mesh.triPoint(projRes.mtp); // in mesh space, before xf
+            mtpPoint = mesh.triPoint(mtp); // in mesh space, before xf
             Assert.That(mtpPoint.x, Is.EqualTo(0.000).Within(1e-3));
             Assert.That(mtpPoint.y, Is.EqualTo(0.439).Within(1e-3));
             Assert.That(mtpPoint.z, Is.EqualTo(0.895).Within(1e-3));

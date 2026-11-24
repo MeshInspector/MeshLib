@@ -28,13 +28,13 @@ TEST( MRMesh, AABBTreePolyline3 )
     Box3f box;
     for ( auto p : polyline.points )
         box.include( p );
-    EXPECT_EQ( tree[AABBTreePolyline3::rootNodeId()].box, box );
-    EXPECT_TRUE( tree[AABBTreePolyline3::rootNodeId()].l.valid() );
-    EXPECT_TRUE( tree[AABBTreePolyline3::rootNodeId()].r.valid() );
+    EXPECT_EQ( tree[tree.rootNodeId()].box, box );
+    EXPECT_EQ( tree.getBoundingBox(), box );
+    EXPECT_EQ( tree.numLeaves(), polyline.topology.undirectedEdgeSize() );
 
-    assert( !tree.nodes().empty() );
+    assert( !tree.empty() );
     auto m = std::move( tree );
-    assert( tree.nodes().empty() );
+    assert( tree.empty() );
 }
 
 } //namespace MR

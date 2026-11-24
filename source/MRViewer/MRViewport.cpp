@@ -24,7 +24,6 @@
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRPolyline.h"
-#include "MRMesh/MRMeshNormals.h"
 #include "MRPch/MRSuppressWarning.h"
 #include "MRPch/MRTBB.h"
 
@@ -463,25 +462,18 @@ std::unordered_map<std::shared_ptr<MR::ObjectMesh>, MR::FaceBitSet> Viewport::fi
 
 FaceBitSet Viewport::findCameraLookingFaces( const Mesh& mesh, const AffineXf3f& meshToWorld ) const
 {
-    const auto normals = computePerFaceNormals( mesh );
-    FaceBitSet faces;
-    faces.resize( normals.size() );
+    // the test is done in mesh space, where face normals need no transformation
+    const auto worldToMesh = meshToWorld.inverse();
+    const auto backwardDir = worldToMesh.A * getBackwardDirection();
+    const auto cameraPos = worldToMesh( getCameraPoint() );
 
-    const auto cameraPos =  getCameraPoint();
-
+    FaceBitSet faces( mesh.topology.faceSize() );
     BitSetParallelFor( mesh.topology.getValidFaces(), [&]( FaceId f )
     {
-        auto transformedNormal = meshToWorld.A * normals[f];
-        if ( params_.orthographic )
-        {
-            if ( ( dot( transformedNormal, cameraPos ) > 0.0f ) )
-                faces.set( f );
-        }
-        else
-        {
-            if ( dot( transformedNormal, cameraPos - mesh.triCenter( f ) ) > 0.0f )
-                faces.set( f );
-        }
+        // all view rays are parallel in orthographic mode
+        const auto toCamera = params_.orthographic ? backwardDir : cameraPos - mesh.triCenter( f );
+        if ( dot( mesh.dirDblArea( f ), toCamera ) > 0 )
+            faces.set( f );
     } );
     return faces;
 }

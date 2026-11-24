@@ -22,6 +22,9 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRMeshFillHole.h"
 #include "MRMeshFixer.h"
+#include "MRAABBTree.h"
+#include <limits>
+#include <optional>
 
 namespace MR
 {
@@ -136,8 +139,9 @@ void convertIntFloatAllVerts( Mesh & mesh, const CoordinateConverters& conv )
     } );
 }
 
-BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params, BooleanInternalParameters intParams,
-    bool copyOriginals = false );
+/// a mesh given in intParams.originalMeshA (originalMeshB) is the caller's: it is only read, and meshA (meshB) must be empty to receive its copy;
+/// otherwise meshA (meshB) is consumed
+BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params, BooleanInternalParameters intParams );
 
 BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
                        const AffineXf3f* rigidB2A /*= nullptr */, BooleanResultMapper* mapper /*= nullptr */, ProgressCallback cb )
@@ -148,19 +152,26 @@ BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation op
 BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation, const BooleanParameters& params /*= {} */ )
 {
     MR_TIMER;
-    // build the trees of the input meshes: important for many calls to Boolean for the same mesh to avoid tree construction on every call
-    tbb::task_group taskGroup;
-    taskGroup.run( [&] () { meshA.getAABBTree(); } );
-    meshB.getAABBTree();
-    taskGroup.wait();
+    // the trees of the whole input meshes are constructed in booleanImpl and cached in them (never temporary trees of their parts),
+    // which is important for many calls to Boolean for the same mesh to avoid tree construction on every call
 
     // the meshes are copied in booleanImpl only when their cuts are known, with the room the cuts need
-    return booleanImpl( {}, {}, operation, params, { .originalMeshA = &meshA,.originalMeshB = &meshB }, true );
+    return booleanImpl( {}, {}, operation, params, { .originalMeshA = &meshA,.originalMeshB = &meshB } );
 }
 
 BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params /*= {} */ )
 {
     return booleanImpl( std::move( meshA ), std::move( meshB ), operation, params, {} );
+}
+
+BooleanResult boolean( const Mesh& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params /*= {} */ )
+{
+    return booleanImpl( {}, std::move( meshB ), operation, params, { .originalMeshA = &meshA } );
+}
+
+BooleanResult boolean( Mesh&& meshA, const Mesh& meshB, BooleanOperation operation, const BooleanParameters& params /*= {} */ )
+{
+    return booleanImpl( std::move( meshA ), {}, operation, params, { .originalMeshB = &meshB } );
 }
 
 namespace detail
@@ -224,7 +235,7 @@ BooleanResult forceBoolean( const Mesh& meshA, const Mesh& meshB, BooleanOperati
     return res;
 }
 
-Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
+Expected<MR::Mesh> selfBoolean( const Mesh& inMesh, FaceMap* outNew2Old )
 {
     auto box = Box3d( inMesh.computeBoundingBox() );
     CoordinateConverters converters{ .toInt = getToIntConverter( box ),.toFloat = getToFloatConverter( box ) };
@@ -244,6 +255,8 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
                         break;
     std::erase_if( intersections, [&] ( const EdgeTri& x ) { return !mesh.topology.hasFace( x.tri ) || mesh.topology.isLoneEdge( x.edge ); } );
     auto contours = orderSelfIntersectionContours( mesh.topology, intersections );
+    if ( contours.empty() && !intersections.empty() )
+        return unexpected( "Self-Boolean cannot order the intersections: the mesh has a face that is not a triangle" );
     removeTwoPointLoops( contours ); // both contours of a pair together, as they have the same points
 
     auto holePairs = detail::findSelfContoursMapping( contours );
@@ -441,6 +454,11 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
         }
     }
 
+    if ( outNew2Old )
+    {
+        new2Old.resize( mesh.topology.faceSize() );
+        *outNew2Old = std::move( new2Old );
+    }
     return mesh;
 }
 
@@ -454,20 +472,102 @@ Contours3f findIntersectionContours( const Mesh& meshA, const Mesh& meshB, const
     return res;
 }
 
-BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params, BooleanInternalParameters intParams,
-    bool copyOriginals )
+/// finds the intersections of two meshes as findCollidingEdgeTrisPrecise does.
+/// The tree of a whole mesh takes more time than the rest of Boolean, and only the faces near the other mesh can intersect it.
+/// So if a mesh has no cached tree, the common part of the bounding boxes of the meshes is a small part of the box of this mesh,
+/// and few of its faces are there, then a temporary tree of only these faces is used;
+/// otherwise the tree of the whole mesh is taken or constructed and cached as usual.
+/// \param cacheTreeA, cacheTreeB true if the mesh belongs to the caller, who can call Boolean for it again:
+/// then the tree of the whole mesh is constructed and cached in it, so the next calls do not construct it
+static PreciseCollisionResult findIntersections( const Mesh& a, const Mesh& b, const ConvertToIntVector& conv, const AffineXf3f* rigidB2A,
+    bool cacheTreeA, bool cacheTreeB )
 {
     MR_TIMER;
-    // the meshes to read until they are cut: if copyOriginals, meshA and meshB are empty and get the copies of the original meshes just before their cuts
-    const Mesh& srcA = copyOriginals ? *intParams.originalMeshA : meshA;
-    const Mesh& srcB = copyOriginals ? *intParams.originalMeshB : meshB;
+    {
+        tbb::task_group taskGroup;
+        if ( cacheTreeA )
+            taskGroup.run( [&] { a.getAABBTree(); } );
+        if ( cacheTreeB )
+            b.getAABBTree();
+        taskGroup.wait();
+    }
+    const AABBTree* aTree = a.getAABBTreeNotCreate();
+    const AABBTree* bTree = b.getAABBTreeNotCreate();
+    if ( aTree && bTree )
+        return findCollidingEdgeTrisPrecise( a, *aTree, b, *bTree, conv, rigidB2A );
+
+    // where the meshes can intersect, in the space of A; widened much more than the conversion in integers can move a point
+    const Box3f boxA = aTree ? aTree->getBoundingBox() : a.computeBoundingBox();
+    const Box3f boxB = b.computeBoundingBox( nullptr, rigidB2A );
+    if ( !boxA.valid() || !boxB.valid() )
+        return {};
+    Box3f common = boxA.intersection( boxB );
+    Box3f both = boxA;
+    both.include( boxB );
+    float maxAbs = 0;
+    for ( int i = 0; i < 3; ++i )
+        maxAbs = std::max( { maxAbs, std::abs( both.min[i] ), std::abs( both.max[i] ) } );
+    const Vector3f margin = Vector3f::diagonal( 1e-5f * maxAbs + std::numeric_limits<float>::min() );
+    common.min -= margin;
+    common.max += margin;
+    if ( !common.valid() )
+        return {}; // the boxes are apart
+
+    FaceBitSet aNear, bNear;
+    std::optional<AABBTree> aLocal, bLocal;
+    const auto findTree = [&common]( const Mesh& m, const Box3f& meshBox, const AffineXf3f* xf, FaceBitSet& nearFaces, std::optional<AABBTree>& local ) -> const AABBTree*
+    {
+        // if the common part takes much of the box of the mesh, then many of its faces are expected there,
+        // and looking for them would only add a pass over the mesh before the construction of the whole tree
+        const Vector3f meshSize = meshBox.size(), partSize = meshBox.intersection( common ).size();
+        float partOfBox = 1;
+        for ( int i = 0; i < 3; ++i )
+            if ( meshSize[i] > 0 )
+                partOfBox *= std::clamp( partSize[i] / meshSize[i], 0.0f, 1.0f );
+        if ( partOfBox > 0.25f )
+            return &m.getAABBTree();
+
+        const auto& validFaces = m.topology.getValidFaces();
+        nearFaces.resize( validFaces.size() );
+        BitSetParallelFor( validFaces, [&]( FaceId f )
+        {
+            Box3f box;
+            for ( VertId v : m.topology.getTriVerts( f ) )
+                box.include( xf ? ( *xf )( m.points[v] ) : m.points[v] );
+            if ( box.intersects( common ) )
+                nearFaces.set( f );
+        } );
+        if ( nearFaces.count() * 4 > size_t( m.topology.numValidFaces() ) )
+            return &m.getAABBTree();
+        local.emplace( MeshPart{ m, &nearFaces } );
+        return &*local;
+    };
+    tbb::task_group taskGroup;
+    if ( !aTree )
+        taskGroup.run( [&] { aTree = findTree( a, boxA, nullptr, aNear, aLocal ); } );
+    if ( !bTree )
+        bTree = findTree( b, boxB, rigidB2A, bNear, bLocal );
+    taskGroup.wait();
+    // a temporary tree comes with its faces as the region: an edge is checked once, from the triangle with the smaller index,
+    // unless the other triangle is outside the region, so without the region an edge would be missed
+    // if only its triangle with the greater index were in the tree
+    return findCollidingEdgeTrisPrecise( { a, aLocal ? &aNear : nullptr }, *aTree, { b, bLocal ? &bNear : nullptr }, *bTree, conv, rigidB2A );
+}
+
+BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation, const BooleanParameters& params, BooleanInternalParameters intParams )
+{
+    MR_TIMER;
+    // whether the mesh is the caller's original: then meshA (meshB) is empty and gets the copy of the original just before its cut
+    const bool copyA = intParams.originalMeshA != nullptr;
+    const bool copyB = intParams.originalMeshB != nullptr;
+    // the meshes to read until they are cut
+    const Mesh& srcA = copyA ? *intParams.originalMeshA : meshA;
+    const Mesh& srcB = copyB ? *intParams.originalMeshB : meshB;
     // copies the original mesh with the capacity for its cut by these contours, so the cut does not reallocate the whole mesh
     // and if addContours, also with the room for all of the other mesh with its cut by them
-    auto copyOriginal = [copyOriginals, &intParams] ( Mesh& to, const Mesh* from, const OneMeshContours* cutContours,
+    auto copyOriginal = [&intParams] ( Mesh& to, const Mesh* from, const OneMeshContours* cutContours,
         const OneMeshContours* addContours = nullptr )
     {
-        if ( !copyOriginals )
-            return;
         MR_NAMED_TIMER( "copyOriginal" );
         if ( cutContours )
             reserveForCut( to, *from, *cutContours );
@@ -493,8 +593,13 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     const size_t meshAVertsNum = srcA.topology.vertSize(); // before any cut of A
 
     // find and order intersections
-    contours = orderIntersectionContours( srcA.topology, srcB.topology,
-        findCollidingEdgeTrisPrecise( srcA, srcB, converters.toInt, params.rigidB2A ) );
+    {
+        // the original meshes are the caller's, the others are consumed here and their trees could not be reused
+        const auto intersections = findIntersections( srcA, srcB, converters.toInt, params.rigidB2A, copyA, copyB );
+        contours = orderIntersectionContours( srcA.topology, srcB.topology, intersections );
+        if ( contours.empty() && !intersections.empty() )
+            return { .errorString = "Boolean cannot order the intersections: a mesh has a face that is not a triangle" };
+    }
     removeTwoPointLoops( contours );
 
     if ( params.cb && !params.cb( 0.0f ) )
@@ -565,12 +670,13 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     bool needInsideB = operation == BooleanOperation::InsideB || operation == BooleanOperation::Intersection || operation == BooleanOperation::DifferenceAB;
     // doBooleanOperation adds the part of cut mesh B to cut mesh A: the room for all of it is reserved in the copy of A,
     // so that the addition does not reallocate and copy the whole of A
-    const bool reserveBinA = copyOriginals && doCutA && doCutB && !params.outPreCutA;
+    const bool reserveBinA = copyA && doCutA && doCutB && !params.outPreCutA;
     if ( doCutA )
     {
         taskGroup.run( [&] ()
         {
-            copyOriginal( meshA, intParams.originalMeshA, &meshAContours, reserveBinA ? &meshBContours : nullptr );
+            if ( copyA )
+                copyOriginal( meshA, intParams.originalMeshA, &meshAContours, reserveBinA ? &meshBContours : nullptr );
             Timer t( "CutMeshA" );
             FaceMap* cut2oldAPtr = params.mapper ? &params.mapper->maps[int( BooleanResultMapper::MapObject::A )].cut2origin : nullptr;
             // cut meshes
@@ -590,7 +696,8 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
 
     if ( doCutB )
     {
-        copyOriginal( meshB, intParams.originalMeshB, &meshBContours );
+        if ( copyB )
+            copyOriginal( meshB, intParams.originalMeshB, &meshBContours );
         Timer t( "CutMeshB" );
         FaceMap* cut2oldBPtr = params.mapper ? &params.mapper->maps[int( BooleanResultMapper::MapObject::B )].cut2origin : nullptr;
         // cut meshes
@@ -607,9 +714,9 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         cutB = std::move( res.resultCut );
     }
     taskGroup.wait();
-    if ( !doCutA )
+    if ( copyA && !doCutA )
         copyOriginal( meshA, intParams.originalMeshA, nullptr );
-    if ( !doCutB )
+    if ( copyB && !doCutB )
         copyOriginal( meshB, intParams.originalMeshB, nullptr );
 
     // the precut outputs take the meshes only after the cuts: where one mesh is not cut (by the operation or for its precut output),
@@ -786,9 +893,9 @@ Expected<BooleanResultPoints> getBooleanPoints( const Mesh& meshA, const Mesh& m
         result.meshBVerts -= ( needInsidePartB ? destVertsB : orgVertsB );
 
         const auto bComponents = MeshComponents::getAllComponents(meshB);
-        std::unique_ptr<AffineXf3f> rigidA2B;
+        std::optional<AffineXf3f> rigidA2B;
         if ( rigidB2A )
-            rigidA2B = std::make_unique<AffineXf3f>( rigidB2A->inverse() );
+            rigidA2B = rigidB2A->inverse();
 
         for ( const auto& bComponent : bComponents )
         {
@@ -796,7 +903,7 @@ Expected<BooleanResultPoints> getBooleanPoints( const Mesh& meshA, const Mesh& m
             if ( bComponentVerts.intersects( result.meshBVerts ) )
                 continue;
 
-            const bool inside = isInside( MeshPart( meshB, &bComponent ), MeshPart( meshA ), rigidA2B.get() );
+            const bool inside = isInside( MeshPart( meshB, &bComponent ), MeshPart( meshA ), rigidA2B ? &*rigidA2B : nullptr );
 
             if ( needInsidePartB == inside  )
             {

@@ -34,10 +34,13 @@ public final class TestMeshCollidePrecise
         long[] sizes = new long[4];
         for (int i = 0; i < 4; i++)
             sizes[i] = contours.index(i).size();
-        check(sizes[0] == 69 || sizes[0] == 71, "contour 0: " + sizes[0]); // Apple Debug
-        check(sizes[1] == 9 || sizes[1] == 7, "contour 1: " + sizes[1]); // Apple Debug
-        check(sizes[2] == 69 || sizes[2] == 71, "contour 2: " + sizes[2]); // with or without the FMA instruction
-        check(sizes[3] == 9 || sizes[3] == 7, "contour 3: " + sizes[3]); // with or without the FMA instruction
+        // the order of the contours follows the order of the intersections found in the trees;
+        // 7 and 71 or 9 and 69, with or without the FMA instruction
+        java.util.Arrays.sort(sizes);
+        check(sizes[0] == 7 || sizes[0] == 9, "short contour: " + sizes[0]);
+        check(sizes[1] == 7 || sizes[1] == 9, "short contour: " + sizes[1]);
+        check(sizes[2] == 69 || sizes[2] == 71, "long contour: " + sizes[2]);
+        check(sizes[3] == 69 || sizes[3] == 71, "long contour: " + sizes[3]);
 
         OneMeshContours contoursA = new OneMeshContours();
         OneMeshContours contoursB = new OneMeshContours();

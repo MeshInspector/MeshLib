@@ -52,6 +52,7 @@
     <ClCompile Include="MRICPTests.cpp" />
     <ClCompile Include="MRLaplacianTests.cpp" />
     <ClCompile Include="MRMarchingCubesTests.cpp" />
+    <ClCompile Include="MRMeshSegmenterTests.cpp" />
     <ClCompile Include="MRMeshBooleanTests.cpp" />
     <ClCompile Include="MRMeshComponentsTests.cpp" />
     <ClCompile Include="MRMeshPatchTests.cpp" />
@@ -71,6 +72,7 @@
     <ClCompile Include="MRPdfTests.cpp" />
     <ClCompile Include="MRPointCloudVariadicOffsetTests.cpp" />
     <ClCompile Include="MRPolyline2IntersectTests.cpp" />
+    <ClCompile Include="MRPointsLoadPcdPtxTests.cpp" />
     <ClCompile Include="MRPolylineTests.cpp" />
     <ClCompile Include="MRPolylineTrimWithPlane.cpp" />
     <ClCompile Include="MRPrecisePredicatesTests.cpp" />
@@ -79,6 +81,7 @@
     <ClCompile Include="MRReducePathTests.cpp" />
     <ClCompile Include="MRSerializeTests.cpp" />
     <ClCompile Include="MRSharpOffsetComponentsTests.cpp" />
+    <ClCompile Include="MRPointsToMeshProjectorTests.cpp" />
     <ClCompile Include="MRShrinkwrapTests.cpp" />
     <ClCompile Include="MRSpdlog.cpp" />
     <ClCompile Include="MRStreamOperatorsTests.cpp" />
@@ -144,6 +147,7 @@
     <ClCompile Include="MRNormalDenoisingTests.cpp" />
     <ClCompile Include="MRPointCloudFPFHTests.cpp" />
     <ClCompile Include="MRRigidXfRansacTests.cpp" />
+    <ClCompile Include="MRGlobalRegistrationTests.cpp" />
     <ClCompile Include="MRPositionVertsSmoothlyTests.cpp" />
     <ClCompile Include="MRQuadraticFormTests.cpp" />
     <ClCompile Include="MRRasterTests.cpp" />
@@ -154,6 +158,7 @@
     <ClCompile Include="MRScalarConvertTests.cpp" />
     <ClCompile Include="MRTupleBindingsTests.cpp" />
     <ClCompile Include="MRViewportIdTests.cpp" />
+    <ClCompile Include="MRViewportTests.cpp" />
     <ClCompile Include="MRVolumeIndexerTests.cpp" />
     <ClCompile Include="MRVectorTests.cpp" />
     <ClCompile Include="MRVoxelsLoadTests.cpp" />

@@ -8,11 +8,15 @@
 #include "MRMeshRelax.h"
 #include "MRMeshComponents.h"
 #include "MRMeshSubdivide.h"
+#include "MRMeshBoolean.h"
+#include "MRRingIterator.h"
+#include "MRUnionFind.h"
 #include "MRTimer.h"
 #include "MRBox.h"
 #include "MRMapOrHashMap.h"
 #include "MRPch/MRSpdlog.h"
 #include <algorithm>
+#include <optional>
 
 namespace MR
 {
@@ -105,12 +109,122 @@ Expected<void> fixOld( Mesh& mesh, const Settings& settings )
     return {};
 }
 
+// fixes the self-intersections of the mesh by selfBoolean, which cuts only the contours not reaching a boundary: so the holes
+// that they can reach are filled first, and the fill faces are removed after the cut; the connected components of the mesh
+// with faces in one part of the result are taken as one, and of all parts of the result made of its faces only the largest one is kept
+static Expected<void> fixBySelfBoolean( Mesh& mesh, const Settings& settings )
+{
+    MR_TIMER;
+    auto bad = findSelfCollidingTrianglesBS( mesh, subprogress( settings.callback, 0.0f, 0.2f ) );
+    if ( !bad )
+        return unexpected( std::move( bad.error() ) );
+    if ( bad->none() )
+    {
+        if ( settings.new2Old )
+        {
+            settings.new2Old->resize( mesh.topology.faceSize() );
+            for ( auto f : mesh.topology.getValidFaces() )
+                ( *settings.new2Old )[f] = f;
+        }
+        return {};
+    }
+
+    // only the holes with self-intersecting faces along them are filled, then the holes that the new fills reach, and so on;
+    // a hole is filled with the triangles from its edges to a vertex away from it and from the faces along it (a fill towards them
+    // would cut them off): where the intersecting parts of the mesh reach the holes,
+    // the holes overlap or cross themselves, and such fills cross one another and themselves along lines, while the fills
+    // in the surfaces of the holes would overlap; the holes are filled in a copy made at the first fill, so that the mesh
+    // stays as it is on failure
+    std::optional<Mesh> filled;
+    FaceBitSet fill;
+    for ( auto holes = mesh.topology.findHoleRepresentiveEdges(); !holes.empty(); )
+    {
+        const auto numHoles = holes.size();
+        std::erase_if( holes, [&] ( EdgeId e )
+        {
+            const Mesh& m = filled ? *filled : mesh;
+            bool reached = false;
+            Vector3f away; // from the faces along the hole
+            for ( auto x : leftRing( m.topology, e ) )
+            {
+                const auto r = m.topology.right( x );
+                reached = reached || contains( *bad, r );
+                away += m.edgeCenter( x ) - m.triCenter( r );
+            }
+            if ( reached )
+            {
+                // as far from the hole as the radius of a circle with its perimeter, on the side without the faces
+                auto dir = m.holeDirArea( e );
+                if ( dir.lengthSq() == 0 ) // e.g. two edges between the same vertices
+                    dir = Vector3d( away );
+                auto shift = Vector3f( dir.normalized() * ( m.holePerimeter( e ) / ( 2 * PI ) ) );
+                if ( dot( shift, away ) < 0 )
+                    shift = -shift;
+                if ( !filled )
+                    filled.emplace( mesh );
+                filled->points[fillHoleTrivially( *filled, e, &fill )] += shift;
+            }
+            return reached;
+        } );
+        if ( holes.size() == numHoles )
+            break;
+        filled->invalidateCaches();
+        bad = findSelfCollidingTrianglesBS( *filled, subprogress( settings.callback, 0.2f, 0.2f ) );
+        if ( !bad )
+            return unexpected( std::move( bad.error() ) );
+    }
+
+    const Mesh& cut = filled ? *filled : mesh;
+    const auto [before, numBefore] = MeshComponents::getAllComponentsMap( cut );
+    FaceMap new2Old;
+    auto res = selfBoolean( cut, &new2Old );
+    if ( !res )
+        return unexpected( std::move( res.error() ) );
+    if ( !reportProgress( settings.callback, 0.9f ) )
+        return unexpectedOperationCanceled();
+    const auto [after, numAfter] = MeshComponents::getAllComponentsMap( *res );
+    const auto& valid = res->topology.getValidFaces();
+
+    // a component of the mesh with faces in each part of the result, and the components with faces in one part united;
+    // the areas of the parts without the fill faces, which are removed
+    UnionFind<RegionId> joined( numBefore );
+    Vector<RegionId, RegionId> origin( numAfter ), largest( numBefore );
+    Vector<double, RegionId> areas( numAfter );
+    for ( auto f : valid )
+    {
+        const auto a = after[f];
+        if ( auto& o = origin[a]; o )
+            joined.unite( o, before[new2Old[f]] );
+        else
+            o = before[new2Old[f]];
+        if ( !fill.test( new2Old[f] ) )
+            areas[a] += res->area( f );
+    }
+    for ( RegionId a( 0 ); a < origin.endId(); ++a )
+        if ( auto& l = largest[joined.find( origin[a] )]; !l || areas[a] > areas[l] )
+            l = a;
+
+    FaceBitSet del( res->topology.faceSize() );
+    for ( auto f : valid )
+        if ( fill.test( new2Old[f] ) || largest[joined.find( origin[after[f]] )] != after[f] )
+            del.set( f );
+    res->deleteFaces( del );
+    mesh = std::move( *res );
+    if ( settings.new2Old )
+        *settings.new2Old = std::move( new2Old );
+    reportProgress( settings.callback, 1.0f );
+    return {};
+}
+
 Expected<void> fix( Mesh& mesh, const Settings& settings )
 {
     MR_TIMER;
 
     if ( !reportProgress( settings.callback, 0.0f ) )
         return unexpectedOperationCanceled();
+
+    if ( settings.method == Settings::Method::SelfBoolean )
+        return fixBySelfBoolean( mesh, settings );
 
     if ( settings.touchIsIntersection )
     {

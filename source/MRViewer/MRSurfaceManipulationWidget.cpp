@@ -1057,7 +1057,7 @@ void SurfaceManipulationWidget::updateValueChangesExactDistance_( const VertBitS
     BitSetParallelFor( region, [&] ( VertId v )
     {
         const auto projRes = findProjection( meshVerts[v], *originalMesh_, FLT_MAX, nullptr, 0 );
-        if ( projRes.mtp.e )
+        if ( projRes.valid() )
             valueChanges_[v] = originalMesh_->signedDistance( meshVerts[v], projRes );
         else
         {

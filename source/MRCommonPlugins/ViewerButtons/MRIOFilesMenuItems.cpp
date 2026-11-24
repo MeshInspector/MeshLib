@@ -555,38 +555,40 @@ struct SaveInfo
     const IOFilters& baseFilters;
 };
 
+std::optional<SaveInfo> getObjectSaveInfo( const Object& obj )
+{
+    if ( dynamic_cast<const ObjectMesh*>( &obj ) )
+        return SaveInfo{ ViewerSettingsManager::ObjType::Mesh, MeshSave::getFilters() };
+    if ( dynamic_cast<const ObjectLines*>( &obj ) )
+        return SaveInfo{ ViewerSettingsManager::ObjType::Lines, LinesSave::getFilters() };
+    if ( dynamic_cast<const ObjectPoints*>( &obj ) )
+        return SaveInfo{ ViewerSettingsManager::ObjType::Points, PointsSave::getFilters() };
+    if ( dynamic_cast<const ObjectDistanceMap*>( &obj ) )
+        return SaveInfo{ ViewerSettingsManager::ObjType::DistanceMap, DistanceMapSave::getFilters() };
+    if ( dynamic_cast<const ObjectGcode*>( &obj ) )
+        return SaveInfo{ ViewerSettingsManager::ObjType::Gcode, GcodeSave::Filters };
+#ifndef MESHLIB_NO_VOXELS
+    if ( dynamic_cast<const ObjectVoxels*>( &obj ) )
+        return SaveInfo{ ViewerSettingsManager::ObjType::Voxels, VoxelsSave::getFilters() };
+#endif
+    return {};
+}
+
+/// returns nullopt if objs has no VisualObject or its VisualObjects do not all map to one saver
 template<typename T>
 std::optional<SaveInfo> getSaveInfo( const std::vector<std::shared_ptr<T>> & objs )
 {
     std::optional<SaveInfo> res;
-    // return nullopt if there is no single VisualObject in objs
-    if ( std::none_of( objs.begin(), objs.end(), [&]( const auto & pObj )
-        { return dynamic_cast<const VisualObject*>( pObj.get() ); } ) )
-        return res;
-
-    auto checkObjects = [&]<class U>( SaveInfo info )
+    for ( const auto & obj : objs )
     {
-        for ( const auto & obj : objs )
-        {
-            if ( !dynamic_cast<const VisualObject*>( obj.get() ) )
-                continue; // skip not VisualObjects
-            if ( !dynamic_cast<const U*>( obj.get() ) )
-                return false;
-        }
-        res.emplace( info );
-        return true;
-    };
-
-    checkObjects.template operator()<ObjectMesh>( { ViewerSettingsManager::ObjType::Mesh, MeshSave::getFilters() } )
-    || checkObjects.template operator()<ObjectLines>( { ViewerSettingsManager::ObjType::Lines, LinesSave::getFilters() } )
-    || checkObjects.template operator()<ObjectPoints>( { ViewerSettingsManager::ObjType::Points, PointsSave::getFilters() } )
-    || checkObjects.template operator()<ObjectDistanceMap>( { ViewerSettingsManager::ObjType::DistanceMap, DistanceMapSave::getFilters() } )
-    || checkObjects.template operator()<ObjectGcode>( { ViewerSettingsManager::ObjType::Gcode, GcodeSave::Filters } )
-#ifndef MESHLIB_NO_VOXELS
-    || checkObjects.template operator()<ObjectVoxels>( { ViewerSettingsManager::ObjType::Voxels, VoxelsSave::getFilters() } )
-#endif
-    ;
-
+        if ( !dynamic_cast<const VisualObject*>( obj.get() ) )
+            continue; // skip not VisualObjects
+        auto info = getObjectSaveInfo( *obj );
+        if ( !info || ( res && res->objType != info->objType ) )
+            return {};
+        if ( !res )
+            res.emplace( *info );
+    }
     return res;
 }
 
@@ -600,13 +602,22 @@ SaveObjectMenuItem::SaveObjectMenuItem() :
 std::string SaveObjectMenuItem::isAvailable( const std::vector<std::shared_ptr<const Object>>&objs ) const
 {
 #ifdef __EMSCRIPTEN__
-    if ( objs.size() != 1 || !getSaveInfo( objs ) )
+    if ( objs.size() != 1 )
         return _tr( "Select exactly one object of an exportable type (e.g. Mesh, Point Cloud or Volume)" );
-#else
-    if ( !getSaveInfo( objs ) )
-        return _tr( "Select objects of the same type (e.g. Meshes, Point Clouds or Volumes)" );
 #endif
-    return "";
+    if ( getSaveInfo( objs ) )
+        return "";
+    for ( const auto & obj : objs )
+    {
+        if ( dynamic_cast<const VisualObject*>( obj.get() ) && !getObjectSaveInfo( *obj ) )
+            // TRANSLATORS: example string: Plane objects cannot be exported
+            return fmt::format( f_tr( "{} objects cannot be exported" ), _tr( obj->className() ) );
+    }
+#ifdef __EMSCRIPTEN__
+    return _tr( "Select exactly one object of an exportable type (e.g. Mesh, Point Cloud or Volume)" );
+#else
+    return _tr( "Select objects of the same type (e.g. Meshes, Point Clouds or Volumes)" );
+#endif
 }
 
 bool SaveObjectMenuItem::action()

@@ -26,7 +26,7 @@ PolylineProjectionResult<V> findProjectionCore( const AABBTreePolyline<V> & tree
 {
     PolylineProjectionResult<V> res;
     res.distSq = upDistLimitSq;
-    if ( tree.nodes().empty() )
+    if ( tree.empty() )
         return res;
 
     struct SubTask
@@ -44,7 +44,7 @@ PolylineProjectionResult<V> findProjectionCore( const AABBTreePolyline<V> & tree
 
     auto getSubTask = [&] ( NodeId n )
     {
-        return SubTask { n, distSqToBox( transformed( tree.nodes()[n].box, xf ) ) };
+        return SubTask { n, distSqToBox( transformed( tree.box( n ), xf ) ) };
     };
 
     addSubTask( getSubTask( tree.rootNodeId() ) );
@@ -53,13 +53,12 @@ PolylineProjectionResult<V> findProjectionCore( const AABBTreePolyline<V> & tree
     {
         const auto s = subtasks.top();
         subtasks.pop();
-        const auto& node = tree[s.n];
         if ( s.distSq >= res.distSq )
             continue;
 
-        if ( node.leaf() )
+        if ( tree.isLeaf( s.n ) )
         {
-            const auto lineId = node.leafId();
+            const auto lineId = tree.leafId( s.n );
             V a, b;
             edgeToEndPoints( lineId, a, b );
             if ( xf )
@@ -81,6 +80,7 @@ PolylineProjectionResult<V> findProjectionCore( const AABBTreePolyline<V> & tree
             continue;
         }
 
+        const auto& node = tree[s.n];
         auto s1 = getSubTask( node.l );
         auto s2 = getSubTask( node.r );
         // add task with smaller distance last to descend there first
@@ -185,7 +185,7 @@ PolylineProjectionWithOffsetResult<V> findProjectionOnPolylineWithOffsetT(
 
     PolylineProjectionWithOffsetResult<V> res;
     res.dist = upDistLimit;
-    if ( tree.nodes().empty() )
+    if ( tree.empty() )
         return res;
 
     if ( offsetPerEdge.size() < polyline.topology.undirectedEdgeSize() )
@@ -225,7 +225,7 @@ PolylineProjectionWithOffsetResult<V> findProjectionOnPolylineWithOffsetT(
 
     auto getSubTask = [&] ( NodeId n )
     {
-        const auto & box = tree.nodes()[n].box;
+        const auto & box = tree.box( n );
         float dist = std::sqrt( xf ? transformed( box, *xf ).getDistanceSq( pt ) : box.getDistanceSq( pt ) ) - maxOffset;
         return SubTask { n, dist };
     };
@@ -236,13 +236,12 @@ PolylineProjectionWithOffsetResult<V> findProjectionOnPolylineWithOffsetT(
     {
         const auto s = subtasks.top();
         subtasks.pop();
-        const auto& node = tree[s.n];
         if ( s.dist >= res.dist )
             continue;
 
-        if ( node.leaf() )
+        if ( tree.isLeaf( s.n ) )
         {
-            const auto lineId = node.leafId();
+            const auto lineId = tree.leafId( s.n );
             V a, b;
             a = polyline.orgPnt( lineId );
             b = polyline.destPnt( lineId );
@@ -265,6 +264,7 @@ PolylineProjectionWithOffsetResult<V> findProjectionOnPolylineWithOffsetT(
             continue;
         }
 
+        const auto& node = tree[s.n];
         auto s1 = getSubTask( node.l );
         auto s2 = getSubTask( node.r );
         // add task with smaller distance last to descend there first
@@ -334,7 +334,7 @@ void findEdgesInBallCore( const AABBTreePolyline<V>& tree, const V& center,
         return;
     }
 
-    if ( tree.nodes().empty() )
+    if ( tree.empty() )
         return;
 
     const auto radiusSq = sqr( radius );
@@ -342,7 +342,7 @@ void findEdgesInBallCore( const AABBTreePolyline<V>& tree, const V& center,
 
     auto addSubTask = [&] ( NodeId n )
     {
-        const auto & box = tree.nodes()[n].box;
+        const auto & box = tree.box( n );
         float distSq = xf ? transformed( box, *xf ).getDistanceSq( center ) : box.getDistanceSq( center );
         if ( distSq <= radiusSq )
             subtasks.push( n );
@@ -354,12 +354,11 @@ void findEdgesInBallCore( const AABBTreePolyline<V>& tree, const V& center,
     {
         const auto n = subtasks.top();
         subtasks.pop();
-        const auto& node = tree[n];
 
-        if ( node.leaf() )
+        if ( tree.isLeaf( n ) )
         {
             LineSegm<V> segm;
-            edgeToEndPoints( node.leafId(), segm.a, segm.b );
+            edgeToEndPoints( tree.leafId( n ), segm.a, segm.b );
             if ( xf )
             {
                 segm.a = ( *xf )( segm.a );
@@ -369,10 +368,11 @@ void findEdgesInBallCore( const AABBTreePolyline<V>& tree, const V& center,
 
             float distSq = ( proj - center ).lengthSq();
             if ( distSq <= radiusSq )
-                foundCallback( node.leafId(), proj, distSq );
+                foundCallback( tree.leafId( n ), proj, distSq );
             continue;
         }
 
+        const auto& node = tree[n];
         addSubTask( node.r ); // look at right node later
         addSubTask( node.l ); // look at left node first
     }

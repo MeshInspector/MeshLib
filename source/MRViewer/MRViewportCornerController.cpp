@@ -341,7 +341,7 @@ Mesh makeCornerControllerRotationArrowMesh( float size, const Vector2f& shift, b
 
     for ( auto& p : mesh.points )
         p.y = 2 * shift.y - p.y;
-    mesh.topology.flipOrientation();
+    mesh.flipOrientation();
     return mesh;
 }
 

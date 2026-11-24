@@ -8,7 +8,7 @@ namespace MR::Cuda
 {
 
 template <typename Func>
-__device__ void findEdgesInTool( const Node3* __restrict__ nodes, const float3* __restrict__ points, const int* __restrict__ orgs, const float3 pos, const float toolRadius, const float toolMinHeight, const float toolMaxHeight, Func callback )
+__device__ void findEdgesInTool( const Polyline3Data& polyline, const float3 pos, const float toolRadius, const float toolMinHeight, const float toolMaxHeight, Func callback )
 {
     const auto toolRadiusSq = toolRadius * toolRadius;
 
@@ -21,24 +21,23 @@ __device__ void findEdgesInTool( const Node3* __restrict__ nodes, const float3* 
 
     auto addSubTask = [&] ( int n )
     {
-        const auto& box = nodes[n].box;
+        const auto& box = polyline.box( n );
         if ( box.intersection( toolBox ).valid() )
             subtasks.push( n );
     };
 
-    addSubTask( 0 );
+    addSubTask( polyline.root );
 
     while ( !subtasks.empty() )
     {
         const auto n = subtasks.top();
         subtasks.pop();
 
-        const auto& node = nodes[n];
-        if ( node.leaf() )
+        if ( Polyline3Data::isLeaf( n ) )
         {
-            const auto ue = node.leafId();
-            const auto a = points[orgs[2 * ue + 0]];
-            const auto b = points[orgs[2 * ue + 1]];
+            const auto ue = polyline.leafId( n );
+            const auto a = polyline.points[polyline.orgs[2 * ue + 0]];
+            const auto b = polyline.points[polyline.orgs[2 * ue + 1]];
             const auto proj = closestPointOnLineSegm( pos, a, b );
 
             const auto dist2Sq = lengthSq( float2{ proj.x - pos.x, proj.y - pos.y } );
@@ -51,6 +50,7 @@ __device__ void findEdgesInTool( const Node3* __restrict__ nodes, const float3* 
         }
         else
         {
+            const auto& node = polyline.nodes[n];
             addSubTask( node.r ); // look at right node later
             addSubTask( node.l ); // look at left node first
         }
@@ -94,7 +94,7 @@ __device__ void kernel( float* __restrict__ output, size_t size, VolumeIndexer i
         distSgnSq = min( distSgnSq, posToDistFunc( toolPos ) );
         return distSgnSq < -paddingSq;
     };
-    findEdgesInTool( toolpath.nodes, toolpath.points, toolpath.orgs, point, toolRadius, toolMinHeight, toolMaxHeight, getToolDistance );
+    findEdgesInTool( toolpath, point, toolRadius, toolMinHeight, toolMaxHeight, getToolDistance );
 
     output[index] = distSgnSq != FLT_MAX ? sqrtSgn( distSgnSq ) : FLT_MAX;
 }
@@ -103,8 +103,8 @@ __global__ void kernel( float* __restrict__ output, size_t size, VolumeIndexer i
 {
     return kernel( output, size, indexer, toolpath, toolRadius, toolMinHeight, toolMaxHeight, padding, [&] ( const float2 toolPos )
     {
-        const auto toolDistSq = findProjectionOnPolyline2( toolPos, toolPolyline.nodes, toolPolyline.points, toolPolyline.orgs, sqr( toolPos.x ), 0.f ).distSq;
-        const auto toolDistSgn = isPointInsidePolyline( toolPos, toolPolyline.nodes, toolPolyline.points, toolPolyline.orgs ) ? -1.f : +1.f;
+        const auto toolDistSq = findProjectionOnPolyline2( toolPos, toolPolyline, sqr( toolPos.x ), 0.f ).distSq;
+        const auto toolDistSgn = isPointInsidePolyline( toolPos, toolPolyline ) ? -1.f : +1.f;
         return toolDistSgn * toolDistSq;
     } );
 }

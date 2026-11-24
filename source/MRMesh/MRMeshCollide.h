@@ -14,7 +14,8 @@ namespace MR
 /**
  * \brief finds all pairs of colliding triangles from two meshes or two mesh regions
  * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
- * \param firstIntersectionOnly if true then the function returns at most one pair of intersecting triangles and returns faster
+ * \param firstIntersectionOnly if true then the function returns at most one pair of intersecting triangles (the same in every run),
+ *        testing the triangles during the tree traversal and stopping it as soon as an intersection is found
  */
 [[nodiscard]] MRMESH_API std::vector<FaceFace> findCollidingTriangles( const MeshPart & a, const MeshPart & b, 
     const AffineXf3f * rigidB2A = nullptr, bool firstIntersectionOnly = false );

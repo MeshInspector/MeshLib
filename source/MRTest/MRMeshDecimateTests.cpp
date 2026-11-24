@@ -3,6 +3,8 @@
 #include <MRMesh/MRCylinder.h>
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRCube.h>
+#include <MRMesh/MRTorus.h>
+#include <MRMesh/MREdgeIterator.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBuffer.h>
 #include <MRMesh/MRMeshLoad.h>
@@ -12,6 +14,7 @@
 #include <MRMesh/MRRegionBoundary.h>
 #include <MRMesh/MRQuadraticForm.h>
 #include <map>
+#include <random>
 #include <tuple>
 #include <sstream>
 
@@ -48,17 +51,113 @@ TEST( MRMesh, MeshDecimate )
 TEST( MRMesh, MeshDecimateParallel )
 {
     const int cNumVerts = 400;
-    auto mesh = makeSphere( { .numMeshVertices = cNumVerts } );
-    mesh.packOptimally();
-    DecimateSettings settings
+    for ( bool preventNormalFlips : { true, false } )
     {
-        .maxError = 1000000, // no actual limit
-        .maxDeletedVertices = cNumVerts - 3,
-        .subdivideParts = 8
+        auto mesh = makeSphere( { .numMeshVertices = cNumVerts } );
+        mesh.packOptimally();
+        DecimateSettings settings
+        {
+            .maxError = 1000000, // no actual limit
+            .preventNormalFlips = preventNormalFlips,
+            .maxDeletedVertices = cNumVerts - 3,
+            .subdivideParts = 8
+        };
+        decimateMesh( mesh, settings );
+        // the last tetrahedron is not collapsed in two triangles lying on each other, and its removal would exceed the limit
+        EXPECT_EQ( mesh.topology.numValidFaces(), 4 ) << preventNormalFlips;
+        EXPECT_EQ( mesh.topology.numValidVerts(), 4 ) << preventNormalFlips;
+
+        // without the limit, the tetrahedron is removed completely
+        decimateMesh( mesh, { .maxError = 1000000, .preventNormalFlips = preventNormalFlips } );
+        EXPECT_EQ( mesh.topology.numValidFaces(), 0 ) << preventNormalFlips;
+        EXPECT_EQ( mesh.topology.numValidVerts(), 0 ) << preventNormalFlips;
+    }
+}
+
+// a closed tetrahedron is removed completely if its four vertices can be collapsed in one point within maxError, otherwise it is kept whole
+TEST( MRMesh, MeshDecimateTetrahedron )
+{
+    std::mt19937 gen( 1 );
+    auto rnd = [&] { return float( gen() % 2001 ) / 1000 - 1; };
+    int removed = 0, keptWithSmallEdge = 0;
+    for ( int i = 0; i < 200; ++i )
+    {
+        VertCoords pts;
+        for ( int k = 0; k < 4; ++k )
+        {
+            const float x = rnd(), y = rnd(), z = rnd();
+            pts.push_back( { x, y, z } );
+        }
+        if ( dot( pts[1_v] - pts[0_v], cross( pts[2_v] - pts[0_v], pts[3_v] - pts[0_v] ) ) < 0 )
+            std::swap( pts[1_v], pts[2_v] );
+        Mesh mesh = Mesh::fromTriangles( pts, { { 0_v, 2_v, 1_v }, { 0_v, 1_v, 3_v }, { 0_v, 3_v, 2_v }, { 1_v, 2_v, 3_v } } );
+        const DecimateSettings settings{ .maxError = 0.03f * ( 1 + i % 10 ) };
+        const auto forms = computeFormsAtVertices( mesh, settings.stabilizer, settings.angleWeightedDistToPlane );
+        auto collapse = [&]( int a, int b ) { return sum( forms[VertId( a )], pts[VertId( a )], forms[VertId( b )], pts[VertId( b )] ); };
+        const auto [q01, p01] = collapse( 0, 1 );
+        const auto [q23, p23] = collapse( 2, 3 );
+        const float errSq = sum( q01, p01, q23, p23 ).first.c, maxErrSq = sqr( settings.maxError );
+        if ( std::abs( errSq - maxErrSq ) <= 1e-3f * maxErrSq )
+            continue; // the decimator may sum the forms in another order, so the rounding can decide such case
+        const bool small = errSq <= maxErrSq;
+        bool smallEdge = false;
+        for ( int a = 0; a < 4; ++a )
+            for ( int b = a + 1; b < 4; ++b )
+                smallEdge = smallEdge || collapse( a, b ).first.c <= sqr( settings.maxError );
+
+        decimateMesh( mesh, settings );
+        EXPECT_EQ( mesh.topology.numValidFaces(), small ? 0 : 4 ) << i;
+        removed += small;
+        keptWithSmallEdge += !small && smallEdge;
+    }
+    EXPECT_GT( removed, 0 );
+    EXPECT_GT( keptWithSmallEdge, 0 ); // one of their edges alone could be collapsed within maxError
+}
+
+// a small tetrahedron is kept whole if the settings do not permit its removal
+TEST( MRMesh, MeshDecimateTetrahedronKept )
+{
+    const Mesh tetra = Mesh::fromTriangles( { { 0, 0, 0 }, { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 } },
+        { { 0_v, 2_v, 1_v }, { 0_v, 1_v, 3_v }, { 0_v, 3_v, 2_v }, { 1_v, 2_v, 3_v } } );
+    const auto e12 = tetra.topology.findEdge( 1_v, 2_v ).undirected();
+    auto facesLeft = [&]( const DecimateSettings & settings )
+    {
+        Mesh mesh = tetra;
+        decimateMesh( mesh, settings );
+        return mesh.topology.numValidFaces();
     };
-    decimateMesh( mesh, settings );
-    ASSERT_EQ( mesh.topology.numValidFaces(), 2 );
-    ASSERT_EQ( mesh.topology.numValidVerts(), 3 );
+    EXPECT_EQ( facesLeft( { .maxError = 10 } ), 0 );
+    EXPECT_EQ( facesLeft( { .maxError = 10, .maxDeletedFaces = 3 } ), 4 );
+
+    FaceBitSet region( 4, true );
+    region.reset( 3_f );
+    EXPECT_EQ( facesLeft( { .maxError = 10, .region = &region } ), 4 );
+
+    UndirectedEdgeBitSet notFlippable( 6 );
+    notFlippable.set( e12 );
+    EXPECT_EQ( facesLeft( { .maxError = 10, .notFlippable = &notFlippable } ), 4 );
+
+    UndirectedEdgeBitSet edgesToCollapse( 6, true );
+    edgesToCollapse.reset( e12 );
+    EXPECT_EQ( facesLeft( { .maxError = 10, .edgesToCollapse = &edgesToCollapse } ), 4 );
+
+    VertBitSet bdVerts( 4 );
+    bdVerts.set( 3_v );
+    EXPECT_EQ( facesLeft( { .maxError = 10, .touchBdVerts = false, .bdVerts = &bdVerts } ), 4 );
+
+    EXPECT_EQ( facesLeft( { .maxError = 10, .preCollapse = []( EdgeId, const Vector3f & ) { return false; } } ), 4 );
+
+    // preCollapse is called only right before the removal, since it may update vertex attributes
+    int preCollapseCalls = 0;
+    auto countCalls = [&]( EdgeId, const Vector3f & ) { ++preCollapseCalls; return true; };
+    EXPECT_EQ( facesLeft( { .maxError = 10, .maxDeletedFaces = 3, .preCollapse = countCalls } ), 4 );
+    EXPECT_EQ( preCollapseCalls, 0 );
+    EXPECT_EQ( facesLeft( { .maxError = 10, .preCollapse = countCalls } ), 0 );
+    EXPECT_EQ( preCollapseCalls, 1 );
+
+    // for ShortestEdgeFirst, maxError limits the length of the edges, and the longest one is sqrt(2)
+    EXPECT_EQ( facesLeft( { .strategy = DecimateStrategy::ShortestEdgeFirst, .maxError = 1.2f } ), 4 );
+    EXPECT_EQ( facesLeft( { .strategy = DecimateStrategy::ShortestEdgeFirst, .maxError = 1.5f } ), 0 );
 }
 
 // all parts modes decimate a region of the mesh in parallel and keep the sets from the settings consistent with the mesh
@@ -305,6 +404,138 @@ TEST( MRMesh, MeshDecimateResolveDegen )
     );
 }
 
+TEST( MRMesh, MeshDecimateOtherEnd )
+{
+    // prism of height 2 whose side has a tiny stair step: wall b-c, strip c-a 0.014 wide, wall a-e;
+    // edge c-a is the cheapest to collapse, its optimal position and keeping c make too thin triangles, but keeping a removes the step
+    const VertCoords points
+    {
+        { -0.2f, 1.1f, 2 }, { 0, 0.165f, 2 }, { 0, 0, 2 }, { 0.014f, 0, 2 }, { 0.6f, -10, 2 }, { 20, -10, 2 }, { 20, 40, 2 }, { -0.2f, 40, 2 }, // k b c a e f g h
+        { -0.2f, 1.1f, 0 }, { 0, 0.165f, 0 }, { 0, 0, 0 }, { 0.6f, -10, 0 }, { 20, -10, 0 }, { 20, 40, 0 }, { -0.2f, 40, 0 }               // k0 b0 c0 e0 f0 g0 h0
+    };
+    const Triangulation t
+    {
+        { 2_v, 3_v, 1_v }, { 6_v, 1_v, 3_v }, { 4_v, 6_v, 3_v }, { 1_v, 6_v, 0_v }, { 4_v, 5_v, 6_v }, { 0_v, 6_v, 7_v },      // top
+        { 9_v, 2_v, 1_v }, { 9_v, 10_v, 2_v }, { 2_v, 10_v, 3_v }, { 10_v, 4_v, 3_v }, { 10_v, 11_v, 4_v },                // b-c, strip c-a, a-e
+        { 8_v, 9_v, 0_v }, { 0_v, 9_v, 1_v }, { 11_v, 12_v, 5_v }, { 11_v, 5_v, 4_v }, { 12_v, 13_v, 6_v }, { 12_v, 6_v, 5_v },  // k-b, e-f, f-g
+        { 13_v, 14_v, 7_v }, { 13_v, 7_v, 6_v }, { 14_v, 8_v, 0_v }, { 14_v, 0_v, 7_v },                                    // g-h, h-k
+        { 13_v, 9_v, 8_v }, { 13_v, 10_v, 9_v }, { 13_v, 11_v, 10_v }, { 13_v, 12_v, 11_v }, { 13_v, 8_v, 14_v }            // bottom
+    };
+    Mesh mesh = Mesh::fromTriangles( points, t );
+    const auto res = decimateMesh( mesh, { .maxError = 0.03f, .stabilizer = 1e-5f } );
+    EXPECT_EQ( res.vertsDeleted, 1 );
+    EXPECT_FALSE( mesh.topology.hasVert( 2_v ) );
+    EXPECT_EQ( mesh.points[3_v], points[3_v] );
+}
+
+TEST( MRMesh, DecimateFixedBoundary )
+{
+    // half of a torus, whose two boundary circles shall stay unchanged
+    const Mesh mesh0 = []
+    {
+        Mesh m = makeTorus( 1.0f, 0.3f, 64, 16 );
+        FaceBitSet half( m.topology.faceSize() );
+        for ( auto f : m.topology.getValidFaces() )
+            if ( m.triCenter( f ).x < 0 )
+                half.set( f );
+        m.topology.deleteFaces( half );
+        return m;
+    }();
+    auto bdVerts = getBoundaryVerts( mesh0.topology );
+    const auto len = mesh0.averageEdgeLength();
+    auto expectFixed = [&]( const Mesh & mesh, const VertBitSet & fixed )
+    {
+        int changed = 0;
+        for ( auto v : fixed )
+            if ( !mesh.topology.hasVert( v ) || mesh.points[v] != mesh0.points[v] )
+                ++changed;
+        EXPECT_EQ( changed, 0 );
+    };
+
+    Mesh mesh = mesh0;
+    remesh( mesh, { .targetEdgeLen = 3 * len, .frozenBoundary = true } );
+    expectFixed( mesh, bdVerts );
+
+    // not-flippable edges near the boundary
+    mesh = mesh0;
+    auto notFlippable = getIncidentEdges( mesh0.topology, getIncidentFaces( mesh0.topology, bdVerts ) );
+    remesh( mesh, { .targetEdgeLen = 3 * len, .frozenBoundary = true, .notFlippable = &notFlippable } );
+    expectFixed( mesh, bdVerts );
+
+    // the boundary of the region is fixed as well
+    mesh = mesh0;
+    FaceBitSet region( mesh0.topology.faceSize() );
+    for ( auto f : mesh0.topology.getValidFaces() )
+        if ( mesh0.triCenter( f ).y > 0 )
+            region.set( f );
+    const auto regionBd = getBoundaryVerts( mesh0.topology, &region );
+    remesh( mesh, { .targetEdgeLen = 3 * len, .frozenBoundary = true, .region = &region } );
+    expectFixed( mesh, regionBd );
+
+    for ( auto [strategy, maxError] : { std::pair{ DecimateStrategy::MinimizeError, 0.01f }, std::pair{ DecimateStrategy::MinimizeError, FLT_MAX },
+        std::pair{ DecimateStrategy::ShortestEdgeFirst, 3 * len } } )
+        for ( bool touchNearBdEdges : { true, false } )
+            for ( int parts : { 1, 8 } )
+                for ( auto givenBd : { (VertBitSet*)nullptr, &bdVerts } )
+                {
+                    SCOPED_TRACE( testing::Message() << "strategy " << int( strategy ) << ", maxError " << maxError << ", touchNearBdEdges " << touchNearBdEdges
+                        << ", parts " << parts << ", bdVerts " << ( givenBd != nullptr ) );
+                    mesh = mesh0;
+                    const auto res = decimateMesh( mesh, { .strategy = strategy, .maxError = maxError, .maxDeletedFaces = mesh0.topology.numValidFaces() / 2,
+                        .touchNearBdEdges = touchNearBdEdges, .touchBdVerts = false, .bdVerts = givenBd, .subdivideParts = parts } );
+                    EXPECT_GT( res.vertsDeleted, 0 );
+                    expectFixed( mesh, bdVerts );
+                }
+
+    // adjustCollapse does not move a fixed vertex
+    mesh = mesh0;
+    decimateMesh( mesh, { .maxError = FLT_MAX, .maxDeletedFaces = mesh0.topology.numValidFaces() / 2, .touchBdVerts = false,
+        .adjustCollapse = []( UndirectedEdgeId, float &, Vector3f & pos ) { pos.z += 0.001f; } } );
+    expectFixed( mesh, bdVerts );
+
+    // a zero-length edge of a fixed vertex: a fan of 6 triangles around vertex 0, which coincides with boundary vertex 1;
+    // the triangle ( 1, 0, 6 ) is first to orient the edge from vertex 1
+    VertCoords fanPoints( 7 );
+    Triangulation fanTris{ { 1_v, 0_v, 6_v } };
+    for ( int i = 0; i < 6; ++i )
+    {
+        fanPoints[VertId( i + 1 )] = Vector3f( std::cos( i * PI_F / 3 ), std::sin( i * PI_F / 3 ), 0 );
+        if ( i < 5 )
+            fanTris.push_back( { 0_v, VertId( i + 1 ), VertId( i + 2 ) } );
+    }
+    fanPoints[0_v] = fanPoints[1_v];
+    Mesh fan = Mesh::fromTriangles( fanPoints, fanTris );
+    EXPECT_EQ( decimateMesh( fan, { .maxError = 1e-4f, .touchBdVerts = false } ).vertsDeleted, 1 );
+    EXPECT_TRUE( fan.topology.hasVert( 1_v ) );
+}
+
+TEST( MRMesh, DecimateTinyEdgeFixedVertex )
+{
+    // tiny edge 0-1 cannot collapse, because both its ends are connected with vertex 3;
+    // so vertex 2 of degree 3 inside triangle 0-1-3 is deleted instead, unless it is fixed or its edges cannot be collapsed
+    const Mesh mesh0 = Mesh::fromTriangles( { { 0, 0, 0 }, { 0.01f, 0, 0 }, { 0.005f, 0.3f, 0 }, { 0.005f, 1, 0 }, { 0.005f, -1, 0 } },
+        { { 0_v, 1_v, 2_v }, { 1_v, 3_v, 2_v }, { 3_v, 0_v, 2_v }, { 1_v, 0_v, 4_v } } );
+    auto keeps2 = [&]( DecimateSettings settings )
+    {
+        Mesh mesh = mesh0;
+        settings.strategy = DecimateStrategy::ShortestEdgeFirst;
+        settings.maxError = 0.05f;
+        settings.tinyEdgeLength = 0.02f;
+        settings.optimizeVertexPos = false;
+        decimateMesh( mesh, settings );
+        return mesh.topology.hasVert( 2_v );
+    };
+    EXPECT_FALSE( keeps2( {} ) );
+
+    VertBitSet fixed( 5 );
+    fixed.set( 2_v );
+    EXPECT_TRUE( keeps2( { .touchBdVerts = false, .bdVerts = &fixed } ) );
+
+    UndirectedEdgeBitSet edges( mesh0.topology.undirectedEdgeSize() );
+    edges.set( mesh0.topology.findEdge( 0_v, 1_v ).undirected() );
+    EXPECT_TRUE( keeps2( { .edgesToCollapse = &edges } ) );
+}
+
 TEST( MRMesh, DecimateObjectMeshDataShortAttributes )
 {
     const Mesh original = makeSphere( { .numMeshVertices = 400 } );
@@ -395,6 +626,41 @@ TEST( MRMesh, RemeshKeepsSharpEdges )
     for ( auto v : mesh.topology.getValidVerts() )
         maxDist = std::max( maxDist, std::sqrt( findProjection( mesh.points[v], cube ).distSq ) );
     EXPECT_LT( maxDist, rs.targetEdgeLen );
+}
+
+TEST( MRMesh, MeshDecimateNoFold )
+{
+    // box [0,1]x[0,1]x[0,2] with tiny top triangle (c,a,b) at the corner (0,0,2);
+    // moving b onto a deletes it, side triangle (b0,c,b) turns by almost 90 degrees and folds onto its new neighbour (c0,a,c)
+    const float d = 0.01f, h = 0.2f;
+    const VertCoords points
+    {
+        { 0, 0, 2 }, { d, 0.001f, 2 }, { 0, h, 2 }, { 1, 0, 2 }, { 1, 1, 2 }, { 0, 1, 2 }, // c, a, b, top corners
+        { 0, 0, 0 }, { d, 0, 0 }, { 0, h, 0 }, { 1, 0, 0 }, { 1, 1, 0 }, { 0, 1, 0 }        // c0, a0, b0, bottom corners
+    };
+    const Triangulation t
+    {
+        { 0_v, 1_v, 2_v }, { 1_v, 3_v, 4_v }, { 1_v, 4_v, 2_v }, { 2_v, 4_v, 5_v },      // top
+        { 6_v, 7_v, 1_v }, { 6_v, 1_v, 0_v }, { 7_v, 9_v, 3_v }, { 7_v, 3_v, 1_v },      // y = 0
+        { 8_v, 0_v, 2_v }, { 6_v, 0_v, 8_v }, { 8_v, 2_v, 5_v }, { 8_v, 5_v, 11_v },     // x = 0
+        { 9_v, 10_v, 4_v }, { 9_v, 4_v, 3_v }, { 10_v, 11_v, 5_v }, { 10_v, 5_v, 4_v },  // x = 1, y = 1
+        { 10_v, 9_v, 7_v }, { 10_v, 7_v, 6_v }, { 10_v, 6_v, 8_v }, { 10_v, 8_v, 11_v }  // bottom
+    };
+    Mesh mesh = Mesh::fromTriangles( points, t );
+    ASSERT_TRUE( mesh.topology.isClosed() );
+
+    UndirectedEdgeBitSet edgesToCollapse( mesh.topology.undirectedEdgeSize() );
+    edgesToCollapse.set( mesh.topology.findEdge( 1_v, 2_v ).undirected() );
+    DecimateSettings settings
+    {
+        .maxError = 0.05f, // allows moving b onto a, but not a onto b
+        .maxTriangleAspectRatio = FLT_MAX,
+        .optimizeVertexPos = false,
+        .edgesToCollapse = &edgesToCollapse
+    };
+    decimateMesh( mesh, settings );
+    for ( auto ue : undirectedEdges( mesh.topology ) )
+        EXPECT_GT( dot( mesh.normal( mesh.topology.left( ue ) ), mesh.normal( mesh.topology.right( ue ) ) ), -0.5f );
 }
 
 } //namespace MR

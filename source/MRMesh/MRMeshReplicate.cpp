@@ -27,7 +27,7 @@ void replicateZ( Mesh & m, const Mesh & target )
     m.getAABBTree();
     BitSetParallelFor( target.topology.getValidVerts(), [&]( VertId v )
     {
-        targetVertProjections[v] = findProjection( target.points[v], m ).mtp;
+        targetVertProjections[v] = findProjection( target.points[v], m ).mtp( m.topology );
     } );
 
     Vector<int, VertId> mVertToNum = makeVectorWithSeqNums( m.topology.getValidVerts() );

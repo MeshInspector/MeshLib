@@ -34,7 +34,8 @@ using V2 = Vector2d;
 
 const double cCos40 = std::cos( 40 * PI / 180 );
 const double cCosVert = std::cos( 29.5 * PI / 180 );
-const double cCosFacets = std::cos( 35 * PI / 180 );
+const double cMaxFacetAngle = 35 * PI / 180;
+const double cCosFacets = std::cos( cMaxFacetAngle );
 const double cCos1 = std::cos( 1 * PI / 180 );
 
 /// values of (deg+1) non-zero B-spline basis functions at t, and optionally their derivatives;
@@ -1667,7 +1668,18 @@ void Grower::processSegment_( int seg, const std::vector<int>& segFaces )
                     fnd.dev = std::round( d.centersDeviation( s, *reg ) / q ) * q;
                     fnd.surf = s;
                     fnd.faces = std::move( *reg );
-                    if ( !best || fnd.area > best->area * 1.0001 || ( fnd.area > best->area * 0.9999 && better_( fnd, *best ) ) )
+                    bool take = !best || fnd.area > best->area * 1.0001 || ( fnd.area > best->area * 0.9999 && better_( fnd, *best ) );
+                    if ( best && fnd.surf.type != best->surf.type && std::min( fnd.area, best->area ) > 0.97 * std::max( fnd.area, best->area ) )
+                    {
+                        // a more complex surface can take a few more small triangles, but it must not win
+                        // if it passes much farther from the facets, e.g. a huge torus instead of a cylinder
+                        const bool simpler = fnd.surf.type < best->surf.type;
+                        const Found& lo = simpler ? fnd : *best;
+                        const Found& hi = simpler ? *best : fnd;
+                        if ( 3 * lo.dev + 0.5 * d.tol < hi.dev )
+                            take = simpler;
+                    }
+                    if ( take )
                         best = std::move( fnd );
                 }
                 if ( best && best->surf.type != SurfType::Plane && !best->surf.known )
@@ -2401,6 +2413,9 @@ std::optional<Curve> BRepWriter::circleFrom_( const std::vector<V3>& p, const V3
         if ( closed && i + 1 == p.size() )
             ang = 2 * PI;
         if ( ang <= prev )
+            return {};
+        // nothing but the points defines the curve on mesh boundary, and few points can be the corners of a polygon
+        if ( ss.size() < 2 && ang - prev > cMaxFacetAngle )
             return {};
         prev = ang;
     }

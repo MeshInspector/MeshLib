@@ -2,8 +2,8 @@
 #include "MRMesh.h"
 #include "MRMeshPart.h"
 #include "MRRegionBoundary.h"
-#include "MRSymMatrix3.h"
-#include "MRMatrix3.h"
+#include "MRBestFit.h"
+#include "MRDirMaxBruteForce.h"
 #include "MRVector2.h"
 #include "MRTimer.h"
 #include "MRPch/MREigenCore.h"
@@ -12,46 +12,27 @@
 namespace MR
 {
 
-Expected<VertCoords2> leastSquaresConformalMap( const MeshPart& mp )
+Expected<VertUVCoords> leastSquaresConformalMap( const MeshPart& mp )
 {
     MR_TIMER;
     const auto& topology = mp.mesh.topology;
     const auto& faces = topology.getFaceIds( mp.region );
     const auto verts = getIncidentVerts( topology, faces );
-    const int n = int( verts.count() );
-    if ( n < 3 )
+    if ( verts.count() < 3 )
         return unexpected( "Too few vertices" );
 
-    // pin two vertices most distant along the main direction
-    Vector3d mean;
+    // pin two vertices most distant along the main direction: pa in (0,0) and pb in (1,0)
+    PointAccumulator acc;
     for ( auto v : verts )
-        mean += Vector3d( mp.mesh.points[v] );
-    mean /= double( n );
-    SymMatrix3d cov;
-    for ( auto v : verts )
-        cov += outerSquare( Vector3d( mp.mesh.points[v] ) - mean );
-    Matrix3d vecs;
-    cov.eigens( &vecs );
-    const Vector3d axis = vecs.z;
-    VertId pa, pb;
-    for ( auto v : verts )
-    {
-        const double t = dot( Vector3d( mp.mesh.points[v] ), axis );
-        if ( !pa || t < dot( Vector3d( mp.mesh.points[pa] ), axis ) )
-            pa = v;
-        if ( !pb || t > dot( Vector3d( mp.mesh.points[pb] ), axis ) )
-            pb = v;
-    }
-
-    // the unknowns are u and v coordinates of not-pinned vertices
-    Vector<int, VertId> uCol( topology.vertSize(), -1 ), vCol( topology.vertSize(), -1 );
-    int numFree = 0;
-    for ( auto v : verts )
-        if ( v != pa && v != pb )
-            uCol[v] = numFree++;
-    for ( auto v : verts )
-        if ( v != pa && v != pb )
-            vCol[v] = numFree++;
+        acc.addPoint( mp.mesh.points[v] );
+    const auto mm = findDirMinMaxBruteForce( Vector3f( acc.getBestLine().d ), mp.mesh.points, &verts );
+    const VertId pa = mm.minArg, pb = mm.maxArg;
+    // the unknowns are u coordinates of not-pinned vertices in columns col[v], and their v coordinates in columns col[v] + numFree
+    auto freeVerts = verts;
+    freeVerts.reset( pa );
+    freeVerts.reset( pb );
+    const auto col = makeVectorWithSeqNums( freeVerts );
+    const int numFree = int( freeVerts.count() );
 
     std::vector<Eigen::Triplet<double>> trips;
     std::vector<double> rhsVals;
@@ -75,26 +56,25 @@ Expected<VertCoords2> leastSquaresConformalMap( const MeshPart& mp )
         {
             const int a = ( j + 1 ) % 3, b = ( j + 2 ) % 3;
             const double wr = ( x[b] - x[a] ) * w, wi = ( y[b] - y[a] ) * w;
-            const VertId v = t[j];
-            // the pinned vertices have (u,v) = (0,0) and (1,0)
-            auto add = [&]( int r, int col, bool isU, double coeff )
+            if ( const int c = col[t[j]]; c >= 0 )
             {
-                if ( col >= 0 )
-                    trips.emplace_back( r, col, coeff );
-                else if ( isU && v == pb )
-                    rhsVals[r] -= coeff;
-            };
-            add( row, uCol[v], true, wr );
-            add( row, vCol[v], false, -wi );
-            add( row + 1, uCol[v], true, wi );
-            add( row + 1, vCol[v], false, wr );
+                trips.emplace_back( row, c, wr );
+                trips.emplace_back( row, c + numFree, -wi );
+                trips.emplace_back( row + 1, c, wi );
+                trips.emplace_back( row + 1, c + numFree, wr );
+            }
+            else if ( t[j] == pb ) // pinned pa = (0,0) adds nothing
+            {
+                rhsVals[row] -= wr;
+                rhsVals[row + 1] -= wi;
+            }
         }
         row += 2;
     }
     if ( row == 0 )
         return unexpected( "No non-degenerate triangles" );
 
-    Eigen::SparseMatrix<double> m( row, numFree );
+    Eigen::SparseMatrix<double> m( row, 2 * numFree );
     m.setFromTriplets( trips.begin(), trips.end() );
     const Eigen::VectorXd rhs = Eigen::Map<const Eigen::VectorXd>( rhsVals.data(), row );
     const Eigen::SparseMatrix<double> mtm = m.transpose() * m;
@@ -103,11 +83,11 @@ Expected<VertCoords2> leastSquaresConformalMap( const MeshPart& mp )
         return unexpected( "Degenerate system" );
     const Eigen::VectorXd sol = ldlt.solve( m.transpose() * rhs );
 
-    VertCoords2 res( topology.vertSize() );
-    for ( auto v : verts )
+    VertUVCoords res( topology.vertSize() );
+    res[pb].x = 1;
+    for ( auto v : freeVerts )
     {
-        res[v].x = uCol[v] >= 0 ? float( sol[uCol[v]] ) : ( v == pb ? 1.0f : 0.0f );
-        res[v].y = vCol[v] >= 0 ? float( sol[vCol[v]] ) : 0.0f;
+        res[v] = UVCoord( float( sol[col[v]] ), float( sol[col[v] + numFree] ) );
         if ( !std::isfinite( res[v].x + res[v].y ) )
             return unexpected( "Degenerate system" );
     }

@@ -53,6 +53,18 @@ int bsplineBasis( const std::vector<double>& knots, int deg, int n, double t, do
     return span - deg;
 }
 
+/// clamped knots with uniform inner spacing on [0, 1] for given number of control points and degree
+std::vector<double> makeClampedUniformKnots( int numControlPoints, int degree )
+{
+    const int n = numControlPoints;
+    std::vector<double> res( n + degree + 1, 1.0 );
+    for ( int i = 0; i <= degree; ++i )
+        res[i] = 0;
+    for ( int i = degree + 1; i < n; ++i )
+        res[i] = double( i - degree ) / ( n - degree );
+    return res;
+}
+
 } //anonymous namespace
 
 Vector3d BSplineCurve::eval( double t ) const
@@ -120,17 +132,6 @@ Vector2d BSplineSurface::project( const Vector3d& p, Vector2d uv, int iterations
     return uv;
 }
 
-std::vector<double> makeClampedUniformKnots( int numControlPoints, int degree )
-{
-    const int n = numControlPoints;
-    std::vector<double> res( n + degree + 1, 1.0 );
-    for ( int i = 0; i <= degree; ++i )
-        res[i] = 0;
-    for ( int i = degree + 1; i < n; ++i )
-        res[i] = double( i - degree ) / ( n - degree );
-    return res;
-}
-
 BSplineCurve interpolateBSplineCurve( const std::vector<Vector3d>& points )
 {
     const int n = int( points.size() );
@@ -145,10 +146,8 @@ BSplineCurve interpolateBSplineCurve( const std::vector<Vector3d>& points )
     BSplineCurve res;
     res.degree = std::min( 3, n - 1 );
     const int k = res.degree;
-    // the inner knots are the averages of the parameters of the points
-    res.knots.assign( n + k + 1, 1.0 );
-    for ( int i = 0; i <= k; ++i )
-        res.knots[i] = 0;
+    // clamped knots with the inner ones being the averages of the parameters of the points
+    res.knots = makeClampedUniformKnots( n, k );
     for ( int j = 1; j < n - k; ++j )
         res.knots[j + k] = std::accumulate( t.begin() + j, t.begin() + j + k, 0.0 ) / k;
 

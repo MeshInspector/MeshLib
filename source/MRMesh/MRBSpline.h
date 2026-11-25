@@ -44,9 +44,6 @@ struct BSplineSurface
     [[nodiscard]] MRMESH_API Vector2d project( const Vector3d& p, Vector2d uv, int iterations = 12 ) const;
 };
 
-/// clamped knots with uniform inner spacing on [0, 1] for given number of control points and degree
-[[nodiscard]] MRMESH_API std::vector<double> makeClampedUniformKnots( int numControlPoints, int degree );
-
 /// B-spline curve of degree min( 3, points.size() - 1 ) passing through all given points (at least 2),
 /// with the parameters of the points proportional to the length of the polyline through them, in [0, 1]
 [[nodiscard]] MRMESH_API BSplineCurve interpolateBSplineCurve( const std::vector<Vector3d>& points );

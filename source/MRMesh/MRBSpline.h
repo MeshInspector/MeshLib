@@ -42,8 +42,8 @@ struct BSplineSurface
     [[nodiscard]] MRMESH_API Vector3d normal( const Vector2d& uv ) const;
 
     /// parameters of the surface point closest to given one, found by Gauss-Newton iterations from the initial parameters uv clamped to the domain and kept in it;
-    /// a step that decreases the squared distance by less than 1/4 of what the linearization predicts is halved,
-    /// and the iterations stop when the predicted decrease is below the rounding errors
+    /// a step that decreases the squared distance by less than 1/4 of what the linearization predicts is shortened 2 to 10 times
+    /// by quadratic interpolation, and the iterations stop when the predicted decrease is below the rounding errors
     [[nodiscard]] MRMESH_API Vector2d project( const Vector3d& p, Vector2d uv, int iterations = 12 ) const;
 };
 

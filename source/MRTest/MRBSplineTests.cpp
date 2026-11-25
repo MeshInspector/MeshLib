@@ -153,12 +153,13 @@ TEST( MRMesh, ProjectOnBSplineSurface )
     s.controlPoints = { Vector3d( 0, 0, 0 ), Vector3d( 0, 0, 0 ), Vector3d( 1, 0, 0 ), Vector3d( 1, 1, 0 ) };
     EXPECT_NEAR( ( s.project( Vector3d( 0.5, 0.25, 0 ), Vector2d( 0, 0.9 ) ) - Vector2d( 0.5, 0.5 ) ).length(), 0, 1e-12 );
 
-    // the arch z = (1 - x^2) / 2 of curvature radius 1 at the apex, and a point at distance 3 above it,
-    // where the Gauss-Newton steps are 4 times too long, and still 2 times after one halving
+    // the arch z = (1 - x^2) / 2 of curvature radius 1 at the apex, and points at distances 3 and 25 above it,
+    // where the Gauss-Newton steps are 4 and 26 times too long
     s.degreeU = 2;
     s.knotsU = { 0, 0, 0, 1, 1, 1 };
     s.controlPoints = { Vector3d( -1, 0, 0 ), Vector3d( -1, 1, 0 ), Vector3d( 0, 0, 1 ), Vector3d( 0, 1, 1 ), Vector3d( 1, 0, 0 ), Vector3d( 1, 1, 0 ) };
     EXPECT_NEAR( ( s.project( Vector3d( 0, 0.5, 3.5 ), Vector2d( 0.9, 0.2 ) ) - Vector2d( 0.5, 0.5 ) ).length(), 0, 1e-6 );
+    EXPECT_NEAR( ( s.project( Vector3d( 0, 0.5, 25.5 ), Vector2d( 0.9, 0.2 ) ) - Vector2d( 0.5, 0.5 ) ).length(), 0, 1e-6 );
 }
 
 TEST( MRMesh, LeastSquaresConformalMap )

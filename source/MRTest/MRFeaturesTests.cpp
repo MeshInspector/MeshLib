@@ -1,4 +1,6 @@
 #include <MRMesh/MRFeatures.h>
+#include <MRMesh/MRCircleObject.h>
+#include <MRMesh/MRConstants.h>
 #include <MRMesh/MRLineSegm3.h>
 #include <gtest/gtest.h>
 
@@ -944,6 +946,104 @@ TEST( Features, Angle_Plane_Plane )
         ASSERT_TRUE( r.isSurfaceNormalA );
         ASSERT_TRUE( r.isSurfaceNormalB );
     }
+}
+
+TEST( Features, PrimitiveFromObjectWithWorldXf )
+{
+    Object parent;
+    parent.setXf( AffineXf3f::translation( { 10, 0, 0 } ) );
+    auto circle = std::make_shared<CircleObject>();
+    circle->setCenter( { 1, 2, 3 } );
+    circle->setRadius( 2 );
+    parent.addChild( circle );
+    const auto c = std::get<Primitives::ConeSegment>( *primitiveFromObjectWithWorldXf( *circle ) );
+    EXPECT_LE( ( c.centerPoint().center - Vector3f( 11, 2, 3 ) ).length(), testEps );
+    EXPECT_NEAR( c.positiveSideRadius, 2, testEps );
+}
+
+static void expectNear( const AffineXf3d& a, const AffineXf3f& b )
+{
+    for ( auto p : { Vector3f(), Vector3f( 10, 0, 0 ), Vector3f( 0, 10, 0 ), Vector3f( 0, 0, 10 ) } )
+        EXPECT_LT( ( AffineXf3f( a )( p ) - b( p ) ).length(), 1e-4f );
+}
+
+// moving features are the fixed ones displaced by g^-1, so fully constrained alignment must return g
+TEST( Features, AlignRecoversPlacement )
+{
+    const auto g = AffineXf3f( Matrix3f::rotation( Vector3f( 1, 2, 3 ), 0.7f ), Vector3f( 5, -3, 8 ) );
+    const auto mv = [gInv = g.inverse()] ( const Primitives::Variant& f ) { return transformPrimitive( gInv, f ); };
+
+    const Primitives::Plane plane{ .center = { 1, 2, 0 }, .normal = { 0, 0, 1 } };
+    const Primitives::Plane mating{ .center = plane.center, .normal = -plane.normal };
+    const auto hole1 = primitiveCircle( { 10, 0, 0 }, { 0, 0, 1 }, 2 ), hole2 = primitiveCircle( { -5, 7, 0 }, { 0, 0, 1 }, 3 );
+    expectNear( align( { mv( mating ), plane }, { .locators = { { mv( hole1 ), hole1 }, { mv( hole2 ), hole2 } } } ), g );
+
+    const auto line = toPrimitive( LineSegm3f( { 0, 0, 0 }, { 3, 4, 1 } ) );
+    expectNear( align( { mv( mating ), plane }, { .locators = { { mv( hole1 ), hole1 } }, .clocking = AlignPair{ mv( line ), line } } ), g );
+
+    // the moving axis points the other way: the closer direction is taken
+    const auto pin = primitiveCylinder( { 0, 0, -5 }, { 0, 0, 5 }, 2 ), pinReversed = primitiveCylinder( { 0, 0, 5 }, { 0, 0, -5 }, 2 );
+    const Primitives::Sphere p0( Vector3f( 4, 4, 1 ), 0 ), p1( Vector3f( -3, 2, 6 ), 0 ), p2( Vector3f( 1, -7, 2 ), 1 );
+    expectNear( align( { mv( pinReversed ), pin }, { .locators = { { mv( p0 ), p0 } } } ), g );
+
+    expectNear( align( { mv( p0 ), p0 }, { .locators = { { mv( p1 ), p1 }, { mv( p2 ), p2 } } } ), g );
+}
+
+TEST( Features, AlignPlaneKeepsTangentialPosition )
+{
+    const Primitives::Plane fixed{ .center = { 0, 0, 0 }, .normal = { 0, 0, 1 } };
+    const Primitives::Plane moving{ .center = { 3, 4, 10 }, .normal = Vector3f( 0, 1, -1 ).normalized() };
+    for ( bool flip : { false, true } )
+    {
+        const auto xf = align( { moving, fixed }, { .flip = flip, .gap = 2 } );
+        EXPECT_LT( ( xf( Vector3d( moving.center ) ) - Vector3d( 3, 4, 2 ) ).length(), 1e-6 );
+        EXPECT_LT( ( xf.A * Vector3d( moving.normal ) - Vector3d( 0, 0, flip ? 1 : -1 ) ).length(), 1e-6 );
+    }
+}
+
+TEST( Features, AlignBalancesHoleMismatch )
+{
+    const Primitives::Plane fixed{ .center = {}, .normal = { 0, 0, 1 } }, moving{ .center = {}, .normal = { 0, 0, -1 } };
+    const Primitives::Sphere f1( Vector3f( 10, 0, 0 ), 1 ), f2( Vector3f( -10, 0, 0 ), 1 ), m1( Vector3f( 10.5f, 3, 0 ), 1 ), m2( Vector3f( -10.5f, 3, 0 ), 1 );
+    const auto xf = align( { moving, fixed }, { .locators = { { m1, f1 }, { m2, f2 } } } );
+    EXPECT_NEAR( ( xf( Vector3d( m1.center ) ) - Vector3d( f1.center ) ).length(), 0.5, 1e-6 );
+    EXPECT_NEAR( ( xf( Vector3d( m2.center ) ) - Vector3d( f2.center ) ).length(), 0.5, 1e-6 );
+    EXPECT_LT( ( xf.A * Vector3d( 0, 0, -1 ) - Vector3d( 0, 0, -1 ) ).length(), 1e-6 );
+}
+
+TEST( Features, AlignFreeDofs )
+{
+    const Primitives::Plane plane{ .center = {}, .normal = { 0, 0, 1 } }, mating{ .center = {}, .normal = { 0, 0, -1 } };
+    const auto pin = primitiveCylinder( { 0, 0, -5 }, { 0, 0, 5 }, 2 );
+    const auto line = toPrimitive( LineSegm3f( { 0, 0, 0 }, { 1, 0, 0 } ) );
+    const Primitives::Sphere p0( Vector3f(), 0 ), p1( Vector3f( 5, 0, 0 ), 0 ), p2( Vector3f( 0, 5, 0 ), 0 ), onAxis( Vector3f( 0, 0, 7 ), 0 );
+    const auto freeDofs = [] ( const AlignPair& primary, AlignParams params )
+    {
+        int res = -1;
+        params.freeDofs = &res;
+        (void)align( primary, params );
+        return res;
+    };
+    EXPECT_EQ( freeDofs( { mating, plane }, {} ), 3 );
+    EXPECT_EQ( freeDofs( { mating, plane }, { .clocking = AlignPair{ line, line } } ), 2 );
+    EXPECT_EQ( freeDofs( { mating, plane }, { .locators = { { p1, p1 } } } ), 1 );
+    EXPECT_EQ( freeDofs( { mating, plane }, { .locators = { { p1, p1 } }, .clocking = AlignPair{ line, line } } ), 0 );
+    EXPECT_EQ( freeDofs( { mating, plane }, { .locators = { { p1, p1 }, { p2, p2 } } } ), 0 );
+    EXPECT_EQ( freeDofs( { pin, pin }, { .locators = { { onAxis, onAxis } } } ), 1 );
+    EXPECT_EQ( freeDofs( { pin, pin }, { .locators = { { p1, p1 } } } ), 0 );
+    EXPECT_EQ( freeDofs( { p0, p0 }, {} ), 3 );
+    EXPECT_EQ( freeDofs( { p0, p0 }, { .locators = { { p1, p1 } } } ), 1 );
+    EXPECT_EQ( freeDofs( { p0, p0 }, { .locators = { { p1, p1 }, { p2, p2 } } } ), 0 );
+}
+
+TEST( Features, AlignOnAxisLocatorKeepsSpinFree )
+{
+    const auto pin = primitiveCylinder( { 0, 0, -5 }, { 0, 0, 5 }, 2 );
+    const Primitives::Sphere m( Vector3f( 1e-9f, 0, 1e5f ), 0 ), f( Vector3f( 0, 1e-7f, 1e5f ), 0 );
+    expectNear( align( { pin, pin }, { .locators = { { m, f } } } ), AffineXf3f() );
+    // a long on-axis locator does not outweigh a short off-axis one
+    const Primitives::Sphere m2( Vector3f( 2, 0, 0 ), 0 ), f2( Vector3f( 0, 2, 0 ), 0 );
+    expectNear( align( { pin, pin }, { .locators = { { m, f }, { m2, f2 } } } ), AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), PI2_F ) ) );
 }
 
 } //namespace MR::Features

@@ -1,4 +1,5 @@
 #include "MRMeshToStepData.hpp"
+#include "MRBestFit.h"
 #include "MRMatrix3.h"
 #include "MRTimer.h"
 
@@ -210,20 +211,17 @@ void Grower::candidates_( int seed, std::vector<Surf>& out )
                 continue;
             a /= len;
             const auto [u, v] = a.perpendicular();
-            std::vector<double> xs, ys;
+            std::vector<V2> proj;
             for ( int f : { seed, q } )
                 for ( int vert : d.tris[f] )
-                {
-                    xs.push_back( dot( d.pts[vert], u ) );
-                    ys.push_back( dot( d.pts[vert], v ) );
-                }
-            Surf s;
-            s.type = SurfType::Cyl;
-            s.a = a;
-            double cx, cy;
-            if ( fitCircle2( xs, ys, cx, cy, s.r ) )
+                    proj.emplace_back( dot( d.pts[vert], u ), dot( d.pts[vert], v ) );
+            if ( const auto circle = findBestCircle( proj ) )
             {
-                s.c = cx * u + cy * v;
+                Surf s;
+                s.type = SurfType::Cyl;
+                s.a = a;
+                s.r = circle->radius;
+                s.c = circle->center.x * u + circle->center.y * v;
                 out.push_back( s );
             }
         }
@@ -331,8 +329,8 @@ void Grower::candidates_( int seed, std::vector<Surf>& out )
             {
                 if ( auto s = axisTorus( pts, ax.dir, ax.pos ); s && s->maxDist( pts ) < d.tol )
                     out.push_back( *s );
-                double err = 0;
-                if ( auto s = axisCone( pts, ax.dir, ax.pos, &err ); s && err < d.tol && std::tan( s->r ) > 1e-4 && std::tan( s->r ) < 1e4 )
+                // the distance to the cone measured orthogonally to the axis is compared
+                if ( auto s = axisCone( pts, ax.dir, ax.pos ); s && s->maxDist( pts ) < d.tol * std::cos( s->r ) && std::tan( s->r ) > 1e-4 && std::tan( s->r ) < 1e4 )
                     out.push_back( *s );
             }
         }

@@ -1,4 +1,5 @@
 #include "MRMeshToStepData.hpp"
+#include "MRBestFit.h"
 #include "MRBox.h"
 #include "MRMatrix3.h"
 #include "MRSymMatrix3.h"
@@ -227,18 +228,18 @@ std::optional<Curve> BRepWriter::tryCircle_( const std::vector<V3>& p, const Sur
     if ( std::sqrt( std::max( vals[1], 0.0 ) ) < 1e-6 * std::sqrt( std::max( vals[2], 1e-24 ) ) )
         return {};
     const V3 n = vecs.x, u = vecs.z, v = vecs.y;
-    std::vector<double> xs, ys;
+    std::vector<V2> proj;
     for ( const auto& pt : q )
     {
         if ( std::abs( dot( pt - c0, n ) ) > 0.5 * d_.tol )
             return {};
-        xs.push_back( dot( pt - c0, u ) );
-        ys.push_back( dot( pt - c0, v ) );
+        proj.emplace_back( dot( pt - c0, u ), dot( pt - c0, v ) );
     }
-    double cx, cy, r;
-    if ( !fitCircle2( xs, ys, cx, cy, r ) || r < 1e-9 * d_.diag )
+    const auto circle = findBestCircle( proj );
+    if ( !circle || circle->radius < 1e-9 * d_.diag )
         return {};
-    const V3 ctr = c0 + cx * u + cy * v;
+    const double r = circle->radius;
+    const V3 ctr = c0 + circle->center.x * u + circle->center.y * v;
     for ( const auto& pt : q )
         if ( std::abs( ( pt - ctr ).length() - r ) > 0.5 * d_.tol )
             return {};

@@ -96,9 +96,6 @@ struct Surf
 
 V3 centroid( const std::vector<V3>& pts );
 
-/// least squares circle x^2 + y^2 = 2*cx*x + 2*cy*y + s; \return false if the points do not define a circle
-bool fitCircle2( const std::vector<double>& xs, const std::vector<double>& ys, double& cx, double& cy, double& rad );
-
 Surf fitPlane( const std::vector<V3>& pts );
 
 std::optional<Surf> fitSphere( const std::vector<V3>& pts );
@@ -106,11 +103,8 @@ std::optional<Surf> fitSphere( const std::vector<V3>& pts );
 /// cylinder with the axis orthogonal to given normals
 std::optional<Surf> fitCyl( const std::vector<V3>& pts, const std::vector<V3>& normals );
 
-/// the line intersecting all normal lines: the axis of a surface of revolution
-bool revolutionAxis( const std::vector<V3>& pts, const std::vector<V3>& normals, V3& dir, V3& pos );
-
 /// cone with given axis fitted to the points
-std::optional<Surf> axisCone( const std::vector<V3>& pts, const V3& a, const V3& c, double* maxErr = nullptr );
+std::optional<Surf> axisCone( const std::vector<V3>& pts, const V3& a, const V3& c );
 
 /// torus with given axis fitted to the points
 std::optional<Surf> axisTorus( const std::vector<V3>& pts, const V3& a, const V3& c );

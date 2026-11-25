@@ -115,7 +115,9 @@ private:
 
 /// cylinder with the axis orthogonal to all given surface normals, and the radius fitted to the points by findBestCircle (biased low for noisy points of a short arc);
 /// the center and the length of the cylinder span the projections of the points on the axis;
-/// returns nullopt if the normals do not define the axis (e.g. of a plane or of a sphere cap) or the projections of the points do not define the circle
+/// returns nullopt if the projections of the points do not define the circle, or the normals do not define the axis:
+/// the two smallest eigenvalues of the sum of their outer squares differ by less than 1e-6 of the largest one, e.g. for the normals of a plane
+/// or of a sphere cap symmetric around its center; other sphere patches and noisy normals of a plane give a cylinder, so check its distances to the points
 [[nodiscard]] MRMESH_API std::optional<Cylinder3d> findBestCylinderByNormals( const std::vector<Vector3d>& points, const std::vector<Vector3d>& normals );
 
 /// cone with given axis fitted to the points: the line of the distance to the axis against the position along it, fitted orthogonally;
@@ -124,7 +126,8 @@ private:
 
 /// cone tangent to all given planes (e.g. of mesh triangles) with consistently oriented normals, and the angle fitted to the points;
 /// unlike findRevolutionAxis + findBestConeWithAxis, it works for a single strip of triangles; the planes with zero normals are ignored;
-/// the height of the cone spans the points; returns nullopt if the planes do not define the cone: fewer than 3 distinct normals,
+/// the height of the cone spans the points; returns nullopt if the planes do not define the cone: fewer than 3 distinct normals or the normals
+/// within a few degrees of a revolution (the two smallest eigenvalues of their covariance differ by less than 1e-4 of the largest one),
 /// all normals orthogonal to one direction (planes tangent to a cylinder), or no unique apex
 [[nodiscard]] MRMESH_API std::optional<Cone3d> findBestConeByTangentPlanes( const std::vector<Vector3d>& points, const std::vector<Plane3d>& tangentPlanes );
 
@@ -133,7 +136,7 @@ private:
 [[nodiscard]] MRMESH_API std::optional<Torus3d> findBestTorusWithAxis( const std::vector<Vector3d>& points, const Line3d& axis );
 
 /// minimizes the sum of squared distances from the points to the torus by Levenberg-Marquardt method starting from given torus;
-/// the result is never worse than given torus (with unit axis and non-negative radii)
+/// the result is never worse than given torus (with unit axis and non-negative radii), which is returned for fewer than 8 points
 [[nodiscard]] MRMESH_API Torus3d refineTorus( const std::vector<Vector3d>& points, const Torus3d& torus );
 
 } // namespace MR

@@ -409,9 +409,10 @@ std::optional<Cone3d> findBestConeByTangentPlanes( const std::vector<Vector3d>& 
     Matrix3d vecs;
     tips.getCenteredCovarianceEigen( tipsCenter, vecs, eig );
     // the tips do not define the plane if they are on a line (two distinct normals) or coincide (parallel planes);
-    // k is about zero if the planes are tangent to a cylinder
+    // k is about zero if the planes are tangent to a cylinder; to tell it reliably, the two smallest eigenvalues must differ by 1e-4 of the largest one,
+    // since SymMatrix3::eigens finds the eigenvector of the smallest one with the error growing as eps / gap^2 (the tips of about 4.5 degrees of a revolution pass)
     const Vector3d a = vecs.x;
-    if ( !( eig[1] - eig[0] > cEigenTol * eig[2] ) || !( std::abs( dot( a, tipsCenter ) ) > 1e-6 ) )
+    if ( !( eig[1] - eig[0] > 1e-4 * eig[2] ) || !( std::abs( dot( a, tipsCenter ) ) > 1e-6 ) )
         return {};
     Vector3d center;
     for ( const auto& p : points )

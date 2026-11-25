@@ -21,6 +21,15 @@ template <typename T>
     return U( U( S( bit_cast<U>( x ) ) >> ( 8 * sizeof( U ) - 1 ) ) | 1 );
 }
 
+/// whether 0 < |x| < max: then the closest values around x differ from it by one in the bits; one unsigned comparison of the bits
+template <typename T>
+[[nodiscard]] inline bool nonzeroBelowMax( T x )
+{
+    using U = decltype( signStep( x ) );
+    constexpr U absMask = U( -1 ) >> 1;
+    return U( ( bit_cast<U>( x ) & absMask ) - 1 ) < U( bit_cast<U>( std::numeric_limits<T>::max() ) - 1 );
+}
+
 } //namespace detail
 
 /// returns the closest representable value greater than x,
@@ -31,7 +40,7 @@ template <typename T>
     if constexpr ( std::is_same_v<T, float> || std::is_same_v<T, double> )
     {
         // without a branch on the sign of x, which is often unpredictable
-        if ( x != 0 && x >= std::numeric_limits<T>::lowest() && x < std::numeric_limits<T>::max() )
+        if ( detail::nonzeroBelowMax( x ) )
             return bit_cast<T>( bit_cast<decltype( detail::signStep( x ) )>( x ) + detail::signStep( x ) );
     }
     return std::nextafter( x, std::numeric_limits<T>::max() );
@@ -44,7 +53,7 @@ template <typename T>
 {
     if constexpr ( std::is_same_v<T, float> || std::is_same_v<T, double> )
     {
-        if ( x != 0 && x > std::numeric_limits<T>::lowest() && x <= std::numeric_limits<T>::max() )
+        if ( detail::nonzeroBelowMax( x ) )
             return bit_cast<T>( bit_cast<decltype( detail::signStep( x ) )>( x ) - detail::signStep( x ) );
     }
     return std::nextafter( x, std::numeric_limits<T>::lowest() );

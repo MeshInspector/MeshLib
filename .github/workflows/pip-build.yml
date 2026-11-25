@@ -217,16 +217,6 @@ jobs:
       docker_image_tag: ${{ inputs.vcpkg_docker_image_tag || 'latest' }}
       version_tag: ${{needs.setup.outputs.version_tag}}
 
-  generate-wasm-definitions:
-    needs: setup
-    if: ${{ needs.setup.outputs.publish_prod == 'true' }}
-    uses: ./.github/workflows/build-test-emscripten.yml
-    with:
-      docker_image_tag: ${{ inputs.vcpkg_docker_image_tag || 'latest' }}
-      upload_artifacts: false
-      definitions_only: true
-      version_tag: ${{needs.setup.outputs.version_tag}}
-
   manylinux-pip-build:
     needs: setup
     # Skip entirely when both platforms are disabled (empty matrix would
@@ -304,24 +294,27 @@ jobs:
         with:
           build-dir: build/Release
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+
       - name: Generate and build MRBind bindings
         # The stub works around libstdc++11's https://gcc.gnu.org/PR108636 (fixed in 11.4, EL8 ships
         # 11.2.1): Clang emits an extern ref to path::_List::type, which EL8 defines in no library.
         run: |
           clang -O2 -c scripts/mrbind/libstdcxx_fs_path_compat.c -o libstdcxx_fs_path_compat.o
+          PYTHON_MIN_VERSION=$(head -n 1 scripts/wheel/python_versions.txt)
+          # The headers come from uv's Python of the oldest supported version, as the image has only python3.12-devel.
+          export PKG_CONFIG_PATH=$(uv run --no-project --managed-python --python ${PYTHON_MIN_VERSION} scripts/wheel/get_sysconfig_var.py LIBPC)
           make -f scripts/mrbind/generate.mk -B --trace \
             MODE=release \
             FOR_WHEEL=1 \
+            PYTHON_VERSIONS=${PYTHON_MIN_VERSION} \
             PYTHON_SOURCES_DIR=source/MeshLibC2/temp/python \
             CXX_FOR_ABI=${{ matrix.compiler }} \
             CXX_FOR_BINDINGS=${{ matrix.compiler }} \
             DEPS_BASE_DIR=${VCPKG_INSTALLED_DIR}/${VCPKG_TRIPLET} \
             EXTRA_CFLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }} \
             EXTRA_LDFLAGS="--gcc-install-dir=${{ matrix.gcc-install-dir }} $PWD/libstdcxx_fs_path_compat.o"
-
-      # install helper utility for Python version management
-      - name: Install uv
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
 
       - name: Run Tests
         run: xvfb-run -a ./build/Release/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd
@@ -397,7 +390,7 @@ jobs:
     needs:
       - setup
       - manylinux-pip-build
-      - generate-wasm-definitions
+      - generate-c-bindings
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: MeshLib
@@ -425,9 +418,9 @@ jobs:
             msys2-env: clang64
             msys2-pkgs: _clang22
             mrbind-cache-prefix: windows-clang22
-            cuda-version: '12.0.1'
+            cuda-version: '12.4.1'
             cuda-major: '12'
-            cuda-minor: '0'
+            cuda-minor: '4'
           - platform: arm64
             runner: windows-11-vs2026-arm
             vcpkg-triplet: arm64-windows-meshlib
@@ -476,6 +469,18 @@ jobs:
 
       - name: Install all Python versions
         run: scripts/wheel/install_all_python_versions_windows.bat
+
+      - name: Install uv
+        if: ${{ matrix.platform == 'arm64' }}
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
+
+      - name: Get the Python 3.8 headers
+        # There is no win-arm64 Python before 3.11, so take the headers of the x64 one, which also serve arm64.
+        if: ${{ matrix.platform == 'arm64' }}
+        shell: bash
+        run: |
+          INCLUDE=$(uv run --no-project --managed-python --python cpython-3.8-windows-x86_64-none python -c "import sysconfig, pathlib; print(pathlib.Path(sysconfig.get_path('include')).as_posix())")
+          echo "PYTHON_HEADER_ARGS=PYTHON_HEADER_VERSION=3.8 PYTHON_CFLAGS=-I${INCLUDE}" >> $GITHUB_ENV
 
       - name: Install CUDA
         if: ${{ matrix.cuda-version != '' }}
@@ -557,7 +562,7 @@ jobs:
         # one to fail the step on a generation error instead of swallowing it.
         run: |
           call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" ${{ matrix.vs-dev-args }} -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
-          call ./scripts/mrbind/generate_win.bat -B --trace MODE=release FOR_WHEEL=1 PYTHON_SOURCES_DIR=source/MeshLibC2/temp/python || exit /b 1
+          call ./scripts/mrbind/generate_win.bat -B --trace MODE=release FOR_WHEEL=1 PYTHON_SOURCES_DIR=source/MeshLibC2/temp/python %PYTHON_HEADER_ARGS% || exit /b 1
 
       - name: Run Test
         working-directory: source\${{ matrix.platform }}\Release
@@ -653,7 +658,7 @@ jobs:
           internal-build: ${{ needs.setup.outputs.internal_build }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
 
       - name: Install all Python versions
         run: uv python install $(cat scripts/wheel/python_versions.txt | xargs)
@@ -1009,7 +1014,7 @@ jobs:
           merge-multiple: true
 
       - name: Install uv
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d
 
       # One step per Python ABI so the GitHub Actions UI shows per-version
       # status / timing / logs. Each step is a thin wrapper around the

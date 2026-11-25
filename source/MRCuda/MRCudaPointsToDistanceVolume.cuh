@@ -1,5 +1,6 @@
 #include "MRCudaBasic.cuh"
 #include "MRCudaMath.cuh"
+#include "MRCudaPointCloud.cuh"
 
 namespace MR
 {
@@ -30,13 +31,6 @@ namespace Cuda
         bool sqrtAngleWeight{ false };
     };
     
-    // struct similar to MR::Point
-    struct OrderedPoint
-    {
-        float3 coord;
-        int id;
-    };
-
-    void pointsToDistanceVolumeKernel( const Node3* nodes, const OrderedPoint* points, const float3* normals, float* volume, PointsToDistanceVolumeParams params, size_t chunkSize, size_t chunkOffset );
+    void pointsToDistanceVolumeKernel( PointCloudData pc, float* volume, PointsToDistanceVolumeParams params, size_t chunkSize, size_t chunkOffset );
 }
 }

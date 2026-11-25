@@ -4,6 +4,7 @@
 #include "MRAffineXf3.h"
 #include "MRTimer.h"
 #include "MRPch/MRTBB.h"
+#include <optional>
 
 namespace MR
 {
@@ -39,8 +40,10 @@ float findMaxDistanceSqOneWay( const PointCloud& a, const PointCloud& b, const A
 
 float findMaxDistanceSq( const PointCloud& a, const PointCloud& b, const AffineXf3f* rigidB2A, float maxDistanceSq )
 {
-    std::unique_ptr<AffineXf3f> rigidA2B = rigidB2A ? std::make_unique<AffineXf3f>( rigidB2A->inverse() ) : nullptr;
-    return std::max( findMaxDistanceSqOneWay( a, b, rigidB2A, maxDistanceSq ), findMaxDistanceSqOneWay( b, a, rigidA2B.get(), maxDistanceSq ) );
+    std::optional<AffineXf3f> rigidA2B;
+    if ( rigidB2A )
+        rigidA2B = rigidB2A->inverse();
+    return std::max( findMaxDistanceSqOneWay( a, b, rigidB2A, maxDistanceSq ), findMaxDistanceSqOneWay( b, a, rigidA2B ? &*rigidA2B : nullptr, maxDistanceSq ) );
 }
 
 } //namespace MR

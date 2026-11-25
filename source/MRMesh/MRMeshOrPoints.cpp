@@ -146,11 +146,12 @@ auto MeshOrPoints::limitedProjector() const -> LimitedProjectorFunc
                 MeshProjectionResult mpr = findProjection( p, mp, res.distSq );
                 if ( mpr.distSq < res.distSq )
                 {
+                    const auto mtp = mpr.mtp( mp.mesh.topology );
                     res = ProjectionResult
                     {
                         .point = mpr.proj.point,
-                        .normal = mp.mesh.pseudonormal( mpr.mtp, mp.region ),
-                        .isBd = mpr.mtp.isBd( mp.mesh.topology, mp.region ),
+                        .normal = mp.mesh.pseudonormal( mtp, mp.region ),
+                        .isBd = mtp.isBd( mp.mesh.topology, mp.region ),
                         .distSq = mpr.distSq,
                         .closestVert = mp.mesh.getClosestVertex( mpr.proj )
                     };

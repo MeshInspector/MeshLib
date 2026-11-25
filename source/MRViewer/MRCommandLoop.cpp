@@ -18,16 +18,12 @@ CommandLoop::~CommandLoop()
 
 void CommandLoop::setMainThreadId( const std::thread::id& id )
 {
-    auto& inst = instance_();
-    std::unique_lock<std::mutex> lock( inst.mutex_ );
-    inst.mainThreadId_ = id;
+    instance_().mainThreadId_ = id;
 }
 
 std::thread::id CommandLoop::getMainThreadId()
 {
-    auto& inst = instance_();
-    std::unique_lock<std::mutex> lock( inst.mutex_ ); // `setMainThreadId` runs on the launch thread
-    return inst.mainThreadId_;
+    return instance_().mainThreadId_;
 }
 
 void CommandLoop::setState( StartPosition state )
@@ -193,9 +189,13 @@ Expected<bool> CommandLoop::addCommand_( CommandFunc func, bool blockThread, Sta
     }
     inst.commands_.push( cmd );
 
+    // post with the mutex released: on Emscripten `postEmptyEvent` locks the viewer event queue,
+    // which runs its callbacks under that lock, and a callback may call into CommandLoop
+    lock.unlock();
     getViewerInstance().postEmptyEvent();
     if ( blockThread )
     {
+        lock.lock();
         // wait on `done`, not on a bare notification: a spurious wakeup would otherwise return while
         // `exception` above - a local of this frame - is still captured by the not yet executed command
         // wait with a timeout: the event posted above can be lost or never woken on, and an untimed wait

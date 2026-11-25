@@ -2,6 +2,11 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRTorus.h>
 #include <MRMesh/MRBitSet.h>
+#include <MRMesh/MRUVSphere.h>
+#include <MRMesh/MRMeshComponents.h>
+#include <MRMesh/MRAffineXf3.h>
+#include <MRMesh/MRMeshCollide.h>
+#include <MRMesh/MRConstants.h>
 #include <gtest/gtest.h>
 
 namespace MR
@@ -27,6 +32,116 @@ TEST( MRMesh, FixSelfIntersections )
     intersections = SelfIntersections::getFaces( mesh, false );
     EXPECT_TRUE( intersections.has_value() );
     EXPECT_EQ( intersections->count(), 0 );
+}
+
+// A sphere with the cap above z = 0.6 moved down through its bottom crosses itself along two closed curves. The largest part between them
+// is the ring bounded by the band of the sphere and by the surface that the moved cap pulls inside it. Method::SelfBoolean keeps this part
+// of the closed mesh, of the mesh with a hole away from the curves, which stays as it was, and of the mesh with a hole across them;
+// another part of the mesh without self-intersections keeps its faces, and two parts that collide are united.
+TEST( MRMesh, FixSelfIntersectionsSelfBoolean )
+{
+    auto closed = makeUVSphere( 1.0f, 32, 32 );
+    for ( auto& p : closed.points )
+        if ( p.z > 0.6f )
+            p += Vector3f( 0.1f, 0.05f, -1.7f );
+    closed.invalidateCaches();
+    // without the faces with centers in the ball
+    auto withHole = [&] ( const Vector3f& center, float radius )
+    {
+        auto mesh = closed;
+        FaceBitSet hole( mesh.topology.faceSize() );
+        for ( auto f : mesh.topology.getValidFaces() )
+            if ( ( mesh.triCenter( f ) - center ).length() < radius )
+                hole.set( f );
+        mesh.deleteFaces( hole );
+        return mesh;
+    };
+    SelfIntersections::Settings settings;
+    settings.method = SelfIntersections::Settings::Method::SelfBoolean;
+    const float ringVolume = 0.945f;
+    auto fixAndCheck = [&] ( Mesh& mesh )
+    {
+        const auto in = mesh;
+        FaceMap new2Old;
+        auto withMap = settings;
+        withMap.new2Old = &new2Old;
+        EXPECT_TRUE( SelfIntersections::getFaces( mesh, false )->any() );
+        EXPECT_TRUE( SelfIntersections::fix( mesh, withMap ).has_value() );
+        EXPECT_TRUE( SelfIntersections::getFaces( mesh, false )->none() );
+        EXPECT_TRUE( mesh.topology.checkValidity() );
+        // every face lies in the face of the input mesh that it is a part of
+        ASSERT_EQ( new2Old.size(), mesh.topology.faceSize() );
+        for ( auto f : mesh.topology.getValidFaces() )
+        {
+            const auto old = new2Old[f];
+            ASSERT_TRUE( in.topology.hasFace( old ) );
+            EXPECT_LT( std::abs( dot( in.normal( old ), mesh.triCenter( f ) - in.triCenter( old ) ) ), 1e-5f );
+        }
+    };
+
+    auto mesh = closed;
+    fixAndCheck( mesh );
+    EXPECT_TRUE( mesh.topology.isClosed() );
+    EXPECT_EQ( MeshComponents::getNumComponents( mesh ), 1 );
+    EXPECT_NEAR( mesh.volume(), ringVolume, 1e-3f );
+
+    const auto away = withHole( { -1, 0, 0 }, 0.15f );
+    const auto awayHole = away.topology.findHoleRepresentiveEdges();
+    ASSERT_EQ( awayHole.size(), 1 );
+    mesh = away;
+    fixAndCheck( mesh );
+    const auto fixedHole = mesh.topology.findHoleRepresentiveEdges();
+    ASSERT_EQ( fixedHole.size(), 1 );
+    EXPECT_EQ( mesh.topology.findLeftBdEdges().count(), away.topology.findLeftBdEdges().count() );
+    EXPECT_NEAR( mesh.holePerimeter( fixedHole[0] ), away.holePerimeter( awayHole[0] ), 1e-5f );
+    EXPECT_EQ( MeshComponents::getNumComponents( mesh ), 1 );
+    EXPECT_NEAR( mesh.volume(), ringVolume, 1e-2f );
+
+    mesh = withHole( { 0.1f, 0.6f, -0.85f }, 0.3f );
+    EXPECT_FALSE( mesh.topology.isClosed() );
+    fixAndCheck( mesh );
+    EXPECT_NEAR( mesh.volume(), ringVolume, 1e-2f );
+
+    // a mesh without self-intersections stays as it is, and its faces map to themselves
+    auto part = makeUVSphere( 0.5f, 16, 16 );
+    part.transform( AffineXf3f::translation( { 5, 0, 0 } ) );
+    mesh = part;
+    FaceMap new2Old;
+    settings.new2Old = &new2Old;
+    EXPECT_TRUE( SelfIntersections::fix( mesh, settings ).has_value() );
+    settings.new2Old = nullptr;
+    EXPECT_TRUE( mesh == part );
+    ASSERT_EQ( new2Old.size(), part.topology.faceSize() );
+    for ( auto f : part.topology.getValidFaces() )
+        ASSERT_EQ( new2Old[f], f );
+
+    // as another part, it keeps its faces, and its vertices are only rounded by the cut
+    mesh.addMesh( closed );
+    fixAndCheck( mesh );
+    EXPECT_EQ( MeshComponents::getNumComponents( mesh ), 2 );
+    for ( auto f : part.topology.getValidFaces() )
+    {
+        ASSERT_TRUE( mesh.topology.hasFace( f ) );
+        const auto fixedPoints = mesh.getTriPoints( f );
+        const auto partPoints = part.getTriPoints( f );
+        for ( int i = 0; i < 3; ++i )
+            EXPECT_LT( ( fixedPoints[i] - partPoints[i] ).length(), 1e-6f );
+    }
+
+    // two colliding spheres, none of which collides with itself: without the lens that two unit balls have in common
+    const Vector3f shift( 0.9f, 0.3f, 0.1f );
+    mesh = makeUVSphere( 1.0f, 32, 32 );
+    const auto sphereVolume = mesh.volume();
+    part = mesh;
+    part.transform( AffineXf3f::translation( shift ) );
+    mesh.addMesh( part );
+    EXPECT_TRUE( SelfIntersections::getFaces( mesh, false )->none() );
+    EXPECT_TRUE( SelfIntersections::fix( mesh, settings ).has_value() );
+    EXPECT_TRUE( findSelfCollidingTrianglesBS( mesh )->none() );
+    EXPECT_TRUE( mesh.topology.isClosed() );
+    EXPECT_EQ( MeshComponents::getNumComponents( mesh ), 1 );
+    const float d = shift.length();
+    EXPECT_NEAR( mesh.volume(), 2 * sphereVolume - PI * ( 4 + d ) * ( 2 - d ) * ( 2 - d ) / 12, 0.05 );
 }
 
 } //namespace MR

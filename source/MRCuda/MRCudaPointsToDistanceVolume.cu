@@ -5,7 +5,7 @@ namespace MR
 {
 namespace Cuda
 {
-    __global__ void kernel( const Node3* nodes, const OrderedPoint* orderedPoints, const float3* normals, float* volume, PointsToDistanceVolumeParams params, size_t chunkSize, size_t chunkOffset )
+    __global__ void kernel( PointCloudData pc, float* volume, PointsToDistanceVolumeParams params, size_t chunkSize, size_t chunkOffset )
     {
         const size_t gridSize = size_t( params.dimensions.x ) * params.dimensions.y * params.dimensions.z;
         if ( gridSize == 0 )
@@ -43,60 +43,59 @@ namespace Cuda
         const float radius = 3 * params.sigma;
         const float radiusSq = radius * radius;
 
-        InplaceStack<int, 32> subtasks;
-        subtasks.push( 0 );
-
-        auto addSubTask = [&] ( int n )
+        // every level adds at most 3 tasks
+        InplaceStack<int, 49> subtasks;
+        auto inBall = [&] ( const Box3 & box )
         {
-            float distSq = lengthSq( nodes[n].box.getBoxClosestPointTo( voxelCenter ) - voxelCenter );
-            if ( distSq <= radiusSq )
-                subtasks.push( n );
+            return lengthSq( box.getBoxClosestPointTo( voxelCenter ) - voxelCenter ) <= radiusSq;
         };
+        if ( inBall( pc.rootBox ) )
+            subtasks.push( pc.rootRef );
 
-        addSubTask( 0 );
         const auto inv2SgSq = -params.invSigmaModifier / ( params.sigma * params.sigma );
         while ( !subtasks.empty() )
         {
-            const auto n = subtasks.top();
+            const auto ref = subtasks.top();
             subtasks.pop();
-            const auto& node = nodes[n];
 
-            if ( node.leaf() )
+            if ( ref < 0 )
             {
-                auto range = node.getLeafPointRange();
-                auto first = range.x, last = range.y;
-                for ( int i = first; i < last; ++i )
+                const auto range = pc.leafPointRange( ~ref );
+                for ( int i = range.x; i < range.y; ++i )
                 {
-                    auto coord = orderedPoints[i].coord;
+                    auto coord = pc.points[i].coord;
                     if ( lengthSq( coord - voxelCenter ) <= radiusSq )
                     {
                         const auto distSq =  lengthSq(voxelCenter - coord );
                         const auto w = exp( distSq * inv2SgSq );
                         sumWeight += w;
-                        const auto dt = dot( normals[orderedPoints[i].id], voxelCenter - coord );
+                        const auto dt = dot( pc.normals[pc.points[i].id], voxelCenter - coord );
                         if ( !params.sqrtAngleWeight )
                             sumDist += dt * w;
                         else
-                            sumDist += copysign( sqrt( abs( dt ) ), dt ) * w;
+                            sumDist += copysignf( sqrt( abs( dt ) ), dt ) * w;
                     }
                 }
                 continue;
             }
 
-            addSubTask( node.r ); // look at right node later
-            addSubTask( node.l ); // look at left node first
+            // the first child is looked at first
+            const auto & node = pc.nodes[ref];
+            for ( int i = 3; i >= 0; --i )
+                if ( node.child[i] && inBall( node.childBox( i ) ) )
+                    subtasks.push( node.child[i] );
         }
 
         if ( sumWeight >= params.minWeight )
             volume[index] = sumDist / sumWeight;
     }
 
-    void pointsToDistanceVolumeKernel( const Node3* nodes, const OrderedPoint* points, const float3* normals, float* volume, PointsToDistanceVolumeParams params, size_t chunkSize, size_t chunkOffset )
+    void pointsToDistanceVolumeKernel( PointCloudData pc, float* volume, PointsToDistanceVolumeParams params, size_t chunkSize, size_t chunkOffset )
     {
         constexpr int maxThreadsPerBlock = 640;
 
         auto numBlocks = (unsigned int)( ( chunkSize + maxThreadsPerBlock - 1 ) / maxThreadsPerBlock );
-        kernel <<< numBlocks, maxThreadsPerBlock >>> ( nodes, points, normals, volume, params, chunkSize, chunkOffset );
+        kernel <<< numBlocks, maxThreadsPerBlock >>> ( pc, volume, params, chunkSize, chunkOffset );
     }
 } // namespace Cuda
 } // namespace MR

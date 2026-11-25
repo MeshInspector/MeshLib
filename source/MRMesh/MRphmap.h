@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMesh/MRMeshFwd.h"
+#include "MRMesh/MRAllocator.h"
 #include "MRPch/MRHashMap.h"
 
 namespace MR

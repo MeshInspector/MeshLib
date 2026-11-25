@@ -227,21 +227,14 @@ Expected<Mesh> fromDrc( std::istream& in, const MeshLoadSettings& settings )
     }
 
     std::vector<MeshBuilder::VertDuplication> dups;
+    const auto numLoadedPoints = points.size();
     auto mesh = Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( points ), t, &dups,
         { .skippedFaceCount = settings.skippedFaceCount } );
     if ( settings.duplicatedVertexCount )
         *settings.duplicatedVertexCount = int( dups.size() );
-    auto copyDupAttributes = [&dups, sz = mesh.points.size()] ( auto& attributes )
-    {
-        if ( dups.empty() || attributes.empty() )
-            return;
-        attributes.resize( sz );
-        for ( const auto & [src, dup] : dups )
-            attributes[dup] = attributes[src];
-    };
-    copyDupAttributes( colors );
-    copyDupAttributes( normals );
-    copyDupAttributes( uvCoords );
+    MeshBuilder::copyAttributesToDuplicates( colors, dups, numLoadedPoints, mesh.points.size() );
+    MeshBuilder::copyAttributesToDuplicates( normals, dups, numLoadedPoints, mesh.points.size() );
+    MeshBuilder::copyAttributesToDuplicates( uvCoords, dups, numLoadedPoints, mesh.points.size() );
     if ( colorAtt )
         *settings.colors = std::move( colors );
     if ( normalAtt )

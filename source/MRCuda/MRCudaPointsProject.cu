@@ -24,67 +24,71 @@ __global__ void kernel( PointsProjectionResult* __restrict__ res, PointCloudData
 
     struct SubTask
     {
-        int n;
+        int ref; // as in SimdNode3::child
         float distSq;
     };
+    // every level adds at most 3 tasks
+    InplaceStack<SubTask, 49> subtasks;
 
-    InplaceStack<SubTask, 32> subtasks;
+    auto boxDistSq = [&] ( const Box3 & box )
+    {
+        return lengthSq( box.getBoxClosestPointTo( pt ) - pt );
+    };
 
-    auto addSubTask = [&] ( const SubTask& s )
+    // the node to visit next is not pushed in the stack
+    SubTask s{ pc.rootRef, boxDistSq( pc.rootBox ) };
+    for (;;)
     {
         if ( s.distSq < result.distSq )
-            subtasks.push( s );
-    };
-
-    auto getSubTask = [&] ( int n )
-    {
-        const auto box = pc.nodes[n].box;
-        const auto distSq = lengthSq( box.getBoxClosestPointTo( pt ) - pt );
-        return SubTask{ n, distSq };
-    };
-
-    addSubTask( getSubTask( 0 ) );
-
-    while ( !subtasks.empty() )
-    {
-        const auto s = subtasks.top();
-        subtasks.pop();
-        const auto& node = pc.nodes[s.n];
-        if ( s.distSq >= result.distSq )
-            continue;
-
-        if ( node.leaf() )
         {
-            auto range = node.getLeafPointRange();
-            auto begin = range.x, end = range.y;
-            for ( int i = begin; i < end; ++i )
+            if ( s.ref < 0 )
             {
-                if ( skipSameIndex && i == globalIndex )
-                    continue;
-
-                const auto proj = pc.points[i].coord;
-                const auto distSq = lengthSq( proj - pt );
-                if ( distSq < result.distSq )
+                const auto range = pc.leafPointRange( ~s.ref );
+                for ( int i = range.x; i < range.y; ++i )
                 {
-                    result = { distSq, pc.points[i].id };
-                    if ( distSq <= loDistLimitSq )
-                        goto exit;
+                    if ( skipSameIndex && size_t( pc.points[i].id ) == globalIndex )
+                        continue;
+
+                    const auto proj = pc.points[i].coord;
+                    const auto distSq = lengthSq( proj - pt );
+                    if ( distSq < result.distSq )
+                    {
+                        result = { distSq, pc.points[i].id };
+                        if ( distSq <= loDistLimitSq )
+                            goto exit;
+                    }
                 }
             }
-            continue;
+            else
+            {
+                const auto & node = pc.nodes[s.ref];
+                // the children closer than the found point ordered by distance, the farthest first
+                SubTask ch[4];
+                int numCh = 0;
+                for ( int i = 0; i < 4 && node.child[i]; ++i )
+                {
+                    const float d = boxDistSq( node.childBox( i ) );
+                    if ( !( d < result.distSq ) )
+                        continue;
+                    int k = numCh++;
+                    for ( ; k > 0 && ch[k - 1].distSq < d; --k )
+                        ch[k] = ch[k - 1];
+                    ch[k] = { node.child[i], d };
+                }
+                if ( numCh > 0 )
+                {
+                    // descend in the nearest child, the others wait in the stack
+                    for ( int i = 0; i + 1 < numCh; ++i )
+                        subtasks.push( ch[i] );
+                    s = ch[numCh - 1];
+                    continue;
+                }
+            }
         }
-
-        auto s1 = getSubTask( node.l );
-        auto s2 = getSubTask( node.r );
-        if ( s1.distSq < s2.distSq )
-        {
-            const auto temp = s1;
-            s1 = s2;
-            s2 = temp;
-        }
-        assert( s1.distSq >= s2.distSq );
-        addSubTask( s1 ); // larger distance to look later
-        addSubTask( s2 ); // smaller distance to look first
+        if ( subtasks.empty() )
+            break;
+        s = subtasks.top();
+        subtasks.pop();
     }
 
 exit:

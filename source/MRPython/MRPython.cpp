@@ -13,7 +13,7 @@ template<StreamType T>
 void PythonStreamRedirector<T>::write( const std::string& text )
 {
     ++NumWritten<T>::counter;
-    MR::UnifiedPythonStream::get() << text;
+    MR::UnifiedPythonStream::append( text );
     if constexpr ( T == Stdout )
         std::cout << text;
     else

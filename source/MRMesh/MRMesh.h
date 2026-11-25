@@ -45,12 +45,19 @@ struct [[nodiscard]] Mesh
         const MeshBuilder::BuildSettings & settings = {},
         const MeshBuilder::BetterDupContinuation & betterCont = {} );
 
-    /// construct mesh from vertex coordinates and construct mesh topology from face soup,
-    /// where each face can have arbitrary degree (not only triangles);
+    /// construct mesh from TriMesh representation;
+    /// unlike simple fromTriMesh() it tries to resolve non-manifold vertices by creating duplicate vertices;
+    /// `betterCont` (if given) selects the best triangle among several possible continuations during the duplication
+    [[nodiscard]] MRMESH_API static Mesh fromTriMeshDuplicatingNonManifoldVertices(
+        TriMesh && triMesh, ///< points of triMesh will be moved in the result
+        std::vector<MeshBuilder::VertDuplication> * dups = nullptr,
+        const MeshBuilder::BuildSettings & settings = {},
+        const MeshBuilder::BetterDupContinuation & betterCont = {} );
+
+    /// construct mesh from face soup, where each face can have arbitrary degree (not only triangles);
     /// all non-triangular faces will be automatically subdivided on triangles
     [[nodiscard]] MRMESH_API static Mesh fromFaceSoup(
-        VertCoords vertexCoordinates,
-        const std::vector<VertId> & verts, const Vector<MeshBuilder::VertSpan, FaceId> & faces,
+        FaceSoup && soup, ///< points of soup will be moved in the result
         const MeshBuilder::BuildSettings& settings = {}, ProgressCallback cb = {} );
 
     /// construct mesh from point triples;
@@ -334,7 +341,7 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] MRMESH_API QuadraticForm3f quadraticForm( VertId v, bool angleWeigted,
         const FaceBitSet * region = nullptr, const UndirectedEdgeBitSet * creases = nullptr ) const;
 
-    /// returns the bounding box containing all valid vertices (implemented via getAABBTree())
+    /// returns the bounding box containing all valid vertices (the root box of AABBTree)
     /// this bounding box is insignificantly bigger that minimal box due to AABB algorithms precision
     [[nodiscard]] MRMESH_API Box3f getBoundingBox() const;
 
@@ -441,9 +448,13 @@ struct [[nodiscard]] Mesh
     MRMESH_API PackMapping packOptimally( bool preserveAABBTree = true );
     MRMESH_API Expected<PackMapping> packOptimally( bool preserveAABBTree, ProgressCallback cb );
 
-    /// deletes multiple given faces, also deletes adjacent edges and vertices if they were not shared by remaining faces and not in \param keepEdges
-    /// return bit sets of all vacant elements in this mesh after deletion
-    MRMESH_API VacantElements deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
+    /// deletes multiple given faces, also deletes adjacent edges and vertices if they were not shared by remaining faces and not in \param keepEdges;
+    /// the edges that had no left and no right face before the call are not touched, see MeshTopology::deleteFaces
+    MRMESH_API void deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
+
+    /// same as \ref deleteFaces, but also makes lone all edges without faces in this mesh,
+    /// and returns bit sets of all vacant elements in this mesh after deletion, see MeshTopology::deleteFacesFindVacant
+    MRMESH_API VacantElements deleteFacesFindVacant( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges = nullptr );
 
     /// finds the closest mesh point on this mesh (or its region) to given point;
     /// \param point source location to look the closest to
@@ -471,10 +482,10 @@ struct [[nodiscard]] Mesh
     [[nodiscard]] MRMESH_API MeshProjectionResult projectPoint( const Vector3f& point, float maxDistSq = FLT_MAX, const FaceBitSet * region = nullptr, const AffineXf3f * xf = nullptr ) const;
     [[nodiscard]] MeshProjectionResult findClosestPoint( const Vector3f& point, float maxDistSq = FLT_MAX, const FaceBitSet * region = nullptr, const AffineXf3f * xf = nullptr ) const { return projectPoint( point, maxDistSq, region, xf ); }
 
-    /// returns cached aabb-tree for this mesh, creating it if it did not exist in a thread-safe manner
+    /// returns cached aabb-tree of this mesh's triangles, creating it if it did not exist in a thread-safe manner
     MRMESH_API const AABBTree & getAABBTree() const;
 
-    /// returns cached aabb-tree for this mesh, but does not create it if it did not exist
+    /// returns cached aabb-tree of this mesh's triangles, but does not create it if it did not exist
     [[nodiscard]] const AABBTree * getAABBTreeNotCreate() const { return AABBTreeOwner_.get(); }
 
     /// returns cached aabb-tree for points of this mesh, creating it if it did not exist in a thread-safe manner

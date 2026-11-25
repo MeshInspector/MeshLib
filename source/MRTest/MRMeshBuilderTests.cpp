@@ -6,6 +6,7 @@
 #include <MRMesh/MRUnorientedTriangle.h>
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRMesh.h>
+#include <MRMesh/MRTriMesh.h>
 #include <MRMesh/MRRingIterator.h>
 #include <MRMesh/MRBitSet.h>
 #include <gtest/gtest.h>
@@ -19,6 +20,50 @@ namespace MR
 
 namespace MeshBuilder
 {
+
+TEST( MRMesh, fromTriMeshDuplicatingNonManifoldVertices )
+{
+    // two closed fans sharing vertex 0
+    TriMesh tm;
+    tm.tris = {
+        { 0_v, 1_v, 2_v }, { 0_v, 2_v, 3_v }, { 0_v, 3_v, 1_v },
+        { 0_v, 4_v, 5_v }, { 0_v, 5_v, 6_v }, { 0_v, 6_v, 4_v } };
+    for ( int i = 0; i < 7; ++i )
+        tm.points.push_back( Vector3f( float( i ), float( i * i ), 1.0f ) );
+
+    std::vector<VertDuplication> dups;
+    const auto mesh = Mesh::fromTriMeshDuplicatingNonManifoldVertices( std::move( tm ), &dups );
+    ASSERT_EQ( dups.size(), 1 );
+    EXPECT_EQ( dups[0].srcVert, 0_v );
+    EXPECT_EQ( dups[0].dupVert, 7_v );
+    EXPECT_EQ( mesh.topology.numValidVerts(), 8 );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 6 );
+    ASSERT_EQ( mesh.points.size(), 8 );
+    EXPECT_EQ( mesh.points[7_v], mesh.points[0_v] );
+}
+
+TEST( MRMesh, TriMeshFromMesh )
+{
+    auto mesh = makeSphere( { .numMeshVertices = 100 } );
+    FaceBitSet del;
+    del.autoResizeSet( 9_f );
+    mesh.topology.deleteFaces( del );
+
+    const auto tm = TriMesh::fromMesh( mesh );
+    EXPECT_EQ( tm.tris, mesh.topology.getTriangulation() );
+    EXPECT_EQ( tm.points, mesh.points );
+    EXPECT_FALSE( tm.tris[9_f][0].valid() );
+
+    auto meshCopy = mesh;
+    const auto tm1 = TriMesh::fromMesh( std::move( meshCopy ) );
+    EXPECT_EQ( tm1.tris, tm.tris );
+    EXPECT_EQ( tm1.points, tm.points );
+
+    mesh.pack();
+    const auto rebuilt = Mesh::fromTriMesh( TriMesh::fromMesh( mesh ) );
+    EXPECT_EQ( rebuilt.topology.getTriangulation(), mesh.topology.getTriangulation() );
+    EXPECT_EQ( rebuilt.points, mesh.points );
+}
 
 // check non-manifold vertices resolving
 TEST( MRMesh, duplicateNonManifoldVertices )

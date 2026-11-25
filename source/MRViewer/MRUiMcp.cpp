@@ -337,10 +337,10 @@ MR_ON_INIT{
         );
     };
 
-    handleValueType.operator()<std::int64_t >( "Int",    "int"    );
-    handleValueType.operator()<std::uint64_t>( "Uint",   "uint"   );
-    handleValueType.operator()<double       >( "Real",   "float"  );
-    handleValueType.operator()<std::string  >( "String", "string" );
+    handleValueType.template operator()<std::int64_t >( "Int",    "int"    );
+    handleValueType.template operator()<std::uint64_t>( "Uint",   "uint"   );
+    handleValueType.template operator()<double       >( "Real",   "float"  );
+    handleValueType.template operator()<std::string  >( "String", "string" );
 
     server.addTool(
         /*id*/"ui_progressStatus",

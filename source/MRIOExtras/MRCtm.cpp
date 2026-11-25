@@ -198,19 +198,11 @@ Expected<Mesh> fromCtm( std::istream& in, const MeshLoadSettings& settings /*= {
         return unexpected( "vertex id is larger than total point coordinates" );
     if ( settings.duplicatedVertexCount )
         *settings.duplicatedVertexCount = int( dups.size() );
-    if ( !dups.empty() )
-    {
-        auto copyDupAttributes = [&dups, sz = mesh.points.size()] ( auto * attributes )
-        {
-            if ( !attributes || attributes->empty() )
-                return;
-            attributes->resize( sz );
-            for ( const auto & [src, dup] : dups )
-                (*attributes)[dup] = (*attributes)[src];
-        };
-        copyDupAttributes( settings.colors );
-        copyDupAttributes( settings.normals );
-    }
+    // the attributes of other sizes were not filled by the loader
+    if ( settings.colors )
+        MeshBuilder::copyAttributesToDuplicates( *settings.colors, dups, vertCount, mesh.points.size() );
+    if ( settings.normals )
+        MeshBuilder::copyAttributesToDuplicates( *settings.normals, dups, vertCount, mesh.points.size() );
     return mesh;
 }
 

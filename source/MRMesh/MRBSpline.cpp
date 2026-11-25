@@ -17,12 +17,12 @@ namespace
 
 constexpr int cMaxDegree = 7;
 
-/// values of (deg+1) non-zero B-spline basis functions of n control points at t, and optionally their derivatives;
+/// values of (deg+1) non-zero B-spline basis functions at t, and optionally their derivatives;
 /// \return the index of the first of them
-int bsplineBasis( const std::vector<double>& knots, int deg, int n, double t, double* vals, double* ders )
+int bsplineBasis( const std::vector<double>& knots, int deg, double t, double* vals, double* ders )
 {
     assert( deg >= 1 && deg <= cMaxDegree );
-    const int span = int( std::upper_bound( knots.begin() + deg + 1, knots.begin() + n, t ) - knots.begin() ) - 1;
+    const int span = int( std::upper_bound( knots.begin() + deg + 1, knots.end() - deg - 1, t ) - knots.begin() ) - 1;
     double left[cMaxDegree + 1], right[cMaxDegree + 1], low[cMaxDegree + 1];
     vals[0] = 1;
     for ( int j = 1; j <= deg; ++j )
@@ -84,7 +84,7 @@ bool solveLdlt( const Eigen::SparseMatrix<double>& a, const Eigen::MatrixXd& b, 
 Vector3d BSplineCurve::eval( double t ) const
 {
     double b[cMaxDegree + 1];
-    const int i0 = bsplineBasis( knots, degree, int( controlPoints.size() ), t, b, nullptr );
+    const int i0 = bsplineBasis( knots, degree, t, b, nullptr );
     Vector3d res;
     for ( int j = 0; j <= degree; ++j )
         res += b[j] * controlPoints[i0 + j];
@@ -95,8 +95,8 @@ Vector3d BSplineSurface::eval( const Vector2d& uv, Vector3d* du, Vector3d* dv ) 
 {
     double bu[cMaxDegree + 1], bv[cMaxDegree + 1], dbu[cMaxDegree + 1], dbv[cMaxDegree + 1];
     const int nv = numV();
-    const int iu = bsplineBasis( knotsU, degreeU, numU(), uv.x, bu, du ? dbu : nullptr );
-    const int iv = bsplineBasis( knotsV, degreeV, nv, uv.y, bv, dv ? dbv : nullptr );
+    const int iu = bsplineBasis( knotsU, degreeU, uv.x, bu, du ? dbu : nullptr );
+    const int iv = bsplineBasis( knotsV, degreeV, uv.y, bv, dv ? dbv : nullptr );
     Vector3d res;
     if ( du )
         *du = Vector3d();
@@ -193,7 +193,7 @@ std::optional<BSplineCurve> interpolateBSplineCurve( const std::vector<Vector3d>
     for ( int i = 0; i < n; ++i )
     {
         double b[cMaxDegree + 1];
-        const int i0 = bsplineBasis( res.knots, k, n, t[i], b, nullptr );
+        const int i0 = bsplineBasis( res.knots, k, t[i], b, nullptr );
         for ( int j = 0; j <= k; ++j )
             trips.emplace_back( i, i0 + j, b[j] );
         for ( int c = 0; c < 3; ++c )
@@ -227,8 +227,8 @@ std::optional<BSplineSurface> fitBSplineSurface( const std::vector<Vector3d>& po
     for ( size_t i = 0; i < points.size(); ++i )
     {
         double bu[4], bv[4];
-        const int iu = bsplineBasis( res.knotsU, 3, nu, uvs[i].x, bu, nullptr );
-        const int iv = bsplineBasis( res.knotsV, 3, nv, uvs[i].y, bv, nullptr );
+        const int iu = bsplineBasis( res.knotsU, 3, uvs[i].x, bu, nullptr );
+        const int iv = bsplineBasis( res.knotsV, 3, uvs[i].y, bv, nullptr );
         const double w = settings.weights ? ( *settings.weights )[i] : 1.0;
         double val[16];
         for ( int a = 0; a < 16; ++a )

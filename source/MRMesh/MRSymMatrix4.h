@@ -4,6 +4,7 @@
 #include "MRMatrix4.h"
 #include <algorithm>
 #include <cmath>
+#include <initializer_list>
 #include <limits>
 #include <utility>
 
@@ -183,40 +184,54 @@ Vector4<T> SymMatrix4<T>::eigens( Matrix4<T> * eigenvectors ) const MR_REQUIRES_
         { xw, yw, zw, ww }
     };
     Matrix4<T> v; // eigenvectors in rows
+    constexpr T eps2 = std::numeric_limits<T>::epsilon() * std::numeric_limits<T>::epsilon() / 64;
+    // the pairs (p,q) of each rotation and the two other indices r
+    constexpr int P[6] = { 0, 0, 0, 1, 1, 2 }, Q[6] = { 1, 2, 3, 2, 3, 3 }, R1[6] = { 2, 1, 1, 0, 0, 0 }, R2[6] = { 3, 3, 2, 3, 2, 1 };
     for ( int sweep = 0; sweep < 32; ++sweep )
     {
         bool rotated = false;
-        for ( int p = 0; p < 3; ++p )
-            for ( int q = p + 1; q < 4; ++q )
+        for ( int i = 0; i < 6; ++i )
+        {
+            const int p = P[i], q = Q[i];
+            const T apq = a[p][q];
+            // the rotation is skipped if it cannot change the diagonal elements
+            if ( apq * apq <= eps2 * std::abs( a[p][p] * a[q][q] ) )
             {
-                const T apq = a[p][q];
-                // the rotation is skipped if it cannot change the diagonal elements
-                if ( apq == 0 || std::abs( apq ) <= std::numeric_limits<T>::epsilon() * std::sqrt( std::abs( a[p][p] * a[q][q] ) ) / 8 )
-                {
-                    a[p][q] = a[q][p] = 0;
-                    continue;
-                }
-                rotated = true;
-                const T theta = ( a[q][q] - a[p][p] ) / ( 2 * apq );
-                const T t = ( theta >= 0 ? T( 1 ) : T( -1 ) ) / ( std::abs( theta ) + std::sqrt( theta * theta + 1 ) );
-                const T c = 1 / std::sqrt( t * t + 1 );
-                const T s = t * c;
-                a[p][p] -= t * apq;
-                a[q][q] += t * apq;
                 a[p][q] = a[q][p] = 0;
-                for ( int k = 0; k < 4; ++k )
-                {
-                    if ( k != p && k != q )
-                    {
-                        const T akp = a[k][p], akq = a[k][q];
-                        a[k][p] = a[p][k] = c * akp - s * akq;
-                        a[k][q] = a[q][k] = s * akp + c * akq;
-                    }
-                    const T vpk = v[p][k], vqk = v[q][k];
-                    v[p][k] = c * vpk - s * vqk;
-                    v[q][k] = s * vpk + c * vqk;
-                }
+                continue;
             }
+            rotated = true;
+            // t = tan, c = cos, s = sin of the rotation angle
+            const T d = a[q][q] - a[p][p];
+            T t, c;
+            if ( std::abs( d ) > T( 1 << 28 ) * std::abs( apq ) )
+            {
+                // tiny angle: t = apq / d and c = 1 within the precision
+                t = apq / d;
+                c = 1;
+            }
+            else
+            {
+                // c is found from h and u, not from t, so that the two square roots do not wait for one another
+                const T h = std::sqrt( d * d + 4 * apq * apq );
+                const T u = std::abs( d ) + h;
+                t = 2 * apq / std::copysign( u, d );
+                c = std::sqrt( u / ( 2 * h ) );
+            }
+            const T s = t * c;
+            a[p][p] -= t * apq;
+            a[q][q] += t * apq;
+            a[p][q] = a[q][p] = 0;
+            for ( int k : { R1[i], R2[i] } )
+            {
+                const T akp = a[k][p], akq = a[k][q];
+                a[k][p] = a[p][k] = c * akp - s * akq;
+                a[k][q] = a[q][k] = s * akp + c * akq;
+            }
+            const Vector4<T> vp = v[p], vq = v[q];
+            v[p] = c * vp - s * vq;
+            v[q] = s * vp + c * vq;
+        }
         if ( !rotated )
             break;
     }

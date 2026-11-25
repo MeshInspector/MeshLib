@@ -3,8 +3,6 @@
 #include "MRSymMatrix3.h"
 #include "MRSymMatrix4.h"
 #include "MRQuaternion.h"
-#include "MRToFromEigen.h"
-#include <Eigen/Eigenvalues>
 
 namespace MR
 {
@@ -61,10 +59,11 @@ auto PointToPointAligningTransform::findPureRotation_() const -> BestRotation
     const Matrix3d s = sum12_ - outer( sum1_, centroid2() );
     const SymMatrix4d p = calculateMatrixP( s );
 
-    const Eigen::SelfAdjointEigenSolver<Eigen::Matrix4d> solver( toEigen( p ) );
-    Eigen::Vector4d largestEigenVector = solver.eigenvectors().col( 3 );
-    Quaterniond q( largestEigenVector[0], largestEigenVector[1], largestEigenVector[2], largestEigenVector[3] );
-    return { Matrix3d{ q }, solver.eigenvalues()( 3 ) };
+    Matrix4d eigenvectors;
+    const auto eigenvalues = p.eigens( &eigenvectors );
+    const auto & largestEigenVector = eigenvectors.w;
+    Quaterniond q( largestEigenVector.x, largestEigenVector.y, largestEigenVector.z, largestEigenVector.w );
+    return { Matrix3d{ q }, eigenvalues.w };
 }
 
 AffineXf3d PointToPointAligningTransform::findBestRigidXf() const

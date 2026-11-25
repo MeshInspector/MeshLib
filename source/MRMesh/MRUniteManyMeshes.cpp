@@ -154,6 +154,8 @@ public:
             else
             {
                 FaceMap fMap;
+                if ( params_.shifts ) // in the frame of this mesh, as the union would place it
+                    y.resultMesh.transform( AffineXf3f::translation( shift ) );
                 resultMesh.addMesh( y.resultMesh, params_.collectNewFaces || collectNew2Old ? &fMap : nullptr );
                 if ( params_.collectNewFaces )
                 {

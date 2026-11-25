@@ -7,11 +7,17 @@
 #include "MRTimer.h"
 #include "MRPolylineEdgeIterator.h"
 #include "MRBox.h"
-#include "MRSymMatrix4.h"
+#include "MRSymMatrix2.h"
 #include <MRPch/MREigenCore.h>
-#include <Eigen/Cholesky>
-#include <Eigen/Eigenvalues>
-#include <Eigen/QR>
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4244) // conversion from double to float
+#pragma warning(disable: 4464) // relative include path contains '..'
+#endif
+#include <unsupported/Eigen/NonLinearOptimization>
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 #include <cassert>
 
 namespace MR
@@ -206,6 +212,75 @@ Vector3f PlaneAccumulator::findBestCrossPoint( const Vector3f & p0, float tol, i
 namespace
 {
 
+/// relative tolerance of the eigenvalue gaps and ranks below: SymMatrix3::eigens splits equal eigenvalues by up to about 1.5e-8 of the largest one,
+/// and well-defined fits have much larger gaps, e.g. the smallest eigenvalue of the covariance of the points of a 5 degree arc is 1.4e-4 of the largest one
+constexpr double cEigenTol = 1e-6;
+
+template <typename V>
+std::optional<Sphere<V>> findBestSphereT( const std::vector<V>& points )
+{
+    V mean;
+    for ( const auto& p : points )
+        mean += p;
+    if ( !points.empty() )
+        mean /= double( points.size() );
+    // |d - c|^2 = r^2 for the centered points d = p - mean is linear in c and s = r^2 - |c|^2: |d|^2 = 2 * dot( d, c ) + s;
+    // since sum d = 0, its least squares solution decouples: ( sum d d^T ) c = sum d |d|^2 / 2 and s = mean |d|^2
+    decltype( outerSquare( mean ) ) m;
+    V rhs;
+    double s = 0;
+    for ( const auto& p : points )
+    {
+        const V d = p - mean;
+        m += outerSquare( d );
+        rhs += d.lengthSq() * d;
+        s += d.lengthSq();
+    }
+    // the center is not unique if the points are on a line (circle) or in a plane (sphere)
+    int rank = 0;
+    const V c = m.pseudoinverse( cEigenTol, &rank ) * rhs / 2.0;
+    const double r2 = s / double( points.size() ) + c.lengthSq();
+    if ( rank < V::elements || !std::isfinite( r2 ) )
+        return {};
+    return Sphere<V>( mean + c, std::sqrt( r2 ) );
+}
+
+/// the distances from the points to the torus with the parameters: the shift of the center from c0, not-unit axis, major and minor radii;
+/// the functor for Eigen::LevenbergMarquardt
+struct TorusDistances
+{
+    const std::vector<Vector3d>& points;
+    Vector3d c0;
+
+    Torus3d torus( const Eigen::VectorXd& x ) const
+    {
+        return Torus3d( c0 + Vector3d( x[0], x[1], x[2] ), Vector3d( x[3], x[4], x[5] ).normalized(), std::abs( x[6] ), std::abs( x[7] ) );
+    }
+    int values() const { return int( points.size() ); }
+    int operator()( const Eigen::VectorXd& x, Eigen::VectorXd& f ) const
+    {
+        const auto t = torus( x );
+        for ( int i = 0; i < values(); ++i )
+            f[i] = t.distance( points[i] );
+        return 0;
+    }
+    /// the derivatives of a distance by the center: -n, by the not-unit axis: majorRadius * dot( n, axis ) * e / |axis|,
+    /// by the radii: -dot( n, e ) and -1, where n is the normal of the torus and e is the unit direction from the axis to the point
+    int df( const Eigen::VectorXd& x, Eigen::MatrixXd& jac ) const
+    {
+        const auto t = torus( x );
+        const double rLen = 1 / Vector3d( x[3], x[4], x[5] ).length();
+        for ( int i = 0; i < values(); ++i )
+        {
+            const Vector3d d = points[i] - t.center, n = t.normal( points[i] );
+            const Vector3d e = ( d - dot( d, t.axis ) * t.axis ).normalized();
+            const Vector3d da = t.majorRadius * dot( n, t.axis ) * rLen * e;
+            jac.row( i ) << -n.x, -n.y, -n.z, da.x, da.y, da.z, x[6] < 0 ? dot( n, e ) : -dot( n, e ), x[7] < 0 ? 1 : -1;
+        }
+        return 0;
+    }
+};
+
 /// the cone with given apex, axis and angle, and the height spanning the points
 Cone3d coneSpanning( const std::vector<Vector3d>& points, const Line3d& axis, double angle )
 {
@@ -219,81 +294,53 @@ Cone3d coneSpanning( const std::vector<Vector3d>& points, const Line3d& axis, do
 
 std::optional<Sphere3d> findBestSphere( const std::vector<Vector3d>& points )
 {
-    Vector3d mean;
-    for ( const auto& p : points )
-        mean += p;
-    if ( !points.empty() )
-        mean /= double( points.size() );
-    // |p - c|^2 = r^2  <=>  |p|^2 = 2*dot( p, c ) + r^2 - |c|^2
-    SymMatrix4d m;
-    Vector4d rhs;
-    for ( const auto& p : points )
-    {
-        const Vector3d d = p - mean;
-        const Vector4d row( 2 * d.x, 2 * d.y, 2 * d.z, 1 );
-        m += outerSquare( row );
-        rhs += row * d.lengthSq();
-    }
-    // the pseudoinverse gives the minimum-norm solution for degenerate points
-    const Vector4d sol = m.pseudoinverse() * rhs;
-    const Vector3d c( sol.x, sol.y, sol.z );
-    const double r2 = sol.w + c.lengthSq();
-    if ( !( r2 > 0 ) || !std::isfinite( r2 ) )
-        return {};
-    return Sphere3d( mean + c, std::sqrt( r2 ) );
+    return findBestSphereT( points );
 }
 
 std::optional<Sphere2d> findBestCircle( const std::vector<Vector2d>& points )
 {
-    Vector2d mean;
-    for ( const auto& p : points )
-        mean += p;
-    if ( !points.empty() )
-        mean /= double( points.size() );
-    // |p - c|^2 = r^2  <=>  |p|^2 = 2*dot( p, c ) + r^2 - |c|^2
-    Eigen::Matrix3d m = Eigen::Matrix3d::Zero();
-    Eigen::Vector3d rhs = Eigen::Vector3d::Zero();
-    for ( const auto& p : points )
-    {
-        const Vector2d d = p - mean;
-        const Eigen::Vector3d row( 2 * d.x, 2 * d.y, 1 );
-        m += row * row.transpose();
-        rhs += row * d.lengthSq();
-    }
-    // this rank-revealing solver is the most precise for a short arc, where the matrix is nearly degenerate
-    const Eigen::Vector3d sol = m.completeOrthogonalDecomposition().solve( rhs );
-    const Vector2d c( sol[0], sol[1] );
-    const double r2 = sol[2] + c.lengthSq();
-    if ( !( r2 > 0 ) || !std::isfinite( r2 ) )
-        return {};
-    return Sphere2d( mean + c, std::sqrt( r2 ) );
+    return findBestSphereT( points );
 }
 
 std::optional<Line3d> findRevolutionAxis( const std::vector<Line3d>& normalLines )
 {
-    // the axis has zero reciprocal product with every normal line: in Pluecker coordinates (d, m) of the axis, dot( d, p x n ) + dot( m, n ) = 0;
-    // the points are scaled to make both parts of the coordinates comparable
-    double sc = 1e-9;
+    // the axis has zero reciprocal product with every normal line (p, n): in Pluecker coordinates (d, m) of the axis, dot( d, p x n ) + dot( m, n ) = 0;
+    // the points are centered and scaled to make both parts of the coordinates comparable, so |p x n| <= |n|
+    Vector3d c;
     for ( const auto& l : normalLines )
-        sc = std::max( { sc, std::abs( l.p.x ), std::abs( l.p.y ), std::abs( l.p.z ) } );
-    Eigen::Matrix<double, 6, 6> m = Eigen::Matrix<double, 6, 6>::Zero();
+        c += l.p;
+    if ( !normalLines.empty() )
+        c /= double( normalLines.size() );
+    double sc = 0;
+    for ( const auto& l : normalLines )
+        sc = std::max( sc, ( l.p - c ).length() );
+    if ( !( sc > 0 ) )
+        return {};
+    // for given unit d, the best m = -nn^+ b^T d with b = sum ( p x n ) n^T and nn = sum n n^T, and the cost is dot( d, s d ),
+    // where s sums the outer squares of the residuals of the least squares fit of p x n by b nn^+ n
+    Matrix3d b = Matrix3d::zero();
+    SymMatrix3d nn;
     for ( const auto& l : normalLines )
     {
-        const Vector3d mo = cross( l.p / sc, l.d );
-        Eigen::Matrix<double, 6, 1> row;
-        row << mo.x, mo.y, mo.z, l.d.x, l.d.y, l.d.z;
-        m += row * row.transpose();
+        b += outer( cross( ( l.p - c ) / sc, l.d ), l.d );
+        nn += outerSquare( l.d );
     }
-    const Eigen::SelfAdjointEigenSolver<Eigen::Matrix<double, 6, 6>> es( m );
-    const auto v = es.eigenvectors().col( 0 );
-    Vector3d d( v[0], v[1], v[2] ), mom( v[3], v[4], v[5] );
-    const double nd = d.length();
-    if ( !( nd > 1e-6 ) )
+    int rank = 0;
+    const auto nnInv = nn.pseudoinverse( cEigenTol, &rank );
+    SymMatrix3d s;
+    for ( const auto& l : normalLines )
+        s += outerSquare( cross( ( l.p - c ) / sc, l.d ) - b * ( nnInv * l.d ) );
+    Matrix3d vecs;
+    const auto eig = s.eigens( &vecs );
+    // the direction is not unique if the two smallest eigenvalues of s are close relative to the trace of nn, which bounds them:
+    // e.g. all lines through the center of a sphere cross its normals;
+    // the position is not unique if nn has rank 1: e.g. any line along the normal of a plane crosses its normals
+    if ( !( eig[1] - eig[0] > cEigenTol * nn.trace() ) || rank < 2 )
         return {};
-    d /= nd;
-    mom /= nd;
-    mom -= d * dot( mom, d );
-    return Line3d( cross( d, mom ) * sc, d );
+    const Vector3d d = vecs.x;
+    Vector3d m = -( nnInv * ( b.transposed() * d ) );
+    m -= dot( m, d ) * d;
+    return Line3d( c + sc * cross( d, m ), d );
 }
 
 std::optional<Cylinder3d> findBestCylinderByNormals( const std::vector<Vector3d>& points, const std::vector<Vector3d>& normals )
@@ -302,7 +349,10 @@ std::optional<Cylinder3d> findBestCylinderByNormals( const std::vector<Vector3d>
     for ( const auto& n : normals )
         nn += outerSquare( n );
     Matrix3d vecs;
-    nn.eigens( &vecs );
+    const auto eig = nn.eigens( &vecs );
+    // the axis is not unique if the two smallest eigenvalues are close, e.g. for the normals of a plane or of a sphere cap
+    if ( !( eig[1] - eig[0] > cEigenTol * eig[2] ) )
+        return {};
     const Vector3d a = vecs.x;
     const auto [u, v] = a.perpendicular();
     std::vector<Vector2d> proj( points.size() );
@@ -320,51 +370,56 @@ std::optional<Cylinder3d> findBestCylinderByNormals( const std::vector<Vector3d>
 
 std::optional<Cone3d> findBestConeWithAxis( const std::vector<Vector3d>& points, const Line3d& axis )
 {
-    // the distance to the axis: rho = k * h + b
+    // the generator of the cone fitted orthogonally to the points (h, rho): the position along the axis and the distance to it
     const Vector3d a = axis.d.normalized();
-    double sh = 0, shh = 0, sr = 0, shr = 0;
+    PointAccumulator acc;
     for ( const auto& p : points )
     {
         const Vector3d d = p - axis.p;
         const double h = dot( d, a );
-        const double rho = ( d - h * a ).length();
-        sh += h;
-        shh += h * h;
-        sr += rho;
-        shr += h * rho;
+        acc.addPoint( Vector3d( h, ( d - h * a ).length(), 0 ) );
     }
-    const double n = double( points.size() );
-    const double det = shh * n - sh * sh;
-    if ( std::abs( det ) < 1e-30 )
+    if ( !acc.valid() )
         return {};
-    const double k = ( shr * n - sh * sr ) / det;
-    const double b = ( shh * sr - sh * shr ) / det;
-    if ( std::abs( k ) < 1e-6 )
+    const auto l = acc.getBestLine();
+    // a constant distance (a cylinder) or a constant position (a plane) gives no cone; so do coincident points: then the line goes along z
+    const double angle = std::atan2( std::abs( l.d.y ), std::abs( l.d.x ) );
+    if ( !( angle > 1e-6 && angle < PI / 2 - 1e-6 ) )
         return {};
-    return coneSpanning( points, Line3d( axis.p - a * ( b / k ), k > 0 ? a : -a ), std::atan( std::abs( k ) ) );
+    return coneSpanning( points, Line3d( axis.p + a * ( l.p.x - l.p.y * l.d.x / l.d.y ), l.d.x * l.d.y > 0 ? a : -a ), angle );
 }
 
 std::optional<Cone3d> findBestConeByTangentPlanes( const std::vector<Vector3d>& points, const std::vector<Plane3d>& tangentPlanes )
 {
-    // all normals make the same angle with the axis: dot( n, a ) = k
-    SymMatrix4d m;
+    // all unit normals make the same angle with the axis a: their tips are in the plane dot( a, x ) = k
+    PointAccumulator tips;
     // the apex is on all tangent planes
     PlaneAccumulator apexAcc;
     for ( const auto& plane : tangentPlanes )
     {
         const auto pl = plane.normalized();
-        m += outerSquare( Vector4d( pl.n.x, pl.n.y, pl.n.z, -1 ) );
+        if ( pl.n == Vector3d{} )
+            continue; // e.g. the plane of a degenerate triangle
+        tips.addPoint( pl.n );
         apexAcc.addPlane( pl );
     }
-    // the eigenvector of the smallest eigenvalue
-    Matrix4d vecs;
-    m.eigens( &vecs );
-    Vector3d a( vecs.x.x, vecs.x.y, vecs.x.z );
-    const double len = a.length();
-    if ( !( len > 1e-9 ) )
+    if ( !tips.valid() )
         return {};
-    a /= len;
-    const Vector3d apex = apexAcc.findBestCrossPoint( Vector3d{}, std::numeric_limits<double>::epsilon() );
+    Vector3d tipsCenter, eig;
+    Matrix3d vecs;
+    tips.getCenteredCovarianceEigen( tipsCenter, vecs, eig );
+    // the tips do not define the plane if they are on a line (two distinct normals) or coincide (parallel planes);
+    // k is about zero if the planes are tangent to a cylinder
+    const Vector3d a = vecs.x;
+    if ( !( eig[1] - eig[0] > cEigenTol * eig[2] ) || !( std::abs( dot( a, tipsCenter ) ) > 1e-6 ) )
+        return {};
+    Vector3d center;
+    for ( const auto& p : points )
+        center += p;
+    int rank = 0;
+    const Vector3d apex = apexAcc.findBestCrossPoint( center / double( points.size() ), std::numeric_limits<double>::epsilon(), &rank );
+    if ( rank < 3 )
+        return {};
     double sumH = 0, sumHH = 0, sumHR = 0;
     for ( const auto& p : points )
     {
@@ -377,7 +432,7 @@ std::optional<Cone3d> findBestConeByTangentPlanes( const std::vector<Vector3d>& 
     if ( !( sumHH > 0 ) )
         return {};
     const double angle = std::atan( sumHR / sumHH );
-    if ( !std::isfinite( apex.x + apex.y + apex.z ) || !( angle > 1e-6 ) )
+    if ( !( angle > 1e-6 ) )
         return {};
     return coneSpanning( points, Line3d( apex, sumH < 0 ? -a : a ), angle );
 }
@@ -400,65 +455,14 @@ std::optional<Torus3d> findBestTorusWithAxis( const std::vector<Vector3d>& point
 
 Torus3d refineTorus( const std::vector<Vector3d>& points, const Torus3d& torus )
 {
-    constexpr int np = 8;
-    using EV = Eigen::Matrix<double, np, 1>;
-    const auto unpack = []( const EV& x )
-    {
-        return Torus3d( Vector3d( x[0], x[1], x[2] ), Vector3d( x[3], x[4], x[5] ).normalized(), x[6], std::abs( x[7] ) );
-    };
-    const int m = int( points.size() );
-    const auto residuals = [&]( const EV& x, Eigen::VectorXd& f )
-    {
-        const auto t = unpack( x );
-        for ( int i = 0; i < m; ++i )
-            f[i] = t.distance( points[i] );
-    };
-    EV x;
-    x << torus.center.x, torus.center.y, torus.center.z, torus.axis.x, torus.axis.y, torus.axis.z, torus.majorRadius, torus.minorRadius;
-    Eigen::VectorXd f( m ), f1( m );
-    Eigen::Matrix<double, Eigen::Dynamic, np> jac( m, np );
-    residuals( x, f );
-    double cost = f.squaredNorm();
-    if ( !std::isfinite( cost ) )
-        return torus;
-    double lambda = 1e-3;
-    for ( int it = 0; it < 60; ++it )
-    {
-        for ( int j = 0; j < np; ++j )
-        {
-            EV xh = x;
-            const double h = 1e-7 * std::max( 1.0, std::abs( x[j] ) );
-            xh[j] += h;
-            residuals( xh, f1 );
-            jac.col( j ) = ( f1 - f ) / h;
-        }
-        const Eigen::Matrix<double, np, np> jtj = jac.transpose() * jac;
-        const EV g = jac.transpose() * f;
-        bool improved = false;
-        for ( int k = 0; k < 12; ++k )
-        {
-            Eigen::Matrix<double, np, np> lhs = jtj;
-            for ( int j = 0; j < np; ++j )
-                lhs( j, j ) += lambda * std::max( jtj( j, j ), 1e-12 );
-            const EV xn = x + lhs.ldlt().solve( -g );
-            residuals( xn, f1 );
-            const double c1 = f1.squaredNorm();
-            if ( std::isfinite( c1 ) && c1 < cost )
-            {
-                const bool converged = cost - c1 <= 1e-14 * cost;
-                x = xn;
-                f = f1;
-                cost = c1;
-                lambda = std::max( lambda * 0.2, 1e-12 );
-                improved = !converged;
-                break;
-            }
-            lambda *= 5;
-        }
-        if ( !improved )
-            break;
-    }
-    const auto res = unpack( x );
+    // the center is shifted from the given one, so the relative tolerances of the minimization do not depend on the distance to the origin;
+    // the minimization accepts only the steps decreasing the sum of squared distances
+    TorusDistances f{ points, torus.center };
+    Eigen::VectorXd x( 8 );
+    x << 0, 0, 0, torus.axis.x, torus.axis.y, torus.axis.z, torus.majorRadius, torus.minorRadius;
+    Eigen::LevenbergMarquardt<TorusDistances> lm( f );
+    lm.minimize( x );
+    const auto res = f.torus( x );
     return std::isfinite( res.center.x + res.center.y + res.center.z + res.axis.x + res.axis.y + res.axis.z + res.majorRadius + res.minorRadius ) ? res : torus;
 }
 

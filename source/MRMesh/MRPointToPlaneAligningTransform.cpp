@@ -106,8 +106,7 @@ auto PointToPlaneAligningTransform::calculateFixedAxisAmendment( const Vector3d 
     b.topRows<1>() = k.transpose() * ( sumB_.topRows<3>() - sumA.block<3,1>( 0, 6 ) );
     b.bottomRows<3>() = sumB_.middleRows<3>(3) - sumA.block<3,1>( 3, 6 );
 
-    Eigen::LLT<Eigen::MatrixXd> chol(A);
-    Eigen::VectorXd solution = chol.solve(b);
+    const Eigen::Matrix<double, 4, 1> solution = A.llt().solve( b );
 
     RigidScaleXf3d res;
     res.a = solution.coeff( 0 ) * fromEigen( k );

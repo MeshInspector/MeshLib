@@ -55,6 +55,10 @@ struct SymMatrix4
     /// \param rank optional output for this matrix rank according to given tolerance
     SymMatrix4<T> pseudoinverse( T tol = std::numeric_limits<T>::epsilon(), int * rank = nullptr ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> );
 
+    /// solves M*x = b for positive definite M by LDL^T decomposition without pivoting,
+    /// much faster than eigens() or pseudoinverse(); pivots that are not positive are skipped
+    Vector4<T> solveLDLT( const Vector4<T> & b ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> );
+
     bool operator ==( const SymMatrix4<T> & ) const = default;
 };
 
@@ -263,6 +267,35 @@ SymMatrix4<T> SymMatrix4<T>::pseudoinverse( T tol, int * rank ) const MR_REQUIRE
     if ( rank )
         *rank = myRank;
     return res;
+}
+
+template <typename T>
+Vector4<T> SymMatrix4<T>::solveLDLT( const Vector4<T> & b ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> )
+{
+    // M = L*D*L^T with unit lower-triangular L and diagonal D = ( d0, d1, d2, d3 ); eij = lij * dj
+    // a pivot that is not positive is skipped: the solution stays finite for a degenerate positive semi-definite M
+    const auto inv = []( T d ) { return d > 0 ? 1 / d : T( 0 ); };
+    const T i0 = inv( xx );
+    const T l10 = xy * i0, l20 = xz * i0, l30 = xw * i0;
+    const T i1 = inv( yy - l10 * xy );
+    const T e21 = yz - l20 * xy, e31 = yw - l30 * xy;
+    const T l21 = e21 * i1, l31 = e31 * i1;
+    const T i2 = inv( zz - l20 * xz - l21 * e21 );
+    const T e32 = zw - l30 * xz - l31 * e21;
+    const T l32 = e32 * i2;
+    const T i3 = inv( ww - l30 * xw - l31 * e31 - l32 * e32 );
+    // L*y = b
+    const T y0 = b.x;
+    const T y1 = b.y - l10 * y0;
+    const T y2 = b.z - l20 * y0 - l21 * y1;
+    const T y3 = b.w - l30 * y0 - l31 * y1 - l32 * y2;
+    // D*L^T*x = y
+    Vector4<T> x;
+    x.w = y3 * i3;
+    x.z = y2 * i2 - l32 * x.w;
+    x.y = y1 * i1 - l21 * x.z - l31 * x.w;
+    x.x = y0 * i0 - l10 * x.y - l20 * x.z - l30 * x.w;
+    return x;
 }
 
 /// \}

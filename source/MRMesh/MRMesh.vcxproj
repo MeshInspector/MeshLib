@@ -437,6 +437,9 @@
     <ClInclude Include="MRTorus.h" />
     <ClInclude Include="MRMeshTopology.h" />
     <ClInclude Include="MRMeshToStep.h" />
+    <ClInclude Include="MRMeshToStepBSpline.hpp" />
+    <ClInclude Include="MRMeshToStepData.hpp" />
+    <ClInclude Include="MRMeshToStepSurf.hpp" />
     <ClInclude Include="MRMeshBuilder.h" />
     <ClInclude Include="MRVertDuplication.h" />
     <ClInclude Include="MRMeshFwd.h" />
@@ -793,6 +796,12 @@
     <ClCompile Include="MRMeshSubdivide.cpp" />
     <ClCompile Include="MRMeshTopology.cpp" />
     <ClCompile Include="MRMeshToStep.cpp" />
+    <ClCompile Include="MRMeshToStepBRep.cpp" />
+    <ClCompile Include="MRMeshToStepBSpline.cpp" />
+    <ClCompile Include="MRMeshToStepCleaner.cpp" />
+    <ClCompile Include="MRMeshToStepData.cpp" />
+    <ClCompile Include="MRMeshToStepGrower.cpp" />
+    <ClCompile Include="MRMeshToStepSurf.cpp" />
     <ClCompile Include="MRMeshBuilder.cpp" />
     <ClCompile Include="MRVertDuplication.cpp" />
     <ClCompile Include="MRMeshLoad.cpp" />

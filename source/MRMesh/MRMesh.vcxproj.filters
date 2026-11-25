@@ -177,6 +177,18 @@
     <ClInclude Include="MRParallelProgressReporter.h">
       <Filter>Source Files\BaseStructures</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshToStep.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshToStepBSpline.hpp">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshToStepData.hpp">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshToStepSurf.hpp">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
     <ClInclude Include="MRMeshSave.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
@@ -1582,6 +1594,27 @@
     </ClCompile>
     <ClCompile Include="MRSystem.cpp">
       <Filter>Source Files\System</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshToStep.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshToStepBRep.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshToStepBSpline.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshToStepCleaner.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshToStepData.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshToStepGrower.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshToStepSurf.cpp">
+      <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshSave.cpp">
       <Filter>Source Files\IO</Filter>

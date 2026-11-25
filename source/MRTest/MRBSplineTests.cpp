@@ -2,6 +2,8 @@
 #include <MRMesh/MRConformalMap.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshPart.h>
+#include <MRMesh/MRRegionBoundary.h>
+#include <MRMesh/MRRegularGridMesh.h>
 #include <gtest/gtest.h>
 
 namespace MR
@@ -72,6 +74,8 @@ TEST( MRMesh, FitBSplineSurface )
             pts.emplace_back( 3 * u, 2 * v, 2 * u - v + 1 );
         }
     EXPECT_FALSE( fitBSplineSurface( pts, uvs, { .numU = 3 } ).has_value() );
+    EXPECT_FALSE( fitBSplineSurface( pts, uvs, { .numV = 3 } ).has_value() );
+    EXPECT_FALSE( fitBSplineSurface( {}, {} ).has_value() ); // the zero matrix fails the factorization
     // B-splines reproduce linear functions exactly
     auto s = fitBSplineSurface( pts, uvs ).value();
     EXPECT_EQ( s.numU(), 4 );
@@ -168,24 +172,14 @@ TEST( MRMesh, ProjectOnBSplineSurface )
 
 TEST( MRMesh, LeastSquaresConformalMap )
 {
-    // a grid on an inclined plane, the conformal map of its part with i <= 5 is a similarity
+    // a grid on an inclined plane, the conformal map of its part with x <= 5 is a similarity
     const int nx = 8, ny = 4;
-    VertCoords points;
-    for ( int j = 0; j < ny; ++j )
-        for ( int i = 0; i < nx; ++i )
-            points.emplace_back( float( i ), 0.7f * j, 0.3f * i + 0.2f * j );
-    Triangulation t;
-    for ( int j = 0; j + 1 < ny; ++j )
-        for ( int i = 0; i + 1 < nx; ++i )
-        {
-            const VertId v( j * nx + i );
-            t.push_back( { v, v + 1, v + nx + 1 } );
-            t.push_back( { v, v + nx + 1, v + nx } );
-        }
-    const auto mesh = Mesh::fromTriangles( std::move( points ), t );
-    FaceBitSet region( t.size() );
-    for ( int i = 0; i < int( t.size() ); ++i )
-        region.set( FaceId( i ), i / 2 % ( nx - 1 ) < 5 );
+    const auto mesh = makeRegularGridMesh( nx, ny, []( size_t, size_t ) { return true; },
+        []( size_t x, size_t y ) { return Vector3f( float( x ), 0.7f * y, 0.3f * x + 0.2f * y ); } ).value();
+    VertBitSet left( nx * ny );
+    for ( int v = 0; v < nx * ny; ++v )
+        left.set( VertId( v ), v % nx <= 5 );
+    const auto region = getInnerFaces( mesh.topology, left );
     const auto uv = leastSquaresConformalMap( { mesh, &region } );
     ASSERT_TRUE( uv.has_value() ) << uv.error();
     const VertId v0( 0 ), v1( nx * ny - 3 );
@@ -210,6 +204,18 @@ TEST( MRMesh, LeastSquaresConformalMap )
         const auto tv = mesh.topology.getTriVerts( f );
         EXPECT_GT( cross( ( *uv )[tv[1]] - ( *uv )[tv[0]], ( *uv )[tv[2]] - ( *uv )[tv[0]] ), 0 );
     }
+
+    // a fan around a raised vertex, not developable (312 degrees around it): the reference coordinates minimize the Dirichlet energy minus
+    // the area of the map with the extreme vertices along x pinned; unit weights of the triangles in the least squares are 7e-3 off
+    const auto fan = Mesh::fromTriangles( { Vector3f( 0, 0, 1.5f ), Vector3f( 3, 0, 0 ), Vector3f( 1, 2, 0.5f ), Vector3f( -1, 1.5f, -0.5f ),
+        Vector3f( -3, 0, 0.25f ), Vector3f( -1, -2, 0 ), Vector3f( 1.5f, -1.5f, -0.25f ) },
+        { { 0_v, 1_v, 2_v }, { 0_v, 2_v, 3_v }, { 0_v, 3_v, 4_v }, { 0_v, 4_v, 5_v }, { 0_v, 5_v, 6_v }, { 0_v, 6_v, 1_v } } );
+    const UVCoord fanRef[] = { { 0.491746f, 0.024721f }, { 1, 0 }, { 0.661545f, 0.346254f }, { 0.263965f, 0.353664f },
+        { 0, 0 }, { 0.333594f, -0.343738f }, { 0.767868f, -0.279723f } };
+    const auto fanUv = leastSquaresConformalMap( fan );
+    ASSERT_TRUE( fanUv.has_value() ) << fanUv.error();
+    for ( int v = 0; v < 7; ++v )
+        EXPECT_NEAR( ( ( *fanUv )[VertId( v )] - fanRef[v] ).length(), 0, 1e-5 );
 
     // vertex 3 is only in a degenerate triangle, so its coordinates are not defined, and the degenerate triangle alone gives the zero matrix
     VertCoords degPoints{ Vector3f( 0, 0, 0 ), Vector3f( 2, 0, 0 ), Vector3f( 1, 1, 0 ), Vector3f( 1, 0, 0 ) };

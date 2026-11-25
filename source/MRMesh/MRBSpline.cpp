@@ -143,10 +143,8 @@ Vector2d BSplineSurface::project( const Vector3d& p, Vector2d uv, int iterations
         const Vector2d c( std::clamp( m.x, u0, u1 ), std::clamp( m.y, v0, v1 ) );
         const Vector2d a( c.x, h.yy > 0 ? std::clamp( uv.y + ( g.y - h.xy * ( c.x - uv.x ) ) / h.yy, v0, v1 ) : c.y );
         const Vector2d b( h.xx > 0 ? std::clamp( uv.x + ( g.x - h.xy * ( c.y - uv.y ) ) / h.xx, u0, u1 ) : c.x, c.y );
-        // the step is shortened until the squared distance decreases by at least 1/4 of the decrease -2 * model( next ) predicted
-        // by the linearization (a step 2 times too long does not), to the minimum of the parabola through the squared distances
-        // at both ends with the slope -2 * dot( g, next - uv ) at uv, but 2 to 10 times; the iterations stop when the predicted decrease
-        // is below the rounding error of the computed one: the surface point S has the error of a few eps * |S|, and |S| <= |p| + |r|
+        // accept a step giving 1/4 of the predicted decrease -2 * model( next ) (2 times too long gives 0), else shorten it to the minimum
+        // of the parabola through both ends with the slope at uv; stop below the rounding error of the surface point, a few eps * ( |p| + |r| )
         const double tol = 8 * std::numeric_limits<double>::epsilon() * r.length() * ( p.length() + r.length() );
         Vector2d next = model( a ) <= model( b ) ? a : b;
         Vector3d nr, nsu, nsv;

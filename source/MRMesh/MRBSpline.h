@@ -41,9 +41,7 @@ struct BSplineSurface
     /// unit normal of the surface at given parameters: cross( du, dv ) normalized, or zero vector where du and dv are zero or parallel
     [[nodiscard]] MRMESH_API Vector3d normal( const Vector2d& uv ) const;
 
-    /// parameters of the surface point closest to given one, found by Gauss-Newton iterations from the initial parameters uv clamped to the domain and kept in it;
-    /// a step that decreases the squared distance by less than 1/4 of what the linearization predicts is shortened 2 to 10 times
-    /// by quadratic interpolation, and the iterations stop when the predicted decrease is below the rounding errors
+    /// parameters in the domain of the surface point closest to given one: Gauss-Newton iterations with step control from uv clamped to the domain, stopping at rounding errors
     [[nodiscard]] MRMESH_API Vector2d project( const Vector3d& p, Vector2d uv, int iterations = 12 ) const;
 };
 
@@ -66,7 +64,7 @@ struct BSplineSurfaceFitSettings
     const std::vector<double>* weights = nullptr;
 };
 
-/// bicubic B-spline surface over [0, 1] x [0, 1] fitted by least squares to the points with given parameters:
+/// bicubic B-spline surface over [0, 1] x [0, 1] fitted by least squares to the points with given parameters, expected in this square (outside, the end polynomials are extrapolated):
 /// minimizes the sum of weight * squared distance between each point and the surface at its parameters;
 /// the solution is unique if smoothing > 0 and no bilinear function of (u, v) but zero vanishes at all points with positive weights
 /// (which needs at least 4 points not all on one line), otherwise the control points can be arbitrary;

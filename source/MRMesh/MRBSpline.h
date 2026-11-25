@@ -37,7 +37,7 @@ struct BSplineSurface
     /// the point of the surface at given parameters, and optionally its partial derivatives
     [[nodiscard]] MRMESH_API Vector3d eval( const Vector2d& uv, Vector3d* du = nullptr, Vector3d* dv = nullptr ) const;
 
-    /// unit normal of the surface at given parameters: cross( du, dv ) normalized
+    /// unit normal of the surface at given parameters: cross( du, dv ) normalized, or zero vector where du and dv are zero or parallel
     [[nodiscard]] MRMESH_API Vector3d normal( const Vector2d& uv ) const;
 
     /// parameters of the surface point closest to given one, found by Gauss-Newton iterations from the initial parameters uv and kept in the domain
@@ -46,12 +46,12 @@ struct BSplineSurface
 
 /// B-spline curve of degree min( 3, points.size() - 1 ) passing through all given points,
 /// with the parameters of the points proportional to the length of the polyline through them, in [0, 1];
-/// requires at least 2 points and no two consecutive points equal (they give NaN control points)
+/// requires at least 2 points (otherwise returns an empty curve) and no two consecutive points equal (they give NaN control points)
 [[nodiscard]] MRMESH_API BSplineCurve interpolateBSplineCurve( const std::vector<Vector3d>& points );
 
 struct BSplineSurfaceFitSettings
 {
-    /// the number of control points along u and v, at least 4 (the degree is 3)
+    /// the number of control points along u and v, at least 4 (the degree is 3); smaller values give an empty surface without knots and control points
     int numU = 4;
     int numV = 4;
 

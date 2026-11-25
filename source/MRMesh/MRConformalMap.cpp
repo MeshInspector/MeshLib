@@ -25,7 +25,7 @@ Expected<VertUVCoords> leastSquaresConformalMap( const MeshPart& mp )
     PointAccumulator acc;
     for ( auto v : verts )
         acc.addPoint( mp.mesh.points[v] );
-    const auto mm = findDirMinMaxBruteForce( Vector3f( acc.getBestLine().d ), mp.mesh.points, &verts );
+    const auto mm = findDirMinMaxBruteForce( acc.getBestLinef().d, mp.mesh.points, &verts );
     const VertId pa = mm.minArg, pb = mm.maxArg;
     if ( !pa || !pb )
         return unexpected( "Not finite coordinates" );

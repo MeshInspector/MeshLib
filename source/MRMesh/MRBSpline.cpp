@@ -23,9 +23,7 @@ constexpr int cMaxDegree = 7;
 int bsplineBasis( const std::vector<double>& knots, int deg, int n, double t, double* vals, double* ders )
 {
     assert( deg >= 1 && deg <= cMaxDegree );
-    int span = deg;
-    while ( span + 1 < n && knots[span + 1] <= t )
-        ++span;
+    const int span = int( std::upper_bound( knots.begin() + deg + 1, knots.begin() + n, t ) - knots.begin() ) - 1;
     double left[cMaxDegree + 1], right[cMaxDegree + 1], low[cMaxDegree + 1];
     vals[0] = 1;
     for ( int j = 1; j <= deg; ++j )
@@ -139,6 +137,8 @@ BSplineCurve interpolateBSplineCurve( const std::vector<Vector3d>& points )
 {
     const int n = int( points.size() );
     assert( n >= 2 );
+    if ( n < 2 )
+        return {};
     std::vector<double> t( n, 0.0 );
     for ( int i = 1; i < n; ++i )
     {
@@ -146,8 +146,7 @@ BSplineCurve interpolateBSplineCurve( const std::vector<Vector3d>& points )
         assert( t[i] > t[i - 1] ); // no two consecutive points are equal
     }
     for ( auto& x : t )
-        x /= std::max( t.back(), 1e-300 );
-    t.back() = 1;
+        x /= t.back(); // the last one becomes exactly 1
 
     BSplineCurve res;
     res.degree = std::min( 3, n - 1 );
@@ -190,6 +189,8 @@ BSplineSurface fitBSplineSurface( const std::vector<Vector3d>& points, const std
     assert( !settings.weights || settings.weights->size() == points.size() );
     const int nu = settings.numU, nv = settings.numV;
     assert( nu >= 4 && nv >= 4 );
+    if ( nu < 4 || nv < 4 )
+        return {};
     BSplineSurface res;
     res.knotsU = makeClampedUniformKnots( nu, res.degreeU );
     res.knotsV = makeClampedUniformKnots( nv, res.degreeV );
@@ -228,7 +229,7 @@ BSplineSurface fitBSplineSurface( const std::vector<Vector3d>& points, const std
     }
     // smoothing: second differences of the control net
     const int numRows = ( nu - 2 ) * nv + nu * ( nv - 2 );
-    const double w2 = settings.smoothing * double( points.size() ) / std::max( numRows, 1 );
+    const double w2 = settings.smoothing * double( points.size() ) / numRows;
     auto addRow = [&]( int i0, int i1, int i2 )
     {
         const int idx[3] = { i0, i1, i2 };

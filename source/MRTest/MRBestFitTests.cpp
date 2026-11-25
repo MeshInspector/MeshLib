@@ -179,6 +179,12 @@ TEST( MRMesh, FindBestSphereCap )
     ASSERT_TRUE( cs );
     EXPECT_NEAR( ( cs->center - c ).length(), 0, 1e-9 );
     EXPECT_NEAR( cs->radius, 7, 1e-9 );
+
+    // no torus fits the points of a sphere better than the sphere itself: the refined torus degenerates into it
+    const auto rt = refineTorus( pts, Torus3d( c + Vector3d( 0.1, 0.05, -0.1 ), dir, 0.5, 6.4 ) );
+    EXPECT_LT( rt.majorRadius, 1e-3 );
+    EXPECT_NEAR( rt.minorRadius, 7, 1e-3 );
+    EXPECT_NEAR( ( rt.center - c ).length(), 0, 1e-3 );
 }
 
 TEST( MRMesh, FindBestCircleShortArc )
@@ -281,7 +287,7 @@ TEST( MRMesh, FindRevolutionAxisNoisy )
         ASSERT_TRUE( ra );
         maxAngle = std::max( maxAngle, cross( ra->d, axis.d ).length() );
     }
-    EXPECT_LT( maxAngle, 0.1 );
+    EXPECT_LT( maxAngle, 0.05 );
 }
 
 TEST( MRMesh, FindBestCone )

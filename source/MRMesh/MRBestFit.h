@@ -137,7 +137,9 @@ private:
 [[nodiscard]] MRMESH_API std::optional<Torus3d> findBestTorusWithAxis( const std::vector<Vector3d>& points, const Line3d& axis );
 
 /// minimizes the sum of squared distances from the points to the torus by Levenberg-Marquardt method starting from given torus;
-/// the result is never worse than given torus (with unit axis and non-negative radii), which is returned for fewer than 8 points
+/// the result is never worse than given torus (with unit axis and non-negative radii), which is returned for fewer than 8 points;
+/// it can be degenerate, so check its radii: majorRadius is about zero if a sphere fits the points better than any torus,
+/// and both radii can be very large if the points are nearly on a cylinder, a cone or a plane
 [[nodiscard]] MRMESH_API Torus3d refineTorus( const std::vector<Vector3d>& points, const Torus3d& torus );
 
 } // namespace MR

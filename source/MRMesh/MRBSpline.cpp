@@ -3,6 +3,7 @@
 #include "MRTimer.h"
 #include "MRPch/MREigenSparseCore.h"
 #include <Eigen/SparseCholesky>
+#include <Eigen/SparseLU>
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -65,14 +66,14 @@ std::vector<double> makeClampedUniformKnots( int numControlPoints, int degree )
     return res;
 }
 
-/// solves the system with the symmetric matrix given by its upper triangle and n x 3 right-hand side into n points;
-/// \return false if the factorization fails
-bool solveLdlt( const Eigen::SparseMatrix<double>& a, const Eigen::MatrixXd& b, std::vector<Vector3d>& x )
+/// solves the system factorized by s with n x 3 right-hand side into n points;
+/// \return false if the factorization failed
+template <typename S>
+bool solve( const S& s, const Eigen::MatrixXd& b, std::vector<Vector3d>& x )
 {
-    const Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>, Eigen::Upper> ldlt( a );
-    if ( ldlt.info() != Eigen::Success )
+    if ( s.info() != Eigen::Success )
         return false;
-    const Eigen::MatrixXd sol = ldlt.solve( b );
+    const Eigen::MatrixXd sol = s.solve( b );
     x.resize( sol.rows() );
     for ( int i = 0; i < int( x.size() ); ++i )
         x[i] = Vector3d( sol( i, 0 ), sol( i, 1 ), sol( i, 2 ) );
@@ -186,7 +187,8 @@ std::optional<BSplineCurve> interpolateBSplineCurve( const std::vector<Vector3d>
     for ( int j = 1; j < n - k; ++j )
         res.knots[j + k] = std::accumulate( t.begin() + j, t.begin() + j + k, 0.0 ) / k;
 
-    // the collocation matrix has at most k + 1 non-zeros in a row, and it is not singular for increasing parameters
+    // the collocation matrix has at most k + 1 non-zeros in a row, and it is not singular for increasing parameters;
+    // it is factorized directly, since the normal equations would square its condition number
     std::vector<Eigen::Triplet<double>> trips;
     trips.reserve( size_t( n ) * ( k + 1 ) );
     Eigen::MatrixXd rhs( n, 3 );
@@ -201,8 +203,7 @@ std::optional<BSplineCurve> interpolateBSplineCurve( const std::vector<Vector3d>
     }
     Eigen::SparseMatrix<double> m( n, n );
     m.setFromTriplets( trips.begin(), trips.end() );
-    // the normal equations
-    if ( !solveLdlt( m.transpose() * m, m.transpose() * rhs, res.controlPoints ) )
+    if ( !solve( Eigen::SparseLU<Eigen::SparseMatrix<double>>( m ), rhs, res.controlPoints ) )
         return std::nullopt;
     return res;
 }
@@ -274,7 +275,7 @@ std::optional<BSplineSurface> fitBSplineSurface( const std::vector<Vector3d>& po
         }
     Eigen::SparseMatrix<double> ata( k, k );
     ata.setFromTriplets( trips.begin(), trips.end() );
-    if ( !solveLdlt( ata, atb, res.controlPoints ) )
+    if ( !solve( Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>, Eigen::Upper>( ata ), atb, res.controlPoints ) )
         return std::nullopt;
     return res;
 }

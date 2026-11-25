@@ -46,14 +46,18 @@ TEST( MRMesh, InterpolateBSplineCurve )
     for ( int i = 0; i < 4; ++i )
         EXPECT_NEAR( ( cubic.eval( i / 3.0 ) - four[i] ).length(), 0, 1e-12 );
 
-    // uneven spacing: the parameters are proportional to the length of the polyline
-    const std::vector<Vector3d> uneven = { Vector3d( 0, 0, 0 ), Vector3d( 0.01, 0, 0 ), Vector3d( 1, 1, 0 ), Vector3d( 1, 1, 2 ), Vector3d( 5, 1, 2 ) };
-    const auto uc = interpolateBSplineCurve( uneven ).value();
-    std::vector<double> t( 1, 0.0 );
-    for ( size_t i = 1; i < uneven.size(); ++i )
-        t.push_back( t.back() + ( uneven[i] - uneven[i - 1] ).length() );
-    for ( size_t i = 0; i < uneven.size(); ++i )
-        EXPECT_NEAR( ( uc.eval( t[i] / t.back() ) - uneven[i] ).length(), 0, 1e-12 );
+    // uneven spacing: the parameters are proportional to the length of the polyline;
+    // the second chain has two steps of 1e-5, where the normal equations of the collocation system were 5e-6 off
+    for ( const auto& uneven : { std::vector{ Vector3d( 0, 0, 0 ), Vector3d( 0.01, 0, 0 ), Vector3d( 1, 1, 0 ), Vector3d( 1, 1, 2 ), Vector3d( 5, 1, 2 ) },
+        std::vector{ Vector3d( 0, 0, 0 ), Vector3d( 1, 0, 0 ), Vector3d( 1, 1e-5, 0 ), Vector3d( 1, 1e-5, 1e-5 ), Vector3d( 2, 1, 1 ), Vector3d( 3, 0, 1 ) } } )
+    {
+        const auto uc = interpolateBSplineCurve( uneven ).value();
+        std::vector<double> t( 1, 0.0 );
+        for ( size_t i = 1; i < uneven.size(); ++i )
+            t.push_back( t.back() + ( uneven[i] - uneven[i - 1] ).length() );
+        for ( size_t i = 0; i < uneven.size(); ++i )
+            EXPECT_NEAR( ( uc.eval( t[i] / t.back() ) - uneven[i] ).length(), 0, 1e-9 );
+    }
 }
 
 TEST( MRMesh, FitBSplineSurface )

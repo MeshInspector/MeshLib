@@ -212,8 +212,8 @@ Vector3f PlaneAccumulator::findBestCrossPoint( const Vector3f & p0, float tol, i
 namespace
 {
 
-/// relative tolerance of the eigenvalue gaps and ranks in the axis fits below: SymMatrix3::eigens splits equal eigenvalues by up to about 1.5e-8 of the largest one,
-/// and well-defined axes have much larger gaps, e.g. for the normals of a 5 degree band of a cylinder the gap is above 6e-4 of the largest eigenvalue
+/// relative tolerance of the eigenvalue gaps and ranks in the axis fits below, which use SymMatrix3::eigensJacobi, precise also for small eigenvalues:
+/// a smaller gap means that the axis is not defined by the data, e.g. for the normals of half a degree of a cylinder the gap is about 6e-6 of the largest eigenvalue
 constexpr double cEigenTol = 1e-6;
 
 template <typename V>
@@ -333,7 +333,7 @@ std::optional<Line3d> findRevolutionAxis( const std::vector<Line3d>& normalLines
     for ( const auto& l : normalLines )
         s += outerSquare( cross( ( l.p - c ) / sc, l.d ) - b * ( nnInv * l.d ) );
     Matrix3d vecs;
-    const auto eig = s.eigens( &vecs );
+    const auto eig = s.eigensJacobi( &vecs );
     // the direction is not unique if the two smallest eigenvalues of s are close relative to the trace of nn, which bounds them:
     // e.g. all lines through the center of a sphere cross its normals;
     // the position is not unique if nn has rank 1: e.g. any line along the normal of a plane crosses its normals
@@ -351,7 +351,7 @@ std::optional<Cylinder3d> findBestCylinderByNormals( const std::vector<Vector3d>
     for ( const auto& n : normals )
         nn += outerSquare( n );
     Matrix3d vecs;
-    const auto eig = nn.eigens( &vecs );
+    const auto eig = nn.eigensJacobi( &vecs );
     // the axis is not unique if the two smallest eigenvalues are close, e.g. for the normals of a plane or of a sphere cap
     if ( !( eig[1] - eig[0] > cEigenTol * eig[2] ) )
         return {};
@@ -394,7 +394,9 @@ std::optional<Cone3d> findBestConeWithAxis( const std::vector<Vector3d>& points,
 std::optional<Cone3d> findBestConeByTangentPlanes( const std::vector<Vector3d>& points, const std::vector<Plane3d>& tangentPlanes )
 {
     // all unit normals make the same angle with the axis a: their tips are in the plane dot( a, x ) = k
-    PointAccumulator tips;
+    std::vector<Vector3d> tips;
+    tips.reserve( tangentPlanes.size() );
+    Vector3d tipsCenter;
     // the apex is on all tangent planes
     PlaneAccumulator apexAcc;
     for ( const auto& plane : tangentPlanes )
@@ -402,19 +404,22 @@ std::optional<Cone3d> findBestConeByTangentPlanes( const std::vector<Vector3d>& 
         const auto pl = plane.normalized();
         if ( pl.n == Vector3d{} )
             continue; // e.g. the plane of a degenerate triangle
-        tips.addPoint( pl.n );
+        tips.push_back( pl.n );
+        tipsCenter += pl.n;
         apexAcc.addPlane( pl );
     }
-    if ( !tips.valid() )
+    if ( tips.empty() )
         return {};
-    Vector3d tipsCenter, eig;
+    tipsCenter /= double( tips.size() );
+    SymMatrix3d cov;
+    for ( const auto& t : tips )
+        cov += outerSquare( t - tipsCenter );
     Matrix3d vecs;
-    tips.getCenteredCovarianceEigen( tipsCenter, vecs, eig );
+    const auto eig = cov.eigensJacobi( &vecs );
     // the tips do not define the plane if they are on a line (two distinct normals) or coincide (parallel planes);
-    // k is about zero if the planes are tangent to a cylinder; to tell it reliably, the two smallest eigenvalues must differ by 1e-4 of the largest one,
-    // since SymMatrix3::eigens finds the eigenvector of the smallest one with the error growing as eps / gap^2 (the tips of about 4.5 degrees of a revolution pass)
+    // k is about zero if the planes are tangent to a cylinder
     const Vector3d a = vecs.x;
-    if ( !( eig[1] - eig[0] > 1e-4 * eig[2] ) || !( std::abs( dot( a, tipsCenter ) ) > 1e-6 ) )
+    if ( !( eig[1] - eig[0] > cEigenTol * eig[2] ) || !( std::abs( dot( a, tipsCenter ) ) > 1e-6 ) )
         return {};
     Vector3d center;
     for ( const auto& p : points )

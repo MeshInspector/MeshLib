@@ -127,7 +127,7 @@ private:
 /// cone tangent to all given planes (e.g. of mesh triangles) with consistently oriented normals, and the angle fitted to the points;
 /// unlike findRevolutionAxis + findBestConeWithAxis, it works for a single strip of triangles; the planes with zero normals are ignored;
 /// the height of the cone spans the points; returns nullopt if the planes do not define the cone: fewer than 3 distinct normals or the normals
-/// within a few degrees of a revolution (the two smallest eigenvalues of their covariance differ by less than 1e-4 of the largest one),
+/// within less than half a degree of a revolution (the two smallest eigenvalues of their covariance differ by less than 1e-6 of the largest one),
 /// all normals orthogonal to one direction (planes tangent to a cylinder), or no unique apex
 [[nodiscard]] MRMESH_API std::optional<Cone3d> findBestConeByTangentPlanes( const std::vector<Vector3d>& points, const std::vector<Plane3d>& tangentPlanes );
 

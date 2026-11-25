@@ -8,6 +8,7 @@
 #include "MRPolylineEdgeIterator.h"
 #include "MRBox.h"
 #include "MRSymMatrix2.h"
+#include "MRVector.h"
 #include <MRPch/MREigenCore.h>
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -394,7 +395,7 @@ std::optional<Cone3d> findBestConeWithAxis( const std::vector<Vector3d>& points,
 std::optional<Cone3d> findBestConeByTangentPlanes( const std::vector<Vector3d>& points, const std::vector<Plane3d>& tangentPlanes )
 {
     // all unit normals make the same angle with the axis a: their tips are in the plane dot( a, x ) = k
-    std::vector<Vector3d> tips;
+    Vector<Vector3d> tips;
     tips.reserve( tangentPlanes.size() );
     Vector3d tipsCenter;
     // the apex is on all tangent planes

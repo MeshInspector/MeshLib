@@ -88,10 +88,10 @@ They live in `source/MRTest/` and use GoogleTest.
 * The test suite is named after the library being tested, and the test after what it checks:
 
   ```cpp
-  TEST( MRMesh, PolylineMaxDistance )
+  TEST( MRMesh, PolylineTotalLength )
   {
       const Polyline3 a( Contour3f{ { 0, 0, 0 }, { 1, 0, 0 } } );
-      EXPECT_EQ( findMaxDistanceSq( a, a ), 0.0f );
+      EXPECT_EQ( a.totalLength(), 1.0f );
   }
   ```
 

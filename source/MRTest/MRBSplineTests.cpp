@@ -125,7 +125,7 @@ TEST( MRMesh, FitBSplineSurface )
     const Vector2d uv0( 0.3, 0.7 );
     const auto p = s.eval( uv0 ) + 0.01 * s.normal( uv0 );
     const auto uv = s.project( p, Vector2d( 0.5, 0.5 ) );
-    EXPECT_NEAR( ( uv - uv0 ).length(), 0, 1e-9 );
+    EXPECT_NEAR( ( uv - uv0 ).length(), 0, 1e-7 ); // steps below ~1e-9 do not change the computed distance
 }
 
 TEST( MRMesh, ProjectOnBSplineSurface )
@@ -140,7 +140,14 @@ TEST( MRMesh, ProjectOnBSplineSurface )
 
     // a collapsed row of control points: the derivative along v is zero at u = 0
     s.controlPoints = { Vector3d( 0, 0, 0 ), Vector3d( 0, 0, 0 ), Vector3d( 1, 0, 0 ), Vector3d( 1, 1, 0 ) };
-    EXPECT_NEAR( ( s.project( Vector3d( 0.5, 0.25, 0 ), Vector2d( 0, 0.5 ) ) - Vector2d( 0.5, 0.5 ) ).length(), 0, 1e-12 );
+    EXPECT_NEAR( ( s.project( Vector3d( 0.5, 0.25, 0 ), Vector2d( 0, 0.9 ) ) - Vector2d( 0.5, 0.5 ) ).length(), 0, 1e-12 );
+
+    // the arch z = (1 - x^2) / 2 of curvature radius 1 at the apex, and a point at distance 3 above it,
+    // where the Gauss-Newton steps are 4 times too long, and still 2 times after one halving
+    s.degreeU = 2;
+    s.knotsU = { 0, 0, 0, 1, 1, 1 };
+    s.controlPoints = { Vector3d( -1, 0, 0 ), Vector3d( -1, 1, 0 ), Vector3d( 0, 0, 1 ), Vector3d( 0, 1, 1 ), Vector3d( 1, 0, 0 ), Vector3d( 1, 1, 0 ) };
+    EXPECT_NEAR( ( s.project( Vector3d( 0, 0.5, 3.5 ), Vector2d( 0.9, 0.2 ) ) - Vector2d( 0.5, 0.5 ) ).length(), 0, 1e-6 );
 }
 
 TEST( MRMesh, LeastSquaresConformalMap )

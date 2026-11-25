@@ -3,7 +3,6 @@
 #include "MRTimer.h"
 #include "MRPch/MREigenSparseCore.h"
 #include <Eigen/SparseCholesky>
-#include <Eigen/SparseLU>
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -171,12 +170,13 @@ BSplineCurve interpolateBSplineCurve( const std::vector<Vector3d>& points )
     }
     Eigen::SparseMatrix<double> m( n, n );
     m.setFromTriplets( trips.begin(), trips.end() );
-    const Eigen::SparseLU<Eigen::SparseMatrix<double>> lu( m );
-    assert( lu.info() == Eigen::Success );
+    // the normal equations
+    const Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> ldlt( m.transpose() * m );
+    assert( ldlt.info() == Eigen::Success );
     res.controlPoints.resize( n, Vector3d::diagonal( std::numeric_limits<double>::quiet_NaN() ) );
-    if ( lu.info() != Eigen::Success )
-        return res; // the preconditions are violated, and solve would read the factors that were not computed
-    const Eigen::MatrixXd sol = lu.solve( rhs );
+    if ( ldlt.info() != Eigen::Success )
+        return res; // the preconditions are violated, and solve would leave the solution uninitialized
+    const Eigen::MatrixXd sol = ldlt.solve( m.transpose() * rhs );
     for ( int i = 0; i < n; ++i )
         res.controlPoints[i] = Vector3d( sol( i, 0 ), sol( i, 1 ), sol( i, 2 ) );
     return res;

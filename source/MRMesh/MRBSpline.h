@@ -46,7 +46,7 @@ struct BSplineSurface
 
 /// B-spline curve of degree min( 3, points.size() - 1 ) passing through all given points,
 /// with the parameters of the points proportional to the length of the polyline through them, in [0, 1];
-/// requires at least 2 points (otherwise returns an empty curve) and no two consecutive points equal (they give NaN control points)
+/// requires at least 2 points (otherwise returns an empty curve) and no two consecutive points equal (they give NaN or arbitrary control points)
 [[nodiscard]] MRMESH_API BSplineCurve interpolateBSplineCurve( const std::vector<Vector3d>& points );
 
 struct BSplineSurfaceFitSettings

@@ -111,6 +111,7 @@ Vector3d BSplineSurface::normal( const Vector2d& uv ) const
 Vector2d BSplineSurface::project( const Vector3d& p, Vector2d uv, int iterations ) const
 {
     const double u0 = knotsU[degreeU], u1 = knotsU[numU()], v0 = knotsV[degreeV], v1 = knotsV[numV()];
+    uv = Vector2d( std::clamp( uv.x, u0, u1 ), std::clamp( uv.y, v0, v1 ) );
     Vector3d su, sv;
     Vector3d r = p - eval( uv, &su, &sv );
     for ( int it = 0; it < iterations; ++it )
@@ -127,13 +128,15 @@ Vector2d BSplineSurface::project( const Vector3d& p, Vector2d uv, int iterations
         const Vector2d c( std::clamp( m.x, u0, u1 ), std::clamp( m.y, v0, v1 ) );
         const Vector2d a( c.x, h.yy > 0 ? std::clamp( uv.y + ( g.y - h.xy * ( c.x - uv.x ) ) / h.yy, v0, v1 ) : c.y );
         const Vector2d b( h.xx > 0 ? std::clamp( uv.x + ( g.x - h.xy * ( c.y - uv.y ) ) / h.xx, u0, u1 ) : c.x, c.y );
-        // the step is halved, at most 4 times, until the squared distance decreases by at least 1/4 of the decrease -2 * model( next ) predicted
-        // by the linearization (a step 2 times too long does not), and the iterations stop if no step is left
+        // the step is halved until the squared distance decreases by at least 1/4 of the decrease -2 * model( next ) predicted
+        // by the linearization (a step 2 times too long does not), and the iterations stop when the predicted decrease is below
+        // the rounding error of the computed one: the surface point S has the error of a few eps * |S|, and |S| <= |p| + |r|
+        const double tol = 8 * std::numeric_limits<double>::epsilon() * r.length() * ( p.length() + r.length() );
         Vector2d next = model( a ) <= model( b ) ? a : b;
         Vector3d nr, nsu, nsv;
-        for ( int i = 0; next != uv && ( nr = p - eval( next, &nsu, &nsv ) ).lengthSq() > r.lengthSq() + model( next ) / 2; ++i )
-            next = i < 4 ? 0.5 * ( uv + next ) : uv;
-        if ( next == uv )
+        while ( -2 * model( next ) > tol && ( nr = p - eval( next, &nsu, &nsv ) ).lengthSq() > r.lengthSq() + model( next ) / 2 )
+            next = 0.5 * ( uv + next );
+        if ( !( -2 * model( next ) > tol ) )
             break;
         uv = next;
         r = nr;

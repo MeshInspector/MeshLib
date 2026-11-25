@@ -40,8 +40,9 @@ struct BSplineSurface
     /// unit normal of the surface at given parameters: cross( du, dv ) normalized, or zero vector where du and dv are zero or parallel
     [[nodiscard]] MRMESH_API Vector3d normal( const Vector2d& uv ) const;
 
-    /// parameters of the surface point closest to given one, found by Gauss-Newton iterations from the initial parameters uv and kept in the domain;
-    /// a step that decreases the distance by less than 1/4 of what the linearization predicts is halved
+    /// parameters of the surface point closest to given one, found by Gauss-Newton iterations from the initial parameters uv clamped to the domain and kept in it;
+    /// a step that decreases the squared distance by less than 1/4 of what the linearization predicts is halved,
+    /// and the iterations stop when the predicted decrease is below the rounding errors
     [[nodiscard]] MRMESH_API Vector2d project( const Vector3d& p, Vector2d uv, int iterations = 12 ) const;
 };
 

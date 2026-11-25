@@ -137,6 +137,7 @@ TEST( MRMesh, ProjectOnBSplineSurface )
     s.controlPoints = { Vector3d( 0, 0, 0 ), Vector3d( 1, 1, 0 ), Vector3d( 1, 0, 0 ), Vector3d( 2, 1, 0 ) };
     EXPECT_NEAR( ( s.project( Vector3d( 0, 0.8, 0 ), Vector2d( 0.5, 0.5 ) ) - Vector2d( 0, 0.4 ) ).length(), 0, 1e-12 );
     EXPECT_NEAR( ( s.project( Vector3d( 0.5, -2, 0 ), Vector2d( 0.5, 0.5 ) ) - Vector2d( 0.5, 0 ) ).length(), 0, 1e-12 );
+    EXPECT_NEAR( ( s.project( Vector3d( 2.1, 0.5, 0 ), Vector2d( 2, 0.5 ) ) - Vector2d( 1, 0.8 ) ).length(), 0, 1e-12 ); // from outside the domain
 
     // a collapsed row of control points: the derivative along v is zero at u = 0
     s.controlPoints = { Vector3d( 0, 0, 0 ), Vector3d( 0, 0, 0 ), Vector3d( 1, 0, 0 ), Vector3d( 1, 1, 0 ) };

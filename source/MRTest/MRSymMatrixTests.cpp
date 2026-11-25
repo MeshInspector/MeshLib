@@ -131,7 +131,9 @@ TEST( MRMesh, SymMatrix4Eigens )
         for ( int i = 0; i < 4; ++i )
         {
             if ( i > 0 )
+            {
                 EXPECT_LE( vals[i - 1], vals[i] );
+            }
             EXPECT_NEAR( ( m * vecs[i] - vals[i] * vecs[i] ).length(), 0, 1e-14 * scale );
             for ( int j = 0; j < 4; ++j )
                 EXPECT_NEAR( dot( vecs[i], vecs[j] ), i == j ? 1 : 0, 1e-14 );

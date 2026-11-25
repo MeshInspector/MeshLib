@@ -27,6 +27,8 @@ Expected<VertUVCoords> leastSquaresConformalMap( const MeshPart& mp )
         acc.addPoint( mp.mesh.points[v] );
     const auto mm = findDirMinMaxBruteForce( Vector3f( acc.getBestLine().d ), mp.mesh.points, &verts );
     const VertId pa = mm.minArg, pb = mm.maxArg;
+    if ( !pa || !pb )
+        return unexpected( "Not finite coordinates" );
     // the unknowns are u coordinates of not-pinned vertices in columns col[v], and their v coordinates in columns col[v] + numFree
     auto freeVerts = verts;
     freeVerts.reset( pa );
@@ -86,11 +88,7 @@ Expected<VertUVCoords> leastSquaresConformalMap( const MeshPart& mp )
     VertUVCoords res( topology.vertSize() );
     res[pb].x = 1;
     for ( auto v : freeVerts )
-    {
         res[v] = UVCoord( float( sol[col[v]] ), float( sol[col[v] + numFree] ) );
-        if ( !std::isfinite( res[v].x + res[v].y ) )
-            return unexpected( "Degenerate system" );
-    }
     return res;
 }
 

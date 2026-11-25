@@ -55,7 +55,8 @@ struct BSplineSurfaceFitSettings
     int numU = 4;
     int numV = 4;
 
-    /// the weight of the second differences of the control net relative to the points, to keep the surface smooth where the points are sparse
+    /// the weight of the second differences of the control net relative to the weights of the points, to keep the surface smooth where the points are sparse;
+    /// the differences are divided by the distances of the Greville abscissae, so they are zero for bilinear functions of (u, v)
     double smoothing = 1e-7;
 
     /// optional weights of the points, all 1 if not given
@@ -64,8 +65,8 @@ struct BSplineSurfaceFitSettings
 
 /// bicubic B-spline surface over [0, 1] x [0, 1] fitted by least squares to the points with given parameters:
 /// minimizes the sum of weight * squared distance between each point and the surface at its parameters;
-/// the solution is unique if smoothing > 0 and at least 4 points with positive weights are in general position (e.g. not all with the same u or v),
-/// otherwise the control points can be NaN or arbitrary
+/// the solution is unique if smoothing > 0 and no bilinear function of (u, v) but zero vanishes at all points with positive weights
+/// (which needs at least 4 points not all on one line), otherwise the control points can be NaN or arbitrary
 [[nodiscard]] MRMESH_API BSplineSurface fitBSplineSurface( const std::vector<Vector3d>& points, const std::vector<Vector2d>& uvs,
     const BSplineSurfaceFitSettings& settings = {} );
 

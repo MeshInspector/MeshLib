@@ -94,6 +94,26 @@ TEST( MRMesh, FitBSplineSurface )
             EXPECT_NEAR( ( ws.eval( uvs[i] ) - pts[i] ).length(), 0, 1e-9 );
     }
 
+    // the smoothing keeps bilinear functions of (u, v): such a surface with points only in an ellipse is reproduced in all the domain
+    const auto bilinear = []( const Vector2d& uv ) { return Vector3d( 3 * uv.x, 2 * uv.y, 2 * uv.x - uv.y + uv.x * uv.y ); };
+    std::vector<Vector3d> ePts;
+    std::vector<Vector2d> eUvs;
+    for ( const auto& uv : uvs )
+    {
+        if ( sqr( ( uv.x - 0.5 ) / 0.44 ) + sqr( ( uv.y - 0.5 ) / 0.3 ) > 1 )
+            continue;
+        eUvs.push_back( uv );
+        ePts.push_back( bilinear( uv ) );
+    }
+    for ( const auto& [nu, nv] : { std::pair( 6, 4 ), std::pair( 10, 5 ) } )
+    {
+        const auto es = fitBSplineSurface( ePts, eUvs, { .numU = nu, .numV = nv } );
+        EXPECT_EQ( es.numU(), nu );
+        EXPECT_EQ( es.numV(), nv );
+        for ( const auto& uv : { Vector2d( 0, 0 ), Vector2d( 1, 0 ), Vector2d( 0, 1 ), Vector2d( 1, 1 ), Vector2d( 0.3, 0.6 ) } )
+            EXPECT_NEAR( ( es.eval( uv ) - bilinear( uv ) ).length(), 0, 1e-8 );
+    }
+
     // a curved surface
     for ( size_t i = 0; i < pts.size(); ++i )
         pts[i].z = std::sin( 3 * uvs[i].x ) * std::cos( 2 * uvs[i].y );

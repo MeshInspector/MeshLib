@@ -227,13 +227,15 @@ BSplineSurface fitBSplineSurface( const std::vector<Vector3d>& points, const std
             for ( int b = a; b < 16; ++b )
                 trips.emplace_back( i0 + a / 4 * nv + a % 4, i0 + b / 4 * nv + b % 4, spanAta[s][a * 16 + b] );
     }
-    // smoothing: second differences of the control net
+    // smoothing: second differences of the control net along u and v divided by the differences of the Greville abscissae
+    // ( knots[i + 1] + knots[i + 2] + knots[i + 3] ) / 3, scaled to ( 1, -2, 1 ) for equal differences; they are zero for bilinear functions of ( u, v )
     const int numRows = ( nu - 2 ) * nv + nu * ( nv - 2 );
-    const double w2 = settings.smoothing * double( points.size() ) / numRows;
-    auto addRow = [&]( int i0, int i1, int i2 )
+    const double w2 = settings.smoothing * ( settings.weights ? std::accumulate( settings.weights->begin(), settings.weights->end(), 0.0 ) : double( points.size() ) ) / numRows;
+    auto addRow = [&]( const std::vector<double>& knots, int i, int idx1, int step )
     {
-        const int idx[3] = { i0, i1, i2 };
-        const double val[3] = { 1, -2, 1 };
+        const double d0 = knots[i + 3] - knots[i], d1 = knots[i + 4] - knots[i + 1], h = ( d0 + d1 ) / 2; // 3 times the differences of the abscissae
+        const int idx[3] = { idx1 - step, idx1, idx1 + step };
+        const double val[3] = { h / d0, -h / d0 - h / d1, h / d1 };
         for ( int a = 0; a < 3; ++a )
             for ( int b = a; b < 3; ++b )
                 trips.emplace_back( idx[a], idx[b], w2 * val[a] * val[b] );
@@ -242,9 +244,9 @@ BSplineSurface fitBSplineSurface( const std::vector<Vector3d>& points, const std
         for ( int b = 0; b < nv; ++b )
         {
             if ( a > 0 && a + 1 < nu )
-                addRow( ( a - 1 ) * nv + b, a * nv + b, ( a + 1 ) * nv + b );
+                addRow( res.knotsU, a, a * nv + b, nv );
             if ( b > 0 && b + 1 < nv )
-                addRow( a * nv + b - 1, a * nv + b, a * nv + b + 1 );
+                addRow( res.knotsV, b, a * nv + b, 1 );
         }
     Eigen::SparseMatrix<double> ata( k, k );
     ata.setFromTriplets( trips.begin(), trips.end() );

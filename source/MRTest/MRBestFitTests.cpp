@@ -275,10 +275,10 @@ TEST( MRMesh, FindBestCone )
     const Vector3d apex( 1, 2, 3 ), a = Vector3d( 0.2, -0.5, 1 ).normalized();
     const double angle = 0.4;
     const auto [u, v] = a.perpendicular();
-    // one strip of the cone between the heights 5 and 5.5, and the planes of two degenerate triangles
+    // a third of one strip of the cone between the heights 5 and 5.5, and the planes of two degenerate triangles
     std::vector<Vector3d> pts;
     std::vector<Plane3d> planes = { Plane3d{}, Plane3d( Vector3d{}, 1 ) };
-    for ( int i = 0; i < 30; ++i )
+    for ( int i = 0; i < 10; ++i )
         for ( double h : { 5.0, 5.5 } )
         {
             const double phi = 2 * PI * i / 30;

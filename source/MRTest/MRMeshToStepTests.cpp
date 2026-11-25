@@ -5,6 +5,7 @@
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRTorus.h>
 #include <gtest/gtest.h>
+#include <cmath>
 #include <sstream>
 
 namespace MR
@@ -27,6 +28,16 @@ TEST( MRMesh, MeshToStep )
     EXPECT_EQ( stats.cylinders + stats.cones + stats.spheres + stats.tori + stats.bsplines, 0 );
 
     stats = convert( makeCylinder( 1.0f, 3.0f, 32 ) );
+    EXPECT_EQ( stats.planes, 2 );
+    EXPECT_EQ( stats.cylinders, 1 );
+    EXPECT_EQ( stats.cones + stats.spheres + stats.tori + stats.bsplines, 0 );
+
+    // as if loaded from a text file with 4 decimal digits
+    auto rounded = makeCylinder( 1.0f, 3.0f, 32 );
+    for ( auto& p : rounded.points )
+        for ( int i = 0; i < 3; ++i )
+            p[i] = std::round( p[i] * 1e4f ) / 1e4f;
+    stats = convert( rounded );
     EXPECT_EQ( stats.planes, 2 );
     EXPECT_EQ( stats.cylinders, 1 );
     EXPECT_EQ( stats.cones + stats.spheres + stats.tori + stats.bsplines, 0 );

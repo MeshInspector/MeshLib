@@ -15,7 +15,8 @@ struct MeshToStepSettings
     const UndirectedEdgeBitSet* faceBoundaries = nullptr;
 
     /// maximum distance from a mesh vertex to the analytic surface of its face;
-    /// if not positive then 2.5e-6 of the diagonal of mesh bounding box is taken
+    /// if not positive then 2.5e-6 of the diagonal of mesh bounding box is taken, or more
+    /// if the coordinates are less precise, e.g. the mesh was loaded from a text file with few decimal digits
     float tolerance = 0;
 
     /// name of the product written in the file

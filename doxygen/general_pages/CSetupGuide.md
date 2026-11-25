@@ -30,10 +30,11 @@ The release archives include the C headers (in the directory called `MRCMesh` an
 
 ### Windows
 > [!NOTE]
-> MeshLib for Windows is distributed for x64 only. Make sure you're not targeting x32.
+> MeshLib for Windows is distributed for **x64** and **Arm64**: set the platform of your project to `x64` or `ARM64`. A 32-bit (`Win32`) build is not supported.
+> On Windows on Arm, take the `-arm64` archive.
 
-Every release publishes one Windows distributive per Visual Studio toolset, plus one for Debug builds that keep MSVC's iterator debugging on.
-The [C++ guide's archive table](\ref CppSetupWindows) names all four and says which one to take, including the binary-compatibility rule that lets an older toolset's archive serve a newer Visual Studio. It applies to C unchanged, except for its `_ITERATOR_DEBUG_LEVEL` column:
+Every release publishes one Windows distributive per Visual Studio toolset and target architecture, plus one for Debug builds that keep MSVC's iterator debugging on.
+The [C++ guide's archive table](\ref CppSetupWindows) lists them all and says which one to take, including the binary-compatibility rule that lets an older toolset's archive serve a newer Visual Studio. It applies to C unchanged, except for its `_ITERATOR_DEBUG_LEVEL` column:
 a pure-C consumer needs no `_ITERATOR_DEBUG_LEVEL` define, whichever archive it picks, because C code passes no standard containers across the DLL boundary, so the mismatch that define guards against cannot arise. A project that also compiles C++ translation units against MeshLib's C++ headers does need it, at the value in that column.
 
  1. **Download and Extract the Built Version**
@@ -50,7 +51,7 @@ example_plugin/      # example solution for creating MeshLib/MeshInspector plugi
 ```
  2. **Configure and integrate with Visual Studio**
     - **Solution Platform**:
-    <br/> Set: `x64`
+    <br/> Set: `x64` (`ARM64` with an `-arm64` archive)
     - **C/C++ → General → Additional Include Directories**:
     <br/> Add: `C:\meshlib-built\install\include`
     - **C/C++ → All Options → Additional Options**:
@@ -86,24 +87,12 @@ target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
  <br/> Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page: the release description links one `.pkg` installer for macOS Arm (Apple silicon) and one for macOS x64 (Intel). Take the one matching `uname -m` (`arm64` or `x86_64`).
  2. **Install**
   - Double-click the downloaded `.pkg` and follow the installer. The release asset is the installer itself, so there is nothing to unpack first.
-  - The framework is installed into `/Library/Frameworks/MeshLib.framework`, or into `~/Library/Frameworks/MeshLib.framework` if you choose to install for the current user only.
-  - **Install Dependencies via Homebrew**
-  <br/> The `.pkg` does not pull in the Homebrew formulae MeshLib links against, so install them yourself. Skip this step if your project enables only the C language. This needs [Homebrew](https://brew.sh/) — install it first if you do not have it. Open Terminal and run the following command:
-```sh
-xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
-```
-  - If you installed for the current user only, prefix the path with `~`: `~/Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt`.
+  - The framework is installed into `/Library/Frameworks/MeshLib.framework`, or into `~/Library/Frameworks/MeshLib.framework` if you choose to install for the current user only. It bundles its third-party dependencies, so nothing else needs installing.
  3. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
  <br/> Add the following to your `CMakeLists.txt`:
 ```cmake
 target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
 ```
-
-## Try MeshLib with C Examples
-
-MeshLib provides a [collection of C code samples](\ref Examples) to help you get started quickly with common mesh processing tasks.
-
-We suggest running one of them to confirm that the installation was performed correctly, for example the [Load and Save Meshes](\ref ExampleMeshLoadSave) sample.
 
 ## Building C API from source {#CppBuildCBindingsFromSource}
 
@@ -120,3 +109,9 @@ Additionally, if you want Cuda support, similarly extract `MeshLibC2Cuda/{includ
 If you **don't** want Cuda support, you instead have to copy Cuda stubs from `scripts/mrbind/cuda_placeholder_generated_c/{include,src}` to `source/MeshLibC2Cuda`. This is the only option on Wasm.
 
 Lastly, build MeshLib with C API enabled by adding `-DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON` to CMake flags. We recommend using CMake for this, but VS project files are also available in `source/MeshLibC2` and `source/MeshLibC2Cuda`, but they aren't included in the VS solution by default.
+
+## Try MeshLib with C Examples
+
+MeshLib provides a [collection of C code samples](\ref Examples) to help you get started quickly with common mesh processing tasks.
+
+We suggest running one of them to confirm that the installation was performed correctly, for example the [Load and Save Meshes](\ref ExampleMeshLoadSave) sample.

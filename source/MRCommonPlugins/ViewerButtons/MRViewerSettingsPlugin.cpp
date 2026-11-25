@@ -1393,7 +1393,6 @@ void ViewerSettingsPlugin::drawTouchpadSettings_()
     bool updateSettings = false;
     if ( UI::checkbox( _tr( "Enable Touchpad Gestures" ), &touchpadParameters_.gesturesEnabled ) )
         updateSettings = true;
-    UI::setTooltipIfHovered( _tr( "If unchecked, the swipe, pinch and rotation gestures of the touchpad do not move the camera." ) );
     if ( UI::checkbox( _tr( "Ignore Kinetic Movements" ), &touchpadParameters_.ignoreKineticMoves ) )
         updateSettings = true;
     if ( UI::checkbox( _tr( "Allow System to Interrupt Gestures" ), &touchpadParameters_.cancellable ) )

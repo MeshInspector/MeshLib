@@ -7,7 +7,7 @@ namespace MR
 
 struct TouchpadParameters
 {
-    /// if false, all touchpad gestures (rotate, swipe, zoom) are ignored
+    /// if false, all touchpad gestures are ignored
     bool gesturesEnabled = true;
     /// most touchpads implement kinetic (or inertial) scrolling, this option disables handling of these events
     bool ignoreKineticMoves = false;

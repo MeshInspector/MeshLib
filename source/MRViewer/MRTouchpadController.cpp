@@ -243,6 +243,7 @@ bool TouchpadController::touchpadZoomGestureUpdate_( float scale, bool kinetic )
 
 bool TouchpadController::touchpadZoomGestureEnd_()
 {
+    // leave it for consistency
     if ( !parameters_.gesturesEnabled )
         return true;
 

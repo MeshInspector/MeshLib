@@ -131,8 +131,6 @@ cmake -S . -B build -A x64 ^
   -D MESHLIB_LIB_DIRS=C:/meshlib-built/install/lib/Release
 ```
 
-An older archive that has `install/include/eigen3` instead of `install/include/Eigen` needs `C:/meshlib-built/install/include/eigen3` in `MESHLIB_INCLUDE_DIRS` as well.
-
 ```cmake
 target_include_directories(your_project_name PUBLIC ${MESHLIB_INCLUDE_DIRS})
 target_link_directories(your_project_name PUBLIC ${MESHLIB_LIB_DIRS})

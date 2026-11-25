@@ -10,7 +10,6 @@
     <br/> Set: `/std:c++20` or later
     - **C/C++ → General → Additional Include Directories**:
     <br/> Add: `C:\meshlib-built\install\include`
-    <br/> An older archive that has `install\include\eigen3` instead of `install\include\Eigen` needs `C:\meshlib-built\install\include\eigen3` as well.
     - **C/C++ → All Options → Additional Options**:
     <br/> Add: `/bigobj /utf-8`
     - **Linker → Input → Additional Dependencies**:

@@ -1,6 +1,5 @@
 #include <MRMesh/MRBSpline.h>
 #include <MRMesh/MRConformalMap.h>
-#include <MRMesh/MRConstants.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshPart.h>
 #include <gtest/gtest.h>
@@ -31,6 +30,12 @@ TEST( MRMesh, InterpolateBSplineCurve )
     const auto line = interpolateBSplineCurve( { Vector3d( 0, 0, 0 ), Vector3d( 2, 0, 0 ) } );
     EXPECT_EQ( line.degree, 1 );
     EXPECT_NEAR( ( line.eval( 0.25 ) - Vector3d( 0.5, 0, 0 ) ).length(), 0, 1e-15 );
+
+    const std::vector<Vector3d> three = { Vector3d( 0, 0, 0 ), Vector3d( 1, 1, 0 ), Vector3d( 2, 0, 0 ) };
+    const auto parabola = interpolateBSplineCurve( three );
+    EXPECT_EQ( parabola.degree, 2 );
+    for ( int i = 0; i < 3; ++i )
+        EXPECT_NEAR( ( parabola.eval( i / 2.0 ) - three[i] ).length(), 0, 1e-15 );
 }
 
 TEST( MRMesh, FitBSplineSurface )
@@ -63,6 +68,23 @@ TEST( MRMesh, FitBSplineSurface )
         EXPECT_NEAR( ( ws.eval( wUvs.back() ) - Vector3d( 1.5, 1, 1.5 ) ).length(), 0, 1e-9 );
     }
 
+    // the weights multiply the squared distances: the plane shifted by -3 with weight 1 and by +1 with weight 3 give the plane
+    {
+        auto wPts = pts;
+        auto wUvs = uvs;
+        std::vector<double> weights( 2 * pts.size(), 1.0 );
+        for ( size_t i = 0; i < pts.size(); ++i )
+        {
+            wPts[i].z -= 3;
+            wPts.push_back( pts[i] + Vector3d( 0, 0, 1 ) );
+            wUvs.push_back( uvs[i] );
+            weights[pts.size() + i] = 3;
+        }
+        const auto ws = fitBSplineSurface( wPts, wUvs, { .weights = &weights } );
+        for ( size_t i = 0; i < pts.size(); ++i )
+            EXPECT_NEAR( ( ws.eval( uvs[i] ) - pts[i] ).length(), 0, 1e-9 );
+    }
+
     // a curved surface
     for ( size_t i = 0; i < pts.size(); ++i )
         pts[i].z = std::sin( 3 * uvs[i].x ) * std::cos( 2 * uvs[i].y );
@@ -77,10 +99,25 @@ TEST( MRMesh, FitBSplineSurface )
     EXPECT_NEAR( ( uv - uv0 ).length(), 0, 1e-9 );
 }
 
+TEST( MRMesh, ProjectOnBSplineSurface )
+{
+    BSplineSurface s;
+    s.degreeU = s.degreeV = 1;
+    s.knotsU = s.knotsV = { 0, 0, 1, 1 };
+    // the plane u * (1,0,0) + v * (1,1,0) with not orthogonal derivatives, the closest points are on the border of the domain
+    s.controlPoints = { Vector3d( 0, 0, 0 ), Vector3d( 1, 1, 0 ), Vector3d( 1, 0, 0 ), Vector3d( 2, 1, 0 ) };
+    EXPECT_NEAR( ( s.project( Vector3d( 0, 0.8, 0 ), Vector2d( 0.5, 0.5 ) ) - Vector2d( 0, 0.4 ) ).length(), 0, 1e-12 );
+    EXPECT_NEAR( ( s.project( Vector3d( 0.5, -2, 0 ), Vector2d( 0.5, 0.5 ) ) - Vector2d( 0.5, 0 ) ).length(), 0, 1e-12 );
+
+    // a collapsed row of control points: the derivative along v is zero at u = 0
+    s.controlPoints = { Vector3d( 0, 0, 0 ), Vector3d( 0, 0, 0 ), Vector3d( 1, 0, 0 ), Vector3d( 1, 1, 0 ) };
+    EXPECT_NEAR( ( s.project( Vector3d( 0.5, 0.25, 0 ), Vector2d( 0, 0.5 ) ) - Vector2d( 0.5, 0.5 ) ).length(), 0, 1e-12 );
+}
+
 TEST( MRMesh, LeastSquaresConformalMap )
 {
-    // a grid on an inclined plane, its conformal map is a similarity
-    const int nx = 6, ny = 4;
+    // a grid on an inclined plane, the conformal map of its part with i <= 5 is a similarity
+    const int nx = 8, ny = 4;
     VertCoords points;
     for ( int j = 0; j < ny; ++j )
         for ( int i = 0; i < nx; ++i )
@@ -94,13 +131,42 @@ TEST( MRMesh, LeastSquaresConformalMap )
             t.push_back( { v, v + nx + 1, v + nx } );
         }
     const auto mesh = Mesh::fromTriangles( std::move( points ), t );
-    const auto uv = leastSquaresConformalMap( mesh );
+    FaceBitSet region( t.size() );
+    for ( int i = 0; i < int( t.size() ); ++i )
+        region.set( FaceId( i ), i / 2 % ( nx - 1 ) < 5 );
+    const auto uv = leastSquaresConformalMap( { mesh, &region } );
     ASSERT_TRUE( uv.has_value() ) << uv.error();
-    const VertId v0( 0 ), v1( nx * ny - 1 );
+    const VertId v0( 0 ), v1( nx * ny - 3 );
     const double scale = ( ( *uv )[v1] - ( *uv )[v0] ).length() / ( mesh.points[v1] - mesh.points[v0] ).length();
     for ( auto a : mesh.topology.getValidVerts() )
+    {
+        if ( int( a ) % nx > 5 )
+        {
+            EXPECT_EQ( ( *uv )[a], UVCoord() ); // outside the region
+            continue;
+        }
         for ( auto b : mesh.topology.getValidVerts() )
+        {
+            if ( int( b ) % nx > 5 )
+                continue;
             EXPECT_NEAR( ( ( *uv )[a] - ( *uv )[b] ).length(), scale * ( mesh.points[a] - mesh.points[b] ).length(), 1e-5 );
+        }
+    }
+    // not mirrored: the triangles are counterclockwise seen from the normal of the plane, and in the map
+    for ( auto f : region )
+    {
+        const auto tv = mesh.topology.getTriVerts( f );
+        EXPECT_GT( cross( ( *uv )[tv[1]] - ( *uv )[tv[0]], ( *uv )[tv[2]] - ( *uv )[tv[0]] ), 0 );
+    }
+
+    // vertex 3 is only in a degenerate triangle, so its coordinates are not defined
+    VertCoords degPoints{ Vector3f( 0, 0, 0 ), Vector3f( 2, 0, 0 ), Vector3f( 1, 1, 0 ), Vector3f( 1, 0, 0 ) };
+    Triangulation degTris{ { VertId( 0 ), VertId( 1 ), VertId( 2 ) }, { VertId( 1 ), VertId( 0 ), VertId( 3 ) } };
+    EXPECT_FALSE( leastSquaresConformalMap( Mesh::fromTriangles( std::move( degPoints ), degTris ) ).has_value() );
+
+    auto nanMesh = mesh;
+    nanMesh.points[v0].z = std::numeric_limits<float>::quiet_NaN();
+    EXPECT_FALSE( leastSquaresConformalMap( nanMesh ).has_value() );
 }
 
 } //namespace MR

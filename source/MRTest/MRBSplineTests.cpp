@@ -13,7 +13,7 @@ TEST( MRMesh, InterpolateBSplineCurve )
     std::vector<Vector3d> pts;
     for ( int i = 0; i < 40; ++i )
         pts.emplace_back( std::cos( 0.2 * i ), std::sin( 0.2 * i ), 0.05 * i );
-    const auto c = interpolateBSplineCurve( pts );
+    const auto c = interpolateBSplineCurve( pts ).value();
     EXPECT_EQ( c.degree, 3 );
     ASSERT_EQ( c.controlPoints.size(), pts.size() );
     ASSERT_EQ( c.knots.size(), pts.size() + 4 );
@@ -27,19 +27,28 @@ TEST( MRMesh, InterpolateBSplineCurve )
         EXPECT_NEAR( Vector2d( p.x, p.y ).length(), 1, 1e-4 );
     }
 
-    const auto line = interpolateBSplineCurve( { Vector3d( 0, 0, 0 ), Vector3d( 2, 0, 0 ) } );
+    EXPECT_FALSE( interpolateBSplineCurve( { Vector3d() } ).has_value() );
+
+    const auto line = interpolateBSplineCurve( { Vector3d( 0, 0, 0 ), Vector3d( 2, 0, 0 ) } ).value();
     EXPECT_EQ( line.degree, 1 );
     EXPECT_NEAR( ( line.eval( 0.25 ) - Vector3d( 0.5, 0, 0 ) ).length(), 0, 1e-15 );
 
     const std::vector<Vector3d> three = { Vector3d( 0, 0, 0 ), Vector3d( 1, 1, 0 ), Vector3d( 2, 0, 0 ) };
-    const auto parabola = interpolateBSplineCurve( three );
+    const auto parabola = interpolateBSplineCurve( three ).value();
     EXPECT_EQ( parabola.degree, 2 );
     for ( int i = 0; i < 3; ++i )
         EXPECT_NEAR( ( parabola.eval( i / 2.0 ) - three[i] ).length(), 0, 1e-15 );
 
+    // 4 points with equal distances: a cubic without inner knots
+    const std::vector<Vector3d> four = { Vector3d( 0, 0, 0 ), Vector3d( 1, 1, 0 ), Vector3d( 2, 1, 1 ), Vector3d( 3, 0, 1 ) };
+    const auto cubic = interpolateBSplineCurve( four ).value();
+    EXPECT_EQ( cubic.knots, std::vector<double>( { 0, 0, 0, 0, 1, 1, 1, 1 } ) );
+    for ( int i = 0; i < 4; ++i )
+        EXPECT_NEAR( ( cubic.eval( i / 3.0 ) - four[i] ).length(), 0, 1e-12 );
+
     // uneven spacing: the parameters are proportional to the length of the polyline
     const std::vector<Vector3d> uneven = { Vector3d( 0, 0, 0 ), Vector3d( 0.01, 0, 0 ), Vector3d( 1, 1, 0 ), Vector3d( 1, 1, 2 ), Vector3d( 5, 1, 2 ) };
-    const auto uc = interpolateBSplineCurve( uneven );
+    const auto uc = interpolateBSplineCurve( uneven ).value();
     std::vector<double> t( 1, 0.0 );
     for ( size_t i = 1; i < uneven.size(); ++i )
         t.push_back( t.back() + ( uneven[i] - uneven[i - 1] ).length() );
@@ -58,8 +67,9 @@ TEST( MRMesh, FitBSplineSurface )
             uvs.emplace_back( u, v );
             pts.emplace_back( 3 * u, 2 * v, 2 * u - v + 1 );
         }
+    EXPECT_FALSE( fitBSplineSurface( pts, uvs, { .numU = 3 } ).has_value() );
     // B-splines reproduce linear functions exactly
-    auto s = fitBSplineSurface( pts, uvs );
+    auto s = fitBSplineSurface( pts, uvs ).value();
     EXPECT_EQ( s.numU(), 4 );
     EXPECT_EQ( s.numV(), 4 );
     for ( size_t i = 0; i < pts.size(); ++i )
@@ -73,7 +83,7 @@ TEST( MRMesh, FitBSplineSurface )
         wUvs.emplace_back( 0.5, 0.5 );
         std::vector<double> weights( wPts.size(), 1.0 );
         weights.back() = 0;
-        const auto ws = fitBSplineSurface( wPts, wUvs, { .weights = &weights } );
+        const auto ws = fitBSplineSurface( wPts, wUvs, { .weights = &weights } ).value();
         EXPECT_NEAR( ( ws.eval( wUvs.back() ) - Vector3d( 1.5, 1, 1.5 ) ).length(), 0, 1e-9 );
     }
 
@@ -89,7 +99,7 @@ TEST( MRMesh, FitBSplineSurface )
             wUvs.push_back( uvs[i] );
             weights[pts.size() + i] = 3;
         }
-        const auto ws = fitBSplineSurface( wPts, wUvs, { .weights = &weights } );
+        const auto ws = fitBSplineSurface( wPts, wUvs, { .weights = &weights } ).value();
         for ( size_t i = 0; i < pts.size(); ++i )
             EXPECT_NEAR( ( ws.eval( uvs[i] ) - pts[i] ).length(), 0, 1e-9 );
     }
@@ -107,7 +117,7 @@ TEST( MRMesh, FitBSplineSurface )
     }
     for ( const auto& [nu, nv] : { std::pair( 6, 4 ), std::pair( 10, 5 ) } )
     {
-        const auto es = fitBSplineSurface( ePts, eUvs, { .numU = nu, .numV = nv } );
+        const auto es = fitBSplineSurface( ePts, eUvs, { .numU = nu, .numV = nv } ).value();
         EXPECT_EQ( es.numU(), nu );
         EXPECT_EQ( es.numV(), nv );
         for ( const auto& uv : { Vector2d( 0, 0 ), Vector2d( 1, 0 ), Vector2d( 0, 1 ), Vector2d( 1, 1 ), Vector2d( 0.3, 0.6 ) } )
@@ -117,7 +127,7 @@ TEST( MRMesh, FitBSplineSurface )
     // a curved surface
     for ( size_t i = 0; i < pts.size(); ++i )
         pts[i].z = std::sin( 3 * uvs[i].x ) * std::cos( 2 * uvs[i].y );
-    s = fitBSplineSurface( pts, uvs, { .numU = 8, .numV = 8 } );
+    s = fitBSplineSurface( pts, uvs, { .numU = 8, .numV = 8 } ).value();
     for ( size_t i = 0; i < pts.size(); ++i )
         EXPECT_NEAR( ( s.eval( uvs[i] ) - pts[i] ).length(), 0, 1e-3 );
 

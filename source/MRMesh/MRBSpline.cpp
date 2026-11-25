@@ -65,6 +65,20 @@ std::vector<double> makeClampedUniformKnots( int numControlPoints, int degree )
     return res;
 }
 
+/// solves the system with the symmetric matrix given by its upper triangle and n x 3 right-hand side into n points;
+/// \return false if the factorization fails
+bool solveLdlt( const Eigen::SparseMatrix<double>& a, const Eigen::MatrixXd& b, std::vector<Vector3d>& x )
+{
+    const Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>, Eigen::Upper> ldlt( a );
+    if ( ldlt.info() != Eigen::Success )
+        return false;
+    const Eigen::MatrixXd sol = ldlt.solve( b );
+    x.resize( sol.rows() );
+    for ( int i = 0; i < int( x.size() ); ++i )
+        x[i] = Vector3d( sol( i, 0 ), sol( i, 1 ), sol( i, 2 ) );
+    return true;
+}
+
 } //anonymous namespace
 
 Vector3d BSplineCurve::eval( double t ) const
@@ -146,12 +160,11 @@ Vector2d BSplineSurface::project( const Vector3d& p, Vector2d uv, int iterations
     return uv;
 }
 
-BSplineCurve interpolateBSplineCurve( const std::vector<Vector3d>& points )
+std::optional<BSplineCurve> interpolateBSplineCurve( const std::vector<Vector3d>& points )
 {
     const int n = int( points.size() );
-    assert( n >= 2 );
     if ( n < 2 )
-        return {};
+        return std::nullopt;
     std::vector<double> t( n, 0.0 );
     for ( int i = 1; i < n; ++i )
     {
@@ -185,26 +198,19 @@ BSplineCurve interpolateBSplineCurve( const std::vector<Vector3d>& points )
     Eigen::SparseMatrix<double> m( n, n );
     m.setFromTriplets( trips.begin(), trips.end() );
     // the normal equations
-    const Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> ldlt( m.transpose() * m );
-    assert( ldlt.info() == Eigen::Success );
-    res.controlPoints.resize( n, Vector3d::diagonal( std::numeric_limits<double>::quiet_NaN() ) );
-    if ( ldlt.info() != Eigen::Success )
-        return res; // the preconditions are violated, and solve would leave the solution uninitialized
-    const Eigen::MatrixXd sol = ldlt.solve( m.transpose() * rhs );
-    for ( int i = 0; i < n; ++i )
-        res.controlPoints[i] = Vector3d( sol( i, 0 ), sol( i, 1 ), sol( i, 2 ) );
+    if ( !solveLdlt( m.transpose() * m, m.transpose() * rhs, res.controlPoints ) )
+        return std::nullopt;
     return res;
 }
 
-BSplineSurface fitBSplineSurface( const std::vector<Vector3d>& points, const std::vector<Vector2d>& uvs, const BSplineSurfaceFitSettings& settings )
+std::optional<BSplineSurface> fitBSplineSurface( const std::vector<Vector3d>& points, const std::vector<Vector2d>& uvs, const BSplineSurfaceFitSettings& settings )
 {
     MR_TIMER;
     assert( points.size() == uvs.size() );
     assert( !settings.weights || settings.weights->size() == points.size() );
     const int nu = settings.numU, nv = settings.numV;
-    assert( nu >= 4 && nv >= 4 );
     if ( nu < 4 || nv < 4 )
-        return {};
+        return std::nullopt;
     BSplineSurface res;
     res.knotsU = makeClampedUniformKnots( nu, res.degreeU );
     res.knotsV = makeClampedUniformKnots( nv, res.degreeV );
@@ -264,14 +270,8 @@ BSplineSurface fitBSplineSurface( const std::vector<Vector3d>& points, const std
         }
     Eigen::SparseMatrix<double> ata( k, k );
     ata.setFromTriplets( trips.begin(), trips.end() );
-    const Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>, Eigen::Upper> ldlt( ata );
-    assert( ldlt.info() == Eigen::Success );
-    res.controlPoints.resize( k, Vector3d::diagonal( std::numeric_limits<double>::quiet_NaN() ) );
-    if ( ldlt.info() != Eigen::Success )
-        return res; // the preconditions are violated, and solve would leave the solution uninitialized
-    const Eigen::MatrixXd sol = ldlt.solve( atb );
-    for ( int i = 0; i < k; ++i )
-        res.controlPoints[i] = Vector3d( sol( i, 0 ), sol( i, 1 ), sol( i, 2 ) );
+    if ( !solveLdlt( ata, atb, res.controlPoints ) )
+        return std::nullopt;
     return res;
 }
 

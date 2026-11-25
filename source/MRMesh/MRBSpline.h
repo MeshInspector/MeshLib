@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 #include "MRVector2.h"
 #include "MRVector3.h"
+#include <optional>
 #include <vector>
 
 namespace MR
@@ -48,12 +49,12 @@ struct BSplineSurface
 
 /// B-spline curve of degree min( 3, points.size() - 1 ) passing through all given points,
 /// with the parameters of the points proportional to the length of the polyline through them, in [0, 1];
-/// requires at least 2 points (otherwise returns an empty curve) and no two consecutive points equal (they give NaN or arbitrary control points)
-[[nodiscard]] MRMESH_API BSplineCurve interpolateBSplineCurve( const std::vector<Vector3d>& points );
+/// requires no two consecutive points equal; \return nullopt for fewer than 2 points or a failed factorization
+[[nodiscard]] MRMESH_API std::optional<BSplineCurve> interpolateBSplineCurve( const std::vector<Vector3d>& points );
 
 struct BSplineSurfaceFitSettings
 {
-    /// the number of control points along u and v, at least 4 (the degree is 3); smaller values give an empty surface without knots and control points
+    /// the number of control points along u and v, at least 4 (the degree is 3)
     int numU = 4;
     int numV = 4;
 
@@ -68,8 +69,9 @@ struct BSplineSurfaceFitSettings
 /// bicubic B-spline surface over [0, 1] x [0, 1] fitted by least squares to the points with given parameters:
 /// minimizes the sum of weight * squared distance between each point and the surface at its parameters;
 /// the solution is unique if smoothing > 0 and no bilinear function of (u, v) but zero vanishes at all points with positive weights
-/// (which needs at least 4 points not all on one line), otherwise the control points can be NaN or arbitrary
-[[nodiscard]] MRMESH_API BSplineSurface fitBSplineSurface( const std::vector<Vector3d>& points, const std::vector<Vector2d>& uvs,
+/// (which needs at least 4 points not all on one line), otherwise the control points can be arbitrary;
+/// \return nullopt if numU or numV is less than 4 or the factorization fails
+[[nodiscard]] MRMESH_API std::optional<BSplineSurface> fitBSplineSurface( const std::vector<Vector3d>& points, const std::vector<Vector2d>& uvs,
     const BSplineSurfaceFitSettings& settings = {} );
 
 } //namespace MR

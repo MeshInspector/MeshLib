@@ -64,19 +64,11 @@ SphereObject::SphereObject()
 SphereObject::SphereObject( const std::vector<Vector3f>& pointsToApprox )
     : SphereObject()
 {
-    const std::vector<Vector3d> points( pointsToApprox.begin(), pointsToApprox.end() );
-    if ( const auto sphere = findBestSphere( points ) )
+    if ( const auto sphere = findBestSphere( std::vector<Vector3d>( pointsToApprox.begin(), pointsToApprox.end() ) ) )
     {
         setCenter( Vector3f( sphere->center ) );
         setRadius( float( sphere->radius ) );
-        return;
     }
-    // fewer than 4 points or coplanar ones define no sphere: then the center is their centroid,
-    // and the radius stays default, since zero radius would make the transformation degenerate
-    Vector3d centroid;
-    for ( const auto& p : points )
-        centroid += p / double( points.size() );
-    setCenter( Vector3f( centroid ) );
 }
 
 std::shared_ptr<Object> SphereObject::shallowClone() const

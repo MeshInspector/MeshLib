@@ -212,8 +212,8 @@ Vector3f PlaneAccumulator::findBestCrossPoint( const Vector3f & p0, float tol, i
 namespace
 {
 
-/// relative tolerance of the eigenvalue gaps and ranks below: SymMatrix3::eigens splits equal eigenvalues by up to about 1.5e-8 of the largest one,
-/// and well-defined fits have much larger gaps, e.g. the smallest eigenvalue of the covariance of the points of a 5 degree arc is 1.4e-4 of the largest one
+/// relative tolerance of the eigenvalue gaps and ranks in the axis fits below: SymMatrix3::eigens splits equal eigenvalues by up to about 1.5e-8 of the largest one,
+/// and well-defined axes have much larger gaps, e.g. for the normals of a 5 degree band of a cylinder the gap is above 6e-4 of the largest eigenvalue
 constexpr double cEigenTol = 1e-6;
 
 template <typename V>
@@ -236,11 +236,10 @@ std::optional<Sphere<V>> findBestSphereT( const std::vector<V>& points )
         rhs += d.lengthSq() * d;
         s += d.lengthSq();
     }
-    // the center is not unique if the points are on a line (circle) or in a plane (sphere)
-    int rank = 0;
-    const V c = m.pseudoinverse( cEigenTol, &rank ) * rhs / 2.0;
+    // the center is not unique if the points are on a line (circle) or in a plane (sphere): then the pseudoinverse gives the minimum-norm c
+    const V c = m.pseudoinverse() * rhs / 2.0;
     const double r2 = s / double( points.size() ) + c.lengthSq();
-    if ( rank < V::elements || !std::isfinite( r2 ) )
+    if ( !( r2 > 0 ) || !std::isfinite( r2 ) )
         return {};
     return Sphere<V>( mean + c, std::sqrt( r2 ) );
 }

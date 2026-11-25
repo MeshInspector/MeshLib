@@ -97,14 +97,14 @@ private:
 
 /// least squares sphere through the points (algebraic fit of the centered points): exact for the points of a sphere,
 /// but with noisy points of a small cap its radius is biased low (e.g. by 16% if the standard deviation of the noise is 13% of the cap height);
-/// returns nullopt if the points do not define the center: fewer than 4 points or the points in one plane
-/// (the smallest eigenvalue of their covariance is below 1e-6 of the largest one)
+/// for coplanar points the result is not unique, and the one with the center closest to their centroid is returned (the minimum-norm solution):
+/// e.g. the sphere through the points of a circle is centered at that circle; returns nullopt for no points or coincident ones
 [[nodiscard]] MRMESH_API std::optional<Sphere3d> findBestSphere( const std::vector<Vector3d>& points );
 
 /// least squares circle through the points (algebraic fit of the centered points), stable for short arcs: exact for the points of a circle,
 /// but with noisy points of a short arc its radius is biased low (e.g. by 13% if the standard deviation of the noise is 13% of the arc height);
-/// returns nullopt if the points do not define the center: fewer than 3 points or the points on one line
-/// (the smallest eigenvalue of their covariance is below 1e-6 of the largest one)
+/// for collinear points the result is not unique, and the one with the center closest to their centroid is returned (the minimum-norm solution):
+/// its center is on their line, e.g. at their centroid for symmetric points; returns nullopt for no points or coincident ones
 [[nodiscard]] MRMESH_API std::optional<Sphere2d> findBestCircle( const std::vector<Vector2d>& points );
 
 /// finds the line crossing all given lines in the least squares sense,
@@ -115,7 +115,7 @@ private:
 
 /// cylinder with the axis orthogonal to all given surface normals, and the radius fitted to the points by findBestCircle (biased low for noisy points of a short arc);
 /// the center and the length of the cylinder span the projections of the points on the axis;
-/// returns nullopt if the projections of the points do not define the circle, or the normals do not define the axis:
+/// returns nullopt if findBestCircle does for the projections of the points, or if the normals do not define the axis:
 /// the two smallest eigenvalues of the sum of their outer squares differ by less than 1e-6 of the largest one, e.g. for the normals of a plane
 /// or of a sphere cap symmetric around its center; other sphere patches and noisy normals of a plane give a cylinder, so check its distances to the points
 [[nodiscard]] MRMESH_API std::optional<Cylinder3d> findBestCylinderByNormals( const std::vector<Vector3d>& points, const std::vector<Vector3d>& normals );
@@ -132,7 +132,8 @@ private:
 [[nodiscard]] MRMESH_API std::optional<Cone3d> findBestConeByTangentPlanes( const std::vector<Vector3d>& points, const std::vector<Plane3d>& tangentPlanes );
 
 /// torus with given axis fitted to the points: the circle of the tube section fitted by findBestCircle in the plane (distance to the axis, position along it),
-/// so the minor radius is biased low for noisy points of a short arc of the tube; the result can have minorRadius > majorRadius (a spindle torus)
+/// so the minor radius is biased low for noisy points of a short arc of the tube, and collinear sections (e.g. of a cylinder) give its minimum-norm circle;
+/// the result can have minorRadius > majorRadius (a spindle torus)
 [[nodiscard]] MRMESH_API std::optional<Torus3d> findBestTorusWithAxis( const std::vector<Vector3d>& points, const Line3d& axis );
 
 /// minimizes the sum of squared distances from the points to the torus by Levenberg-Marquardt method starting from given torus;

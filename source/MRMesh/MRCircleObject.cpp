@@ -99,14 +99,12 @@ CircleObject::CircleObject( const std::vector<Vector3f>& pointsToApprox )
         const Vector3d d = Vector3d( pointsToApprox[i] ) - centroid;
         proj[i] = Vector2d( dot( d, u ), dot( d, v ) );
     }
-    const auto circle = findBestCircle( proj );
-
     setNormal( Vector3f( normal ) );
-    // fewer than 3 points or collinear ones define no circle: then the center is their centroid,
-    // and the radius stays default, since zero radius would make the transformation degenerate
-    setCenter( Vector3f( circle ? centroid + circle->center.x * u + circle->center.y * v : centroid ) );
-    if ( circle )
+    if ( const auto circle = findBestCircle( proj ) )
+    {
+        setCenter( Vector3f( centroid + circle->center.x * u + circle->center.y * v ) );
         setRadius( float( circle->radius ) );
+    }
 }
 
 std::shared_ptr<Object> CircleObject::shallowClone() const

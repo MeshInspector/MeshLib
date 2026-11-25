@@ -19,7 +19,7 @@ public:
     /// Creates simple sphere object with center in zero and radius - 1
     MRMESH_API CircleObject();
     /// Finds best circle to approx given points;
-    /// if they define no circle (fewer than 3 points or collinear ones), the center is their centroid, and the radius is 1
+    /// coincident points keep the center in zero and radius 1 (no points assert in Debug)
     MRMESH_API CircleObject( const std::vector<Vector3f>& pointsToApprox );
 
     CircleObject( CircleObject&& ) noexcept = default;

@@ -171,11 +171,14 @@ TEST( MRMesh, FindBestSphereCap )
     EXPECT_FALSE( findRevolutionAxis( normalLines ) );
     EXPECT_FALSE( findBestCylinderByNormals( pts, normals ) );
 
-    // the points of a circle are in one plane: every sphere through the circle passes through them
+    // the points of a circle are in one plane: every sphere through the circle passes through them, and the minimum-norm one is centered at it
     std::vector<Vector3d> circle;
     for ( int i = 0; i < 4; ++i )
         circle.push_back( c + 7.0 * ( std::cos( 1.5 * i ) * u + std::sin( 1.5 * i ) * v ) );
-    EXPECT_FALSE( findBestSphere( circle ) );
+    const auto cs = findBestSphere( circle );
+    ASSERT_TRUE( cs );
+    EXPECT_NEAR( ( cs->center - c ).length(), 0, 1e-9 );
+    EXPECT_NEAR( cs->radius, 7, 1e-9 );
 }
 
 TEST( MRMesh, FindBestCircleShortArc )
@@ -193,9 +196,13 @@ TEST( MRMesh, FindBestCircleShortArc )
     EXPECT_NEAR( ( s->center - c ).length(), 0, 1e-6 );
     EXPECT_NEAR( s->radius, 300, 1e-6 );
 
-    // no points or collinear points, no circle
+    // no points or coincident points, no circle; symmetric collinear points give the circle centered at their mean
     EXPECT_FALSE( findBestCircle( {} ) );
-    EXPECT_FALSE( findBestCircle( { { 1, 2 }, { 3, 3 }, { 7, 5 } } ) );
+    EXPECT_FALSE( findBestCircle( { { 1, 2 }, { 1, 2 } } ) );
+    const auto line = findBestCircle( { { 1, 2 }, { 3, 3 }, { 5, 4 } } );
+    ASSERT_TRUE( line );
+    EXPECT_NEAR( ( line->center - Vector2d( 3, 3 ) ).length(), 0, 1e-12 );
+    EXPECT_NEAR( line->radius, std::sqrt( 10.0 / 3 ), 1e-12 );
 }
 
 TEST( MRMesh, FindBestCylinderByNormals )

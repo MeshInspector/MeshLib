@@ -984,13 +984,14 @@ TEST( Features, SphereAndCircleObjectsFromPoints )
     // directed away from the origin
     EXPECT_LE( ( circle.getNormal() - Vector3f( 2, -2, 1 ) / 3.0f ).length(), 1e-4f );
 
-    // coplanar points define no sphere, and collinear ones no circle: the center is their centroid, and the radius is default
+    // the minimum-norm fits: the coplanar points of the circle give the sphere centered at it,
+    // and symmetric collinear points the circle centered at their mean; no points keep the defaults
     const SphereObject flat( circlePts );
-    EXPECT_LE( ( flat.getCenter() - ( c + Vector3f( 38, 19, -38 ) / 7.0f ) ).length(), 1e-3f );
-    EXPECT_EQ( flat.getRadius(), SphereObject().getRadius() );
-    const CircleObject line( { c, c + Vector3f( 1, 2, 2 ), c + Vector3f( 3, 6, 6 ) } );
-    EXPECT_LE( ( line.getCenter() - ( c + Vector3f( 4, 8, 8 ) / 3.0f ) ).length(), 1e-3f );
-    EXPECT_NEAR( line.getRadius(), CircleObject().getRadius(), 1e-6f );
+    EXPECT_LE( ( flat.getCenter() - c ).length(), 1e-3f );
+    EXPECT_NEAR( flat.getRadius(), 15, 1e-4f );
+    const CircleObject line( { c - Vector3f( 1, 2, 2 ), c, c + Vector3f( 1, 2, 2 ) } );
+    EXPECT_LE( ( line.getCenter() - c ).length(), 1e-3f );
+    EXPECT_NEAR( line.getRadius(), std::sqrt( 6.0f ), 1e-4f );
     const SphereObject none( std::vector<Vector3f>{} );
     EXPECT_EQ( none.getCenter(), Vector3f() );
     EXPECT_EQ( none.getRadius(), SphereObject().getRadius() );

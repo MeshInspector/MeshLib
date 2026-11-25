@@ -57,7 +57,6 @@ if(DEFINED CMAKE_C_COMPILER_VERSION)
   endif(MESHLIB_BUILD_GENERATED_C_BINDINGS)
 endif()
 
-# only the Homebrew-based framework ships its requirements; the vcpkg-based one bundles its dependencies
 get_filename_component(MR_BREW_REQUIREMENTS "${CMAKE_CURRENT_LIST_DIR}/../../requirements/macos.txt" ABSOLUTE)
 if(APPLE AND EXISTS "${MR_BREW_REQUIREMENTS}")
     message("You can install required packages via brew: ' xargs brew install < ${MR_BREW_REQUIREMENTS} '")

@@ -537,7 +537,7 @@ jobs:
         with:
           cuda: ${{ matrix.cuda-version != '' }}
 
-      - name: Build C bindings
+      - name: Get and build C bindings
         shell: cmd
         env:
           GETTEXT_ROOT: C:\msys64\clang64

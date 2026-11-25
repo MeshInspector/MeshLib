@@ -61,6 +61,7 @@ get_filename_component(MR_BREW_REQUIREMENTS "${CMAKE_CURRENT_LIST_DIR}/../../req
 if(APPLE AND EXISTS "${MR_BREW_REQUIREMENTS}")
     message("You can install required packages via brew: ' xargs brew install < ${MR_BREW_REQUIREMENTS} '")
 endif()
+unset(MR_BREW_REQUIREMENTS)
 
 if(EMSCRIPTEN)
     include(EmscriptenHelpers)

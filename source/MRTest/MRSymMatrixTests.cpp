@@ -57,6 +57,72 @@ TEST( MRMesh, SymMatrix3Pseudoinverse )
     EXPECT_NEAR( ( psdInv * Vector3d( 0, 0, 1 ) ).length(), 0, 1e-12 );
 }
 
+// pseudoinverse of ill-conditioned and singular matrices relies on the precision of eigensJacobi for small eigenvalues
+TEST( MRMesh, SymMatrix3PseudoinversePrecision )
+{
+    const double eps = std::numeric_limits<double>::epsilon();
+
+    // least squares circle |p|^2 = 2*dot( p, c ) + r^2 - |c|^2 through 1 degree of arc, in the coordinates relative to the middle of the arc
+    const Vector2d c( -299.5, 20 );
+    const double r = c.length();
+    const double a0 = std::atan2( -c.y, -c.x );
+    SymMatrix3d m;
+    Vector3d rhs;
+    for ( int i = -10; i <= 10; ++i )
+    {
+        const double a = a0 + i * ( 0.5 * PI / 180 ) / 10;
+        const Vector2d p = c + r * Vector2d( std::cos( a ), std::sin( a ) );
+        const Vector3d row( 2 * p.x, 2 * p.y, 1 );
+        m += outerSquare( row );
+        rhs += row * p.lengthSq();
+    }
+    int rank = 0;
+    const auto sol = m.pseudoinverse( eps, &rank ) * rhs;
+    EXPECT_EQ( rank, 3 );
+    EXPECT_NEAR( ( Vector2d( sol.x, sol.y ) - c ).length(), 0, 3e-9 );
+    EXPECT_NEAR( std::sqrt( sol.z + sqr( sol.x ) + sqr( sol.y ) ), r, 3e-9 );
+
+    // exactly singular matrices in general position
+    const Vector3d u( 1, 1, 1 ), v( 1, 2, 4 ), w( 10, 1, 0.1 );
+    const auto rank2 = outerSquare( u ) + outerSquare( v );
+    Vector3d space;
+    const auto inv2 = rank2.pseudoinverse( eps, &rank, &space );
+    EXPECT_EQ( rank, 2 );
+    EXPECT_NEAR( cross( space, cross( u, v ).normalized() ).length(), 0, 1e-12 );
+    for ( const auto & x : { u, v } )
+        EXPECT_NEAR( ( inv2 * ( rank2 * x ) - x ).length(), 0, 1e-12 );
+
+    const auto rank1 = outerSquare( w );
+    const auto inv1 = rank1.pseudoinverse( eps, &rank, &space );
+    EXPECT_EQ( rank, 1 );
+    EXPECT_NEAR( cross( space, w.normalized() ).length(), 0, 1e-12 );
+    EXPECT_NEAR( ( inv1 * ( rank1 * w ) - w ).length(), 0, 1e-12 );
+}
+
+// eigensJacobi returns the same as eigens, with small eigenvalues found much more precisely
+TEST( MRMesh, SymMatrix3EigensJacobi )
+{
+    SymMatrix3d m;
+    m.xx = 4; m.xy = 1; m.xz = 0.5; m.yy = 3; m.yz = 0.2; m.zz = 2;
+    Matrix3d vecs, vecsJ;
+    const auto vals = m.eigens( &vecs );
+    const auto valsJ = m.eigensJacobi( &vecsJ );
+    for ( int i = 0; i < 3; ++i )
+    {
+        EXPECT_NEAR( vals[i], valsJ[i], 1e-14 );
+        EXPECT_NEAR( std::abs( dot( vecs[i], vecsJ[i] ) ), 1, 1e-14 );
+        EXPECT_NEAR( ( m * vecsJ[i] - valsJ[i] * vecsJ[i] ).length(), 0, 1e-14 );
+    }
+
+    // diag( 1, 1e-6, 1e-12 ) scaled as D*C*D with a well-conditioned C: all eigenvalues keep their relative precision
+    SymMatrix3d g;
+    g.xx = 1; g.xy = 0.5e-3; g.xz = 0.5e-6; g.yy = 1e-6; g.yz = 0.5e-9; g.zz = 1e-12;
+    const auto e = g.eigensJacobi();
+    EXPECT_NEAR( e[0], 2e-12 / 3, 1e-18 );
+    EXPECT_NEAR( e[1], 0.75e-6, 1e-12 );
+    EXPECT_NEAR( e[0] * e[1] * e[2], g.det(), 1e-12 * g.det() );
+}
+
 // inverse of integer matrices divides each element by the determinant
 TEST( MRMesh, SymMatrixIntegerInverse )
 {

@@ -1,11 +1,11 @@
 #include "MRCudaFastWindingNumber.h"
-#include "MRCudaAABBTree.hpp"
 #include "MRCudaFastWindingNumber.cuh"
 
 #include "MRCudaBasic.h"
 #include "MRCudaMath.h"
 #include "MRCudaMath.cuh"
 #include "MRCudaPipeline.h"
+#include "MRCudaAABBTree.hpp"
 
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRBitSetParallelFor.h"
@@ -22,6 +22,8 @@ namespace MR
 namespace Cuda
 {
 
+
+
 struct FastWindingNumberDataBuffers
 {
     DynamicArray<Dipole> dipoles;
@@ -33,7 +35,7 @@ struct FastWindingNumberDataBuffers
     {
         return {
             .dipoles = dipoles.data(),
-            .tree = tree.data(),
+            .tree = tree.toData(),
             .meshPoints = cudaMeshPoints.data(),
             .faces = cudaFaces.data(),
         };
@@ -76,6 +78,7 @@ Expected<void> FastWindingNumber::prepareData_( ProgressCallback cb )
     if ( !reportProgress( cb, 0.6f ) )
         return unexpectedOperationCanceled();
 
+    // the dipoles are in the order of the node ids of the tree
     CUDA_LOGE_RETURN_UNEXPECTED( data->dipoles.fromVector( mesh_.getDipoles() ) );
     if ( !reportProgress( cb, 1.0f ) )
         return unexpectedOperationCanceled();

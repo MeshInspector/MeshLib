@@ -371,7 +371,7 @@ Intervals getIntervals( const MeshPart& mp, const MeshPart* offset, const V3fIt 
 
         if ( isInsideSelection )
         {
-            const auto faceId = offset ? offset->mesh.topology.left( mpr.mtp.e ) : mp.mesh.topology.left( mpr.mtp.e );
+            const auto faceId = mpr.proj.face;
 
             isInsideSelection = offset ?
                 ( !offset->region || ( mpr && offset->region->test( faceId ) ) ) :

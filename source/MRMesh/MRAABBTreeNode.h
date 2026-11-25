@@ -4,7 +4,6 @@
 #include "MRId.h"
 #include "MRVector2.h"
 #include "MRVector3.h"
-#include <type_traits>
 
 namespace MR
 {
@@ -19,8 +18,6 @@ struct MRMESH_CLASS AABBTreeTraits
     using LeafId = Id<L>;
     using BoxT = B;
 };
-
-using FaceTreeTraits3 = AABBTreeTraits<FaceTag, Box3f>;
 
 template<typename V>
 using LineTreeTraits = AABBTreeTraits<UndirectedEdgeTag, Box<V>>;
@@ -37,22 +34,6 @@ struct BoxedLeaf
     BoxedLeaf() noexcept = default;
     explicit BoxedLeaf( NoInit ) noexcept : leafId( noInit ), box( noInit ) { }
 };
-
-/// a leaf of the AABB-tree of a mesh: the face with the vertices of its triangle, the box of the triangle is not stored
-struct FaceLeaf
-{
-    FaceId leafId;
-    ThreeVertIds verts; ///< as returned by MeshTopology::getTriVerts when the tree was built
-
-    FaceLeaf() noexcept = default;
-    explicit FaceLeaf( NoInit ) noexcept : leafId( noInit ), verts{ VertId( noInit ), VertId( noInit ), VertId( noInit ) } { }
-};
-
-/// the type of the leaves stored in the AABB-tree with given traits
-template<typename T>
-struct AABBTreeLeaf { using type = BoxedLeaf<T>; };
-template<>
-struct AABBTreeLeaf<FaceTreeTraits3> { using type = FaceLeaf; };
 
 /// the encoding of the children of AABB-tree nodes
 struct AABBTreeChildEncoding
@@ -78,30 +59,8 @@ struct AABBTreeNode : AABBTreeChildEncoding
     explicit AABBTreeNode( NoInit ) noexcept : box( noInit ), l( noInit ), r( noInit ){}
 };
 
-/// a node of the AABB-tree of a mesh: only the children, the boxes of nodes and leaves are in one array AABBTree::boxes()
-struct FaceTreeNode : AABBTreeChildEncoding
-{
-    using LeafId = FaceId;
-    using BoxT = Box3f;
-
-    NodeId l, r; ///< two children: each is either another node (non-negative id) or a leaf (encoded as negative number ~leafIndex)
-
-    FaceTreeNode() noexcept = default;
-    explicit FaceTreeNode( NoInit ) noexcept : l( noInit ), r( noInit ){}
-};
-
-/// the type of the nodes of the AABB-tree with given traits
 template<typename T>
-struct AABBTreeNodeType { using type = AABBTreeNode<T>; };
-template<>
-struct AABBTreeNodeType<FaceTreeTraits3> { using type = FaceTreeNode; };
-
-/// whether the nodes of the tree with given traits store their boxes
-template<typename T>
-inline constexpr bool nodesHaveBoxes = !std::is_same_v<typename AABBTreeNodeType<T>::type, FaceTreeNode>;
-
-template<typename T>
-using AABBTreeNodeVec = Vector<typename AABBTreeNodeType<T>::type, NodeId>;
+using AABBTreeNodeVec = Vector<AABBTreeNode<T>, NodeId>;
 
 struct NodeNode
 {

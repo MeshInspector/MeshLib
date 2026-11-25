@@ -6,6 +6,7 @@
 #include "MRRingIterator.h"
 #include "MRBox.h"
 #include "MRSurfacePath.h"
+#include "MRPch/MRFmt.h"
 #include "MRPch/MRSpdlog.h"
 
 namespace MR
@@ -572,18 +573,15 @@ void getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const
         inOffsets[j + 1] = inOffsets[j] + n;
         outOffsets[j + 1] = outOffsets[j] + n + ( terminals.empty() ? 0 : int( terminals[j][0].valid() ) + int( terminals[j][1].valid() ) );
     }
-    // resizeNoInit touches no element but still takes a step per element, so the outputs are sized concurrently
-    tbb::task_group sizing;
     for ( auto out : { outA, outB } )
         if ( out )
-            sizing.run( [out, &outOffsets] { out->intersections.resizeNoInit( outOffsets.back() ); } ); // every element is written below
+            out->intersections.resizeNoInit( outOffsets.back() ); // every element is written below
     if ( outPtsA )
     {
         outPtsA->resize( contours.size() );
         for ( int j = 0; j < contours.size(); ++j )
             resizeNoInit( ( *outPtsA )[j], outOffsets[j + 1] - outOffsets[j] );
     }
-    sizing.wait();
 
     BitSet closed( contours.size() );
     parallelForContourPieces( inOffsets, [&] ( int j, int k0, int k1 )
@@ -860,9 +858,12 @@ Expected<OneMeshContour> surfaceLineToMeshContour( const Mesh& mesh, const std::
             }
         }
         // using DijkstraAStar here might be faster, in most case points are close to each other
-        auto sp = connectorFn( meshTriPoints[i], meshTriPoints[( i + 1 ) % meshTriPoints.size()], firstIndex, secondIndex );
+        const auto& nextMtp = meshTriPoints[( i + 1 ) % meshTriPoints.size()];
+        auto sp = connectorFn( meshTriPoints[i], nextMtp, firstIndex, secondIndex );
         if ( !sp.has_value() )
             return unexpected( sp.error() );
+        if ( !isConnectedPath( mesh.topology, meshTriPoints[i], *sp, nextMtp ) )
+            return unexpected( fmt::format( "Path between points #{} and #{} is not connected", firstIndex, secondIndex ) );
         auto partContours = surfacePathsToMeshContours( mesh, { std::move( sp.value() ) } );
         assert( partContours.size() == 1 );
         surfacePaths[i] = partContours.contour( 0 );

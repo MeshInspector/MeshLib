@@ -1,6 +1,11 @@
 {
   "Items": [
     {
+      "Name": "Feature Alignment",
+      "Tooltip": "Move one object so that its fitted features meet the matching features of another object.",
+      "Icon": ""
+    },
+    {
       "Name": "Undo",
       "Tooltip": "Undo the last action.",
       "Icon": "\uF0E2",
@@ -48,7 +53,7 @@
     },
     {
       "Name": "Binary Operations",
-      "Tooltip": "Various bivariate functions on individual voxel pairs: Union, Intersection, Difference, Max, Min, Sum, Multiply, Divide, Replace.",
+      "Tooltip": "Various bivariate functions on individual voxel pairs: Union, Intersection, Difference for volumes made from meshes; Max, Min, Sum, Multiply, Divide for other volumes.",
       "Icon": "\uF15C",
       "HelpLink": "https://meshinspector.com/inappvideo/voxelsoperations"
     },
@@ -260,7 +265,7 @@
       "Tooltip": "Selects objects by clicking them in the scene",
       "Icon": "\uF245",
       "HelpLink": "https://meshinspector.com/inappvideo/selectobjects",
-      "Shortcut": { "Keys": "Primary+Q", "Category": "Objects" }
+      "Shortcut": { "Keys": "Ctrl+Q", "Category": "Objects" }
     },
     {
       "Name": "Move object",

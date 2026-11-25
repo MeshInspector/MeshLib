@@ -266,11 +266,18 @@ void RibbonIcons::load_( IconType type )
     int minSize = static_cast< int >( currentData.minMaxSizes.first );
     int maxSize = static_cast< int >( currentData.minMaxSizes.second );
 
+    std::error_code ec;
+    if ( !std::filesystem::is_directory( path, ec ) )
+    {
+        // an application may have no icons of this type at all, e.g. the viewer started from the Python package
+        spdlog::warn( "no icons directory {}", utf8string( path ) );
+        return;
+    }
+
     for ( int sz = minSize; sz <= maxSize; ++sz )
     {
         auto dirPath = path / sizeSubFolder_( Sizes( sz ) );
 
-        std::error_code ec;
         if ( !std::filesystem::is_directory( dirPath, ec ) )
         {
             spdlog::error( "icons path {} is not directory", utf8string( dirPath ) );

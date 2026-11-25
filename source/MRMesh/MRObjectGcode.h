@@ -21,10 +21,10 @@ public:
     constexpr static const char* StaticTypeName() noexcept { return "ObjectGcode"; }
     virtual const char* typeName() const override { return StaticTypeName(); }
 
-    constexpr static const char* StaticClassName() noexcept { return "G-code"; }
+    constexpr static const char* StaticClassName() noexcept { return _t( "G-code" ); }
     virtual std::string className() const override { return StaticClassName(); }
 
-    constexpr static const char* StaticClassNameInPlural() noexcept { return "G-codes"; }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return _t( "G-codes" ); }
     virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;

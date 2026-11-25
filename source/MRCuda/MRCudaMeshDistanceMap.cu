@@ -6,7 +6,7 @@ namespace MR
 namespace Cuda
 {
 
-__global__ void kernel( const MeshTree tree, const float3* meshPoints, MeshToDistanceMapParams params,
+__global__ void kernel( MeshTree3 tree, const float3* meshPoints, MeshToDistanceMapParams params,
                         IntersectionPrecomputes prec, float shift, float* res, MeshTriPoint* outSamples, size_t chunkSize, float3 xStep, float3 yStep, size_t chunkOffset )
 {
     size_t index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -30,13 +30,13 @@ __global__ void kernel( const MeshTree tree, const float3* meshPoints, MeshToDis
     {
         res[index] = interRes.distanceAlongLine - shift;
         if ( outSamples )
-            outSamples[index] = interRes.tp;
+            outSamples[index] = MeshTriPoint{ -1, interRes.tp.a, interRes.tp.b };
     }
 }
 
 
 void computeMeshDistanceMapKernel(
-    const MeshTree& tree, const float3* meshPoints, MeshToDistanceMapParams params,
+    MeshTree3 tree, const float3* meshPoints, MeshToDistanceMapParams params,
     IntersectionPrecomputes prec, float shift,
     float* res, MeshTriPoint* outSamples, size_t chunkSize, size_t chunkOffset )
 {

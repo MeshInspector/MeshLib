@@ -24,10 +24,10 @@ public:
     constexpr static const char* StaticTypeName() noexcept { return "PointObject"; }
     virtual const char* typeName() const override { return StaticTypeName(); }
 
-    constexpr static const char* StaticClassName() noexcept { return "Point"; }
+    constexpr static const char* StaticClassName() noexcept { return _t( "Point" ); }
     virtual std::string className() const override { return StaticClassName(); }
 
-    constexpr static const char* StaticClassNameInPlural() noexcept { return "Points"; }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return _t( "Points" ); }
     virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     /// \note this ctor is public only for std::make_shared used inside clone()

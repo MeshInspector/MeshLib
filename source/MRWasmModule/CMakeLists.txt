@@ -12,9 +12,9 @@ endif()
 
 set(CMAKE_EXECUTABLE_SUFFIX ".mjs")
 if(MR_EMSCRIPTEN_SINGLETHREAD)
-  set(MESHLIB_WASM_OUTPUT_NAME "meshlib")
+  set(MESHLIB_WASM_OUTPUT_NAME "meshlib-light")
 else()
-  set(MESHLIB_WASM_OUTPUT_NAME "meshlib-mt")
+  set(MESHLIB_WASM_OUTPUT_NAME "meshlib-light-mt")
 endif()
 
 function(mr_add_wasm_module TARGET_NAME)
@@ -59,28 +59,13 @@ function(mr_add_wasm_module TARGET_NAME)
   )
 endfunction()
 
-if(MESHLIB_BUILD_WASM_DEFINITIONS_ONLY)
-  # `--emit-tsd` only runs the embind registrations, which never call into the unlinked MeshLib.
-  add_executable(MRWasmModuleDefinitions $<TARGET_OBJECTS:MRWasmModuleObjects>)
-  set_target_properties(MRWasmModuleDefinitions PROPERTIES
-    OUTPUT_NAME "${MESHLIB_WASM_OUTPUT_NAME}"
-    LINKER_LANGUAGE CXX
-  )
-  target_link_options(MRWasmModuleDefinitions PRIVATE
-    "--bind"
-    "SHELL:--emit-tsd ${MESHLIB_WASM_OUTPUT_NAME}.d.mts"
-    "-sERROR_ON_UNDEFINED_SYMBOLS=0"
-    "-Wno-error=js-compiler"
-  )
-else()
-  mr_add_wasm_module(MRWasmModuleBrowser
-    OUTPUT_NAME "${MESHLIB_WASM_OUTPUT_NAME}"
-    LINK_OPTIONS "-sENVIRONMENT=web,worker"
-  )
-  mr_add_wasm_module(MRWasmModuleNode
-    OUTPUT_NAME "${MESHLIB_WASM_OUTPUT_NAME}.node"
-    LINK_OPTIONS
-      "-sENVIRONMENT=node"
-      "-sNODERAWFS=1"
-  )
-endif()
+mr_add_wasm_module(MRWasmModuleBrowser
+  OUTPUT_NAME "${MESHLIB_WASM_OUTPUT_NAME}"
+  LINK_OPTIONS "-sENVIRONMENT=web,worker"
+)
+mr_add_wasm_module(MRWasmModuleNode
+  OUTPUT_NAME "${MESHLIB_WASM_OUTPUT_NAME}.node"
+  LINK_OPTIONS
+    "-sENVIRONMENT=node"
+    "-sNODERAWFS=1"
+)

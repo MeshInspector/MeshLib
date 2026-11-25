@@ -1,4 +1,5 @@
 #include "MRMeshSave.h"
+#include "MRMeshOrTriMesh.h"
 #include "MRIOFormatsRegistry.h"
 #include "MRMesh.h"
 #include "MRTriMesh.h"
@@ -12,6 +13,7 @@
 #include "MRImageSave.h"
 #include "MRSerializer.h"
 #include "MRTelemetry.h"
+#include <cstring>
 #include <fstream>
 
 namespace MR
@@ -19,6 +21,8 @@ namespace MR
 
 namespace MeshSave
 {
+
+using namespace MR::detail;
 
 Expected<void> toMrmesh( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
 {
@@ -50,30 +54,35 @@ Expected<void> toMrmesh( const Mesh & mesh, std::ostream & out, const SaveSettin
     return {};
 }
 
-Expected<void> toOff( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
+template<typename MeshType>
+static Expected<void> toOffImpl( const MeshType & mesh, std::ostream & out, const SaveSettings & settings );
+
+template<typename MeshType>
+static Expected<void> toOffImpl( const MeshType & mesh, const std::filesystem::path & file, const SaveSettings & settings )
 {
     // although .off is a textual format, we open the file in binary mode to get exactly the same result on Windows and Linux
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toOff( mesh, out, settings );
+    return toOffImpl( mesh, out, settings );
 }
 
-Expected<void> toOff( const Mesh& mesh, std::ostream& out, const SaveSettings & settings )
+template<typename MeshType>
+static Expected<void> toOffImpl( const MeshType & mesh, std::ostream & out, const SaveSettings & settings )
 {
     MR_TIMER;
 
-    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
+    const auto vertRenumber = getVertRenumber( mesh, settings.onlyValidPoints );
     const int numPoints = vertRenumber.sizeVerts();
-    const VertId lastVertId = mesh.topology.lastValidVert();
-    const int numPolygons = mesh.topology.numValidFaces();
+    const VertId lastVertId = lastValidVert( mesh );
+    const int numPolygons = numValidFaces( mesh );
 
     out << "OFF\n" << numPoints << ' ' << numPolygons << " 0\n\n";
     int numSaved = 0;
     for ( VertId i{ 0 }; i <= lastVertId; ++i )
     {
-        if ( settings.onlyValidPoints && !mesh.topology.hasVert( i ) )
+        if ( settings.onlyValidPoints && !hasVert( mesh, i ) )
             continue;
         auto saveVertex = [&]( auto && p )
         {
@@ -89,18 +98,16 @@ Expected<void> toOff( const Mesh& mesh, std::ostream& out, const SaveSettings & 
     }
     out << '\n';
 
-    const float facesNum = float( mesh.topology.edgePerFace().size() );
-    size_t faceIndex = 0;
-    for ( const auto& e : mesh.topology.edgePerFace() )
+    const FaceId lastFaceId = lastValidFace( mesh );
+    const float facesNum = float( lastFaceId + 1 );
+    for ( FaceId f{ 0 }; f <= lastFaceId; ++f )
     {
-        ++faceIndex;
-        if ( settings.progress && !( faceIndex & 0x3FF ) && !settings.progress( float( faceIndex ) / facesNum * 0.5f + 0.5f ) )
+        if ( settings.progress && !( ( (int)f + 1 ) & 0x3FF ) && !settings.progress( float( (int)f + 1 ) / facesNum * 0.5f + 0.5f ) )
             return unexpectedOperationCanceled();
-        if ( !e.valid() )
+        if ( !hasFace( mesh, f ) )
             continue;
 
-        VertId a, b, c;
-        mesh.topology.getLeftTriVerts( e, a, b, c );
+        const auto [a, b, c] = getTriVerts( mesh, f );
         out << fmt::format( "3 {} {} {}\n", vertRenumber( a ), vertRenumber( b ), vertRenumber( c ) );
     }
 
@@ -111,8 +118,31 @@ Expected<void> toOff( const Mesh& mesh, std::ostream& out, const SaveSettings & 
     return {};
 }
 
+Expected<void> toOff( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
+{
+    return toOffImpl( mesh, file, settings );
+}
 
-Expected<void> toObj( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, int firstVertId )
+Expected<void> toOff( const Mesh & mesh, std::ostream & out, const SaveSettings & settings )
+{
+    return toOffImpl( mesh, out, settings );
+}
+
+Expected<void> toOff( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, const FaceBitSet * region )
+{
+    return region ? toOffImpl( TriMeshPart( mesh, *region ), file, settings ) : toOffImpl( mesh, file, settings );
+}
+
+Expected<void> toOff( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings, const FaceBitSet * region )
+{
+    return region ? toOffImpl( TriMeshPart( mesh, *region ), out, settings ) : toOffImpl( mesh, out, settings );
+}
+
+template<typename MeshType>
+static Expected<void> toObjImpl( const MeshType & mesh, std::ostream & out, const SaveSettings & settings, int firstVertId );
+
+template<typename MeshType>
+static Expected<void> toObjImpl( const MeshType & mesh, const std::filesystem::path & file, const SaveSettings & settings, int firstVertId )
 {
     // although .obj is a textual format, we open the file in binary mode to get exactly the same result on Windows and Linux
     std::ofstream out( file, std::ofstream::binary );
@@ -122,43 +152,52 @@ Expected<void> toObj( const Mesh & mesh, const std::filesystem::path & file, con
 #ifndef __EMSCRIPTEN__
     // it is hard to handle several files output for browser, so for now it is under ifdef,
     // anyway later it may be reworked to save simple zip and taken out of ifdef
-    if ( settings.uvMap && settings.texture && !settings.texture->pixels.empty() )
+    const bool saveTexture = settings.uvMap && settings.texture && !settings.texture->pixels.empty();
+    if ( saveTexture || settings.solidColor )
     {
-        if ( auto pngSaver = ImageSave::getImageSaver( "*.png" ) )
+        auto mtlPath = file.parent_path() / asU8String( settings.materialName + ".mtl" );
+        std::ofstream ofMtl( mtlPath, std::ofstream::binary );
+        if ( ofMtl )
         {
-            auto mtlPath = file.parent_path() / asU8String( settings.materialName + ".mtl" );
-            std::ofstream ofMtl( mtlPath, std::ofstream::binary );
-            if ( ofMtl )
+            ofMtl << "newmtl Texture\n";
+            if ( settings.solidColor )
             {
-                ofMtl << "newmtl Texture\n";
-                if ( settings.texture && pngSaver( *settings.texture, file.parent_path() / asU8String( settings.materialName + ".png" ) ).has_value() )
-                    ofMtl << fmt::format( "map_Kd {}\n", settings.materialName + ".png" );
+                const auto c = Vector4f( *settings.solidColor );
+                ofMtl << fmt::format( "Kd {} {} {}\n", c.x, c.y, c.z );
+                if ( settings.solidColor->a != 255 )
+                    ofMtl << fmt::format( "d {}\n", c.w );
             }
+            if ( saveTexture )
+                if ( auto pngSaver = ImageSave::getImageSaver( "*.png" ) )
+                    if ( pngSaver( *settings.texture, file.parent_path() / asU8String( settings.materialName + ".png" ) ).has_value() )
+                        ofMtl << fmt::format( "map_Kd {}\n", settings.materialName + ".png" );
         }
     }
 #endif
-    return toObj( mesh, out, settings, firstVertId );
+    return toObjImpl( mesh, out, settings, firstVertId );
 }
 
-Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings & settings, int firstVertId )
+template<typename MeshType>
+static Expected<void> toObjImpl( const MeshType & mesh, std::ostream & out, const SaveSettings & settings, int firstVertId )
 {
     MR_TIMER;
-    const VertId lastVertId = mesh.topology.lastValidVert();
+    const VertId lastVertId = lastValidVert( mesh );
     out << "# MeshInspector.com\n";
     bool saveUV = settings.uvMap && !settings.uvMap->empty();
     bool saveColors = settings.colors && !settings.colors->empty();
+    const bool useMtl = saveUV || settings.solidColor;
 
-    if ( saveUV )
+    if ( useMtl )
         out << fmt::format( "mtllib {}.mtl\n", settings.materialName );
 
-    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
+    const auto vertRenumber = getVertRenumber( mesh, settings.onlyValidPoints );
     const int numPoints = vertRenumber.sizeVerts();
 
     int numSaved = 0;
     auto sb = subprogress( settings.progress, 0.0f, settings.uvMap ? 0.35f : 0.5f );
     for ( VertId i{ 0 }; i <= lastVertId; ++i )
     {
-        if ( settings.onlyValidPoints && !mesh.topology.hasVert( i ) )
+        if ( settings.onlyValidPoints && !hasVert( mesh, i ) )
             continue;
 
         auto saveVertex = [&]( auto && p )
@@ -188,7 +227,7 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
         sb = subprogress( settings.progress, 0.35f, 0.7f );
         for ( VertId i{ 0 }; i <= lastVertId; ++i )
         {
-            if ( settings.onlyValidPoints && !mesh.topology.hasVert( i ) )
+            if ( settings.onlyValidPoints && !hasVert( mesh, i ) )
                 continue;
             const auto uv = getAt( *settings.uvMap, i );
             out << fmt::format( "vt {} {}\n", uv.x, uv.y );
@@ -196,22 +235,21 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
             if ( settings.progress && !( numSaved & 0x3FF ) && !sb( float( numSaved ) / numPoints ) )
                 return unexpectedOperationCanceled();
         }
-        out << "usemtl Texture\n";
     }
+    if ( useMtl )
+        out << "usemtl Texture\n";
 
     sb = subprogress( settings.progress, saveUV ? 0.7f : 0.5f, 1.0f );
-    const float facesNum = float( mesh.topology.edgePerFace().size() );
-    size_t faceIndex = 0;
-    for ( const auto& e : mesh.topology.edgePerFace() )
+    const FaceId lastFaceId = lastValidFace( mesh );
+    const float facesNum = float( lastFaceId + 1 );
+    for ( FaceId f{ 0 }; f <= lastFaceId; ++f )
     {
-        ++faceIndex;
-        if ( settings.progress && !( faceIndex & 0x3FF ) && !sb( faceIndex / facesNum ) )
+        if ( settings.progress && !( ( (int)f + 1 ) & 0x3FF ) && !sb( float( (int)f + 1 ) / facesNum ) )
             return unexpectedOperationCanceled();
-        if ( !e.valid() )
+        if ( !hasFace( mesh, f ) )
             continue;
 
-        VertId a, b, c;
-        mesh.topology.getLeftTriVerts( e, a, b, c );
+        const auto [a, b, c] = getTriVerts( mesh, f );
         Vector3i values( vertRenumber( a ) + firstVertId, vertRenumber( b ) + firstVertId, vertRenumber( c ) + firstVertId );
         if ( saveUV )
             out << fmt::format( "f {}/{} {}/{} {}/{}\n",
@@ -230,24 +268,54 @@ Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings 
     return {};
 }
 
+Expected<void> toObj( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, int firstVertId )
+{
+    return toObjImpl( mesh, file, settings, firstVertId );
+}
+
+Expected<void> toObj( const Mesh & mesh, std::ostream & out, const SaveSettings & settings, int firstVertId )
+{
+    return toObjImpl( mesh, out, settings, firstVertId );
+}
+
 Expected<void> toObj( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings& settings )
 {
-    return toObj( mesh, file, settings, 1 );
+    return toObjImpl( mesh, file, settings, 1 );
 }
 
 Expected<void> toObj( const Mesh& mesh, std::ostream& out, const SaveSettings& settings )
 {
-    return toObj( mesh, out, settings, 1 );
+    return toObjImpl( mesh, out, settings, 1 );
 }
 
-static FaceBitSet getNotDegenTris( const Mesh &mesh )
+Expected<void> toObj( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, int firstVertId, const FaceBitSet * region )
+{
+    return region ? toObjImpl( TriMeshPart( mesh, *region ), file, settings, firstVertId ) : toObjImpl( mesh, file, settings, firstVertId );
+}
+
+Expected<void> toObj( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings, int firstVertId, const FaceBitSet * region )
+{
+    return region ? toObjImpl( TriMeshPart( mesh, *region ), out, settings, firstVertId ) : toObjImpl( mesh, out, settings, firstVertId );
+}
+
+Expected<void> toObj( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, const FaceBitSet * region )
+{
+    return region ? toObjImpl( TriMeshPart( mesh, *region ), file, settings, 1 ) : toObjImpl( mesh, file, settings, 1 );
+}
+
+Expected<void> toObj( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings, const FaceBitSet * region )
+{
+    return region ? toObjImpl( TriMeshPart( mesh, *region ), out, settings, 1 ) : toObjImpl( mesh, out, settings, 1 );
+}
+
+template<typename MeshType>
+static FaceBitSet getNotDegenTris( const MeshType & mesh )
 {
     MR_TIMER;
-    FaceBitSet notDegenTris = mesh.topology.getValidFaces();
+    FaceBitSet notDegenTris = validFaces( mesh );
     BitSetParallelFor( notDegenTris, [&]( FaceId f )
     {
-        VertId a, b, c;
-        mesh.topology.getTriVerts( f, a, b, c );
+        const auto [a, b, c] = getTriVerts( mesh, f );
         assert( a.valid() && b.valid() && c.valid() );
 
         const Vector3f& ap = mesh.points[a];
@@ -259,16 +327,21 @@ static FaceBitSet getNotDegenTris( const Mesh &mesh )
     return notDegenTris;
 }
 
-Expected<void> toBinaryStl( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
+template<typename MeshType>
+static Expected<void> toBinaryStlImpl( const MeshType & mesh, std::ostream & out, const SaveSettings & settings );
+
+template<typename MeshType>
+static Expected<void> toBinaryStlImpl( const MeshType & mesh, const std::filesystem::path & file, const SaveSettings & settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toBinaryStl( mesh, out, settings );
+    return toBinaryStlImpl( mesh, out, settings );
 }
 
-Expected<void> toBinaryStl( const Mesh & mesh, std::ostream & out, const SaveSettings & settings )
+template<typename MeshType>
+static Expected<void> toBinaryStlImpl( const MeshType & mesh, std::ostream & out, const SaveSettings & settings )
 {
     MR_TIMER;
 
@@ -280,7 +353,7 @@ Expected<void> toBinaryStl( const Mesh & mesh, std::ostream & out, const SaveSet
     int trisIndex = 0;
     for ( auto f : notDegenTris )
     {
-        saver.writeTri( mesh.getTriPoints( f ) );
+        saver.writeTri( getTriPoints( mesh, f ) );
         if ( settings.progress && !( trisIndex & 0x3FF ) && !settings.progress( trisIndex / trisNum ) )
             return unexpectedOperationCanceled();
         ++trisIndex;
@@ -293,11 +366,40 @@ Expected<void> toBinaryStl( const Mesh & mesh, std::ostream & out, const SaveSet
     return {};
 }
 
+Expected<void> toBinaryStl( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
+{
+    return toBinaryStlImpl( mesh, file, settings );
+}
+
+Expected<void> toBinaryStl( const Mesh & mesh, std::ostream & out, const SaveSettings & settings )
+{
+    return toBinaryStlImpl( mesh, out, settings );
+}
+
+Expected<void> toBinaryStl( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, const FaceBitSet * region )
+{
+    return region ? toBinaryStlImpl( TriMeshPart( mesh, *region ), file, settings ) : toBinaryStlImpl( mesh, file, settings );
+}
+
+Expected<void> toBinaryStl( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings, const FaceBitSet * region )
+{
+    return region ? toBinaryStlImpl( TriMeshPart( mesh, *region ), out, settings ) : toBinaryStlImpl( mesh, out, settings );
+}
+
 BinaryStlSaver::BinaryStlSaver( std::ostream & out, const SaveSettings & settings, std::uint32_t expectedNumTris )
     : out_( out )
     , settings_( settings )
 {
     char header[80] = "MeshInspector.com";
+    if ( const auto & c = settings.solidColor )
+    {
+        // object color by Materialise Magics convention
+        const char color[] = { ' ', 'C', 'O', 'L', 'O', 'R', '=', char( c->r ), char( c->g ), char( c->b ), char( c->a ) };
+        std::memcpy( header + 17, color, sizeof( color ) );
+        // bit 15 means "use object color" for Magics, and "valid color" with 5-bit red, green, blue for VisCAM/SolidView,
+        // so both conventions show the same color
+        triAttr_ = std::uint16_t( 0x8000 | ( ( c->r >> 3 ) << 10 ) | ( ( c->g >> 3 ) << 5 ) | ( c->b >> 3 ) );
+    }
     out.write( header, 80 );
 
     numTrisPos_ = out.tellp();
@@ -320,8 +422,7 @@ bool BinaryStlSaver::writeTri( const Triangle3f& tri )
     out_.write( (const char*)&ap, 12 );
     out_.write( (const char*)&bp, 12 );
     out_.write( (const char*)&cp, 12 );
-    std::uint16_t attr{ 0 };
-    out_.write( ( const char* )&attr, 2 );
+    out_.write( ( const char* )&triAttr_, 2 );
     ++savedNumTris_;
     return (bool)out_;
 }
@@ -344,16 +445,21 @@ BinaryStlSaver::~BinaryStlSaver()
     updateHeadCounter();
 }
 
-Expected<void> toAsciiStl( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings & settings )
+template<typename MeshType>
+static Expected<void> toAsciiStlImpl( const MeshType & mesh, std::ostream & out, const SaveSettings & settings );
+
+template<typename MeshType>
+static Expected<void> toAsciiStlImpl( const MeshType & mesh, const std::filesystem::path & file, const SaveSettings & settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
         return unexpected( std::string( "Cannot open file for writing " ) + utf8string( file ) );
 
-    return toAsciiStl( mesh, out, settings );
+    return toAsciiStlImpl( mesh, out, settings );
 }
 
-Expected<void> toAsciiStl( const Mesh& mesh, std::ostream& out, const SaveSettings & settings )
+template<typename MeshType>
+static Expected<void> toAsciiStlImpl( const MeshType & mesh, std::ostream & out, const SaveSettings & settings )
 {
     MR_TIMER;
 
@@ -364,8 +470,7 @@ Expected<void> toAsciiStl( const Mesh& mesh, std::ostream& out, const SaveSettin
     int trisIndex = 0;
     for ( auto f : notDegenTris )
     {
-        VertId a, b, c;
-        mesh.topology.getTriVerts( f, a, b, c );
+        const auto [a, b, c] = getTriVerts( mesh, f );
         assert( a.valid() && b.valid() && c.valid() );
         auto saveVertex = [&]( auto && ap, auto && bp, auto && cp )
         {
@@ -396,44 +501,25 @@ Expected<void> toAsciiStl( const Mesh& mesh, std::ostream& out, const SaveSettin
     return {};
 }
 
-// helpers allowing to save Mesh and TriMesh by the same code;
-// all vertices and triangles of TriMesh are always valid
-
-static VertRenumber getVertRenumber( const Mesh & mesh, const SaveSettings & settings )
+Expected<void> toAsciiStl( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
 {
-    return VertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
+    return toAsciiStlImpl( mesh, file, settings );
 }
 
-/// identity vertex renumbering for TriMesh
-struct NoRenumber
+Expected<void> toAsciiStl( const Mesh & mesh, std::ostream & out, const SaveSettings & settings )
 {
-    int numVerts = 0;
-    int sizeVerts() const { return numVerts; }
-    int operator()( VertId v ) const { assert( v ); return (int)v; }
-};
-
-static NoRenumber getVertRenumber( const TriMesh & mesh, const SaveSettings & )
-{
-    return { .numVerts = (int)mesh.points.size() };
+    return toAsciiStlImpl( mesh, out, settings );
 }
 
-static VertId lastValidVert( const Mesh & mesh ) { return mesh.topology.lastValidVert(); }
-static VertId lastValidVert( const TriMesh & mesh ) { return VertId( (int)mesh.points.size() - 1 ); }
+Expected<void> toAsciiStl( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, const FaceBitSet * region )
+{
+    return region ? toAsciiStlImpl( TriMeshPart( mesh, *region ), file, settings ) : toAsciiStlImpl( mesh, file, settings );
+}
 
-static bool hasVert( const Mesh & mesh, VertId v ) { return mesh.topology.hasVert( v ); }
-static bool hasVert( const TriMesh &, VertId ) { return true; }
-
-static FaceId lastValidFace( const Mesh & mesh ) { return mesh.topology.lastValidFace(); }
-static FaceId lastValidFace( const TriMesh & mesh ) { return FaceId( (int)mesh.tris.size() - 1 ); }
-
-static int numValidFaces( const Mesh & mesh ) { return mesh.topology.numValidFaces(); }
-static int numValidFaces( const TriMesh & mesh ) { return (int)mesh.tris.size(); }
-
-static bool hasFace( const Mesh & mesh, FaceId f ) { return mesh.topology.hasFace( f ); }
-static bool hasFace( const TriMesh &, FaceId ) { return true; }
-
-static ThreeVertIds getTriVerts( const Mesh & mesh, FaceId f ) { return mesh.topology.getTriVerts( f ); }
-static const ThreeVertIds & getTriVerts( const TriMesh & mesh, FaceId f ) { return mesh.tris[f]; }
+Expected<void> toAsciiStl( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings, const FaceBitSet * region )
+{
+    return region ? toAsciiStlImpl( TriMeshPart( mesh, *region ), out, settings ) : toAsciiStlImpl( mesh, out, settings );
+}
 
 template<typename MeshType>
 static Expected<void> toPlyImpl( const MeshType & mesh, std::ostream & out, const SaveSettings & settings );
@@ -462,7 +548,7 @@ static Expected<void> toPlyImpl( const MeshType & mesh, std::ostream & out, cons
 {
     MR_TIMER;
 
-    const auto vertRenumber = getVertRenumber( mesh, settings );
+    const auto vertRenumber = getVertRenumber( mesh, settings.onlyValidPoints );
     const int numPoints = vertRenumber.sizeVerts();
     const VertId lastVertId = lastValidVert( mesh );
 
@@ -577,14 +663,14 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
     return toPlyImpl( mesh, out, settings );
 }
 
-Expected<void> toPly( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
+Expected<void> toPly( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings, const FaceBitSet * region )
 {
-    return toPlyImpl( mesh, file, settings );
+    return region ? toPlyImpl( TriMeshPart( mesh, *region ), file, settings ) : toPlyImpl( mesh, file, settings );
 }
 
-Expected<void> toPly( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings )
+Expected<void> toPly( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings, const FaceBitSet * region )
 {
-    return toPlyImpl( mesh, out, settings );
+    return region ? toPlyImpl( TriMeshPart( mesh, *region ), out, settings ) : toPlyImpl( mesh, out, settings );
 }
 
 static void telemetryLogSize( const Mesh& mesh )

@@ -345,11 +345,16 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
             CommandLoop::appendCommand( [&viewer, size]
             {
                 spdlog::info( "Resize window: {} {}", size.x, size.y );
-                viewer.resize( size.x, size.y );
+                // on Wayland, the framebuffer scale is unknown until the first frame is shown
+                // thus we should save and restore the window size in screen coordinates
+                if ( viewer.window && getWindowSystem() == WindowSystem::Wayland )
+                    glfwSetWindowSize( viewer.window, size.x, size.y );
+                else
+                    viewer.resize( size.x, size.y );
             } );
         }
     }
-    if ( cfg.hasVector2i( cMainWindowPos ) )
+    if ( cfg.hasVector2i( cMainWindowPos ) && getWindowSystem() != WindowSystem::Wayland ) // Wayland does not let a client position its window
     {
         auto pos = cfg.getVector2i( cMainWindowPos, Vector2i( 100, 100 ) );
         if ( pos.x > -32000 && pos.y > -32000 )
@@ -458,6 +463,10 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     {
         const auto& object = cfg.getJsonValue( cTouchpadSettings );
         TouchpadParameters parameters;
+        if ( object.isMember( "gesturesEnabled" ) && object["gesturesEnabled"].isBool() )
+        {
+            parameters.gesturesEnabled = object["gesturesEnabled"].asBool();
+        }
         if ( object.isMember( "ignoreKineticMoves" ) && object["ignoreKineticMoves"].isBool() )
         {
             parameters.ignoreKineticMoves = object["ignoreKineticMoves"].asBool();
@@ -668,7 +677,18 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     xtext["Nums"] = Json::arrayValue;
     cfg.setJsonValue( "lastExtextentions", xtext );
 
-    cfg.setVector2i( cMainWindowSize, viewer.windowSaveSize );
+    auto windowSize = viewer.windowSaveSize;
+    if ( getWindowSystem() == WindowSystem::Wayland )
+    {
+        // on Wayland, the framebuffer scale is unknown until the first frame is shown
+        // thus we should save and restore the window size in screen coordinates
+        assert( viewer.pixelRatio > 0.f );
+        windowSize = {
+            (int)std::lround( (float)windowSize.x / viewer.pixelRatio ),
+            (int)std::lround( (float)windowSize.y / viewer.pixelRatio ),
+        };
+    }
+    cfg.setVector2i( cMainWindowSize, windowSize );
     if ( viewer.windowSaveSize.x > 0 && viewer.windowSaveSize.y > 0 )
         cfg.setVector2i( cMainWindowPos, viewer.windowSavePos );
     cfg.setBool( cMainWindowMaximized, viewer.windowMaximized );
@@ -684,6 +704,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
 
     Json::Value touchpadParametersJson;
     const auto& touchpadParameters = viewer.touchpadController().getParameters();
+    touchpadParametersJson["gesturesEnabled"] = touchpadParameters.gesturesEnabled;
     touchpadParametersJson["ignoreKineticMoves"] = touchpadParameters.ignoreKineticMoves;
     touchpadParametersJson["cancellable"] = touchpadParameters.cancellable;
     touchpadParametersJson["swipeMode"] = (int)touchpadParameters.swipeMode;

@@ -386,26 +386,10 @@ Expected<std::vector<MeshData>> readMeshes( const tinygltf::Model& model, const 
 
         std::vector<MeshBuilder::VertDuplication> dups;
         meshData.mesh = std::make_shared<Mesh>( Mesh::fromTrianglesDuplicatingNonManifoldVertices( vertexCoordinates, t, &dups ) );
-        if ( dups.empty() )
-            continue;
-
-        if ( !areMaterialsSame )
-        {
-            meshData.vertsColorMap.resize( meshData.vertsColorMap.size() + dups.size() );
-            for ( const auto& dup : dups )
-            {
-                meshData.vertsColorMap[dup.dupVert] = meshData.vertsColorMap[dup.srcVert];
-            }
-        }
-
+        // vertsColorMap is empty if areMaterialsSame
+        MeshBuilder::copyAttributesToDuplicates( meshData.vertsColorMap, dups, vertexCoordinates.size(), meshData.mesh->points.size() );
         if ( meshData.materialIndex >= 0 && model.materials[meshData.materialIndex].pbrMetallicRoughness.baseColorTexture.index >= 0 )
-        {
-            meshData.uvCoords.resize( meshData.uvCoords.size() + dups.size() );
-            for ( const auto& dup : dups )
-            {
-                meshData.uvCoords[dup.dupVert] = meshData.uvCoords[dup.srcVert];
-            }
-        }
+            MeshBuilder::copyAttributesToDuplicates( meshData.uvCoords, dups, vertexCoordinates.size(), meshData.mesh->points.size() );
     }
 
     return result;

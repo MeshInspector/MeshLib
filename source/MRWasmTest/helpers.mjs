@@ -2,7 +2,7 @@ import { pathToFileURL } from 'node:url';
 
 const moduleUrl = process.env.MESHLIB_MODULE
   ? pathToFileURL( process.env.MESHLIB_MODULE ).href
-  : new URL( './meshlib.mjs', import.meta.url ).href;
+  : new URL( './meshlib-light.mjs', import.meta.url ).href;
 
 const { default: createMeshLib } = await import( moduleUrl );
 export const ml = await createMeshLib();

@@ -36,7 +36,7 @@ static VertId findMaxVertId( const Triangulation & t, const FaceBitSet * region 
     } );
 }
 
-static VertId findMaxVertId( const std::vector<VertId> & verts )
+static VertId findMaxVertId( const Vector<VertId> & verts )
 {
     MR_TIMER;
     return parallel_reduce( tbb::blocked_range( size_t(0), verts.size() ), VertId{},
@@ -266,7 +266,7 @@ static size_t addTrianglesSeqCore( MeshTopology& res, const Triangulation & t, c
     return triAddedTotal;
 }
 
-MeshTopology fromFaceSoup( const std::vector<VertId> & verts, const Vector<VertSpan, FaceId> & faces,
+MeshTopology fromFaceSoup( const Vector<VertId> & verts, const Vector<VertSpan, FaceId> & faces,
     const BuildSettings & settings, ProgressCallback progressCb )
 {
     MR_TIMER;

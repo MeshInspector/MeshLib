@@ -26,6 +26,7 @@
 #include "MRIdentifyVertices.h"
 #include "MRMeshFillHole.h"
 #include "MRTriMesh.h"
+#include "MRFaceSoup.h"
 #include "MRDipole.h"
 #include "MRPartMappingAdapters.h"
 
@@ -92,15 +93,21 @@ Mesh Mesh::fromTrianglesDuplicatingNonManifoldVertices(
     return res;
 }
 
-Mesh Mesh::fromFaceSoup(
-    VertCoords vertexCoordinates,
-    const std::vector<VertId> & verts, const Vector<MeshBuilder::VertSpan, FaceId> & faces,
-    const MeshBuilder::BuildSettings& settings, ProgressCallback cb /*= {}*/ )
+Mesh Mesh::fromTriMeshDuplicatingNonManifoldVertices(
+    TriMesh && triMesh,
+    std::vector<MeshBuilder::VertDuplication> * dups,
+    const MeshBuilder::BuildSettings & settings,
+    const MeshBuilder::BetterDupContinuation & betterCont )
+{
+    return fromTrianglesDuplicatingNonManifoldVertices( std::move( triMesh.points ), triMesh.tris, dups, settings, betterCont );
+}
+
+Mesh Mesh::fromFaceSoup( FaceSoup && soup, const MeshBuilder::BuildSettings& settings, ProgressCallback cb /*= {}*/ )
 {
     MR_TIMER;
     Mesh res;
-    res.points = std::move( vertexCoordinates );
-    res.topology = MeshBuilder::fromFaceSoup( verts, faces, settings, subprogress( cb, 0.0f, 0.8f ) );
+    res.points = std::move( soup.points );
+    res.topology = MeshBuilder::fromFaceSoup( soup.verts, soup.faces, settings, subprogress( cb, 0.0f, 0.8f ) );
 
     std::vector<EdgeId> holeRepresentativeEdges;
     for ( auto f : res.topology.getValidFaces() )
@@ -164,7 +171,7 @@ MeshEdgePoint Mesh::toEdgePoint( VertId v ) const
 
 bool Mesh::isOutsideByProjNorm( const Vector3f & pt, const MeshProjectionResult & proj, const FaceBitSet * region ) const
 {
-    return dot( proj.proj.point - pt, pseudonormal( proj.mtp, region ) ) <= 0;
+    return dot( proj.proj.point - pt, pseudonormal( proj.mtp( topology ), region ) ) <= 0;
 }
 
 Plane3f Mesh::getPlane3f( FaceId f ) const
@@ -465,10 +472,11 @@ Expected<PackMapping> Mesh::packOptimally( bool preserveAABBTree, ProgressCallba
 
     PackMapping map;
     AABBTreePointsOwner_.reset(); // points-tree will be invalidated anyway
+    dipolesOwner_.reset();
     // an already constructed tree gives the face order much faster than getOptimalFaceOrdering
     if ( preserveAABBTree || AABBTreeOwner_.get() )
     {
-        getAABBTree(); // ensure that tree is constructed
+        const auto & tree = getAABBTree(); // ensure that tree is constructed
         map.f.b.resize( topology.faceSize() );
         const bool packed = topology.numValidFaces() == topology.faceSize();
         if ( !packed )
@@ -477,13 +485,9 @@ Expected<PackMapping> Mesh::packOptimally( bool preserveAABBTree, ProgressCallba
                 if ( !topology.hasFace( f ) )
                     map.f.b[f] = FaceId{};
         }
-        if ( preserveAABBTree )
-            AABBTreeOwner_.update( [&map]( AABBTree& t ) { t.getLeafOrderAndReset( map.f ); } );
-        else
-        {
-            AABBTreeOwner_.get()->getLeafOrder( map.f );
+        tree.getLeafOrder( map.f );
+        if ( !preserveAABBTree )
             AABBTreeOwner_.reset();
-        }
     }
     else
         map.f = getOptimalFaceOrdering( *this );
@@ -500,18 +504,23 @@ Expected<PackMapping> Mesh::packOptimally( bool preserveAABBTree, ProgressCallba
 
     if ( auto r = pack( map, subprogress( cb, 0.7f, 1.0f ) ); !r )
         return unexpected( std::move( r.error() ) );
-
-    if ( preserveAABBTree )
-        AABBTreeOwner_.update( [this]( AABBTree & t ) { t.updateLeafVerts( topology ); } );
+    AABBTreeOwner_.update( [&map]( AABBTree & t ) { t.renumber( map.f, map.v ); } );
 
     return map;
 }
 
-VacantElements Mesh::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
+void Mesh::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
 {
     if ( fs.any() )
         invalidateCaches(); // some points can be deleted as well
-    return topology.deleteFaces( fs, keepEdges );
+    topology.deleteFaces( fs, keepEdges );
+}
+
+VacantElements Mesh::deleteFacesFindVacant( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
+{
+    if ( fs.any() )
+        invalidateCaches(); // some points can be deleted as well
+    return topology.deleteFacesFindVacant( fs, keepEdges );
 }
 
 bool Mesh::projectPoint( const Vector3f& point, PointOnFace& res, float maxDistSq, const FaceBitSet * region, const AffineXf3f * xf ) const
@@ -542,7 +551,7 @@ MeshProjectionResult Mesh::projectPoint( const Vector3f& point, float maxDistSq,
 const AABBTree & Mesh::getAABBTree() const
 {
     const auto & res = AABBTreeOwner_.getOrCreate( [this]{ return AABBTree( *this ); } );
-    assert( res.numLeaves() == topology.numValidFaces() );
+    assert( res.numTris() == topology.numValidFaces() );
     return res;
 }
 
@@ -562,7 +571,7 @@ const Dipoles & Mesh::getDipoles() const
         [this, &tree] {
             return calcDipoles( tree, *this );
         } );
-    assert( res.size() == tree.nodes().size() );
+    assert( res.size() == tree.numNodes() );
     return res;
 }
 
@@ -578,7 +587,7 @@ void Mesh::updateCaches( const VertBitSet * changedVerts )
 {
     AABBTreeOwner_.update( [&]( AABBTree & tree )
     {
-        assert( tree.numLeaves() == topology.numValidFaces() );
+        assert( tree.numTris() == topology.numValidFaces() );
         tree.refit( *this, changedVerts );
     } );
     AABBTreePointsOwner_.update( [&]( AABBTreePoints & tree )
@@ -596,7 +605,7 @@ void Mesh::updateCachesAfterSplits( const FaceHashMap & new2Old )
     AABBTreeOwner_.update( [&]( AABBTree & tree )
     {
         tree.addSplitFaces( *this, new2Old );
-        assert( tree.numLeaves() == topology.numValidFaces() );
+        assert( tree.numTris() == topology.numValidFaces() );
     } );
     AABBTreePointsOwner_.reset(); // new vertices appeared
     dipolesOwner_.reset();

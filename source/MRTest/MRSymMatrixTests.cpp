@@ -1,7 +1,9 @@
 #include <MRMesh/MRSymMatrix2.h>
 #include <MRMesh/MRSymMatrix3.h>
+#include <MRMesh/MRSymMatrix4.h>
 #include <MRMesh/MRMatrix2.h>
 #include <MRMesh/MRMatrix3.h>
+#include <MRMesh/MRMatrix4.h>
 #include <gtest/gtest.h>
 
 namespace MR
@@ -100,6 +102,92 @@ TEST( MRMesh, SymMatrix2Pseudoinverse )
     const auto psdInv = psd.pseudoinverse( eps, &rank, &space );
     EXPECT_EQ( rank, 1 );
     EXPECT_NEAR( ( psdInv * Vector2f( 1, -1 ) ).length(), 0, 1e-6f );
+}
+
+// all 10 elements take part in the arithmetic operators
+TEST( MRMesh, SymMatrix4Operators )
+{
+    auto m = SymMatrix4d::identity();
+    m += SymMatrix4d::diagonal( 2 );
+    EXPECT_EQ( m, SymMatrix4d::diagonal( 3 ) );
+    m -= SymMatrix4d::identity();
+    EXPECT_EQ( m, SymMatrix4d::diagonal( 2 ) );
+    m *= 4.0;
+    EXPECT_EQ( m, SymMatrix4d::diagonal( 8 ) );
+    m /= 2.0;
+    EXPECT_EQ( m, SymMatrix4d::diagonal( 4 ) );
+    auto mi = SymMatrix4i::diagonal( 6 );
+    mi /= 3;
+    EXPECT_EQ( mi, SymMatrix4i::diagonal( 2 ) );
+}
+
+TEST( MRMesh, SymMatrix4Eigens )
+{
+    auto check = []( const SymMatrix4d & m, double scale )
+    {
+        Matrix4d vecs;
+        const auto vals = m.eigens( &vecs );
+        EXPECT_EQ( vals, m.eigens() );
+        for ( int i = 0; i < 4; ++i )
+        {
+            if ( i > 0 )
+                EXPECT_LE( vals[i - 1], vals[i] );
+            EXPECT_NEAR( ( m * vecs[i] - vals[i] * vecs[i] ).length(), 0, 1e-14 * scale );
+            for ( int j = 0; j < 4; ++j )
+                EXPECT_NEAR( dot( vecs[i], vecs[j] ), i == j ? 1 : 0, 1e-14 );
+        }
+        return vals;
+    };
+
+    auto vals = check( SymMatrix4d::diagonal( 5 ), 5 );
+    EXPECT_EQ( vals, Vector4d( 5, 5, 5, 5 ) );
+
+    SymMatrix4d m;
+    m.xx = 4; m.xy = 1; m.xz = -2; m.xw = 2;
+              m.yy = 2; m.yz = 0;  m.yw = 1;
+                        m.zz = 3;  m.zw = -2;
+                                   m.ww = -1;
+    vals = check( m, 10 );
+    EXPECT_NEAR( vals[0] + vals[1] + vals[2] + vals[3], m.trace(), 1e-13 );
+    EXPECT_NEAR( sqr( vals[0] ) + sqr( vals[1] ) + sqr( vals[2] ) + sqr( vals[3] ), m.normSq(), 1e-12 );
+
+    // two tiny and two close eigenvalues: 1e-12, 2e-12, 1, 1 + 1e-9 in a rotated basis
+    const Vector4d dirs[4] = { Vector4d( 1, 1, 1, 1 ) / 2.0, Vector4d( 1, -1, 1, -1 ) / 2.0, Vector4d( 1, 1, -1, -1 ) / 2.0, Vector4d( 1, -1, -1, 1 ) / 2.0 };
+    const double lambdas[4] = { 1e-12, 2e-12, 1, 1 + 1e-9 };
+    SymMatrix4d t;
+    for ( int i = 0; i < 4; ++i )
+        t += outerSquare( lambdas[i], dirs[i] );
+    vals = check( t, 1 );
+    for ( int i = 0; i < 4; ++i )
+        EXPECT_NEAR( vals[i], lambdas[i], 1e-14 );
+    Matrix4d vecs;
+    t.eigens( &vecs );
+    EXPECT_NEAR( std::abs( dot( vecs[0], dirs[0] ) ), 1, 1e-3 );
+    EXPECT_NEAR( std::abs( dot( vecs[1], dirs[1] ) ), 1, 1e-3 );
+}
+
+TEST( MRMesh, SymMatrix4Pseudoinverse )
+{
+    const double eps = std::numeric_limits<double>::epsilon();
+    SymMatrix4d m;
+    m.xx = 4; m.xy = 1; m.xz = -2; m.xw = 2;
+              m.yy = 2; m.yz = 0;  m.yw = 1;
+                        m.zz = 3;  m.zw = -2;
+                                   m.ww = -1;
+    int rank = 0;
+    const auto inv = m.pseudoinverse( eps, &rank );
+    EXPECT_EQ( rank, 4 );
+    for ( const auto & v : { Vector4d( 1, 0, 0, 0 ), Vector4d( 0, 1, 0, 0 ), Vector4d( 0, 0, 1, 0 ), Vector4d( 0, 0, 0, 1 ), Vector4d( 1, -2, 3, -4 ) } )
+        EXPECT_NEAR( ( inv * ( m * v ) - v ).length(), 0, 1e-12 * v.length() );
+
+    // positive semi-definite of rank 2: the kernel is mapped to zero, the rest is inverted
+    const Vector4d a( 1, 2, 0, -1 ), b( 0, 1, 1, 1 );
+    const auto psd = outerSquare( a ) + outerSquare( b );
+    const auto psdInv = psd.pseudoinverse( 1e-12, &rank );
+    EXPECT_EQ( rank, 2 );
+    EXPECT_NEAR( ( psdInv * Vector4d( 2, -1, 1, 0 ) ).length(), 0, 1e-12 ); // orthogonal to a and b
+    for ( const auto & v : { a, b, a - 3.0 * b } )
+        EXPECT_NEAR( ( psdInv * ( psd * v ) - v ).length(), 0, 1e-12 * v.length() );
 }
 
 } //namespace MR

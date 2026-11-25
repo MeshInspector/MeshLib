@@ -1,9 +1,11 @@
 #include "MRBSpline.h"
 #include "MRSymMatrix2.h"
-#include "MRPch/MREigenCore.h"
-#include <Eigen/Cholesky>
-#include <Eigen/LU>
+#include "MRTimer.h"
+#include "MRPch/MREigenSparseCore.h"
+#include <Eigen/SparseCholesky>
+#include <Eigen/SparseLU>
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <numeric>
 
@@ -138,7 +140,10 @@ BSplineCurve interpolateBSplineCurve( const std::vector<Vector3d>& points )
     assert( n >= 2 );
     std::vector<double> t( n, 0.0 );
     for ( int i = 1; i < n; ++i )
+    {
         t[i] = t[i - 1] + ( points[i] - points[i - 1] ).length();
+        assert( t[i] > t[i - 1] ); // no two consecutive points are equal
+    }
     for ( auto& x : t )
         x /= std::max( t.back(), 1e-300 );
     t.back() = 1;
@@ -151,18 +156,24 @@ BSplineCurve interpolateBSplineCurve( const std::vector<Vector3d>& points )
     for ( int j = 1; j < n - k; ++j )
         res.knots[j + k] = std::accumulate( t.begin() + j, t.begin() + j + k, 0.0 ) / k;
 
-    Eigen::MatrixXd m = Eigen::MatrixXd::Zero( n, n );
+    // the collocation matrix has at most k + 1 non-zeros in a row, and it is not singular for increasing parameters
+    std::vector<Eigen::Triplet<double>> trips;
+    trips.reserve( size_t( n ) * ( k + 1 ) );
     Eigen::MatrixXd rhs( n, 3 );
     for ( int i = 0; i < n; ++i )
     {
         double b[cMaxDegree + 1];
         const int i0 = bsplineBasis( res.knots, k, n, t[i], b, nullptr );
         for ( int j = 0; j <= k; ++j )
-            m( i, i0 + j ) = b[j];
+            trips.emplace_back( i, i0 + j, b[j] );
         for ( int c = 0; c < 3; ++c )
             rhs( i, c ) = points[i][c];
     }
-    const Eigen::MatrixXd sol = m.partialPivLu().solve( rhs );
+    Eigen::SparseMatrix<double> m( n, n );
+    m.setFromTriplets( trips.begin(), trips.end() );
+    const Eigen::SparseLU<Eigen::SparseMatrix<double>> lu( m );
+    assert( lu.info() == Eigen::Success );
+    const Eigen::MatrixXd sol = lu.solve( rhs );
     res.controlPoints.resize( n );
     for ( int i = 0; i < n; ++i )
         res.controlPoints[i] = Vector3d( sol( i, 0 ), sol( i, 1 ), sol( i, 2 ) );
@@ -171,6 +182,7 @@ BSplineCurve interpolateBSplineCurve( const std::vector<Vector3d>& points )
 
 BSplineSurface fitBSplineSurface( const std::vector<Vector3d>& points, const std::vector<Vector2d>& uvs, const BSplineSurfaceFitSettings& settings )
 {
+    MR_TIMER;
     assert( points.size() == uvs.size() );
     assert( !settings.weights || settings.weights->size() == points.size() );
     const int nu = settings.numU, nv = settings.numV;
@@ -179,7 +191,10 @@ BSplineSurface fitBSplineSurface( const std::vector<Vector3d>& points, const std
     res.knotsU = makeClampedUniformKnots( nu, res.degreeU );
     res.knotsV = makeClampedUniformKnots( nv, res.degreeV );
     const int k = nu * nv;
-    Eigen::MatrixXd ata = Eigen::MatrixXd::Zero( k, k );
+    // all points in a knot span have the same 16 non-zero basis functions, so the normal equations are summed per span first,
+    // in the upper triangle of the 16 x 16 matrix of each span (control point indices increase with a)
+    const int numSpansV = nv - 3;
+    std::vector<std::array<double, 256>> spanAta( size_t( nu - 3 ) * numSpansV );
     Eigen::MatrixXd atb = Eigen::MatrixXd::Zero( k, 3 );
     for ( size_t i = 0; i < points.size(); ++i )
     {
@@ -187,21 +202,26 @@ BSplineSurface fitBSplineSurface( const std::vector<Vector3d>& points, const std
         const int iu = bsplineBasis( res.knotsU, 3, nu, uvs[i].x, bu, nullptr );
         const int iv = bsplineBasis( res.knotsV, 3, nv, uvs[i].y, bv, nullptr );
         const double w = settings.weights ? ( *settings.weights )[i] : 1.0;
-        int idx[16];
         double val[16];
-        for ( int a = 0; a < 4; ++a )
-            for ( int b = 0; b < 4; ++b )
-            {
-                idx[a * 4 + b] = ( iu + a ) * nv + iv + b;
-                val[a * 4 + b] = bu[a] * bv[b];
-            }
+        for ( int a = 0; a < 16; ++a )
+            val[a] = bu[a / 4] * bv[a % 4];
+        auto& spanA = spanAta[iu * numSpansV + iv];
         for ( int a = 0; a < 16; ++a )
         {
-            for ( int b = 0; b < 16; ++b )
-                ata( idx[a], idx[b] ) += w * val[a] * val[b];
+            for ( int b = a; b < 16; ++b )
+                spanA[a * 16 + b] += w * val[a] * val[b];
             for ( int d = 0; d < 3; ++d )
-                atb( idx[a], d ) += w * val[a] * points[i][d];
+                atb( ( iu + a / 4 ) * nv + iv + a % 4, d ) += w * val[a] * points[i][d];
         }
+    }
+    std::vector<Eigen::Triplet<double>> trips;
+    trips.reserve( spanAta.size() * 136 + size_t( k ) * 12 );
+    for ( int s = 0; s < int( spanAta.size() ); ++s )
+    {
+        const int i0 = s / numSpansV * nv + s % numSpansV;
+        for ( int a = 0; a < 16; ++a )
+            for ( int b = a; b < 16; ++b )
+                trips.emplace_back( i0 + a / 4 * nv + a % 4, i0 + b / 4 * nv + b % 4, spanAta[s][a * 16 + b] );
     }
     // smoothing: second differences of the control net
     const int numRows = ( nu - 2 ) * nv + nu * ( nv - 2 );
@@ -211,8 +231,8 @@ BSplineSurface fitBSplineSurface( const std::vector<Vector3d>& points, const std
         const int idx[3] = { i0, i1, i2 };
         const double val[3] = { 1, -2, 1 };
         for ( int a = 0; a < 3; ++a )
-            for ( int b = 0; b < 3; ++b )
-                ata( idx[a], idx[b] ) += w2 * val[a] * val[b];
+            for ( int b = a; b < 3; ++b )
+                trips.emplace_back( idx[a], idx[b], w2 * val[a] * val[b] );
     };
     for ( int a = 0; a < nu; ++a )
         for ( int b = 0; b < nv; ++b )
@@ -222,7 +242,11 @@ BSplineSurface fitBSplineSurface( const std::vector<Vector3d>& points, const std
             if ( b > 0 && b + 1 < nv )
                 addRow( a * nv + b - 1, a * nv + b, a * nv + b + 1 );
         }
-    const Eigen::MatrixXd sol = ata.ldlt().solve( atb );
+    Eigen::SparseMatrix<double> ata( k, k );
+    ata.setFromTriplets( trips.begin(), trips.end() );
+    const Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>, Eigen::Upper> ldlt( ata );
+    assert( ldlt.info() == Eigen::Success );
+    const Eigen::MatrixXd sol = ldlt.solve( atb );
     res.controlPoints.resize( k );
     for ( int i = 0; i < k; ++i )
         res.controlPoints[i] = Vector3d( sol( i, 0 ), sol( i, 1 ), sol( i, 2 ) );

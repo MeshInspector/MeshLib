@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <limits>
 #include <numeric>
 
 namespace MR
@@ -173,8 +174,10 @@ BSplineCurve interpolateBSplineCurve( const std::vector<Vector3d>& points )
     m.setFromTriplets( trips.begin(), trips.end() );
     const Eigen::SparseLU<Eigen::SparseMatrix<double>> lu( m );
     assert( lu.info() == Eigen::Success );
+    res.controlPoints.resize( n, Vector3d::diagonal( std::numeric_limits<double>::quiet_NaN() ) );
+    if ( lu.info() != Eigen::Success )
+        return res; // the preconditions are violated, and solve would read the factors that were not computed
     const Eigen::MatrixXd sol = lu.solve( rhs );
-    res.controlPoints.resize( n );
     for ( int i = 0; i < n; ++i )
         res.controlPoints[i] = Vector3d( sol( i, 0 ), sol( i, 1 ), sol( i, 2 ) );
     return res;
@@ -246,8 +249,10 @@ BSplineSurface fitBSplineSurface( const std::vector<Vector3d>& points, const std
     ata.setFromTriplets( trips.begin(), trips.end() );
     const Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>, Eigen::Upper> ldlt( ata );
     assert( ldlt.info() == Eigen::Success );
+    res.controlPoints.resize( k, Vector3d::diagonal( std::numeric_limits<double>::quiet_NaN() ) );
+    if ( ldlt.info() != Eigen::Success )
+        return res; // the preconditions are violated, and solve would leave the solution uninitialized
     const Eigen::MatrixXd sol = ldlt.solve( atb );
-    res.controlPoints.resize( k );
     for ( int i = 0; i < k; ++i )
         res.controlPoints[i] = Vector3d( sol( i, 0 ), sol( i, 1 ), sol( i, 2 ) );
     return res;

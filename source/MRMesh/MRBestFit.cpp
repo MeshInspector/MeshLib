@@ -226,19 +226,22 @@ std::optional<Sphere<V>> findBestSphereT( const std::vector<V>& points )
         mean /= double( points.size() );
     // |d - c|^2 = r^2 for the centered points d = p - mean is linear in c and s = r^2 - |c|^2: |d|^2 = 2 * dot( d, c ) + s;
     // since sum d = 0, its least squares solution decouples: ( sum d d^T ) c = sum d |d|^2 / 2 and s = mean |d|^2
+    double s = 0;
+    for ( const auto& p : points )
+        s += ( p - mean ).lengthSq();
+    s /= double( points.size() );
     decltype( outerSquare( mean ) ) m;
     V rhs;
-    double s = 0;
     for ( const auto& p : points )
     {
         const V d = p - mean;
         m += outerSquare( d );
-        rhs += d.lengthSq() * d;
-        s += d.lengthSq();
+        // subtracting s changes nothing in exact arithmetic (sum d = 0), but avoids the cancellation, which costs a digit on short arcs
+        rhs += ( d.lengthSq() - s ) * d;
     }
     // the center is not unique if the points are on a line (circle) or in a plane (sphere): then the pseudoinverse gives the minimum-norm c
     const V c = m.pseudoinverse() * rhs / 2.0;
-    const double r2 = s / double( points.size() ) + c.lengthSq();
+    const double r2 = s + c.lengthSq();
     if ( !( r2 > 0 ) || !std::isfinite( r2 ) )
         return {};
     return Sphere<V>( mean + c, std::sqrt( r2 ) );

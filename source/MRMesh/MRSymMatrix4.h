@@ -4,6 +4,7 @@
 #include "MRMatrix4.h"
 #include <algorithm>
 #include <cmath>
+#include <initializer_list>
 #include <limits>
 #include <utility>
 
@@ -53,6 +54,10 @@ struct SymMatrix4
     /// \param tol relative epsilon-tolerance for too small number detection
     /// \param rank optional output for this matrix rank according to given tolerance
     SymMatrix4<T> pseudoinverse( T tol = std::numeric_limits<T>::epsilon(), int * rank = nullptr ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> );
+
+    /// solves M*x = b for positive definite M by LDL^T decomposition without pivoting,
+    /// much faster than eigens() or pseudoinverse(); pivots that are not positive are skipped
+    Vector4<T> solveLDLT( const Vector4<T> & b ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> );
 
     bool operator ==( const SymMatrix4<T> & ) const = default;
 };
@@ -183,40 +188,54 @@ Vector4<T> SymMatrix4<T>::eigens( Matrix4<T> * eigenvectors ) const MR_REQUIRES_
         { xw, yw, zw, ww }
     };
     Matrix4<T> v; // eigenvectors in rows
+    constexpr T eps2 = std::numeric_limits<T>::epsilon() * std::numeric_limits<T>::epsilon() / 64;
+    // the pairs (p,q) of each rotation and the two other indices r
+    constexpr int P[6] = { 0, 0, 0, 1, 1, 2 }, Q[6] = { 1, 2, 3, 2, 3, 3 }, R1[6] = { 2, 1, 1, 0, 0, 0 }, R2[6] = { 3, 3, 2, 3, 2, 1 };
     for ( int sweep = 0; sweep < 32; ++sweep )
     {
         bool rotated = false;
-        for ( int p = 0; p < 3; ++p )
-            for ( int q = p + 1; q < 4; ++q )
+        for ( int i = 0; i < 6; ++i )
+        {
+            const int p = P[i], q = Q[i];
+            const T apq = a[p][q];
+            // the rotation is skipped if it cannot change the diagonal elements
+            if ( apq * apq <= eps2 * std::abs( a[p][p] * a[q][q] ) )
             {
-                const T apq = a[p][q];
-                // the rotation is skipped if it cannot change the diagonal elements
-                if ( apq == 0 || std::abs( apq ) <= std::numeric_limits<T>::epsilon() * std::sqrt( std::abs( a[p][p] * a[q][q] ) ) / 8 )
-                {
-                    a[p][q] = a[q][p] = 0;
-                    continue;
-                }
-                rotated = true;
-                const T theta = ( a[q][q] - a[p][p] ) / ( 2 * apq );
-                const T t = ( theta >= 0 ? T( 1 ) : T( -1 ) ) / ( std::abs( theta ) + std::sqrt( theta * theta + 1 ) );
-                const T c = 1 / std::sqrt( t * t + 1 );
-                const T s = t * c;
-                a[p][p] -= t * apq;
-                a[q][q] += t * apq;
                 a[p][q] = a[q][p] = 0;
-                for ( int k = 0; k < 4; ++k )
-                {
-                    if ( k != p && k != q )
-                    {
-                        const T akp = a[k][p], akq = a[k][q];
-                        a[k][p] = a[p][k] = c * akp - s * akq;
-                        a[k][q] = a[q][k] = s * akp + c * akq;
-                    }
-                    const T vpk = v[p][k], vqk = v[q][k];
-                    v[p][k] = c * vpk - s * vqk;
-                    v[q][k] = s * vpk + c * vqk;
-                }
+                continue;
             }
+            rotated = true;
+            // t = tan, c = cos, s = sin of the rotation angle
+            const T d = a[q][q] - a[p][p];
+            T t, c;
+            if ( std::abs( d ) > T( 1 << 28 ) * std::abs( apq ) )
+            {
+                // tiny angle: t = apq / d and c = 1 within the precision
+                t = apq / d;
+                c = 1;
+            }
+            else
+            {
+                // c is found from h and u, not from t, so that the two square roots do not wait for one another
+                const T h = std::sqrt( d * d + 4 * apq * apq );
+                const T u = std::abs( d ) + h;
+                t = 2 * apq / std::copysign( u, d );
+                c = std::sqrt( u / ( 2 * h ) );
+            }
+            const T s = t * c;
+            a[p][p] -= t * apq;
+            a[q][q] += t * apq;
+            a[p][q] = a[q][p] = 0;
+            for ( int k : { R1[i], R2[i] } )
+            {
+                const T akp = a[k][p], akq = a[k][q];
+                a[k][p] = a[p][k] = c * akp - s * akq;
+                a[k][q] = a[q][k] = s * akp + c * akq;
+            }
+            const Vector4<T> vp = v[p], vq = v[q];
+            v[p] = c * vp - s * vq;
+            v[q] = s * vp + c * vq;
+        }
         if ( !rotated )
             break;
     }
@@ -248,6 +267,35 @@ SymMatrix4<T> SymMatrix4<T>::pseudoinverse( T tol, int * rank ) const MR_REQUIRE
     if ( rank )
         *rank = myRank;
     return res;
+}
+
+template <typename T>
+Vector4<T> SymMatrix4<T>::solveLDLT( const Vector4<T> & b ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> )
+{
+    // M = L*D*L^T with unit lower-triangular L and diagonal D = ( d0, d1, d2, d3 ); eij = lij * dj
+    // a pivot that is not positive is skipped: the solution stays finite for a degenerate positive semi-definite M
+    const auto inv = []( T d ) { return d > 0 ? 1 / d : T( 0 ); };
+    const T i0 = inv( xx );
+    const T l10 = xy * i0, l20 = xz * i0, l30 = xw * i0;
+    const T i1 = inv( yy - l10 * xy );
+    const T e21 = yz - l20 * xy, e31 = yw - l30 * xy;
+    const T l21 = e21 * i1, l31 = e31 * i1;
+    const T i2 = inv( zz - l20 * xz - l21 * e21 );
+    const T e32 = zw - l30 * xz - l31 * e21;
+    const T l32 = e32 * i2;
+    const T i3 = inv( ww - l30 * xw - l31 * e31 - l32 * e32 );
+    // L*y = b
+    const T y0 = b.x;
+    const T y1 = b.y - l10 * y0;
+    const T y2 = b.z - l20 * y0 - l21 * y1;
+    const T y3 = b.w - l30 * y0 - l31 * y1 - l32 * y2;
+    // D*L^T*x = y
+    Vector4<T> x;
+    x.w = y3 * i3;
+    x.z = y2 * i2 - l32 * x.w;
+    x.y = y1 * i1 - l21 * x.z - l31 * x.w;
+    x.x = y0 * i0 - l10 * x.y - l20 * x.z - l30 * x.w;
+    return x;
 }
 
 /// \}

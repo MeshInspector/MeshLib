@@ -127,7 +127,7 @@ The `MeshLibDistVS*.zip` archives contain no CMake config files, so `find_packag
 
 ```cmd
 cmake -S . -B build -A x64 ^
-  -D MESHLIB_INCLUDE_DIRS=C:/meshlib-built/install/include ^
+  -D MESHLIB_INCLUDE_DIRS="C:/meshlib-built/install/include;C:/meshlib-built/install/include/eigen3" ^
   -D MESHLIB_LIB_DIRS=C:/meshlib-built/install/lib/Release
 ```
 
@@ -150,7 +150,7 @@ An archive shipping `install/include/MRMesh/config_dist.h` declares its own leve
 
 ```cmd
 cmake -S . -B build -A x64 ^
-  -D MESHLIB_INCLUDE_DIRS=C:/meshlib-built/install/include ^
+  -D MESHLIB_INCLUDE_DIRS="C:/meshlib-built/install/include;C:/meshlib-built/install/include/eigen3" ^
   -D MESHLIB_LIB_DIRS=C:/meshlib-built/install/lib/Debug ^
   -D CMAKE_CXX_FLAGS="/D_ITERATOR_DEBUG_LEVEL=2 /DMR_ITERATOR_DEBUG_LEVEL=2"
 ```

@@ -7,6 +7,7 @@
 #include "MRTimer.h"
 #include "MRPolylineEdgeIterator.h"
 #include "MRBox.h"
+#include "MRSymMatrix4.h"
 #include <MRPch/MREigenCore.h>
 #include <Eigen/Cholesky>
 #include <Eigen/Eigenvalues>
@@ -205,40 +206,6 @@ Vector3f PlaneAccumulator::findBestCrossPoint( const Vector3f & p0, float tol, i
 namespace
 {
 
-template <typename V>
-std::optional<Sphere<V>> findBestSphereT( const std::vector<V>& points )
-{
-    constexpr int n = V::elements;
-    using EV = Eigen::Matrix<double, n + 1, 1>;
-    V mean;
-    for ( const auto& p : points )
-        mean += p;
-    if ( !points.empty() )
-        mean /= double( points.size() );
-    // |p - c|^2 = r^2  <=>  |p|^2 = 2*dot( p, c ) + r^2 - |c|^2
-    Eigen::Matrix<double, n + 1, n + 1> m = Eigen::Matrix<double, n + 1, n + 1>::Zero();
-    EV rhs = EV::Zero();
-    for ( const auto& p : points )
-    {
-        const V d = p - mean;
-        EV row;
-        for ( int i = 0; i < n; ++i )
-            row[i] = 2 * d[i];
-        row[n] = 1;
-        m += row * row.transpose();
-        rhs += row * d.lengthSq();
-    }
-    // the rank-revealing solver gives the stablest result for a short arc, where the matrix is nearly degenerate
-    const EV sol = m.completeOrthogonalDecomposition().solve( rhs );
-    V c;
-    for ( int i = 0; i < n; ++i )
-        c[i] = sol[i];
-    const double r2 = sol[n] + c.lengthSq();
-    if ( !( r2 > 0 ) || !std::isfinite( r2 ) )
-        return {};
-    return Sphere<V>( mean + c, std::sqrt( r2 ) );
-}
-
 /// the cone with given apex, axis and angle, and the height spanning the points
 Cone3d coneSpanning( const std::vector<Vector3d>& points, const Line3d& axis, double angle )
 {
@@ -252,12 +219,54 @@ Cone3d coneSpanning( const std::vector<Vector3d>& points, const Line3d& axis, do
 
 std::optional<Sphere3d> findBestSphere( const std::vector<Vector3d>& points )
 {
-    return findBestSphereT( points );
+    Vector3d mean;
+    for ( const auto& p : points )
+        mean += p;
+    if ( !points.empty() )
+        mean /= double( points.size() );
+    // |p - c|^2 = r^2  <=>  |p|^2 = 2*dot( p, c ) + r^2 - |c|^2
+    SymMatrix4d m;
+    Vector4d rhs;
+    for ( const auto& p : points )
+    {
+        const Vector3d d = p - mean;
+        const Vector4d row( 2 * d.x, 2 * d.y, 2 * d.z, 1 );
+        m += outerSquare( row );
+        rhs += row * d.lengthSq();
+    }
+    // the pseudoinverse gives the minimum-norm solution for degenerate points
+    const Vector4d sol = m.pseudoinverse() * rhs;
+    const Vector3d c( sol.x, sol.y, sol.z );
+    const double r2 = sol.w + c.lengthSq();
+    if ( !( r2 > 0 ) || !std::isfinite( r2 ) )
+        return {};
+    return Sphere3d( mean + c, std::sqrt( r2 ) );
 }
 
 std::optional<Sphere2d> findBestCircle( const std::vector<Vector2d>& points )
 {
-    return findBestSphereT( points );
+    Vector2d mean;
+    for ( const auto& p : points )
+        mean += p;
+    if ( !points.empty() )
+        mean /= double( points.size() );
+    // |p - c|^2 = r^2  <=>  |p|^2 = 2*dot( p, c ) + r^2 - |c|^2
+    Eigen::Matrix3d m = Eigen::Matrix3d::Zero();
+    Eigen::Vector3d rhs = Eigen::Vector3d::Zero();
+    for ( const auto& p : points )
+    {
+        const Vector2d d = p - mean;
+        const Eigen::Vector3d row( 2 * d.x, 2 * d.y, 1 );
+        m += row * row.transpose();
+        rhs += row * d.lengthSq();
+    }
+    // this rank-revealing solver is the most precise for a short arc, where the matrix is nearly degenerate
+    const Eigen::Vector3d sol = m.completeOrthogonalDecomposition().solve( rhs );
+    const Vector2d c( sol[0], sol[1] );
+    const double r2 = sol[2] + c.lengthSq();
+    if ( !( r2 > 0 ) || !std::isfinite( r2 ) )
+        return {};
+    return Sphere2d( mean + c, std::sqrt( r2 ) );
 }
 
 std::optional<Line3d> findRevolutionAxis( const std::vector<Line3d>& normalLines )
@@ -338,18 +347,19 @@ std::optional<Cone3d> findBestConeWithAxis( const std::vector<Vector3d>& points,
 std::optional<Cone3d> findBestConeByTangentPlanes( const std::vector<Vector3d>& points, const std::vector<Plane3d>& tangentPlanes )
 {
     // all normals make the same angle with the axis: dot( n, a ) = k
-    Eigen::Matrix4d m = Eigen::Matrix4d::Zero();
+    SymMatrix4d m;
     // the apex is on all tangent planes
     PlaneAccumulator apexAcc;
     for ( const auto& plane : tangentPlanes )
     {
         const auto pl = plane.normalized();
-        const Eigen::Vector4d row( pl.n.x, pl.n.y, pl.n.z, -1 );
-        m += row * row.transpose();
+        m += outerSquare( Vector4d( pl.n.x, pl.n.y, pl.n.z, -1 ) );
         apexAcc.addPlane( pl );
     }
-    const Eigen::Vector4d v = Eigen::SelfAdjointEigenSolver<Eigen::Matrix4d>( m ).eigenvectors().col( 0 );
-    Vector3d a( v[0], v[1], v[2] );
+    // the eigenvector of the smallest eigenvalue
+    Matrix4d vecs;
+    m.eigens( &vecs );
+    Vector3d a( vecs.x.x, vecs.x.y, vecs.x.z );
     const double len = a.length();
     if ( !( len > 1e-9 ) )
         return {};

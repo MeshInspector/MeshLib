@@ -2,6 +2,11 @@
 #include "MRMesh.h"
 #include "MRBitSet.h"
 #include "MRBox.h"
+#include "MRMatrix2.h"
+#include "MRMatrix3.h"
+#include "MRSymMatrix2.h"
+#include "MRSymMatrix3.h"
+#include "MRToFromEigen.h"
 #include "MRVector2.h"
 #include "MRVector3.h"
 #include "MRStringConvert.h"
@@ -282,21 +287,22 @@ bool fitCircle2( const std::vector<double>& xs, const std::vector<double>& ys, d
     }
     mx /= std::max<size_t>( xs.size(), 1 );
     my /= std::max<size_t>( xs.size(), 1 );
-    Eigen::Matrix3d m = Eigen::Matrix3d::Zero();
-    Eigen::Vector3d rhs = Eigen::Vector3d::Zero();
+    SymMatrix3d m;
+    V3 rhs;
     for ( size_t i = 0; i < xs.size(); ++i )
     {
         const double x = xs[i] - mx, y = ys[i] - my;
-        const Eigen::Vector3d row( 2 * x, 2 * y, 1 );
-        m += row * row.transpose();
+        const V3 row( 2 * x, 2 * y, 1 );
+        m += outerSquare( row );
         rhs += row * ( x * x + y * y );
     }
-    const Eigen::Vector3d sol = m.completeOrthogonalDecomposition().solve( rhs );
-    const double r2 = sol[2] + sol[0] * sol[0] + sol[1] * sol[1];
+    // the rank-revealing solver gives the stablest result for a short arc, where the matrix is nearly degenerate
+    const V3 sol = fromEigen( Eigen::Vector3d( toEigen( m ).completeOrthogonalDecomposition().solve( toEigen( rhs ) ) ) );
+    const double r2 = sol.z + sol.x * sol.x + sol.y * sol.y;
     if ( !( r2 > 0 ) || !std::isfinite( r2 ) )
         return false;
-    cx = sol[0] + mx;
-    cy = sol[1] + my;
+    cx = sol.x + mx;
+    cy = sol.y + my;
     rad = std::sqrt( r2 );
     return true;
 }
@@ -305,16 +311,12 @@ Surf fitPlane( const std::vector<V3>& pts )
 {
     Surf res;
     res.c = centroid( pts );
-    Eigen::Matrix3d m = Eigen::Matrix3d::Zero();
+    SymMatrix3d m;
     for ( const auto& p : pts )
-    {
-        const V3 d = p - res.c;
-        const Eigen::Vector3d e( d.x, d.y, d.z );
-        m += e * e.transpose();
-    }
-    const Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> es( m );
-    const Eigen::Vector3d n = es.eigenvectors().col( 0 );
-    res.a = V3( n[0], n[1], n[2] );
+        m += outerSquare( p - res.c );
+    Matrix3d vecs;
+    m.eigens( &vecs );
+    res.a = vecs.x;
     return res;
 }
 
@@ -345,17 +347,14 @@ std::optional<Surf> fitSphere( const std::vector<V3>& pts )
 /// cylinder with the axis orthogonal to given normals
 std::optional<Surf> fitCyl( const std::vector<V3>& pts, const std::vector<V3>& normals )
 {
-    Eigen::Matrix3d m = Eigen::Matrix3d::Zero();
+    SymMatrix3d m;
     for ( const auto& n : normals )
-    {
-        const Eigen::Vector3d e( n.x, n.y, n.z );
-        m += e * e.transpose();
-    }
-    const Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> es( m );
-    const Eigen::Vector3d ax = es.eigenvectors().col( 0 );
+        m += outerSquare( n );
+    Matrix3d vecs;
+    m.eigens( &vecs );
     Surf res;
     res.type = SurfType::Cyl;
-    res.a = V3( ax[0], ax[1], ax[2] ).normalized();
+    res.a = vecs.x;
     V3 u, v;
     frame( res.a, u, v );
     std::vector<double> xs( pts.size() ), ys( pts.size() );
@@ -466,16 +465,15 @@ std::optional<Surf> fitConeByNormals( const std::vector<V3>& pts, const std::vec
 {
     // all normals make the same angle with the axis: dot( n, a ) = k
     Eigen::Matrix4d m = Eigen::Matrix4d::Zero();
-    Eigen::Matrix3d nn = Eigen::Matrix3d::Zero();
-    Eigen::Vector3d rhs = Eigen::Vector3d::Zero();
+    SymMatrix3d nn;
+    V3 rhs;
     for ( size_t i = 0; i < normals.size(); ++i )
     {
         const auto& n = normals[i];
         const Eigen::Vector4d row( n.x, n.y, n.z, -1 );
         m += row * row.transpose();
-        const Eigen::Vector3d e( n.x, n.y, n.z );
-        nn += e * e.transpose();
-        rhs += e * dot( n, pc[i] );
+        nn += outerSquare( n );
+        rhs += n * dot( n, pc[i] );
     }
     const Eigen::Vector4d v = Eigen::SelfAdjointEigenSolver<Eigen::Matrix4d>( m ).eigenvectors().col( 0 );
     V3 a( v[0], v[1], v[2] );
@@ -484,10 +482,9 @@ std::optional<Surf> fitConeByNormals( const std::vector<V3>& pts, const std::vec
         return {};
     a /= len;
     // the apex is on all tangent planes
-    const Eigen::Vector3d ap = nn.completeOrthogonalDecomposition().solve( rhs );
     Surf res;
     res.type = SurfType::Cone;
-    res.c = V3( ap[0], ap[1], ap[2] );
+    res.c = nn.pseudoinverse() * rhs;
     double sumH = 0, sumHH = 0, sumHR = 0;
     for ( const auto& p : pts )
     {
@@ -663,15 +660,12 @@ std::vector<V2> lscm( const std::vector<V3>& pts, const std::vector<Tri>& tris )
     const int n = int( pts.size() );
     // pin two vertices most distant along the main direction
     const V3 mean = centroid( pts );
-    Eigen::Matrix3d cov = Eigen::Matrix3d::Zero();
+    SymMatrix3d cov;
     for ( const auto& p : pts )
-    {
-        const V3 d = p - mean;
-        const Eigen::Vector3d e( d.x, d.y, d.z );
-        cov += e * e.transpose();
-    }
-    const Eigen::Vector3d ax = Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d>( cov ).eigenvectors().col( 2 );
-    const V3 axis( ax[0], ax[1], ax[2] );
+        cov += outerSquare( p - mean );
+    Matrix3d vecs;
+    cov.eigens( &vecs );
+    const V3 axis = vecs.z;
     int pa = 0, pb = 0;
     for ( int i = 0; i < n; ++i )
     {
@@ -735,18 +729,18 @@ std::vector<V2> lscm( const std::vector<V3>& pts, const std::vector<Tri>& tris )
     V2 c;
     for ( const auto& p : uv )
         c += p / double( n );
-    Eigen::Matrix2d cov2 = Eigen::Matrix2d::Zero();
+    SymMatrix2d cov2;
     for ( auto& p : uv )
     {
         p -= c;
-        const Eigen::Vector2d e( p.x, p.y );
-        cov2 += e * e.transpose();
+        cov2 += outerSquare( p );
     }
-    const Eigen::Matrix2d ev = Eigen::SelfAdjointEigenSolver<Eigen::Matrix2d>( cov2 ).eigenvectors();
+    Matrix2d ev;
+    cov2.eigens( &ev );
     V2 lo( DBL_MAX, DBL_MAX ), hi( -DBL_MAX, -DBL_MAX );
     for ( auto& p : uv )
     {
-        p = V2( p.x * ev( 0, 1 ) + p.y * ev( 1, 1 ), p.x * ev( 0, 0 ) + p.y * ev( 1, 0 ) );
+        p = V2( dot( p, ev.y ), dot( p, ev.x ) );
         lo = V2( std::min( lo.x, p.x ), std::min( lo.y, p.y ) );
         hi = V2( std::max( hi.x, p.x ), std::max( hi.y, p.y ) );
     }
@@ -1412,12 +1406,10 @@ void Grower::candidates_( int seed, std::vector<Surf>& out )
             if ( len < 1e-3 )
                 continue;
             a /= len;
-            Eigen::Matrix3d m;
-            m << n0.x, n0.y, n0.z, n1.x, n1.y, n1.z, n2.x, n2.y, n2.z;
-            if ( std::abs( dot( n0, a ) ) < 0.02 || std::abs( m.determinant() ) < 1e-6 )
+            const auto m = Matrix3d::fromRows( n0, n1, n2 );
+            if ( std::abs( dot( n0, a ) ) < 0.02 || std::abs( m.det() ) < 1e-6 )
                 continue;
-            const Eigen::Vector3d ap = m.inverse() * Eigen::Vector3d( dot( n0, d.centers[fs[0]] ), dot( n1, d.centers[fs[1]] ), dot( n2, d.centers[fs[2]] ) );
-            const V3 apex( ap[0], ap[1], ap[2] );
+            const V3 apex = m.inverse() * V3( dot( n0, d.centers[fs[0]] ), dot( n1, d.centers[fs[1]] ), dot( n2, d.centers[fs[2]] ) );
             std::vector<double> hs;
             double sumTan = 0, minH = DBL_MAX;
             for ( int f : fs )
@@ -2474,18 +2466,14 @@ std::optional<Curve> BRepWriter::tryCircle_( const std::vector<V3>& p, const Sur
     if ( q.size() < 3 )
         return {};
     const V3 c0 = centroid( q );
-    Eigen::Matrix3d cov = Eigen::Matrix3d::Zero();
+    SymMatrix3d cov;
     for ( const auto& pt : q )
-    {
-        const V3 d = pt - c0;
-        const Eigen::Vector3d e( d.x, d.y, d.z );
-        cov += e * e.transpose();
-    }
-    const Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> es( cov );
-    if ( std::sqrt( std::max( es.eigenvalues()[1], 0.0 ) ) < 1e-6 * std::sqrt( std::max( es.eigenvalues()[2], 1e-24 ) ) )
+        cov += outerSquare( pt - c0 );
+    Matrix3d vecs;
+    const V3 vals = cov.eigens( &vecs );
+    if ( std::sqrt( std::max( vals[1], 0.0 ) ) < 1e-6 * std::sqrt( std::max( vals[2], 1e-24 ) ) )
         return {};
-    auto col = [&]( int i ) { return V3( es.eigenvectors()( 0, i ), es.eigenvectors()( 1, i ), es.eigenvectors()( 2, i ) ); };
-    const V3 n = col( 0 ), u = col( 2 ), v = col( 1 );
+    const V3 n = vecs.x, u = vecs.z, v = vecs.y;
     std::vector<double> xs, ys;
     for ( const auto& pt : q )
     {

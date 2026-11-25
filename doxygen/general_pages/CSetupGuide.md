@@ -29,10 +29,6 @@ The installation process is [same as for C++](\ref MeshLibCppSetupGuide), and is
 The release archives include the C headers (in the directory called `MRCMesh` and several other `MRC...` directories), and a compiled library named `MeshLibC2` (`MeshLibC2.dll` on Windows, `libMeshLibC2.so` on Linux, etc). This library links against our C++ libraries (`MRMesh` and others) and provides C wrappers for them.
 
 ### Windows
-> [!NOTE]
-> MeshLib for Windows is distributed for **x64** and **Arm64**: set the platform of your project to `x64` or `ARM64`. A 32-bit (`Win32`) build is not supported.
-> On Windows on Arm, take the `-arm64` archive.
-
 Every release publishes one Windows distributive per Visual Studio toolset and target architecture, plus one for Debug builds that keep MSVC's iterator debugging on.
 The [C++ guide's archive table](\ref CppSetupWindows) lists them all and says which one to take, including the binary-compatibility rule that lets an older toolset's archive serve a newer Visual Studio. It applies to C unchanged, except for its `_ITERATOR_DEBUG_LEVEL` column:
 a pure-C consumer needs no `_ITERATOR_DEBUG_LEVEL` define, whichever archive it picks, because C code passes no standard containers across the DLL boundary, so the mismatch that define guards against cannot arise. A project that also compiles C++ translation units against MeshLib's C++ headers does need it, at the value in that column.

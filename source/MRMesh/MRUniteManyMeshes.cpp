@@ -134,8 +134,9 @@ public:
         upParams.commonParams = params_.commonParams;
         upParams.mapper = params_.collectNewFaces || collectNew2Old ? &mapper : nullptr;
         upParams.shift = params_.shifts ? &shift : nullptr;
-        if ( params_.commonParams.mergeMode )
+        if ( params_.mergeOnFail )
         {
+            // a failed boolean leaves the moved meshes cut (with unfilled pseudo faces), so keep the originals for the merge
             res = unitePairOfMeshes( Mesh( resultMesh ), Mesh( y.resultMesh ), upParams );
         }
         else

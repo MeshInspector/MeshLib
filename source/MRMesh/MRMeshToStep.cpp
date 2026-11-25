@@ -2939,7 +2939,7 @@ MeshToStepStats BRepWriter::write( std::ostream& out )
                 std::vector<std::string> row;
                 for ( int j = 0; j < s.bs->nv; ++j )
                     row.push_back( point_( s.bs->cp[i * s.bs->nv + j] ) );
-                rows.push_back( "(" + joined( row ) + ")" );
+                rows.push_back( fmt::format( "({})", joined( row ) ) );
             }
             const auto [mu, ku] = knotLists( s.bs->tu );
             const auto [mv, kv] = knotLists( s.bs->tv );

@@ -10,6 +10,7 @@
 #include "MRRegionBoundary.h"
 #include "MRSymMatrix2.h"
 #include "MRSymMatrix3.h"
+#include "MRSymMatrix4.h"
 #include "MRToFromEigen.h"
 #include "MRVector2.h"
 #include "MRVector3.h"
@@ -317,18 +318,18 @@ Surf fitPlane( const std::vector<V3>& pts )
 std::optional<Surf> fitSphere( const std::vector<V3>& pts )
 {
     const V3 mean = centroid( pts );
-    Eigen::Matrix4d m = Eigen::Matrix4d::Zero();
-    Eigen::Vector4d rhs = Eigen::Vector4d::Zero();
+    SymMatrix4d m;
+    Vector4d rhs;
     for ( const auto& p : pts )
     {
         const V3 d = p - mean;
-        const Eigen::Vector4d row( 2 * d.x, 2 * d.y, 2 * d.z, 1 );
-        m += row * row.transpose();
+        const Vector4d row( 2 * d.x, 2 * d.y, 2 * d.z, 1 );
+        m += outerSquare( row );
         rhs += row * d.lengthSq();
     }
-    const Eigen::Vector4d sol = m.completeOrthogonalDecomposition().solve( rhs );
-    const V3 c( sol[0], sol[1], sol[2] );
-    const double r2 = sol[3] + c.lengthSq();
+    const Vector4d sol = m.pseudoinverse() * rhs;
+    const V3 c( sol.x, sol.y, sol.z );
+    const double r2 = sol.w + c.lengthSq();
     if ( !( r2 > 0 ) || !std::isfinite( r2 ) )
         return {};
     Surf res;
@@ -457,19 +458,19 @@ std::optional<Surf> axisTorus( const std::vector<V3>& pts, const V3& a, const V3
 std::optional<Surf> fitConeByNormals( const std::vector<V3>& pts, const std::vector<V3>& pc, const std::vector<V3>& normals )
 {
     // all normals make the same angle with the axis: dot( n, a ) = k
-    Eigen::Matrix4d m = Eigen::Matrix4d::Zero();
+    SymMatrix4d m;
     SymMatrix3d nn;
     V3 rhs;
     for ( size_t i = 0; i < normals.size(); ++i )
     {
         const auto& n = normals[i];
-        const Eigen::Vector4d row( n.x, n.y, n.z, -1 );
-        m += row * row.transpose();
+        m += outerSquare( Vector4d( n.x, n.y, n.z, -1 ) );
         nn += outerSquare( n );
         rhs += n * dot( n, pc[i] );
     }
-    const Eigen::Vector4d v = Eigen::SelfAdjointEigenSolver<Eigen::Matrix4d>( m ).eigenvectors().col( 0 );
-    V3 a( v[0], v[1], v[2] );
+    Matrix4d vecs;
+    m.eigens( &vecs );
+    V3 a( vecs.x.x, vecs.x.y, vecs.x.z );
     const double len = a.length();
     if ( !( len > 1e-9 ) )
         return {};

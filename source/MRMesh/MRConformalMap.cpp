@@ -98,7 +98,10 @@ Expected<VertCoords2> leastSquaresConformalMap( const MeshPart& mp )
     m.setFromTriplets( trips.begin(), trips.end() );
     const Eigen::VectorXd rhs = Eigen::Map<const Eigen::VectorXd>( rhsVals.data(), row );
     const Eigen::SparseMatrix<double> mtm = m.transpose() * m;
-    const Eigen::VectorXd sol = Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>>( mtm ).solve( m.transpose() * rhs );
+    const Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> ldlt( mtm );
+    if ( ldlt.info() != Eigen::Success )
+        return unexpected( "Degenerate system" );
+    const Eigen::VectorXd sol = ldlt.solve( m.transpose() * rhs );
 
     VertCoords2 res( topology.vertSize() );
     for ( auto v : verts )

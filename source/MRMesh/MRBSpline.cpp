@@ -1,4 +1,5 @@
 #include "MRBSpline.h"
+#include "MRSymMatrix2.h"
 #include "MRPch/MREigenCore.h"
 #include <Eigen/Cholesky>
 #include <Eigen/LU>
@@ -101,13 +102,20 @@ Vector2d BSplineSurface::project( const Vector3d& p, Vector2d uv, int iterations
     for ( int it = 0; it < iterations; ++it )
     {
         Vector3d su, sv;
-        const Vector3d r = eval( uv, &su, &sv ) - p;
-        const double a = dot( su, su ), b = dot( su, sv ), c = dot( sv, sv ), e = -dot( su, r ), f = -dot( sv, r );
-        double det = a * c - b * b;
-        if ( std::abs( det ) < 1e-30 )
-            det = 1e-30;
-        uv.x = std::clamp( uv.x + ( c * e - b * f ) / det, u0, u1 );
-        uv.y = std::clamp( uv.y + ( a * f - b * e ) / det, v0, v1 );
+        const Vector3d r = p - eval( uv, &su, &sv );
+        // Gauss-Newton step: minimize the quadratic model of the squared distance in the domain
+        SymMatrix2d h;
+        h.xx = dot( su, su );
+        h.xy = dot( su, sv );
+        h.yy = dot( sv, sv );
+        const Vector2d g( dot( su, r ), dot( sv, r ) );
+        const auto model = [&]( const Vector2d& x ) { const Vector2d d = x - uv; return dot( d, 0.5 * ( h * d ) - g ); };
+        // the minimum in the domain is on the line u = c.x or on the line v = c.y, where c is the minimum in the plane clamped to the domain
+        const Vector2d m = uv + h.pseudoinverse() * g;
+        const Vector2d c( std::clamp( m.x, u0, u1 ), std::clamp( m.y, v0, v1 ) );
+        const Vector2d a( c.x, h.yy > 0 ? std::clamp( uv.y + ( g.y - h.xy * ( c.x - uv.x ) ) / h.yy, v0, v1 ) : c.y );
+        const Vector2d b( h.xx > 0 ? std::clamp( uv.x + ( g.x - h.xy * ( c.y - uv.y ) ) / h.xx, u0, u1 ) : c.x, c.y );
+        uv = model( a ) <= model( b ) ? a : b;
     }
     return uv;
 }

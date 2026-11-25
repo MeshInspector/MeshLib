@@ -2,6 +2,10 @@
 
 #include "MRVector4.h"
 #include "MRMatrix4.h"
+#include <algorithm>
+#include <cmath>
+#include <limits>
+#include <utility>
 
 namespace MR
 {
@@ -38,6 +42,17 @@ struct SymMatrix4
     SymMatrix4 & operator -=( const SymMatrix4<T> & b );
     SymMatrix4 & operator *=( T b );
     SymMatrix4 & operator /=( T b );
+
+    /// returns eigenvalues of the matrix in ascending order (diagonal matrix L), and
+    /// optionally returns corresponding unit eigenvectors in the rows of orthogonal matrix V,
+    /// M*V^T = V^T*L; M = V^T*L*V
+    Vector4<T> eigens( Matrix4<T> * eigenvectors = nullptr ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> );
+
+    /// for not-degenerate matrix returns just inverse matrix, otherwise
+    /// returns degenerate matrix, which performs inversion on not-kernel subspace;
+    /// \param tol relative epsilon-tolerance for too small number detection
+    /// \param rank optional output for this matrix rank according to given tolerance
+    SymMatrix4<T> pseudoinverse( T tol = std::numeric_limits<T>::epsilon(), int * rank = nullptr ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> );
 
     bool operator ==( const SymMatrix4<T> & ) const = default;
 };
@@ -116,7 +131,7 @@ SymMatrix4<T> & SymMatrix4<T>::operator +=( const SymMatrix4<T> & b )
     xx += b.xx; xy += b.xy; xz += b.xz; xw += b.xw;
                 yy += b.yy; yz += b.yz; yw += b.yw;
                             zz += b.zz; zw += b.zw;
-                                        zz += b.zz;
+                                        ww += b.ww;
     return * this;
 }
 
@@ -126,7 +141,7 @@ SymMatrix4<T> & SymMatrix4<T>::operator -=( const SymMatrix4<T> & b )
     xx -= b.xx; xy -= b.xy; xz -= b.xz; xw -= b.xw;
                 yy -= b.yy; yz -= b.yz; yw -= b.yw;
                             zz -= b.zz; zw -= b.zw;
-                                        zz -= b.zz;
+                                        ww -= b.ww;
     return * this;
 }
 
@@ -136,7 +151,7 @@ SymMatrix4<T> & SymMatrix4<T>::operator *=( T b )
     xx *= b; xy *= b; xz *= b; xw *= b;
              yy *= b; yz *= b; yw *= b;
                       zz *= b; zw *= b;
-                               zz *= b;
+                               ww *= b;
     return * this;
 }
 
@@ -148,11 +163,91 @@ SymMatrix4<T> & SymMatrix4<T>::operator /=( T b )
         xx /= b; xy /= b; xz /= b; xw /= b;
                  yy /= b; yz /= b; yw /= b;
                           zz /= b; zw /= b;
-                                   zz /= b;
+                                   ww /= b;
     }
     else
         *this *= ( 1 / b );
     return * this;
+}
+
+template <typename T>
+Vector4<T> SymMatrix4<T>::eigens( Matrix4<T> * eigenvectors ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> )
+{
+    // cyclic Jacobi method: each rotation zeroes one off-diagonal element,
+    // it is precise also for close and for tiny eigenvalues
+    T a[4][4] =
+    {
+        { xx, xy, xz, xw },
+        { xy, yy, yz, yw },
+        { xz, yz, zz, zw },
+        { xw, yw, zw, ww }
+    };
+    Matrix4<T> v; // eigenvectors in rows
+    for ( int sweep = 0; sweep < 32; ++sweep )
+    {
+        bool rotated = false;
+        for ( int p = 0; p < 3; ++p )
+            for ( int q = p + 1; q < 4; ++q )
+            {
+                const T apq = a[p][q];
+                // the rotation is skipped if it cannot change the diagonal elements
+                if ( apq == 0 || std::abs( apq ) <= std::numeric_limits<T>::epsilon() * std::sqrt( std::abs( a[p][p] * a[q][q] ) ) / 8 )
+                {
+                    a[p][q] = a[q][p] = 0;
+                    continue;
+                }
+                rotated = true;
+                const T theta = ( a[q][q] - a[p][p] ) / ( 2 * apq );
+                const T t = ( theta >= 0 ? T( 1 ) : T( -1 ) ) / ( std::abs( theta ) + std::sqrt( theta * theta + 1 ) );
+                const T c = 1 / std::sqrt( t * t + 1 );
+                const T s = t * c;
+                a[p][p] -= t * apq;
+                a[q][q] += t * apq;
+                a[p][q] = a[q][p] = 0;
+                for ( int k = 0; k < 4; ++k )
+                {
+                    if ( k != p && k != q )
+                    {
+                        const T akp = a[k][p], akq = a[k][q];
+                        a[k][p] = a[p][k] = c * akp - s * akq;
+                        a[k][q] = a[q][k] = s * akp + c * akq;
+                    }
+                    const T vpk = v[p][k], vqk = v[q][k];
+                    v[p][k] = c * vpk - s * vqk;
+                    v[q][k] = s * vpk + c * vqk;
+                }
+            }
+        if ( !rotated )
+            break;
+    }
+    int order[4] = { 0, 1, 2, 3 };
+    std::sort( order, order + 4, [&]( int i, int j ) { return a[i][i] < a[j][j]; } );
+    Vector4<T> eig;
+    for ( int i = 0; i < 4; ++i )
+        eig[i] = a[order[i]][order[i]];
+    if ( eigenvectors )
+        *eigenvectors = Matrix4<T>( v[order[0]], v[order[1]], v[order[2]], v[order[3]] );
+    return eig;
+}
+
+template <typename T>
+SymMatrix4<T> SymMatrix4<T>::pseudoinverse( T tol, int * rank ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> )
+{
+    SymMatrix4<T> res;
+    Matrix4<T> eigenvectors;
+    const auto eigenvalues = eigens( &eigenvectors );
+    const auto threshold = std::max( std::abs( eigenvalues[0] ), std::abs( eigenvalues[3] ) ) * tol;
+    int myRank = 0;
+    for ( int i = 0; i < 4; ++i )
+    {
+        if ( std::abs( eigenvalues[i] ) <= threshold )
+            continue;
+        res += outerSquare( 1 / eigenvalues[i], eigenvectors[i] );
+        ++myRank;
+    }
+    if ( rank )
+        *rank = myRank;
+    return res;
 }
 
 /// \}

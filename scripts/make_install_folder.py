@@ -51,7 +51,8 @@ def prepare_includes_list():
 	it.includes_src_dst_thirdparty.clear()
 	# Eigen installs into include/eigen3, but MeshLib headers include <Eigen/...>: put it in the root so install/include is enough
 	it.append_includes_list(os.path.join(vcpkg_directory,"include"), True, skipped_dir_regexes = [re.compile('eigen3(/|$)')])
-	it.append_includes_list(os.path.join(vcpkg_directory,"include","eigen3"), True)
+	# only its subfolders: the root holds just signature_of_eigen3_matrix_library
+	it.append_includes_list(os.path.join(vcpkg_directory,"include","eigen3"), True, skipped_dir_regexes = [re.compile(r'\.$')])
 	it.append_includes_list(it.path_to_sources, skipped_dir_regexes = [re.compile(target_arch() + '(/.*)?'), re.compile('TempOutput(/.*)?'), re.compile('MeshLibC2(/.*)?'), re.compile('MeshLibC2Cuda(/.*)?'), re.compile('MeshLibC2PythonViewer(/.*)?'), re.compile('MRPythonViewer(/.*)?')])
 	it.append_includes_list(os.path.join(it.path_to_sources, "MeshLibC2/include"))
 	it.append_includes_list(os.path.join(it.path_to_sources, "MeshLibC2Cuda/include"))

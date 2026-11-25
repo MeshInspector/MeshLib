@@ -51,7 +51,7 @@ msgstr ""
 msgid "Binary Operations"
 msgstr ""
 
-msgid "Various bivariate functions on individual voxel pairs: Union, Intersection, Difference, Max, Min, Sum, Multiply, Divide, Replace."
+msgid "Various bivariate functions on individual voxel pairs: Union, Intersection, Difference for volumes made from meshes; Max, Min, Sum, Multiply, Divide for other volumes."
 msgstr ""
 
 msgid "Open Voxels From TIFF"

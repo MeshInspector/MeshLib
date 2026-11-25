@@ -1133,4 +1133,26 @@ TEST( MRMesh, UniteManyMeshesNew2OldFaces )
     checkNew2OldFaces( *res, new2old, { &all } );
 }
 
+// the union of an open sphere with two cubes fails, so mergeOnFail merges the meshes instead
+TEST( MRMesh, UniteManyMeshesMergeOnFail )
+{
+    auto sphere = makeUVSphere( 0.8f, 24, 24 );
+    FaceBitSet hole( sphere.topology.faceSize() );
+    for ( int i = 0; i < 40; ++i )
+        hole.set( FaceId( i ) );
+    sphere.deleteFaces( hole );
+    sphere.pack();
+    const auto cubeA = makeCube( Vector3f::diagonal( 1.0f ), Vector3f( 0.0f, -0.2f, -0.3f ) );
+    const auto cubeB = makeCube( Vector3f::diagonal( 1.0f ), Vector3f( -0.9f, 0.1f, -0.8f ) );
+    const std::vector<const Mesh*> meshes{ &sphere, &cubeA, &cubeB };
+    EXPECT_FALSE( uniteManyMeshes( meshes ).has_value() );
+
+    Vector<ObjFaceId, FaceId> new2old;
+    auto res = uniteManyMeshes( meshes, { .new2oldFaces = &new2old, .mergeOnFail = true } );
+    ASSERT_TRUE( res.has_value() );
+    for ( auto f : res->topology.getValidFaces() )
+        EXPECT_EQ( res->topology.getFaceDegree( f ), 3 );
+    checkNew2OldFaces( *res, new2old, meshes );
+}
+
 } //namespace MR

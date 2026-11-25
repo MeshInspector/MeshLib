@@ -365,6 +365,11 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> class), Cone3,
     ( Cone3d, Cone3<double> )
 )
 
+MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Torus3,
+    ( Torus3f, Torus3<float>  )
+    ( Torus3d, Torus3<double> )
+)
+
 // No canonical typedefs here, because those ultimately boil to `std::vector`, which isn't under our control.
 template <typename V> using Contour = std::vector<V>;
 template <typename T> using Contour2 = Contour<Vector2<T>>;

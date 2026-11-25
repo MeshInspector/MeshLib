@@ -1,9 +1,13 @@
 #include "MRMeshToStep.h"
 #include "MRMesh.h"
+#include "MRBestFit.h"
 #include "MRBitSet.h"
 #include "MRBox.h"
+#include "MRId.h"
 #include "MRMatrix2.h"
 #include "MRMatrix3.h"
+#include "MRMeshComponents.h"
+#include "MRRegionBoundary.h"
 #include "MRSymMatrix2.h"
 #include "MRSymMatrix3.h"
 #include "MRToFromEigen.h"
@@ -11,6 +15,7 @@
 #include "MRVector3.h"
 #include "MRStringConvert.h"
 #include "MRTimer.h"
+#include "MRUnionFind.h"
 #include "MRPch/MRFmt.h"
 #include "MRPch/MRSuppressWarning.h"
 
@@ -257,17 +262,6 @@ struct Surf
 };
 
 /// two unit vectors orthogonal to given unit vector and to each other
-void frame( const V3& a, V3& u, V3& v )
-{
-    V3 t( 1, 0, 0 );
-    if ( std::abs( a.y ) < std::abs( a.x ) && std::abs( a.y ) <= std::abs( a.z ) )
-        t = V3( 0, 1, 0 );
-    else if ( std::abs( a.z ) < std::abs( a.x ) && std::abs( a.z ) < std::abs( a.y ) )
-        t = V3( 0, 0, 1 );
-    u = cross( a, t ).normalized();
-    v = cross( a, u );
-}
-
 V3 centroid( const std::vector<V3>& pts )
 {
     V3 res;
@@ -310,13 +304,13 @@ bool fitCircle2( const std::vector<double>& xs, const std::vector<double>& ys, d
 Surf fitPlane( const std::vector<V3>& pts )
 {
     Surf res;
-    res.c = centroid( pts );
-    SymMatrix3d m;
+    PointAccumulator acc;
     for ( const auto& p : pts )
-        m += outerSquare( p - res.c );
+        acc.addPoint( p );
     Matrix3d vecs;
-    m.eigens( &vecs );
-    res.a = vecs.x;
+    V3 vals;
+    if ( acc.getCenteredCovarianceEigen( res.c, vecs, vals ) )
+        res.a = vecs.x;
     return res;
 }
 
@@ -355,8 +349,7 @@ std::optional<Surf> fitCyl( const std::vector<V3>& pts, const std::vector<V3>& n
     Surf res;
     res.type = SurfType::Cyl;
     res.a = vecs.x;
-    V3 u, v;
-    frame( res.a, u, v );
+    const auto [u, v] = res.a.perpendicular();
     std::vector<double> xs( pts.size() ), ys( pts.size() );
     for ( size_t i = 0; i < pts.size(); ++i )
     {
@@ -622,35 +615,6 @@ Surf refine( const Surf& s0, const std::vector<V3>& pts )
 
 using Tri = std::array<int, 3>;
 
-/// the number of boundary loops of a triangulation
-int numBoundaryLoops( const std::vector<Tri>& tris )
-{
-    std::set<std::pair<int, int>> dirEdges;
-    for ( const auto& t : tris )
-        for ( int i = 0; i < 3; ++i )
-            dirEdges.insert( { t[i], t[( i + 1 ) % 3] } );
-    std::map<int, int> next;
-    for ( const auto& [u, v] : dirEdges )
-        if ( !dirEdges.count( { v, u } ) )
-            next[u] = v;
-    std::set<int> seen;
-    int loops = 0;
-    for ( const auto& [u, v] : next )
-    {
-        if ( seen.count( u ) )
-            continue;
-        ++loops;
-        for ( int w = u; seen.insert( w ).second; )
-        {
-            auto it = next.find( w );
-            if ( it == next.end() )
-                break;
-            w = it->second;
-        }
-    }
-    return loops;
-}
-
 /// the part of the surface domain occupied by fitted points is [cMargin, 1-cMargin]^2, the rest is a natural extension
 constexpr double cMargin = 0.06;
 
@@ -814,8 +778,6 @@ std::shared_ptr<BSplineSurf> lsqBSpline( const std::vector<V3>& pts, const std::
 /// \return nullptr if the triangulation is not a disk or has too few vertices
 std::shared_ptr<BSplineSurf> fitBSpline( const std::vector<V3>& pts, const std::vector<Tri>& tris, double tol )
 {
-    if ( numBoundaryLoops( tris ) != 1 )
-        return {};
     const auto uv0 = lscm( pts, tris );
     for ( const auto& p : uv0 )
         if ( !std::isfinite( p.x + p.y ) )
@@ -894,6 +856,7 @@ struct Region
 /// the mesh in the form convenient for the algorithms below, and its subdivision on regions
 struct Data
 {
+    const Mesh* mesh = nullptr;
     int nf = 0;
     std::vector<V3> pts;       ///< by vertex
     std::vector<Tri> tris;     ///< by face; {-1,-1,-1} for invalid faces
@@ -1069,6 +1032,7 @@ double coordResolution( const Mesh& mesh, const Box3d& box )
 Data makeData( const Mesh& mesh, const MeshToStepSettings& settings )
 {
     Data d;
+    d.mesh = &mesh;
     const auto& topology = mesh.topology;
     d.nf = int( topology.lastValidFace() ) + 1;
     d.pts.resize( mesh.points.size() );
@@ -1079,7 +1043,6 @@ Data makeData( const Mesh& mesh, const MeshToStepSettings& settings )
     d.normals.resize( d.nf );
     d.centers.resize( d.nf );
     d.areas.resize( d.nf, 0.0 );
-    std::vector<std::array<bool, 3>> cut( d.nf, { false, false, false } );
     Box3d box;
     for ( FaceId f : topology.getValidFaces() )
     {
@@ -1088,7 +1051,6 @@ Data makeData( const Mesh& mesh, const MeshToStepSettings& settings )
         {
             d.tris[f][i] = topology.org( e );
             d.nbr[f][i] = topology.right( e ).valid() ? int( topology.right( e ) ) : -1;
-            cut[f][i] = settings.faceBoundaries && settings.faceBoundaries->test( e.undirected() );
             e = topology.prev( e.sym() );
         }
         const V3& a = d.pts[d.tris[f][0]];
@@ -1108,30 +1070,11 @@ Data makeData( const Mesh& mesh, const MeshToStepSettings& settings )
     d.tol = settings.tolerance > 0 ? settings.tolerance : std::max( 2.5e-6 * d.diag, 7 * coordResolution( mesh, box ) );
 
     // segments are connected components of faces not separated by the given edges
+    const auto [segMap, numSegs] = MeshComponents::getAllComponentsMap( mesh, MeshComponents::PerEdge, settings.faceBoundaries );
+    d.numSegs = numSegs;
     d.seg.assign( d.nf, -1 );
-    std::vector<int> stack;
-    for ( int f0 = 0; f0 < d.nf; ++f0 )
-    {
-        if ( !d.valid( f0 ) || d.seg[f0] >= 0 )
-            continue;
-        d.seg[f0] = d.numSegs;
-        stack.push_back( f0 );
-        while ( !stack.empty() )
-        {
-            const int f = stack.back();
-            stack.pop_back();
-            for ( int i = 0; i < 3; ++i )
-            {
-                const int g = d.nbr[f][i];
-                if ( g >= 0 && !cut[f][i] && d.seg[g] < 0 )
-                {
-                    d.seg[g] = d.numSegs;
-                    stack.push_back( g );
-                }
-            }
-        }
-        ++d.numSegs;
-    }
+    for ( FaceId f : topology.getValidFaces() )
+        d.seg[f] = segMap[f];
     d.sub.assign( d.nf, -1 );
     return d;
 }
@@ -1377,8 +1320,7 @@ void Grower::candidates_( int seed, std::vector<Surf>& out )
             if ( len < 0.02 )
                 continue;
             a /= len;
-            V3 u, v;
-            frame( a, u, v );
+            const auto [u, v] = a.perpendicular();
             std::vector<double> xs, ys;
             for ( int f : { seed, q } )
                 for ( int vert : d.tris[f] )
@@ -2035,30 +1977,21 @@ void Cleaner::mergeSameSurface_()
 {
     auto& d = d_;
     d.updateStats();
-    std::vector<int> parent( d.regions.size() );
-    std::iota( parent.begin(), parent.end(), 0 );
-    auto find = [&]( int x )
-    {
-        while ( parent[x] != x )
-            x = parent[x] = parent[parent[x]];
-        return x;
-    };
-    std::vector<double> area;
-    for ( const auto& r : d.regions )
-        area.push_back( r.area );
+    UnionFind<RegionId> uf( d.regions.size() );
+    // the surface of the largest region is kept for every united set
+    std::vector<int> largest( d.regions.size() );
+    std::iota( largest.begin(), largest.end(), 0 );
     for ( const auto& [p, b] : borders_() )
     {
-        int ra = find( p.first ), rb = find( p.second );
+        const RegionId ra = uf.find( RegionId( p.first ) ), rb = uf.find( RegionId( p.second ) );
         if ( ra == rb || !sameSurface( d.regions[p.first].surf, d.regions[p.second].surf, 0.5 * d.tol ) )
             continue;
-        if ( area[ra] < area[rb] )
-            std::swap( ra, rb );
-        parent[rb] = ra;
-        area[ra] += area[rb];
+        const int la = largest[ra], lb = largest[rb];
+        largest[uf.unite( ra, rb ).first] = d.regions[la].area < d.regions[lb].area ? lb : la;
     }
     for ( int f = 0; f < d.nf; ++f )
         if ( d.valid( f ) )
-            d.sub[f] = find( d.sub[f] );
+            d.sub[f] = largest[uf.find( RegionId( d.sub[f] ) )];
 }
 
 /// groups of smoothly adjacent weak regions are approximated by B-spline surfaces
@@ -2159,6 +2092,19 @@ void Cleaner::fitFreeform_()
     {
         if ( fs.size() < 30 )
             continue;
+        FaceBitSet region( d.nf );
+        for ( int f : fs )
+            region.set( FaceId( f ) );
+        // only a disk can be parametrized: one boundary loop not touching itself in a vertex
+        const auto loops = findLeftBoundary( d.mesh->topology, &region );
+        if ( loops.size() != 1 )
+            continue;
+        std::vector<VertId> loopVerts;
+        for ( EdgeId e : loops[0] )
+            loopVerts.push_back( d.mesh->topology.org( e ) );
+        std::sort( loopVerts.begin(), loopVerts.end() );
+        if ( std::adjacent_find( loopVerts.begin(), loopVerts.end() ) != loopVerts.end() )
+            continue;
         const auto verts = d.vertsOf( fs );
         std::vector<V3> pts;
         pts.reserve( verts.size() );
@@ -2223,30 +2169,22 @@ void Cleaner::mergeZeroArea_()
 void Cleaner::splitOnComponents_()
 {
     auto& d = d_;
-    std::vector<int> comp( d.nf, -1 );
-    std::vector<Region> regions;
-    std::vector<int> stack;
-    for ( int f0 = 0; f0 < d.nf; ++f0 )
+    const auto& topology = d.mesh->topology;
+    UndirectedEdgeBitSet borders( topology.undirectedEdgeSize() );
+    for ( UndirectedEdgeId ue{ 0 }; ue < borders.size(); ++ue )
     {
-        if ( !d.valid( f0 ) || comp[f0] >= 0 )
-            continue;
-        const int id = (int)regions.size();
-        regions.push_back( d.regions[d.sub[f0]] );
-        comp[f0] = id;
-        stack.push_back( f0 );
-        while ( !stack.empty() )
-        {
-            const int f = stack.back();
-            stack.pop_back();
-            for ( int g : d.nbr[f] )
-                if ( g >= 0 && comp[g] < 0 && d.sub[g] == d.sub[f] )
-                {
-                    comp[g] = id;
-                    stack.push_back( g );
-                }
-        }
+        const FaceId l = topology.left( ue ), r = topology.right( ue );
+        if ( l && r && d.sub[l] != d.sub[r] )
+            borders.set( ue );
     }
-    d.sub = std::move( comp );
+    const auto [compMap, numComps] = MeshComponents::getAllComponentsMap( *d.mesh, MeshComponents::PerEdge, &borders );
+    std::vector<Region> regions( numComps );
+    for ( FaceId f : topology.getValidFaces() )
+    {
+        const int c = compMap[f];
+        regions[c] = d.regions[d.sub[f]];
+        d.sub[f] = c;
+    }
     d.regions = std::move( regions );
     d.updateStats();
 }
@@ -2805,11 +2743,20 @@ std::string BRepWriter::dir_( const V3& d0 )
 std::string BRepWriter::axis2_( const V3& p, const V3& z0, const V3* x0 )
 {
     const V3 z = z0.normalized();
-    V3 x, y;
+    V3 x;
     if ( x0 )
         x = *x0;
     else
-        frame( z, x, y );
+    {
+        // the reference direction sets the seam of a periodic surface, and the reader leaves small cracks
+        // near some seams; this choice (not the one of Vector3d::perpendicular) gave the fewest of them
+        x = V3( 1, 0, 0 );
+        if ( std::abs( z.y ) < std::abs( z.x ) && std::abs( z.y ) <= std::abs( z.z ) )
+            x = V3( 0, 1, 0 );
+        else if ( std::abs( z.z ) < std::abs( z.x ) && std::abs( z.z ) < std::abs( z.y ) )
+            x = V3( 0, 0, 1 );
+        x = cross( z, x );
+    }
     x -= z * dot( x, z );
     const auto ps = point_( p );
     const auto zs = dir_( z );

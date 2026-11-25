@@ -206,10 +206,14 @@ TEST( MRMesh, LeastSquaresConformalMap )
         EXPECT_GT( cross( ( *uv )[tv[1]] - ( *uv )[tv[0]], ( *uv )[tv[2]] - ( *uv )[tv[0]] ), 0 );
     }
 
-    // vertex 3 is only in a degenerate triangle, so its coordinates are not defined
+    // vertex 3 is only in a degenerate triangle, so its coordinates are not defined, and the degenerate triangle alone gives the zero matrix
     VertCoords degPoints{ Vector3f( 0, 0, 0 ), Vector3f( 2, 0, 0 ), Vector3f( 1, 1, 0 ), Vector3f( 1, 0, 0 ) };
     Triangulation degTris{ { VertId( 0 ), VertId( 1 ), VertId( 2 ) }, { VertId( 1 ), VertId( 0 ), VertId( 3 ) } };
-    EXPECT_FALSE( leastSquaresConformalMap( Mesh::fromTriangles( std::move( degPoints ), degTris ) ).has_value() );
+    const auto degMesh = Mesh::fromTriangles( std::move( degPoints ), degTris );
+    EXPECT_FALSE( leastSquaresConformalMap( degMesh ).has_value() );
+    FaceBitSet degRegion( 2 );
+    degRegion.set( FaceId( 1 ) );
+    EXPECT_FALSE( leastSquaresConformalMap( { degMesh, &degRegion } ).has_value() );
 
     auto nanMesh = mesh;
     nanMesh.points[v0].z = std::numeric_limits<float>::quiet_NaN();

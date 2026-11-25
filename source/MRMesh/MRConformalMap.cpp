@@ -4,9 +4,10 @@
 #include "MRRegionBoundary.h"
 #include "MRBestFit.h"
 #include "MRDirMaxBruteForce.h"
+#include "MRReducePath.h"
 #include "MRVector2.h"
 #include "MRTimer.h"
-#include "MRPch/MREigenCore.h"
+#include "MRPch/MREigenSparseCore.h"
 #include <Eigen/SparseCholesky>
 
 namespace MR
@@ -37,7 +38,7 @@ Expected<VertUVCoords> leastSquaresConformalMap( const MeshPart& mp )
     const int numFree = int( freeVerts.count() );
 
     std::vector<Eigen::Triplet<double>> trips;
-    std::vector<double> rhsVals;
+    Eigen::VectorXd rhs = Eigen::VectorXd::Zero( 2 * int( faces.count() ) );
     int row = 0;
     for ( auto f : faces )
     {
@@ -45,19 +46,14 @@ Expected<VertUVCoords> leastSquaresConformalMap( const MeshPart& mp )
         const Vector3d p0( mp.mesh.points[t[0]] );
         const Vector3d e1 = Vector3d( mp.mesh.points[t[1]] ) - p0, e2 = Vector3d( mp.mesh.points[t[2]] ) - p0;
         const double l1 = e1.length();
-        const Vector3d nrm = cross( e1, e2 );
-        const double ar = nrm.length();
-        if ( !( l1 > 0 ) || !( ar > 0 ) )
-            continue;
-        // the triangle in its own orthonormal frame
-        const Vector3d ex = e1 / l1, ey = cross( nrm / ar, ex );
-        const double x[3] = { 0, l1, dot( e2, ex ) }, y[3] = { 0, 0, dot( e2, ey ) };
-        const double w = 1 / std::sqrt( ar );
-        rhsVals.resize( row + 2, 0.0 );
+        // the triangle in the plane with the vertices in (0,0), (l1,0) and q[2] to the left
+        const Vector2d q[3] = { {}, { l1, 0 }, unfoldOnPlane( e1, e2, Vector2d( l1, 0 ), true ) };
+        const double ar = l1 * q[2].y; // twice the area
+        const double w = ar > 0 ? 1 / std::sqrt( ar ) : 0; // zero rows for degenerate triangles, the coordinates are finite here
         for ( int j = 0; j < 3; ++j )
         {
             const int a = ( j + 1 ) % 3, b = ( j + 2 ) % 3;
-            const double wr = ( x[b] - x[a] ) * w, wi = ( y[b] - y[a] ) * w;
+            const double wr = ( q[b].x - q[a].x ) * w, wi = ( q[b].y - q[a].y ) * w;
             if ( const int c = col[t[j]]; c >= 0 )
             {
                 trips.emplace_back( row, c, wr );
@@ -67,20 +63,17 @@ Expected<VertUVCoords> leastSquaresConformalMap( const MeshPart& mp )
             }
             else if ( t[j] == pb ) // pinned pa = (0,0) adds nothing
             {
-                rhsVals[row] -= wr;
-                rhsVals[row + 1] -= wi;
+                rhs[row] -= wr;
+                rhs[row + 1] -= wi;
             }
         }
         row += 2;
     }
-    if ( row == 0 )
-        return unexpected( "No non-degenerate triangles" );
 
-    Eigen::SparseMatrix<double> m( row, 2 * numFree );
+    Eigen::SparseMatrix<double> m( rhs.size(), 2 * numFree );
     m.setFromTriplets( trips.begin(), trips.end() );
-    const Eigen::VectorXd rhs = Eigen::Map<const Eigen::VectorXd>( rhsVals.data(), row );
-    const Eigen::SparseMatrix<double> mtm = m.transpose() * m;
-    const Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> ldlt( mtm );
+    // without non-degenerate triangles the matrix is zero and its factorization fails
+    const Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> ldlt( m.transpose() * m );
     if ( ldlt.info() != Eigen::Success )
         return unexpected( "Degenerate system" );
     const Eigen::VectorXd sol = ldlt.solve( m.transpose() * rhs );

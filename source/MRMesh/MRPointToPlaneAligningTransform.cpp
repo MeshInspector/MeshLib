@@ -2,6 +2,7 @@
 #include "MRVector3.h"
 #include "MRAffineXf3.h"
 #include "MRQuaternion.h"
+#include "MRSymMatrix4.h"
 #include "MRToFromEigen.h"
 #include <Eigen/Cholesky> //LLT
 
@@ -90,27 +91,24 @@ auto PointToPlaneAligningTransform::calculateFixedAxisAmendment( const Vector3d 
         return calculateAmendment();
 
     const auto sumA = stabilizedA_();
-    Eigen::Matrix<double, 4, 4> A;
-    Eigen::Matrix<double, 4, 1> b;
-
     const auto k = toEigen( axis.normalized() );
-
-    A(0,0) = k.transpose() * sumA.topLeftCorner<3,3>() * k;
-
     const Eigen::Matrix<double, 3, 1> tk = sumA.block<3,3>(3, 0) * k;
-    A.bottomLeftCorner<3,1>() = tk;
-    A.topRightCorner<1,3>() = tk.transpose();
 
-    A.bottomRightCorner<3,3>() = sumA.block<3,3>(3, 3);
+    SymMatrix4d A;
+    A.xx = k.dot( sumA.topLeftCorner<3,3>() * k );
+    A.xy = tk[0]; A.xz = tk[1]; A.xw = tk[2];
+    A.yy = sumA( 3, 3 ); A.yz = sumA( 3, 4 ); A.yw = sumA( 3, 5 );
+    A.zz = sumA( 4, 4 ); A.zw = sumA( 4, 5 );
+    A.ww = sumA( 5, 5 );
 
-    b.topRows<1>() = k.transpose() * ( sumB_.topRows<3>() - sumA.block<3,1>( 0, 6 ) );
-    b.bottomRows<3>() = sumB_.middleRows<3>(3) - sumA.block<3,1>( 3, 6 );
+    const Eigen::Matrix<double, 3, 1> bt = sumB_.middleRows<3>(3) - sumA.block<3,1>( 3, 6 );
+    const Vector4d b{ k.dot( sumB_.topRows<3>() - sumA.block<3,1>( 0, 6 ) ), bt[0], bt[1], bt[2] };
 
-    const Eigen::Matrix<double, 4, 1> solution = A.llt().solve( b );
+    const Vector4d solution = A.solveLDLT( b );
 
     RigidScaleXf3d res;
-    res.a = solution.coeff( 0 ) * fromEigen( k );
-    res.b = Vector3d{ solution.coeff( 1 ), solution.coeff( 2 ), solution.coeff( 3 ) };
+    res.a = solution.x * fromEigen( k );
+    res.b = Vector3d{ solution.y, solution.z, solution.w };
     return res;
 }
 

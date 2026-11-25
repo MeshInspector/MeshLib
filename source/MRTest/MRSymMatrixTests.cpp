@@ -192,4 +192,25 @@ TEST( MRMesh, SymMatrix4Pseudoinverse )
         EXPECT_NEAR( ( psdInv * ( psd * v ) - v ).length(), 0, 1e-12 * v.length() );
 }
 
+TEST( MRMesh, SymMatrix4SolveLDLT )
+{
+    // positive definite: A^T*A + I
+    SymMatrix4d m = SymMatrix4d::identity();
+    for ( const auto & r : { Vector4d( 1, 2, 0, -1 ), Vector4d( 0, 1, 1, 1 ), Vector4d( 3, -1, 2, 0 ), Vector4d( -2, 0, 1, 4 ) } )
+        m += outerSquare( r );
+    for ( const auto & x : { Vector4d( 1, 0, 0, 0 ), Vector4d( 0, 0, 0, 1 ), Vector4d( 1, -2, 3, -4 ), Vector4d( 1e3, 1e-3, -5, 0.5 ) } )
+        EXPECT_NEAR( ( m.solveLDLT( m * x ) - x ).length(), 0, 1e-12 * x.length() );
+
+    // same as pseudoinverse for a positive definite matrix
+    const Vector4d b( 0.3, -1, 2, 7 );
+    EXPECT_NEAR( ( m.solveLDLT( b ) - m.pseudoinverse() * b ).length(), 0, 1e-12 * b.length() );
+
+    // positive semi-definite with exactly zero pivots: finite solution of a consistent system
+    const auto psd = outerSquare( Vector4d( 1, 1, 0, 0 ) ) + outerSquare( Vector4d( 0, 0, 1, 0 ) ) + outerSquare( Vector4d( 0, 0, 0, 1 ) );
+    const Vector4d bp( 1, 1, 2, 3 );
+    const auto xp = psd.solveLDLT( bp );
+    EXPECT_NEAR( ( psd * xp - bp ).length(), 0, 1e-12 );
+    EXPECT_EQ( SymMatrix4d{}.solveLDLT( Vector4d( 1, 2, 3, 4 ) ), Vector4d() );
+}
+
 } //namespace MR

@@ -16,7 +16,8 @@ class MRMESH_CLASS SphereObject : public AddVisualProperties<FeatureObject, Dime
 public:
     /// Creates simple sphere object with center in zero and radius - 1
     MRMESH_API SphereObject();
-    /// Finds best sphere to approx given points
+    /// Finds best sphere to approx given points;
+    /// if they define no sphere (fewer than 4 points or coplanar ones), the center is their centroid, and the radius is 1
     MRMESH_API SphereObject( const std::vector<Vector3f>& pointsToApprox );
 
     SphereObject( SphereObject&& ) noexcept = default;

@@ -3,7 +3,7 @@
 #include "MRMesh.h"
 #include "MRObjectFactory.h"
 #include "MRIRenderObject.h"
-#include "MRSymMatrix3.h"
+#include "MRBestFit.h"
 #include <MRPch/MRJson.h>
 
 namespace MR
@@ -64,36 +64,19 @@ SphereObject::SphereObject()
 SphereObject::SphereObject( const std::vector<Vector3f>& pointsToApprox )
     : SphereObject()
 {
-    // least squares of ( |p - c|^2 - r^2 ), translation-invariant: relative to the centroid m of the points,
-    // it gives S * ( c - m ) = t / 2 for the scatter matrix S, and r^2 = |c - m|^2 + mean |p - m|^2;
-    // the sums are taken relative to the first point and then moved to the centroid
-    if ( pointsToApprox.empty() )
+    const std::vector<Vector3d> points( pointsToApprox.begin(), pointsToApprox.end() );
+    if ( const auto sphere = findBestSphere( points ) )
     {
-        setCenter( Vector3f{} );
-        setRadius( 0.0f );
+        setCenter( Vector3f( sphere->center ) );
+        setRadius( float( sphere->radius ) );
         return;
     }
-    const Vector3d p0( pointsToApprox[0] );
-    SymMatrix3d syy;
-    Vector3d sy, ry;
-    double q = 0;
-    for ( const auto& pta : pointsToApprox )
-    {
-        const Vector3d y = Vector3d( pta ) - p0;
-        const double yy = y.lengthSq();
-        sy += y;
-        syy += outerSquare( y );
-        ry += yy * y;
-        q += yy;
-    }
-    const double n = double( pointsToApprox.size() );
-    const Vector3d m = sy / n;
-    const double mm = m.lengthSq();
-    const SymMatrix3d s = syy - outerSquare( n, m );
-    const Vector3d t = ry - 2.0 * ( syy * m ) - q * m + ( 2 * n * mm ) * m;
-    const Vector3d c = 0.5 * ( s.pseudoinverse() * t );
-    setCenter( Vector3f( p0 + m + c ) );
-    setRadius( float( std::sqrt( std::max( c.lengthSq() + q / n - mm, 0.0 ) ) ) );
+    // fewer than 4 points or coplanar ones define no sphere: then the center is their centroid,
+    // and the radius stays default, since zero radius would make the transformation degenerate
+    Vector3d centroid;
+    for ( const auto& p : points )
+        centroid += p / double( points.size() );
+    setCenter( Vector3f( centroid ) );
 }
 
 std::shared_ptr<Object> SphereObject::shallowClone() const

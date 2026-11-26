@@ -52,9 +52,6 @@ struct FitBSplineSurfaceToMeshSettings
 
     /// see BSplineSurfaceFitSettings::smoothing
     double smoothing = BSplineSurfaceFitSettings{}.smoothing;
-
-    /// to report the progress (one step per tried number of control points) and to cancel
-    ProgressCallback progress;
 };
 
 /// approximates a mesh part with disk topology by a bicubic B-spline surface passing near its vertices:
@@ -66,6 +63,8 @@ struct FitBSplineSurfaceToMeshSettings
 /// if the part is not one disk (several components, or touching itself in a vertex) then the parametrization can be meaningless,
 /// and a surface with large maxError is returned, so pass a disk or check maxError;
 /// \return an error if the part cannot be parametrized, has fewer than 35 vertices (too few for 6x4 control points), the margin is wrong, no fit succeeds, or the operation is canceled
-[[nodiscard]] MRMESH_API Expected<FittedBSplineSurface> fitBSplineSurfaceToMesh( const MeshPart& mp, const FitBSplineSurfaceToMeshSettings& settings = {} );
+/// via the callback, which gets the progress in one step per tried number of control points
+[[nodiscard]] MRMESH_API Expected<FittedBSplineSurface> fitBSplineSurfaceToMesh( const MeshPart& mp, const FitBSplineSurfaceToMeshSettings& settings = {},
+    const ProgressCallback& progress = {} );
 
 } //namespace MR

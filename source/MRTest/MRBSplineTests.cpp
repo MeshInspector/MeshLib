@@ -335,9 +335,9 @@ TEST( MRMesh, FitBSplineSurfaceToMesh )
 
     // the progress is reported, and the fit can be canceled
     int numReports = 0;
-    EXPECT_TRUE( fitBSplineSurfaceToMesh( mesh, { .progress = [&]( float ) { ++numReports; return true; } } ).has_value() );
+    EXPECT_TRUE( fitBSplineSurfaceToMesh( mesh, {}, [&]( float ) { ++numReports; return true; } ).has_value() );
     EXPECT_EQ( numReports, 8 );
-    EXPECT_FALSE( fitBSplineSurfaceToMesh( mesh, { .progress = []( float v ) { return v < 0.2f; } } ).has_value() );
+    EXPECT_FALSE( fitBSplineSurfaceToMesh( mesh, {}, []( float v ) { return v < 0.2f; } ).has_value() );
 
     // a strip 50 times longer than wide takes all the domain inside the margin: its long sides have the smallest and the largest v
     const auto strip = makeRegularGridMesh( 101, 3, []( size_t, size_t ) { return true; },

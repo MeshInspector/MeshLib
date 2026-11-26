@@ -104,7 +104,7 @@ double FittedBSplineSurface::distanceSq( const Vector3d& p ) const
     return ( p - surface.eval( project( p ) ) ).lengthSq();
 }
 
-Expected<FittedBSplineSurface> fitBSplineSurfaceToMesh( const MeshPart& mp, const FitBSplineSurfaceToMeshSettings& settings )
+Expected<FittedBSplineSurface> fitBSplineSurfaceToMesh( const MeshPart& mp, const FitBSplineSurfaceToMeshSettings& settings, const ProgressCallback& progress )
 {
     MR_TIMER;
     if ( !( settings.margin >= 0 && settings.margin < 0.5 ) )
@@ -179,7 +179,7 @@ Expected<FittedBSplineSurface> fitBSplineSurfaceToMesh( const MeshPart& mp, cons
     {
         if ( sz[0] * sz[1] > cMaxControlPointsPerVertex * numVerts )
             break;
-        if ( !reportProgress( settings.progress, float( sizeNum++ ) / float( std::size( cSizes ) ) ) )
+        if ( !reportProgress( progress, float( sizeNum++ ) / float( std::size( cSizes ) ) ) )
             return unexpectedOperationCanceled();
         const BSplineSurfaceFitSettings fitSettings{ .numU = sz[0], .numV = sz[1], .smoothing = settings.smoothing, .weights = &weights };
         auto uv = uvs;

@@ -21,7 +21,7 @@ constexpr int cMaxDegree = 7;
 
 /// values of (deg+1) non-zero B-spline basis functions at t, and optionally their derivatives;
 /// \return the index of the first of them
-int bsplineBasis( const std::vector<double>& knots, int deg, double t, double* vals, double* ders )
+int bsplineBasis( const Vector<double>& knots, int deg, double t, double* vals, double* ders )
 {
     assert( deg >= 1 && deg <= cMaxDegree );
     const int span = int( std::upper_bound( knots.begin() + deg + 1, knots.end() - deg - 1, t ) - knots.begin() ) - 1;
@@ -56,16 +56,16 @@ int bsplineBasis( const std::vector<double>& knots, int deg, double t, double* v
 }
 
 /// whether the degree is supported and the knots are consistent with it and with the number of control points
-bool isValid( const std::vector<double>& knots, int deg, size_t numControlPoints )
+bool isValid( const Vector<double>& knots, int deg, size_t numControlPoints )
 {
     return deg >= 1 && deg <= cMaxDegree && numControlPoints > size_t( deg ) && knots.size() == numControlPoints + deg + 1;
 }
 
 /// clamped knots with uniform inner spacing on [0, 1] for given number of control points and degree
-std::vector<double> makeClampedUniformKnots( int numControlPoints, int degree )
+Vector<double> makeClampedUniformKnots( int numControlPoints, int degree )
 {
     const int n = numControlPoints;
-    std::vector<double> res( n + degree + 1, 1.0 );
+    Vector<double> res( n + degree + 1, 1.0 );
     for ( int i = 0; i <= degree; ++i )
         res[i] = 0;
     for ( int i = degree + 1; i < n; ++i )
@@ -76,7 +76,7 @@ std::vector<double> makeClampedUniformKnots( int numControlPoints, int degree )
 /// solves the system factorized by s with n x 3 right-hand side into n points;
 /// \return false if the factorization failed
 template <typename S>
-bool solve( const S& s, const Eigen::MatrixXd& b, std::vector<Vector3d>& x )
+bool solve( const S& s, const Eigen::MatrixXd& b, Vector<Vector3d>& x )
 {
     if ( s.info() != Eigen::Success )
         return false;
@@ -193,12 +193,12 @@ Vector2d BSplineSurface::project( const Vector3d& p, Vector2d uv, int iterations
     return uv;
 }
 
-std::optional<BSplineCurve> interpolateBSplineCurve( const std::vector<Vector3d>& points )
+std::optional<BSplineCurve> interpolateBSplineCurve( const Vector<Vector3d>& points )
 {
     const int n = int( points.size() );
     if ( n < 2 )
         return std::nullopt;
-    std::vector<double> t( n, 0.0 );
+    Vector<double> t( n, 0.0 );
     for ( int i = 1; i < n; ++i )
     {
         t[i] = t[i - 1] + ( points[i] - points[i - 1] ).length();
@@ -220,7 +220,7 @@ std::optional<BSplineCurve> interpolateBSplineCurve( const std::vector<Vector3d>
 
     // the collocation matrix has at most k + 1 non-zeros in a row, and it is not singular for increasing parameters;
     // it is factorized directly, since the normal equations would square its condition number
-    std::vector<Eigen::Triplet<double>> trips;
+    Vector<Eigen::Triplet<double>> trips;
     trips.reserve( size_t( n ) * ( k + 1 ) );
     Eigen::MatrixXd rhs( n, 3 );
     for ( int i = 0; i < n; ++i )
@@ -239,7 +239,7 @@ std::optional<BSplineCurve> interpolateBSplineCurve( const std::vector<Vector3d>
     return res;
 }
 
-std::optional<BSplineSurface> fitBSplineSurface( const std::vector<Vector3d>& points, const std::vector<Vector2d>& uvs, const BSplineSurfaceFitSettings& settings )
+std::optional<BSplineSurface> fitBSplineSurface( const Vector<Vector3d>& points, const Vector<Vector2d>& uvs, const BSplineSurfaceFitSettings& settings )
 {
     MR_TIMER;
     assert( points.size() == uvs.size() );
@@ -254,7 +254,7 @@ std::optional<BSplineSurface> fitBSplineSurface( const std::vector<Vector3d>& po
     // all points in a knot span have the same 16 non-zero basis functions, so the normal equations are summed per span first,
     // in the upper triangle of the 16 x 16 matrix of each span (control point indices increase with a)
     const int numSpansV = nv - 3;
-    std::vector<std::array<double, 256>> spanAta( size_t( nu - 3 ) * numSpansV );
+    Vector<std::array<double, 256>> spanAta( size_t( nu - 3 ) * numSpansV );
     Eigen::MatrixXd atb = Eigen::MatrixXd::Zero( k, 3 );
     for ( size_t i = 0; i < points.size(); ++i )
     {
@@ -274,7 +274,7 @@ std::optional<BSplineSurface> fitBSplineSurface( const std::vector<Vector3d>& po
                 atb( ( iu + a / 4 ) * nv + iv + a % 4, d ) += w * val[a] * points[i][d];
         }
     }
-    std::vector<Eigen::Triplet<double>> trips;
+    Vector<Eigen::Triplet<double>> trips;
     trips.reserve( spanAta.size() * 136 + size_t( k ) * 12 );
     for ( int s = 0; s < int( spanAta.size() ); ++s )
     {
@@ -287,7 +287,7 @@ std::optional<BSplineSurface> fitBSplineSurface( const std::vector<Vector3d>& po
     // ( knots[i + 1] + knots[i + 2] + knots[i + 3] ) / 3, scaled to ( 1, -2, 1 ) for equal differences; they are zero for bilinear functions of ( u, v )
     const int numRows = ( nu - 2 ) * nv + nu * ( nv - 2 );
     const double w2 = settings.smoothing * ( settings.weights ? std::accumulate( settings.weights->begin(), settings.weights->end(), 0.0 ) : double( points.size() ) ) / numRows;
-    auto addRow = [&]( const std::vector<double>& knots, int i, int idx1, int step )
+    auto addRow = [&]( const Vector<double>& knots, int i, int idx1, int step )
     {
         const double d0 = knots[i + 3] - knots[i], d1 = knots[i + 4] - knots[i + 1], h = ( d0 + d1 ) / 2; // 3 times the differences of the abscissae
         const int idx[3] = { idx1 - step, idx1, idx1 + step };

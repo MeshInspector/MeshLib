@@ -5,6 +5,7 @@
 #include "MRBestFit.h"
 #include "MRDirMaxBruteForce.h"
 #include "MRReducePath.h"
+#include "MRVector.h"
 #include "MRVector2.h"
 #include "MRTimer.h"
 #include "MRPch/MREigenSparseCore.h"
@@ -37,7 +38,7 @@ Expected<VertUVCoords> leastSquaresConformalMap( const MeshPart& mp )
     const auto col = makeVectorWithSeqNums( freeVerts );
     const int numFree = int( freeVerts.count() );
 
-    std::vector<Eigen::Triplet<double>> trips;
+    Vector<Eigen::Triplet<double>> trips;
     Eigen::VectorXd rhs = Eigen::VectorXd::Zero( 2 * int( faces.count() ) );
     int row = 0;
     for ( auto f : faces )

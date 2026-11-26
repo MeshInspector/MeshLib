@@ -2,9 +2,9 @@
 
 #include "MRMeshFwd.h"
 #include "MRVector2.h"
+#include "MRVector.h"
 #include "MRVector3.h"
 #include <optional>
-#include <vector>
 
 namespace MR
 {
@@ -14,8 +14,8 @@ namespace MR
 struct BSplineCurve
 {
     int degree = 3;                      ///< from 1 to 7
-    std::vector<double> knots;           ///< non-decreasing, controlPoints.size() + degree + 1 values
-    std::vector<Vector3d> controlPoints;
+    Vector<double> knots;           ///< non-decreasing, controlPoints.size() + degree + 1 values
+    Vector<Vector3d> controlPoints;
 
     /// whether the degree is supported, there are more control points than the degree, and the number of knots is as above
     [[nodiscard]] MRMESH_API bool valid() const;
@@ -30,9 +30,9 @@ struct BSplineSurface
 {
     int degreeU = 3;                     ///< from 1 to 7
     int degreeV = 3;                     ///< from 1 to 7
-    std::vector<double> knotsU;          ///< non-decreasing, numU() + degreeU + 1 values
-    std::vector<double> knotsV;          ///< non-decreasing, numV() + degreeV + 1 values
-    std::vector<Vector3d> controlPoints; ///< numU() * numV() points, the point (i, j) has index i * numV() + j
+    Vector<double> knotsU;          ///< non-decreasing, numU() + degreeU + 1 values
+    Vector<double> knotsV;          ///< non-decreasing, numV() + degreeV + 1 values
+    Vector<Vector3d> controlPoints; ///< numU() * numV() points, the point (i, j) has index i * numV() + j
 
     /// the number of control points along u and v
     [[nodiscard]] int numU() const { return int( knotsU.size() ) - degreeU - 1; }
@@ -54,7 +54,7 @@ struct BSplineSurface
 /// B-spline curve of degree min( 3, points.size() - 1 ) passing through all given points,
 /// with the parameters of the points proportional to the length of the polyline through them, in [0, 1];
 /// \return nullopt for fewer than 2 points, two consecutive points equal, not finite coordinates, or a failed factorization
-[[nodiscard]] MRMESH_API std::optional<BSplineCurve> interpolateBSplineCurve( const std::vector<Vector3d>& points );
+[[nodiscard]] MRMESH_API std::optional<BSplineCurve> interpolateBSplineCurve( const Vector<Vector3d>& points );
 
 struct BSplineSurfaceFitSettings
 {
@@ -67,7 +67,7 @@ struct BSplineSurfaceFitSettings
     double smoothing = 1e-7;
 
     /// optional weights of the points, all 1 if not given
-    const std::vector<double>* weights = nullptr;
+    const Vector<double>* weights = nullptr;
 };
 
 /// bicubic B-spline surface over [0, 1] x [0, 1] fitted by least squares to the points with given parameters, expected in this square (outside, the end polynomials are extrapolated):
@@ -75,7 +75,7 @@ struct BSplineSurfaceFitSettings
 /// the solution is unique if smoothing > 0 and no bilinear function of (u, v) but zero vanishes at all points with positive weights
 /// (which needs at least 4 points not all on one line), otherwise the control points can be arbitrary;
 /// \return nullopt if numU or numV is less than 4 or the factorization fails
-[[nodiscard]] MRMESH_API std::optional<BSplineSurface> fitBSplineSurface( const std::vector<Vector3d>& points, const std::vector<Vector2d>& uvs,
+[[nodiscard]] MRMESH_API std::optional<BSplineSurface> fitBSplineSurface( const Vector<Vector3d>& points, const Vector<Vector2d>& uvs,
     const BSplineSurfaceFitSettings& settings = {} );
 
 } //namespace MR

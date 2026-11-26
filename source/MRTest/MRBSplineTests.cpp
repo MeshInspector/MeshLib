@@ -4,6 +4,7 @@
 #include <MRMesh/MRMeshPart.h>
 #include <MRMesh/MRRegionBoundary.h>
 #include <MRMesh/MRRegularGridMesh.h>
+#include <MRMesh/MRVector.h>
 #include <gtest/gtest.h>
 #include <limits>
 
@@ -13,7 +14,7 @@ namespace MR
 TEST( MRMesh, InterpolateBSplineCurve )
 {
     // a helix
-    std::vector<Vector3d> pts;
+    Vector<Vector3d> pts;
     for ( int i = 0; i < 40; ++i )
         pts.emplace_back( std::cos( 0.2 * i ), std::sin( 0.2 * i ), 0.05 * i );
     const auto c = interpolateBSplineCurve( pts ).value();
@@ -78,26 +79,26 @@ TEST( MRMesh, BSplineNotValid )
     EXPECT_EQ( line.degree, 1 );
     EXPECT_NEAR( ( line.eval( 0.25 ) - Vector3d( 0.5, 0, 0 ) ).length(), 0, 1e-15 );
 
-    const std::vector<Vector3d> three = { Vector3d( 0, 0, 0 ), Vector3d( 1, 1, 0 ), Vector3d( 2, 0, 0 ) };
+    const Vector<Vector3d> three = { Vector3d( 0, 0, 0 ), Vector3d( 1, 1, 0 ), Vector3d( 2, 0, 0 ) };
     const auto parabola = interpolateBSplineCurve( three ).value();
     EXPECT_EQ( parabola.degree, 2 );
     for ( int i = 0; i < 3; ++i )
         EXPECT_NEAR( ( parabola.eval( i / 2.0 ) - three[i] ).length(), 0, 1e-15 );
 
     // 4 points with equal distances: a cubic without inner knots
-    const std::vector<Vector3d> four = { Vector3d( 0, 0, 0 ), Vector3d( 1, 1, 0 ), Vector3d( 2, 1, 1 ), Vector3d( 3, 0, 1 ) };
+    const Vector<Vector3d> four = { Vector3d( 0, 0, 0 ), Vector3d( 1, 1, 0 ), Vector3d( 2, 1, 1 ), Vector3d( 3, 0, 1 ) };
     const auto cubic = interpolateBSplineCurve( four ).value();
-    EXPECT_EQ( cubic.knots, std::vector<double>( { 0, 0, 0, 0, 1, 1, 1, 1 } ) );
+    EXPECT_EQ( cubic.knots, Vector<double>( { 0, 0, 0, 0, 1, 1, 1, 1 } ) );
     for ( int i = 0; i < 4; ++i )
         EXPECT_NEAR( ( cubic.eval( i / 3.0 ) - four[i] ).length(), 0, 1e-12 );
 
     // uneven spacing: the parameters are proportional to the length of the polyline;
     // the second chain has two steps of 1e-5, where the normal equations of the collocation system were 5e-6 off
-    for ( const auto& uneven : { std::vector{ Vector3d( 0, 0, 0 ), Vector3d( 0.01, 0, 0 ), Vector3d( 1, 1, 0 ), Vector3d( 1, 1, 2 ), Vector3d( 5, 1, 2 ) },
-        std::vector{ Vector3d( 0, 0, 0 ), Vector3d( 1, 0, 0 ), Vector3d( 1, 1e-5, 0 ), Vector3d( 1, 1e-5, 1e-5 ), Vector3d( 2, 1, 1 ), Vector3d( 3, 0, 1 ) } } )
+    for ( const auto& uneven : { Vector<Vector3d>{ Vector3d( 0, 0, 0 ), Vector3d( 0.01, 0, 0 ), Vector3d( 1, 1, 0 ), Vector3d( 1, 1, 2 ), Vector3d( 5, 1, 2 ) },
+        Vector<Vector3d>{ Vector3d( 0, 0, 0 ), Vector3d( 1, 0, 0 ), Vector3d( 1, 1e-5, 0 ), Vector3d( 1, 1e-5, 1e-5 ), Vector3d( 2, 1, 1 ), Vector3d( 3, 0, 1 ) } } )
     {
         const auto uc = interpolateBSplineCurve( uneven ).value();
-        std::vector<double> t( 1, 0.0 );
+        Vector<double> t( 1, 0.0 );
         for ( size_t i = 1; i < uneven.size(); ++i )
             t.push_back( t.back() + ( uneven[i] - uneven[i - 1] ).length() );
         for ( size_t i = 0; i < uneven.size(); ++i )
@@ -107,8 +108,8 @@ TEST( MRMesh, BSplineNotValid )
 
 TEST( MRMesh, FitBSplineSurface )
 {
-    std::vector<Vector3d> pts;
-    std::vector<Vector2d> uvs;
+    Vector<Vector3d> pts;
+    Vector<Vector2d> uvs;
     for ( int i = 0; i <= 20; ++i )
         for ( int j = 0; j <= 20; ++j )
         {
@@ -132,7 +133,7 @@ TEST( MRMesh, FitBSplineSurface )
         auto wUvs = uvs;
         wPts.emplace_back( 1.5, 1, 100 );
         wUvs.emplace_back( 0.5, 0.5 );
-        std::vector<double> weights( wPts.size(), 1.0 );
+        Vector<double> weights( wPts.size(), 1.0 );
         weights.back() = 0;
         const auto ws = fitBSplineSurface( wPts, wUvs, { .weights = &weights } ).value();
         EXPECT_NEAR( ( ws.eval( wUvs.back() ) - Vector3d( 1.5, 1, 1.5 ) ).length(), 0, 1e-9 );
@@ -142,7 +143,7 @@ TEST( MRMesh, FitBSplineSurface )
     {
         auto wPts = pts;
         auto wUvs = uvs;
-        std::vector<double> weights( 2 * pts.size(), 1.0 );
+        Vector<double> weights( 2 * pts.size(), 1.0 );
         for ( size_t i = 0; i < pts.size(); ++i )
         {
             wPts[i].z -= 3;
@@ -157,8 +158,8 @@ TEST( MRMesh, FitBSplineSurface )
 
     // the smoothing keeps bilinear functions of (u, v): such a surface with points only in an ellipse is reproduced in all the domain
     const auto bilinear = []( const Vector2d& uv ) { return Vector3d( 3 * uv.x, 2 * uv.y, 2 * uv.x - uv.y + uv.x * uv.y ); };
-    std::vector<Vector3d> ePts;
-    std::vector<Vector2d> eUvs;
+    Vector<Vector3d> ePts;
+    Vector<Vector2d> eUvs;
     for ( const auto& uv : uvs )
     {
         if ( sqr( ( uv.x - 0.5 ) / 0.44 ) + sqr( ( uv.y - 0.5 ) / 0.3 ) > 1 )

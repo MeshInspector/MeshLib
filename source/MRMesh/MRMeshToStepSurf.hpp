@@ -44,9 +44,7 @@ struct Surf
         if ( type == SurfType::BSpline )
         {
             const auto uv = bs->project( p );
-            V3 s;
-            bs->eval( uv, s );
-            return dot( p - s, bs->normalAt( uv ) );
+            return dot( p - bs->surf.eval( uv ), bs->normalAt( uv ) );
         }
         const V3 d = p - c;
         const double h = dot( d, a );

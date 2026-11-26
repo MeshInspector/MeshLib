@@ -413,21 +413,7 @@ void Cleaner::fitFreeform_()
         std::sort( loopVerts.begin(), loopVerts.end() );
         if ( std::adjacent_find( loopVerts.begin(), loopVerts.end() ) != loopVerts.end() )
             continue;
-        const auto verts = d.vertsOf( fs );
-        std::vector<V3> pts;
-        pts.reserve( verts.size() );
-        for ( int v : verts )
-            pts.push_back( d.pts[v] );
-        std::vector<Tri> tris;
-        tris.reserve( fs.size() );
-        for ( int f : fs )
-        {
-            Tri t;
-            for ( int i = 0; i < 3; ++i )
-                t[i] = int( std::lower_bound( verts.begin(), verts.end(), d.tris[f][i] ) - verts.begin() );
-            tris.push_back( t );
-        }
-        auto bs = fitBSpline( pts, tris, 0.5 * d.tol );
+        auto bs = fitBSpline( *d.mesh, region, 0.5 * d.tol );
         if ( !bs )
             continue;
         Region r;

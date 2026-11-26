@@ -1,12 +1,11 @@
 #include "MRMeshToStepData.hpp"
 #include "MRBestFit.h"
 #include "MRBox.h"
+#include "MRBSpline.h"
 #include "MRMatrix3.h"
 #include "MRSymMatrix3.h"
 #include "MRTimer.h"
 #include "MRPch/MRFmt.h"
-
-#include <Eigen/Dense>
 
 #include <map>
 #include <numeric>
@@ -29,8 +28,8 @@ struct Curve
     V3 c, n, x;   ///< circle: center, normal and the direction to the start point
     double r = 0; ///< circle radius
     int deg = 0;  ///< B-spline degree
-    std::vector<double> knots;
-    std::vector<V3> cp;
+    Vector<double> knots;
+    Vector<V3> cp;
     double dev = 0; ///< maximum distance from B-spline to the surfaces
 };
 
@@ -293,49 +292,30 @@ Curve BRepWriter::spline_( const std::vector<V3>& p, const Surfs& ss ) const
         }
         q = std::move( even );
     }
-    std::vector<double> t( n, 0.0 );
-    for ( int i = 1; i < n; ++i )
-        t[i] = t[i - 1] + ( q[i] - q[i - 1] ).length();
-    for ( auto& x : t )
-        x /= std::max( t.back(), 1e-300 );
-    t.back() = 1;
-
     Curve res;
     res.kind = Curve::Kind::BSpline;
-    res.deg = std::min( 3, n - 1 );
-    const int k = res.deg;
-    res.knots.assign( n + k + 1, 1.0 );
-    for ( int i = 0; i <= k; ++i )
-        res.knots[i] = 0;
-    for ( int j = 1; j < n - k; ++j )
-        res.knots[j + k] = std::accumulate( t.begin() + j, t.begin() + j + k, 0.0 ) / k;
-    Eigen::MatrixXd m = Eigen::MatrixXd::Zero( n, n );
-    Eigen::MatrixXd rhs( n, 3 );
-    for ( int i = 0; i < n; ++i )
+    // equal consecutive points cannot be interpolated
+    Vector<V3> distinct;
+    for ( const auto& x : q )
+        if ( distinct.empty() || x != distinct.back() )
+            distinct.push_back( x );
+    const auto curve = interpolateBSplineCurve( distinct );
+    if ( !curve )
     {
-        double b[4];
-        const int i0 = bsplineBasis( res.knots, k, n, t[i], b, nullptr );
-        for ( int j = 0; j <= k; ++j )
-            m( i, i0 + j ) = b[j];
-        for ( int c = 0; c < 3; ++c )
-            rhs( i, c ) = q[i][c];
+        res.deg = 1;
+        res.knots = { 0, 0, 1, 1 };
+        res.cp = { q.front(), q.back() };
+        res.dev = DBL_MAX;
+        return res;
     }
-    const Eigen::MatrixXd sol = m.partialPivLu().solve( rhs );
-    res.cp.resize( n );
-    for ( int i = 0; i < n; ++i )
-        res.cp[i] = V3( sol( i, 0 ), sol( i, 1 ), sol( i, 2 ) );
+    res.deg = curve->degree;
+    res.knots = curve->knots;
+    res.cp = curve->controlPoints;
 
     std::vector<V3> samples;
     const int num = 8 * n;
     for ( int i = 0; i < num; ++i )
-    {
-        double b[4];
-        const int i0 = bsplineBasis( res.knots, k, n, double( i ) / ( num - 1 ), b, nullptr );
-        V3 s;
-        for ( int j = 0; j <= k; ++j )
-            s += b[j] * res.cp[i0 + j];
-        samples.push_back( s );
-    }
+        samples.push_back( curve->eval( double( i ) / ( num - 1 ) ) );
     res.dev = onSurfs_( samples, ss );
     if ( !std::isfinite( res.dev ) )
         res.dev = DBL_MAX;
@@ -613,7 +593,7 @@ std::string joined( const std::vector<std::string>& v )
 }
 
 /// distinct knots and their multiplicities as two STEP lists
-std::pair<std::string, std::string> knotLists( const std::vector<double>& knots )
+std::pair<std::string, std::string> knotLists( const Vector<double>& knots )
 {
     std::vector<std::string> ks, ms;
     for ( size_t i = 0; i < knots.size(); )
@@ -726,17 +706,19 @@ MeshToStepStats BRepWriter::write( std::ostream& out )
             ++stats.bsplines;
             stats.maxBSplineError = std::max( stats.maxBSplineError, float( s.bs->err ) );
             std::vector<std::string> rows;
-            for ( int i = 0; i < s.bs->nu; ++i )
+            const auto& bs = s.bs->surf;
+            const int nu = bs.numU(), nv = bs.numV();
+            for ( int i = 0; i < nu; ++i )
             {
                 std::vector<std::string> row;
-                for ( int j = 0; j < s.bs->nv; ++j )
-                    row.push_back( point_( s.bs->cp[i * s.bs->nv + j] ) );
+                for ( int j = 0; j < nv; ++j )
+                    row.push_back( point_( bs.controlPoints[i * nv + j] ) );
                 rows.push_back( fmt::format( "({})", joined( row ) ) );
             }
-            const auto [mu, ku] = knotLists( s.bs->tu );
-            const auto [mv, kv] = knotLists( s.bs->tv );
+            const auto [mu, ku] = knotLists( bs.knotsU );
+            const auto [mv, kv] = knotLists( bs.knotsV );
             srf = add_( fmt::format( "B_SPLINE_SURFACE_WITH_KNOTS('',{0},{0},({1}),.UNSPECIFIED.,.F.,.F.,.F.,({2}),({3}),({4}),({5}),.UNSPECIFIED.)",
-                BSplineSurf::deg, joined( rows ), mu, mv, ku, kv ) );
+                bs.degreeU, joined( rows ), mu, mv, ku, kv ) );
             break;
         }
         }

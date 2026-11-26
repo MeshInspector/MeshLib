@@ -2,6 +2,7 @@
 #include <MRMesh/MRConstants.h>
 #include <MRMesh/MRLine3.h>
 #include <MRMesh/MRPlane3.h>
+#include <MRMesh/MRVector.h>
 #include <gtest/gtest.h>
 #include <random>
 
@@ -152,8 +153,8 @@ TEST( MRMesh, FindBestSphereCap )
     // a cap of 0.3 radians
     const Vector3d c( 3, -2, 5 ), dir = Vector3d( 1, 2, 3 ).normalized();
     const auto [u, v] = dir.perpendicular();
-    std::vector<Vector3d> pts, normals;
-    std::vector<Line3d> normalLines;
+    Vector<Vector3d> pts, normals;
+    Vector<Line3d> normalLines;
     for ( int i = 0; i < 10; ++i )
         for ( int j = 0; j < 10; ++j )
         {
@@ -172,7 +173,7 @@ TEST( MRMesh, FindBestSphereCap )
     EXPECT_FALSE( findBestCylinderByNormals( pts, normals ) );
 
     // the points of a circle are in one plane: every sphere through the circle passes through them, and the minimum-norm one is centered at it
-    std::vector<Vector3d> circle;
+    Vector<Vector3d> circle;
     for ( int i = 0; i < 4; ++i )
         circle.push_back( c + 7.0 * ( std::cos( 1.5 * i ) * u + std::sin( 1.5 * i ) * v ) );
     const auto cs = findBestSphere( circle );
@@ -191,7 +192,7 @@ TEST( MRMesh, FindBestCircleShortArc )
 {
     // 5 degrees of a circle far from the origin
     const Vector2d c( 1000, -500 );
-    std::vector<Vector2d> pts;
+    Vector<Vector2d> pts;
     for ( int i = 0; i < 20; ++i )
     {
         const double a = 0.3 + i * ( 5 * PI / 180 ) / 19;
@@ -215,9 +216,9 @@ TEST( MRMesh, FindBestCylinderByNormals )
 {
     const Line3d axis( Vector3d( 2, 3, -1 ), Vector3d( 1, 1, 0.3 ).normalized() );
     const auto [u, v] = axis.d.perpendicular();
-    std::vector<Vector3d> pts, normals;
-    std::vector<Line3d> normalLines;
-    std::vector<Plane3d> planes;
+    Vector<Vector3d> pts, normals;
+    Vector<Line3d> normalLines;
+    Vector<Plane3d> planes;
     for ( int i = 0; i < 12; ++i )
         for ( int j = 0; j < 5; ++j )
         {
@@ -251,8 +252,8 @@ TEST( MRMesh, FindBestCylinderByNormals )
     EXPECT_FALSE( findBestConeByTangentPlanes( pts, planes ) );
 
     // all lines along the normal of a plane cross its normals, and all directions in the plane are orthogonal to them
-    std::vector<Vector3d> planePts, planeNormals;
-    std::vector<Line3d> planeNormalLines;
+    Vector<Vector3d> planePts, planeNormals;
+    Vector<Line3d> planeNormalLines;
     for ( int i = 0; i < 5; ++i )
     {
         planePts.emplace_back( i, i * i, 0 );
@@ -272,7 +273,7 @@ TEST( MRMesh, FindRevolutionAxisNoisy )
     double maxAngle = 0;
     for ( int k = 0; k < 50; ++k )
     {
-        std::vector<Line3d> normalLines;
+        Vector<Line3d> normalLines;
         for ( int i = 0; i < 12; ++i )
             for ( int j = 0; j < 5; ++j )
             {
@@ -296,8 +297,8 @@ TEST( MRMesh, FindBestCone )
     const double angle = 0.4;
     const auto [u, v] = a.perpendicular();
     // a third of one strip of the cone between the heights 5 and 5.5, and the planes of two degenerate triangles
-    std::vector<Vector3d> pts;
-    std::vector<Plane3d> planes = { Plane3d{}, Plane3d( Vector3d{}, 1 ) };
+    Vector<Vector3d> pts;
+    Vector<Plane3d> planes = { Plane3d{}, Plane3d( Vector3d{}, 1 ) };
     for ( int i = 0; i < 10; ++i )
         for ( double h : { 5.0, 5.5 } )
         {
@@ -323,7 +324,7 @@ TEST( MRMesh, FindBestCone )
     // a wide cone with the points shifted along the normal by +0.1 and -0.1 in turn: the orthogonal fit of the generator is exact,
     // while the least squares line of the distance to the axis against the position along it is not
     const double wide = 1.2;
-    std::vector<Vector3d> widePts;
+    Vector<Vector3d> widePts;
     for ( int i = 0; i < 12; ++i )
         for ( int j = 0; j < 8; ++j )
         {
@@ -347,8 +348,8 @@ TEST( MRMesh, FindBestTorus )
         const Torus3d t( Vector3d( -1, 4, 2 ) + shift, dir.normalized(), 5, 1.5 );
         const auto [u, v] = t.axis.perpendicular();
         // a patch of the torus like a fillet: a quarter of the revolution and 2 radians of the tube
-        std::vector<Vector3d> pts;
-        std::vector<Line3d> normalLines;
+        Vector<Vector3d> pts;
+        Vector<Line3d> normalLines;
         for ( int i = 0; i < 10; ++i )
             for ( int j = 0; j < 10; ++j )
             {
@@ -376,7 +377,7 @@ TEST( MRMesh, FindBestTorus )
         check( refineTorus( pts, initial ), 1e-7 );
 
         // with the points shifted along the normals by noise, the refined torus is closer to them than the true one
-        std::vector<Vector3d> noisyPts;
+        Vector<Vector3d> noisyPts;
         for ( const auto& p : pts )
         {
             const double e = noise( gen, 0.05 );

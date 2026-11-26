@@ -20,6 +20,7 @@
 #pragma warning(pop)
 #endif
 #include <cassert>
+#include <cstdint>
 
 namespace MR
 {
@@ -284,6 +285,131 @@ struct TorusDistances
     }
 };
 
+/// the distances from the points to the infinite cylinder with the parameters: the shift of an axis point from c0, not-unit axis, radius;
+/// the functor for Eigen::LevenbergMarquardt
+struct CylinderDistances
+{
+    const Vector<Vector3d>& points;
+    Vector3d c0;
+
+    int values() const { return int( points.size() ); }
+    int operator()( const Eigen::VectorXd& x, Eigen::VectorXd& f ) const
+    {
+        const Vector3d c = c0 + Vector3d( x[0], x[1], x[2] ), a = Vector3d( x[3], x[4], x[5] ).normalized();
+        for ( int i = 0; i < values(); ++i )
+            f[i] = cross( points[i] - c, a ).length() - std::abs( x[6] );
+        return 0;
+    }
+    /// the derivatives of a distance by the axis point: -e, by the not-unit axis: -dot( p - c, axis ) * e / |axis|, by the radius: -1,
+    /// where e is the unit direction from the axis to the point
+    int df( const Eigen::VectorXd& x, Eigen::MatrixXd& jac ) const
+    {
+        const Vector3d c = c0 + Vector3d( x[0], x[1], x[2] ), a = Vector3d( x[3], x[4], x[5] ).normalized();
+        const double rLen = 1 / Vector3d( x[3], x[4], x[5] ).length();
+        for ( int i = 0; i < values(); ++i )
+        {
+            const Vector3d d = points[i] - c;
+            const double h = dot( d, a );
+            const Vector3d e = ( d - h * a ).normalized();
+            const Vector3d da = -h * rLen * e;
+            jac.row( i ) << -e.x, -e.y, -e.z, da.x, da.y, da.z, x[6] < 0 ? 1 : -1;
+        }
+        return 0;
+    }
+};
+
+/// the distances from the points to the lines of the cone surface with the parameters: the shift of the apex from c0, not-unit axis, angle;
+/// a distance is rho * cos( angle ) - h * sin( angle ), where h is the position of the point along the axis and rho is its distance to the axis;
+/// the functor for Eigen::LevenbergMarquardt
+struct ConeDistances
+{
+    const Vector<Vector3d>& points;
+    Vector3d c0;
+
+    int values() const { return int( points.size() ); }
+    int operator()( const Eigen::VectorXd& x, Eigen::VectorXd& f ) const
+    {
+        const Vector3d c = c0 + Vector3d( x[0], x[1], x[2] ), a = Vector3d( x[3], x[4], x[5] ).normalized();
+        const double cs = std::cos( x[6] ), sn = std::sin( x[6] );
+        for ( int i = 0; i < values(); ++i )
+        {
+            const Vector3d d = points[i] - c;
+            const double h = dot( d, a );
+            f[i] = ( d - h * a ).length() * cs - h * sn;
+        }
+        return 0;
+    }
+    /// the derivatives of a distance by the apex: -n, by the not-unit axis: -( h * cos + rho * sin ) * e / |axis|, by the angle: -( h * cos + rho * sin ),
+    /// where e is the unit direction from the axis to the point, and n = e * cos - axis * sin is the normal of the cone
+    int df( const Eigen::VectorXd& x, Eigen::MatrixXd& jac ) const
+    {
+        const Vector3d c = c0 + Vector3d( x[0], x[1], x[2] ), a = Vector3d( x[3], x[4], x[5] ).normalized();
+        const double rLen = 1 / Vector3d( x[3], x[4], x[5] ).length();
+        const double cs = std::cos( x[6] ), sn = std::sin( x[6] );
+        for ( int i = 0; i < values(); ++i )
+        {
+            const Vector3d d = points[i] - c;
+            const double h = dot( d, a );
+            const Vector3d r = d - h * a;
+            const double rho = r.length();
+            const Vector3d e = r.normalized(), n = cs * e - sn * a;
+            const double along = h * cs + rho * sn; // the position of the point along the line of the cone surface
+            const Vector3d da = -along * rLen * e;
+            jac.row( i ) << -n.x, -n.y, -n.z, da.x, da.y, da.z, -along;
+        }
+        return 0;
+    }
+};
+
+/// minimizes the sum of squared values of the functor F{ points, c0 } by Levenberg-Marquardt method starting from x;
+/// if there are more than maxPoints points, then the minimization uses only that many of them (one from each of equal ranges), which bounds its time
+/// (but not fewer than the number of parameters), and x is changed only if the sum over all the points does not grow
+template <typename F>
+void minimizeByPoints( const Vector<Vector3d>& points, const Vector3d& c0, Eigen::VectorXd& x, size_t maxPoints )
+{
+    maxPoints = std::max( maxPoints, size_t( x.size() ) );
+    if ( points.size() <= maxPoints )
+    {
+        F f{ points, c0 };
+        Eigen::LevenbergMarquardt<F> lm( f );
+        lm.minimize( x );
+        return;
+    }
+    Vector<Vector3d> sample;
+    sample.reserve( maxPoints );
+    // one point from each of maxPoints equal ranges; a pseudo-random one, because points taken with a constant step
+    // can be all in one row of a regular grid; the generator is the same on all platforms
+    std::uint64_t state = 0x9E3779B97F4A7C15ull;
+    for ( size_t i = 0; i < maxPoints; ++i )
+    {
+        const size_t begin = i * points.size() / maxPoints, end = ( i + 1 ) * points.size() / maxPoints;
+        state = state * 6364136223846793005ull + 1442695040888963407ull;
+        sample.push_back( points[begin + size_t( state >> 33 ) % ( end - begin )] );
+    }
+    Eigen::VectorXd res = x;
+    {
+        F f{ sample, c0 };
+        Eigen::LevenbergMarquardt<F> lm( f );
+        lm.minimize( res );
+    }
+    const F all{ points, c0 };
+    Eigen::VectorXd dists( all.values() );
+    all( x, dists );
+    const double given = dists.squaredNorm();
+    all( res, dists );
+    if ( dists.squaredNorm() <= given )
+        x = res;
+}
+
+/// the cylinder with given axis (with unit direction) and radius, and the center and the length spanning the projections of the points on the axis
+Cylinder3d cylinderSpanning( const Vector<Vector3d>& points, const Line3d& axis, double radius )
+{
+    MinMaxd range;
+    for ( const auto& p : points )
+        range.include( dot( p - axis.p, axis.d ) );
+    return Cylinder3d( axis.p + range.center() * axis.d, axis.d, radius, range.size() );
+}
+
 /// the cone with given apex, axis and angle, and the height spanning the points
 Cone3d coneSpanning( const Vector<Vector3d>& points, const Line3d& axis, double angle )
 {
@@ -365,10 +491,7 @@ std::optional<Cylinder3d> findBestCylinderByNormals( const Vector<Vector3d>& poi
     if ( !circle )
         return {};
     const Vector3d c = circle->center.x * u + circle->center.y * v;
-    MinMaxd range;
-    for ( const auto& p : points )
-        range.include( dot( p - c, a ) );
-    return Cylinder3d( c + range.center() * a, a, circle->radius, range.size() );
+    return cylinderSpanning( points, Line3d( c, a ), circle->radius );
 }
 
 std::optional<Cone3d> findBestConeWithAxis( const Vector<Vector3d>& points, const Line3d& axis )
@@ -462,17 +585,59 @@ std::optional<Torus3d> findBestTorusWithAxis( const Vector<Vector3d>& points, co
     return Torus3d( axis.p + a * circle->center.y, a, circle->center.x, circle->radius );
 }
 
-Torus3d refineTorus( const Vector<Vector3d>& points, const Torus3d& torus )
+Torus3d refineTorus( const Vector<Vector3d>& points, const Torus3d& torus, size_t maxPoints )
 {
     // the center is shifted from the given one, so the relative tolerances of the minimization do not depend on the distance to the origin;
     // the minimization accepts only the steps decreasing the sum of squared distances
-    TorusDistances f{ points, torus.center };
     Eigen::VectorXd x( 8 );
     x << 0, 0, 0, torus.axis.x, torus.axis.y, torus.axis.z, torus.majorRadius, torus.minorRadius;
-    Eigen::LevenbergMarquardt<TorusDistances> lm( f );
-    lm.minimize( x );
-    const auto res = f.torus( x );
+    minimizeByPoints<TorusDistances>( points, torus.center, x, maxPoints );
+    const auto res = TorusDistances{ points, torus.center }.torus( x );
     return std::isfinite( res.center.x + res.center.y + res.center.z + res.axis.x + res.axis.y + res.axis.z + res.majorRadius + res.minorRadius ) ? res : torus;
+}
+
+Cylinder3d refineCylinder( const Vector<Vector3d>& points, const Cylinder3d& cylinder, size_t maxPoints )
+{
+    // the minimization needs at least as many points as it has parameters
+    if ( points.size() < 7 )
+        return cylinder;
+    // see the comments in refineTorus
+    Eigen::VectorXd x( 7 );
+    x << 0, 0, 0, cylinder.direction().x, cylinder.direction().y, cylinder.direction().z, cylinder.radius;
+    minimizeByPoints<CylinderDistances>( points, cylinder.center(), x, maxPoints );
+    const Vector3d c = cylinder.center() + Vector3d( x[0], x[1], x[2] ), a = Vector3d( x[3], x[4], x[5] ).normalized();
+    const double radius = std::abs( x[6] );
+    if ( !std::isfinite( c.x + c.y + c.z + a.x + a.y + a.z + radius ) || a == Vector3d() )
+        return cylinder;
+    return cylinderSpanning( points, Line3d( c, a ), radius );
+}
+
+Cone3d refineCone( const Vector<Vector3d>& points, const Cone3d& cone, size_t maxPoints )
+{
+    if ( points.size() < 7 )
+        return cone;
+    // see the comments in refineTorus
+    Eigen::VectorXd x( 7 );
+    x << 0, 0, 0, cone.direction().x, cone.direction().y, cone.direction().z, cone.angle;
+    minimizeByPoints<ConeDistances>( points, cone.apex(), x, maxPoints );
+    const Vector3d c = cone.apex() + Vector3d( x[0], x[1], x[2] );
+    Vector3d a = Vector3d( x[3], x[4], x[5] ).normalized();
+    // the same cone with the angle in [0, pi/2]: the distances keep their values if both the angle and the axis change the sign,
+    // and only change the sign if the angle is replaced with pi - angle and the axis is reversed
+    double angle = std::remainder( x[6], 2 * PI );
+    if ( angle < 0 )
+    {
+        angle = -angle;
+        a = -a;
+    }
+    if ( angle > PI2 )
+    {
+        angle = PI - angle;
+        a = -a;
+    }
+    if ( !std::isfinite( c.x + c.y + c.z + a.x + a.y + a.z + angle ) || a == Vector3d() )
+        return cone;
+    return coneSpanning( points, Line3d( c, a ), angle );
 }
 
 } //namespace MR

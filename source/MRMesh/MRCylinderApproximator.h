@@ -36,6 +36,7 @@ private:
     size_t thetaResolution_ = 0;
     size_t phiResolution_ = 0;
     bool isMultithread_ = true;
+    size_t maxRefinePoints_ = 10000;
 
     //Input data converted to Eigen format and normalized to the avgPoint position of all points in the cloud.
     std::vector<Eigen::Vector<T, 3>> normalizedPoints_ = {};
@@ -58,9 +59,13 @@ public:
 
     MRMESH_API void reset();
 
-    // Solver for CylinderFitterType::HemisphereSearchFit type
+    // Both solvers return the mean of squared distances from the points to the found cylinder, or -1 for fewer than 6 points.
+
+    // Solver for CylinderFitterType::HemisphereSearchFit type: the best direction of the search is then refined by refineCylinder (see MRBestFit.h)
     // thetaResolution_, phiResolution_  must be positive and as large as it posible. Price is CPU time. (~ 100 gives good results).
-    MRMESH_API T solveGeneral( const std::vector<MR::Vector3<T>>& points, Cylinder3<T>& cylinder, size_t theta = 180, size_t phi = 90, bool isMultithread = true );
+    // maxRefinePoints is passed to refineCylinder: at most this number of points is used in its minimization
+    MRMESH_API T solveGeneral( const std::vector<MR::Vector3<T>>& points, Cylinder3<T>& cylinder, size_t theta = 180, size_t phi = 90, bool isMultithread = true,
+        size_t maxRefinePoints = 10000 );
 
     // Solver for CylinderFitterType::SpecificAxisFit type
     // Simplet way in case of we already know clinder axis

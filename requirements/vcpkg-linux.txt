@@ -1,9 +1,6 @@
 boost-algorithm
-boost-functional
 boost-locale
-boost-move
 boost-program-options
-boost-range
 boost-serialization
 boost-signals2
 boost-stacktrace

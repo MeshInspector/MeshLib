@@ -35,11 +35,8 @@
         "type": "vcpkg-registry",
         "ports": [
           "boost-algorithm",
-          "boost-functional",
           "boost-locale",
-          "boost-move",
           "boost-program-options",
-          "boost-range",
           "boost-serialization",
           "boost-signals2",
           "boost-stacktrace",
@@ -48,11 +45,8 @@
       },
       "version": {
         "boost-algorithm": "1.92.0#0",
-        "boost-functional": "1.92.0#0",
         "boost-locale": "1.92.0#0",
-        "boost-move": "1.92.0#0",
         "boost-program-options": "1.92.0#0",
-        "boost-range": "1.92.0#0",
         "boost-serialization": "1.92.0#0",
         "boost-signals2": "1.92.0#0",
         "boost-stacktrace": "1.92.0#0",

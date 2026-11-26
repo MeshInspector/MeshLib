@@ -17,7 +17,7 @@ The tables below categorize MeshLib's supported file formats based on their type
 | **STL** | Yes | No | No | Yes |
 | **OBJ** | Yes | Yes | Yes | Yes |
 | **OFF** | Yes | No | No | Yes |
-| **DXF** | Yes | No | No | Yes |
+| **DXF** | Yes | No | No | No |
 | **STEP** | Yes | No | Yes | No |
 | **STP** | Yes | No | Yes | No |
 | **CTM** | Yes | No | Yes | Yes |
@@ -40,6 +40,7 @@ The tables below categorize MeshLib's supported file formats based on their type
 | **ASC** | Yes | Yes | Yes |
 | **CSV** | Yes | No | No |
 | **DRC** | Yes | Yes | Yes |
+| **DXF** | Yes | No | No |
 | **E57** | Yes | Yes | No |
 | **LAS** | Yes | Yes | No |
 | **LAZ** | Yes | Yes | No |
@@ -53,6 +54,7 @@ The tables below categorize MeshLib's supported file formats based on their type
 | **Format** | **Import** | **Export** |
 | --- | --- | --- |
 | **DICOM (.DCM)** | Yes | Yes |
+| **GAV** | Yes | Yes |
 | **RAW** | Yes | Yes |
 | **TIFF (.TIF, .TIFF)** | Yes | No |
 | **VDB** | Yes | Yes |
@@ -62,9 +64,12 @@ The tables below categorize MeshLib's supported file formats based on their type
 | **Format** | **Import** | **Export** |
 | --- | --- | --- |
 | **DXF** | Yes | Yes |
-| **GAV** | Yes | Yes |
+| **PLY** | Yes | Yes |
 | **PTS** | Yes | Yes |
 | **SVG** | Yes | No |
+
+> [!NOTE]
+> DXF files are loaded as polylines from LINE, LWPOLYLINE, POLYLINE, CIRCLE and ARC entities; arcs are approximated by segments. 3DFACE entities are loaded as a mesh, and POINT entities as a point cloud.
 
 ### Distance Map Formats
 

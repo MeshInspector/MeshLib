@@ -905,7 +905,7 @@ Expected<TriMesh> fromDxfAsTriMesh( std::istream& in, const MeshLoadSettings& se
     }
 
     if ( triangles.empty() )
-        return unexpected( "No mesh is found" );
+        return unexpected( stringUnsupportedFileFormat() + ": no mesh is found in DXF file" ); // lines or points can be there
 
     MeshBuilder::VertexIdentifier vi;
     vi.reserve( triangles.size() );

@@ -231,7 +231,7 @@ jobs:
           MESHLIB_BUILD_DEBUG: "OFF"
           MR_EMSCRIPTEN_SINGLE: ${{ fromJSON('["OFF", "ON"]')[matrix.singlethread == 1] }}
           MR_EMSCRIPTEN_WASM64: ${{ fromJSON('["OFF", "ON"]')[matrix.wasm64 == 1] }}
-          # No viewer: with it, ConfigureEmscripten.cmake adds the GL/GLFW glue and the asyncify instrumentation to every executable.
+          # No viewer: with it, ConfigureEmscripten.cmake adds the GL/GLFW glue (and asyncify with MR_EMSCRIPTEN_ASYNCIFY=ON) to every executable.
           MR_CMAKE_OPTIONS: >
             -DMR_CXX_STANDARD=23
             -DMR_PCH_USE_EXTRA_HEADERS=ON

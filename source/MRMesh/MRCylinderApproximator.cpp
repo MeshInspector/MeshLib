@@ -1,4 +1,5 @@
 #include "MRCylinderApproximator.h"
+#include "MRBestFit.h"
 #include "MRConstants.h"
 #include "MRCylinder3.h"
 #include "MRParallelFor.h"
@@ -29,11 +30,12 @@ void Cylinder3Approximation<T>::reset()
 
 template <typename T>
 T Cylinder3Approximation<T>::solveGeneral( const std::vector<Vector3<T>>& points, Cylinder3<T>& cylinder, size_t theta,
-    size_t phi, bool isMultithread )
+    size_t phi, bool isMultithread, size_t maxRefinePoints )
 {
     thetaResolution_ = theta;
     phiResolution_ = phi;
     isMultithread_ = isMultithread;
+    maxRefinePoints_ = maxRefinePoints;
     fitter_ = CylinderFitterType::HemisphereSearchFit;
     assert( thetaResolution_ > 0 );
     assert( phiResolution_ > 0 );
@@ -100,6 +102,19 @@ T Cylinder3Approximation<T>::solve( const std::vector<Vector3<T>>& points, Cylin
     cylinder.center() = fromEigen( bestPC ) + avgPoint;
     cylinder.direction() = ( fromEigen( bestW ) ).normalized();
     cylinder.radius = std::sqrt( rootSquare );
+
+    if ( fitter_ == CylinderFitterType::HemisphereSearchFit )
+    {
+        // the best direction of the search is refined together with other parameters by the distances from the points to the cylinder
+        const auto res = refineCylinder( Vector<Vector3d>( points.begin(), points.end() ), Cylinder3d( Vector3d( cylinder.center() ), Vector3d( cylinder.direction() ), cylinder.radius, 0 ), maxRefinePoints_ );
+        cylinder.center() = Vector3<T>( res.center() );
+        cylinder.direction() = Vector3<T>( res.direction() ).normalized();
+        cylinder.radius = T( res.radius );
+    }
+    error = 0;
+    for ( const auto& p : points )
+        error += sqr( cross( p - cylinder.center(), cylinder.direction() ).length() - cylinder.radius );
+    error /= T( points.size() );
 
     // Calculate a max. possible length of a cylinder covered by dataset.
     // Project point on a main cylinder axis

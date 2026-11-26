@@ -1,123 +1,34 @@
 #include "MRConeApproximator.h"
+#include "MRBestFit.h"
 #include "MRConstants.h"
 #include "MRParallelFor.h"
-#include "MRToFromEigen.h"
+#include "MRVector.h"
 #include "MRPch/MRSuppressWarning.h"
 
 #include <Eigen/SVD>
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable: 4244) // conversion from double to float
-#pragma warning(disable: 4464) // relative include path contains '..'
-#endif
-#include <unsupported/Eigen/NonLinearOptimization>
-#include <unsupported/Eigen/NumericalDiff>
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
-
 #include <algorithm>
 
-// Main idea is here: https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf pages 45-51
-// Below we will write out the function and Jacobian for minimization by the Levenberg-Marquard method
-// and use it to clarify the apex of the cone and the direction of its main axis.
+// The initial cone is found as in https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf pages 45-51,
+// and then it is refined by refineCone, which minimizes the distances from the points to the cone.
 
 namespace MR
 {
 
-// to use Levenberg-Marquardt minimization we need a special type of functor
-// to look1: https://github.com/cryos/eigen/blob/master/unsupported/test/NonLinearOptimization.cpp : lmder_functor
-// to look2: https://eigen.tuxfamily.org/dox-devel/unsupported/group__NonLinearOptimization__Module.html
-template <typename T>
-struct ConeFittingFunctor
+namespace
 {
-    using Scalar = T;
-    using InputType = Eigen::Matrix<T, Eigen::Dynamic, 1>;
-    using ValueType = Eigen::Matrix<T, Eigen::Dynamic, 1>;
-    using JacobianType = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
 
-    std::vector <Eigen::Vector3<T>> points;
+/// given cone refined by the points; its height is not updated
+template <typename T>
+void refine( const Vector<Vector3d>& points, Cone3<T>& cone, size_t maxPoints )
+{
+    const auto res = refineCone( points, Cone3d( Line3d( Vector3d( cone.apex() ), Vector3d( cone.direction() ) ), cone.angle, cone.height ), maxPoints );
+    cone.apex() = Vector3<T>( res.apex() );
+    cone.direction() = Vector3<T>( res.direction() ).normalized();
+    cone.angle = T( res.angle );
+}
 
-    void setPoints( const std::vector<MR::Vector3<T>>& pointsMR )
-    {
-        points.reserve( pointsMR.size() );
-        for ( auto i = 0; i < pointsMR.size(); ++i )
-        {
-            points.push_back( toEigen( pointsMR[i] ) );
-        }
-    }
-
-    int inputs() const
-    {
-        return 6;
-    }
-    int values() const
-    {
-        return static_cast< int > ( points.size() );
-    }
-
-    // https://www.geometrictools.com/Documentation/LeastSquaresFitting.pdf formula 103
-    // F[i](V,W) = D^T * (I - W * W^T) * D
-    // where: D = V - X[i] and P = (V,W)
-    int operator()( const InputType& x, ValueType& F ) const
-    {
-        Eigen::Vector3<T> V;
-        V( 0 ) = x( 0 );
-        V( 1 ) = x( 1 );
-        V( 2 ) = x( 2 );
-
-        Eigen::Vector3<T> W;
-        W( 0 ) = x( 3 );
-        W( 1 ) = x( 4 );
-        W( 2 ) = x( 5 );
-
-        for ( int i = 0; i < points.size(); ++i )
-        {
-            Eigen::Vector3<T> delta = V - points[i];
-            T deltaDotW = delta.dot( W );
-            F[i] = delta.squaredNorm() - deltaDotW * deltaDotW;
-        }
-        return 0;
-    }
-
-    // Here we calculate a Jacobian.
-    // function name requested by Eigen lib.
-    int df( const InputType& x, JacobianType& J ) const
-    {
-
-        Eigen::Vector3<T> V;
-        V( 0 ) = x( 0 );
-        V( 1 ) = x( 1 );
-        V( 2 ) = x( 2 );
-
-        Eigen::Vector3<T> W;
-        W( 0 ) = x( 3 );
-        W( 1 ) = x( 4 );
-        W( 2 ) = x( 5 );
-
-        for ( int i = 0; i < points.size(); ++i )
-        {
-            const Eigen::Vector3<T>& P = points[i];
-            Eigen::Vector3<T> D = ( V - P );
-            T PW = D.dot( W );
-            Eigen::Vector3<T> PVW = V - P - PW * W;
-            Eigen::Vector3<T> PWD = PW * D;
-
-            // Derivative of f with respect to the components of vertex V
-            J( i, 0 ) = 2 * PVW.x();
-            J( i, 1 ) = 2 * PVW.y();
-            J( i, 2 ) = 2 * PVW.z();
-
-            // Derivative of f with respect to the components of the vector W
-            J( i, 3 ) = -2 * PWD.x();
-            J( i, 4 ) = -2 * PWD.y();
-            J( i, 5 ) = -2 * PWD.z();
-        }
-        return 0;
-    }
-
-};
+} //anonymous namespace
 
 template <typename T>
 T Cone3Approximation<T>::solve( const std::vector<MR::Vector3<T>>& points,
@@ -144,39 +55,13 @@ T Cone3Approximation<T>::solve( const std::vector<MR::Vector3<T>>& points,
 
 template <typename T>
 T Cone3Approximation<T>::solveFixedAxis_( const std::vector<MR::Vector3<T>>& points,
-    Cone3<T>& cone, bool useConeInputAsInitialGuess )
+    Cone3<T>& cone, bool useInputAxis )
 {
-    ConeFittingFunctor<T> coneFittingFunctor;
-    coneFittingFunctor.setPoints( points );
-    Eigen::LevenbergMarquardt<ConeFittingFunctor<T>, T> lm( coneFittingFunctor );
-    lm.parameters.maxfev = params_.levenbergMarquardtMaxIteration;
-
     MR::Vector3<T> center, U;
     computeCenterAndNormal_( points, center, U );
-
-    MR::Vector3<T>& coneAxis = cone.direction();
-    if ( useConeInputAsInitialGuess )
-    {
-        coneAxis = coneAxis.normalized();
-    }
-    else
-    {
-        cone = computeInitialCone_( points, center, U );
-    }
-
-    Eigen::VectorX<T> fittedParams( 6 );
-    coneToFitParams_( cone, fittedParams );
-    [[maybe_unused]] Eigen::LevenbergMarquardtSpace::Status result = lm.minimize( fittedParams );
-
-    // Looks like a bug in Eigen. Eigen::LevenbergMarquardtSpace::Status have error codes only. Not return value for Success minimization.
-    // So just log status
-
-    fitParamsToCone_( fittedParams, cone );
-
-    T const one_v = static_cast< T >( 1 );
-    auto cosAngle = std::clamp( one_v / coneAxis.length(), static_cast< T >( 0 ), one_v );
-    cone.angle = std::acos( cosAngle );
-    cone.direction() = cone.direction().normalized();
+    // only the axis of the input cone is used
+    cone = computeInitialCone_( points, center, useInputAxis ? cone.direction().normalized() : U );
+    refine( Vector<Vector3d>( points.begin(), points.end() ), cone, params_.maxRefinePoints );
     cone.height = calculateConeHeight_( points, cone );
 
     return getApproximationRMS_( points, cone );
@@ -198,11 +83,10 @@ template <typename T>
 T Cone3Approximation<T>::solveHemisphereSearchFit_( const std::vector<MR::Vector3<T>>& points, Cone3<T>& cone )
 {
     Vector3<T> center = computeCenter_( points );
-    ConeFittingFunctor<T> coneFittingFunctor;
-    coneFittingFunctor.setPoints( points );
+    const Vector<Vector3d> pointsDouble( points.begin(), points.end() );
 
     constexpr T pi2 = static_cast< T >( PI2 );
-    T const theraStep = static_cast< T >( 2 * PI ) / params_.hemisphereSearchPhiResolution;
+    T const theraStep = static_cast< T >( 2 * PI ) / params_.hemisphereSearchThetaResolution;
     T const phiStep = pi2 / params_.hemisphereSearchPhiResolution;
 
     struct BestCone {
@@ -228,24 +112,6 @@ T Cone3Approximation<T>::solveHemisphereSearchFit_( const std::vector<MR::Vector
 
             auto tmpCone = computeInitialCone_( points, center, U );
 
-            Eigen::VectorX<T> fittedParams( 6 );
-            coneToFitParams_( tmpCone, fittedParams );
-
-            // create approximator and minimize functor
-            Eigen::LevenbergMarquardt<ConeFittingFunctor<T>, T> lm( coneFittingFunctor );
-            lm.parameters.maxfev = params_.levenbergMarquardtMaxIteration;
-            [[maybe_unused]] Eigen::LevenbergMarquardtSpace::Status result = lm.minimize( fittedParams );
-
-            // Looks like a bug in Eigen. Eigen::LevenbergMarquardtSpace::Status have error codes only.
-            // Not return value for Success minimization.
-
-            fitParamsToCone_( fittedParams, tmpCone );
-
-            T const one_v = static_cast< T >( 1 );
-            auto cosAngle = std::clamp( one_v / tmpCone.direction().length(), static_cast< T >( 0 ), one_v );
-            tmpCone.angle = std::acos( cosAngle );
-            tmpCone.direction() = tmpCone.direction().normalized();
-
             // calculate approximation error and store best result.
             T error = getApproximationRMS_( points, tmpCone );
             if ( error < bestCones[j].minError )
@@ -256,7 +122,20 @@ T Cone3Approximation<T>::solveHemisphereSearchFit_( const std::vector<MR::Vector
         }
     } );
 
-    // find best result
+    // only the best initial cone of each row of directions is refined
+    ParallelFor( size_t( 0 ), bestCones.size(), [&] ( size_t i )
+    {
+        auto& best = bestCones[i];
+        if ( best.minError == std::numeric_limits<T>::max() )
+            return;
+        auto refined = best.bestCone;
+        refine( pointsDouble, refined, params_.maxRefinePoints );
+        if ( const T error = getApproximationRMS_( points, refined ); error < best.minError )
+        {
+            best.minError = error;
+            best.bestCone = refined;
+        }
+    } );
     auto bestAppox = std::min_element( bestCones.begin(), bestCones.end(), [] ( const BestCone& a, const BestCone& b )
     {
         return a.minError < b.minError;
@@ -420,33 +299,6 @@ void Cone3Approximation<T>::findBestFitLine_( const std::vector<MR::Vector2<T>>&
         *avg = *avg / static_cast < T > ( xyPairs.size() );
         avg->y = lineA * avg->x + lineB;
     }
-}
-
-template <typename T>
-void Cone3Approximation<T>::fitParamsToCone_( Eigen::Vector<T, Eigen::Dynamic>& fittedParams, Cone3<T>& cone )
-{
-    cone.apex().x = fittedParams[0];
-    cone.apex().y = fittedParams[1];
-    cone.apex().z = fittedParams[2];
-
-    cone.direction().x = fittedParams[3];
-    cone.direction().y = fittedParams[4];
-    cone.direction().z = fittedParams[5];
-}
-
-template <typename T>
-void Cone3Approximation<T>::coneToFitParams_( Cone3<T>& cone, Eigen::Vector<T, Eigen::Dynamic>& fittedParams )
-{
-    // The fittedParams guess for the cone vertex.
-    fittedParams[0] = cone.apex().x;
-    fittedParams[1] = cone.apex().y;
-    fittedParams[2] = cone.apex().z;
-
-    // The initial guess for the weighted cone axis.
-    T coneCosAngle = std::cos( cone.angle );
-    fittedParams[3] = cone.direction().x / coneCosAngle;
-    fittedParams[4] = cone.direction().y / coneCosAngle;
-    fittedParams[5] = cone.direction().z / coneCosAngle;
 }
 
 template class Cone3Approximation<float>;

@@ -39,8 +39,7 @@ class IScannerBackend
 public:
     virtual ~IScannerBackend() = default;
 
-    // The scanner's name, e.g. "Polyga"; lowercased, the Config object shared with the host's settings (rotate*, registration),
-    // so a backend updates it by read-modify-write.
+    // The scanner's name, e.g. "Polyga".
     virtual std::string name() const = 0;
     virtual bool runtimeLoaded() const = 0;
     virtual bool isReady() const = 0; // can capture(), e.g. connected
@@ -69,15 +68,15 @@ public:
     virtual Expected<void> captureFrame() { return {}; }
 
     // The UI as data, rebuilt on every call:
-    //   { "groups": [ { "title"?, "params": [<param>...] } ],
-    //     "actionGroups": [ { "title"?, "status"?, "statusArg"?, "actions": [<action>...] } ] }
-    // <param>: key, type (float|int|bool|enum|info|path), label, value; for a path also filters ("*.a;*.b",
+    //   { "groups": [ { "title"?, "params": [`<param>`...] } ],
+    //     "actionGroups": [ { "title"?, "status"?, "statusArg"?, "actions": [`<action>`...] } ] }
+    // `<param>`: key, type (float|int|bool|enum|info|path), label, value; for a path also filters ("*.a;*.b",
     //   named by the label; the value is a UTF-8 path picked from such files); optional: enabled, tooltip,
     //   min, max, step, unit ("ms"), precision, options (enum labels; the value is the index).
-    // <action>: key, label; optional: tooltip, enabled, filters (pick a file, passed as a UTF-8 path),
+    // `<action>`: key, label; optional: tooltip, enabled, filters (pick a file, passed as a UTF-8 path),
     //   save (pick a file to write), advanced (shown with Ctrl+Shift), experimental.
-    // Texts are English, marked _t; "{}" in a status is replaced by statusArg. Widget IDs are label##key
-    //   (a path: ##key and ...##key).
+    // Texts are English, marked _t; "{}" in a status is replaced by statusArg. Widget IDs are `label##key`
+    //   (a path: `##key` and `...##key`).
     virtual Json::Value paramSchema() const = 0;
     virtual void setParam( const std::string& key, const Json::Value& value ) = 0;
 
@@ -90,13 +89,15 @@ public:
     // The up direction of the scanner's frame, to orient the camera to a new scan.
     virtual Vector3f upDirection() const { return Vector3f::minusY(); }
 
-    // All settings in Config: the host loads them once and saves them whenever it closes the backend
+    // All settings, in the Config object toLower( name() ) shared with the host's settings (rotate*, registration),
+    // so saveSettings() updates its own fields there, never replaces the object. The host loads them once and saves
+    // them whenever it closes the backend.
     virtual void loadSettings() = 0;
     virtual void saveSettings() = 0;
     virtual void resetSettings() = 0;
 };
 
-// A schema <param> with its required fields.
+// A schema `<param>` with its required fields.
 inline Json::Value scannerParam( std::string key, std::string label, std::string type, Json::Value value )
 {
     Json::Value p;

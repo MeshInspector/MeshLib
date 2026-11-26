@@ -122,9 +122,10 @@ private:
 public:
     /// Creates a new widget for visualizing the ray/axis and adds it to scene
     /// subscribes to viewer events
-    /// @param line initial line
+    /// @param ray initial ray
     /// @param length length of the visual object
     /// @param onRayChanged callback for the ray change
+    /// @param parent parent object for the widget, nullptr means scene root
     MRVIEWER_API void create( const Line3f& ray, float length, OnRayChangedCallback onRayChanged, VisualObject* parent = nullptr  );
 
     /// Removes the widget from the scene

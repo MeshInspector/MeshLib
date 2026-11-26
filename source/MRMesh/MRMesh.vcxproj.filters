@@ -138,6 +138,12 @@
     <ClInclude Include="MRBestFit.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRBSpline.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MRConformalMap.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
     <ClInclude Include="MRAffineXf3.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
@@ -1566,6 +1572,12 @@
       <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRBestFit.cpp">
+      <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MRBSpline.cpp">
+      <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MRConformalMap.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRBitSet.cpp">

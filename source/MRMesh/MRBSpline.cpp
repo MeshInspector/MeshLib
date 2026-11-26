@@ -1,0 +1,314 @@
+#include "MRBSpline.h"
+#include "MRSymMatrix2.h"
+#include "MRTimer.h"
+#include "MRPch/MREigenSparseCore.h"
+#include <Eigen/SparseCholesky>
+#include <Eigen/SparseLU>
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <cmath>
+#include <limits>
+#include <numeric>
+
+namespace MR
+{
+
+namespace
+{
+
+constexpr int cMaxDegree = 7;
+
+/// values of (deg+1) non-zero B-spline basis functions at t, and optionally their derivatives;
+/// \return the index of the first of them
+int bsplineBasis( const Vector<double>& knots, int deg, double t, double* vals, double* ders )
+{
+    assert( deg >= 1 && deg <= cMaxDegree );
+    const int span = int( std::upper_bound( knots.begin() + deg + 1, knots.end() - deg - 1, t ) - knots.begin() ) - 1;
+    double left[cMaxDegree + 1], right[cMaxDegree + 1], low[cMaxDegree + 1];
+    vals[0] = 1;
+    for ( int j = 1; j <= deg; ++j )
+    {
+        if ( ders && j == deg )
+            std::copy( vals, vals + deg, low );
+        left[j] = t - knots[span + 1 - j];
+        right[j] = knots[span + j] - t;
+        double saved = 0;
+        for ( int r = 0; r < j; ++r )
+        {
+            const double temp = vals[r] / ( right[r + 1] + left[j - r] );
+            vals[r] = saved + right[r + 1] * temp;
+            saved = left[j - r] * temp;
+        }
+        vals[j] = saved;
+    }
+    if ( ders )
+    {
+        for ( int j = 0; j <= deg; ++j )
+        {
+            const int i = span - deg + j;
+            const double t1 = j >= 1 ? low[j - 1] / ( knots[i + deg] - knots[i] ) : 0;
+            const double t2 = j < deg ? low[j] / ( knots[i + deg + 1] - knots[i + 1] ) : 0;
+            ders[j] = deg * ( t1 - t2 );
+        }
+    }
+    return span - deg;
+}
+
+/// whether the degree is supported and the knots are consistent with it and with the number of control points
+bool isValid( const Vector<double>& knots, int deg, size_t numControlPoints )
+{
+    return deg >= 1 && deg <= cMaxDegree && numControlPoints > size_t( deg ) && knots.size() == numControlPoints + deg + 1;
+}
+
+/// clamped knots with uniform inner spacing on [0, 1] for given number of control points and degree
+Vector<double> makeClampedUniformKnots( int numControlPoints, int degree )
+{
+    const int n = numControlPoints;
+    Vector<double> res( n + degree + 1, 1.0 );
+    for ( int i = 0; i <= degree; ++i )
+        res[i] = 0;
+    for ( int i = degree + 1; i < n; ++i )
+        res[i] = double( i - degree ) / ( n - degree );
+    return res;
+}
+
+/// solves the system factorized by s with n x 3 right-hand side into n points;
+/// \return false if the factorization failed
+template <typename S>
+bool solve( const S& s, const Eigen::MatrixXd& b, Vector<Vector3d>& x )
+{
+    if ( s.info() != Eigen::Success )
+        return false;
+    const Eigen::MatrixXd sol = s.solve( b );
+    x.resize( sol.rows() );
+    for ( int i = 0; i < int( x.size() ); ++i )
+        x[i] = Vector3d( sol( i, 0 ), sol( i, 1 ), sol( i, 2 ) );
+    return true;
+}
+
+} //anonymous namespace
+
+bool BSplineCurve::valid() const
+{
+    return isValid( knots, degree, controlPoints.size() );
+}
+
+Vector3d BSplineCurve::eval( double t ) const
+{
+    if ( !valid() )
+        return {};
+    double b[cMaxDegree + 1];
+    const int i0 = bsplineBasis( knots, degree, t, b, nullptr );
+    Vector3d res;
+    for ( int j = 0; j <= degree; ++j )
+        res += b[j] * controlPoints[i0 + j];
+    return res;
+}
+
+bool BSplineSurface::valid() const
+{
+    const int nu = numU(), nv = numV();
+    return nu > 0 && nv > 0 && isValid( knotsU, degreeU, nu ) && isValid( knotsV, degreeV, nv ) && controlPoints.size() == size_t( nu ) * nv;
+}
+
+Vector3d BSplineSurface::eval( const Vector2d& uv, Vector3d* du, Vector3d* dv ) const
+{
+    if ( !valid() )
+    {
+        if ( du )
+            *du = Vector3d();
+        if ( dv )
+            *dv = Vector3d();
+        return {};
+    }
+    double bu[cMaxDegree + 1], bv[cMaxDegree + 1], dbu[cMaxDegree + 1], dbv[cMaxDegree + 1];
+    const int nv = numV();
+    const int iu = bsplineBasis( knotsU, degreeU, uv.x, bu, du ? dbu : nullptr );
+    const int iv = bsplineBasis( knotsV, degreeV, uv.y, bv, dv ? dbv : nullptr );
+    Vector3d res;
+    if ( du )
+        *du = Vector3d();
+    if ( dv )
+        *dv = Vector3d();
+    for ( int a = 0; a <= degreeU; ++a )
+        for ( int b = 0; b <= degreeV; ++b )
+        {
+            const Vector3d& p = controlPoints[( iu + a ) * nv + iv + b];
+            res += bu[a] * bv[b] * p;
+            if ( du )
+                *du += dbu[a] * bv[b] * p;
+            if ( dv )
+                *dv += bu[a] * dbv[b] * p;
+        }
+    return res;
+}
+
+Vector3d BSplineSurface::normal( const Vector2d& uv ) const
+{
+    Vector3d du, dv;
+    (void)eval( uv, &du, &dv );
+    return cross( du, dv ).normalized();
+}
+
+Vector2d BSplineSurface::project( const Vector3d& p, Vector2d uv, int iterations ) const
+{
+    if ( !valid() )
+        return uv;
+    const double u0 = knotsU[degreeU], u1 = knotsU[numU()], v0 = knotsV[degreeV], v1 = knotsV[numV()];
+    uv = Vector2d( std::clamp( uv.x, u0, u1 ), std::clamp( uv.y, v0, v1 ) );
+    Vector3d su, sv;
+    Vector3d r = p - eval( uv, &su, &sv );
+    for ( int it = 0; it < iterations; ++it )
+    {
+        // Gauss-Newton step: minimize the quadratic model of the squared distance in the domain
+        SymMatrix2d h;
+        h.xx = dot( su, su );
+        h.xy = dot( su, sv );
+        h.yy = dot( sv, sv );
+        const Vector2d g( dot( su, r ), dot( sv, r ) );
+        const auto model = [&]( const Vector2d& x ) { const Vector2d d = x - uv; return dot( d, 0.5 * ( h * d ) - g ); };
+        // the minimum in the domain is on the line u = c.x or on the line v = c.y, where c is the minimum in the plane clamped to the domain
+        const Vector2d m = uv + h.pseudoinverse() * g;
+        const Vector2d c( std::clamp( m.x, u0, u1 ), std::clamp( m.y, v0, v1 ) );
+        const Vector2d a( c.x, h.yy > 0 ? std::clamp( uv.y + ( g.y - h.xy * ( c.x - uv.x ) ) / h.yy, v0, v1 ) : c.y );
+        const Vector2d b( h.xx > 0 ? std::clamp( uv.x + ( g.x - h.xy * ( c.y - uv.y ) ) / h.xx, u0, u1 ) : c.x, c.y );
+        // accept a step giving 1/4 of the predicted decrease -2 * model( next ) (2 times too long gives 0), else shorten it to the minimum
+        // of the parabola through both ends with the slope at uv; stop below the rounding error of the surface point, a few eps * ( |p| + |r| )
+        const double tol = 8 * std::numeric_limits<double>::epsilon() * r.length() * ( p.length() + r.length() );
+        Vector2d next = model( a ) <= model( b ) ? a : b;
+        Vector3d nr, nsu, nsv;
+        while ( -2 * model( next ) > tol && ( nr = p - eval( next, &nsu, &nsv ) ).lengthSq() > r.lengthSq() + model( next ) / 2 )
+        {
+            const double gd = dot( g, next - uv );
+            next = uv + std::clamp( gd / ( nr.lengthSq() - r.lengthSq() + 2 * gd ), 0.1, 0.5 ) * ( next - uv );
+        }
+        if ( !( -2 * model( next ) > tol ) )
+            break;
+        uv = next;
+        r = nr;
+        su = nsu;
+        sv = nsv;
+    }
+    return uv;
+}
+
+std::optional<BSplineCurve> interpolateBSplineCurve( const Vector<Vector3d>& points )
+{
+    const int n = int( points.size() );
+    if ( n < 2 )
+        return std::nullopt;
+    Vector<double> t( n, 0.0 );
+    for ( int i = 1; i < n; ++i )
+    {
+        t[i] = t[i - 1] + ( points[i] - points[i - 1] ).length();
+        if ( !( t[i] > t[i - 1] ) ) // two consecutive points are equal, or not finite coordinates
+            return std::nullopt;
+    }
+    if ( !std::isfinite( t.back() ) )
+        return std::nullopt;
+    for ( auto& x : t )
+        x /= t.back(); // the last one becomes exactly 1
+
+    BSplineCurve res;
+    res.degree = std::min( 3, n - 1 );
+    const int k = res.degree;
+    // clamped knots with the inner ones being the averages of the parameters of the points
+    res.knots = makeClampedUniformKnots( n, k );
+    for ( int j = 1; j < n - k; ++j )
+        res.knots[j + k] = std::accumulate( t.begin() + j, t.begin() + j + k, 0.0 ) / k;
+
+    // the collocation matrix has at most k + 1 non-zeros in a row, and it is not singular for increasing parameters;
+    // it is factorized directly, since the normal equations would square its condition number
+    Vector<Eigen::Triplet<double>> trips;
+    trips.reserve( size_t( n ) * ( k + 1 ) );
+    Eigen::MatrixXd rhs( n, 3 );
+    for ( int i = 0; i < n; ++i )
+    {
+        double b[cMaxDegree + 1];
+        const int i0 = bsplineBasis( res.knots, k, t[i], b, nullptr );
+        for ( int j = 0; j <= k; ++j )
+            trips.emplace_back( i, i0 + j, b[j] );
+        for ( int c = 0; c < 3; ++c )
+            rhs( i, c ) = points[i][c];
+    }
+    Eigen::SparseMatrix<double> m( n, n );
+    m.setFromTriplets( trips.begin(), trips.end() );
+    if ( !solve( Eigen::SparseLU<Eigen::SparseMatrix<double>>( m ), rhs, res.controlPoints ) )
+        return std::nullopt;
+    return res;
+}
+
+std::optional<BSplineSurface> fitBSplineSurface( const Vector<Vector3d>& points, const Vector<Vector2d>& uvs, const BSplineSurfaceFitSettings& settings )
+{
+    MR_TIMER;
+    assert( points.size() == uvs.size() );
+    assert( !settings.weights || settings.weights->size() == points.size() );
+    const int nu = settings.numU, nv = settings.numV;
+    if ( nu < 4 || nv < 4 )
+        return std::nullopt;
+    BSplineSurface res;
+    res.knotsU = makeClampedUniformKnots( nu, res.degreeU );
+    res.knotsV = makeClampedUniformKnots( nv, res.degreeV );
+    const int k = nu * nv;
+    // all points in a knot span have the same 16 non-zero basis functions, so the normal equations are summed per span first,
+    // in the upper triangle of the 16 x 16 matrix of each span (control point indices increase with a)
+    const int numSpansV = nv - 3;
+    Vector<std::array<double, 256>> spanAta( size_t( nu - 3 ) * numSpansV );
+    Eigen::MatrixXd atb = Eigen::MatrixXd::Zero( k, 3 );
+    for ( size_t i = 0; i < points.size(); ++i )
+    {
+        double bu[4], bv[4];
+        const int iu = bsplineBasis( res.knotsU, 3, uvs[i].x, bu, nullptr );
+        const int iv = bsplineBasis( res.knotsV, 3, uvs[i].y, bv, nullptr );
+        const double w = settings.weights ? ( *settings.weights )[i] : 1.0;
+        double val[16];
+        for ( int a = 0; a < 16; ++a )
+            val[a] = bu[a / 4] * bv[a % 4];
+        auto& spanA = spanAta[iu * numSpansV + iv];
+        for ( int a = 0; a < 16; ++a )
+        {
+            for ( int b = a; b < 16; ++b )
+                spanA[a * 16 + b] += w * val[a] * val[b];
+            for ( int d = 0; d < 3; ++d )
+                atb( ( iu + a / 4 ) * nv + iv + a % 4, d ) += w * val[a] * points[i][d];
+        }
+    }
+    Vector<Eigen::Triplet<double>> trips;
+    trips.reserve( spanAta.size() * 136 + size_t( k ) * 12 );
+    for ( int s = 0; s < int( spanAta.size() ); ++s )
+    {
+        const int i0 = s / numSpansV * nv + s % numSpansV;
+        for ( int a = 0; a < 16; ++a )
+            for ( int b = a; b < 16; ++b )
+                trips.emplace_back( i0 + a / 4 * nv + a % 4, i0 + b / 4 * nv + b % 4, spanAta[s][a * 16 + b] );
+    }
+    // smoothing: second differences of the control net along u and v divided by the differences of the Greville abscissae
+    // ( knots[i + 1] + knots[i + 2] + knots[i + 3] ) / 3, scaled to ( 1, -2, 1 ) for equal differences; they are zero for bilinear functions of ( u, v )
+    const int numRows = ( nu - 2 ) * nv + nu * ( nv - 2 );
+    const double w2 = settings.smoothing * ( settings.weights ? std::accumulate( settings.weights->begin(), settings.weights->end(), 0.0 ) : double( points.size() ) ) / numRows;
+    auto addRow = [&]( const Vector<double>& knots, int i, int idx1, int step )
+    {
+        const double d0 = knots[i + 3] - knots[i], d1 = knots[i + 4] - knots[i + 1], h = ( d0 + d1 ) / 2; // 3 times the differences of the abscissae
+        const int idx[3] = { idx1 - step, idx1, idx1 + step };
+        const double val[3] = { h / d0, -h / d0 - h / d1, h / d1 };
+        for ( int a = 0; a < 3; ++a )
+            for ( int b = a; b < 3; ++b )
+                trips.emplace_back( idx[a], idx[b], w2 * val[a] * val[b] );
+    };
+    for ( int a = 0; a < nu; ++a )
+        for ( int b = 0; b < nv; ++b )
+        {
+            if ( a > 0 && a + 1 < nu )
+                addRow( res.knotsU, a, a * nv + b, nv );
+            if ( b > 0 && b + 1 < nv )
+                addRow( res.knotsV, b, a * nv + b, 1 );
+        }
+    Eigen::SparseMatrix<double> ata( k, k );
+    ata.setFromTriplets( trips.begin(), trips.end() );
+    if ( !solve( Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>, Eigen::Upper>( ata ), atb, res.controlPoints ) )
+        return std::nullopt;
+    return res;
+}
+
+} //namespace MR

@@ -1,0 +1,81 @@
+#pragma once
+
+#include "MRMeshFwd.h"
+#include "MRVector2.h"
+#include "MRVector.h"
+#include "MRVector3.h"
+#include <optional>
+
+namespace MR
+{
+
+/// non-rational B-spline curve in 3D
+/// \ingroup MathGroup
+struct BSplineCurve
+{
+    int degree = 3;                      ///< from 1 to 7
+    Vector<double> knots;           ///< non-decreasing, controlPoints.size() + degree + 1 values
+    Vector<Vector3d> controlPoints;
+
+    /// whether the degree is supported, there are more control points than the degree, and the number of knots is as above
+    [[nodiscard]] MRMESH_API bool valid() const;
+
+    /// the point of the curve at parameter t from [knots[degree], knots[controlPoints.size()]]; zero vector if not valid()
+    [[nodiscard]] MRMESH_API Vector3d eval( double t ) const;
+};
+
+/// non-rational tensor product B-spline surface
+/// \ingroup MathGroup
+struct BSplineSurface
+{
+    int degreeU = 3;                     ///< from 1 to 7
+    int degreeV = 3;                     ///< from 1 to 7
+    Vector<double> knotsU;          ///< non-decreasing, numU() + degreeU + 1 values
+    Vector<double> knotsV;          ///< non-decreasing, numV() + degreeV + 1 values
+    Vector<Vector3d> controlPoints; ///< numU() * numV() points, the point (i, j) has index i * numV() + j
+
+    /// the number of control points along u and v
+    [[nodiscard]] int numU() const { return int( knotsU.size() ) - degreeU - 1; }
+    [[nodiscard]] int numV() const { return int( knotsV.size() ) - degreeV - 1; }
+
+    /// whether the degrees are supported, there are more control points along u and v than the degree, and their total number is as above
+    [[nodiscard]] MRMESH_API bool valid() const;
+
+    /// the point of the surface at given parameters, and optionally its partial derivatives; zero vectors if not valid()
+    [[nodiscard]] MRMESH_API Vector3d eval( const Vector2d& uv, Vector3d* du = nullptr, Vector3d* dv = nullptr ) const;
+
+    /// unit normal of the surface at given parameters: cross( du, dv ) normalized, or zero vector where du and dv are zero or parallel
+    [[nodiscard]] MRMESH_API Vector3d normal( const Vector2d& uv ) const;
+
+    /// parameters in the domain of the surface point closest to given one: Gauss-Newton iterations with step control from uv clamped to the domain, stopping at rounding errors; given uv if not valid()
+    [[nodiscard]] MRMESH_API Vector2d project( const Vector3d& p, Vector2d uv, int iterations = 12 ) const;
+};
+
+/// B-spline curve of degree min( 3, points.size() - 1 ) passing through all given points,
+/// with the parameters of the points proportional to the length of the polyline through them, in [0, 1];
+/// \return nullopt for fewer than 2 points, two consecutive points equal, not finite coordinates, or a failed factorization
+[[nodiscard]] MRMESH_API std::optional<BSplineCurve> interpolateBSplineCurve( const Vector<Vector3d>& points );
+
+struct BSplineSurfaceFitSettings
+{
+    /// the number of control points along u and v, at least 4 (the degree is 3)
+    int numU = 4;
+    int numV = 4;
+
+    /// the weight of the second differences of the control net relative to the weights of the points, to keep the surface smooth where the points are sparse;
+    /// the differences are divided by the distances of the Greville abscissae, so they are zero for bilinear functions of (u, v)
+    double smoothing = 1e-7;
+
+    /// optional weights of the points, all 1 if not given
+    const Vector<double>* weights = nullptr;
+};
+
+/// bicubic B-spline surface over [0, 1] x [0, 1] fitted by least squares to the points with given parameters, expected in this square (outside, the end polynomials are extrapolated):
+/// minimizes the sum of weight * squared distance between each point and the surface at its parameters;
+/// the solution is unique if smoothing > 0 and no bilinear function of (u, v) but zero vanishes at all points with positive weights
+/// (which needs at least 4 points not all on one line), otherwise the control points can be arbitrary;
+/// \return nullopt if numU or numV is less than 4 or the factorization fails
+[[nodiscard]] MRMESH_API std::optional<BSplineSurface> fitBSplineSurface( const Vector<Vector3d>& points, const Vector<Vector2d>& uvs,
+    const BSplineSurfaceFitSettings& settings = {} );
+
+} //namespace MR

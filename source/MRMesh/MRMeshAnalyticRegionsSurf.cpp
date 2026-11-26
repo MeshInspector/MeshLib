@@ -4,8 +4,6 @@
 #include "MRMatrix3.h"
 #include "MRPlane3.h"
 
-#include <Eigen/Dense>
-
 namespace MR
 {
 
@@ -152,92 +150,15 @@ Surf refine( const Surf& s0, const Vector<V3>& pts )
             return toSurf( Sphere3d( refined.center, refined.minorRadius ) );
         return toSurf( refined );
     }
-    // cylinder or cone
-    constexpr int np = 7;
-    auto unpack = [&]( const Eigen::VectorXd& x )
-    {
-        Surf s;
-        s.type = s0.type;
-        s.c = V3( x[0], x[1], x[2] );
-        s.a = V3( x[3], x[4], x[5] ).normalized();
-        if ( s.type == SurfType::Cyl )
-        {
-            s.c -= s.a * dot( s.c, s.a );
-            s.r = std::abs( x[6] );
-        }
-        else
-            s.r = x[6];
-        return s;
-    };
-    auto residuals = [&]( const Eigen::VectorXd& x, Eigen::VectorXd& f )
-    {
-        const Surf s = unpack( x );
-        for ( size_t i = 0; i < pts.size(); ++i )
-            f[i] = s.dist( pts[i] );
-    };
-    Eigen::VectorXd x( np );
-    x << s0.c.x, s0.c.y, s0.c.z, s0.a.x, s0.a.y, s0.a.z, s0.r;
-    const int m = int( pts.size() );
-    Eigen::VectorXd f( m ), f1( m );
-    Eigen::MatrixXd jac( m, np );
-    residuals( x, f );
-    double cost = f.squaredNorm();
-    if ( !std::isfinite( cost ) )
-        return s0;
-    double lambda = 1e-3;
-    for ( int it = 0; it < 60; ++it )
-    {
-        for ( int j = 0; j < np; ++j )
-        {
-            Eigen::VectorXd xh = x;
-            const double h = 1e-7 * std::max( 1.0, std::abs( x[j] ) );
-            xh[j] += h;
-            residuals( xh, f1 );
-            jac.col( j ) = ( f1 - f ) / h;
-        }
-        const Eigen::MatrixXd jtj = jac.transpose() * jac;
-        const Eigen::VectorXd g = jac.transpose() * f;
-        bool improved = false;
-        for ( int k = 0; k < 12; ++k )
-        {
-            Eigen::MatrixXd lhs = jtj;
-            for ( int j = 0; j < np; ++j )
-                lhs( j, j ) += lambda * std::max( jtj( j, j ), 1e-12 );
-            const Eigen::VectorXd dx = lhs.ldlt().solve( -g );
-            const Eigen::VectorXd xn = x + dx;
-            residuals( xn, f1 );
-            const double c1 = f1.squaredNorm();
-            if ( std::isfinite( c1 ) && c1 < cost )
-            {
-                const bool converged = cost - c1 <= 1e-14 * cost;
-                x = xn;
-                f = f1;
-                cost = c1;
-                lambda = std::max( lambda * 0.2, 1e-12 );
-                improved = !converged;
-                break;
-            }
-            lambda *= 5;
-        }
-        if ( !improved )
-            break;
-    }
-    Surf res = unpack( x );
-    if ( res.type == SurfType::Cone )
-    {
-        // half-angle must be in (0, pi/2)
-        res.r = std::remainder( res.r, 2 * PI );
-        if ( res.r < 0 )
-        {
-            res.r = -res.r;
-            res.a = -res.a;
-        }
-        if ( res.r > PI / 2 )
-        {
-            res.r = PI - res.r;
-            res.a = -res.a;
-        }
-    }
+    // cylinder or cone; the refinements need at least 7 points, and a surface through fewer points (e.g. a cylinder through
+    // two triangles) is found by them too if all the points are repeated: it does not change the closest surface
+    Vector<V3> repeated;
+    while ( pts.size() < 7 && repeated.size() < 7 )
+        for ( const auto& q : pts )
+            repeated.push_back( q );
+    const auto& ps = repeated.empty() ? pts : repeated;
+    const Surf res = s0.type == SurfType::Cyl ? toSurf( refineCylinder( ps, Cylinder3d( s0.c, s0.a, s0.r, 0 ) ) )
+        : toSurf( refineCone( ps, Cone3d( Line3d( s0.c, s0.a ), s0.r, 0 ) ) );
     return res.finite() ? res : s0;
 }
 

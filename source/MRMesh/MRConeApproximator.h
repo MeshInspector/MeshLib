@@ -11,20 +11,17 @@ enum class ConeFitterType
 {
     ApproximationPCM, // approximation of cone axis by principal component method
     HemisphereSearchFit,
-    SpecificAxisFit
+    SpecificAxisFit // the initial approximation is found for the axis of the given cone
 };
 
 struct Cone3ApproximationParams {
-    int levenbergMarquardtMaxIteration = 40;
     ConeFitterType coneFitterType = ConeFitterType::HemisphereSearchFit;
     int hemisphereSearchPhiResolution = 30;
     int hemisphereSearchThetaResolution = 30;
 };
 
 // Class for approximation cloud point by cone.
-// We will calculate the initial approximation of the cone and then use a minimizer to refine the parameters.
-// minimizer is LevenbergMarquardt now.
-// TODO: Possible we could add GaussNewton in future.
+// We calculate the initial approximation of the cone and then refine it by refineCone (see MRBestFit.h).
 template <typename T>
 class Cone3Approximation
 {
@@ -66,12 +63,6 @@ private:
 
     // Function for finding the best approximation of a straight line in general form y = a*x + b
     void findBestFitLine_( const std::vector<MR::Vector2<T>>& xyPairs, T& lineA, T& lineB, MR::Vector2<T>* avg = nullptr );
-
-    // Convert data from Eigen minimizator representation to cone params.
-    void fitParamsToCone_( Eigen::Vector<T, Eigen::Dynamic>& fittedParams, Cone3<T>& cone );
-
-    // Convert data from cone params to Eigen minimizator representation.
-    void coneToFitParams_( Cone3<T>& cone, Eigen::Vector<T, Eigen::Dynamic>& fittedParams );
 };
 
 }

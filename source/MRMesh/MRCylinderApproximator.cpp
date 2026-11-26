@@ -1,4 +1,5 @@
 #include "MRCylinderApproximator.h"
+#include "MRBestFit.h"
 #include "MRConstants.h"
 #include "MRCylinder3.h"
 #include "MRParallelFor.h"
@@ -100,6 +101,23 @@ T Cylinder3Approximation<T>::solve( const std::vector<Vector3<T>>& points, Cylin
     cylinder.center() = fromEigen( bestPC ) + avgPoint;
     cylinder.direction() = ( fromEigen( bestW ) ).normalized();
     cylinder.radius = std::sqrt( rootSquare );
+
+    if ( fitter_ == CylinderFitterType::HemisphereSearchFit )
+    {
+        // the best direction of the search is refined together with other parameters by the distances from the points to the cylinder
+        Vector<Vector3d> pts;
+        pts.reserve( points.size() );
+        for ( const auto& p : points )
+            pts.emplace_back( p );
+        const auto res = refineCylinder( pts, Cylinder3d( Vector3d( cylinder.center() ), Vector3d( cylinder.direction() ), cylinder.radius, 0 ) );
+        cylinder.center() = Vector3<T>( res.center() );
+        cylinder.direction() = Vector3<T>( res.direction() ).normalized();
+        cylinder.radius = T( res.radius );
+        error = 0;
+        for ( const auto& p : points )
+            error += sqr( cross( p - cylinder.center(), cylinder.direction() ).length() - cylinder.radius );
+        error /= T( points.size() );
+    }
 
     // Calculate a max. possible length of a cylinder covered by dataset.
     // Project point on a main cylinder axis

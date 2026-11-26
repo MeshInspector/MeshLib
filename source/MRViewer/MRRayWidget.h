@@ -93,8 +93,8 @@ public:
 private:
     // An object that is first part cylinder centered around 0 and secong part sphere in 0
     std::shared_ptr<ObjectMesh> lineObj_;
-    size_t cylinderFaces_;
-    VisualObject* parent_;
+    size_t cylinderFaces_ = 0;
+    VisualObject* parent_ = nullptr;
 
 
     bool active_ = false;
@@ -105,7 +105,7 @@ private:
     bool pickingPoint_ = false;
 
     Line3f line_;
-    float length_;
+    float length_ = 0.0f;
     bool settingDir_ = false;
     // When blocked, cannot be moved with mouse
     bool blockedMouse_{ false };

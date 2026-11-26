@@ -76,7 +76,7 @@ void RayWidget::updateOrigin( const Vector3f& org )
 
 void RayWidget::updateLength( float length )
 {
-    if ( length_ <= 0.0f )
+    if ( length <= 0.0f )
         return;
     length_ = length;
     createObject_();
@@ -173,7 +173,7 @@ bool RayWidget::onDragStart_( Viewer::MouseButton button, int modifiers )
     if ( !obj || obj != lineObj_ )
         return false;
 
-    settingDir_ = pof.face <= cylinderFaces_;
+    settingDir_ = pof.face < FaceId( cylinderFaces_ );
     worldStartPoint_ = lineObj_->worldXf()( pof.point );
     worldStartOrg_ = ( parent_ ? parent_->worldXf()( line_.p ) : line_.p );
     Vector3f projectedStartPoint = line_.project( worldStartPoint_ );

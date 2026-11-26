@@ -529,7 +529,7 @@ void ScannerPlugin::registerScan_( std::shared_ptr<VisualObject> scan )
         .meanSqDistToPoint = icp.getMeanSqDistToPoint(), .meanSqDistToPlane = icp.getMeanSqDistToPlane() };
 
     AppendHistory<ChangeXfAction>( _t( "Register scan" ), scan );
-    scan->setXf( xf * scan->xf() );
+    scan->setXf( xf ); // the new to-world pose, as the scan has no parent yet
 }
 
 void ScannerPlugin::orientCameraToObject_( VisualObject& obj )
@@ -722,7 +722,7 @@ void ScannerPlugin::drawNotLoaded_()
     ImGui::SameLine( 0.0f, ImGui::GetContentRegionAvail().x - 30.0f * UI::scale() );
     if ( UI::button( "...", ImVec2( 24.0f * UI::scale(), 24.0f * UI::scale() ) ) )
     {
-        std::filesystem::path newPath = openFolderDialog( sdkPath );
+        std::filesystem::path newPath = openFolderDialog( asU8String( sdkPath ) );
         if ( !newPath.empty() )
         {
             loadCancelled_ = false;

@@ -29,6 +29,7 @@ void RibbonSchema::eliminateEmptyGroups()
         if ( it->second.empty() )
         {
             spdlog::info( "Empty group {} eliminated", it->first );
+            groupsPriority.erase( it->first );
             it = groupsMap.erase( it );
         }
         else
@@ -48,6 +49,15 @@ void RibbonSchema::sortTabsByPriority()
     {
         return a.priority < b.priority;
     } );
+    for ( auto& [tabName, groups] : tabsMap )
+    {
+        auto priority = [this, &tabName = tabName] ( const std::string& group )
+        {
+            auto it = groupsPriority.find( tabName + group );
+            return it == groupsPriority.end() ? 0 : it->second;
+        };
+        std::stable_sort( groups.begin(), groups.end(), [&] ( const std::string& a, const std::string& b ) { return priority( a ) < priority( b ); } );
+    }
 }
 
 void RibbonSchema::updateCaptions()
@@ -868,6 +878,9 @@ void RibbonSchemaLoader::readUIJson_( const Json::Value& itemsStructure, LocaleD
             readMenuItemsList( list, items );
             auto [it, inserted] = RibbonSchemaHolder::schema().groupsMap.insert( { tabName.asString() + groupName.asString(), MenuItemsList{} } );
             auto& groupsMapRef = it->second;
+            const auto groupPriority = group["Priority"];
+            if ( inserted || groupPriority.isInt() )
+                RibbonSchemaHolder::schema().groupsPriority[it->first] = groupPriority.isInt() ? groupPriority.asInt() : 0;
             if ( inserted )
             {
                 groupsMapRef = std::move( items );
@@ -875,6 +888,8 @@ void RibbonSchemaLoader::readUIJson_( const Json::Value& itemsStructure, LocaleD
             }
             else
             {
+                // an item listed again in the same group takes its new position
+                std::erase_if( groupsMapRef, [&] ( const std::string& name ) { return std::find( items.begin(), items.end(), name ) != items.end(); } );
                 groupsMapRef.insert( groupsMapRef.end(), items.begin(), items.end() );
             }
         }

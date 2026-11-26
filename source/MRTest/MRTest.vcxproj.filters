@@ -118,6 +118,9 @@
     <ClCompile Include="MRLaplacianTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRLinesDxfTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRPointsLoadPcdPtxTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

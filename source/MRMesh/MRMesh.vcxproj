@@ -55,7 +55,6 @@
     <ClInclude Include="MRConeApproximator.h" />
     <ClInclude Include="MRConeObject.h" />
     <ClInclude Include="MRCylinder3.h" />
-    <ClInclude Include="MRTorus3.h" />
     <ClInclude Include="MRCylinderApproximator.h" />
     <ClInclude Include="MRCylinderObject.h" />
     <ClInclude Include="MRDipole.h" />
@@ -402,6 +401,7 @@
     <ClInclude Include="MRSymMatrix3.h" />
     <ClInclude Include="MRFreeFormDeformer.h" />
     <ClInclude Include="MRToFromEigen.h" />
+    <ClInclude Include="MRTorus3.h" />
     <ClInclude Include="MRTriangleIntersection.h" />
     <ClInclude Include="MRTriMath.h" />
     <ClInclude Include="MRTriPoint.h" />

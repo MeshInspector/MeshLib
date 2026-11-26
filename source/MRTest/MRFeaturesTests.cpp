@@ -2,6 +2,7 @@
 #include <MRMesh/MRCircleObject.h>
 #include <MRMesh/MRConstants.h>
 #include <MRMesh/MRLineSegm3.h>
+#include <MRMesh/MRSphereObject.h>
 #include <gtest/gtest.h>
 
 namespace MR::Features
@@ -959,6 +960,41 @@ TEST( Features, PrimitiveFromObjectWithWorldXf )
     const auto c = std::get<Primitives::ConeSegment>( *primitiveFromObjectWithWorldXf( *circle ) );
     EXPECT_LE( ( c.centerPoint().center - Vector3f( 11, 2, 3 ) ).length(), testEps );
     EXPECT_NEAR( c.positiveSideRadius, 2, testEps );
+}
+
+TEST( Features, SphereAndCircleObjectsFromPoints )
+{
+    // exact points far from the origin: a cap of the sphere of radius 25,
+    // and a half of the circle of radius 15 in the plane with the normal ( 2, -2, 1 ) / 3
+    const Vector3f c( 1000, -500, 2000 );
+    std::vector<Vector3f> spherePts, circlePts;
+    for ( const auto& d : { Vector3f( 0, 0, 25 ), Vector3f( 15, 0, 20 ), Vector3f( 0, 15, 20 ), Vector3f( -20, 0, 15 ), Vector3f( 0, -20, 15 ),
+        Vector3f( 9, 12, 20 ), Vector3f( 12, 16, 15 ), Vector3f( -12, -16, 15 ), Vector3f( 16, -12, 15 ) } )
+        spherePts.push_back( c + d );
+    for ( const auto& d : { Vector3f( 5, 10, 10 ), Vector3f( 10, 11, 2 ), Vector3f( 11, 10, -2 ), Vector3f( 10, 5, -10 ),
+        Vector3f( 5, -2, -14 ), Vector3f( 2, -5, -14 ), Vector3f( -5, -10, -10 ) } )
+        circlePts.push_back( c + d );
+
+    const SphereObject sphere( spherePts );
+    EXPECT_LE( ( sphere.getCenter() - c ).length(), 1e-3f );
+    EXPECT_NEAR( sphere.getRadius(), 25, 1e-4f );
+    const CircleObject circle( circlePts );
+    EXPECT_LE( ( circle.getCenter() - c ).length(), 1e-3f );
+    EXPECT_NEAR( circle.getRadius(), 15, 1e-4f );
+    // directed away from the origin
+    EXPECT_LE( ( circle.getNormal() - Vector3f( 2, -2, 1 ) / 3.0f ).length(), 1e-4f );
+
+    // the minimum-norm fits: the coplanar points of the circle give the sphere centered at it,
+    // and symmetric collinear points the circle centered at their mean; no points keep the defaults
+    const SphereObject flat( circlePts );
+    EXPECT_LE( ( flat.getCenter() - c ).length(), 1e-3f );
+    EXPECT_NEAR( flat.getRadius(), 15, 1e-4f );
+    const CircleObject line( { c - Vector3f( 1, 2, 2 ), c, c + Vector3f( 1, 2, 2 ) } );
+    EXPECT_LE( ( line.getCenter() - c ).length(), 1e-3f );
+    EXPECT_NEAR( line.getRadius(), std::sqrt( 6.0f ), 1e-4f );
+    const SphereObject none( std::vector<Vector3f>{} );
+    EXPECT_EQ( none.getCenter(), Vector3f() );
+    EXPECT_EQ( none.getRadius(), SphereObject().getRadius() );
 }
 
 static void expectNear( const AffineXf3d& a, const AffineXf3f& b )

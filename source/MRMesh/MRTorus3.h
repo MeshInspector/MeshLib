@@ -21,6 +21,11 @@ struct Torus3
     constexpr Torus3( const Vector3<T>& c, const Vector3<T>& a, T major, T minor ) noexcept
         : center( c ), axis( a ), majorRadius( major ), minorRadius( minor ) {}
 
+    // Here `T == U` doesn't seem to cause any issues in the C++ code, but we're still disabling it because it somehow gets emitted
+    //   when generating the bindings, and results in duplicate functions in C#.
+    template <typename U> MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<T, U> )
+    constexpr explicit Torus3( const Torus3<U> & t ) noexcept : center( t.center ), axis( t.axis ), majorRadius( T( t.majorRadius ) ), minorRadius( T( t.minorRadius ) ) { }
+
     /// the center of the tube section closest to given point
     [[nodiscard]] Vector3<T> tubeCenter( const Vector3<T>& x ) const
     {

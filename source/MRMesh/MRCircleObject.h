@@ -18,7 +18,8 @@ class MRMESH_CLASS CircleObject : public AddVisualProperties<FeatureObject, Dime
 public:
     /// Creates simple sphere object with center in zero and radius - 1
     MRMESH_API CircleObject();
-    /// Finds best sphere to approx given points
+    /// Finds best circle to approx given points;
+    /// coincident points keep the center in zero and radius 1 (no points assert in Debug)
     MRMESH_API CircleObject( const std::vector<Vector3f>& pointsToApprox );
 
     CircleObject( CircleObject&& ) noexcept = default;

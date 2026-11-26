@@ -6,6 +6,12 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Project-Id-Version: MeshLib\n"
 
+msgid "Feature Alignment"
+msgstr ""
+
+msgid "Move one object so that its fitted features meet the matching features of another object."
+msgstr ""
+
 msgid "Undo"
 msgstr ""
 

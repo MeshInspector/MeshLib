@@ -1150,15 +1150,17 @@ TEST(MRMesh, SaveObjManyTextures)
     settings.materialName = "model";
     ASSERT_TRUE( MeshSave::toObj( mesh, dir / "model.obj", settings ).has_value() );
 
-    // faces are grouped by texture: one usemtl per material
+    const auto countUsemtl = [&]( const std::filesystem::path& path )
     {
-        std::ifstream obj( dir / "model.obj" );
+        std::ifstream obj( path );
         int numUsemtl = 0;
         for ( std::string line; std::getline( obj, line ); )
             if ( line.starts_with( "usemtl " ) )
                 ++numUsemtl;
-        EXPECT_EQ( numUsemtl, 2 );
-    }
+        return numUsemtl;
+    };
+    // faces are grouped by texture: one usemtl per material
+    EXPECT_EQ( countUsemtl( dir / "model.obj" ), 2 );
 
     auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
     ASSERT_TRUE( res.has_value() );
@@ -1181,6 +1183,25 @@ TEST(MRMesh, SaveObjManyTextures)
             ++f;
         ASSERT_LT( f, 3 );
         EXPECT_EQ( loadedTextures[loadedTexturePerFace[lf]].pixels, textures[texturePerFace[f]].pixels );
+    }
+
+    // without packPrimitives the order of faces is kept, and usemtl is written at each change of texture
+    settings.packPrimitives = false;
+    ASSERT_TRUE( MeshSave::toObj( mesh, dir / "ordered.obj", settings ).has_value() );
+    settings.packPrimitives = true;
+    EXPECT_EQ( countUsemtl( dir / "ordered.obj" ), 3 );
+    {
+        auto ordered = MeshLoad::loadObjectFromObj( dir / "ordered.obj" );
+        ASSERT_TRUE( ordered.has_value() );
+        ASSERT_EQ( ordered->objs.size(), 1 );
+        auto orderedMesh = std::dynamic_pointer_cast<ObjectMesh>( ordered->objs.front() );
+        ASSERT_TRUE( orderedMesh );
+        ASSERT_EQ( orderedMesh->getTexturePerFace().size(), 3 );
+        for ( FaceId f{ 0 }; f < 3; ++f )
+        {
+            EXPECT_EQ( ( orderedMesh->meshPtr()->triCenter( f ) - mesh.triCenter( f ) ).lengthSq(), 0.0f );
+            EXPECT_EQ( orderedMesh->getTextures()[orderedMesh->getTexturePerFace()[f]].pixels, textures[texturePerFace[f]].pixels );
+        }
     }
 
     // one texture is saved as before

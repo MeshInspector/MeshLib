@@ -287,28 +287,38 @@ static Expected<void> toObjImpl( const MeshType & mesh, std::ostream & out, cons
 
     sb = subprogress( settings.progress, saveUV ? 0.7f : 0.5f, 1.0f );
     const FaceId lastFaceId = lastValidFace( mesh );
-    if ( !manyTextures )
+    const auto faceTexture = [&]( FaceId f )
     {
+        const auto t = getAt( *settings.texturePerFace, f, TextureId( 0 ) );
+        return t.valid() && t < settings.textures->endId() ? t : TextureId( 0 );
+    };
+    if ( !manyTextures || !settings.packPrimitives )
+    {
+        // the order of faces is kept, and with several textures usemtl is written whenever the texture changes
         const float facesNum = float( lastFaceId + 1 );
+        TextureId curTexture;
         for ( FaceId f{ 0 }; f <= lastFaceId; ++f )
         {
             if ( settings.progress && !( ( (int)f + 1 ) & 0x3FF ) && !sb( float( (int)f + 1 ) / facesNum ) )
                 return unexpectedOperationCanceled();
-            if ( hasFace( mesh, f ) )
-                writeFace( f );
+            if ( !hasFace( mesh, f ) )
+                continue;
+            if ( manyTextures )
+            {
+                if ( const auto t = faceTexture( f ); t != curTexture )
+                {
+                    curTexture = t;
+                    out << fmt::format( "usemtl Texture{}\n", int( t ) );
+                }
+            }
+            writeFace( f );
         }
     }
     else
     {
-        // faces are grouped by texture to write one usemtl per material
-        const auto numTextures = settings.textures->size();
-        auto faceTexture = [&]( FaceId f )
-        {
-            auto t = getAt( *settings.texturePerFace, f, TextureId( 0 ) );
-            return t.valid() && size_t( t ) < numTextures ? size_t( t ) : size_t( 0 );
-        };
+        // faces are grouped by texture to write one usemtl per material;
         // faces of texture t are sortedFaces[texStart[t]..texStart[t+1])
-        std::vector<int> texStart( numTextures + 1, 0 );
+        Vector<int, TextureId> texStart( settings.textures->size() + 1 );
         for ( FaceId f{ 0 }; f <= lastFaceId; ++f )
             if ( hasFace( mesh, f ) )
                 ++texStart[faceTexture( f ) + 1];
@@ -320,11 +330,11 @@ static Expected<void> toObjImpl( const MeshType & mesh, std::ostream & out, cons
                 sortedFaces[texNext[faceTexture( f )]++] = f;
 
         const float facesNum = float( sortedFaces.size() );
-        for ( size_t t = 0; t < numTextures; ++t )
+        for ( TextureId t{ 0 }; t < settings.textures->endId(); ++t )
         {
             if ( texStart[t] == texStart[t + 1] )
                 continue;
-            out << fmt::format( "usemtl Texture{}\n", t );
+            out << fmt::format( "usemtl Texture{}\n", int( t ) );
             for ( int i = texStart[t]; i < texStart[t + 1]; ++i )
             {
                 if ( settings.progress && !( ( i + 1 ) & 0x3FF ) && !sb( float( i + 1 ) / facesNum ) )

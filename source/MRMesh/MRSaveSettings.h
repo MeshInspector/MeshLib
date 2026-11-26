@@ -23,7 +23,8 @@ struct SaveSettings
     /// if packPrimitives=true, then ids of invalid primitives are reused by valid primitives
     /// and higher compression (in .ctm format) can be reached if the order of triangles is changed;
     /// if packPrimitives=false then all primitives maintain their ids, and invalid primitives are saved with all vertex ids equal to zero;
-    /// currently this flag affects the saving in .ctm and .ply formats only
+    /// in .obj format with several textures, packPrimitives=true groups triangles by texture to write one material switch per texture;
+    /// currently this flag affects the saving in .ctm, .ply and .obj formats only
     bool packPrimitives = true;
 
     /// optional per-vertex color to save with the geometry

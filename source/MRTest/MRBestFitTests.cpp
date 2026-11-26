@@ -440,6 +440,21 @@ TEST( MRMesh, RefineCylinder )
         EXPECT_LT( cost( refined, noisyPts ), cost( Cylinder3d( c, a, radius, 1 ), noisyPts ) );
         EXPECT_LT( cost( refined, noisyPts ), cost( Cylinder3d( initial.center(), initial.direction().normalized(), initial.radius, 1 ), noisyPts ) );
 
+        // more points than the minimization uses: the result is as precise as the noise allows, and not worse than the start for all the points
+        Vector<Vector3d> manyPts;
+        for ( int i = 0; i < 300; ++i )
+            for ( int j = 0; j < 100; ++j )
+            {
+                const double phi = 0.005 * i;
+                const Vector3d er = std::cos( phi ) * u + std::sin( phi ) * v;
+                manyPts.push_back( c + ( 1 + 0.045 * j ) * a + ( radius + noise( gen, 0.01 ) ) * er );
+            }
+        const auto many = refineCylinder( manyPts, initial );
+        EXPECT_NEAR( cross( many.direction(), a ).length(), 0, 1e-3 );
+        EXPECT_NEAR( many.radius, radius, 1e-3 );
+        EXPECT_NEAR( many.length, 4.455, 1e-2 ); // spans all the points
+        EXPECT_LT( cost( many, manyPts ), cost( Cylinder3d( initial.center(), initial.direction().normalized(), initial.radius, 1 ), manyPts ) );
+
         // too few points
         const Vector<Vector3d> six( pts.begin(), pts.begin() + 6 );
         const auto same = refineCylinder( six, initial );
@@ -506,6 +521,21 @@ TEST( MRMesh, RefineCone )
             const auto flipped = refineCone( pts, Cone3d( Line3d( initial.apex(), -initial.direction() ), PI - initial.angle, 1 ) );
             EXPECT_NEAR( ( flipped.direction() - a ).length(), 0, eps );
             EXPECT_NEAR( flipped.angle, angle, eps );
+
+            // more points than the minimization uses
+            Vector<Vector3d> manyPts;
+            for ( int i = 0; i < 300; ++i )
+                for ( int j = 0; j < 100; ++j )
+                {
+                    const double phi = 0.007 * i, h = 4 + 0.045 * j;
+                    const Vector3d er = std::cos( phi ) * u + std::sin( phi ) * v;
+                    manyPts.push_back( apex + h * ( a + std::tan( angle ) * er ) + noise( gen, 0.01 ) * ( std::cos( angle ) * er - std::sin( angle ) * a ) );
+                }
+            const auto many = refineCone( manyPts, initial );
+            // the apex of a narrow cone is defined by the noisy points much worse
+            EXPECT_NEAR( ( many.direction() - a ).length(), 0, angle < 0.1 ? 1e-2 : 1e-3 );
+            EXPECT_NEAR( many.angle, angle, angle < 0.1 ? 1e-2 : 1e-3 );
+            EXPECT_LT( cost( many, manyPts ), cost( Cone3d( Line3d( initial.apex(), initial.direction().normalized() ), initial.angle, 1 ), manyPts ) );
 
             // the start angles giving the same cone: shifted by the full turn, and negative with the reversed axis
             for ( const auto& start : { Cone3d( Line3d( initial.apex(), initial.direction() ), initial.angle + 2 * PI, 1 ),

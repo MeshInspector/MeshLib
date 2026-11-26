@@ -360,6 +360,41 @@ struct ConeDistances
     }
 };
 
+/// the minimizations by distances to points use at most this number of the points, which bounds their time
+constexpr size_t cMaxRefinePoints = 10000;
+
+/// minimizes the sum of squared values of the functor F{ points, c0 } by Levenberg-Marquardt method starting from x;
+/// if there are more than cMaxRefinePoints points, then the minimization uses only that many of them taken evenly,
+/// and x is changed only if the sum over all the points does not grow
+template <typename F>
+void minimizeByPoints( const Vector<Vector3d>& points, const Vector3d& c0, Eigen::VectorXd& x )
+{
+    if ( points.size() <= cMaxRefinePoints )
+    {
+        F f{ points, c0 };
+        Eigen::LevenbergMarquardt<F> lm( f );
+        lm.minimize( x );
+        return;
+    }
+    Vector<Vector3d> sample;
+    sample.reserve( cMaxRefinePoints );
+    for ( size_t i = 0; i < cMaxRefinePoints; ++i )
+        sample.push_back( points[i * points.size() / cMaxRefinePoints] );
+    Eigen::VectorXd res = x;
+    {
+        F f{ sample, c0 };
+        Eigen::LevenbergMarquardt<F> lm( f );
+        lm.minimize( res );
+    }
+    const F all{ points, c0 };
+    Eigen::VectorXd dists( all.values() );
+    all( x, dists );
+    const double given = dists.squaredNorm();
+    all( res, dists );
+    if ( dists.squaredNorm() <= given )
+        x = res;
+}
+
 /// the cylinder with given axis (with unit direction) and radius, and the center and the length spanning the projections of the points on the axis
 Cylinder3d cylinderSpanning( const Vector<Vector3d>& points, const Line3d& axis, double radius )
 {
@@ -548,12 +583,10 @@ Torus3d refineTorus( const Vector<Vector3d>& points, const Torus3d& torus )
 {
     // the center is shifted from the given one, so the relative tolerances of the minimization do not depend on the distance to the origin;
     // the minimization accepts only the steps decreasing the sum of squared distances
-    TorusDistances f{ points, torus.center };
     Eigen::VectorXd x( 8 );
     x << 0, 0, 0, torus.axis.x, torus.axis.y, torus.axis.z, torus.majorRadius, torus.minorRadius;
-    Eigen::LevenbergMarquardt<TorusDistances> lm( f );
-    lm.minimize( x );
-    const auto res = f.torus( x );
+    minimizeByPoints<TorusDistances>( points, torus.center, x );
+    const auto res = TorusDistances{ points, torus.center }.torus( x );
     return std::isfinite( res.center.x + res.center.y + res.center.z + res.axis.x + res.axis.y + res.axis.z + res.majorRadius + res.minorRadius ) ? res : torus;
 }
 
@@ -563,12 +596,10 @@ Cylinder3d refineCylinder( const Vector<Vector3d>& points, const Cylinder3d& cyl
     if ( points.size() < 7 )
         return cylinder;
     // see the comments in refineTorus
-    CylinderDistances f{ points, cylinder.center() };
     Eigen::VectorXd x( 7 );
     x << 0, 0, 0, cylinder.direction().x, cylinder.direction().y, cylinder.direction().z, cylinder.radius;
-    Eigen::LevenbergMarquardt<CylinderDistances> lm( f );
-    lm.minimize( x );
-    const Vector3d c = f.c0 + Vector3d( x[0], x[1], x[2] ), a = Vector3d( x[3], x[4], x[5] ).normalized();
+    minimizeByPoints<CylinderDistances>( points, cylinder.center(), x );
+    const Vector3d c = cylinder.center() + Vector3d( x[0], x[1], x[2] ), a = Vector3d( x[3], x[4], x[5] ).normalized();
     const double radius = std::abs( x[6] );
     if ( !std::isfinite( c.x + c.y + c.z + a.x + a.y + a.z + radius ) || a == Vector3d() )
         return cylinder;
@@ -580,12 +611,10 @@ Cone3d refineCone( const Vector<Vector3d>& points, const Cone3d& cone )
     if ( points.size() < 7 )
         return cone;
     // see the comments in refineTorus
-    ConeDistances f{ points, cone.apex() };
     Eigen::VectorXd x( 7 );
     x << 0, 0, 0, cone.direction().x, cone.direction().y, cone.direction().z, cone.angle;
-    Eigen::LevenbergMarquardt<ConeDistances> lm( f );
-    lm.minimize( x );
-    const Vector3d c = f.c0 + Vector3d( x[0], x[1], x[2] );
+    minimizeByPoints<ConeDistances>( points, cone.apex(), x );
+    const Vector3d c = cone.apex() + Vector3d( x[0], x[1], x[2] );
     Vector3d a = Vector3d( x[3], x[4], x[5] ).normalized();
     // the same cone with the angle in [0, pi/2]: the distances keep their values if both the angle and the axis change the sign,
     // and only change the sign if the angle is replaced with pi - angle and the axis is reversed

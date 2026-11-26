@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cmath>
 #include <limits>
 #include <numeric>
 
@@ -54,6 +55,12 @@ int bsplineBasis( const std::vector<double>& knots, int deg, double t, double* v
     return span - deg;
 }
 
+/// whether the degree is supported and the knots are consistent with it and with the number of control points
+bool isValid( const std::vector<double>& knots, int deg, size_t numControlPoints )
+{
+    return deg >= 1 && deg <= cMaxDegree && numControlPoints > size_t( deg ) && knots.size() == numControlPoints + deg + 1;
+}
+
 /// clamped knots with uniform inner spacing on [0, 1] for given number of control points and degree
 std::vector<double> makeClampedUniformKnots( int numControlPoints, int degree )
 {
@@ -82,8 +89,15 @@ bool solve( const S& s, const Eigen::MatrixXd& b, std::vector<Vector3d>& x )
 
 } //anonymous namespace
 
+bool BSplineCurve::valid() const
+{
+    return isValid( knots, degree, controlPoints.size() );
+}
+
 Vector3d BSplineCurve::eval( double t ) const
 {
+    if ( !valid() )
+        return {};
     double b[cMaxDegree + 1];
     const int i0 = bsplineBasis( knots, degree, t, b, nullptr );
     Vector3d res;
@@ -92,8 +106,22 @@ Vector3d BSplineCurve::eval( double t ) const
     return res;
 }
 
+bool BSplineSurface::valid() const
+{
+    const int nu = numU(), nv = numV();
+    return nu > 0 && nv > 0 && isValid( knotsU, degreeU, nu ) && isValid( knotsV, degreeV, nv ) && controlPoints.size() == size_t( nu ) * nv;
+}
+
 Vector3d BSplineSurface::eval( const Vector2d& uv, Vector3d* du, Vector3d* dv ) const
 {
+    if ( !valid() )
+    {
+        if ( du )
+            *du = Vector3d();
+        if ( dv )
+            *dv = Vector3d();
+        return {};
+    }
     double bu[cMaxDegree + 1], bv[cMaxDegree + 1], dbu[cMaxDegree + 1], dbv[cMaxDegree + 1];
     const int nv = numV();
     const int iu = bsplineBasis( knotsU, degreeU, uv.x, bu, du ? dbu : nullptr );
@@ -125,6 +153,8 @@ Vector3d BSplineSurface::normal( const Vector2d& uv ) const
 
 Vector2d BSplineSurface::project( const Vector3d& p, Vector2d uv, int iterations ) const
 {
+    if ( !valid() )
+        return uv;
     const double u0 = knotsU[degreeU], u1 = knotsU[numU()], v0 = knotsV[degreeV], v1 = knotsV[numV()];
     uv = Vector2d( std::clamp( uv.x, u0, u1 ), std::clamp( uv.y, v0, v1 ) );
     Vector3d su, sv;
@@ -172,8 +202,11 @@ std::optional<BSplineCurve> interpolateBSplineCurve( const std::vector<Vector3d>
     for ( int i = 1; i < n; ++i )
     {
         t[i] = t[i - 1] + ( points[i] - points[i - 1] ).length();
-        assert( t[i] > t[i - 1] ); // no two consecutive points are equal
+        if ( !( t[i] > t[i - 1] ) ) // two consecutive points are equal, or not finite coordinates
+            return std::nullopt;
     }
+    if ( !std::isfinite( t.back() ) )
+        return std::nullopt;
     for ( auto& x : t )
         x /= t.back(); // the last one becomes exactly 1
 

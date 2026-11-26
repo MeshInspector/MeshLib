@@ -77,6 +77,8 @@ Expected<VertUVCoords> leastSquaresConformalMap( const MeshPart& mp )
     if ( ldlt.info() != Eigen::Success )
         return unexpected( "Degenerate system" );
     const Eigen::VectorXd sol = ldlt.solve( m.transpose() * rhs );
+    if ( !sol.allFinite() )
+        return unexpected( "Degenerate system" );
 
     VertUVCoords res( topology.vertSize() );
     res[pb].x = 1;

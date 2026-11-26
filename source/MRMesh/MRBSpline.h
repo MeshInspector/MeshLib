@@ -17,7 +17,10 @@ struct BSplineCurve
     std::vector<double> knots;           ///< non-decreasing, controlPoints.size() + degree + 1 values
     std::vector<Vector3d> controlPoints;
 
-    /// the point of the curve at parameter t from [knots[degree], knots[controlPoints.size()]]
+    /// whether the degree is supported, there are more control points than the degree, and the number of knots is as above
+    [[nodiscard]] MRMESH_API bool valid() const;
+
+    /// the point of the curve at parameter t from [knots[degree], knots[controlPoints.size()]]; zero vector if not valid()
     [[nodiscard]] MRMESH_API Vector3d eval( double t ) const;
 };
 
@@ -35,19 +38,22 @@ struct BSplineSurface
     [[nodiscard]] int numU() const { return int( knotsU.size() ) - degreeU - 1; }
     [[nodiscard]] int numV() const { return int( knotsV.size() ) - degreeV - 1; }
 
-    /// the point of the surface at given parameters, and optionally its partial derivatives
+    /// whether the degrees are supported, there are more control points along u and v than the degree, and their total number is as above
+    [[nodiscard]] MRMESH_API bool valid() const;
+
+    /// the point of the surface at given parameters, and optionally its partial derivatives; zero vectors if not valid()
     [[nodiscard]] MRMESH_API Vector3d eval( const Vector2d& uv, Vector3d* du = nullptr, Vector3d* dv = nullptr ) const;
 
     /// unit normal of the surface at given parameters: cross( du, dv ) normalized, or zero vector where du and dv are zero or parallel
     [[nodiscard]] MRMESH_API Vector3d normal( const Vector2d& uv ) const;
 
-    /// parameters in the domain of the surface point closest to given one: Gauss-Newton iterations with step control from uv clamped to the domain, stopping at rounding errors
+    /// parameters in the domain of the surface point closest to given one: Gauss-Newton iterations with step control from uv clamped to the domain, stopping at rounding errors; given uv if not valid()
     [[nodiscard]] MRMESH_API Vector2d project( const Vector3d& p, Vector2d uv, int iterations = 12 ) const;
 };
 
 /// B-spline curve of degree min( 3, points.size() - 1 ) passing through all given points,
 /// with the parameters of the points proportional to the length of the polyline through them, in [0, 1];
-/// requires no two consecutive points equal; \return nullopt for fewer than 2 points or a failed factorization
+/// \return nullopt for fewer than 2 points, two consecutive points equal, not finite coordinates, or a failed factorization
 [[nodiscard]] MRMESH_API std::optional<BSplineCurve> interpolateBSplineCurve( const std::vector<Vector3d>& points );
 
 struct BSplineSurfaceFitSettings

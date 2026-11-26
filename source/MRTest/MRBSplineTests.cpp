@@ -5,6 +5,7 @@
 #include <MRMesh/MRRegionBoundary.h>
 #include <MRMesh/MRRegularGridMesh.h>
 #include <gtest/gtest.h>
+#include <limits>
 
 namespace MR
 {
@@ -30,6 +31,48 @@ TEST( MRMesh, InterpolateBSplineCurve )
     }
 
     EXPECT_FALSE( interpolateBSplineCurve( { Vector3d() } ).has_value() );
+    // equal consecutive points, all points equal, not finite coordinates
+    EXPECT_FALSE( interpolateBSplineCurve( { Vector3d(), Vector3d( 1, 0, 0 ), Vector3d( 1, 0, 0 ), Vector3d( 2, 0, 0 ) } ).has_value() );
+    EXPECT_FALSE( interpolateBSplineCurve( { Vector3d( 1, 2, 3 ), Vector3d( 1, 2, 3 ) } ).has_value() );
+    EXPECT_FALSE( interpolateBSplineCurve( { Vector3d(), Vector3d( std::numeric_limits<double>::infinity(), 0, 0 ) } ).has_value() );
+    EXPECT_FALSE( interpolateBSplineCurve( { Vector3d(), Vector3d( std::numeric_limits<double>::quiet_NaN(), 0, 0 ) } ).has_value() );
+}
+
+TEST( MRMesh, BSplineNotValid )
+{
+    BSplineCurve curve;
+    EXPECT_FALSE( curve.valid() );
+    curve.knots = { 0, 0, 0, 0, 1, 1, 1, 1 };
+    curve.controlPoints = { Vector3d( 1, 0, 0 ), Vector3d( 2, 0, 0 ), Vector3d( 3, 0, 0 ), Vector3d( 4, 0, 0 ) };
+    EXPECT_TRUE( curve.valid() );
+    EXPECT_EQ( curve.eval( 1 ), Vector3d( 4, 0, 0 ) );
+    // too large degree, or a wrong number of knots
+    curve.degree = 8;
+    EXPECT_FALSE( curve.valid() );
+    EXPECT_EQ( curve.eval( 1 ), Vector3d() );
+    curve.degree = 3;
+    curve.knots.push_back( 1 );
+    EXPECT_FALSE( curve.valid() );
+    EXPECT_EQ( curve.eval( 1 ), Vector3d() );
+
+    BSplineSurface surf;
+    EXPECT_FALSE( surf.valid() );
+    surf.knotsU = surf.knotsV = { 0, 0, 0, 0, 1, 1, 1, 1 };
+    surf.controlPoints.resize( 16, Vector3d( 1, 2, 3 ) );
+    EXPECT_TRUE( surf.valid() );
+    EXPECT_NEAR( ( surf.eval( { 0.3, 0.6 } ) - Vector3d( 1, 2, 3 ) ).length(), 0, 1e-12 );
+    surf.controlPoints.pop_back();
+    EXPECT_FALSE( surf.valid() );
+    Vector3d du( 1, 1, 1 ), dv( 1, 1, 1 );
+    EXPECT_EQ( surf.eval( { 0.3, 0.6 }, &du, &dv ), Vector3d() );
+    EXPECT_EQ( du, Vector3d() );
+    EXPECT_EQ( dv, Vector3d() );
+    EXPECT_EQ( surf.normal( { 0.3, 0.6 } ), Vector3d() );
+    EXPECT_EQ( surf.project( { 5, 5, 5 }, { 0.3, 0.6 } ), Vector2d( 0.3, 0.6 ) );
+    surf.controlPoints.resize( 16 );
+    surf.degreeV = 9;
+    EXPECT_FALSE( surf.valid() );
+    EXPECT_EQ( surf.eval( { 0.3, 0.6 } ), Vector3d() );
 
     const auto line = interpolateBSplineCurve( { Vector3d( 0, 0, 0 ), Vector3d( 2, 0, 0 ) } ).value();
     EXPECT_EQ( line.degree, 1 );

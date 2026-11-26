@@ -1129,17 +1129,17 @@ TEST(MRMesh, SaveObjManyTextures)
         GTEST_SKIP() << "PNG format is not supported in this build";
     }
 
-    // two triangles, each with its own texture
+    // three triangles, the first and the last with the same texture
     const auto mesh = Mesh::fromTriangles(
-        { { 0, 0, 0 }, { 1, 0, 0 }, { 1, 1, 0 }, { 0, 1, 0 } },
-        { { VertId( 0 ), VertId( 1 ), VertId( 2 ) }, { VertId( 0 ), VertId( 2 ), VertId( 3 ) } } );
-    const VertUVCoords uvCoords{ { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 } };
+        { { 0, 0, 0 }, { 1, 0, 0 }, { 1, 1, 0 }, { 0, 1, 0 }, { 2, 0, 0 } },
+        { { VertId( 0 ), VertId( 1 ), VertId( 2 ) }, { VertId( 0 ), VertId( 2 ), VertId( 3 ) }, { VertId( 1 ), VertId( 4 ), VertId( 2 ) } } );
+    const VertUVCoords uvCoords{ { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 }, { 0, 0 } };
     Vector<MeshTexture, TextureId> textures( 2 );
     textures[TextureId( 0 )].pixels = { Color::red() };
     textures[TextureId( 0 )].resolution = { 1, 1 };
     textures[TextureId( 1 )].pixels = { Color::blue(), Color::green() };
     textures[TextureId( 1 )].resolution = { 2, 1 };
-    const TexturePerFace texturePerFace{ TextureId( 1 ), TextureId( 0 ) };
+    const TexturePerFace texturePerFace{ TextureId( 1 ), TextureId( 0 ), TextureId( 1 ) };
 
     UniqueTemporaryFolder dir;
     SaveSettings settings;
@@ -1150,20 +1150,38 @@ TEST(MRMesh, SaveObjManyTextures)
     settings.materialName = "model";
     ASSERT_TRUE( MeshSave::toObj( mesh, dir / "model.obj", settings ).has_value() );
 
+    // faces are grouped by texture: one usemtl per material
+    {
+        std::ifstream obj( dir / "model.obj" );
+        int numUsemtl = 0;
+        for ( std::string line; std::getline( obj, line ); )
+            if ( line.starts_with( "usemtl " ) )
+                ++numUsemtl;
+        EXPECT_EQ( numUsemtl, 2 );
+    }
+
     auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
     ASSERT_TRUE( res.has_value() );
     ASSERT_EQ( res->objs.size(), 1 );
     auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( res->objs.front() );
     ASSERT_TRUE( objMesh );
-    ASSERT_EQ( objMesh->meshPtr()->topology.numValidFaces(), 2 );
+    const auto& loadedMesh = *objMesh->meshPtr();
+    ASSERT_EQ( loadedMesh.topology.numValidFaces(), 3 );
 
-    // materials appear in the file in the order of their first use, so compare the pixels of each face's texture
+    // faces are reordered, so find each original face by its center and compare the pixels of its texture
     const auto& loadedTextures = objMesh->getTextures();
     const auto& loadedTexturePerFace = objMesh->getTexturePerFace();
     ASSERT_EQ( loadedTextures.size(), 2 );
-    ASSERT_EQ( loadedTexturePerFace.size(), 2 );
-    for ( FaceId f{ 0 }; f < 2; ++f )
-        EXPECT_EQ( loadedTextures[loadedTexturePerFace[f]].pixels, textures[texturePerFace[f]].pixels );
+    ASSERT_EQ( loadedTexturePerFace.size(), 3 );
+    for ( FaceId lf{ 0 }; lf < 3; ++lf )
+    {
+        const auto c = loadedMesh.triCenter( lf );
+        FaceId f{ 0 };
+        while ( f < 3 && ( mesh.triCenter( f ) - c ).lengthSq() > 1e-6f )
+            ++f;
+        ASSERT_LT( f, 3 );
+        EXPECT_EQ( loadedTextures[loadedTexturePerFace[lf]].pixels, textures[texturePerFace[f]].pixels );
+    }
 
     // one texture is saved as before
     settings.textures = nullptr;

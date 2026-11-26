@@ -6,7 +6,6 @@
     "homepage": "https://meshlib.io",
     "dependencies": [
         "boost-algorithm",
-        "boost-dynamic-bitset",
         "boost-functional",
         "boost-integer",
         "boost-locale",

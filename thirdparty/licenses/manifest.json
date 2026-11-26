@@ -35,7 +35,6 @@
         "type": "vcpkg-registry",
         "ports": [
           "boost-algorithm",
-          "boost-dynamic-bitset",
           "boost-functional",
           "boost-integer",
           "boost-locale",
@@ -50,7 +49,6 @@
       },
       "version": {
         "boost-algorithm": "1.92.0#0",
-        "boost-dynamic-bitset": "1.92.0#0",
         "boost-functional": "1.92.0#0",
         "boost-integer": "1.92.0#0",
         "boost-locale": "1.92.0#0",

@@ -1,9 +1,14 @@
 #pragma once
 
-#include "MRMeshToStepBSpline.hpp"
+#include "MRMeshFwd.h"
 #include "MRConstants.h"
+#include "MRFittedBSplineSurface.h"
+#include "MRVector.h"
+#include "MRVector2.h"
+#include "MRVector3.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <memory>
 #include <optional>
@@ -14,6 +19,10 @@ namespace MR
 
 namespace MeshToStep
 {
+
+using V3 = Vector3d;
+using V2 = Vector2d;
+using Tri = std::array<int, 3>;
 
 const double cCos40 = std::cos( 40 * PI / 180 );
 const double cCosVert = std::cos( 29.5 * PI / 180 );
@@ -32,7 +41,7 @@ struct Surf
     double r = 0;     ///< radius of cylinder or sphere, minor radius of torus, half-angle of cone
     double R = 0;     ///< major radius of torus
     bool known = false; ///< taken from already found surfaces, not to be refined
-    std::shared_ptr<const BSplineSurf> bs;
+    std::shared_ptr<const FittedBSplineSurface> bs;
 
     /// signed distance to the surface
     double dist( const V3& p ) const
@@ -44,7 +53,7 @@ struct Surf
         if ( type == SurfType::BSpline )
         {
             const auto uv = bs->project( p );
-            return dot( p - bs->surf.eval( uv ), bs->normalAt( uv ) );
+            return dot( p - bs->surface.eval( uv ), bsplineNormal_( uv ) );
         }
         const V3 d = p - c;
         const double h = dot( d, a );
@@ -62,7 +71,7 @@ struct Surf
         if ( type == SurfType::Plane )
             return a;
         if ( type == SurfType::BSpline )
-            return bs->normalAt( bs->project( p ) );
+            return bsplineNormal_( bs->project( p ) );
         const V3 d = p - c;
         if ( type == SurfType::Sphere )
             return d / std::max( d.length(), 1e-12 );
@@ -76,6 +85,13 @@ struct Surf
             return er * std::cos( r ) - a * std::sin( r );
         const V3 n = er * ( rho - R ) + h * a;
         return n / std::max( n.length(), 1e-12 );
+    }
+
+    /// unit normal of the B-spline surface, or (0,0,1) where it is not defined
+    V3 bsplineNormal_( const V2& uv ) const
+    {
+        const V3 n = bs->surface.normal( uv );
+        return n == V3() ? V3( 0, 0, 1 ) : n;
     }
 
     bool finite() const

@@ -189,9 +189,6 @@
     <ClInclude Include="MRMeshToStep.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
-    <ClInclude Include="MRMeshToStepBSpline.hpp">
-      <Filter>Source Files\IO</Filter>
-    </ClInclude>
     <ClInclude Include="MRMeshToStepData.hpp">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
@@ -1620,9 +1617,6 @@
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshToStepBRep.cpp">
-      <Filter>Source Files\IO</Filter>
-    </ClCompile>
-    <ClCompile Include="MRMeshToStepBSpline.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshToStepCleaner.cpp">

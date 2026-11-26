@@ -2,6 +2,7 @@
 #include "MRBitSet.h"
 #include "MRId.h"
 #include "MRMeshComponents.h"
+#include "MRMeshPart.h"
 #include "MRRegionBoundary.h"
 #include "MRTimer.h"
 #include "MRUnionFind.h"
@@ -413,12 +414,12 @@ void Cleaner::fitFreeform_()
         std::sort( loopVerts.begin(), loopVerts.end() );
         if ( std::adjacent_find( loopVerts.begin(), loopVerts.end() ) != loopVerts.end() )
             continue;
-        auto bs = fitBSpline( *d.mesh, region, 0.5 * d.tol );
+        auto bs = fitBSplineSurfaceToMesh( { *d.mesh, &region }, { .tolerance = 0.5 * d.tol } );
         if ( !bs )
             continue;
         Region r;
         r.surf.type = SurfType::BSpline;
-        r.surf.bs = bs;
+        r.surf.bs = std::make_shared<FittedBSplineSurface>( std::move( *bs ) );
         r.seg = d.seg[fs[0]];
         for ( int f : fs )
             d.sub[f] = (int)d.regions.size();

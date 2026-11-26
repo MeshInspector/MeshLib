@@ -90,7 +90,7 @@ double BRepWriter::curveTol_( const Surfs& ss ) const
     double res = d_.tol;
     for ( auto s : ss )
         if ( s->type == SurfType::BSpline )
-            res = std::max( res, 3 * s->bs->err );
+            res = std::max( res, 3 * s->bs->maxError );
     return res;
 }
 
@@ -704,9 +704,9 @@ MeshToStepStats BRepWriter::write( std::ostream& out )
         case SurfType::BSpline:
         {
             ++stats.bsplines;
-            stats.maxBSplineError = std::max( stats.maxBSplineError, float( s.bs->err ) );
+            stats.maxBSplineError = std::max( stats.maxBSplineError, float( s.bs->maxError ) );
             Vector<std::string> rows;
-            const auto& bs = s.bs->surf;
+            const auto& bs = s.bs->surface;
             const int nu = bs.numU(), nv = bs.numV();
             for ( int i = 0; i < nu; ++i )
             {

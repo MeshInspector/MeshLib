@@ -645,6 +645,7 @@ void Viewer::emsMainInfiniteLoop()
         viewer.eventQueue_->execute();
     CommandLoop::processCommands();
     keepDrawing = viewer.forceRedrawFrames_ > 0 || viewer.needRedraw_();
+    sLastEmsTickMs = emscripten_get_now(); // a tick longer than 100 ms must not make the interval run another one right away
 }
 #else
 void Viewer::emsMainInfiniteLoop()

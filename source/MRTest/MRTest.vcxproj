@@ -73,6 +73,7 @@
     <ClCompile Include="MRPdfTests.cpp" />
     <ClCompile Include="MRPointCloudVariadicOffsetTests.cpp" />
     <ClCompile Include="MRPolyline2IntersectTests.cpp" />
+    <ClCompile Include="MRLinesDxfTests.cpp" />
     <ClCompile Include="MRPointsLoadPcdPtxTests.cpp" />
     <ClCompile Include="MRPolylineTests.cpp" />
     <ClCompile Include="MRPolylineTrimWithPlane.cpp" />

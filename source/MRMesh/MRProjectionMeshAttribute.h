@@ -45,10 +45,8 @@ bool projectVertAttribute( const MeshVertPart& mp, const Mesh& oldMesh, F&& func
     {
         auto point = !params.xfs.rigidXfPoint ? mp.mesh.points[id] : ( *params.xfs.rigidXfPoint )( mp.mesh.points[id] );
         auto projectionResult = findProjection( point, oldMesh, FLT_MAX, params.xfs.nonRigidXfTree );
-        auto res = projectionResult.mtp;
-        VertId v1 = oldMesh.topology.org( res.e );
-        VertId v2 = oldMesh.topology.dest( res.e );
-        VertId v3 = oldMesh.topology.dest( oldMesh.topology.next( res.e ) );
+        VertId v1, v2, v3;
+        oldMesh.topology.getTriVerts( projectionResult.proj.face, v1, v2, v3 );
         func( id, projectionResult, v1, v2, v3 );
     },
     params.progressCb );

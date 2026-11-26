@@ -9,7 +9,7 @@ fn main()
     // all point coordinates
     let points = mesh.points();
     // triangle vertices as triples of ints (pointing to elements in points vector)
-    let vertex_triples = triangles.data() as *const i32;
+    let vertex_triples = triangles.data().map_or(core::ptr::null(), |t| t as *const _ as *const i32);
 
     // TODO: export in your format
     let _ = points;

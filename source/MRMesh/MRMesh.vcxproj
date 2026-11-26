@@ -39,6 +39,9 @@
     <ClInclude Include="MRAABBTreeBase.h" />
     <ClInclude Include="MRAABBTreeBase.hpp" />
     <ClInclude Include="MRAABBTreeMaker.hpp" />
+    <ClInclude Include="MRAABBTreeCenters.hpp" />
+    <ClInclude Include="MRSelectByKey.hpp" />
+    <ClInclude Include="MRTriBox.hpp" />
     <ClInclude Include="MRAABBTreeObjects.h" />
     <ClInclude Include="MRAddNoise.h" />
     <ClInclude Include="MRAligningTransform.h" />
@@ -143,6 +146,7 @@
     <ClInclude Include="MRFile.h" />
     <ClInclude Include="MRFillContour.h" />
     <ClInclude Include="MRFaceFace.h" />
+    <ClInclude Include="MRFaceSoup.h" />
     <ClInclude Include="MRFillContourByGraphCut.h" />
     <ClInclude Include="MRFillContours2D.h" />
     <ClInclude Include="MRGcodeProcessor.h" />
@@ -175,6 +179,9 @@
     <ClInclude Include="MRMeshRelax.hpp" />
     <ClInclude Include="MRMeshReplicate.h" />
     <ClInclude Include="MRSegmentMesh.h" />
+    <ClInclude Include="MRMeshSegmenter.h" />
+    <ClInclude Include="MRSimpleSegmentPolicy.h" />
+    <ClInclude Include="MRNarrowNeckSegmentPolicy.h" />
     <ClInclude Include="MRMeshSubdivideCallbacks.h" />
     <ClInclude Include="MRMeshThickness.h" />
     <ClInclude Include="MRMeshTopologyDiff.h" />
@@ -248,6 +255,7 @@
     <ClInclude Include="MRPointToPlaneAligningTransform.h" />
     <ClInclude Include="MRPointToPointAligningTransform.h" />
     <ClInclude Include="MRRigidXfRansac.h" />
+    <ClInclude Include="MRGlobalRegistration.h" />
     <ClInclude Include="MRPolyline.h" />
     <ClInclude Include="MRPolyline2Collide.h" />
     <ClInclude Include="MRPolyline2Intersect.h" />
@@ -265,7 +273,6 @@
     <ClInclude Include="MRPrimitiveMapsComposition.h" />
     <ClInclude Include="MRPriorityQueue.h" />
     <ClInclude Include="MRPrism.h" />
-    <ClInclude Include="MRProcessSelfTreeSubtasks.h" />
     <ClInclude Include="MRProgressReadWrite.h" />
     <ClInclude Include="MRProtectedRun.h" />
     <ClInclude Include="MRRadiusCompensation.h" />
@@ -308,6 +315,7 @@
     <ClInclude Include="MRCameraPointsTriangulation.h" />
     <ClInclude Include="MRTimeRecord.h" />
     <ClInclude Include="MRTriMesh.h" />
+    <ClInclude Include="MRTriMeshPart.h" />
     <ClInclude Include="MRTripleFaceIntersections.h" />
     <ClInclude Include="MRTunnelDetector.h" />
     <ClInclude Include="MRMeshDirMax.h" />
@@ -315,6 +323,10 @@
     <ClInclude Include="MRMeshToPointCloud.h" />
     <ClInclude Include="miniply.h" />
     <ClInclude Include="MRAABBTree.h" />
+    <ClInclude Include="MRAABBTreeSimd.h" />
+    <ClInclude Include="MRAABBTreePointsTraversal.hpp" />
+    <ClInclude Include="MRAABBTreeTraversal.hpp" />
+    <ClInclude Include="MRSimd4.hpp" />
     <ClInclude Include="MRBitSetParallelFor.h" />
     <ClInclude Include="MRClosestPointInTriangle.h" />
     <ClInclude Include="MRArrow.h" />
@@ -323,6 +335,9 @@
     <ClInclude Include="MREdgeIterator.h" />
     <ClInclude Include="MRAffineXf3.h" />
     <ClInclude Include="MRBestFit.h" />
+    <ClInclude Include="MRBSpline.h" />
+    <ClInclude Include="MRConformalMap.h" />
+    <ClInclude Include="MRFittedBSplineSurface.h" />
     <ClInclude Include="MRLocalConvexity.h" />
     <ClInclude Include="MRAllocator.h" />
     <ClInclude Include="MRBitSet.h" />
@@ -389,6 +404,7 @@
     <ClInclude Include="MRSymMatrix3.h" />
     <ClInclude Include="MRFreeFormDeformer.h" />
     <ClInclude Include="MRToFromEigen.h" />
+    <ClInclude Include="MRTorus3.h" />
     <ClInclude Include="MRTriangleIntersection.h" />
     <ClInclude Include="MRTriMath.h" />
     <ClInclude Include="MRTriPoint.h" />
@@ -417,6 +433,7 @@
     <ClInclude Include="MRMeshNormals.h" />
     <ClInclude Include="MRMeshRelax.h" />
     <ClInclude Include="MRMeshSave.h" />
+    <ClInclude Include="MRMeshOrTriMesh.h" />
     <ClInclude Include="MRMeshSubdivide.h" />
     <ClInclude Include="MRProgressCallback.h" />
     <ClInclude Include="MRParallelProgressReporter.h" />
@@ -469,6 +486,7 @@
     <ClInclude Include="MRBestFitPolynomial.h" />
     <ClInclude Include="MRMeta.h" />
     <ClInclude Include="MRMacros.h" />
+    <ClInclude Include="MRPrefetch.h" />
     <ClInclude Include="MRCanonicalTypedefs.h" />
     <ClInclude Include="MRProjectionMeshAttribute.h" />
     <ClInclude Include="MRUniqueTemporaryFolder.h" />
@@ -502,6 +520,7 @@
       <ExcludedFromBuild Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'!='ON'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="MRAlignContoursToMesh.cpp" />
+    <ClCompile Include="MRAllocator.cpp" />
     <ClCompile Include="MRAlphaShape.cpp" />
     <ClCompile Include="MRBoxNesting.cpp" />
     <ClCompile Include="MRChangeMeshDataAction.cpp" />
@@ -527,6 +546,7 @@
     <ClCompile Include="MR2DContoursTriangulation.cpp" />
     <ClCompile Include="miniply.cpp" />
     <ClCompile Include="MRAABBTree.cpp" />
+    <ClCompile Include="MRAABBTreeCenters.cpp" />
     <ClCompile Include="MRAABBTreeObjects.cpp" />
     <ClCompile Include="MRAABBTreePoints.cpp" />
     <ClCompile Include="MRAABBTreePolyline.cpp" />
@@ -557,6 +577,9 @@
     <ClCompile Include="MRDirectory.cpp" />
     <ClCompile Include="MRDistanceMap.cpp" />
     <ClCompile Include="MRBestFit.cpp" />
+    <ClCompile Include="MRBSpline.cpp" />
+    <ClCompile Include="MRConformalMap.cpp" />
+    <ClCompile Include="MRFittedBSplineSurface.cpp" />
     <ClCompile Include="MRLocalConvexity.cpp" />
     <ClCompile Include="MRBitSet.cpp" />
     <ClCompile Include="MRBase64.cpp" />
@@ -670,11 +693,13 @@
     <ClCompile Include="MRPointObject.cpp" />
     <ClCompile Include="MRPointsInBall.cpp" />
     <ClCompile Include="MRPointsLoad.cpp" />
+    <ClCompile Include="MRPointsLoadPcdPtx.cpp" />
     <ClCompile Include="MRMultiScanLoad.cpp" />
     <ClCompile Include="MRPointsSave.cpp" />
     <ClCompile Include="MRPointToPlaneAligningTransform.cpp" />
     <ClCompile Include="MRPointToPointAligningTransform.cpp" />
     <ClCompile Include="MRRigidXfRansac.cpp" />
+    <ClCompile Include="MRGlobalRegistration.cpp" />
     <ClCompile Include="MRPolyline.cpp" />
     <ClCompile Include="MRPolyline2Collide.cpp" />
     <ClCompile Include="MRPolyline2Intersect.cpp" />
@@ -769,6 +794,8 @@
     <ClCompile Include="MRMeshNormals.cpp" />
     <ClCompile Include="MRMeshRelax.cpp" />
     <ClCompile Include="MRMeshSave.cpp" />
+    <ClCompile Include="MRTriMesh.cpp" />
+    <ClCompile Include="MRTriMeshPart.cpp" />
     <ClCompile Include="MRMeshSubdivide.cpp" />
     <ClCompile Include="MRMeshTopology.cpp" />
     <ClCompile Include="MRMeshBuilder.cpp" />

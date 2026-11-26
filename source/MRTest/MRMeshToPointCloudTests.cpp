@@ -94,7 +94,7 @@ TEST( MRMesh, MeshToDensePointCloud )
         {
             EXPECT_NEAR( cloud->normals[v].length(), 1.f, 1e-5f );
             const auto proj = findProjection( cloud->points[v], mesh );
-            EXPECT_GT( dot( cloud->normals[v], mesh.normal( proj.mtp ) ), 0.9f );
+            EXPECT_GT( dot( cloud->normals[v], mesh.normal( proj.mtp( mesh.topology ) ) ), 0.9f );
         }
 
         // the same cloud without normals
@@ -272,7 +272,7 @@ TEST( MRMesh, MeshToDensePointCloudPseudonormals )
     for ( auto v = VertId( torus.points.size() ); v < tcloud->points.endId(); ++v )
     {
         const auto p = tcloud->points[v];
-        const auto face = torus.topology.left( findProjection( p, torus ).mtp.e ); // the triangle with the point
+        const auto face = findProjection( p, torus ).proj.face; // the triangle with the point
         Vector3f expected = torus.normal( face );
         EdgeId es[3];
         torus.topology.getTriEdges( face, es );

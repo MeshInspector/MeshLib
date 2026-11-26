@@ -14,18 +14,18 @@ of MeshLib's Wasm uses):
 
 ```sh
 ./scripts/build_wasm_meshlib.sh
-# -> build/Release/bin/meshlib.mjs and build/Release/bin/meshlib.wasm
+# -> build/Release/bin/meshlib-light.mjs and build/Release/bin/meshlib-light.wasm
 ```
 
 ## Run the tests
 
-Point `MESHLIB_MODULE` at the built module (its `meshlib.wasm` is loaded from the same directory):
+Point `MESHLIB_MODULE` at the built module (its `meshlib-light.wasm` is loaded from the same directory):
 
 ```sh
 # from the MeshLib root
-MESHLIB_MODULE=build/Release/bin/meshlib.mjs node source/MRWasmTest/index.mjs     # main set
-MESHLIB_MODULE=build/Release/bin/meshlib.mjs node source/MRWasmTest/io.test.mjs   # + disk IO
+MESHLIB_MODULE=build/Release/bin/meshlib-light.mjs node source/MRWasmTest/index.mjs     # main set
+MESHLIB_MODULE=build/Release/bin/meshlib-light.mjs node source/MRWasmTest/io.test.mjs   # + disk IO
 ```
 
-Or copy `meshlib.mjs` + `meshlib.wasm` into this directory and run `npm test` (which runs both).
+Or copy `meshlib-light.mjs` + `meshlib-light.wasm` into this directory and run `npm test` (which runs both).
 Each entry prints `OK` / `IO OK` and exits 0 on success.

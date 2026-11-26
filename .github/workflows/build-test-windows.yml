@@ -237,7 +237,7 @@ jobs:
           call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp PREGENERATED=1 CSHARP_MODE=${{matrix.config}} CSHARP_STATIC_DLLIMPORT=1 CSHARP_INPUT_JSON=MeshLib/CbindingsTmp/MeshLibC2Wasm/temp/interop_desc.json || exit /b 1
           dotnet build examples/c-sharp-examples -c ${{matrix.config}} -p:Platform=%MSBUILD_PLATFORM% -p:MeshLibArch=%MR_ARCH% || exit /b 1
 
-      - name: Build C bindings
+      - name: Get and build C bindings
         if: ${{ inputs.mrbind_c }}
         shell: cmd
         env:

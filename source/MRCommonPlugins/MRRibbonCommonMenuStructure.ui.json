@@ -49,6 +49,14 @@
 							"Name": "Viewer settings"
 						}
 					]
+				},
+				{
+					"Name": "Transform",
+					"List": [
+						{
+							"Name": "Feature Alignment"
+						}
+					]
 				}
 			]
 		},

@@ -1,25 +1,28 @@
-import createMeshLib from '@meshinspector/meshlib';
+import * as ml from '@meshinspector/meshlib';
 
-const ml = await createMeshLib();
+await ml.init();
 
-using meshA = ml.makeUVSphere(1.0, 16, 16); // make mesh A
-using meshB = ml.makeUVSphere(1.0, 16, 16); // make mesh B
-// shift mesh B for better demonstration
-using shift = ml.AffineXf3f.translation({ x: 0.1, y: 0.1, z: 0.1 });
-meshB.transform(shift);
+using meshA = ml.makeUVSphere(); // make mesh A
+using meshB = ml.makeUVSphere(); // make mesh B
+meshB.transform(ml.AffineXf3f.translation(new ml.Vector3f(0.1, 0.1, 0.1))); // shift mesh B for better demonstration
+
+// the collision functions take mesh parts (a mesh plus an optional region)
+using partA = new ml.MeshPart(meshA);
+using partB = new ml.MeshPart(meshB);
 
 // find each pair of colliding faces
-const collidingFacePairs = ml.findCollidingTriangles(meshA, meshB);
-for (const { aFace, bFace } of collidingFacePairs)
-  console.log(`${aFace} ${bFace}`);
+using collidingFacePairs = ml.findCollidingTriangles(partA, partB);
+for (let i = 0; i < collidingFacePairs.size(); ++i) {
+  const fp = collidingFacePairs.at(i);
+  console.log(fp.aFace.id_, fp.bFace.id_); // print each pair of colliding faces
+}
 
 // find bitsets of colliding faces
-const bitsets = ml.findCollidingTriangleBitsets(meshA, meshB);
-using collidingFacesA = bitsets.a;
-using collidingFacesB = bitsets.b;
-console.log(collidingFacesA.count()); // number of colliding faces from mesh A
-console.log(collidingFacesB.count()); // number of colliding faces from mesh B
+using collidingBitSets = ml.findCollidingTriangleBitsets(partA, partB);
+console.log(collidingBitSets.first().count()); // number of colliding faces from mesh A
+console.log(collidingBitSets.second().count()); // number of colliding faces from mesh B
 
 // fast check whether mesh A and mesh B collide
-const isColliding = ml.findCollidingTriangles(meshA, meshB, true).length > 0;
+using firstPair = ml.findCollidingTriangles(partA, partB, null, true);
+const isColliding = !firstPair.empty();
 console.log(isColliding);

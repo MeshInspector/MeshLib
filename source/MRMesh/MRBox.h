@@ -11,6 +11,14 @@
 #include <limits>
 #include <type_traits>
 
+// MSVC for arm64 vectorizes the loops of Box::include into fmin/fmax, which return NaN of either argument, unlike v < lo ? v : lo
+// https://developercommunity.visualstudio.com/t/MSVC-ARM64-O2-vectorizer-emits-FMIN-wit/11182553
+#if defined( _MSC_VER ) && !defined( __clang__ ) && defined( _M_ARM64 )
+#define MR_BOX_NO_VECTOR __pragma( loop( no_vector ) )
+#else
+#define MR_BOX_NO_VECTOR
+#endif
+
 namespace MR
 {
 
@@ -122,20 +130,29 @@ public:
     /// minimally increases the box to include given point
     void include( const V & pt )
     {
+        MR_BOX_NO_VECTOR
         for ( int i = 0; i < elements; ++i )
         {
-            if ( VTraits::getElem( i, pt ) < VTraits::getElem( i, min ) ) VTraits::getElem( i, min ) = VTraits::getElem( i, pt );
-            if ( VTraits::getElem( i, pt ) > VTraits::getElem( i, max ) ) VTraits::getElem( i, max ) = VTraits::getElem( i, pt );
+            const auto v = VTraits::getElem( i, pt );
+            auto & lo = VTraits::getElem( i, min );
+            auto & hi = VTraits::getElem( i, max );
+            lo = v < lo ? v : lo;
+            hi = hi < v ? v : hi;
         }
     }
 
     /// minimally increases the box to include another box
     void include( const Box & b )
     {
+        MR_BOX_NO_VECTOR
         for ( int i = 0; i < elements; ++i )
         {
-            if ( VTraits::getElem( i, b.min ) < VTraits::getElem( i, min ) ) VTraits::getElem( i, min ) = VTraits::getElem( i, b.min );
-            if ( VTraits::getElem( i, b.max ) > VTraits::getElem( i, max ) ) VTraits::getElem( i, max ) = VTraits::getElem( i, b.max );
+            const auto bLo = VTraits::getElem( i, b.min );
+            const auto bHi = VTraits::getElem( i, b.max );
+            auto & lo = VTraits::getElem( i, min );
+            auto & hi = VTraits::getElem( i, max );
+            lo = bLo < lo ? bLo : lo;
+            hi = hi < bHi ? bHi : hi;
         }
     }
 

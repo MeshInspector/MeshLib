@@ -330,7 +330,7 @@ TEST( MRMesh, cutMeshAlongBoundaryFillsSpikedHoles )
         Vector3f( 3.79533172f, 0.0137018608f, -0.186390594f ),
         Vector3f( 4.15900469f, 0.154283509f, -0.246287376f ),
     } )
-        mtps.push_back( mesh.projectPoint( p ).mtp );
+        mtps.push_back( mesh.projectPoint( p ).mtp( mesh.topology ) );
     mtps.push_back( mtps.front() );
     auto contour = surfaceLineToMeshContour( mesh, mtps );
     ASSERT_TRUE( contour.has_value() );

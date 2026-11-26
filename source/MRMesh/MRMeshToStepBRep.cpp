@@ -36,7 +36,7 @@ struct Curve
 /// a part of the boundary between two regions: one curve between two vertices
 struct BRepEdge
 {
-    std::vector<int> verts; ///< the chain of mesh vertices
+    Vector<int> verts; ///< the chain of mesh vertices
     Curve curve;
 };
 
@@ -48,7 +48,7 @@ public:
     MeshToStepStats write( std::ostream& out );
 
 private:
-    using Surfs = std::vector<const Surf*>;
+    using Surfs = Vector<const Surf*>;
     using DirEdge = std::pair<int, int>;
     struct EdgeUse
     {
@@ -58,14 +58,14 @@ private:
     };
 
     double curveTol_( const Surfs& ss ) const;
-    double onSurfs_( const std::vector<V3>& pts, const Surfs& ss ) const;
-    std::vector<V3> pointsOf_( const std::vector<int>& ids ) const;
-    std::optional<Curve> tryLine_( const std::vector<V3>& p, const Surfs& ss ) const;
-    std::optional<Curve> circleFrom_( const std::vector<V3>& p, const V3& ctr, V3 n, double r, const Surfs& ss, bool closed ) const;
-    std::optional<Curve> axisCircle_( const std::vector<V3>& p, const Surfs& ss, bool closed ) const;
-    std::optional<Curve> tryCircle_( const std::vector<V3>& p, const Surfs& ss, bool closed ) const;
-    Curve spline_( const std::vector<V3>& p, const Surfs& ss ) const;
-    void splitFit_( const std::vector<int>& ids, const Surfs& ss );
+    double onSurfs_( const Vector<V3>& pts, const Surfs& ss ) const;
+    Vector<V3> pointsOf_( const Vector<int>& ids ) const;
+    std::optional<Curve> tryLine_( const Vector<V3>& p, const Surfs& ss ) const;
+    std::optional<Curve> circleFrom_( const Vector<V3>& p, const V3& ctr, V3 n, double r, const Surfs& ss, bool closed ) const;
+    std::optional<Curve> axisCircle_( const Vector<V3>& p, const Surfs& ss, bool closed ) const;
+    std::optional<Curve> tryCircle_( const Vector<V3>& p, const Surfs& ss, bool closed ) const;
+    Curve spline_( const Vector<V3>& p, const Surfs& ss ) const;
+    void splitFit_( const Vector<int>& ids, const Surfs& ss );
     void findEdges_();
     void findLoops_();
 
@@ -78,10 +78,10 @@ private:
     const Data& d_;
     std::string name_;
     std::map<DirEdge, std::pair<int, int>> bnd_; ///< boundary mesh edge (u,v) -> its left face and the index of the edge in it
-    std::vector<BRepEdge> edges_;
+    Vector<BRepEdge> edges_;
     std::map<DirEdge, EdgeUse> edgeOf_;
-    std::vector<std::vector<std::vector<std::pair<int, bool>>>> loops_; ///< region -> loops -> (edge, forward)
-    std::vector<std::string> lines_;
+    Vector<Vector<Vector<std::pair<int, bool>>>> loops_; ///< region -> loops -> (edge, forward)
+    Vector<std::string> lines_;
     std::map<int, std::string> vertexIds_;
 };
 
@@ -94,7 +94,7 @@ double BRepWriter::curveTol_( const Surfs& ss ) const
     return res;
 }
 
-double BRepWriter::onSurfs_( const std::vector<V3>& pts, const Surfs& ss ) const
+double BRepWriter::onSurfs_( const Vector<V3>& pts, const Surfs& ss ) const
 {
     double res = 0;
     for ( auto s : ss )
@@ -102,16 +102,16 @@ double BRepWriter::onSurfs_( const std::vector<V3>& pts, const Surfs& ss ) const
     return res;
 }
 
-std::vector<V3> BRepWriter::pointsOf_( const std::vector<int>& ids ) const
+Vector<V3> BRepWriter::pointsOf_( const Vector<int>& ids ) const
 {
-    std::vector<V3> res;
+    Vector<V3> res;
     res.reserve( ids.size() );
     for ( int v : ids )
         res.push_back( d_.pts[v] );
     return res;
 }
 
-std::optional<Curve> BRepWriter::tryLine_( const std::vector<V3>& p, const Surfs& ss ) const
+std::optional<Curve> BRepWriter::tryLine_( const Vector<V3>& p, const Surfs& ss ) const
 {
     V3 dir = p.back() - p.front();
     const double len = dir.length();
@@ -124,7 +124,7 @@ std::optional<Curve> BRepWriter::tryLine_( const std::vector<V3>& p, const Surfs
         if ( ( r - dir * dot( r, dir ) ).length() > 0.5 * d_.tol )
             return {};
     }
-    std::vector<V3> samples;
+    Vector<V3> samples;
     for ( int i = 0; i <= 8; ++i )
         samples.push_back( p.front() + ( p.back() - p.front() ) * ( i / 8.0 ) );
     if ( onSurfs_( samples, ss ) > curveTol_( ss ) )
@@ -132,7 +132,7 @@ std::optional<Curve> BRepWriter::tryLine_( const std::vector<V3>& p, const Surfs
     return Curve{};
 }
 
-std::optional<Curve> BRepWriter::circleFrom_( const std::vector<V3>& p, const V3& ctr, V3 n, double r, const Surfs& ss, bool closed ) const
+std::optional<Curve> BRepWriter::circleFrom_( const Vector<V3>& p, const V3& ctr, V3 n, double r, const Surfs& ss, bool closed ) const
 {
     // orient the axis so that the chain runs counter-clockwise
     V3 tot;
@@ -166,7 +166,7 @@ std::optional<Curve> BRepWriter::circleFrom_( const std::vector<V3>& p, const V3
     }
     if ( prev > 2 * PI + 1e-9 )
         return {};
-    std::vector<V3> samples;
+    Vector<V3> samples;
     const int num = 4 * (int)p.size();
     for ( int i = 0; i <= num; ++i )
     {
@@ -185,7 +185,7 @@ std::optional<Curve> BRepWriter::circleFrom_( const std::vector<V3>& p, const V3
 }
 
 /// circle around the axis of an adjacent surface of revolution: steadier than a free fit to few points
-std::optional<Curve> BRepWriter::axisCircle_( const std::vector<V3>& p, const Surfs& ss, bool closed ) const
+std::optional<Curve> BRepWriter::axisCircle_( const Vector<V3>& p, const Surfs& ss, bool closed ) const
 {
     for ( auto s : ss )
     {
@@ -213,9 +213,9 @@ std::optional<Curve> BRepWriter::axisCircle_( const std::vector<V3>& p, const Su
     return {};
 }
 
-std::optional<Curve> BRepWriter::tryCircle_( const std::vector<V3>& p, const Surfs& ss, bool closed ) const
+std::optional<Curve> BRepWriter::tryCircle_( const Vector<V3>& p, const Surfs& ss, bool closed ) const
 {
-    std::vector<V3> q( p.begin(), closed ? p.end() - 1 : p.end() );
+    Vector<V3> q( p.begin(), closed ? p.end() - 1 : p.end() );
     if ( q.size() < 3 )
         return {};
     const V3 c0 = centroid( q );
@@ -227,7 +227,7 @@ std::optional<Curve> BRepWriter::tryCircle_( const std::vector<V3>& p, const Sur
     if ( std::sqrt( std::max( vals[1], 0.0 ) ) < 1e-6 * std::sqrt( std::max( vals[2], 1e-24 ) ) )
         return {};
     const V3 n = vecs.x, u = vecs.z, v = vecs.y;
-    std::vector<V2> proj;
+    Vector<V2> proj;
     for ( const auto& pt : q )
     {
         if ( std::abs( dot( pt - c0, n ) ) > 0.5 * d_.tol )
@@ -246,12 +246,12 @@ std::optional<Curve> BRepWriter::tryCircle_( const std::vector<V3>& p, const Sur
 }
 
 /// B-spline curve interpolating given points and additional points between them projected on the surfaces
-Curve BRepWriter::spline_( const std::vector<V3>& p, const Surfs& ss ) const
+Curve BRepWriter::spline_( const Vector<V3>& p, const Surfs& ss ) const
 {
     auto q = p;
     for ( int iter = 0; iter < 2; ++iter )
     {
-        std::vector<V3> z;
+        Vector<V3> z;
         z.reserve( 2 * q.size() );
         for ( size_t i = 0; i + 1 < q.size(); ++i )
         {
@@ -275,10 +275,10 @@ Curve BRepWriter::spline_( const std::vector<V3>& p, const Surfs& ss ) const
     };
     {
         // evenly spaced points make the interpolation stable
-        std::vector<double> len( n, 0.0 );
+        Vector<double> len( n, 0.0 );
         for ( int i = 1; i < n; ++i )
             len[i] = len[i - 1] + ( q[i] - q[i - 1] ).length();
-        std::vector<V3> even( n );
+        Vector<V3> even( n );
         even.front() = q.front();
         even.back() = q.back();
         for ( int i = 1, j = 1; i + 1 < n; ++i )
@@ -312,7 +312,7 @@ Curve BRepWriter::spline_( const std::vector<V3>& p, const Surfs& ss ) const
     res.knots = curve->knots;
     res.cp = curve->controlPoints;
 
-    std::vector<V3> samples;
+    Vector<V3> samples;
     const int num = 8 * n;
     for ( int i = 0; i < num; ++i )
         samples.push_back( curve->eval( double( i ) / ( num - 1 ) ) );
@@ -323,7 +323,7 @@ Curve BRepWriter::spline_( const std::vector<V3>& p, const Surfs& ss ) const
 }
 
 /// approximates the chain of mesh vertices by a line or a circle if possible, otherwise splits it in the corners and approximates by splines
-void BRepWriter::splitFit_( const std::vector<int>& ids, const Surfs& ss )
+void BRepWriter::splitFit_( const Vector<int>& ids, const Surfs& ss )
 {
     const auto p = pointsOf_( ids );
     const bool closed = ids.front() == ids.back();
@@ -341,10 +341,10 @@ void BRepWriter::splitFit_( const std::vector<int>& ids, const Surfs& ss )
     }
     static const double cCorner = 22 * PI / 180;
     const int n = (int)ids.size();
-    auto sub = [&]( int from, int to ) { return std::vector<int>( ids.begin() + from, ids.begin() + to + 1 ); };
+    auto sub = [&]( int from, int to ) { return Vector<int>( ids.begin() + from, ids.begin() + to + 1 ); };
     if ( n > 2 )
     {
-        std::vector<V3> dirs;
+        Vector<V3> dirs;
         for ( int i = 0; i + 1 < n; ++i )
             dirs.push_back( ( p[i + 1] - p[i] ).normalized() );
         auto angle = [&]( int i, int j ) { return std::acos( std::clamp( dot( dirs[i], dirs[j] ), -1.0, 1.0 ) ); };
@@ -362,7 +362,7 @@ void BRepWriter::splitFit_( const std::vector<int>& ids, const Surfs& ss )
             if ( bestAng > cCorner && best != 0 )
             {
                 // restart the closed chain in its sharpest corner
-                std::vector<int> rotated( ids.begin() + best, ids.end() - 1 );
+                Vector<int> rotated( ids.begin() + best, ids.end() - 1 );
                 rotated.insert( rotated.end(), ids.begin(), ids.begin() + best + 1 );
                 return splitFit_( rotated, ss );
             }
@@ -375,7 +375,7 @@ void BRepWriter::splitFit_( const std::vector<int>& ids, const Surfs& ss )
                 return;
             }
         }
-        std::vector<int> corners;
+        Vector<int> corners;
         for ( int i = 1; i + 1 < n; ++i )
             if ( angle( i - 1, i ) > cCorner )
                 corners.push_back( i );
@@ -421,7 +421,7 @@ void BRepWriter::findEdges_()
     std::set<DirEdge> visited;
     auto walk = [&]( int u, int v )
     {
-        std::vector<int> vs{ u, v };
+        Vector<int> vs{ u, v };
         while ( !isNode( vs.back() ) && vs.back() != vs.front() )
         {
             const auto& s = adj[vs.back()];
@@ -452,7 +452,7 @@ void BRepWriter::findEdges_()
     };
     for ( const auto& [u, s] : adj )
         if ( s.size() != 2 )
-            for ( int v : std::vector<int>( s.begin(), s.end() ) )
+            for ( int v : Vector<int>( s.begin(), s.end() ) )
                 if ( !visited.count( { u, v } ) )
                     walk( u, v );
     // closed chains without nodes
@@ -471,7 +471,7 @@ void BRepWriter::findLoops_()
         if ( done.count( start ) )
             continue;
         const int r = d.sub[fi.first];
-        std::vector<std::pair<int, bool>> loop;
+        Vector<std::pair<int, bool>> loop;
         for ( DirEdge cur = start; done.insert( cur ).second; )
         {
             const auto& use = edgeOf_.at( cur );
@@ -580,7 +580,7 @@ V3 snapped( const V3& a )
     return a;
 }
 
-std::string joined( const std::vector<std::string>& v )
+std::string joined( const Vector<std::string>& v )
 {
     std::string res;
     for ( const auto& s : v )
@@ -595,7 +595,7 @@ std::string joined( const std::vector<std::string>& v )
 /// distinct knots and their multiplicities as two STEP lists
 std::pair<std::string, std::string> knotLists( const Vector<double>& knots )
 {
-    std::vector<std::string> ks, ms;
+    Vector<std::string> ks, ms;
     for ( size_t i = 0; i < knots.size(); )
     {
         size_t j = i;
@@ -630,7 +630,7 @@ MeshToStepStats BRepWriter::write( std::ostream& out )
     const auto unc = add_( fmt::format( "UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE({}),{},'distance_accuracy_value','')", stepReal( d.tol ), lu ) );
     const auto ctx = add_( fmt::format( "(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT(({}))GLOBAL_UNIT_ASSIGNED_CONTEXT(({},{},{}))REPRESENTATION_CONTEXT('',''))", unc, lu, au, su ) );
 
-    std::vector<std::string> edgeIds;
+    Vector<std::string> edgeIds;
     for ( const auto& e : edges_ )
     {
         const auto& cv = e.curve;
@@ -647,7 +647,7 @@ MeshToStepStats BRepWriter::write( std::ostream& out )
             geom = add_( fmt::format( "CIRCLE('',{},{})", axis2_( cv.c, snapped( cv.n ), &cv.x ), stepReal( rounded( cv.r, 1e9 ) ) ) );
         else
         {
-            std::vector<std::string> cps;
+            Vector<std::string> cps;
             for ( const auto& p : cv.cp )
                 cps.push_back( point_( p ) );
             const auto [mults, knots] = knotLists( cv.knots );
@@ -660,7 +660,7 @@ MeshToStepStats BRepWriter::write( std::ostream& out )
 
     MeshToStepStats stats;
     const auto regFaces = d.facesOfRegions();
-    std::vector<std::string> faceIds( d.regions.size() );
+    Vector<std::string> faceIds( d.regions.size() );
     for ( size_t r = 0; r < d.regions.size(); ++r )
     {
         const Surf& s = d.regions[r].surf;
@@ -705,12 +705,12 @@ MeshToStepStats BRepWriter::write( std::ostream& out )
         {
             ++stats.bsplines;
             stats.maxBSplineError = std::max( stats.maxBSplineError, float( s.bs->err ) );
-            std::vector<std::string> rows;
+            Vector<std::string> rows;
             const auto& bs = s.bs->surf;
             const int nu = bs.numU(), nv = bs.numV();
             for ( int i = 0; i < nu; ++i )
             {
-                std::vector<std::string> row;
+                Vector<std::string> row;
                 for ( int j = 0; j < nv; ++j )
                     row.push_back( point_( bs.controlPoints[i * nv + j] ) );
                 rows.push_back( fmt::format( "({})", joined( row ) ) );
@@ -728,7 +728,7 @@ MeshToStepStats BRepWriter::write( std::ostream& out )
 
         // the loop with the largest bounding box is the outer one
         const auto& loops = loops_[r];
-        std::vector<double> extent;
+        Vector<double> extent;
         std::set<int> loopVerts;
         for ( const auto& loop : loops )
         {
@@ -741,13 +741,13 @@ MeshToStepStats BRepWriter::write( std::ostream& out )
                 }
             extent.push_back( box.valid() ? box.diagonal() : 0 );
         }
-        std::vector<int> order( loops.size() );
+        Vector<int> order( loops.size() );
         std::iota( order.begin(), order.end(), 0 );
         std::stable_sort( order.begin(), order.end(), [&]( int x, int y ) { return extent[x] > extent[y]; } );
-        std::vector<std::string> bounds;
+        Vector<std::string> bounds;
         for ( int li : order )
         {
-            std::vector<std::string> oes;
+            Vector<std::string> oes;
             for ( const auto& [e, fwd] : loops[li] )
                 oes.push_back( add_( fmt::format( "ORIENTED_EDGE('',*,*,{},{})", edgeIds[e], fwd ? ".T." : ".F." ) ) );
             const auto el = add_( fmt::format( "EDGE_LOOP('',({}))", joined( oes ) ) );
@@ -774,10 +774,10 @@ MeshToStepStats BRepWriter::write( std::ostream& out )
     }
 
     // every connected component of the mesh makes its own shell
-    std::vector<int> comp( d.nf, -1 );
-    std::vector<std::string> shells;
+    Vector<int> comp( d.nf, -1 );
+    Vector<std::string> shells;
     bool allClosed = true;
-    std::vector<int> stack;
+    Vector<int> stack;
     for ( int f0 = 0; f0 < d.nf; ++f0 )
     {
         if ( !d.valid( f0 ) || comp[f0] >= 0 )
@@ -803,7 +803,7 @@ MeshToStepStats BRepWriter::write( std::ostream& out )
                 }
             }
         }
-        std::vector<std::string> fids;
+        Vector<std::string> fids;
         for ( int r : regs )
             fids.push_back( faceIds[r] );
         shells.push_back( add_( fmt::format( "{}('',({}))", closed ? "CLOSED_SHELL" : "OPEN_SHELL", joined( fids ) ) ) );
@@ -814,7 +814,7 @@ MeshToStepStats BRepWriter::write( std::ostream& out )
     std::string rep;
     if ( allClosed )
     {
-        std::vector<std::string> items{ origin };
+        Vector<std::string> items{ origin };
         for ( const auto& sh : shells )
             items.push_back( add_( fmt::format( "MANIFOLD_SOLID_BREP('{}',{})", name_, sh ) ) );
         rep = add_( fmt::format( "ADVANCED_BREP_SHAPE_REPRESENTATION('',({}),{})", joined( items ), ctx ) );

@@ -39,7 +39,7 @@ private:
     std::map<Pair, Border> borders_() const;
     void moveFaces_( int from, int to );
     void extendStrong_();
-    std::optional<Surf> unionFit_( const std::vector<int>& fa, const std::vector<int>& fb, const Region& ra, const Region& rb ) const;
+    std::optional<Surf> unionFit_( const Vector<int>& fa, const Vector<int>& fb, const Region& ra, const Region& rb ) const;
     void uniteUnderOneSurface_();
     void absorbLyingOnNeighbour_();
     void mergeSameSurface_();
@@ -48,7 +48,7 @@ private:
     void splitOnComponents_();
 
     Data& d_;
-    std::vector<Axis> axes_;
+    Vector<Axis> axes_;
 };
 
 bool Cleaner::strong_( const Region& r ) const
@@ -100,10 +100,10 @@ void Cleaner::moveFaces_( int from, int to )
 void Cleaner::extendStrong_()
 {
     auto& d = d_;
-    std::vector<char> isStrong( d.regions.size() );
+    Vector<char> isStrong( d.regions.size() );
     for ( size_t i = 0; i < d.regions.size(); ++i )
         isStrong[i] = strong_( d.regions[i] );
-    std::vector<int> queue;
+    Vector<int> queue;
     for ( int f = 0; f < d.nf; ++f )
         if ( d.valid( f ) && isStrong[d.sub[f]] )
             queue.push_back( f );
@@ -136,14 +136,14 @@ void Cleaner::extendStrong_()
 }
 
 /// one surface passing through all vertices of two regions, if any
-std::optional<Surf> Cleaner::unionFit_( const std::vector<int>& fa, const std::vector<int>& fb, const Region& ra, const Region& rb ) const
+std::optional<Surf> Cleaner::unionFit_( const Vector<int>& fa, const Vector<int>& fb, const Region& ra, const Region& rb ) const
 {
     const auto& d = d_;
     auto fs = fa;
     fs.insert( fs.end(), fb.begin(), fb.end() );
     const auto pts = d.pointsOf( fs );
     const auto sub = d.pointsOf( fs, 800 );
-    std::vector<V3> ns, cs;
+    Vector<V3> ns, cs;
     double area = 0;
     for ( int f : fs )
     {
@@ -193,7 +193,7 @@ void Cleaner::uniteUnderOneSurface_()
         d.updateStats();
         const auto borders = borders_();
         const auto faces = d.facesOfRegions();
-        std::vector<Pair> pairs;
+        Vector<Pair> pairs;
         for ( const auto& [p, b] : borders )
         {
             const auto& ra = d.regions[p.first];
@@ -235,7 +235,7 @@ void Cleaner::absorbLyingOnNeighbour_()
     {
         d.updateStats();
         const auto faces = d.facesOfRegions();
-        std::vector<Pair> pairs;
+        Vector<Pair> pairs;
         for ( const auto& [p, b] : borders_() )
         {
             pairs.push_back( p );
@@ -275,7 +275,7 @@ void Cleaner::mergeSameSurface_()
     d.updateStats();
     UnionFind<RegionId> uf( d.regions.size() );
     // the surface of the largest region is kept for every united set
-    std::vector<int> largest( d.regions.size() );
+    Vector<int> largest( d.regions.size() );
     std::iota( largest.begin(), largest.end(), 0 );
     for ( const auto& [p, b] : borders_() )
     {
@@ -297,24 +297,24 @@ void Cleaner::fitFreeform_()
     auto& d = d_;
     d.updateStats();
     const int nr = (int)d.regions.size();
-    std::vector<char> weak( nr );
+    Vector<char> weak( nr );
     for ( int i = 0; i < nr; ++i )
         weak[i] = d.regions[i].numFaces > 0 && !strong_( d.regions[i] ) && d.regions[i].surf.type != SurfType::Plane; // one or two triangles can be a true plane
     const auto borders = borders_();
-    std::vector<std::vector<int>> smoothNbr( nr );
+    Vector<Vector<int>> smoothNbr( nr );
     for ( const auto& [p, b] : borders )
         if ( b.angle() < 30 )
         {
             smoothNbr[p.first].push_back( p.second );
             smoothNbr[p.second].push_back( p.first );
         }
-    std::vector<int> cluster;
+    Vector<int> cluster;
     int numClusters = 0;
     auto findClusters = [&]
     {
         cluster.assign( nr, -1 );
         numClusters = 0;
-        std::vector<int> stack;
+        Vector<int> stack;
         for ( int r0 = 0; r0 < nr; ++r0 )
         {
             if ( !weak[r0] || cluster[r0] >= 0 )
@@ -336,7 +336,7 @@ void Cleaner::fitFreeform_()
         }
     };
     findClusters();
-    std::vector<double> clusterArea( numClusters, 0.0 ), lim( nr, 0.0 ), border( nr, 0.0 );
+    Vector<double> clusterArea( numClusters, 0.0 ), lim( nr, 0.0 ), border( nr, 0.0 );
     for ( int r = 0; r < nr; ++r )
         if ( weak[r] )
             clusterArea[cluster[r]] += d.regions[r].area;
@@ -352,7 +352,7 @@ void Cleaner::fitFreeform_()
     // accidental "strong" regions lying smoothly inside a cluster join it
     for ( ;; )
     {
-        std::vector<std::pair<int, double>> add;
+        Vector<std::pair<int, double>> add;
         for ( int y = 0; y < nr; ++y )
         {
             const auto& ry = d.regions[y];
@@ -392,7 +392,7 @@ void Cleaner::fitFreeform_()
     }
     findClusters();
 
-    std::vector<std::vector<int>> clusterFaces( numClusters );
+    Vector<Vector<int>> clusterFaces( numClusters );
     for ( int f = 0; f < d.nf; ++f )
         if ( d.valid( f ) && cluster[d.sub[f]] >= 0 )
             clusterFaces[cluster[d.sub[f]]].push_back( f );
@@ -407,7 +407,7 @@ void Cleaner::fitFreeform_()
         const auto loops = findLeftBoundary( d.mesh->topology, &region );
         if ( loops.size() != 1 )
             continue;
-        std::vector<VertId> loopVerts;
+        Vector<VertId> loopVerts;
         for ( EdgeId e : loops[0] )
             loopVerts.push_back( d.mesh->topology.org( e ) );
         std::sort( loopVerts.begin(), loopVerts.end() );
@@ -472,7 +472,7 @@ void Cleaner::splitOnComponents_()
             borders.set( ue );
     }
     const auto [compMap, numComps] = MeshComponents::getAllComponentsMap( *d.mesh, MeshComponents::PerEdge, &borders );
-    std::vector<Region> regions( numComps );
+    Vector<Region> regions( numComps );
     for ( FaceId f : topology.getValidFaces() )
     {
         const int c = compMap[f];

@@ -37,47 +37,47 @@ private:
     {
         double area = 0, dev = 0;
         Surf surf;
-        std::vector<int> faces;
+        Vector<int> faces;
     };
 
     static constexpr size_t cMinVerts = 12;
     static constexpr int cMinStrongFaces = 20;
 
-    std::optional<std::vector<int>> growOnce_( Surf& s, int seed, std::initializer_list<double> sched );
-    std::optional<std::vector<int>> grow_( Surf& s, int seed );
-    std::vector<int> patch_( int seed, int rings ) const;
-    std::vector<int> sample_( const std::vector<int>& from, size_t num );
-    std::vector<V3> normalsOf_( const std::vector<int>& faces ) const;
-    std::vector<V3> centersOf_( const std::vector<int>& faces ) const;
-    void addIfFits_( std::vector<Surf>& out, std::optional<Surf> s, const std::vector<V3>& pts, bool allowRefine ) const;
-    void candidates_( int seed, std::vector<Surf>& out );
-    std::optional<Surf> simpler_( const Surf& s, const std::vector<int>& faces ) const;
+    std::optional<Vector<int>> growOnce_( Surf& s, int seed, std::initializer_list<double> sched );
+    std::optional<Vector<int>> grow_( Surf& s, int seed );
+    Vector<int> patch_( int seed, int rings ) const;
+    Vector<int> sample_( const Vector<int>& from, size_t num );
+    Vector<V3> normalsOf_( const Vector<int>& faces ) const;
+    Vector<V3> centersOf_( const Vector<int>& faces ) const;
+    void addIfFits_( Vector<Surf>& out, std::optional<Surf> s, const Vector<V3>& pts, bool allowRefine ) const;
+    void candidates_( int seed, Vector<Surf>& out );
+    std::optional<Surf> simpler_( const Surf& s, const Vector<int>& faces ) const;
     bool better_( const Found& x, const Found& y ) const;
     bool strong_( const Region& r ) const;
-    void processSegment_( int seg, const std::vector<int>& segFaces );
+    void processSegment_( int seg, const Vector<int>& segFaces );
 
     Data& d_;
     ProgressCallback cb_;
-    std::vector<char> avail_;
-    std::vector<int> fail_;
-    std::vector<int> faceStamp_, coveredStamp_;
+    Vector<char> avail_;
+    Vector<int> fail_;
+    Vector<int> faceStamp_, coveredStamp_;
     int stamp_ = 0;
     std::mt19937 rng_{ 1 };
-    std::vector<Surf> known_; ///< curved surfaces found in the previous pass, they may continue into other segments
-    std::vector<Axis> lib_;   ///< axes of cylinders and cones found in the previous pass
+    Vector<Surf> known_; ///< curved surfaces found in the previous pass, they may continue into other segments
+    Vector<Axis> lib_;   ///< axes of cylinders and cones found in the previous pass
     int pass_ = 1;
 };
 
-std::optional<std::vector<int>> Grower::growOnce_( Surf& s, int seed, std::initializer_list<double> sched )
+std::optional<Vector<int>> Grower::growOnce_( Surf& s, int seed, std::initializer_list<double> sched )
 {
-    std::vector<int> reg;
+    Vector<int> reg;
     for ( int it = 0; it < 10; ++it )
     {
         const double tol = d_.tol * ( it < (int)sched.size() ? sched.begin()[it] : 1.0 );
         if ( !d_.faceOnSurf( s, seed, tol ) )
             return {};
         ++stamp_;
-        std::vector<int> cur{ seed };
+        Vector<int> cur{ seed };
         faceStamp_[seed] = stamp_;
         for ( size_t i = 0; i < cur.size(); ++i )
             for ( int k = 0; k < 3; ++k )
@@ -109,7 +109,7 @@ std::optional<std::vector<int>> Grower::growOnce_( Surf& s, int seed, std::initi
     return reg;
 }
 
-std::optional<std::vector<int>> Grower::grow_( Surf& s, int seed )
+std::optional<Vector<int>> Grower::grow_( Surf& s, int seed )
 {
     const Surf s0 = s;
     auto res = growOnce_( s, seed, {} );
@@ -122,9 +122,9 @@ std::optional<std::vector<int>> Grower::grow_( Surf& s, int seed )
     return res;
 }
 
-std::vector<int> Grower::patch_( int seed, int rings ) const
+Vector<int> Grower::patch_( int seed, int rings ) const
 {
-    std::vector<int> res{ seed };
+    Vector<int> res{ seed };
     size_t begin = 0;
     for ( int r = 0; r < rings; ++r )
     {
@@ -141,7 +141,7 @@ std::vector<int> Grower::patch_( int seed, int rings ) const
     return res;
 }
 
-std::vector<int> Grower::sample_( const std::vector<int>& from, size_t num )
+Vector<int> Grower::sample_( const Vector<int>& from, size_t num )
 {
     auto v = from;
     num = std::min( num, v.size() );
@@ -151,25 +151,25 @@ std::vector<int> Grower::sample_( const std::vector<int>& from, size_t num )
     return v;
 }
 
-std::vector<V3> Grower::normalsOf_( const std::vector<int>& faces ) const
+Vector<V3> Grower::normalsOf_( const Vector<int>& faces ) const
 {
-    std::vector<V3> res;
+    Vector<V3> res;
     res.reserve( faces.size() );
     for ( int f : faces )
         res.push_back( d_.normals[f] );
     return res;
 }
 
-std::vector<V3> Grower::centersOf_( const std::vector<int>& faces ) const
+Vector<V3> Grower::centersOf_( const Vector<int>& faces ) const
 {
-    std::vector<V3> res;
+    Vector<V3> res;
     res.reserve( faces.size() );
     for ( int f : faces )
         res.push_back( d_.centers[f] );
     return res;
 }
 
-void Grower::addIfFits_( std::vector<Surf>& out, std::optional<Surf> s, const std::vector<V3>& pts, bool allowRefine ) const
+void Grower::addIfFits_( Vector<Surf>& out, std::optional<Surf> s, const Vector<V3>& pts, bool allowRefine ) const
 {
     if ( !s || !s->finite() )
         return;
@@ -183,7 +183,7 @@ void Grower::addIfFits_( std::vector<Surf>& out, std::optional<Surf> s, const st
         out.push_back( *s );
 }
 
-void Grower::candidates_( int seed, std::vector<Surf>& out )
+void Grower::candidates_( int seed, Vector<Surf>& out )
 {
     const auto& d = d_;
     Surf plane;
@@ -211,7 +211,7 @@ void Grower::candidates_( int seed, std::vector<Surf>& out )
                 continue;
             a /= len;
             const auto [u, v] = a.perpendicular();
-            std::vector<V2> proj;
+            Vector<V2> proj;
             for ( int f : { seed, q } )
                 for ( int vert : d.tris[f] )
                     proj.emplace_back( dot( d.pts[vert], u ), dot( d.pts[vert], v ) );
@@ -239,7 +239,7 @@ void Grower::candidates_( int seed, std::vector<Surf>& out )
             if ( std::abs( dot( n0, a ) ) < 0.02 || std::abs( m.det() ) < 1e-6 )
                 continue;
             const V3 apex = m.inverse() * V3( dot( n0, d.centers[fs[0]] ), dot( n1, d.centers[fs[1]] ), dot( n2, d.centers[fs[2]] ) );
-            std::vector<double> hs;
+            Vector<double> hs;
             double sumTan = 0, minH = DBL_MAX;
             for ( int f : fs )
                 for ( int vert : d.tris[f] )
@@ -270,7 +270,7 @@ void Grower::candidates_( int seed, std::vector<Surf>& out )
 
     // coarse facets: a cylinder through three triangles of similar size (two triangles give a poor radius)
     {
-        std::vector<int> big;
+        Vector<int> big;
         for ( int f : patch_( seed, 6 ) )
             if ( f != seed && d.areas[f] >= 0.2 * d.areas[seed] )
                 big.push_back( f );
@@ -288,7 +288,7 @@ void Grower::candidates_( int seed, std::vector<Surf>& out )
             for ( size_t i = 0; i < numTries; ++i )
             {
                 const auto q = sample_( big, 2 );
-                const std::vector<int> fs{ seed, q[0], q[1] };
+                const Vector<int> fs{ seed, q[0], q[1] };
                 const auto pts = d.pointsOf( fs );
                 if ( auto s0 = fitCyl( pts, normalsOf_( fs ) ) )
                 {
@@ -346,7 +346,7 @@ void Grower::candidates_( int seed, std::vector<Surf>& out )
 }
 
 /// a simpler surface passing through all vertices of the region, if any
-std::optional<Surf> Grower::simpler_( const Surf& s, const std::vector<int>& faces ) const
+std::optional<Surf> Grower::simpler_( const Surf& s, const Vector<int>& faces ) const
 {
     const auto pts = d_.pointsOf( faces, 600 );
     const auto ns = normalsOf_( faces );
@@ -400,17 +400,17 @@ bool Grower::strong_( const Region& r ) const
     return r.surf.type != SurfType::Torus || isCoaxial( r.surf, lib_, d_.tol );
 }
 
-void Grower::processSegment_( int seg, const std::vector<int>& segFaces )
+void Grower::processSegment_( int seg, const Vector<int>& segFaces )
 {
     auto& d = d_;
-    std::vector<int> faces;
+    Vector<int> faces;
     for ( int f : segFaces )
         if ( d.sub[f] < 0 )
         {
             faces.push_back( f );
             avail_[f] = 1;
         }
-    auto addRegion = [&]( const Surf& s, const std::vector<int>& fs )
+    auto addRegion = [&]( const Surf& s, const Vector<int>& fs )
     {
         Region r;
         r.surf = s;
@@ -424,7 +424,7 @@ void Grower::processSegment_( int seg, const std::vector<int>& segFaces )
         }
         d.regions.push_back( std::move( r ) );
     };
-    std::vector<Surf> cands;
+    Vector<Surf> cands;
     while ( !faces.empty() )
     {
         // first the largest triangles not failed before
@@ -432,7 +432,7 @@ void Grower::processSegment_( int seg, const std::vector<int>& segFaces )
         {
             return std::tuple( fail_[x], -d.areas[x], x ) < std::tuple( fail_[y], -d.areas[y], y );
         } );
-        std::vector<Found> found;
+        Vector<Found> found;
         bool anyTried = false;
         for ( int phase = 0; phase < 4; ++phase )
         {
@@ -548,7 +548,7 @@ void Grower::processSegment_( int seg, const std::vector<int>& segFaces )
         for ( const auto& fnd : found )
             if ( std::all_of( fnd.faces.begin(), fnd.faces.end(), [&]( int f ) { return avail_[f]; } ) )
                 addRegion( fnd.surf, fnd.faces );
-        std::erase_if( faces, [&]( int f ) { return !avail_[f]; } );
+        erase_if( faces, [&]( int f ) { return !avail_[f]; } );
     }
 }
 
@@ -556,7 +556,7 @@ bool Grower::run()
 {
     MR_TIMER;
     auto& d = d_;
-    std::vector<std::vector<int>> segFaces( d.numSegs );
+    Vector<Vector<int>> segFaces( d.numSegs );
     for ( int f = 0; f < d.nf; ++f )
         if ( d.valid( f ) )
             segFaces[d.seg[f]].push_back( f );
@@ -565,8 +565,8 @@ bool Grower::run()
         if ( pass_ == 2 )
         {
             // keep well supported regions, redo the rest with the knowledge of found surfaces
-            std::vector<int> map( d.regions.size(), -1 );
-            std::vector<Region> kept;
+            Vector<int> map( d.regions.size(), -1 );
+            Vector<Region> kept;
             for ( size_t i = 0; i < d.regions.size(); ++i )
                 if ( strong_( d.regions[i] ) )
                 {

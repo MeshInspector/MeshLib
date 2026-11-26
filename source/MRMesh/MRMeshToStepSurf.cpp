@@ -57,7 +57,7 @@ Surf toSurf( const Torus3d& torus )
 
 } //anonymous namespace
 
-V3 centroid( const std::vector<V3>& pts )
+V3 centroid( const Vector<V3>& pts )
 {
     V3 res;
     for ( const auto& p : pts )
@@ -65,7 +65,7 @@ V3 centroid( const std::vector<V3>& pts )
     return pts.empty() ? res : res / double( pts.size() );
 }
 
-Surf fitPlane( const std::vector<V3>& pts )
+Surf fitPlane( const Vector<V3>& pts )
 {
     Surf res;
     PointAccumulator acc;
@@ -78,37 +78,37 @@ Surf fitPlane( const std::vector<V3>& pts )
     return res;
 }
 
-std::optional<Surf> fitSphere( const std::vector<V3>& pts )
+std::optional<Surf> fitSphere( const Vector<V3>& pts )
 {
     if ( const auto sphere = findBestSphere( pts ) )
         return toSurf( *sphere );
     return {};
 }
 
-std::optional<Surf> fitCyl( const std::vector<V3>& pts, const std::vector<V3>& normals )
+std::optional<Surf> fitCyl( const Vector<V3>& pts, const Vector<V3>& normals )
 {
     if ( const auto cyl = findBestCylinderByNormals( pts, normals ) )
         return toSurf( *cyl );
     return {};
 }
 
-std::optional<Surf> axisCone( const std::vector<V3>& pts, const V3& a, const V3& c )
+std::optional<Surf> axisCone( const Vector<V3>& pts, const V3& a, const V3& c )
 {
     if ( const auto cone = findBestConeWithAxis( pts, Line3d( c, a ) ) )
         return toSurf( *cone );
     return {};
 }
 
-std::optional<Surf> axisTorus( const std::vector<V3>& pts, const V3& a, const V3& c )
+std::optional<Surf> axisTorus( const Vector<V3>& pts, const V3& a, const V3& c )
 {
     if ( const auto torus = findBestTorusWithAxis( pts, Line3d( c, a ) ) )
         return toSurf( *torus );
     return {};
 }
 
-std::optional<Surf> fitConeByNormals( const std::vector<V3>& pts, const std::vector<V3>& pc, const std::vector<V3>& normals )
+std::optional<Surf> fitConeByNormals( const Vector<V3>& pts, const Vector<V3>& pc, const Vector<V3>& normals )
 {
-    std::vector<Plane3d> planes;
+    Vector<Plane3d> planes;
     planes.reserve( normals.size() );
     for ( size_t i = 0; i < normals.size(); ++i )
         planes.push_back( Plane3d::fromDirAndPt( normals[i], pc[i] ) );
@@ -117,9 +117,9 @@ std::optional<Surf> fitConeByNormals( const std::vector<V3>& pts, const std::vec
     return {};
 }
 
-std::optional<Surf> fitRevolution( const std::vector<V3>& pts, const std::vector<V3>& pc, const std::vector<V3>& normals, SurfType type )
+std::optional<Surf> fitRevolution( const Vector<V3>& pts, const Vector<V3>& pc, const Vector<V3>& normals, SurfType type )
 {
-    std::vector<Line3d> normalLines;
+    Vector<Line3d> normalLines;
     normalLines.reserve( normals.size() );
     for ( size_t i = 0; i < normals.size(); ++i )
         normalLines.emplace_back( pc[i], normals[i] );
@@ -129,7 +129,7 @@ std::optional<Surf> fitRevolution( const std::vector<V3>& pts, const std::vector
     return type == SurfType::Cone ? axisCone( pts, axis->d, axis->p ) : axisTorus( pts, axis->d, axis->p );
 }
 
-Surf refine( const Surf& s0, const std::vector<V3>& pts )
+Surf refine( const Surf& s0, const Vector<V3>& pts )
 {
     if ( s0.type == SurfType::Plane )
         return fitPlane( pts );
@@ -263,7 +263,7 @@ bool sameSurface( const Surf& p, const Surf& q, double tol )
     }
 }
 
-bool isCoaxial( const Surf& s, const std::vector<Axis>& axes, double tol )
+bool isCoaxial( const Surf& s, const Vector<Axis>& axes, double tol )
 {
     for ( const auto& ax : axes )
     {
@@ -276,7 +276,7 @@ bool isCoaxial( const Surf& s, const std::vector<Axis>& axes, double tol )
     return false;
 }
 
-void addAxis( std::vector<Axis>& axes, const Surf& s, double tol )
+void addAxis( Vector<Axis>& axes, const Surf& s, double tol )
 {
     if ( !isCoaxial( s, axes, tol ) )
         axes.push_back( { s.a, s.c - s.a * dot( s.c, s.a ) } );

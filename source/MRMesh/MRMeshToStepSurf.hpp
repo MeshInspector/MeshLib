@@ -83,7 +83,7 @@ struct Surf
         return std::isfinite( c.x + c.y + c.z + a.x + a.y + a.z + r + R );
     }
 
-    double maxDist( const std::vector<V3>& pts ) const
+    double maxDist( const Vector<V3>& pts ) const
     {
         double res = 0;
         for ( const auto& p : pts )
@@ -92,29 +92,29 @@ struct Surf
     }
 };
 
-V3 centroid( const std::vector<V3>& pts );
+V3 centroid( const Vector<V3>& pts );
 
-Surf fitPlane( const std::vector<V3>& pts );
+Surf fitPlane( const Vector<V3>& pts );
 
-std::optional<Surf> fitSphere( const std::vector<V3>& pts );
+std::optional<Surf> fitSphere( const Vector<V3>& pts );
 
 /// cylinder with the axis orthogonal to given normals
-std::optional<Surf> fitCyl( const std::vector<V3>& pts, const std::vector<V3>& normals );
+std::optional<Surf> fitCyl( const Vector<V3>& pts, const Vector<V3>& normals );
 
 /// cone with given axis fitted to the points
-std::optional<Surf> axisCone( const std::vector<V3>& pts, const V3& a, const V3& c );
+std::optional<Surf> axisCone( const Vector<V3>& pts, const V3& a, const V3& c );
 
 /// torus with given axis fitted to the points
-std::optional<Surf> axisTorus( const std::vector<V3>& pts, const V3& a, const V3& c );
+std::optional<Surf> axisTorus( const Vector<V3>& pts, const V3& a, const V3& c );
 
 /// cone tangent to the planes passing through the points pc with given normals; unlike fitRevolution, it works for one strip of triangles
-std::optional<Surf> fitConeByNormals( const std::vector<V3>& pts, const std::vector<V3>& pc, const std::vector<V3>& normals );
+std::optional<Surf> fitConeByNormals( const Vector<V3>& pts, const Vector<V3>& pc, const Vector<V3>& normals );
 
 /// cone or torus fitted to the points, with the axis found from the normals in the points pc
-std::optional<Surf> fitRevolution( const std::vector<V3>& pts, const std::vector<V3>& pc, const std::vector<V3>& normals, SurfType type );
+std::optional<Surf> fitRevolution( const Vector<V3>& pts, const Vector<V3>& pc, const Vector<V3>& normals, SurfType type );
 
 /// minimizes the sum of squared distances from the points to the surface by Levenberg-Marquardt method
-Surf refine( const Surf& s0, const std::vector<V3>& pts );
+Surf refine( const Surf& s0, const Vector<V3>& pts );
 
 struct Axis
 {
@@ -125,9 +125,9 @@ struct Axis
 bool sameSurface( const Surf& p, const Surf& q, double tol );
 
 /// \return true if the axis of the surface coincides with one of given axes
-bool isCoaxial( const Surf& s, const std::vector<Axis>& axes, double tol );
+bool isCoaxial( const Surf& s, const Vector<Axis>& axes, double tol );
 
-void addAxis( std::vector<Axis>& axes, const Surf& s, double tol );
+void addAxis( Vector<Axis>& axes, const Surf& s, double tol );
 
 } //namespace MeshToStep
 

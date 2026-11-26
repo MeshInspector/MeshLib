@@ -31,14 +31,14 @@ struct Data
 {
     const Mesh* mesh = nullptr;
     int nf = 0;
-    std::vector<V3> pts;       ///< by vertex
-    std::vector<Tri> tris;     ///< by face; {-1,-1,-1} for invalid faces
-    std::vector<Tri> nbr;      ///< faces across the edges (v0v1, v1v2, v2v0), -1 if no face there
-    std::vector<V3> normals, centers;
-    std::vector<double> areas;
-    std::vector<int> seg;      ///< user segment by face, -1 for invalid faces
-    std::vector<int> sub;      ///< region by face
-    std::vector<Region> regions;
+    Vector<V3> pts;       ///< by vertex
+    Vector<Tri> tris;     ///< by face; {-1,-1,-1} for invalid faces
+    Vector<Tri> nbr;      ///< faces across the edges (v0v1, v1v2, v2v0), -1 if no face there
+    Vector<V3> normals, centers;
+    Vector<double> areas;
+    Vector<int> seg;      ///< user segment by face, -1 for invalid faces
+    Vector<int> sub;      ///< region by face
+    Vector<Region> regions;
     double tol = 0, total = 0, diag = 0;
     int numSegs = 0;
 
@@ -66,9 +66,9 @@ struct Data
             }
     }
 
-    std::vector<std::vector<int>> facesOfRegions() const
+    Vector<Vector<int>> facesOfRegions() const
     {
-        std::vector<std::vector<int>> res( regions.size() );
+        Vector<Vector<int>> res( regions.size() );
         for ( int f = 0; f < nf; ++f )
             if ( valid( f ) )
                 res[sub[f]].push_back( f );
@@ -76,9 +76,9 @@ struct Data
     }
 
     /// all triangles' vertices of given faces, with repetitions
-    std::vector<V3> triPoints( const std::vector<int>& faces ) const
+    Vector<V3> triPoints( const Vector<int>& faces ) const
     {
-        std::vector<V3> res;
+        Vector<V3> res;
         res.reserve( faces.size() * 3 );
         for ( int f : faces )
             for ( int v : tris[f] )
@@ -87,9 +87,9 @@ struct Data
     }
 
     /// distinct vertices of given faces
-    std::vector<int> vertsOf( const std::vector<int>& faces ) const
+    Vector<int> vertsOf( const Vector<int>& faces ) const
     {
-        std::vector<int> res;
+        Vector<int> res;
         res.reserve( faces.size() * 3 );
         for ( int f : faces )
             for ( int v : tris[f] )
@@ -100,10 +100,10 @@ struct Data
     }
 
     /// positions of distinct vertices of given faces, evenly subsampled if there are more than maxNum of them
-    std::vector<V3> pointsOf( const std::vector<int>& faces, size_t maxNum = SIZE_MAX ) const
+    Vector<V3> pointsOf( const Vector<int>& faces, size_t maxNum = SIZE_MAX ) const
     {
         const auto vs = vertsOf( faces );
-        std::vector<V3> res;
+        Vector<V3> res;
         if ( vs.size() <= maxNum )
         {
             res.reserve( vs.size() );
@@ -120,7 +120,7 @@ struct Data
     }
 
     /// area-weighted average distance from the centers of given faces to the surface
-    double centersDeviation( const Surf& s, const std::vector<int>& faces ) const
+    double centersDeviation( const Surf& s, const Vector<int>& faces ) const
     {
         double sum = 0, sumA = 0;
         for ( int f : faces )

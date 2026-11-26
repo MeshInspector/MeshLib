@@ -21,6 +21,10 @@ namespace MeshToStep
 namespace
 {
 
+/// a B-spline surface replaces a group of regions if it is within this number of tolerances from all their vertices;
+/// a group that is too large or too curved for one surface is not replaced then
+constexpr double cMaxBSplineError = 50;
+
 /// improves the regions found by Grower, and replaces groups of unreliable regions with B-spline surfaces
 class Cleaner
 {
@@ -415,7 +419,8 @@ void Cleaner::fitFreeform_()
         if ( std::adjacent_find( loopVerts.begin(), loopVerts.end() ) != loopVerts.end() )
             continue;
         auto bs = fitBSplineSurfaceToMesh( { *d.mesh, &region }, { .tolerance = 0.5 * d.tol } );
-        if ( !bs )
+        // a surface far from the vertices is not taken: the regions stay as they are, each within the tolerance of its surface
+        if ( !bs || bs->maxError > cMaxBSplineError * d.tol )
             continue;
         Region r;
         r.surf.type = SurfType::BSpline;

@@ -1,8 +1,8 @@
 #include "MRFittedBSplineSurface.h"
 #include "MRBitSet.h"
 #include "MRBox.h"
-#include "MRConstants.h"
 #include "MRConformalMap.h"
+#include "MRConvexHull.h"
 #include "MRMesh.h"
 #include "MRMeshPart.h"
 #include "MRParallelFor.h"
@@ -19,32 +19,41 @@ namespace MR
 namespace
 {
 
-/// rotates the parameters to their bounding rectangle of the smallest area (among the rotations by whole degrees) with u along its longer side,
-/// and scales them into [margin, 1 - margin]^2; it is not a reflection, so the orientation of the triangles is kept
+/// the numbers of control points along u and v that are tried, while there are not more than cMaxControlPointsPerVertex of them per vertex
+constexpr int cSizes[][2] = { { 6, 4 }, { 8, 4 }, { 10, 5 }, { 14, 5 }, { 18, 6 }, { 24, 6 }, { 32, 7 }, { 40, 8 } };
+constexpr double cMaxControlPointsPerVertex = 0.7;
+
+/// rotates the parameters to their bounding rectangle of the smallest area with u along its longer side, and scales them into
+/// [margin, 1 - margin]^2; it is not a reflection, so the orientation of the triangles is kept
 void toMarginSquare( Vector<Vector2d>& uv, double margin )
 {
     const auto rotated = []( const Vector2d& p, const Vector2d& d ) { return Vector2d( dot( p, d ), cross( d, p ) ); };
-    const auto findBox = [&]( const Vector2d& d )
-    {
-        Box2d box;
-        for ( const auto& p : uv )
-            box.include( rotated( p, d ) );
-        return box;
-    };
+    // the rectangle of the smallest area has a side along an edge of the convex hull
+    Contour2f hull;
+    hull.reserve( uv.size() );
+    for ( const auto& p : uv )
+        hull.emplace_back( Vector2f( p ) );
+    hull = makeConvexHull( std::move( hull ) );
     Vector2d best( 1, 0 );
     double bestArea = DBL_MAX;
-    for ( int deg = 0; deg < 90; ++deg )
+    for ( size_t i = 0; i < hull.size(); ++i )
     {
-        const double a = deg * PI / 180;
-        const Vector2d d( std::cos( a ), std::sin( a ) );
-        const auto size = findBox( d ).size();
+        const Vector2d d = Vector2d( hull[( i + 1 ) % hull.size()] - hull[i] ).normalized();
+        if ( d == Vector2d() )
+            continue;
+        Box2d box;
+        for ( const auto& h : hull )
+            box.include( rotated( Vector2d( h ), d ) );
+        const auto size = box.size();
         if ( const double area = size.x * size.y; area < bestArea )
         {
             bestArea = area;
             best = size.x >= size.y ? d : Vector2d( -d.y, d.x );
         }
     }
-    const auto box = findBox( best );
+    Box2d box;
+    for ( const auto& p : uv )
+        box.include( rotated( p, best ) );
     const auto size = box.size();
     for ( auto& p : uv )
     {
@@ -100,12 +109,14 @@ Expected<FittedBSplineSurface> fitBSplineSurfaceToMesh( const MeshPart& mp, cons
     MR_TIMER;
     if ( !( settings.margin >= 0 && settings.margin < 0.5 ) )
         return unexpected( "Wrong margin" );
-    auto map = leastSquaresConformalMap( mp );
-    if ( !map )
-        return unexpected( std::move( map.error() ) );
     const auto& topology = mp.mesh.topology;
     const auto& faces = topology.getFaceIds( mp.region );
     const auto verts = getIncidentVerts( topology, faces );
+    if ( cSizes[0][0] * cSizes[0][1] > cMaxControlPointsPerVertex * verts.count() )
+        return unexpected( "Too few vertices" );
+    auto map = leastSquaresConformalMap( mp );
+    if ( !map )
+        return unexpected( std::move( map.error() ) );
     const auto num = makeVectorWithSeqNums( verts );
     Vector<Vector3d> pts;
     Vector<Vector2d> uvs;
@@ -120,27 +131,32 @@ Expected<FittedBSplineSurface> fitBSplineSurfaceToMesh( const MeshPart& mp, cons
     const size_t numVerts = pts.size();
 
     // points inside the triangles much larger than the typical one: without them the surface is free to bulge there
-    Vector<double> lens;
+    Vector<double> lens, longestOfFace;
     lens.reserve( faces.count() * 3 );
+    longestOfFace.reserve( faces.count() );
     for ( auto f : faces )
     {
         const auto t = topology.getTriVerts( f );
+        double longest = 0;
         for ( int i = 0; i < 3; ++i )
+        {
             lens.push_back( ( pts[num[t[i]]] - pts[num[t[( i + 1 ) % 3]]] ).length() );
+            longest = std::max( longest, lens.back() );
+        }
+        longestOfFace.push_back( longest );
     }
     const auto mid = lens.begin() + lens.size() / 2;
     std::nth_element( lens.begin(), mid, lens.end() );
     const double med = *mid;
+    size_t faceNum = 0;
     for ( auto f : faces )
     {
+        const double longest = longestOfFace[faceNum++];
+        if ( longest <= 3 * med )
+            continue;
         const auto t = topology.getTriVerts( f );
         const Vector3d p[3] = { pts[num[t[0]]], pts[num[t[1]]], pts[num[t[2]]] };
         const Vector2d q[3] = { uvs[num[t[0]]], uvs[num[t[1]]], uvs[num[t[2]]] };
-        double longest = 0;
-        for ( int i = 0; i < 3; ++i )
-            longest = std::max( longest, ( p[i] - p[( i + 1 ) % 3] ).length() );
-        if ( longest <= 3 * med )
-            continue;
         const int n = int( std::min( 8.0, std::ceil( longest / ( 1.5 * med ) ) ) );
         for ( int i = 0; i <= n; ++i )
             for ( int j = 0; i + j <= n; ++j )
@@ -158,11 +174,13 @@ Expected<FittedBSplineSurface> fitBSplineSurfaceToMesh( const MeshPart& mp, cons
 
     std::optional<FittedBSplineSurface> best;
     Vector<double> distSq( numVerts );
-    static constexpr int sizes[][2] = { { 6, 4 }, { 8, 4 }, { 10, 5 }, { 14, 5 }, { 18, 6 }, { 24, 6 }, { 32, 7 }, { 40, 8 } };
-    for ( const auto& sz : sizes )
+    int sizeNum = 0;
+    for ( const auto& sz : cSizes )
     {
-        if ( sz[0] * sz[1] > 0.7 * numVerts )
+        if ( sz[0] * sz[1] > cMaxControlPointsPerVertex * numVerts )
             break;
+        if ( !reportProgress( settings.progress, float( sizeNum++ ) / float( std::size( cSizes ) ) ) )
+            return unexpectedOperationCanceled();
         const BSplineSurfaceFitSettings fitSettings{ .numU = sz[0], .numV = sz[1], .smoothing = settings.smoothing, .weights = &weights };
         auto uv = uvs;
         std::optional<BSplineSurface> fit;
@@ -182,7 +200,8 @@ Expected<FittedBSplineSurface> fitBSplineSurfaceToMesh( const MeshPart& mp, cons
         FittedBSplineSurface s;
         s.surface = std::move( *fit );
         s.buildGrid();
-        // projection without initial parameters also catches folds of the surface
+        // the error is measured with the same projection as project() does, so it is large also if that projection
+        // comes to a wrong part of the surface for some vertex
         ParallelFor( size_t( 0 ), numVerts, [&]( size_t i )
         {
             distSq[i] = s.distanceSq( pts[i] );
@@ -199,7 +218,7 @@ Expected<FittedBSplineSurface> fitBSplineSurfaceToMesh( const MeshPart& mp, cons
             break;
     }
     if ( !best )
-        return unexpected( numVerts < 35 ? "Too few vertices" : "Surface fit failed" );
+        return unexpected( "Surface fit failed" );
     return std::move( *best );
 }
 

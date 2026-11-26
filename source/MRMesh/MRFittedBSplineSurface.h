@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 #include "MRBSpline.h"
 #include "MRExpected.h"
+#include "MRProgressCallback.h"
 
 namespace MR
 {
@@ -51,6 +52,9 @@ struct FitBSplineSurfaceToMeshSettings
 
     /// see BSplineSurfaceFitSettings::smoothing
     double smoothing = BSplineSurfaceFitSettings{}.smoothing;
+
+    /// to report the progress (one step per tried number of control points) and to cancel
+    ProgressCallback progress;
 };
 
 /// approximates a mesh part with disk topology by a bicubic B-spline surface passing near its vertices:
@@ -61,7 +65,7 @@ struct FitBSplineSurfaceToMeshSettings
 /// the grid of the returned surface is built, and its maxError is the maximum distance from the vertices of the part;
 /// if the part is not one disk (several components, or touching itself in a vertex) then the parametrization can be meaningless,
 /// and a surface with large maxError is returned, so pass a disk or check maxError;
-/// \return an error if the part cannot be parametrized, has fewer than 35 vertices (too few for 6x4 control points), the margin is wrong, or no fit succeeds
+/// \return an error if the part cannot be parametrized, has fewer than 35 vertices (too few for 6x4 control points), the margin is wrong, no fit succeeds, or the operation is canceled
 [[nodiscard]] MRMESH_API Expected<FittedBSplineSurface> fitBSplineSurfaceToMesh( const MeshPart& mp, const FitBSplineSurfaceToMeshSettings& settings = {} );
 
 } //namespace MR

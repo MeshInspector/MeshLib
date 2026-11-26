@@ -330,9 +330,33 @@ TEST( MRMesh, FitBSplineSurfaceToMesh )
 
     // not reachable tolerance: the surface with the most control points allowed for 651 vertices (40x8) or a better one
     const auto fine = fitBSplineSurfaceToMesh( mesh ).value();
-    EXPECT_LE( fine.maxError, s.maxError );
+    EXPECT_GT( fine.surface.numU(), 8 );
+    EXPECT_LT( fine.maxError, 1e-4 );
 
-    // triangles 5 times longer than the others at one side of the patch get additional points inside
+    // the progress is reported, and the fit can be canceled
+    int numReports = 0;
+    EXPECT_TRUE( fitBSplineSurfaceToMesh( mesh, { .progress = [&]( float ) { ++numReports; return true; } } ).has_value() );
+    EXPECT_EQ( numReports, 8 );
+    EXPECT_FALSE( fitBSplineSurfaceToMesh( mesh, { .progress = []( float v ) { return v < 0.2f; } } ).has_value() );
+
+    // a strip 50 times longer than wide takes all the domain inside the margin: its long sides have the smallest and the largest v
+    const auto strip = makeRegularGridMesh( 101, 3, []( size_t, size_t ) { return true; },
+        []( size_t x, size_t y ) { return Vector3f( 0.05f * x, 0.05f * y, 0.02f * std::sin( 0.05f * x ) ); } ).value();
+    const auto st = fitBSplineSurfaceToMesh( strip, { .tolerance = 1e-4 } ).value();
+    EXPECT_LT( st.maxError, 1e-4 );
+    double side0 = 0, side1 = 0;
+    for ( auto v : strip.topology.getValidVerts() )
+    {
+        const auto& p = strip.points[v];
+        if ( p.y > 0.01f && p.y < 0.09f )
+            continue; // the middle line
+        const auto uv = st.project( Vector3d( p ) );
+        EXPECT_NEAR( std::min( uv.y, 1 - uv.y ), 0.06, 0.02 );
+        ( p.y < 0.01f ? side0 : side1 ) += uv.y / 101;
+    }
+    EXPECT_NEAR( std::abs( side1 - side0 ), 0.88, 0.02 );
+
+    // triangles 5 times longer than the others at one side of the patch get additional points inside, which keep the surface near them
     const auto xOf = []( size_t i ) { return i <= 40 ? 0.05 * i : 2 + 0.5 * ( i - 40 ); };
     const auto uneven = makeRegularGridMesh( 43, 21, []( size_t, size_t ) { return true; },
         [&]( size_t x, size_t y ) { return Vector3f( surfPoint( xOf( x ), 0.1 * y ) ); } ).value();
@@ -341,9 +365,9 @@ TEST( MRMesh, FitBSplineSurfaceToMesh )
     for ( auto f : uneven.topology.getValidFaces() )
     {
         const auto c = uneven.triCenter( f );
-        if ( c.x > 2 ) // the triangles are far from the patch there, and the surface is closer to it
+        if ( c.x > 2 ) // the surface does not bulge between the vertices of the long triangles: it is within 0.01 of their centers, with their sides of 0.5
         {
-            EXPECT_LT( us.distanceSq( surfPoint( c.x, c.y ) ), 1e-4 ); // 0.01 squared
+            EXPECT_LT( us.distanceSq( Vector3d( c ) ), 1e-4 );
         }
         EXPECT_GT( dot( us.surface.normal( us.project( Vector3d( c ) ) ), Vector3d( uneven.normal( f ) ) ), 0.9 );
     }

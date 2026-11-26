@@ -2,7 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRCone3.h"
-#include "MRPch/MREigenCore.h"
+#include <vector>
 
 namespace MR
 {
@@ -40,7 +40,7 @@ private:
 
     // solver for single axis case.
     T solveFixedAxis_( const std::vector<MR::Vector3<T>>& points,
-        Cone3<T>& cone, bool useConeInputAsInitialGuess = false );
+        Cone3<T>& cone, bool useInputAxis = false );
 
     T solveApproximationPCM_( const std::vector<MR::Vector3<T>>& points, Cone3<T>& cone );
 

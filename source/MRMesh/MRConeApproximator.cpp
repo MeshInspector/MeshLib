@@ -18,16 +18,6 @@ namespace MR
 namespace
 {
 
-template <typename T>
-Vector<Vector3d> toDouble( const std::vector<Vector3<T>>& points )
-{
-    Vector<Vector3d> res;
-    res.reserve( points.size() );
-    for ( const auto& p : points )
-        res.emplace_back( p );
-    return res;
-}
-
 /// given cone refined by the points; its height is not updated
 template <typename T>
 void refine( const Vector<Vector3d>& points, Cone3<T>& cone )
@@ -65,13 +55,13 @@ T Cone3Approximation<T>::solve( const std::vector<MR::Vector3<T>>& points,
 
 template <typename T>
 T Cone3Approximation<T>::solveFixedAxis_( const std::vector<MR::Vector3<T>>& points,
-    Cone3<T>& cone, bool useConeInputAsInitialGuess )
+    Cone3<T>& cone, bool useInputAxis )
 {
     MR::Vector3<T> center, U;
     computeCenterAndNormal_( points, center, U );
     // only the axis of the input cone is used
-    cone = computeInitialCone_( points, center, useConeInputAsInitialGuess ? cone.direction().normalized() : U );
-    refine( toDouble( points ), cone );
+    cone = computeInitialCone_( points, center, useInputAxis ? cone.direction().normalized() : U );
+    refine( Vector<Vector3d>( points.begin(), points.end() ), cone );
     cone.height = calculateConeHeight_( points, cone );
 
     return getApproximationRMS_( points, cone );
@@ -93,10 +83,10 @@ template <typename T>
 T Cone3Approximation<T>::solveHemisphereSearchFit_( const std::vector<MR::Vector3<T>>& points, Cone3<T>& cone )
 {
     Vector3<T> center = computeCenter_( points );
-    const auto pointsDouble = toDouble( points );
+    const Vector<Vector3d> pointsDouble( points.begin(), points.end() );
 
     constexpr T pi2 = static_cast< T >( PI2 );
-    T const theraStep = static_cast< T >( 2 * PI ) / params_.hemisphereSearchPhiResolution;
+    T const theraStep = static_cast< T >( 2 * PI ) / params_.hemisphereSearchThetaResolution;
     T const phiStep = pi2 / params_.hemisphereSearchPhiResolution;
 
     struct BestCone {
@@ -133,12 +123,7 @@ T Cone3Approximation<T>::solveHemisphereSearchFit_( const std::vector<MR::Vector
     } );
 
     // only the best initial cone of each row of directions is refined
-    std::sort( bestCones.begin(), bestCones.end(), [] ( const BestCone& a, const BestCone& b )
-    {
-        return a.minError < b.minError;
-    } );
-    const size_t numRefined = bestCones.size();
-    ParallelFor( size_t( 0 ), numRefined, [&] ( size_t i )
+    ParallelFor( size_t( 0 ), bestCones.size(), [&] ( size_t i )
     {
         auto& best = bestCones[i];
         if ( best.minError == std::numeric_limits<T>::max() )
@@ -151,7 +136,7 @@ T Cone3Approximation<T>::solveHemisphereSearchFit_( const std::vector<MR::Vector
             best.bestCone = refined;
         }
     } );
-    auto bestAppox = std::min_element( bestCones.begin(), bestCones.begin() + numRefined, [] ( const BestCone& a, const BestCone& b )
+    auto bestAppox = std::min_element( bestCones.begin(), bestCones.end(), [] ( const BestCone& a, const BestCone& b )
     {
         return a.minError < b.minError;
     } );

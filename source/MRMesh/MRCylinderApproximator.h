@@ -58,7 +58,9 @@ public:
 
     MRMESH_API void reset();
 
-    // Solver for CylinderFitterType::HemisphereSearchFit type
+    // Both solvers return the mean of squared distances from the points to the found cylinder, or -1 for fewer than 6 points.
+
+    // Solver for CylinderFitterType::HemisphereSearchFit type: the best direction of the search is then refined by refineCylinder (see MRBestFit.h)
     // thetaResolution_, phiResolution_  must be positive and as large as it posible. Price is CPU time. (~ 100 gives good results).
     MRMESH_API T solveGeneral( const std::vector<MR::Vector3<T>>& points, Cylinder3<T>& cylinder, size_t theta = 180, size_t phi = 90, bool isMultithread = true );
 

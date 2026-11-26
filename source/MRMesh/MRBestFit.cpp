@@ -360,6 +360,15 @@ struct ConeDistances
     }
 };
 
+/// the cylinder with given axis (with unit direction) and radius, and the center and the length spanning the projections of the points on the axis
+Cylinder3d cylinderSpanning( const Vector<Vector3d>& points, const Line3d& axis, double radius )
+{
+    MinMaxd range;
+    for ( const auto& p : points )
+        range.include( dot( p - axis.p, axis.d ) );
+    return Cylinder3d( axis.p + range.center() * axis.d, axis.d, radius, range.size() );
+}
+
 /// the cone with given apex, axis and angle, and the height spanning the points
 Cone3d coneSpanning( const Vector<Vector3d>& points, const Line3d& axis, double angle )
 {
@@ -441,10 +450,7 @@ std::optional<Cylinder3d> findBestCylinderByNormals( const Vector<Vector3d>& poi
     if ( !circle )
         return {};
     const Vector3d c = circle->center.x * u + circle->center.y * v;
-    MinMaxd range;
-    for ( const auto& p : points )
-        range.include( dot( p - c, a ) );
-    return Cylinder3d( c + range.center() * a, a, circle->radius, range.size() );
+    return cylinderSpanning( points, Line3d( c, a ), circle->radius );
 }
 
 std::optional<Cone3d> findBestConeWithAxis( const Vector<Vector3d>& points, const Line3d& axis )
@@ -566,10 +572,7 @@ Cylinder3d refineCylinder( const Vector<Vector3d>& points, const Cylinder3d& cyl
     const double radius = std::abs( x[6] );
     if ( !std::isfinite( c.x + c.y + c.z + a.x + a.y + a.z + radius ) || a == Vector3d() )
         return cylinder;
-    MinMaxd range;
-    for ( const auto& p : points )
-        range.include( dot( p - c, a ) );
-    return Cylinder3d( c + range.center() * a, a, radius, range.size() );
+    return cylinderSpanning( points, Line3d( c, a ), radius );
 }
 
 Cone3d refineCone( const Vector<Vector3d>& points, const Cone3d& cone )

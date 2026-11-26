@@ -507,6 +507,32 @@ TEST( MRMesh, RefineCone )
             EXPECT_NEAR( ( flipped.direction() - a ).length(), 0, eps );
             EXPECT_NEAR( flipped.angle, angle, eps );
 
+            // the start angles giving the same cone: shifted by the full turn, and negative with the reversed axis
+            for ( const auto& start : { Cone3d( Line3d( initial.apex(), initial.direction() ), initial.angle + 2 * PI, 1 ),
+                Cone3d( Line3d( initial.apex(), -initial.direction() ), -initial.angle, 1 ),
+                Cone3d( Line3d( initial.apex(), initial.direction() ), initial.angle - 4 * PI, 1 ) } )
+            {
+                const auto r = refineCone( pts, start );
+                EXPECT_NEAR( ( r.direction() - a ).length(), 0, eps );
+                EXPECT_NEAR( r.angle, angle, eps );
+            }
+
+            // a point exactly in the apex is on the cone and does not change the result
+            auto withApex = pts;
+            withApex.push_back( apex );
+            const auto ra = refineCone( withApex, initial );
+            EXPECT_NEAR( ( ra.apex() - apex ).length(), 0, eps );
+            EXPECT_NEAR( ( ra.direction() - a ).length(), 0, eps );
+            EXPECT_NEAR( ra.angle, angle, eps );
+
+            // points behind the apex are not expected, but with them the result is finite and not worse than the start
+            auto withBehind = pts;
+            for ( int i = 0; i < 5; ++i )
+                withBehind.push_back( apex - ( 1 + 0.3 * i ) * a + 0.2 * i * u );
+            const auto rb = refineCone( withBehind, initial );
+            EXPECT_TRUE( std::isfinite( rb.apex().x + rb.direction().x + rb.angle + rb.height ) );
+            EXPECT_LE( cost( rb, withBehind ), cost( Cone3d( Line3d( initial.apex(), initial.direction().normalized() ), initial.angle, 1 ), withBehind ) );
+
             // too few points
             const Vector<Vector3d> six( pts.begin(), pts.begin() + 6 );
             const auto same = refineCone( six, initial );

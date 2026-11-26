@@ -35,12 +35,14 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRICP.h"
+#include "MRMesh/MRGlobalRegistration.h"
 #include "MRPch/MRSpdlog.h"
 #include <imgui_internal.h>
 
 #include <algorithm>
 #include <deque>
 #include <filesystem>
+#include <limits>
 #include <mutex>
 
 namespace MR
@@ -275,6 +277,7 @@ private:
         ICPProperties params = { .method = ICPMethod::Combined, .farDistFactor = 1.5f, .iterLimit = 100, .badIterStopCount = 20 };
         float samplingVoxelSize = 0.0f;
         float objectSize = 0.0f;
+        bool ransac = false; // also try the RANSAC initial position by shape descriptors, then ICP
         std::string result;
         struct ICPInfo { size_t numSamples = 0, numPairs = 0; float meanSqDistToPoint = 0, meanSqDistToPlane = 0; };
         std::optional<ICPInfo> info;
@@ -474,11 +477,52 @@ void ScannerPlugin::registerScan_( std::shared_ptr<VisualObject> scan )
 
     if ( fixedMerged.isEmpty() || icp_.samplingVoxelSize == 0.0f || ( !scanPointsObj && !scanMeshObj ) )
         return;
-    ICP icp( scanPointsObj ? MeshOrPoints( *scanPointsObj->pointCloudPtr() ) : MeshOrPoints( *scanMeshObj->meshPtr() ),
-        fixedMerged.meshOrPoints(), scan->worldXf(), AffineXf3f(), icp_.samplingVoxelSize );
+    const MeshOrPoints scanMp = scanPointsObj ? MeshOrPoints( *scanPointsObj->pointCloudPtr() ) : MeshOrPoints( *scanMeshObj->meshPtr() );
+    const MeshOrPoints fixedMp = fixedMerged.meshOrPoints();
+    ICP icp( scanMp, fixedMp, scan->worldXf(), AffineXf3f(), icp_.samplingVoxelSize );
     icp.setParams( icp_.params );
     AffineXf3f xf = icp.calculateTransformation();
     icp_.result = icp.getStatusInfo();
+    if ( icp_.ransac )
+    {
+        // also from any position; the merged previous scans are object 0, which keeps its place
+        Vector<MeshOrPointsXf, ObjId> objs;
+        objs.push_back( { fixedMp, {} } );
+        objs.push_back( { scanMp, scan->worldXf() } );
+        const auto res = globalRegistration( objs, { .samplingVoxelSize = icp_.samplingVoxelSize } );
+        if ( !res )
+            icp_.result += "\nRANSAC: " + res.error();
+        else if ( res->groupRoots[ObjId( 1 )] != ObjId( 0 ) )
+            icp_.result += "\nRANSAC: no overlap with the previous scans found";
+        else
+        {
+            // the ICP pose refined with the threshold globalRegistration refines its pose with,
+            // then the pose with clearly more samples within one voxel of the other surface wins
+            ICPProperties params = icp_.params;
+            params.distThresholdSq = sqr( 5 * icp_.samplingVoxelSize );
+            icp.setParams( params );
+            icp.setFloatXf( xf );
+            xf = icp.calculateTransformation();
+            params.distThresholdSq = sqr( icp_.samplingVoxelSize );
+            params.farDistFactor = std::numeric_limits<float>::max();
+            icp.setParams( params );
+            auto numClose = [&] ( const AffineXf3f& fltXf )
+            {
+                icp.setFloatXf( fltXf );
+                icp.updatePointPairs();
+                return icp.getNumActivePairs();
+            };
+            const size_t icpClose = numClose( xf ), ransacClose = numClose( res->xfs[ObjId( 1 )] );
+            const bool applied = ransacClose > icpClose + icpClose / 4; // a tie or a small gain keeps the ICP pose
+            if ( applied )
+                xf = res->xfs[ObjId( 1 )];
+            icp_.result += fmt::format( "\nRANSAC initial position {}:\n{} close pairs vs {} by ICP alone",
+                applied ? "applied" : "discarded", ransacClose, icpClose );
+            icp.setParams( icp_.params );
+            icp.setFloatXf( xf );
+            icp.updatePointPairs();
+        }
+    }
     icp_.info = { .numSamples = icp.getNumSamples(), .numPairs = icp.getNumActivePairs(),
         .meanSqDistToPoint = icp.getMeanSqDistToPoint(), .meanSqDistToPlane = icp.getMeanSqDistToPlane() };
 
@@ -781,6 +825,9 @@ void ScannerPlugin::drawRotReg_()
     drawScannerSeparator( _tr( "Registration" ) );
     UI::checkbox( _tr( "Auto register" ), &settings_.registration );
     UI::setTooltipIfHovered( _tr( "Automatically align a new scan to previous scans" ) );
+    UI::checkboxValid( _tr( "Try RANSAC initial position" ), &icp_.ransac, settings_.registration );
+    UI::setTooltipIfHovered( _tr( "Also align a new scan from any position by matching shape descriptors (RANSAC), then ICP, "
+        "and keep the result that overlaps the previous scans more. Needs normals" ) );
     if ( RibbonButtonDrawer::CustomCollapsingHeader( _tr( "ICP Parameters" ) ) )
     {
         ICPDialog::drawPairsFormingSettings( icp_.params, icp_.samplingVoxelSize, icp_.objectSize );

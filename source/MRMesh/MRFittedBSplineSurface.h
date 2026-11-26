@@ -33,8 +33,8 @@ struct FittedBSplineSurface
     /// requires buildGrid() to be called after the last change of the surface
     [[nodiscard]] MRMESH_API Vector2d project( const Vector3d& p ) const;
 
-    /// the distance from given point to the surface point found by project( p )
-    [[nodiscard]] MRMESH_API double distance( const Vector3d& p ) const;
+    /// squared distance from given point to the surface point found by project( p )
+    [[nodiscard]] MRMESH_API double distanceSq( const Vector3d& p ) const;
 };
 
 struct FitBSplineSurfaceToMeshSettings

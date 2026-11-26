@@ -81,9 +81,9 @@ Vector2d FittedBSplineSurface::project( const Vector3d& p ) const
     return surface.project( p, gridSize > 0 ? gridUV( int( best / gridSize ), int( best % gridSize ) ) : Vector2d() );
 }
 
-double FittedBSplineSurface::distance( const Vector3d& p ) const
+double FittedBSplineSurface::distanceSq( const Vector3d& p ) const
 {
-    return ( p - surface.eval( project( p ) ) ).length();
+    return ( p - surface.eval( project( p ) ) ).lengthSq();
 }
 
 Expected<FittedBSplineSurface> fitBSplineSurfaceToMesh( const MeshPart& mp, const FitBSplineSurfaceToMeshSettings& settings )
@@ -168,8 +168,10 @@ Expected<FittedBSplineSurface> fitBSplineSurfaceToMesh( const MeshPart& mp, cons
         s.surface = std::move( *fit );
         s.buildGrid();
         // projection without initial parameters also catches folds of the surface
+        double maxDistSq = 0;
         for ( size_t i = 0; i < numVerts; ++i )
-            s.maxError = std::max( s.maxError, s.distance( pts[i] ) );
+            maxDistSq = std::max( maxDistSq, s.distanceSq( pts[i] ) );
+        s.maxError = std::sqrt( maxDistSq );
         if ( !std::isfinite( s.maxError ) )
             continue;
         if ( !best || s.maxError < best->maxError )

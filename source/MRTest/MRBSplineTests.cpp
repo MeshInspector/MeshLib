@@ -292,7 +292,7 @@ TEST( MRMesh, FitBSplineSurfaceToMesh )
     for ( auto v : mesh.topology.getValidVerts() )
     {
         const Vector3d p( mesh.points[v] );
-        EXPECT_LE( s.distance( p ), s.maxError );
+        EXPECT_LE( std::sqrt( s.distanceSq( p ) ), s.maxError );
         // the vertices are inside the margin of the domain
         const auto uv = s.project( p );
         EXPECT_GT( std::min( uv.x, uv.y ), 0.05 );
@@ -302,12 +302,12 @@ TEST( MRMesh, FitBSplineSurfaceToMesh )
     EXPECT_GT( ( s.surface.eval( Vector2d( 1, 0.5 ) ) - s.surface.eval( Vector2d( 0, 0.5 ) ) ).length(), 3 );
     EXPECT_LT( ( s.surface.eval( Vector2d( 0.5, 1 ) ) - s.surface.eval( Vector2d( 0.5, 0 ) ) ).length(), 3 );
     // the surface is close to the patch between the vertices too
-    EXPECT_LT( s.distance( surfPoint( 1.234, 0.777 ) ), 2e-3 );
+    EXPECT_LT( s.distanceSq( surfPoint( 1.234, 0.777 ) ), 4e-6 ); // 2e-3 squared
     // projection without initial parameters of a point above the surface
     const Vector2d uv0( 0.4, 0.6 );
     const auto above = s.surface.eval( uv0 ) + 0.05 * s.surface.normal( uv0 );
     EXPECT_NEAR( ( s.project( above ) - uv0 ).length(), 0, 1e-6 );
-    EXPECT_NEAR( s.distance( above ), 0.05, 1e-9 );
+    EXPECT_NEAR( std::sqrt( s.distanceSq( above ) ), 0.05, 1e-9 );
 
     // a coarser grid
     auto coarse = s;
@@ -323,7 +323,7 @@ TEST( MRMesh, FitBSplineSurfaceToMesh )
             region.set( f );
     const auto part = fitBSplineSurfaceToMesh( { mesh, &region }, { .tolerance = 1e-3 } ).value();
     EXPECT_LT( part.maxError, 1e-3 );
-    EXPECT_GT( part.distance( surfPoint( 3, 1 ) ), 0.5 );
+    EXPECT_GT( part.distanceSq( surfPoint( 3, 1 ) ), 0.25 ); // 0.5 squared
 
     // not reachable tolerance: the surface with the most control points allowed for 651 vertices (40x8) or a better one
     const auto fine = fitBSplineSurfaceToMesh( mesh ).value();

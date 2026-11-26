@@ -220,7 +220,6 @@ struct ProcessingSettings
 
 // The Config key of the selected backend's name
 constexpr const char* cBackendKey = "scannerBackend";
-}
 
 // Generic scanner plugin: lists every backend, communicates with the selected one only through
 // IScannerBackend, renders the backend's parameter schema generically, and hosts the backend-agnostic
@@ -312,8 +311,7 @@ ScannerPlugin::ScannerPlugin( std::vector<std::unique_ptr<IScannerBackend>> back
     StatePlugin( "Scanner", StatePluginTabs::Other ),
     backends_( std::move( backends ) )
 {
-    assert( !backends_.empty() );
-    backend_ = backends_.front().get();
+    backend_ = backends_.front().get(); // makeScannerPlugin passes at least one
     for ( auto& backend : backends_ )
         backend->setLiveFrameCallback( [this]( ScannerLiveFrame&& f ) { onLiveFrame_( std::move( f ) ); } );
     CommandLoop::appendCommand( [this]()
@@ -989,9 +987,11 @@ void ScannerPlugin::drawDialog( ImGuiContext* )
     drawPreviewWindow_();
 }
 
+} // namespace
+
 std::shared_ptr<RibbonMenuItem> makeScannerPlugin( std::vector<std::unique_ptr<IScannerBackend>> backends )
 {
-    return std::make_shared<ScannerPlugin>( std::move( backends ) );
+    return backends.empty() ? nullptr : std::make_shared<ScannerPlugin>( std::move( backends ) );
 }
 
 } // namespace MR

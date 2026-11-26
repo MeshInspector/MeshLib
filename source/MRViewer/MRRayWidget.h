@@ -1,6 +1,5 @@
 #pragma once
 
-#include "exports.h"
 #include "MRViewerEventsListener.h"
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRVector3.h"
@@ -14,7 +13,7 @@ namespace MR
 
 /// Widget for visualizing a ray or axis (origin point and direction)
 /// Based on DirectionWidget
-class MRVIEWER_CLASS RayWidget : public MultiListener<DragStartListener, DragListener, DragEndListener, MouseClickListener>
+class RayWidget : public MultiListener<DragStartListener, DragListener, DragEndListener, MouseClickListener>
 {
 public:
     /// This callback is invoked every time when the ray is changed by mouse
@@ -126,42 +125,42 @@ public:
     /// @param length length of the visual object
     /// @param onRayChanged callback for the ray change
     /// @param parent parent object for the widget, nullptr means scene root
-    MRVIEWER_API void create( const Line3f& ray, float length, OnRayChangedCallback onRayChanged, VisualObject* parent = nullptr  );
+    void create( const Line3f& ray, float length, OnRayChangedCallback onRayChanged, VisualObject* parent = nullptr  );
 
     /// Removes the widget from the scene
     /// unsubscribes from viewer events
-    MRVIEWER_API void reset();
+    void reset();
 
     /// Check if the object is active (after create(), before reset())
     bool isActive() const { return active_; }
 
     /// Manually set callback function
-    MRVIEWER_API void setOnRayChangedCallback( OnRayChangedCallback cb );
+    void setOnRayChangedCallback( OnRayChangedCallback cb );
 
     /// Updates the ray
-    MRVIEWER_API void updateRay( const Line3f& ray );
-    MRVIEWER_API void updateDirection( const Vector3f& dir );
-    MRVIEWER_API void updateOrigin( const Vector3f& org );
+    void updateRay( const Line3f& ray );
+    void updateDirection( const Vector3f& dir );
+    void updateOrigin( const Vector3f& org );
 
     /// Updates the length of the visual object
-    MRVIEWER_API void updateLength( float length );
+    void updateLength( float length );
 
     /// Returns internal data model object of this widget
     std::shared_ptr<ObjectMesh> obj() const { return lineObj_; }
 
     /// Sets the visibility of the widget
-    MRVIEWER_API void setVisible( bool visible );
-    MRVIEWER_API bool isVisible() const;
+    void setVisible( bool visible );
+    bool isVisible() const;
 
     /// Pick point mode
-    MRVIEWER_API void setPickMode( bool pickMode );
+    void setPickMode( bool pickMode );
     bool isPickMode() const { return pickingPoint_; }
 
     /// Sets the color of the widget
-    MRVIEWER_API void setColor( const Color& color );
+    void setColor( const Color& color );
 
     /// Returns the color of the widget
-    MRVIEWER_API const Color& getColor() const;
+    const Color& getColor() const;
 
     /// Returns the ray
     const Line3f& getRay() const { return line_; }
@@ -176,10 +175,10 @@ public:
 
     void setMouseBlocked( bool blocked ) { blockedMouse_ = blocked; }
 private:
-    MRVIEWER_API virtual bool onDragStart_( MouseButton button, int modifiers ) override;
-    MRVIEWER_API virtual bool onDragEnd_( MouseButton button, int modifiers ) override;
-    MRVIEWER_API virtual bool onDrag_( int x, int y ) override;
-    MRVIEWER_API virtual bool onMouseClick_( MouseButton button, int modifiers ) override;
+    virtual bool onDragStart_( MouseButton button, int modifiers ) override;
+    virtual bool onDragEnd_( MouseButton button, int modifiers ) override;
+    virtual bool onDrag_( int x, int y ) override;
+    virtual bool onMouseClick_( MouseButton button, int modifiers ) override;
 };
 
 }

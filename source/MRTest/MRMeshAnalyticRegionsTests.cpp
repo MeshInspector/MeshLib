@@ -56,6 +56,8 @@ TEST( MRMesh, FindAnalyticRegions )
     const auto cylMesh = makeCylinder( 1.0f, 3.0f, 32 );
     res = findAnalyticRegions( cylMesh ).value();
     EXPECT_EQ( countRegions( cylMesh, res ), ( std::array<int, 5>{ 2, 1, 0, 0, 0 } ) );
+    // the result is deterministic, and the surfaces can be compared
+    EXPECT_EQ( res.surfaces, findAnalyticRegions( cylMesh ).value().surfaces );
     for ( const auto& s : res.surfaces )
         if ( const auto* cyl = std::get_if<Cylinder3d>( &s ) )
         {

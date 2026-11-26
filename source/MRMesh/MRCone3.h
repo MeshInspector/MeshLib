@@ -89,6 +89,8 @@ public:
     // for any cone point dot( point , direction ) >=0
     T angle = 0;       // cone angle, main axis vs side
     T height = 0;      // cone height
+
+    friend bool operator ==( const Cone3& a, const Cone3& b ) = default;
 };
 
 

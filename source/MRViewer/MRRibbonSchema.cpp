@@ -814,6 +814,16 @@ void RibbonSchemaLoader::readUIJson_( const Json::Value& itemsStructure, LocaleD
         assert( false );
         return;
     }
+    // items listed in this file leave the groups given to them by the files read before
+    HashSet<std::string> listedItems;
+    for ( const auto& tab : tabs )
+        for ( const auto& group : tab["Groups"] )
+            for ( const auto& item : group["List"] )
+                if ( item["Name"].isString() )
+                    listedItems.insert( item["Name"].asString() );
+    for ( auto& [_, items] : RibbonSchemaHolder::schema().groupsMap )
+        std::erase_if( items, [&] ( const std::string& name ) { return listedItems.contains( name ); } );
+
     auto tabsSize = int( tabs.size() );
     for ( int i = 0; i < tabsSize; ++i )
     {

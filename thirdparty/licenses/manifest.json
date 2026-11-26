@@ -36,7 +36,6 @@
         "ports": [
           "boost-algorithm",
           "boost-functional",
-          "boost-integer",
           "boost-locale",
           "boost-move",
           "boost-program-options",
@@ -50,7 +49,6 @@
       "version": {
         "boost-algorithm": "1.92.0#0",
         "boost-functional": "1.92.0#0",
-        "boost-integer": "1.92.0#0",
         "boost-locale": "1.92.0#0",
         "boost-move": "1.92.0#0",
         "boost-program-options": "1.92.0#0",

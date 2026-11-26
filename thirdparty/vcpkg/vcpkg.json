@@ -7,7 +7,6 @@
     "dependencies": [
         "boost-algorithm",
         "boost-functional",
-        "boost-integer",
         "boost-locale",
         "boost-move",
         "boost-program-options",

@@ -1,11 +1,12 @@
 #include "MRFittedBSplineSurface.h"
 #include "MRBitSet.h"
+#include "MRBox.h"
+#include "MRConstants.h"
 #include "MRConformalMap.h"
-#include "MRMatrix2.h"
 #include "MRMesh.h"
 #include "MRMeshPart.h"
+#include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
-#include "MRSymMatrix2.h"
 #include "MRTimer.h"
 #include <algorithm>
 #include <cassert>
@@ -18,31 +19,38 @@ namespace MR
 namespace
 {
 
-/// rotates and scales the parameters into [margin, 1 - margin]^2 with u along their longest direction
+/// rotates the parameters to their bounding rectangle of the smallest area (among the rotations by whole degrees) with u along its longer side,
+/// and scales them into [margin, 1 - margin]^2; it is not a reflection, so the orientation of the triangles is kept
 void toMarginSquare( Vector<Vector2d>& uv, double margin )
 {
-    Vector2d c;
-    for ( const auto& p : uv )
-        c += p / double( uv.size() );
-    SymMatrix2d cov;
-    for ( auto& p : uv )
+    const auto rotated = []( const Vector2d& p, const Vector2d& d ) { return Vector2d( dot( p, d ), cross( d, p ) ); };
+    const auto findBox = [&]( const Vector2d& d )
     {
-        p -= c;
-        cov += outerSquare( p );
+        Box2d box;
+        for ( const auto& p : uv )
+            box.include( rotated( p, d ) );
+        return box;
+    };
+    Vector2d best( 1, 0 );
+    double bestArea = DBL_MAX;
+    for ( int deg = 0; deg < 90; ++deg )
+    {
+        const double a = deg * PI / 180;
+        const Vector2d d( std::cos( a ), std::sin( a ) );
+        const auto size = findBox( d ).size();
+        if ( const double area = size.x * size.y; area < bestArea )
+        {
+            bestArea = area;
+            best = size.x >= size.y ? d : Vector2d( -d.y, d.x );
+        }
     }
-    Matrix2d ev;
-    cov.eigens( &ev );
-    Vector2d lo( DBL_MAX, DBL_MAX ), hi( -DBL_MAX, -DBL_MAX );
+    const auto box = findBox( best );
+    const auto size = box.size();
     for ( auto& p : uv )
     {
-        p = Vector2d( dot( p, ev.y ), dot( p, ev.x ) );
-        lo = Vector2d( std::min( lo.x, p.x ), std::min( lo.y, p.y ) );
-        hi = Vector2d( std::max( hi.x, p.x ), std::max( hi.y, p.y ) );
-    }
-    for ( auto& p : uv )
-    {
-        p.x = margin + ( 1 - 2 * margin ) * ( p.x - lo.x ) / std::max( hi.x - lo.x, 1e-30 );
-        p.y = margin + ( 1 - 2 * margin ) * ( p.y - lo.y ) / std::max( hi.y - lo.y, 1e-30 );
+        const auto q = rotated( p, best ) - box.min;
+        p.x = margin + ( 1 - 2 * margin ) * q.x / std::max( size.x, 1e-30 );
+        p.y = margin + ( 1 - 2 * margin ) * q.y / std::max( size.y, 1e-30 );
     }
 }
 
@@ -70,6 +78,7 @@ Vector2d FittedBSplineSurface::gridUV( int i, int j ) const
 
 Vector2d FittedBSplineSurface::project( const Vector3d& p ) const
 {
+    assert( !grid.empty() );
     size_t best = 0;
     double bestDistSq = DBL_MAX;
     for ( size_t k = 0; k < grid.size(); ++k )
@@ -89,6 +98,8 @@ double FittedBSplineSurface::distanceSq( const Vector3d& p ) const
 Expected<FittedBSplineSurface> fitBSplineSurfaceToMesh( const MeshPart& mp, const FitBSplineSurfaceToMeshSettings& settings )
 {
     MR_TIMER;
+    if ( !( settings.margin >= 0 && settings.margin < 0.5 ) )
+        return unexpected( "Wrong margin" );
     auto map = leastSquaresConformalMap( mp );
     if ( !map )
         return unexpected( std::move( map.error() ) );
@@ -146,6 +157,7 @@ Expected<FittedBSplineSurface> fitBSplineSurfaceToMesh( const MeshPart& mp, cons
     std::fill( weights.begin(), weights.begin() + numVerts, 1.0 );
 
     std::optional<FittedBSplineSurface> best;
+    Vector<double> distSq( numVerts );
     static constexpr int sizes[][2] = { { 6, 4 }, { 8, 4 }, { 10, 5 }, { 14, 5 }, { 18, 6 }, { 24, 6 }, { 32, 7 }, { 40, 8 } };
     for ( const auto& sz : sizes )
     {
@@ -154,13 +166,16 @@ Expected<FittedBSplineSurface> fitBSplineSurfaceToMesh( const MeshPart& mp, cons
         const BSplineSurfaceFitSettings fitSettings{ .numU = sz[0], .numV = sz[1], .smoothing = settings.smoothing, .weights = &weights };
         auto uv = uvs;
         std::optional<BSplineSurface> fit;
-        for ( int it = 0; it < 8; ++it )
+        const int numFits = 8;
+        for ( int it = 0; it < numFits; ++it )
         {
             fit = fitBSplineSurface( pts, uv, fitSettings );
-            if ( !fit )
+            if ( !fit || it + 1 == numFits )
                 break;
-            for ( size_t i = 0; i < pts.size(); ++i )
+            ParallelFor( size_t( 0 ), pts.size(), [&]( size_t i )
+            {
                 uv[i] = fit->project( pts[i], uv[i], 4 );
+            } );
         }
         if ( !fit )
             continue;
@@ -168,12 +183,16 @@ Expected<FittedBSplineSurface> fitBSplineSurfaceToMesh( const MeshPart& mp, cons
         s.surface = std::move( *fit );
         s.buildGrid();
         // projection without initial parameters also catches folds of the surface
+        ParallelFor( size_t( 0 ), numVerts, [&]( size_t i )
+        {
+            distSq[i] = s.distanceSq( pts[i] );
+        } );
         double maxDistSq = 0;
-        for ( size_t i = 0; i < numVerts; ++i )
-            maxDistSq = std::max( maxDistSq, s.distanceSq( pts[i] ) );
-        s.maxError = std::sqrt( maxDistSq );
-        if ( !std::isfinite( s.maxError ) )
+        for ( double d : distSq )
+            maxDistSq = std::isfinite( d ) ? std::max( maxDistSq, d ) : DBL_MAX;
+        if ( maxDistSq == DBL_MAX )
             continue;
+        s.maxError = std::sqrt( maxDistSq );
         if ( !best || s.maxError < best->maxError )
             best = std::move( s );
         if ( best->maxError < settings.tolerance )

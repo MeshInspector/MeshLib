@@ -218,7 +218,7 @@ namespace
 constexpr double cEigenTol = 1e-6;
 
 template <typename V>
-std::optional<Sphere<V>> findBestSphereT( const std::vector<V>& points )
+std::optional<Sphere<V>> findBestSphereT( const Vector<V>& points )
 {
     V mean;
     for ( const auto& p : points )
@@ -252,7 +252,7 @@ std::optional<Sphere<V>> findBestSphereT( const std::vector<V>& points )
 /// the functor for Eigen::LevenbergMarquardt
 struct TorusDistances
 {
-    const std::vector<Vector3d>& points;
+    const Vector<Vector3d>& points;
     Vector3d c0;
 
     Torus3d torus( const Eigen::VectorXd& x ) const
@@ -285,7 +285,7 @@ struct TorusDistances
 };
 
 /// the cone with given apex, axis and angle, and the height spanning the points
-Cone3d coneSpanning( const std::vector<Vector3d>& points, const Line3d& axis, double angle )
+Cone3d coneSpanning( const Vector<Vector3d>& points, const Line3d& axis, double angle )
 {
     double height = 0;
     for ( const auto& p : points )
@@ -295,17 +295,17 @@ Cone3d coneSpanning( const std::vector<Vector3d>& points, const Line3d& axis, do
 
 } //anonymous namespace
 
-std::optional<Sphere3d> findBestSphere( const std::vector<Vector3d>& points )
+std::optional<Sphere3d> findBestSphere( const Vector<Vector3d>& points )
 {
     return findBestSphereT( points );
 }
 
-std::optional<Sphere2d> findBestCircle( const std::vector<Vector2d>& points )
+std::optional<Sphere2d> findBestCircle( const Vector<Vector2d>& points )
 {
     return findBestSphereT( points );
 }
 
-std::optional<Line3d> findRevolutionAxis( const std::vector<Line3d>& normalLines )
+std::optional<Line3d> findRevolutionAxis( const Vector<Line3d>& normalLines )
 {
     // the axis has zero reciprocal product with every normal line (p, n): in Pluecker coordinates (d, m) of the axis, dot( d, p x n ) + dot( m, n ) = 0;
     // the points are centered and scaled to make both parts of the coordinates comparable, so |p x n| <= |n|
@@ -346,7 +346,7 @@ std::optional<Line3d> findRevolutionAxis( const std::vector<Line3d>& normalLines
     return Line3d( c + sc * cross( d, m ), d );
 }
 
-std::optional<Cylinder3d> findBestCylinderByNormals( const std::vector<Vector3d>& points, const std::vector<Vector3d>& normals )
+std::optional<Cylinder3d> findBestCylinderByNormals( const Vector<Vector3d>& points, const Vector<Vector3d>& normals )
 {
     SymMatrix3d nn;
     for ( const auto& n : normals )
@@ -358,7 +358,7 @@ std::optional<Cylinder3d> findBestCylinderByNormals( const std::vector<Vector3d>
         return {};
     const Vector3d a = vecs.x;
     const auto [u, v] = a.perpendicular();
-    std::vector<Vector2d> proj( points.size() );
+    Vector<Vector2d> proj( points.size() );
     for ( size_t i = 0; i < points.size(); ++i )
         proj[i] = Vector2d( dot( points[i], u ), dot( points[i], v ) );
     const auto circle = findBestCircle( proj );
@@ -371,7 +371,7 @@ std::optional<Cylinder3d> findBestCylinderByNormals( const std::vector<Vector3d>
     return Cylinder3d( c + range.center() * a, a, circle->radius, range.size() );
 }
 
-std::optional<Cone3d> findBestConeWithAxis( const std::vector<Vector3d>& points, const Line3d& axis )
+std::optional<Cone3d> findBestConeWithAxis( const Vector<Vector3d>& points, const Line3d& axis )
 {
     // the generator of the cone fitted orthogonally to the points (h, rho): the position along the axis and the distance to it
     const Vector3d a = axis.d.normalized();
@@ -392,7 +392,7 @@ std::optional<Cone3d> findBestConeWithAxis( const std::vector<Vector3d>& points,
     return coneSpanning( points, Line3d( axis.p + a * ( l.p.x - l.p.y * l.d.x / l.d.y ), l.d.x * l.d.y > 0 ? a : -a ), angle );
 }
 
-std::optional<Cone3d> findBestConeByTangentPlanes( const std::vector<Vector3d>& points, const std::vector<Plane3d>& tangentPlanes )
+std::optional<Cone3d> findBestConeByTangentPlanes( const Vector<Vector3d>& points, const Vector<Plane3d>& tangentPlanes )
 {
     // all unit normals make the same angle with the axis a: their tips are in the plane dot( a, x ) = k
     Vector<Vector3d> tips;
@@ -446,10 +446,10 @@ std::optional<Cone3d> findBestConeByTangentPlanes( const std::vector<Vector3d>& 
     return coneSpanning( points, Line3d( apex, sumH < 0 ? -a : a ), angle );
 }
 
-std::optional<Torus3d> findBestTorusWithAxis( const std::vector<Vector3d>& points, const Line3d& axis )
+std::optional<Torus3d> findBestTorusWithAxis( const Vector<Vector3d>& points, const Line3d& axis )
 {
     const Vector3d a = axis.d.normalized();
-    std::vector<Vector2d> rh( points.size() );
+    Vector<Vector2d> rh( points.size() );
     for ( size_t i = 0; i < points.size(); ++i )
     {
         const Vector3d d = points[i] - axis.p;
@@ -462,7 +462,7 @@ std::optional<Torus3d> findBestTorusWithAxis( const std::vector<Vector3d>& point
     return Torus3d( axis.p + a * circle->center.y, a, circle->center.x, circle->radius );
 }
 
-Torus3d refineTorus( const std::vector<Vector3d>& points, const Torus3d& torus )
+Torus3d refineTorus( const Vector<Vector3d>& points, const Torus3d& torus )
 {
     // the center is shifted from the given one, so the relative tolerances of the minimization do not depend on the distance to the origin;
     // the minimization accepts only the steps decreasing the sum of squared distances

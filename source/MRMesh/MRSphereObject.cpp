@@ -4,6 +4,7 @@
 #include "MRObjectFactory.h"
 #include "MRIRenderObject.h"
 #include "MRBestFit.h"
+#include "MRVector.h"
 #include <MRPch/MRJson.h>
 
 namespace MR
@@ -64,7 +65,7 @@ SphereObject::SphereObject()
 SphereObject::SphereObject( const std::vector<Vector3f>& pointsToApprox )
     : SphereObject()
 {
-    if ( const auto sphere = findBestSphere( std::vector<Vector3d>( pointsToApprox.begin(), pointsToApprox.end() ) ) )
+    if ( const auto sphere = findBestSphere( Vector<Vector3d>( pointsToApprox.begin(), pointsToApprox.end() ) ) )
     {
         setCenter( Vector3f( sphere->center ) );
         setRadius( float( sphere->radius ) );

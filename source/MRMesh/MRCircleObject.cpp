@@ -5,6 +5,7 @@
 #include "MRPch/MRJson.h"
 #include "MRConstants.h"
 #include "MRBestFit.h"
+#include "MRVector.h"
 #include "MRIRenderObject.h"
 
 namespace MR
@@ -93,7 +94,7 @@ CircleObject::CircleObject( const std::vector<Vector3f>& pointsToApprox )
 
     // the points relative to the centroid in an orthonormal basis of the plane
     const auto [u, v] = normal.perpendicular();
-    std::vector<Vector2d> proj( pointsToApprox.size() );
+    Vector<Vector2d> proj( pointsToApprox.size() );
     for ( size_t i = 0; i < proj.size(); ++i )
     {
         const Vector3d d = Vector3d( pointsToApprox[i] ) - centroid;

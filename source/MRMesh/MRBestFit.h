@@ -140,16 +140,18 @@ private:
 /// the result is never worse than given torus (with unit axis and non-negative radii), which is returned for fewer than 8 points;
 /// it can be degenerate, so check its radii: majorRadius is about zero if a sphere fits the points better than any torus,
 /// and both radii can be very large if the points are nearly on a cylinder, a cone or a plane;
-/// if there are more than 10000 points, then to bound the time only 10000 of them taken evenly are used in the minimization,
-/// and the result is still not worse than given torus for all the points
-[[nodiscard]] MRMESH_API Torus3d refineTorus( const Vector<Vector3d>& points, const Torus3d& torus );
+/// if there are more than maxPoints points, then to bound the time only maxPoints of them are used in the minimization: one pseudo-random point
+/// from each of maxPoints equal ranges of the points (at least as many as the minimization has parameters, 8 here),
+/// and the result is still not worse than given torus for all the points;
+/// pass SIZE_MAX to use all the points always
+[[nodiscard]] MRMESH_API Torus3d refineTorus( const Vector<Vector3d>& points, const Torus3d& torus, size_t maxPoints = 10000 );
 
 /// minimizes the sum of squared distances from the points to the infinite cylinder by Levenberg-Marquardt method starting from given cylinder;
 /// the result is never worse than given cylinder; the direction of the result is unit, and its center and length span the projections
 /// of the points on the axis; the radius can be very large if the points are nearly on a plane;
 /// given cylinder is returned as is (e.g. with not-unit direction) for fewer than 7 points, or if the minimization gives not finite values or zero axis;
-/// more than 10000 points are treated as in refineTorus
-[[nodiscard]] MRMESH_API Cylinder3d refineCylinder( const Vector<Vector3d>& points, const Cylinder3d& cylinder );
+/// more than maxPoints points are treated as in refineTorus (the minimization has 7 parameters here)
+[[nodiscard]] MRMESH_API Cylinder3d refineCylinder( const Vector<Vector3d>& points, const Cylinder3d& cylinder, size_t maxPoints = 10000 );
 
 /// minimizes the sum of squared distances from the points to the cone by Levenberg-Marquardt method starting from given cone;
 /// the distances are measured to the lines of the cone surface passing via the apex, so the points are expected at the side of the apex
@@ -158,7 +160,8 @@ private:
 /// it can be degenerate, so check its angle: about zero if the points are nearly on a cylinder (then the apex is far away),
 /// and about pi/2 if they are nearly on a plane;
 /// given cone is returned as is (e.g. with not-unit direction or the angle outside [0, pi/2]) for fewer than 7 points,
-/// or if the minimization gives not finite values or zero axis; more than 10000 points are treated as in refineTorus
-[[nodiscard]] MRMESH_API Cone3d refineCone( const Vector<Vector3d>& points, const Cone3d& cone );
+/// or if the minimization gives not finite values or zero axis;
+/// more than maxPoints points are treated as in refineTorus (the minimization has 7 parameters here)
+[[nodiscard]] MRMESH_API Cone3d refineCone( const Vector<Vector3d>& points, const Cone3d& cone, size_t maxPoints = 10000 );
 
 } // namespace MR

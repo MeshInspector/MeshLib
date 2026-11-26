@@ -4,6 +4,7 @@
 #include <MRMesh/MRPlane3.h>
 #include <MRMesh/MRVector.h>
 #include <gtest/gtest.h>
+#include <cstdint>
 #include <random>
 
 namespace MR
@@ -392,6 +393,10 @@ TEST( MRMesh, FindBestTorus )
         };
         const auto refined = refineTorus( noisyPts, initial );
         EXPECT_LT( cost( refined ), cost( t ) );
+        // only 20 of 100 points in the minimization: not worse than the start for all the points, but not as good as with all of them
+        const auto sampled = refineTorus( noisyPts, initial, 20 );
+        EXPECT_LE( cost( sampled ), cost( initial ) );
+        EXPECT_LT( cost( refined ), cost( sampled ) );
     }
 }
 
@@ -454,6 +459,14 @@ TEST( MRMesh, RefineCylinder )
         EXPECT_NEAR( many.radius, radius, 1e-3 );
         EXPECT_NEAR( many.length, 4.455, 1e-2 ); // spans all the points
         EXPECT_LT( cost( many, manyPts ), cost( Cylinder3d( initial.center(), initial.direction().normalized(), initial.radius, 1 ), manyPts ) );
+        // with all the points in the minimization the sum of squared distances is the smallest, and with 100 points it is the largest of the three
+        const auto all = refineCylinder( manyPts, initial, SIZE_MAX );
+        const auto few = refineCylinder( manyPts, initial, 100 );
+        EXPECT_LE( cost( all, manyPts ), cost( many, manyPts ) );
+        EXPECT_LT( cost( many, manyPts ), cost( few, manyPts ) );
+        EXPECT_NEAR( few.radius, radius, 1e-2 );
+        // fewer points than the parameters are not taken: the result is the same as for 7 points
+        EXPECT_EQ( refineCylinder( manyPts, initial, 0 ).radius, refineCylinder( manyPts, initial, 7 ).radius );
 
         // too few points
         const Vector<Vector3d> six( pts.begin(), pts.begin() + 6 );
@@ -536,6 +549,7 @@ TEST( MRMesh, RefineCone )
             EXPECT_NEAR( ( many.direction() - a ).length(), 0, angle < 0.1 ? 1e-2 : 1e-3 );
             EXPECT_NEAR( many.angle, angle, angle < 0.1 ? 1e-2 : 1e-3 );
             EXPECT_LT( cost( many, manyPts ), cost( Cone3d( Line3d( initial.apex(), initial.direction().normalized() ), initial.angle, 1 ), manyPts ) );
+            EXPECT_LE( cost( refineCone( manyPts, initial, SIZE_MAX ), manyPts ), cost( many, manyPts ) );
 
             // the start angles giving the same cone: shifted by the full turn, and negative with the reversed axis
             for ( const auto& start : { Cone3d( Line3d( initial.apex(), initial.direction() ), initial.angle + 2 * PI, 1 ),

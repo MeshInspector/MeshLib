@@ -30,11 +30,12 @@ void Cylinder3Approximation<T>::reset()
 
 template <typename T>
 T Cylinder3Approximation<T>::solveGeneral( const std::vector<Vector3<T>>& points, Cylinder3<T>& cylinder, size_t theta,
-    size_t phi, bool isMultithread )
+    size_t phi, bool isMultithread, size_t maxRefinePoints )
 {
     thetaResolution_ = theta;
     phiResolution_ = phi;
     isMultithread_ = isMultithread;
+    maxRefinePoints_ = maxRefinePoints;
     fitter_ = CylinderFitterType::HemisphereSearchFit;
     assert( thetaResolution_ > 0 );
     assert( phiResolution_ > 0 );
@@ -105,7 +106,7 @@ T Cylinder3Approximation<T>::solve( const std::vector<Vector3<T>>& points, Cylin
     if ( fitter_ == CylinderFitterType::HemisphereSearchFit )
     {
         // the best direction of the search is refined together with other parameters by the distances from the points to the cylinder
-        const auto res = refineCylinder( Vector<Vector3d>( points.begin(), points.end() ), Cylinder3d( Vector3d( cylinder.center() ), Vector3d( cylinder.direction() ), cylinder.radius, 0 ) );
+        const auto res = refineCylinder( Vector<Vector3d>( points.begin(), points.end() ), Cylinder3d( Vector3d( cylinder.center() ), Vector3d( cylinder.direction() ), cylinder.radius, 0 ), maxRefinePoints_ );
         cylinder.center() = Vector3<T>( res.center() );
         cylinder.direction() = Vector3<T>( res.direction() ).normalized();
         cylinder.radius = T( res.radius );

@@ -18,6 +18,8 @@ struct Cone3ApproximationParams {
     ConeFitterType coneFitterType = ConeFitterType::HemisphereSearchFit;
     int hemisphereSearchPhiResolution = 30;
     int hemisphereSearchThetaResolution = 30;
+    /// passed to refineCone: at most this number of points is used in the minimization
+    size_t maxRefinePoints = 10000;
 };
 
 // Class for approximation cloud point by cone.

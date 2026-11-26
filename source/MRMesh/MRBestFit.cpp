@@ -20,6 +20,7 @@
 #pragma warning(pop)
 #endif
 #include <cassert>
+#include <cstdint>
 
 namespace MR
 {
@@ -360,16 +361,14 @@ struct ConeDistances
     }
 };
 
-/// the minimizations by distances to points use at most this number of the points, which bounds their time
-constexpr size_t cMaxRefinePoints = 10000;
-
 /// minimizes the sum of squared values of the functor F{ points, c0 } by Levenberg-Marquardt method starting from x;
-/// if there are more than cMaxRefinePoints points, then the minimization uses only that many of them taken evenly,
-/// and x is changed only if the sum over all the points does not grow
+/// if there are more than maxPoints points, then the minimization uses only that many of them (one from each of equal ranges), which bounds its time
+/// (but not fewer than the number of parameters), and x is changed only if the sum over all the points does not grow
 template <typename F>
-void minimizeByPoints( const Vector<Vector3d>& points, const Vector3d& c0, Eigen::VectorXd& x )
+void minimizeByPoints( const Vector<Vector3d>& points, const Vector3d& c0, Eigen::VectorXd& x, size_t maxPoints )
 {
-    if ( points.size() <= cMaxRefinePoints )
+    maxPoints = std::max( maxPoints, size_t( x.size() ) );
+    if ( points.size() <= maxPoints )
     {
         F f{ points, c0 };
         Eigen::LevenbergMarquardt<F> lm( f );
@@ -377,9 +376,16 @@ void minimizeByPoints( const Vector<Vector3d>& points, const Vector3d& c0, Eigen
         return;
     }
     Vector<Vector3d> sample;
-    sample.reserve( cMaxRefinePoints );
-    for ( size_t i = 0; i < cMaxRefinePoints; ++i )
-        sample.push_back( points[i * points.size() / cMaxRefinePoints] );
+    sample.reserve( maxPoints );
+    // one point from each of maxPoints equal ranges; a pseudo-random one, because points taken with a constant step
+    // can be all in one row of a regular grid; the generator is the same on all platforms
+    std::uint64_t state = 0x9E3779B97F4A7C15ull;
+    for ( size_t i = 0; i < maxPoints; ++i )
+    {
+        const size_t begin = i * points.size() / maxPoints, end = ( i + 1 ) * points.size() / maxPoints;
+        state = state * 6364136223846793005ull + 1442695040888963407ull;
+        sample.push_back( points[begin + size_t( state >> 33 ) % ( end - begin )] );
+    }
     Eigen::VectorXd res = x;
     {
         F f{ sample, c0 };
@@ -579,18 +585,18 @@ std::optional<Torus3d> findBestTorusWithAxis( const Vector<Vector3d>& points, co
     return Torus3d( axis.p + a * circle->center.y, a, circle->center.x, circle->radius );
 }
 
-Torus3d refineTorus( const Vector<Vector3d>& points, const Torus3d& torus )
+Torus3d refineTorus( const Vector<Vector3d>& points, const Torus3d& torus, size_t maxPoints )
 {
     // the center is shifted from the given one, so the relative tolerances of the minimization do not depend on the distance to the origin;
     // the minimization accepts only the steps decreasing the sum of squared distances
     Eigen::VectorXd x( 8 );
     x << 0, 0, 0, torus.axis.x, torus.axis.y, torus.axis.z, torus.majorRadius, torus.minorRadius;
-    minimizeByPoints<TorusDistances>( points, torus.center, x );
+    minimizeByPoints<TorusDistances>( points, torus.center, x, maxPoints );
     const auto res = TorusDistances{ points, torus.center }.torus( x );
     return std::isfinite( res.center.x + res.center.y + res.center.z + res.axis.x + res.axis.y + res.axis.z + res.majorRadius + res.minorRadius ) ? res : torus;
 }
 
-Cylinder3d refineCylinder( const Vector<Vector3d>& points, const Cylinder3d& cylinder )
+Cylinder3d refineCylinder( const Vector<Vector3d>& points, const Cylinder3d& cylinder, size_t maxPoints )
 {
     // the minimization needs at least as many points as it has parameters
     if ( points.size() < 7 )
@@ -598,7 +604,7 @@ Cylinder3d refineCylinder( const Vector<Vector3d>& points, const Cylinder3d& cyl
     // see the comments in refineTorus
     Eigen::VectorXd x( 7 );
     x << 0, 0, 0, cylinder.direction().x, cylinder.direction().y, cylinder.direction().z, cylinder.radius;
-    minimizeByPoints<CylinderDistances>( points, cylinder.center(), x );
+    minimizeByPoints<CylinderDistances>( points, cylinder.center(), x, maxPoints );
     const Vector3d c = cylinder.center() + Vector3d( x[0], x[1], x[2] ), a = Vector3d( x[3], x[4], x[5] ).normalized();
     const double radius = std::abs( x[6] );
     if ( !std::isfinite( c.x + c.y + c.z + a.x + a.y + a.z + radius ) || a == Vector3d() )
@@ -606,14 +612,14 @@ Cylinder3d refineCylinder( const Vector<Vector3d>& points, const Cylinder3d& cyl
     return cylinderSpanning( points, Line3d( c, a ), radius );
 }
 
-Cone3d refineCone( const Vector<Vector3d>& points, const Cone3d& cone )
+Cone3d refineCone( const Vector<Vector3d>& points, const Cone3d& cone, size_t maxPoints )
 {
     if ( points.size() < 7 )
         return cone;
     // see the comments in refineTorus
     Eigen::VectorXd x( 7 );
     x << 0, 0, 0, cone.direction().x, cone.direction().y, cone.direction().z, cone.angle;
-    minimizeByPoints<ConeDistances>( points, cone.apex(), x );
+    minimizeByPoints<ConeDistances>( points, cone.apex(), x, maxPoints );
     const Vector3d c = cone.apex() + Vector3d( x[0], x[1], x[2] );
     Vector3d a = Vector3d( x[3], x[4], x[5] ).normalized();
     // the same cone with the angle in [0, pi/2]: the distances keep their values if both the angle and the axis change the sign,

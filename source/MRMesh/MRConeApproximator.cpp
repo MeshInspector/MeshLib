@@ -20,9 +20,9 @@ namespace
 
 /// given cone refined by the points; its height is not updated
 template <typename T>
-void refine( const Vector<Vector3d>& points, Cone3<T>& cone )
+void refine( const Vector<Vector3d>& points, Cone3<T>& cone, size_t maxPoints )
 {
-    const auto res = refineCone( points, Cone3d( Line3d( Vector3d( cone.apex() ), Vector3d( cone.direction() ) ), cone.angle, cone.height ) );
+    const auto res = refineCone( points, Cone3d( Line3d( Vector3d( cone.apex() ), Vector3d( cone.direction() ) ), cone.angle, cone.height ), maxPoints );
     cone.apex() = Vector3<T>( res.apex() );
     cone.direction() = Vector3<T>( res.direction() ).normalized();
     cone.angle = T( res.angle );
@@ -61,7 +61,7 @@ T Cone3Approximation<T>::solveFixedAxis_( const std::vector<MR::Vector3<T>>& poi
     computeCenterAndNormal_( points, center, U );
     // only the axis of the input cone is used
     cone = computeInitialCone_( points, center, useInputAxis ? cone.direction().normalized() : U );
-    refine( Vector<Vector3d>( points.begin(), points.end() ), cone );
+    refine( Vector<Vector3d>( points.begin(), points.end() ), cone, params_.maxRefinePoints );
     cone.height = calculateConeHeight_( points, cone );
 
     return getApproximationRMS_( points, cone );
@@ -129,7 +129,7 @@ T Cone3Approximation<T>::solveHemisphereSearchFit_( const std::vector<MR::Vector
         if ( best.minError == std::numeric_limits<T>::max() )
             return;
         auto refined = best.bestCone;
-        refine( pointsDouble, refined );
+        refine( pointsDouble, refined, params_.maxRefinePoints );
         if ( const T error = getApproximationRMS_( points, refined ); error < best.minError )
         {
             best.minError = error;

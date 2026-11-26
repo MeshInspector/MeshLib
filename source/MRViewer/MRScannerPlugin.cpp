@@ -278,6 +278,8 @@ private:
         float samplingVoxelSize = 0.0f;
         float objectSize = 0.0f;
         bool ransac = false; // also try the RANSAC initial position by shape descriptors, then ICP
+        // the modes that accept the rigid pose RANSAC finds; the others constrain each step from the current pose
+        bool rigidMode() const { return params.icpMode == ICPMode::RigidScale || params.icpMode == ICPMode::AnyRigidXf; }
         std::string result;
         struct ICPInfo { size_t numSamples = 0, numPairs = 0; float meanSqDistToPoint = 0, meanSqDistToPlane = 0; };
         std::optional<ICPInfo> info;
@@ -483,7 +485,7 @@ void ScannerPlugin::registerScan_( std::shared_ptr<VisualObject> scan )
     icp.setParams( icp_.params );
     AffineXf3f xf = icp.calculateTransformation();
     icp_.result = icp.getStatusInfo();
-    if ( icp_.ransac )
+    if ( icp_.ransac && icp_.rigidMode() )
     {
         // also from any position; the merged previous scans are object 0, which keeps its place
         Vector<MeshOrPointsXf, ObjId> objs;
@@ -825,9 +827,10 @@ void ScannerPlugin::drawRotReg_()
     drawScannerSeparator( _tr( "Registration" ) );
     UI::checkbox( _tr( "Auto register" ), &settings_.registration );
     UI::setTooltipIfHovered( _tr( "Automatically align a new scan to previous scans" ) );
-    UI::checkboxValid( _tr( "Try RANSAC initial position" ), &icp_.ransac, settings_.registration );
+    UI::checkboxValid( _tr( "Try RANSAC initial position" ), &icp_.ransac, settings_.registration && icp_.rigidMode() );
     UI::setTooltipIfHovered( _tr( "Also align a new scan from any position by matching shape descriptors (RANSAC), then ICP, "
-        "and keep the result that overlaps the previous scans more. Needs normals" ) );
+        "and keep that pose if it has at least a quarter more samples within Sampling Spacing of the other surface than ICP alone. "
+        "Needs normals and the Rigid Body or Rigid + Scale Transformation" ) );
     if ( RibbonButtonDrawer::CustomCollapsingHeader( _tr( "ICP Parameters" ) ) )
     {
         ICPDialog::drawPairsFormingSettings( icp_.params, icp_.samplingVoxelSize, icp_.objectSize );

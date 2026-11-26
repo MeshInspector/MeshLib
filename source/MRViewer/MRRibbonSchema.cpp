@@ -29,6 +29,7 @@ void RibbonSchema::eliminateEmptyGroups()
         if ( it->second.empty() )
         {
             spdlog::info( "Empty group {} eliminated", it->first );
+            groupsPriority.erase( it->first );
             it = groupsMap.erase( it );
         }
         else
@@ -50,10 +51,12 @@ void RibbonSchema::sortTabsByPriority()
     } );
     for ( auto& [tabName, groups] : tabsMap )
     {
-        std::stable_sort( groups.begin(), groups.end(), [this, &tabName = tabName] ( const std::string& a, const std::string& b )
+        auto priority = [this, &tabName = tabName] ( const std::string& group )
         {
-            return groupsPriority[tabName + a] < groupsPriority[tabName + b];
-        } );
+            auto it = groupsPriority.find( tabName + group );
+            return it == groupsPriority.end() ? 0 : it->second;
+        };
+        std::stable_sort( groups.begin(), groups.end(), [&] ( const std::string& a, const std::string& b ) { return priority( a ) < priority( b ); } );
     }
 }
 
@@ -875,9 +878,9 @@ void RibbonSchemaLoader::readUIJson_( const Json::Value& itemsStructure, LocaleD
             readMenuItemsList( list, items );
             auto [it, inserted] = RibbonSchemaHolder::schema().groupsMap.insert( { tabName.asString() + groupName.asString(), MenuItemsList{} } );
             auto& groupsMapRef = it->second;
-            const int groupPriority = group["Priority"].isInt() ? group["Priority"].asInt() : 0;
-            if ( inserted || groupPriority != 0 )
-                RibbonSchemaHolder::schema().groupsPriority[it->first] = groupPriority;
+            const auto groupPriority = group["Priority"];
+            if ( inserted || groupPriority.isInt() )
+                RibbonSchemaHolder::schema().groupsPriority[it->first] = groupPriority.isInt() ? groupPriority.asInt() : 0;
             if ( inserted )
             {
                 groupsMapRef = std::move( items );

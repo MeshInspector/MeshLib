@@ -337,6 +337,7 @@
     <ClInclude Include="MRBestFit.h" />
     <ClInclude Include="MRBSpline.h" />
     <ClInclude Include="MRConformalMap.h" />
+    <ClInclude Include="MRFittedBSplineSurface.h" />
     <ClInclude Include="MRLocalConvexity.h" />
     <ClInclude Include="MRAllocator.h" />
     <ClInclude Include="MRBitSet.h" />
@@ -578,6 +579,7 @@
     <ClCompile Include="MRBestFit.cpp" />
     <ClCompile Include="MRBSpline.cpp" />
     <ClCompile Include="MRConformalMap.cpp" />
+    <ClCompile Include="MRFittedBSplineSurface.cpp" />
     <ClCompile Include="MRLocalConvexity.cpp" />
     <ClCompile Include="MRBitSet.cpp" />
     <ClCompile Include="MRBase64.cpp" />

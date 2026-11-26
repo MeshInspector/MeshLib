@@ -1,5 +1,6 @@
 #include <MRMesh/MRBSpline.h>
 #include <MRMesh/MRConformalMap.h>
+#include <MRMesh/MRFittedBSplineSurface.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshPart.h>
 #include <MRMesh/MRRegionBoundary.h>
@@ -273,6 +274,125 @@ TEST( MRMesh, LeastSquaresConformalMap )
     auto nanMesh = mesh;
     nanMesh.points[v0].z = std::numeric_limits<float>::quiet_NaN();
     EXPECT_FALSE( leastSquaresConformalMap( nanMesh ).has_value() );
+}
+
+TEST( MRMesh, FitBSplineSurfaceToMesh )
+{
+    // a curved patch 3 x 2 with the grid step 0.1
+    const auto surfPoint = []( double x, double y ) { return Vector3d( x, y, 0.3 * std::sin( x ) * std::cos( 1.5 * y ) ); };
+    const auto mesh = makeRegularGridMesh( 31, 21, []( size_t, size_t ) { return true; },
+        [&]( size_t x, size_t y ) { return Vector3f( surfPoint( 0.1 * x, 0.1 * y ) ); } ).value();
+    const auto s = fitBSplineSurfaceToMesh( mesh, { .tolerance = 1e-3 } ).value();
+    EXPECT_TRUE( s.surface.valid() );
+    EXPECT_LT( s.maxError, 1e-3 );
+    EXPECT_EQ( s.gridSize, 60 );
+    ASSERT_EQ( s.grid.size(), 3600 );
+    EXPECT_EQ( s.gridUV( 59, 0 ), Vector2d( 1, 0 ) );
+    EXPECT_EQ( s.grid[59 * 60], s.surface.eval( Vector2d( 1, 0 ) ) );
+    for ( auto v : mesh.topology.getValidVerts() )
+    {
+        const Vector3d p( mesh.points[v] );
+        EXPECT_LE( std::sqrt( s.distanceSq( p ) ), s.maxError );
+        // the vertices are inside the margin of the domain
+        const auto uv = s.project( p );
+        EXPECT_GT( std::min( uv.x, uv.y ), 0.05 );
+        EXPECT_LT( std::max( uv.x, uv.y ), 0.95 );
+    }
+    // the normals of the surface and of the mesh agree
+    for ( auto f : mesh.topology.getValidFaces() )
+        EXPECT_GT( dot( s.surface.normal( s.project( Vector3d( mesh.triCenter( f ) ) ) ), Vector3d( mesh.normal( f ) ) ), 0.99 );
+    // u is along the longest direction of the patch
+    EXPECT_GT( ( s.surface.eval( Vector2d( 1, 0.5 ) ) - s.surface.eval( Vector2d( 0, 0.5 ) ) ).length(), 3 );
+    EXPECT_LT( ( s.surface.eval( Vector2d( 0.5, 1 ) ) - s.surface.eval( Vector2d( 0.5, 0 ) ) ).length(), 3 );
+    // the surface is close to the patch between the vertices too
+    EXPECT_LT( s.distanceSq( surfPoint( 1.234, 0.777 ) ), 4e-6 ); // 2e-3 squared
+    // projection without initial parameters of a point above the surface
+    const Vector2d uv0( 0.4, 0.6 );
+    const auto above = s.surface.eval( uv0 ) + 0.05 * s.surface.normal( uv0 );
+    EXPECT_NEAR( ( s.project( above ) - uv0 ).length(), 0, 1e-6 );
+    EXPECT_NEAR( std::sqrt( s.distanceSq( above ) ), 0.05, 1e-9 );
+
+    // a coarser grid
+    auto coarse = s;
+    coarse.buildGrid( 5 );
+    EXPECT_EQ( coarse.grid.size(), 25 );
+    EXPECT_EQ( coarse.gridUV( 2, 4 ), Vector2d( 0.5, 1 ) );
+    EXPECT_NEAR( ( coarse.project( above ) - uv0 ).length(), 0, 1e-6 );
+
+    // a part of the mesh: the triangles with x < 2
+    FaceBitSet region( mesh.topology.faceSize() );
+    for ( auto f : mesh.topology.getValidFaces() )
+        if ( mesh.triCenter( f ).x < 2 )
+            region.set( f );
+    const auto part = fitBSplineSurfaceToMesh( { mesh, &region }, { .tolerance = 1e-3 } ).value();
+    EXPECT_LT( part.maxError, 1e-3 );
+    EXPECT_GT( part.distanceSq( surfPoint( 3, 1 ) ), 0.25 ); // 0.5 squared
+
+    // not reachable tolerance: the surface with the most control points allowed for 651 vertices (40x8) or a better one
+    const auto fine = fitBSplineSurfaceToMesh( mesh ).value();
+    EXPECT_GT( fine.surface.numU(), 8 );
+    EXPECT_LT( fine.maxError, 1e-4 );
+
+    // the progress is reported, and the fit can be canceled
+    int numReports = 0;
+    EXPECT_TRUE( fitBSplineSurfaceToMesh( mesh, {}, [&]( float ) { ++numReports; return true; } ).has_value() );
+    EXPECT_EQ( numReports, 8 );
+    EXPECT_FALSE( fitBSplineSurfaceToMesh( mesh, {}, []( float v ) { return v < 0.2f; } ).has_value() );
+
+    // a strip 50 times longer than wide takes all the domain inside the margin: its long sides have the smallest and the largest v
+    const auto strip = makeRegularGridMesh( 101, 3, []( size_t, size_t ) { return true; },
+        []( size_t x, size_t y ) { return Vector3f( 0.05f * x, 0.05f * y, 0.02f * std::sin( 0.05f * x ) ); } ).value();
+    const auto st = fitBSplineSurfaceToMesh( strip, { .tolerance = 1e-4 } ).value();
+    EXPECT_LT( st.maxError, 1e-4 );
+    double side0 = 0, side1 = 0;
+    for ( auto v : strip.topology.getValidVerts() )
+    {
+        const auto& p = strip.points[v];
+        if ( p.y > 0.01f && p.y < 0.09f )
+            continue; // the middle line
+        const auto uv = st.project( Vector3d( p ) );
+        EXPECT_NEAR( std::min( uv.y, 1 - uv.y ), 0.06, 0.02 );
+        ( p.y < 0.01f ? side0 : side1 ) += uv.y / 101;
+    }
+    EXPECT_NEAR( std::abs( side1 - side0 ), 0.88, 0.02 );
+
+    // triangles 5 times longer than the others at one side of the patch get additional points inside, which keep the surface near them
+    const auto xOf = []( size_t i ) { return i <= 40 ? 0.05 * i : 2 + 0.5 * ( i - 40 ); };
+    const auto uneven = makeRegularGridMesh( 43, 21, []( size_t, size_t ) { return true; },
+        [&]( size_t x, size_t y ) { return Vector3f( surfPoint( xOf( x ), 0.1 * y ) ); } ).value();
+    const auto us = fitBSplineSurfaceToMesh( uneven, { .tolerance = 1e-3 } ).value();
+    EXPECT_LT( us.maxError, 1e-3 );
+    for ( auto f : uneven.topology.getValidFaces() )
+    {
+        const auto c = uneven.triCenter( f );
+        if ( c.x > 2 ) // the surface does not bulge between the vertices of the long triangles: it is within 0.01 of their centers, with their sides of 0.5
+        {
+            EXPECT_LT( us.distanceSq( Vector3d( c ) ), 1e-4 );
+        }
+        EXPECT_GT( dot( us.surface.normal( us.project( Vector3d( c ) ) ), Vector3d( uneven.normal( f ) ) ), 0.9 );
+    }
+
+    // a square part takes all the domain inside the margin: its corners are near the corners (the conformal map of a curved square is not a square)
+    const auto square = makeRegularGridMesh( 21, 21, []( size_t, size_t ) { return true; },
+        [&]( size_t x, size_t y ) { return Vector3f( surfPoint( 0.1 * x, 0.1 * y ) ); } ).value();
+    for ( double margin : { 0.06, 0.2 } )
+    {
+        const auto ss = fitBSplineSurfaceToMesh( square, { .tolerance = 1e-3, .margin = margin } ).value();
+        EXPECT_LT( ss.maxError, 1e-3 );
+        for ( const auto& corner : { surfPoint( 0, 0 ), surfPoint( 2, 0 ), surfPoint( 0, 2 ), surfPoint( 2, 2 ) } )
+        {
+            const auto uv = ss.project( Vector3d( Vector3f( corner ) ) );
+            EXPECT_NEAR( std::min( uv.x, 1 - uv.x ), margin, 0.05 );
+            EXPECT_NEAR( std::min( uv.y, 1 - uv.y ), margin, 0.05 );
+        }
+    }
+    EXPECT_FALSE( fitBSplineSurfaceToMesh( square, { .margin = 0.5 } ).has_value() );
+    EXPECT_FALSE( fitBSplineSurfaceToMesh( square, { .margin = -0.1 } ).has_value() );
+
+    // too few vertices
+    const auto small = makeRegularGridMesh( 5, 5, []( size_t, size_t ) { return true; },
+        []( size_t x, size_t y ) { return Vector3f( float( x ), float( y ), 0 ); } ).value();
+    EXPECT_FALSE( fitBSplineSurfaceToMesh( small ).has_value() );
 }
 
 } //namespace MR

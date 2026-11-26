@@ -63,6 +63,7 @@ protected:
 using ItemMap = HashMap<std::string, MenuItemInfo>;
 using TabsGroupsMap = HashMap<std::string, std::vector<std::string>>;
 using GroupsItemsMap = TabsGroupsMap;
+using GroupsPriorityMap = HashMap<std::string, int>;
 using MenuItemsList = std::vector<std::string>;
 struct RibbonTab
 {
@@ -78,7 +79,7 @@ struct RibbonSchema
     std::vector<RibbonTab> tabsOrder;
     TabsGroupsMap tabsMap;
     GroupsItemsMap groupsMap;
-    HashMap<std::string, int> groupsPriority; // same keys as groupsMap
+    GroupsPriorityMap groupsPriority; // same keys as groupsMap
     ItemMap items;
     MenuItemsList defaultQuickAccessList;
     MenuItemsList headerQuickAccessList;

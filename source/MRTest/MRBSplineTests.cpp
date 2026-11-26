@@ -342,7 +342,9 @@ TEST( MRMesh, FitBSplineSurfaceToMesh )
     {
         const auto c = uneven.triCenter( f );
         if ( c.x > 2 ) // the triangles are far from the patch there, and the surface is closer to it
+        {
             EXPECT_LT( us.distanceSq( surfPoint( c.x, c.y ) ), 1e-4 ); // 0.01 squared
+        }
         EXPECT_GT( dot( us.surface.normal( us.project( Vector3d( c ) ) ), Vector3d( uneven.normal( f ) ) ), 0.9 );
     }
 

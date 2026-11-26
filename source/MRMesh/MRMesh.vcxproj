@@ -335,6 +335,8 @@
     <ClInclude Include="MREdgeIterator.h" />
     <ClInclude Include="MRAffineXf3.h" />
     <ClInclude Include="MRBestFit.h" />
+    <ClInclude Include="MRBSpline.h" />
+    <ClInclude Include="MRConformalMap.h" />
     <ClInclude Include="MRLocalConvexity.h" />
     <ClInclude Include="MRAllocator.h" />
     <ClInclude Include="MRBitSet.h" />
@@ -578,6 +580,8 @@
     <ClCompile Include="MRDirectory.cpp" />
     <ClCompile Include="MRDistanceMap.cpp" />
     <ClCompile Include="MRBestFit.cpp" />
+    <ClCompile Include="MRBSpline.cpp" />
+    <ClCompile Include="MRConformalMap.cpp" />
     <ClCompile Include="MRLocalConvexity.cpp" />
     <ClCompile Include="MRBitSet.cpp" />
     <ClCompile Include="MRBase64.cpp" />

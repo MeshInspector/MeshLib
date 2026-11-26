@@ -381,6 +381,7 @@ void ScannerPlugin::openBackend_( bool skipLoad )
 
 void ScannerPlugin::closeBackend_()
 {
+    backend_->saveSettings(); // all of them, to open with them next time
     backend_->unloadRuntime(); // stops the stream first, so clearStream_ drops its last frame
     for ( ImGuiImage& image : images_ )
         image.update( {} );

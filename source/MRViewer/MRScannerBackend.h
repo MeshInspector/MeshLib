@@ -90,6 +90,7 @@ public:
     // The up direction of the scanner's frame, to orient the camera to a new scan.
     virtual Vector3f upDirection() const { return Vector3f::minusY(); }
 
+    // All settings in Config: the host loads them once and saves them whenever it closes the backend
     virtual void loadSettings() = 0;
     virtual void saveSettings() = 0;
     virtual void resetSettings() = 0;

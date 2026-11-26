@@ -395,4 +395,126 @@ TEST( MRMesh, FindBestTorus )
     }
 }
 
+TEST( MRMesh, RefineCylinder )
+{
+    std::mt19937 gen( 0 );
+    // also with the axis along z far from the origin, where the coordinates of all points are nearly equal
+    for ( const auto& [shift, dir] : { std::pair( Vector3d{}, Vector3d( 0.3, 0.4, 1 ) ), std::pair( Vector3d( 1e5, -1e5, 7e4 ), Vector3d( 0, 0, 1 ) ) } )
+    {
+        const Vector3d a = dir.normalized(), c = Vector3d( -1, 4, 2 ) + shift;
+        const double radius = 3;
+        const auto [u, v] = a.perpendicular();
+        // a quarter of the cylinder with the positions along the axis from 1 to 5.5
+        Vector<Vector3d> pts, normals;
+        for ( int i = 0; i < 10; ++i )
+            for ( int j = 0; j < 10; ++j )
+            {
+                const double phi = 0.17 * i;
+                normals.push_back( std::cos( phi ) * u + std::sin( phi ) * v );
+                pts.push_back( c + ( 1 + 0.5 * j ) * a + radius * normals.back() );
+            }
+        const auto distance = [&]( const Cylinder3d& x, const Vector3d& p ) { return cross( p - x.center(), x.direction() ).length() - x.radius; };
+        const auto cost = [&]( const Cylinder3d& x, const Vector<Vector3d>& ps )
+        {
+            double sum = 0;
+            for ( const auto& p : ps )
+                sum += sqr( distance( x, p ) );
+            return sum;
+        };
+
+        // not-unit direction and the center anywhere on the axis are accepted
+        const Cylinder3d initial( c + Vector3d( 0.05, -0.03, 0.02 ) - 7.0 * a, 2.0 * ( a + Vector3d( 0.02, 0, -0.01 ) ), 3.1, 1 );
+        const auto res = refineCylinder( pts, initial );
+        EXPECT_NEAR( cross( res.direction(), a ).length(), 0, 1e-7 );
+        EXPECT_NEAR( res.direction().length(), 1, 1e-12 );
+        EXPECT_NEAR( res.radius, radius, 1e-7 );
+        // the center is in the middle of the points along the axis, and the length spans them
+        EXPECT_NEAR( ( res.center() - ( c + 3.25 * a ) ).length(), 0, 1e-6 );
+        EXPECT_NEAR( res.length, 4.5, 1e-6 );
+
+        // with the points shifted along the normals by noise, the refined cylinder is closer to them than the true one and than the initial one
+        Vector<Vector3d> noisyPts;
+        for ( size_t i = 0; i < pts.size(); ++i )
+            noisyPts.push_back( pts[i] + noise( gen, 0.05 ) * normals[i] );
+        const auto refined = refineCylinder( noisyPts, initial );
+        EXPECT_LT( cost( refined, noisyPts ), cost( Cylinder3d( c, a, radius, 1 ), noisyPts ) );
+        EXPECT_LT( cost( refined, noisyPts ), cost( Cylinder3d( initial.center(), initial.direction().normalized(), initial.radius, 1 ), noisyPts ) );
+
+        // too few points
+        const Vector<Vector3d> six( pts.begin(), pts.begin() + 6 );
+        const auto same = refineCylinder( six, initial );
+        EXPECT_EQ( same.center(), initial.center() );
+        EXPECT_EQ( same.direction(), initial.direction() );
+        EXPECT_EQ( same.radius, initial.radius );
+        EXPECT_EQ( same.length, initial.length );
+    }
+}
+
+TEST( MRMesh, RefineCone )
+{
+    std::mt19937 gen( 0 );
+    for ( const auto& [shift, dir] : { std::pair( Vector3d{}, Vector3d( 0.3, 0.4, 1 ) ), std::pair( Vector3d( 1e5, -1e5, 7e4 ), Vector3d( 0, 0, 1 ) ) } )
+        for ( double angle : { 0.5, 0.05, 1.4 } ) // also a narrow and a wide cone
+        {
+            const Vector3d a = dir.normalized(), apex = Vector3d( -1, 4, 2 ) + shift;
+            const auto [u, v] = a.perpendicular();
+            // a third of the revolution with the positions along the axis from 4 to 8.5
+            Vector<Vector3d> pts, normals;
+            for ( int i = 0; i < 10; ++i )
+                for ( int j = 0; j < 10; ++j )
+                {
+                    const double phi = 0.23 * i, h = 4 + 0.5 * j;
+                    const Vector3d er = std::cos( phi ) * u + std::sin( phi ) * v;
+                    pts.push_back( apex + h * ( a + std::tan( angle ) * er ) );
+                    normals.push_back( std::cos( angle ) * er - std::sin( angle ) * a );
+                }
+            const auto distance = [&]( const Cone3d& x, const Vector3d& p )
+            {
+                const Vector3d d = p - x.apex();
+                const double h = dot( d, x.direction() );
+                return ( d - h * x.direction() ).length() * std::cos( x.angle ) - h * std::sin( x.angle );
+            };
+            const auto cost = [&]( const Cone3d& x, const Vector<Vector3d>& ps )
+            {
+                double sum = 0;
+                for ( const auto& p : ps )
+                    sum += sqr( distance( x, p ) );
+                return sum;
+            };
+
+            // not-unit direction is accepted
+            const Cone3d initial( Line3d( apex + Vector3d( 0.05, -0.03, 0.02 ), 2.0 * ( a + Vector3d( 0.002, 0, -0.001 ) ) ), angle * 1.02, 1 );
+            const auto res = refineCone( pts, initial );
+            // the apex of a narrow cone is far from the points, so it is found less precisely
+            const double eps = angle < 0.1 ? 1e-5 : 1e-7;
+            EXPECT_NEAR( ( res.apex() - apex ).length(), 0, eps );
+            EXPECT_NEAR( ( res.direction() - a ).length(), 0, eps );
+            EXPECT_NEAR( res.angle, angle, eps );
+            EXPECT_NEAR( res.height, 8.5, eps );
+
+            // with the points shifted along the normals by noise, the refined cone is closer to them than the true one and than the initial one
+            Vector<Vector3d> noisyPts;
+            for ( size_t i = 0; i < pts.size(); ++i )
+                noisyPts.push_back( pts[i] + noise( gen, 0.01 ) * normals[i] );
+            const auto refined = refineCone( noisyPts, initial );
+            EXPECT_LT( cost( refined, noisyPts ), cost( Cone3d( Line3d( apex, a ), angle, 1 ), noisyPts ) );
+            EXPECT_LT( cost( refined, noisyPts ), cost( Cone3d( Line3d( initial.apex(), initial.direction().normalized() ), initial.angle, 1 ), noisyPts ) );
+            EXPECT_GE( refined.angle, 0 );
+            EXPECT_LE( refined.angle, PI2 );
+
+            // the same cone given with the reversed axis and the angle pi - angle is returned with the angle in [0, pi/2]
+            const auto flipped = refineCone( pts, Cone3d( Line3d( initial.apex(), -initial.direction() ), PI - initial.angle, 1 ) );
+            EXPECT_NEAR( ( flipped.direction() - a ).length(), 0, eps );
+            EXPECT_NEAR( flipped.angle, angle, eps );
+
+            // too few points
+            const Vector<Vector3d> six( pts.begin(), pts.begin() + 6 );
+            const auto same = refineCone( six, initial );
+            EXPECT_EQ( same.apex(), initial.apex() );
+            EXPECT_EQ( same.direction(), initial.direction() );
+            EXPECT_EQ( same.angle, initial.angle );
+            EXPECT_EQ( same.height, initial.height );
+        }
+}
+
 } // namespace MR

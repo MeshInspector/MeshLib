@@ -108,6 +108,15 @@
     <ClInclude Include="MRMeshFwd.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshAnalyticRegions.h">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshAnalyticRegionsData.hpp">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshAnalyticRegionsSurf.hpp">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
     <ClInclude Include="MRObject.h">
       <Filter>Source Files\DataModel</Filter>
     </ClInclude>
@@ -1908,6 +1917,18 @@
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshFillHole.cpp">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshAnalyticRegions.cpp">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshAnalyticRegionsData.cpp">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshAnalyticRegionsGrower.cpp">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshAnalyticRegionsSurf.cpp">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshFixer.cpp">

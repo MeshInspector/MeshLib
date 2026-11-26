@@ -25,22 +25,6 @@ static Vector3f averageNormal( const PointCloud &pointsCloud )
     return Vector3f( sum );
 }
 
-// Calculate average normal for all valid faces
-static Vector3f averageNormal( const Mesh & mesh )
-{
-    auto sum = parallel_deterministic_reduce(
-        tbb::blocked_range( 0_f, FaceId{ mesh.topology.faceSize() }, 1024 ), Vector3d{},
-        [&] ( const auto& range, Vector3d curr )
-        {
-            for ( FaceId f = range.begin(); f < range.end(); ++f )
-                if ( mesh.topology.hasFace( f ) )
-                    curr += Vector3d( mesh.dirDblArea( f ) );
-            return curr;
-        },
-        std::plus<Vector3d>() );
-    return Vector3f( sum );
-}
-
 // Calculate average normalized direction from center for all valid points
 static Vector3f averageDirection( const PointCloud& pointsCloud )
 {
@@ -74,7 +58,7 @@ Vector3f findAverageSurfaceVector( const VisualObject& obj )
     else if ( const ObjectMesh* objMesh = obj.asType<ObjectMesh>() )
     {
         if ( const Mesh* mesh = objMesh->meshPtr() )
-            r = averageNormal( *mesh );
+            r = Vector3f( mesh->dirArea() );
     }
     return r.normalized();
 }

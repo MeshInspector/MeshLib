@@ -28,7 +28,6 @@
 #include "MRMesh/MRChangeMeshAction.h"
 #include "MRMesh/MRChangePointCloudAction.h"
 #include "MRMesh/MRRegionBoundary.h"
-#include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRConfig.h"
 #include "MRMesh/MRObjectsAccess.h"
@@ -97,16 +96,11 @@ class MeshAndPoints
 
     void add( const Mesh& mesh, const AffineXf3f& xf )
     {
-        auto vertSize = mesh_.topology.vertSize();
-        mesh_.addMesh( mesh );
-        if ( xf == AffineXf3f() )
-            return;
-        ParallelFor( VertId( vertSize ), mesh_.topology.lastValidVert() + 1,
-            [&]( VertId v )
-            {
-                if ( mesh_.topology.hasVert( v ) )
-                    mesh_.points[v] = xf( mesh_.points[v] );
-            } );
+        VertBitSet newVerts( mesh_.topology.vertSize() );
+        mesh_.addMesh( mesh ); // appends only valid vertices
+        newVerts.resize( mesh_.topology.vertSize(), true );
+        if ( xf != AffineXf3f() )
+            mesh_.transform( xf, &newVerts );
     }
 
     void add( const PointCloud& points, const AffineXf3f& xf )

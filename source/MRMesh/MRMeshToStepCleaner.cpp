@@ -378,6 +378,18 @@ void Cleaner::fitFreeform_()
             lim[y] = l;
         }
     }
+    // a sphere with several weak pieces left around it only approximates a freeform surface, e.g. a lemon-shaped surface of revolution
+    for ( int y = 0; y < nr; ++y )
+    {
+        if ( weak[y] || d.regions[y].numFaces == 0 || d.regions[y].surf.type != SurfType::Sphere )
+            continue;
+        int numWeak = 0;
+        for ( int r : smoothNbr[y] )
+            if ( weak[r] && d.regions[r].surf.type == SurfType::Sphere )
+                ++numWeak;
+        if ( numWeak >= 4 )
+            weak[y] = 1;
+    }
     findClusters();
 
     std::vector<std::vector<int>> clusterFaces( numClusters );

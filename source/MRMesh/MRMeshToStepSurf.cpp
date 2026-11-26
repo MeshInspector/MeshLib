@@ -144,7 +144,13 @@ Surf refine( const Surf& s0, const std::vector<V3>& pts )
     {
         const Torus3d torus( s0.c, s0.a, s0.R, s0.r );
         const auto refined = refineTorus( pts, torus );
-        return refined == torus ? s0 : toSurf( refined );
+        // no major radius means that a sphere fits the points better
+        if ( refined == torus )
+            return s0;
+        // without major radius it is a sphere
+        if ( refined.majorRadius < 1e-3 * refined.minorRadius )
+            return toSurf( Sphere3d( refined.center, refined.minorRadius ) );
+        return toSurf( refined );
     }
     // cylinder or cone
     constexpr int np = 7;

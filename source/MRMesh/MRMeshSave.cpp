@@ -15,6 +15,7 @@
 #include "MRTelemetry.h"
 #include <cstring>
 #include <fstream>
+#include <numeric>
 
 namespace MR
 {
@@ -138,6 +139,25 @@ Expected<void> toOff( const TriMesh & mesh, std::ostream & out, const SaveSettin
     return region ? toOffImpl( TriMeshPart( mesh, *region ), out, settings ) : toOffImpl( mesh, out, settings );
 }
 
+// several materials (Texture0, Texture1, ...) are saved in .obj instead of one (Texture)
+static bool hasManyTextures( const SaveSettings & settings )
+{
+    return settings.textures && settings.textures->size() > 1 && settings.texturePerFace && !settings.texturePerFace->empty();
+}
+
+#ifndef __EMSCRIPTEN__ // .mtl files are not written there
+// writes the solid color (if any) in the current material of .mtl file
+static void writeMtlSolidColor( std::ostream & ofMtl, const SaveSettings & settings )
+{
+    if ( !settings.solidColor )
+        return;
+    const auto c = Vector4f( *settings.solidColor );
+    ofMtl << fmt::format( "Kd {} {} {}\n", c.x, c.y, c.z );
+    if ( settings.solidColor->a != 255 )
+        ofMtl << fmt::format( "d {}\n", c.w );
+}
+#endif
+
 template<typename MeshType>
 static Expected<void> toObjImpl( const MeshType & mesh, std::ostream & out, const SaveSettings & settings, int firstVertId );
 
@@ -153,20 +173,31 @@ static Expected<void> toObjImpl( const MeshType & mesh, const std::filesystem::p
     // it is hard to handle several files output for browser, so for now it is under ifdef,
     // anyway later it may be reworked to save simple zip and taken out of ifdef
     const bool saveTexture = settings.uvMap && settings.texture && !settings.texture->pixels.empty();
-    if ( saveTexture || settings.solidColor )
+    if ( settings.uvMap && hasManyTextures( settings ) )
+    {
+        if ( auto pngSaver = ImageSave::getImageSaver( "*.png" ) )
+        {
+            auto mtlPath = file.parent_path() / asU8String( settings.materialName + ".mtl" );
+            std::ofstream ofMtl( mtlPath, std::ofstream::binary );
+            for ( TextureId t{ 0 }; ofMtl && t < settings.textures->size(); ++t )
+            {
+                ofMtl << fmt::format( "newmtl Texture{}\n", int( t ) );
+                writeMtlSolidColor( ofMtl, settings );
+                const auto& texture = ( *settings.textures )[t];
+                const auto textureName = fmt::format( "{}_{}.png", settings.materialName, int( t ) );
+                if ( !texture.pixels.empty() && pngSaver( texture, file.parent_path() / asU8String( textureName ) ).has_value() )
+                    ofMtl << fmt::format( "map_Kd {}\n", textureName );
+            }
+        }
+    }
+    else if ( saveTexture || settings.solidColor )
     {
         auto mtlPath = file.parent_path() / asU8String( settings.materialName + ".mtl" );
         std::ofstream ofMtl( mtlPath, std::ofstream::binary );
         if ( ofMtl )
         {
             ofMtl << "newmtl Texture\n";
-            if ( settings.solidColor )
-            {
-                const auto c = Vector4f( *settings.solidColor );
-                ofMtl << fmt::format( "Kd {} {} {}\n", c.x, c.y, c.z );
-                if ( settings.solidColor->a != 255 )
-                    ofMtl << fmt::format( "d {}\n", c.w );
-            }
+            writeMtlSolidColor( ofMtl, settings );
             if ( saveTexture )
                 if ( auto pngSaver = ImageSave::getImageSaver( "*.png" ) )
                     if ( pngSaver( *settings.texture, file.parent_path() / asU8String( settings.materialName + ".png" ) ).has_value() )
@@ -236,19 +267,12 @@ static Expected<void> toObjImpl( const MeshType & mesh, std::ostream & out, cons
                 return unexpectedOperationCanceled();
         }
     }
-    if ( useMtl )
+    const bool manyTextures = saveUV && hasManyTextures( settings );
+    if ( useMtl && !manyTextures )
         out << "usemtl Texture\n";
 
-    sb = subprogress( settings.progress, saveUV ? 0.7f : 0.5f, 1.0f );
-    const FaceId lastFaceId = lastValidFace( mesh );
-    const float facesNum = float( lastFaceId + 1 );
-    for ( FaceId f{ 0 }; f <= lastFaceId; ++f )
+    const auto writeFace = [&]( FaceId f )
     {
-        if ( settings.progress && !( ( (int)f + 1 ) & 0x3FF ) && !sb( float( (int)f + 1 ) / facesNum ) )
-            return unexpectedOperationCanceled();
-        if ( !hasFace( mesh, f ) )
-            continue;
-
         const auto [a, b, c] = getTriVerts( mesh, f );
         Vector3i values( vertRenumber( a ) + firstVertId, vertRenumber( b ) + firstVertId, vertRenumber( c ) + firstVertId );
         if ( saveUV )
@@ -259,6 +283,65 @@ static Expected<void> toObjImpl( const MeshType & mesh, std::ostream & out, cons
         else
             out << fmt::format( "f {} {} {}\n",
                 values.x, values.y, values.z );
+    };
+
+    sb = subprogress( settings.progress, saveUV ? 0.7f : 0.5f, 1.0f );
+    const FaceId lastFaceId = lastValidFace( mesh );
+    const auto faceTexture = [&]( FaceId f )
+    {
+        const auto t = getAt( *settings.texturePerFace, f, TextureId( 0 ) );
+        return t.valid() && t < settings.textures->endId() ? t : TextureId( 0 );
+    };
+    if ( !manyTextures || !settings.packPrimitives )
+    {
+        // the order of faces is kept, and with several textures usemtl is written whenever the texture changes
+        const float facesNum = float( lastFaceId + 1 );
+        TextureId curTexture;
+        for ( FaceId f{ 0 }; f <= lastFaceId; ++f )
+        {
+            if ( settings.progress && !( ( (int)f + 1 ) & 0x3FF ) && !sb( float( (int)f + 1 ) / facesNum ) )
+                return unexpectedOperationCanceled();
+            if ( !hasFace( mesh, f ) )
+                continue;
+            if ( manyTextures )
+            {
+                if ( const auto t = faceTexture( f ); t != curTexture )
+                {
+                    curTexture = t;
+                    out << fmt::format( "usemtl Texture{}\n", int( t ) );
+                }
+            }
+            writeFace( f );
+        }
+    }
+    else
+    {
+        // faces are grouped by texture to write one usemtl per material;
+        // faces of texture t are sortedFaces[texStart[t]..texStart[t+1])
+        Vector<int, TextureId> texStart( settings.textures->size() + 1 );
+        for ( FaceId f{ 0 }; f <= lastFaceId; ++f )
+            if ( hasFace( mesh, f ) )
+                ++texStart[faceTexture( f ) + 1];
+        std::partial_sum( texStart.begin(), texStart.end(), texStart.begin() );
+        Vector<FaceId> sortedFaces( texStart.back() );
+        auto texNext = texStart;
+        for ( FaceId f{ 0 }; f <= lastFaceId; ++f )
+            if ( hasFace( mesh, f ) )
+                sortedFaces[texNext[faceTexture( f )]++] = f;
+
+        const float facesNum = float( sortedFaces.size() );
+        for ( TextureId t{ 0 }; t < settings.textures->endId(); ++t )
+        {
+            if ( texStart[t] == texStart[t + 1] )
+                continue;
+            out << fmt::format( "usemtl Texture{}\n", int( t ) );
+            for ( int i = texStart[t]; i < texStart[t + 1]; ++i )
+            {
+                if ( settings.progress && !( ( i + 1 ) & 0x3FF ) && !sb( float( i + 1 ) / facesNum ) )
+                    return unexpectedOperationCanceled();
+                writeFace( sortedFaces[i] );
+            }
+        }
     }
 
     if ( !out )

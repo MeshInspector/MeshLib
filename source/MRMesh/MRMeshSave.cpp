@@ -323,7 +323,7 @@ static Expected<void> toObjImpl( const MeshType & mesh, std::ostream & out, cons
             if ( hasFace( mesh, f ) )
                 ++texStart[faceTexture( f ) + 1];
         std::partial_sum( texStart.begin(), texStart.end(), texStart.begin() );
-        std::vector<FaceId> sortedFaces( texStart.back() );
+        Vector<FaceId> sortedFaces( texStart.back() );
         auto texNext = texStart;
         for ( FaceId f{ 0 }; f <= lastFaceId; ++f )
             if ( hasFace( mesh, f ) )

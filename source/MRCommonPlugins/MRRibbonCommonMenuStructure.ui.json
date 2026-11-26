@@ -49,14 +49,6 @@
 							"Name": "Viewer settings"
 						}
 					]
-				},
-				{
-					"Name": "Transform",
-					"List": [
-						{
-							"Name": "Feature Alignment"
-						}
-					]
 				}
 			]
 		},
@@ -142,6 +134,20 @@
 					"List": [
 						{
 							"Name": "Select objects"
+						}
+					]
+				}
+			]
+		},
+		{
+			"Name": "Transform",
+			"Priority": 3,
+			"Groups": [
+				{
+					"Name": "Features alignment",
+					"List": [
+						{
+							"Name": "Feature Alignment"
 						}
 					]
 				}

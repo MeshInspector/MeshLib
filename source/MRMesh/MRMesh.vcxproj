@@ -55,7 +55,6 @@
     <ClInclude Include="MRConeApproximator.h" />
     <ClInclude Include="MRConeObject.h" />
     <ClInclude Include="MRCylinder3.h" />
-    <ClInclude Include="MRTorus3.h" />
     <ClInclude Include="MRCylinderApproximator.h" />
     <ClInclude Include="MRCylinderObject.h" />
     <ClInclude Include="MRDipole.h" />
@@ -336,6 +335,9 @@
     <ClInclude Include="MREdgeIterator.h" />
     <ClInclude Include="MRAffineXf3.h" />
     <ClInclude Include="MRBestFit.h" />
+    <ClInclude Include="MRBSpline.h" />
+    <ClInclude Include="MRConformalMap.h" />
+    <ClInclude Include="MRFittedBSplineSurface.h" />
     <ClInclude Include="MRLocalConvexity.h" />
     <ClInclude Include="MRAllocator.h" />
     <ClInclude Include="MRBitSet.h" />
@@ -402,6 +404,7 @@
     <ClInclude Include="MRSymMatrix3.h" />
     <ClInclude Include="MRFreeFormDeformer.h" />
     <ClInclude Include="MRToFromEigen.h" />
+    <ClInclude Include="MRTorus3.h" />
     <ClInclude Include="MRTriangleIntersection.h" />
     <ClInclude Include="MRTriMath.h" />
     <ClInclude Include="MRTriPoint.h" />
@@ -574,6 +577,9 @@
     <ClCompile Include="MRDirectory.cpp" />
     <ClCompile Include="MRDistanceMap.cpp" />
     <ClCompile Include="MRBestFit.cpp" />
+    <ClCompile Include="MRBSpline.cpp" />
+    <ClCompile Include="MRConformalMap.cpp" />
+    <ClCompile Include="MRFittedBSplineSurface.cpp" />
     <ClCompile Include="MRLocalConvexity.cpp" />
     <ClCompile Include="MRBitSet.cpp" />
     <ClCompile Include="MRBase64.cpp" />

@@ -620,13 +620,31 @@ void Viewer::parseLaunchParams( LaunchParams& params )
 
 #ifdef __EMSCRIPTEN__
 #ifndef MR_EMSCRIPTEN_ASYNCIFY
+static double sLastEmsTickMs = 0;
+
+// called once per animation frame, draws only when something has changed (as the Asyncify loop does)
 void Viewer::emsMainInfiniteLoop()
 {
     auto& viewer = getViewerInstance();
-    viewer.draw( true );
+    static bool keepDrawing = true;
+    static double lastAnimationMs = 0;
+    const double nowMs = sLastEmsTickMs = emscripten_get_now();
+    bool needDraw = keepDrawing || viewer.forceRedrawFrames_ > 0 || ( viewer.eventQueue_ && !viewer.eventQueue_->empty() );
+    if ( viewer.isAnimating && nowMs - lastAnimationMs >= 1e3 / viewer.animationMaxFps - 1 ) // 1 ms for animation frame jitter
+    {
+        lastAnimationMs = nowMs;
+        needDraw = true;
+    }
+    if ( !needDraw )
+        return; // no GL calls, so the canvas keeps showing the last frame
+
+    // draw before executing the events as the Asyncify loop does: ImGui reads the cursor position only in a new frame,
+    // and a click can come without any mouse move before it
+    while ( !viewer.draw_( true ) );
     if ( viewer.eventQueue_ )
         viewer.eventQueue_->execute();
     CommandLoop::processCommands();
+    keepDrawing = viewer.forceRedrawFrames_ > 0 || viewer.needRedraw_();
 }
 #else
 void Viewer::emsMainInfiniteLoop()
@@ -659,6 +677,8 @@ void Viewer::mainLoopFunc_()
         } while ( forceRedrawFrames_ > 0 || needRedraw_() );
     }
 #else
+    // animation frames stop in hidden tabs and off-screen iframes, keep executing events and commands from worker threads there
+    emscripten_set_interval( [] ( void* ) { if ( emscripten_get_now() - sLastEmsTickMs > 100 ) emsMainInfiniteLoop(); }, 100, nullptr );
     emscripten_set_main_loop( emsMainInfiniteLoop, 0, true );
 #endif
 }
@@ -2168,13 +2188,11 @@ void Viewer::postResize( int w, int h )
     if ( depthPeeler_ )
         depthPeeler_->reset( framebufferSize );
 
-#if !defined(__EMSCRIPTEN__) || defined(MR_EMSCRIPTEN_ASYNCIFY)
     if ( isLaunched_ && !isInDraw_ )
     {
         incrementForceRedrawFrames( forceRedrawMinimumIncrementAfterEvents, true );
         while ( !draw_( true ) );
     }
-#endif
 
     if ( hasScaledFramebuffer_ )
         updatePixelRatio_();

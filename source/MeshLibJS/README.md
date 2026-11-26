@@ -7,7 +7,7 @@ make -f scripts/mrbind/generate.mk TARGET=c    # The C bindings and their descri
 make -f scripts/mrbind/generate.mk TARGET=js   # The JS sources in `js/`, and `js/emcc_link_flags.rsp` for the next step. `JS_WASM64=1` generates `js64/` for the 64-bit modules.
 ```
 
-Then build MeshLib for Emscripten with `-DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON -DMESHLIB_BUILD_JS_BINDINGS=ON` (and `-DMESHLIB_BUILD_MRVIEWER=OFF`, the viewer adds its GL glue and asyncify to every executable), which copies the generated JS to `build/Release/MeshLibJS/js` and links the C bindings and MeshLib into `MeshLibC2.mjs` + `.wasm` (browsers and workers) and `MeshLibC2.node.mjs` + `.wasm` (Node, with the real file system) next to the copy:
+Then build MeshLib for Emscripten with `-DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON -DMESHLIB_BUILD_JS_BINDINGS=ON` (and `-DMESHLIB_BUILD_MRVIEWER=OFF`, the viewer adds its GL glue to every executable), which copies the generated JS to `build/Release/MeshLibJS/js` and links the C bindings and MeshLib into `MeshLibC2.mjs` + `.wasm` (browsers and workers) and `MeshLibC2.node.mjs` + `.wasm` (Node, with the real file system) next to the copy:
 
 ```sh
 MR_CMAKE_OPTIONS="-DMESHLIB_BUILD_MRVIEWER=OFF -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON -DMESHLIB_BUILD_JS_BINDINGS=ON" MR_CMAKE_BUILD_OPTIONS="--target MeshLibJS MeshLibJSNode" ./scripts/build_source.sh

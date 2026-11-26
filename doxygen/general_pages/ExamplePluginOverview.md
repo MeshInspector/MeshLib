@@ -79,7 +79,8 @@ Lets have a closer look at each of these points:
    - **"Priority"** - optional: tabs are ordered by this number
    - **"Groups"** - specify groups of tools in single tab, could be new groups or existing ones (specified plugins with less "Order" number)
        - **"Name"** - name of the group (it is not used now)
-       - **"List"** - list of the tools in this group; a tool listed here is removed from the groups given to it by plugins with less "Order" number
+       - **"Priority"** - optional: groups in a tab are ordered by this number
+       - **"List"** - list of the tools in this group; a tool that is already in this group moves to its position here
            - **"Name"** - name of the tool, should be same as in the code and in the `items.json` file
 
 ```json

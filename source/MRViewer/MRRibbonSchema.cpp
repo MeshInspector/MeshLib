@@ -48,6 +48,13 @@ void RibbonSchema::sortTabsByPriority()
     {
         return a.priority < b.priority;
     } );
+    for ( auto& [tabName, groups] : tabsMap )
+    {
+        std::stable_sort( groups.begin(), groups.end(), [this, &tabName = tabName] ( const std::string& a, const std::string& b )
+        {
+            return groupsPriority[tabName + a] < groupsPriority[tabName + b];
+        } );
+    }
 }
 
 void RibbonSchema::updateCaptions()
@@ -814,16 +821,6 @@ void RibbonSchemaLoader::readUIJson_( const Json::Value& itemsStructure, LocaleD
         assert( false );
         return;
     }
-    // items listed in this file leave the groups given to them by the files read before
-    HashSet<std::string> listedItems;
-    for ( const auto& tab : tabs )
-        for ( const auto& group : tab["Groups"] )
-            for ( const auto& item : group["List"] )
-                if ( item["Name"].isString() )
-                    listedItems.insert( item["Name"].asString() );
-    for ( auto& [_, items] : RibbonSchemaHolder::schema().groupsMap )
-        std::erase_if( items, [&] ( const std::string& name ) { return listedItems.contains( name ); } );
-
     auto tabsSize = int( tabs.size() );
     for ( int i = 0; i < tabsSize; ++i )
     {
@@ -878,6 +875,9 @@ void RibbonSchemaLoader::readUIJson_( const Json::Value& itemsStructure, LocaleD
             readMenuItemsList( list, items );
             auto [it, inserted] = RibbonSchemaHolder::schema().groupsMap.insert( { tabName.asString() + groupName.asString(), MenuItemsList{} } );
             auto& groupsMapRef = it->second;
+            const int groupPriority = group["Priority"].isInt() ? group["Priority"].asInt() : 0;
+            if ( inserted || groupPriority != 0 )
+                RibbonSchemaHolder::schema().groupsPriority[it->first] = groupPriority;
             if ( inserted )
             {
                 groupsMapRef = std::move( items );
@@ -885,6 +885,8 @@ void RibbonSchemaLoader::readUIJson_( const Json::Value& itemsStructure, LocaleD
             }
             else
             {
+                // an item listed again in the same group takes its new position
+                std::erase_if( groupsMapRef, [&] ( const std::string& name ) { return std::find( items.begin(), items.end(), name ) != items.end(); } );
                 groupsMapRef.insert( groupsMapRef.end(), items.begin(), items.end() );
             }
         }

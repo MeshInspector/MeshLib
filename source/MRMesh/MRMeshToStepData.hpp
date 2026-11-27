@@ -21,6 +21,7 @@ struct Region
     Surf surf;
     double rms = 0;     ///< root-mean-square distance from the vertices of the region to its surface
     double maxDist = 0; ///< maximum distance from the vertices of the region to its surface
+    int facetOf = -1;   ///< if not negative, the region is this one triangle, and its plane passes through the vertices wherever they are moved
 };
 
 /// the mesh in the form convenient for the algorithms below, and its subdivision on regions

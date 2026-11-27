@@ -666,7 +666,11 @@ MeshToStepStats BRepWriter::write( std::ostream& out )
     const auto lu = add_( "(LENGTH_UNIT()NAMED_UNIT(*)SI_UNIT(.MILLI.,.METRE.))" );
     const auto au = add_( "(NAMED_UNIT(*)PLANE_ANGLE_UNIT()SI_UNIT($,.RADIAN.))" );
     const auto su = add_( "(NAMED_UNIT(*)SI_UNIT($,.STERADIAN.)SOLID_ANGLE_UNIT())" );
-    const auto unc = add_( fmt::format( "UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE({}),{},'distance_accuracy_value','')", stepReal( d.edgeTol ), lu ) );
+    // the vertices are within this distance from the surfaces and the curves around them
+    double uncertainty = d.edgeTol;
+    for ( double e : d.snapErr )
+        uncertainty = std::max( uncertainty, e );
+    const auto unc = add_( fmt::format( "UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE({}),{},'distance_accuracy_value','')", stepReal( uncertainty ), lu ) );
     const auto ctx = add_( fmt::format( "(GEOMETRIC_REPRESENTATION_CONTEXT(3)GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT(({}))GLOBAL_UNIT_ASSIGNED_CONTEXT(({},{},{}))REPRESENTATION_CONTEXT('',''))", unc, lu, au, su ) );
 
     Vector<std::string> edgeIds;

@@ -42,7 +42,9 @@ struct MeshToStepStats
 /// writes the mesh in STEP format (AP214) as a boundary representation with one face per mesh segment,
 /// where the segments are the connected parts of the mesh separated by given edges, e.g. selected by the user;
 /// the surface of every face is a plane, cylinder, cone, sphere or torus fitted to the vertices of its segment, or a B-spline surface if none fits;
-/// the edges of faces are the curves along the boundaries of the segments, where the surfaces of neighbour segments meet
+/// the edges of faces are the curves along the boundaries of the segments, where the surfaces of neighbour segments meet;
+/// a segment enclosed by another one, whose surfaces do not meet along its boundary (e.g. a small bump of a scanned plane),
+/// becomes as many plane faces as it has triangles
 MRMESH_API Expected<MeshToStepStats> saveMeshAsStep( const Mesh& mesh, const UndirectedEdgeBitSet& faceBoundaries, std::ostream& out,
     const MeshToStepSettings& settings = {} );
 MRMESH_API Expected<MeshToStepStats> saveMeshAsStep( const Mesh& mesh, const UndirectedEdgeBitSet& faceBoundaries, const std::filesystem::path& file,

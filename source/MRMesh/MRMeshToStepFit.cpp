@@ -13,6 +13,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 
 namespace MR
 {
@@ -211,12 +212,86 @@ double snapPoint( V3& p, const Data& d, const Vector<int>& regions )
     return res;
 }
 
+/// a region enclosed by one other region needs a closed curve where their surfaces meet near its boundary;
+/// if there is no such curve, e.g. for a bump of a scanned plane fitted by another plane, which meets the enclosing plane along a line,
+/// the boundary vertices move far when snapped to both surfaces, and every triangle of the region becomes a face of its own instead,
+/// together with the islands inside the region; faceted regions and islands do not count as enclosing ones
+void facetUnboundedRegions( Data& d, Vector<Vector<int>>& faces )
+{
+    Vector<char> faceted( faces.size(), 0 );
+    auto facet = [&]( int r )
+    {
+        for ( int f : faces[r] )
+        {
+            Region t;
+            t.surf.c = d.centers[f];
+            t.surf.a = d.normals[f];
+            t.facetOf = f;
+            d.sub[f] = (int)d.regions.size();
+            d.regions.push_back( t );
+            faces.push_back( { f } );
+            faceted.push_back( 1 );
+        }
+        faces[r].clear();
+        d.regions[r] = {};
+    };
+    for ( bool changed = true; changed; )
+    {
+        changed = false;
+        // the regions around every region, not counting faceted ones; -1 for the boundary of the mesh
+        Vector<std::set<int>> around( faces.size() );
+        for ( int r = 0; r < (int)faces.size(); ++r )
+            for ( int f : faces[r] )
+                for ( int g : d.nbr[f] )
+                    if ( g < 0 )
+                        around[r].insert( -1 );
+                    else if ( d.sub[g] != r && !faceted[d.sub[g]] )
+                        around[r].insert( d.sub[g] );
+        auto isIslandOf = [&]( int s, int r ) { return around[s].size() == 1 && *around[s].begin() == r; };
+        for ( int r = 0; r < (int)around.size(); ++r )
+        {
+            if ( faces[r].empty() || faceted[r] )
+                continue;
+            int nbr = -1;
+            bool enclosed = true;
+            for ( int s : around[r] )
+            {
+                if ( s >= 0 && isIslandOf( s, r ) )
+                    continue;
+                if ( s < 0 || nbr >= 0 )
+                    enclosed = false;
+                nbr = s;
+            }
+            if ( !enclosed || nbr < 0 )
+                continue;
+            const Vector<int> both{ r, nbr };
+            double maxMove = 0;
+            for ( int f : faces[r] )
+                for ( int i = 0; i < 3; ++i )
+                    if ( const int g = d.nbr[f][i]; g >= 0 && d.sub[g] == nbr )
+                    {
+                        V3 p = d.pts[d.tris[f][i]];
+                        snapPoint( p, d, both );
+                        maxMove = std::max( maxMove, ( p - d.pts[d.tris[f][i]] ).length() );
+                    }
+            if ( maxMove <= 2 * d.tol )
+                continue;
+            for ( int s = 0; s < (int)around.size(); ++s )
+                if ( !faces[s].empty() && !faceted[s] && isIslandOf( s, r ) )
+                    facet( s );
+            facet( r );
+            changed = true;
+            break; // the neighbourhoods have changed
+        }
+    }
+}
+
 } //anonymous namespace
 
 bool fitRegions( Data& d, const ProgressCallback& cb )
 {
     MR_TIMER;
-    const auto faces = d.facesOfRegions();
+    auto faces = d.facesOfRegions();
     if ( !ParallelFor( size_t( 0 ), faces.size(), [&]( size_t r )
     {
         d.regions[r] = fitAnalytic( d, faces[r] );
@@ -233,13 +308,16 @@ bool fitRegions( Data& d, const ProgressCallback& cb )
         d.tol = std::max( 2.5 * rms[rms.size() / 2], 1e-6 * d.diag );
     }
 
-    return ParallelFor( size_t( 0 ), faces.size(), [&]( size_t r )
+    if ( !ParallelFor( size_t( 0 ), faces.size(), [&]( size_t r )
     {
         auto& reg = d.regions[r];
         if ( reg.rms > d.tol )
             if ( auto bs = fitBSpline( d, faces[r] ); bs && 1.5 * bs->rms < reg.rms )
                 reg = std::move( *bs );
-    }, subprogress( cb, 0.5f, 1.0f ) );
+    }, subprogress( cb, 0.5f, 1.0f ) ) )
+        return false;
+    facetUnboundedRegions( d, faces );
+    return true;
 }
 
 void snapBoundaries( Data& d )
@@ -272,8 +350,9 @@ void snapBoundaries( Data& d )
             const int u = d.tris[f][i], v = d.tris[f][( i + 1 ) % 3];
             for ( int w : { u, v } )
             {
+                // the plane of a single triangle is defined by its vertices after they are moved
                 auto& rs = bdVert( w ).regions;
-                if ( std::find( rs.begin(), rs.end(), d.sub[f] ) == rs.end() )
+                if ( d.regions[d.sub[f]].facetOf < 0 && std::find( rs.begin(), rs.end(), d.sub[f] ) == rs.end() )
                     rs.push_back( d.sub[f] );
             }
             const int iu = index[u], iv = index[v];
@@ -312,6 +391,16 @@ void snapBoundaries( Data& d )
     {
         d.pts[bv[i].v] = pos[i];
         d.snapErr[bv[i].v] = residual[i];
+    }
+    for ( auto& r : d.regions )
+    {
+        if ( r.facetOf < 0 )
+            continue;
+        const auto& t = d.tris[r.facetOf];
+        const V3 n = cross( d.pts[t[1]] - d.pts[t[0]], d.pts[t[2]] - d.pts[t[0]] );
+        r.surf.c = ( d.pts[t[0]] + d.pts[t[1]] + d.pts[t[2]] ) / 3.0;
+        if ( n.lengthSq() > 0 )
+            r.surf.a = n.normalized();
     }
 }
 

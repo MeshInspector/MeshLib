@@ -327,7 +327,7 @@ bool ScannerPlugin::onEnable_()
     if ( backends.empty() )
         return false;
     // the backend of an earlier opening is gone if its module unloaded without a viewer shutdown
-    if ( !backend_ || std::ranges::none_of( backends, [this] ( const auto& b ) { return b.get() == backend_; } ) )
+    if ( !backend_ || std::none_of( backends.begin(), backends.end(), [this] ( const auto& b ) { return b.get() == backend_; } ) )
     {
         // the saved choice; before this combo, the first backend with its own Config key (e.g. its SDK path); else the first one
         std::string selected = Config::instance().getJsonValue( cBackendKey ).asString();

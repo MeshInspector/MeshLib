@@ -89,7 +89,7 @@ var drop_files_or_dir = function (event) {
         else if (typeof (dynCall_vjij) == 'function')
             dynCall_vjij(GLFW.active.dropFunc, BigInt(GLFW.active.id), length, BigInt(filenamesPtr));
         else
-            getWasmTableEntry(GLFW.active.dropFunc)(toPointer(GLFW.active.id), length, filenamesPtr);
+            getWasmTableEntry(GLFW.active.dropFunc)(toPointer(GLFW.active.id), length, toPointer(filenamesPtr));
     };
 
     if (!GLFW.active || !GLFW.active.dropFunc) return;
@@ -406,9 +406,9 @@ var updateEvents = function () {
             if (typeof (dynCall_viii) == 'function')
                 dynCall_viii(win.windowSizeFunc, win.id, width, height);
             else if (typeof (dynCall_vjii) == 'function')
-                dynCall_vjii(win.windowSizeFunc, win.id, width, height);
+                dynCall_vjii(win.windowSizeFunc, toPointer(win.id), width, height);
             else
-                getWasmTableEntry(win.windowSizeFunc)(win.id, width, height);
+                getWasmTableEntry(win.windowSizeFunc)(toPointer(win.id), width, height);
         }
     }
 }

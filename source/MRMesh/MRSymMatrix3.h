@@ -365,7 +365,6 @@ SymMatrix3<T> SymMatrix3<T>::pseudoinverse( T tol, int * rank, Vector3<T> * spac
     // and pass that check, so also det > tol^2 * (trace/3)^3 is required: it holds if lambdaMin > tol * lambdaMax, since then det > tol^2 * lambdaMax^3;
     // the tolerance here is at least cbrt(eps): the error of the direct inverse is about eps / tol <= eps^(2/3),
     // and tol^2 / 27 >= eps^(2/3) / 27 is far above the rounding errors of a rank-1 matrix
-    const auto dirTol = std::max( tol, detail::cCbrtEpsilon<T> );
     if ( xx > 0 )
     {
         const auto mxy = xx * yy - xy * xy;
@@ -378,6 +377,7 @@ SymMatrix3<T> SymMatrix3<T>::pseudoinverse( T tol, int * rank, Vector3<T> * spac
             const auto d = xx * myz + xy * cxy + xz * cxz;
             const auto mxz = xx * zz - xz * xz;
             const auto tr = trace();
+            const auto dirTol = std::max( tol, detail::cCbrtEpsilon<T> );
             if ( d > 0 && d > dirTol * tr * ( mxy + mxz + myz ) && d > sqr( dirTol ) * tr * tr * tr / 27 )
             {
                 if ( rank )

@@ -384,14 +384,15 @@ SymMatrix3<T> SymMatrix3<T>::pseudoinverse( T tol, int * rank, Vector3<T> * spac
                     *rank = 3;
                 if ( space )
                     *space = Vector3<T>{};
+                // not res /= d after filling res: MSVC then reloads pairs of just stored doubles as vectors, which stalls store-to-load forwarding
+                const auto k = 1 / d;
                 SymMatrix3<T> res;
-                res.xx = myz;
-                res.xy = cxy;
-                res.xz = cxz;
-                res.yy = mxz;
-                res.yz = xz * xy - xx * yz;
-                res.zz = mxy;
-                res /= d;
+                res.xx = myz * k;
+                res.xy = cxy * k;
+                res.xz = cxz * k;
+                res.yy = mxz * k;
+                res.yz = ( xz * xy - xx * yz ) * k;
+                res.zz = mxy * k;
                 return res;
             }
         }

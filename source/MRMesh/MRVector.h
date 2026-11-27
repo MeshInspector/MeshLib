@@ -208,12 +208,14 @@ public:
     // plain pointers, since the bindings can't spell std::vector iterators; C# needs these for foreach
     [[nodiscard]] friend const T* begin( const Vector<T, I> & a MR_LIFETIMEBOUND ) { return a.vec.data(); }
     [[nodiscard]] friend const T* end( const Vector<T, I> & a MR_LIFETIMEBOUND ) { return a.vec.data() + a.vec.size(); }
+    [[nodiscard]] friend T* begin( Vector<T, I> & a MR_LIFETIMEBOUND ) { return a.vec.data(); }
+    [[nodiscard]] friend T* end( Vector<T, I> & a MR_LIFETIMEBOUND ) { return a.vec.data() + a.vec.size(); }
 #else
     [[nodiscard]] MR_BIND_IGNORE friend const_iterator begin( const Vector<T, I> & a ) { return a.vec.begin(); }
     [[nodiscard]] MR_BIND_IGNORE friend const_iterator end( const Vector<T, I> & a ) { return a.vec.end(); }
-#endif
     [[nodiscard]] MR_BIND_IGNORE friend iterator begin( Vector<T, I> & a ) { return a.vec.begin(); }
     [[nodiscard]] MR_BIND_IGNORE friend iterator end( Vector<T, I> & a ) { return a.vec.end(); }
+#endif
 
     /// removes all elements equal to \p value, returns the number of removed elements
     template <typename U>

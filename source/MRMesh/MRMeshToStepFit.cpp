@@ -201,7 +201,7 @@ double snapPoint( V3& p, const Data& d, const Vector<int>& regions )
             jtj += outerSquare( n );
             jtf += n * s.dist( p );
         }
-        // precise eigenvectors are necessary for a degenerate matrix, otherwise the point slides along the surfaces
+        // not SymMatrix3::pseudoinverse: its direct inverse branch takes a rank-1 matrix (a vertex on one surface) for a regular one
         Matrix3d vecs;
         const V3 vals = jtj.eigensJacobi( &vecs );
         V3 step;

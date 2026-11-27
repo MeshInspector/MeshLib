@@ -1,5 +1,7 @@
 #include "MRScannerBackend.h"
 
+#include <algorithm>
+
 namespace MR
 {
 
@@ -17,7 +19,11 @@ std::vector<std::unique_ptr<IScannerBackend>>& scannerBackends()
 ScannerBackendAdder::ScannerBackendAdder( std::unique_ptr<IScannerBackend> backend ) :
     backend_( backend.get() )
 {
-    scannerBackends().push_back( std::move( backend ) );
+    // sorted by name, since the order of static initialization in different translation units is unspecified
+    auto& backends = scannerBackends();
+    const auto pos = std::upper_bound( backends.begin(), backends.end(), backend->name(),
+        [] ( const std::string& name, const auto& b ) { return name < b->name(); } );
+    backends.insert( pos, std::move( backend ) );
 }
 
 ScannerBackendAdder::~ScannerBackendAdder()

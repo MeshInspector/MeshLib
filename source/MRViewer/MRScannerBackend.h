@@ -110,8 +110,8 @@ inline Json::Value scannerParam( std::string key, std::string label, std::string
 }
 
 /// Registers a scanner backend for the Scanner tool on module loading, and unregisters it on module unloading
-/// unless unregisterScannerBackends() did; the tool lists the backends in registration order,
-/// opens the first one unless another is saved, and is unavailable while no backend is registered
+/// unless unregisterScannerBackends() did; the tool lists the backends by name, opens the first one
+/// unless another is saved, and is unavailable while no backend is registered
 class ScannerBackendAdder
 {
 public:
@@ -124,7 +124,7 @@ private:
     const IScannerBackend* backend_;
 };
 
-/// The registered scanner backends, in registration order
+/// The registered scanner backends, sorted by name
 MRVIEWER_API const std::vector<std::unique_ptr<IScannerBackend>>& getScannerBackends();
 
 /// Destroys all registered scanner backends; the Scanner tool calls it on viewer shutdown, after closing,

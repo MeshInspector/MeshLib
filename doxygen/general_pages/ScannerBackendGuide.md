@@ -15,7 +15,7 @@ Both applications include a generic **Scanner** tool. It does everything that is
 - ICP registration of each new scan to the earlier ones;
 - adding every scan to the scene with undo.
 
-The scanner-specific part is a **backend**. It implements one C++ interface, [MR::IScannerBackend](\ref MR::IScannerBackend) from `MRViewer/MRScannerBackend.h`, on top of your SDK. Build the backend as a plugin module and register it, and the Scanner tool lists your scanner by name. The backend does not use ImGui: it describes its parameters and actions as JSON data, and the tool draws them.
+The scanner-specific part is a **backend**. It implements one C++ interface, [MR::IScannerBackend](\ref MR::IScannerBackend) from `MRViewer/MRScannerBackend.h`, on top of your SDK. Build the backend as a plugin module and register it, and the Scanner tool lists your scanner by name. The backend does not use ImGui: it describes its parameters and actions as JSON data, and the tool draws them. If your scanner needs something the interface does not offer, the interface can be extended; see [Extending the interface](\ref ScannerBackendGuide_Extending).
 
 > [!NOTE]
 > The Scanner tool and `IScannerBackend` are new. Build your plugin against a MeshLib SDK whose `MRViewer/MRScannerBackend.h` exists, and deploy it to a host of exactly that version. See [Version compatibility](\ref HowtoAddPluginOverview_VersionCompatibility).
@@ -272,6 +272,15 @@ One module may register several backends, one `ScannerBackendAdder` each. They a
 ```
 3. On Windows, add the delay-load linker options from [Rules every backend follows](\ref ScannerBackendGuide_Rules), and build with the same configuration as the host (Release for an installed MeshInspector).
 4. Install the library and the `*.ui.json` file as described in \ref HowtoAddPluginOverview, and check the log for `Load library MyScannerPlugin was successful`. The SDK itself is not copied into the application folder: the user picks its folder in the Scanner tool, and that folder is saved.
+
+# Extending the interface {#ScannerBackendGuide_Extending}
+
+The interface is not closed. If your scanner needs something that `IScannerBackend` or the Scanner tool does not offer, such as a new parameter type, another optional part of the window or a new call from the host, add it in a pull request to [MeshLib](https://github.com/MeshInspector/MeshLib):
+- a new parameter type or schema field is drawn in `source/MRViewer/MRScannerSchemaUi.cpp`;
+- a new optional part of the window is a field of `ScannerCapabilities`, off by default;
+- a new method is a virtual method of `IScannerBackend` with a default implementation, like `previewImages()`, so that other backends need no change. The host calls it from `source/MRCommonPlugins/Basic/MRScannerPlugin.cpp`.
+
+Once the pull request is merged, build your plugin against a MeshLib version that includes it; see [Version compatibility](\ref HowtoAddPluginOverview_VersionCompatibility).
 
 # Troubleshooting {#ScannerBackendGuide_Troubleshooting}
 

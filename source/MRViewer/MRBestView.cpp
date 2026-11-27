@@ -4,7 +4,6 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRObjectPoints.h>
 #include <MRMesh/MRObjectMesh.h>
-#include <MRMesh/MRBitSetParallelFor.h>
 
 namespace MR
 {

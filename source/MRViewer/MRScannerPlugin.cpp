@@ -20,6 +20,7 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRPointCloud.h"
+#include "MRMesh/MRPointCloudDivideWithPlane.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshOrPoints.h"
 #include "MRMesh/MRPlane3.h"
@@ -60,13 +61,7 @@ void clipScan( std::shared_ptr<VisualObject> scan, Plane3f plane, bool history )
             std::make_unique<Historian<ChangePointCloudAction>>( _t( "Clip Scan by Plane" ), objPoints );
 
         PointCloud& cloud = *objPoints->varPointCloud();
-        VertBitSet validPoints = cloud.validPoints;
-        BitSetParallelFor( cloud.validPoints, [&]( VertId v )
-            {
-                if ( plane.distance( cloud.points[v] ) < 0 )
-                    validPoints.reset( v );
-            } );
-        cloud.validPoints = validPoints;
+        cloud.validPoints -= findHalfSpacePoints( cloud, -plane ); // keeps the points on the plane
         cloud.pack();
     }
     else if ( std::shared_ptr<ObjectMesh> objMesh = std::dynamic_pointer_cast<ObjectMesh>( scan ) )
@@ -440,6 +435,8 @@ void ScannerPlugin::updateScansBox_()
 
 void ScannerPlugin::rotateScans_()
 {
+    if ( !( settings_.rotateAxis.lengthSq() > 0 ) )
+        return; // no axis, e.g. typed or loaded: Matrix3f::rotation would scale the scans
     AffineXf3f xf = AffineXf3f::linear( Matrix3f::rotation( settings_.rotateAxis,
         -settings_.rotateDegrees * ( PI_F / 180.0f ) ) );
     xf = AffineXf3f::translation( settings_.rotateOrg ) * xf * AffineXf3f::translation( -settings_.rotateOrg );

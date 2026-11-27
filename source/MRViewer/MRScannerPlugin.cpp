@@ -222,18 +222,29 @@ struct ProcessingSettings
 // The Config key of the selected backend's name
 constexpr const char* cBackendKey = "scannerBackend";
 
-// Generic scanner plugin: lists every backend, communicates with the selected one only through
+// the backends registered by ScannerBackendAdder, in registration order
+std::vector<std::unique_ptr<IScannerBackend>>& scannerBackends()
+{
+    static std::vector<std::unique_ptr<IScannerBackend>> backends;
+    return backends;
+}
+
+// Generic scanner plugin: lists the registered backends, communicates with the selected one only through
 // IScannerBackend, renders the backend's parameter schema generically, and hosts the backend-agnostic
 // scan processing (clip / rotate / register gizmos, scene insertion) plus a preview of the backend's
 // 2D images and a capability-gated live region.
 class ScannerPlugin : public StatePlugin
 {
 public:
-    explicit ScannerPlugin( std::vector<std::unique_ptr<IScannerBackend>> backends );
+    ScannerPlugin() : StatePlugin( "Scanner", StatePluginTabs::Other ) {}
+    virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const override
+    {
+        return scannerBackends().empty() ? _tr( "No scanner backend is registered" ) : std::string();
+    }
     virtual void drawDialog( ImGuiContext* ) override;
 
 private:
-    IScannerBackend* backend_ = nullptr; // the selected one of backends_; only its runtime is loaded
+    IScannerBackend* backend_ = nullptr; // the selected backend, chosen on the first opening; only its runtime is loaded
     bool loadCancelled_ = false; // Shift was held when the tool opened, so the runtime was not loaded
     std::string error_;          // why the last operation failed, empty after one succeeded
     ProcessingSettings settings_; // persist in the backend's Config object
@@ -251,8 +262,6 @@ private:
     std::vector<Image> streamImages_;
     PointCloud streamPoints_;
     std::shared_ptr<ObjectPoints> streamObject_;
-    // destroyed before the members above: a backend stopping its stream may deliver one more frame
-    std::vector<std::unique_ptr<IScannerBackend>> backends_;
 
     // ---- tabs ----
     bool selectFirstTab_ = true; // open on Parameters
@@ -307,31 +316,25 @@ private:
     void drawPreviewWindow_();
 };
 
-ScannerPlugin::ScannerPlugin( std::vector<std::unique_ptr<IScannerBackend>> backends ) :
-    StatePlugin( "Scanner", StatePluginTabs::Other ),
-    backends_( std::move( backends ) )
+bool ScannerPlugin::onEnable_()
 {
-    backend_ = backends_.front().get(); // makeScannerPlugin passes at least one
-    for ( auto& backend : backends_ )
-        backend->setLiveFrameCallback( [this]( ScannerLiveFrame&& f ) { onLiveFrame_( std::move( f ) ); } );
-    CommandLoop::appendCommand( [this]()
+    const auto& backends = scannerBackends();
+    if ( backends.empty() )
+        return false;
+    if ( !backend_ )
     {
+        // the saved choice; before this combo, the first backend with its own Config key (e.g. its SDK path); else the first one
         std::string selected = Config::instance().getJsonValue( cBackendKey ).asString();
-        for ( auto& backend : backends_ )
+        backend_ = backends.front().get();
+        for ( const auto& backend : backends )
         {
-            backend->loadSettings();
-            // none chosen yet (before this combo): the first backend with its own Config key, e.g. its SDK path
             if ( selected.empty() && Config::instance().hasJsonValue( toLower( backend->name() ) ) )
                 selected = backend->name();
             if ( backend->name() == selected )
                 backend_ = backend.get();
         }
         settings_.load( configKey_() );
-    } );
-}
-
-bool ScannerPlugin::onEnable_()
-{
+    }
     // hold Shift while opening the tool to skip loading the SDK, e.g. one that crashes the application
     openBackend_( ImGui::IsKeyDown( ImGuiMod_Shift ) );
 
@@ -366,6 +369,8 @@ bool ScannerPlugin::onDisable_()
 
 void ScannerPlugin::openBackend_( bool skipLoad )
 {
+    backend_->loadSettings(); // as saved when it closed
+    backend_->setLiveFrameCallback( [this]( ScannerLiveFrame&& f ) { onLiveFrame_( std::move( f ) ); } );
     loadCancelled_ = skipLoad;
     if ( !loadCancelled_ )
         loadRuntime_( backend_->runtimeDir() );
@@ -380,6 +385,7 @@ void ScannerPlugin::closeBackend_()
 {
     backend_->saveSettings(); // all of them, to open with them next time
     backend_->unloadRuntime(); // stops the stream first, so clearStream_ drops its last frame
+    backend_->setLiveFrameCallback( {} ); // the backend may outlive this plugin
     for ( ImGuiImage& image : images_ )
         image.update( {} );
     clearStream_();
@@ -686,14 +692,15 @@ void ScannerPlugin::drawBackendCombo_()
 {
     std::vector<std::string> names;
     int selected = 0;
-    for ( const auto& backend : backends_ )
+    const auto& backends = scannerBackends();
+    for ( const auto& backend : backends )
     {
         if ( backend.get() == backend_ )
             selected = int( names.size() );
         names.push_back( backend->name() );
     }
-    if ( UI::combo( _tr( "Scanner" ), &selected, names ) && backends_[selected].get() != backend_ )
-        selectBackend_( *backends_[selected] );
+    if ( UI::combo( _tr( "Scanner" ), &selected, names ) && backends[selected].get() != backend_ )
+        selectBackend_( *backends[selected] );
 }
 
 void ScannerPlugin::drawNotLoaded_()
@@ -990,9 +997,20 @@ void ScannerPlugin::drawDialog( ImGuiContext* )
 
 } // namespace
 
-std::shared_ptr<RibbonMenuItem> makeScannerPlugin( std::vector<std::unique_ptr<IScannerBackend>> backends )
+ScannerBackendAdder::ScannerBackendAdder( std::unique_ptr<IScannerBackend> backend ) :
+    backend_( backend.get() )
 {
-    return backends.empty() ? nullptr : std::make_shared<ScannerPlugin>( std::move( backends ) );
+    scannerBackends().push_back( std::move( backend ) );
+}
+
+ScannerBackendAdder::~ScannerBackendAdder()
+{
+    std::erase_if( scannerBackends(), [this] ( const auto& b ) { return b.get() == backend_; } );
+}
+
+std::shared_ptr<RibbonMenuItem> makeScannerPlugin()
+{
+    return std::make_shared<ScannerPlugin>();
 }
 
 } // namespace MR

@@ -384,7 +384,8 @@ SymMatrix3<T> SymMatrix3<T>::pseudoinverse( T tol, int * rank, Vector3<T> * spac
                     *rank = 3;
                 if ( space )
                     *space = Vector3<T>{};
-                // not res /= d after filling res: MSVC then reloads pairs of just stored doubles as vectors, which stalls store-to-load forwarding
+                // not res /= d after filling res: MSVC then reloads pairs of just stored doubles as vectors, which stalls store-to-load forwarding,
+                // https://developercommunity.visualstudio.com/t/x64-O2:-scaling-a-just-filled-struct-of/11188541
                 const auto k = 1 / d;
                 SymMatrix3<T> res;
                 res.xx = myz * k;

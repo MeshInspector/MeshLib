@@ -347,7 +347,10 @@ SymMatrix3<T> SymMatrix3<T>::pseudoinverse( T tol, int * rank, Vector3<T> * spac
 {
     // a positive definite matrix (all leading principal minors are positive) is inverted directly, which is several times faster,
     // if lambdaMin > tol * lambdaMax is guaranteed: lambdaMin >= det / m2 (m2 is the sum of principal 2x2 minors >= lambdaMax * lambdaMid),
-    // and lambdaMax <= trace; the tolerance is at least 1e-4 to keep the direct inverse accurate
+    // and lambdaMax <= trace; the tolerance is at least 1e-4 to keep the direct inverse accurate;
+    // rounding errors (about eps * trace^3) can make the determinant and the minors of a rank-1 matrix positive and pass that check,
+    // so also det > tol^2 * (trace/3)^3 is required: it holds if lambdaMin > tol * lambdaMax, since then det > tol^2 * lambdaMax^3
+    const auto dirTol = std::max( tol, T( 1e-4 ) );
     if ( xx > 0 )
     {
         const auto mxy = xx * yy - xy * xy;
@@ -359,7 +362,8 @@ SymMatrix3<T> SymMatrix3<T>::pseudoinverse( T tol, int * rank, Vector3<T> * spac
             const auto cxz = xy * yz - xz * yy;
             const auto d = xx * myz + xy * cxy + xz * cxz;
             const auto mxz = xx * zz - xz * xz;
-            if ( d > 0 && d > std::max( tol, T( 1e-4 ) ) * trace() * ( mxy + mxz + myz ) )
+            const auto tr = trace();
+            if ( d > 0 && d > dirTol * tr * ( mxy + mxz + myz ) && d > sqr( dirTol ) * tr * tr * tr / 27 )
             {
                 if ( rank )
                     *rank = 3;

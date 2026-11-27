@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: MeshLib\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-26 04:10+0000\n"
+"POT-Creation-Date: 2026-11-27 04:10+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1458,11 +1458,11 @@ msgstr ""
 msgid "Angles"
 msgstr ""
 
-#: source/MRMesh/MRCircleObject.h:30
+#: source/MRMesh/MRCircleObject.h:31
 msgid "Circle"
 msgstr ""
 
-#: source/MRMesh/MRCircleObject.h:33
+#: source/MRMesh/MRCircleObject.h:34
 msgid "Circles"
 msgstr ""
 
@@ -1592,11 +1592,11 @@ msgstr ""
 msgid "Roots"
 msgstr ""
 
-#: source/MRMesh/MRSphereObject.h:28
+#: source/MRMesh/MRSphereObject.h:29
 msgid "Sphere"
 msgstr ""
 
-#: source/MRMesh/MRSphereObject.h:31
+#: source/MRMesh/MRSphereObject.h:32
 msgid "Spheres"
 msgstr ""
 
@@ -3087,7 +3087,7 @@ msgid "Degrees, minutes, seconds"
 msgstr ""
 
 #. TRANSLATORS: example string: Open .SVG as Polyline
-#: source/MRViewer/MRViewer.cpp:1405
+#: source/MRViewer/MRViewer.cpp:1426
 #, c++-format
 msgid "{} as {}"
 msgstr ""

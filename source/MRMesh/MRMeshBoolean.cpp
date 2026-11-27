@@ -356,10 +356,9 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh, FaceMap* outNew2Old )
     // meshAVertsNum = 0 because both meshes are actually the same and no need to change the IDs of any mesh vertices
     const SortIntersectionsData sortData{ inMesh, contours, converters.toInt, nullptr, 0, false };
     const VertId firstNewVert( mesh.topology.vertSize() );
-    const FaceId firstNewFace( mesh.topology.faceSize() );
     FaceMap new2Old;
     // where three sheets meet at a point, the contours cross on each of them: the cut splits them there, so the paths pass the crossings
-    auto cutRes = cutMesh( mesh, intContours, { .sortData = &sortData, .new2OldMap = &new2Old,
+    auto cutRes = cutMesh( mesh, intContours, { .sortData = &sortData, .new2OldMap = outNew2Old ? &new2Old : nullptr,
         .forceFillMode = CutMeshParameters::ForceFill::SplitCrossings } );
     // the vertices at the crossings: new vertices that two paths leave (or one path twice), unlike the vertices at the points of the contours
     VertBitSet leftOnce( mesh.topology.vertSize() ), crossings( mesh.topology.vertSize() );
@@ -367,24 +366,9 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh, FaceMap* outNew2Old )
         for ( auto e : path )
             if ( const auto v = mesh.topology.org( e ); v >= firstNewVert && leftOnce.test_set( v ) )
                 crossings.set( v );
+    // the cut reports the faces that it could not cut well, as those of the crossings that it could not split
     if ( cutRes.fbsWithContourIntersections.any() )
-    {
-        // a bad face is filled well only where the cut split the crossings in it (the faces around such a crossing come from that face),
-        // and all the faces made from it are triangles: where its monotone split failed, the planar fill can leave a face that is no
-        // triangle (only the new faces can be such, as the old ones keep their sides), or the face is put back whole with its old id
-        // next to the fills of its islands
-        FaceBitSet split;
-        for ( auto v : crossings )
-            for ( auto e : orgRing( mesh.topology, v ) )
-                if ( const auto f = mesh.topology.left( e ) )
-                    split.autoResizeSet( new2Old[f] );
-        auto bad = cutRes.fbsWithContourIntersections - ( split - mesh.topology.getValidFaces() );
-        for ( auto f = firstNewFace; f < mesh.topology.faceSize(); ++f )
-            if ( cutRes.fbsWithContourIntersections.test( new2Old[f] ) && !mesh.topology.isLeftTri( mesh.topology.edgeWithLeft( f ) ) )
-                bad.set( new2Old[f] );
-        if ( bad.any() )
-            return unexpected( fmt::format( "Self-Boolean has nested intersections on {} faces", bad.count() ) );
-    }
+        return unexpected( fmt::format( "Self-Boolean has nested intersections on {} faces", cutRes.fbsWithContourIntersections.count() ) );
     convertIntFloatAllVerts( mesh, converters );
 
     // before any stitch changes the vertices: the second path of every closed pair goes along the first one from the same point

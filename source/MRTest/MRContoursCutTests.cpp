@@ -781,7 +781,8 @@ TEST( MRMesh, CutMeshSelfCrossingLoneContour )
 
 // a lone contour inside a triangle of zero area (its corners on one line) has no plane to connect it with the triangle in;
 // without the exact sorting data, the cut reports the triangle as bad and keeps it; a contour through the triangle along that line
-// with four points in it, which the plain cut takes, makes it bad under force fill, with no plane to find their crossings in either
+// with four points in it, which the plain cut takes, makes it bad under force fill, with no plane to find their crossings in either,
+// so SplitCrossings cannot split them and reports it too
 TEST( MRMesh, CutMeshLoneContourInZeroAreaFace )
 {
     // corner 2_v of 1_f is on its side from 1_v to 0_v
@@ -798,10 +799,11 @@ TEST( MRMesh, CutMeshLoneContourInZeroAreaFace )
         { mesh.topology.findEdge( 0_v, 1_v ), Vector3f( 6, 6, 0 ) },
         { mesh.topology.findEdge( 3_v, 1_v ), Vector3f( 5, 10, 0 ) } } };
 
-    for ( bool forceFill : { false, true } )
+    for ( auto mode : { CutMeshParameters::ForceFill::None, CutMeshParameters::ForceFill::All, CutMeshParameters::ForceFill::SplitCrossings } )
     {
+        const bool forceFill = mode != CutMeshParameters::ForceFill::None;
         Mesh cut = mesh;
-        const auto res = cutMesh( cut, { island }, { .forceFillMode = forceFill ? CutMeshParameters::ForceFill::All : CutMeshParameters::ForceFill::None } );
+        const auto res = cutMesh( cut, { island }, { .forceFillMode = mode } );
         EXPECT_TRUE( cut.topology.checkValidity() );
         EXPECT_TRUE( res.fbsWithContourIntersections.test( 1_f ) );
         EXPECT_TRUE( cut.topology.hasFace( 1_f ) );
@@ -810,7 +812,7 @@ TEST( MRMesh, CutMeshLoneContourInZeroAreaFace )
         EXPECT_EQ( cut.topology.findNumHoles(), forceFill ? 1 : 3 );
 
         cut = mesh;
-        const auto bad = cutMesh( cut, { through }, { .forceFillMode = forceFill ? CutMeshParameters::ForceFill::All : CutMeshParameters::ForceFill::None } ).fbsWithContourIntersections;
+        const auto bad = cutMesh( cut, { through }, { .forceFillMode = mode } ).fbsWithContourIntersections;
         EXPECT_EQ( bad.count(), forceFill ? 1 : 0 );
         EXPECT_EQ( bad.test( 1_f ), forceFill );
     }
@@ -931,20 +933,21 @@ Mesh makePrism( const std::array<Vector2f, 4>& q, float z0, float z1 )
 }
 
 // cuts the cube by its contours with the boxes (one mesh crossing itself) with the exact sorting data of the boolean, the cube as mesh A and as B;
-// checks that the forced cut finds numBadFaces bad faces, leaves no holes, and keeps the area and orientation of every face of the cube,
+// checks that the forced cut splits all crossings, so it reports no bad faces, leaves no holes, and keeps the area and orientation of every face of the cube,
 // that its closed paths meet at numCrossings new vertices, each passed by two paths or twice by one, and that every new edge maps to the old edge
 // it is a piece of, with the old faces of that edge on its sides, or else to the old face it is inside (as the new edges of the paths and
-// their pieces at the crossings), with that face on both sides; without sortData, nothing is split, and the cut is the one of ForceFill::All
-void checkForcedCutAtCrossings( const std::vector<Mesh>& boxes, int numBadFaces, int numCrossings )
+// their pieces at the crossings), with that face on both sides; all of that also without sortData, on the float predicates
+void checkForcedCutAtCrossings( const std::vector<Mesh>& boxes, int numCrossings )
 {
     const auto cube = makeCube( Vector3f::diagonal( 2.f ), Vector3f::diagonal( -1.f ) );
     const auto& ctp = cube.topology;
     Mesh other;
     for ( const auto& b : boxes )
         other.addMesh( b );
-    for ( bool cubeIsA : { true, false } )
+    for ( int run = 0; run < 4; ++run )
     {
-        SCOPED_TRACE( cubeIsA ? "cube is A" : "cube is B" );
+        const bool cubeIsA = run < 2, exact = run % 2 == 0;
+        SCOPED_TRACE( testing::Message() << ( cubeIsA ? "cube is A" : "cube is B" ) << ( exact ? ", exact" : ", float" ) );
         const auto& a = cubeIsA ? cube : other;
         const auto& b = cubeIsA ? other : cube;
         const auto conv = getVectorConverters( a, b );
@@ -956,9 +959,9 @@ void checkForcedCutAtCrossings( const std::vector<Mesh>& boxes, int numBadFaces,
         Mesh cut = cube;
         FaceMap new2Old;
         NewEdgesMap new2OldEdges;
-        const auto res = cutMesh( cut, cubeContours, { .sortData = &sortData, .new2OldMap = &new2Old,
+        const auto res = cutMesh( cut, cubeContours, { .sortData = exact ? &sortData : nullptr, .new2OldMap = &new2Old,
             .forceFillMode = CutMeshParameters::ForceFill::SplitCrossings, .new2oldEdgesMap = &new2OldEdges } );
-        EXPECT_EQ( res.fbsWithContourIntersections.count(), numBadFaces );
+        EXPECT_TRUE( res.fbsWithContourIntersections.none() );
         const auto& tp = cut.topology;
         EXPECT_TRUE( tp.checkValidity() );
         EXPECT_EQ( tp.findNumHoles(), 0 );
@@ -998,12 +1001,6 @@ void checkForcedCutAtCrossings( const std::vector<Mesh>& boxes, int numBadFaces,
         }
         EXPECT_EQ( std::count( passes.begin(), passes.end(), 2 ), numCrossings );
         EXPECT_EQ( std::count_if( passes.begin(), passes.end(), [] ( int n ) { return n > 2; } ), 0 );
-
-        Mesh all = cube, split = cube;
-        const auto allBad = cutMesh( all, cubeContours, { .forceFillMode = CutMeshParameters::ForceFill::All } ).fbsWithContourIntersections;
-        EXPECT_TRUE( cutMesh( split, cubeContours, { .forceFillMode = CutMeshParameters::ForceFill::SplitCrossings } ).fbsWithContourIntersections == allBad );
-        EXPECT_TRUE( split.points == all.points );
-        EXPECT_TRUE( split.topology == all.topology );
     }
 }
 
@@ -1074,20 +1071,20 @@ TEST( MRMesh, CutMeshLoneContourWithCrossingContour )
 // the forced cut connects the two crossing islands in one, and that one with the rest of the triangle
 TEST( MRMesh, CutMeshSplitCrossingsIslands )
 {
-    checkForcedCutAtCrossings( { makeBox( { 0.6f, 0.f }, 0.1f, 0.1f, 0.5f, 1.5f ), makeBox( { 0.65f, 0.05f }, 0.1f, 0.1f, 0.45f, 1.55f ) }, 1, 2 );
+    checkForcedCutAtCrossings( { makeBox( { 0.6f, 0.f }, 0.1f, 0.1f, 0.5f, 1.5f ), makeBox( { 0.65f, 0.05f }, 0.1f, 0.1f, 0.45f, 1.55f ) }, 2 );
 }
 
 // two long boxes across the top of the cube, along x and along y, whose contours cross twice in each triangle of the top (split by y = x),
 // where a side of the box along y crosses both sides of the other one, so both triangles are bad
 TEST( MRMesh, CutMeshSplitCrossingsContours )
 {
-    checkForcedCutAtCrossings( { makeBox( { 0.f, 0.2f }, 2.f, 0.1f, 0.5f, 1.5f ), makeBox( { 0.2f, 0.f }, 0.4f, 2.f, 0.45f, 1.55f ) }, 2, 4 );
+    checkForcedCutAtCrossings( { makeBox( { 0.f, 0.2f }, 2.f, 0.1f, 0.5f, 1.5f ), makeBox( { 0.2f, 0.f }, 0.4f, 2.f, 0.45f, 1.55f ) }, 4 );
 }
 
 // a long box across the top of the cube, and a small box poking through it whose lone contour crosses the contour of the long one twice
 TEST( MRMesh, CutMeshSplitCrossingsIslandAndContour )
 {
-    checkForcedCutAtCrossings( { makeBox( { 0.f, 0.2f }, 2.f, 0.1f, 0.5f, 1.5f ), makeBox( { -0.6f, 0.3f }, 0.1f, 0.1f, 0.45f, 1.55f ) }, 1, 2 );
+    checkForcedCutAtCrossings( { makeBox( { 0.f, 0.2f }, 2.f, 0.1f, 0.5f, 1.5f ), makeBox( { -0.6f, 0.3f }, 0.1f, 0.1f, 0.45f, 1.55f ) }, 2 );
 }
 
 // a prism over a bow-tie poking through the top of the cube in one of its triangles, so its lone contour there crosses itself once,
@@ -1095,7 +1092,7 @@ TEST( MRMesh, CutMeshSplitCrossingsIslandAndContour )
 TEST( MRMesh, CutMeshSplitCrossingsSelfCrossing )
 {
     checkForcedCutAtCrossings( { makePrism( { Vector2f( 0.5f, -0.1f ), Vector2f( 0.72f, 0.12f ), Vector2f( 0.7f, -0.08f ), Vector2f( 0.48f, 0.1f ) },
-        0.4f, 1.5f ) }, 1, 1 );
+        0.4f, 1.5f ) }, 1 );
 }
 
 // a prism over a bow-tie through the top of the cube, with the crossing of the bow-tie inside one triangle of the top: one lobe stays
@@ -1104,7 +1101,42 @@ TEST( MRMesh, CutMeshSplitCrossingsSelfCrossing )
 TEST( MRMesh, CutMeshSplitCrossingsSelfCrossingContour )
 {
     checkForcedCutAtCrossings( { makePrism( { Vector2f( 0.52f, -0.6f ), Vector2f( 0.1f, 0.8f ), Vector2f( 0.7f, 0.8f ), Vector2f( 0.28f, -0.6f ) },
-        0.4f, 1.5f ) }, 1, 1 );
+        0.4f, 1.5f ) }, 1 );
+}
+
+// a closed surface path over a bow-tie on 3x3 squares, which crosses itself at ( 1.5, 1.4 ) inside a triangle, as a user draws it:
+// without sortData, the forced cut splits the crossing on the float coordinates, so the path passes it twice, no face is reported,
+// and the faces keep the area and the orientation of the plane
+TEST( MRMesh, CutMeshSplitCrossingsSurfacePath )
+{
+    const auto mesh = makeSquares3x3();
+    std::vector<MeshTriPoint> mtps;
+    for ( auto p : { Vector3f( 0.3f, 0.6f, 0 ), Vector3f( 2.7f, 2.2f, 0 ), Vector3f( 2.6f, 0.4f, 0 ), Vector3f( 0.51f, 2.3f, 0 ) } )
+        mtps.push_back( mesh.projectPoint( p ).mtp( mesh.topology ) );
+    mtps.push_back( mtps.front() );
+    const auto contour = surfaceLineToMeshContour( mesh, mtps );
+    ASSERT_TRUE( contour.has_value() );
+
+    Mesh cut = mesh;
+    const auto res = cutMesh( cut, { *contour }, { .forceFillMode = CutMeshParameters::ForceFill::SplitCrossings } );
+    const auto& tp = cut.topology;
+    EXPECT_TRUE( res.fbsWithContourIntersections.none() );
+    EXPECT_TRUE( tp.checkValidity() );
+    EXPECT_EQ( tp.findNumHoles(), 1 ); // the border of the squares
+    EXPECT_NEAR( cut.area(), mesh.area(), 1e-5 );
+    for ( auto f : tp.getValidFaces() )
+        EXPECT_GT( cut.dirDblArea( f ).z, 0 ) << "face " << f;
+    ASSERT_EQ( res.resultCut.size(), 1 );
+    EXPECT_TRUE( isEdgeLoop( tp, res.resultCut[0] ) );
+    Vector<int, VertId> passes( tp.vertSize() );
+    for ( auto e : res.resultCut[0] )
+        ++passes[tp.org( e )];
+    const auto twice = std::find( passes.begin(), passes.end(), 2 );
+    ASSERT_NE( twice, passes.end() );
+    EXPECT_EQ( std::count( passes.begin(), passes.end(), 2 ), 1 );
+    const auto crossing = cut.points[VertId( int( twice - passes.begin() ) )];
+    EXPECT_NEAR( crossing.x, 1.5f, 1e-5f );
+    EXPECT_NEAR( crossing.y, 1.4f, 1e-5f );
 }
 
 TEST( MRMesh, MeshCollidePrecise )
@@ -1695,7 +1727,7 @@ std::vector<ThreeVertIds> trianglesFrom( const Mesh& mesh, const FaceMap& new2Ol
 // the contour of the box enters and leaves on one side, crossing the contour of the fold from 0_v twice, which leaves valid hole loops,
 // so that only the search reports them, while the two faces of the box there have one crossing each, which the plain cut reports already;
 // under SplitCrossings, all these crossings are split, also in 0_f and 5_f, where the contour of the fold that the box crosses ends at 0_v:
-// the triangle of the other sheet along it is the one at its other end with 0_v; the bad faces stay the same
+// the triangle of the other sheet along it is the one at its other end with 0_v, and no face is reported then
 TEST( MRMesh, ForceFillCrossingsFoldVertex )
 {
     const auto spindle = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 16, 0, 0 ), Vector3f( 8, 2, 2 ), Vector3f( 8, -2, -2 ),
@@ -1714,12 +1746,11 @@ TEST( MRMesh, ForceFillCrossingsFoldVertex )
     {
         Mesh all = mesh, split = mesh;
         FaceMap allMap, splitMap;
-        const auto allBad = cutMesh( all, inters, { .sortData = &sortData, .new2OldMap = &allMap,
-            .forceFillMode = CutMeshParameters::ForceFill::All } ).fbsWithContourIntersections;
+        cutMesh( all, inters, { .sortData = &sortData, .new2OldMap = &allMap, .forceFillMode = CutMeshParameters::ForceFill::All } );
         const auto splitBad = cutMesh( split, inters, { .sortData = &sortData, .new2OldMap = &splitMap,
             .forceFillMode = CutMeshParameters::ForceFill::SplitCrossings } ).fbsWithContourIntersections;
         EXPECT_TRUE( split.topology.checkValidity() );
-        EXPECT_TRUE( splitBad == allBad );
+        EXPECT_TRUE( splitBad.none() );
         // the vertices of the crossings, one in each face of the box and two in each of 0_f and 5_f, follow those of the cut
         ASSERT_EQ( split.points.size(), all.points.size() + 6 );
         EXPECT_TRUE( std::equal( all.points.begin(), all.points.end(), split.points.begin() ) );

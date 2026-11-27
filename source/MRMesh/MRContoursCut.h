@@ -55,9 +55,11 @@ struct CutMeshParameters
     {
         None, ///< if bad faces occur, nothing is filled
         All,  ///< bad faces are filled too, but their triangulation can be bad (may have self-intersections or tunnels)
-        /// as All, but with sortData the contours are first split where they cross in bad faces (see \ref CutMeshResult::resultCut);
-        /// where the split fails, as All: e.g. in a face where an open contour ends on a side of the face, or a contour segment ends
-        /// at a mesh vertex that is not a corner of the triangle of the other mesh along the segment (unlike the fold vertices of selfBoolean)
+        /// as All, but the contours are first split where they cross in bad faces (see \ref CutMeshResult::resultCut), found on the exact
+        /// predicates consistent with the boolean with sortData, or on the float coordinates of the contours otherwise, whose rounding
+        /// can miss or add a crossing near another point or edge; where the split fails, as All: e.g. in a face where an open contour ends on
+        /// a side of the face, or, with sortData, a contour segment ends at a mesh vertex that is not a corner of the triangle
+        /// of the other mesh along the segment (unlike the fold vertices of selfBoolean)
         SplitCrossings
     } forceFillMode{ ForceFill::None };
 
@@ -73,13 +75,16 @@ struct CutMeshResult
 {
     /// Paths of new edges on mesh, they represent same contours as input, but already cut;
     /// a contour going from a mesh vertex to a point and back has an edge followed by its sym there;
-    /// with \ref CutMeshParameters::ForceFill::SplitCrossings and sortData, a path also passes the vertices where its contour crosses others (or itself) in bad faces
+    /// with \ref CutMeshParameters::ForceFill::SplitCrossings, a path also passes the vertices where its contour crosses others (or itself) in bad faces
     std::vector<EdgePath> resultCut;
     /// Bitset of bad triangles - triangles where input contours have intersections and cannot be cut and filled in a good way;
     /// under force fill, also the triangles where two segments of the contours cross (segments that follow each other along a contour
     /// or have a common mesh vertex do not), even if their cut is valid; the triangles where that cannot be told may be reported too:
     /// where the exact predicates fail on the points of the contours that they compare (e.g. coincident contours of a double-sided sheet),
-    /// or, without sortData, where the corners of the triangle are on one line and more than three points of the contours are inside it
+    /// or, without sortData, where the corners of the triangle are on one line and more than three points of the contours are inside it;
+    /// under \ref CutMeshParameters::ForceFill::SplitCrossings, not the triangles where the crossings were split, unless their cut or fill
+    /// is bad otherwise (as a hole that passes a crossing twice and cannot be split in monotone parts); without sortData, a crossing that
+    /// the float rounding misses in a triangle where others are split is not reported either
     /// \sa \ref MR::CutMeshParameters
     FaceBitSet fbsWithContourIntersections;
 };

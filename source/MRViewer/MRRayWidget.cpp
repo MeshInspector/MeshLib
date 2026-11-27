@@ -5,20 +5,17 @@
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRCylinder.h"
 #include "MRMesh/MRSceneRoot.h"
-#include "MRMesh/MRMatrix3Decompose.h"
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <GLFW/glfw3.h>
 
 namespace MR
 {
 
-void RayWidget::create( const Line3f& ray, float length, OnRayChangedCallback onRayChanged, VisualObject* parent )
+void RayWidget::create( const Line3f& ray, float length, OnRayChangedCallback onRayChanged )
 {
-    active_ = true;
     line_ = ray;
     length_ = length;
     onRayChanged_ = onRayChanged;
-    parent_ = parent;
     pickingPoint_ = false;
     connect( &getViewerInstance(), 10, boost::signals2::at_front );
     MouseClickListener::disconnect(); // Used in pick mode only
@@ -31,12 +28,6 @@ void RayWidget::reset()
     disconnect();
     setPickMode( false );
     onRayChanged_ = {};
-    active_ = false;
-}
-
-void RayWidget::setOnRayChangedCallback( OnRayChangedCallback cb )
-{
-    onRayChanged_ = cb;
 }
 
 void RayWidget::updateRay( const Line3f& line )
@@ -89,13 +80,6 @@ void RayWidget::setVisible( bool visible )
         lineObj_->setVisible( visible );
 }
 
-bool RayWidget::isVisible() const
-{
-    if ( !lineObj_ )
-        return false;
-    return lineObj_->isVisible();
-}
-
 void RayWidget::setPickMode( bool pickMode )
 {
     if ( pickingPoint_ == pickMode )
@@ -105,18 +89,6 @@ void RayWidget::setPickMode( bool pickMode )
         MouseClickListener::connect( &getViewerInstance(), 10, boost::signals2::at_front );
     else
         MouseClickListener::disconnect();
-}
-
-void RayWidget::setColor( const Color& color )
-{
-    color_ = color;
-    if ( lineObj_ )
-        lineObj_->setFrontColor( color_, false );
-}
-
-const Color& RayWidget::getColor() const
-{
-    return color_;
 }
 
 void RayWidget::createObject_()
@@ -134,14 +106,10 @@ void RayWidget::createObject_()
         lineObj_->detachFromParent();
     lineObj_ = std::make_shared<ObjectMesh>();
     lineObj_->setAncillary( true );
-    lineObj_->setFrontColor( color_, false );
+    lineObj_->setFrontColor( Color::green(), false );
     lineObj_->setMesh( mesh );
     lineObj_->setCreases( creases );
-
-    if ( parent_ )
-        parent_->addChild( lineObj_ );
-    else
-        SceneRoot::get().addChild( lineObj_ );
+    SceneRoot::get().addChild( lineObj_ );
 }
 
 void RayWidget::clearObject_()
@@ -155,16 +123,12 @@ void RayWidget::clearObject_()
 
 void RayWidget::updateXf_()
 {
-    Matrix3f rot, scale;
-    if ( parent_ )
-        decomposeMatrix3( parent_->worldXf().A, rot, scale );
-    lineObj_->setXf( AffineXf3f::translation( line_.p ) *
-        AffineXf3f::linear( rot.inverse() * Matrix3f::rotation( Vector3f::plusZ(), line_.d ) ) );
+    lineObj_->setXf( AffineXf3f( Matrix3f::rotation( Vector3f::plusZ(), line_.d ), line_.p ) );
 }
 
 bool RayWidget::onDragStart_( Viewer::MouseButton button, int modifiers )
 {
-    if ( button != Viewer::MouseButton::Left || modifiers != 0 || blockedMouse_ )
+    if ( button != Viewer::MouseButton::Left || modifiers != 0 )
         return false;
 
     auto viewer = Viewer::instance();
@@ -175,19 +139,10 @@ bool RayWidget::onDragStart_( Viewer::MouseButton button, int modifiers )
 
     settingDir_ = pof.face < FaceId( cylinderFaces_ );
     worldStartPoint_ = lineObj_->worldXf()( pof.point );
-    worldStartOrg_ = ( parent_ ? parent_->worldXf()( line_.p ) : line_.p );
+    worldStartOrg_ = line_.p;
     Vector3f projectedStartPoint = line_.project( worldStartPoint_ );
     startDirRotation_ = Matrix3f::rotation( worldStartPoint_ - worldStartOrg_, projectedStartPoint - worldStartOrg_ );
     viewportStartPointZ_ = viewer->viewport().projectToViewportSpace( worldStartPoint_ ).z;
-    return true;
-}
-
-bool RayWidget::onDragEnd_( Viewer::MouseButton button, int )
-{
-    if ( button != Viewer::MouseButton::Left )
-        return false;
-
-    needToSaveHistory_ = true;
     return true;
 }
 
@@ -198,8 +153,7 @@ bool RayWidget::onDrag_( int x, int y )
     Vector3f worldEndPoint = viewer->viewport().unprojectFromViewportSpace( { viewportEnd.x, viewportEnd.y, viewportStartPointZ_ } );
     if ( settingDir_ )
     {
-        Vector3f newDir = worldEndPoint - ( parent_ ? parent_->worldXf()( line_.p ) : line_.p );
-        newDir = startDirRotation_ * newDir;
+        Vector3f newDir = startDirRotation_ * ( worldEndPoint - line_.p );
         if ( newDir.lengthSq() > length_ * length_ * 0.0001f )
             updateDirection( newDir );
     }
@@ -209,9 +163,7 @@ bool RayWidget::onDrag_( int x, int y )
         updateOrigin( newOrg );
     }
     if ( onRayChanged_ )
-        onRayChanged_( line_, needToSaveHistory_ );
-
-    needToSaveHistory_ = false;
+        onRayChanged_( line_ );
     return true;
 }
 
@@ -231,7 +183,7 @@ bool RayWidget::onMouseClick_( MouseButton button, int modifiers )
                 updateDirection( pt - line_.p );
             setPickMode( false );
             if ( onRayChanged_ )
-                onRayChanged_( line_, true );
+                onRayChanged_( line_ );
             return true;
         }
     }

@@ -339,7 +339,7 @@ bool ScannerPlugin::onEnable_()
     updateScansBox_();
 
     axisWidget_.create( { settings_.rotateOrg, settings_.rotateAxis }, 100.0f,
-        [this]( const Line3f& ray, bool )
+        [this]( const Line3f& ray )
         {
             settings_.rotateOrg = ray.p;
             settings_.rotateAxis = ray.d;

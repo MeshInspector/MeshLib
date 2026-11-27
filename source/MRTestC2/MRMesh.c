@@ -45,7 +45,7 @@ void testShortEdges( void )
     float secondaryRadius = 0.05f;
     int primaryResolution = 16;
     int secondaryResolution = 16;
-    MR_Mesh* mesh = MR_makeTorus(&primaryRadius, &secondaryRadius, &primaryResolution, &secondaryResolution, NULL);
+    MR_Mesh* mesh = MR_makeTorus(&primaryRadius, &secondaryRadius, &primaryResolution, &secondaryResolution, NULL, NULL);
 
     MR_MeshPart *mp = MR_MeshPart_Construct( mesh, NULL );
 

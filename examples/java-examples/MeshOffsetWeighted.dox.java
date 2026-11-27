@@ -11,7 +11,7 @@ class MeshOffsetWeighted
     public static void main(String[] args)
     {
         // Create some mesh
-        Mesh mesh = Functions.makeTorus(null, null, null, null, null);
+        Mesh mesh = Functions.makeTorus(null, null, null, null, null, null);
 
         // Create VertScalars obj with weights for every vertex
         long vertSize = mesh.topology().vertSize();

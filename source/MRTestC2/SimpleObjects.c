@@ -41,7 +41,7 @@ void testMrMakeTorus(void) {
     float secondaryRadius = 0.5f;
     int primaryResolution = 32;
     int secondaryResolution = 32;
-    MR_Mesh* torus = MR_makeTorus(&primaryRadius, &secondaryRadius, &primaryResolution, &secondaryResolution, NULL);
+    MR_Mesh* torus = MR_makeTorus(&primaryRadius, &secondaryRadius, &primaryResolution, &secondaryResolution, NULL, NULL);
 
     TEST_ASSERT(torus != NULL);
 

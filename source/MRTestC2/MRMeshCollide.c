@@ -10,10 +10,10 @@ void testMeshCollide( void )
     float secondaryRadius = 0.5f;
     int primaryResolution = 8;
     int secondaryResolution = 8;
-    MR_Mesh* meshA = MR_makeTorus( &primaryRadius, &secondaryRadius, &primaryResolution, &secondaryResolution, NULL );
+    MR_Mesh* meshA = MR_makeTorus( &primaryRadius, &secondaryRadius, &primaryResolution, &secondaryResolution, NULL, NULL );
 
     secondaryRadius = 0.2f;
-    MR_Mesh* meshB = MR_makeTorus( &primaryRadius, &secondaryRadius, &primaryResolution, &secondaryResolution, NULL );
+    MR_Mesh* meshB = MR_makeTorus( &primaryRadius, &secondaryRadius, &primaryResolution, &secondaryResolution, NULL, NULL );
 
     MR_MeshPart* meshAPart = MR_MeshPart_Construct( meshA, NULL );
     MR_MeshPart* meshBPart = MR_MeshPart_Construct( meshB, NULL );

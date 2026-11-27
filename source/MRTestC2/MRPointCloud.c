@@ -20,7 +20,7 @@ void testTriangulation( void )
     float secondaryRadius = 1.0f;
     int primaryResolution = 32;
     int secondaryResolution = 32;
-    MR_Mesh* mesh = MR_makeTorus(&primaryRadius, &secondaryRadius, &primaryResolution, &secondaryResolution, NULL);
+    MR_Mesh* mesh = MR_makeTorus(&primaryRadius, &secondaryRadius, &primaryResolution, &secondaryResolution, NULL, NULL);
 
     MR_PointCloud* pc = MR_meshToPointCloud( mesh, &(MR_VertNormalsMode){MR_VertNormalsMode_AreaWeighted}, NULL );
     MR_std_optional_MR_Mesh* restored = MR_triangulatePointCloud( pc, NULL, NULL );

@@ -11,7 +11,7 @@ class MeshModification
 {
     public static void main(String[] args)
     {
-        Mesh mesh = Functions.makeTorus(null, null, null, null, null);
+        Mesh mesh = Functions.makeTorus(null, null, null, null, null, null);
 
         // Relax mesh (5 iterations)
         MeshRelaxParams relaxParams = new MeshRelaxParams();

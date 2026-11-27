@@ -19,7 +19,7 @@ final class Common
     /** Creates a torus with the given radii and resolutions. */
     static Mesh makeTorus(float primaryRadius, float secondaryRadius, int primaryResolution, int secondaryResolution)
     {
-        return Functions.makeTorus(primaryRadius, secondaryRadius, primaryResolution, secondaryResolution, null);
+        return Functions.makeTorus(primaryRadius, secondaryRadius, primaryResolution, secondaryResolution, null, null);
     }
 
     static void check(boolean condition, String what)

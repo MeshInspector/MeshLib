@@ -43,6 +43,11 @@
     <ClCompile Include="MRCudaAccessor.cpp" />
     <ClCompile Include="MRDepthPeelingGL.cpp" />
     <ClCompile Include="MRDirectionWidget.cpp" />
+    <ClCompile Include="MRICPDialog.cpp" />
+    <ClCompile Include="MRBestView.cpp" />
+    <ClCompile Include="MRRayWidget.cpp" />
+    <ClCompile Include="MRScannerSchemaUi.cpp" />
+    <ClCompile Include="MRScannerPlugin.cpp" />
     <ClCompile Include="MRDragDropHandler.cpp" />
     <ClCompile Include="MRDragDropWasmHandler.cpp" />
     <ClCompile Include="MRDragDropWin32Handler.cpp" />
@@ -212,6 +217,12 @@
     <ClInclude Include="MRCreateShader.h" />
     <ClInclude Include="MRCudaAccessor.h" />
     <ClInclude Include="MRDirectionWidget.h" />
+    <ClInclude Include="MRICPDialog.h" />
+    <ClInclude Include="MRBestView.h" />
+    <ClInclude Include="MRRayWidget.h" />
+    <ClInclude Include="MRScannerSchemaUi.h" />
+    <ClInclude Include="MRScannerPlugin.h" />
+    <ClInclude Include="MRScannerBackend.h" />
     <ClInclude Include="MRFitData.h" />
     <ClInclude Include="MRGLTexture.h" />
     <ClInclude Include="MRHistoryStore.h" />

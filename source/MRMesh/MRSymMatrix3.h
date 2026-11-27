@@ -342,12 +342,29 @@ Vector3<T> SymMatrix3<T>::eigenvector( T eigenvalue ) const MR_REQUIRES_IF_SUPPO
     return crs20;
 }
 
+namespace detail
+{
+
+/// cube root of the machine epsilon of T (std::cbrt is not constexpr before C++26);
+/// for other types than float and double: eps = 2^(1 - digits), and the cube root is rounded up to a power of two
+template <typename T>
+inline constexpr T cCbrtEpsilon = T( 1 ) / T( 1ull << ( ( std::numeric_limits<T>::digits - 1 ) / 3 ) );
+template <>
+inline constexpr float cCbrtEpsilon<float> = 4.92156660e-3f;
+template <>
+inline constexpr double cCbrtEpsilon<double> = 6.0554544523933395e-6;
+
+} //namespace detail
+
 template <typename T>
 SymMatrix3<T> SymMatrix3<T>::pseudoinverse( T tol, int * rank, Vector3<T> * space ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> )
 {
     // a positive definite matrix (all leading principal minors are positive) is inverted directly, which is several times faster,
     // if lambdaMin > tol * lambdaMax is guaranteed: lambdaMin >= det / m2 (m2 is the sum of principal 2x2 minors >= lambdaMax * lambdaMid),
-    // and lambdaMax <= trace; the tolerance is at least 1e-4 to keep the direct inverse accurate
+    // and lambdaMax <= trace; rounding errors (about eps * trace^3) can make the determinant and the minors of a rank-1 matrix positive
+    // and pass that check, so also det > tol^2 * (trace/3)^3 is required: it holds if lambdaMin > tol * lambdaMax, since then det > tol^2 * lambdaMax^3;
+    // the tolerance here is at least cbrt(eps): the error of the direct inverse is about eps / tol <= eps^(2/3),
+    // and tol^2 / 27 >= eps^(2/3) / 27 is far above the rounding errors of a rank-1 matrix
     if ( xx > 0 )
     {
         const auto mxy = xx * yy - xy * xy;
@@ -359,20 +376,24 @@ SymMatrix3<T> SymMatrix3<T>::pseudoinverse( T tol, int * rank, Vector3<T> * spac
             const auto cxz = xy * yz - xz * yy;
             const auto d = xx * myz + xy * cxy + xz * cxz;
             const auto mxz = xx * zz - xz * xz;
-            if ( d > 0 && d > std::max( tol, T( 1e-4 ) ) * trace() * ( mxy + mxz + myz ) )
+            const auto tr = trace();
+            const auto dirTol = std::max( tol, detail::cCbrtEpsilon<T> );
+            if ( d > 0 && d > dirTol * tr * ( mxy + mxz + myz ) && 27 * d > sqr( dirTol ) * tr * tr * tr )
             {
                 if ( rank )
                     *rank = 3;
                 if ( space )
                     *space = Vector3<T>{};
+                // not res /= d after filling res: MSVC then reloads pairs of just stored doubles as vectors, which stalls store-to-load forwarding,
+                // https://developercommunity.visualstudio.com/t/x64-O2:-scaling-a-just-filled-struct-of/11188541
+                const auto k = 1 / d;
                 SymMatrix3<T> res;
-                res.xx = myz;
-                res.xy = cxy;
-                res.xz = cxz;
-                res.yy = mxz;
-                res.yz = xz * xy - xx * yz;
-                res.zz = mxy;
-                res /= d;
+                res.xx = myz * k;
+                res.xy = cxy * k;
+                res.xz = cxz * k;
+                res.yy = mxz * k;
+                res.yz = ( xz * xy - xx * yz ) * k;
+                res.zz = mxy * k;
                 return res;
             }
         }

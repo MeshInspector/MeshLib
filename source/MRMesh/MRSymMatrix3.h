@@ -348,11 +348,11 @@ namespace detail
 /// cube root of the machine epsilon of T (std::cbrt is not constexpr before C++26);
 /// for other types than float and double: eps = 2^(1 - digits), and the cube root is rounded up to a power of two
 template <typename T>
-constexpr T cCbrtEpsilon = T( 1 ) / T( 1ull << ( ( std::numeric_limits<T>::digits - 1 ) / 3 ) );
+inline constexpr T cCbrtEpsilon = T( 1 ) / T( 1ull << ( ( std::numeric_limits<T>::digits - 1 ) / 3 ) );
 template <>
-constexpr float cCbrtEpsilon<float> = 4.92156660e-3f;
+inline constexpr float cCbrtEpsilon<float> = 4.92156660e-3f;
 template <>
-constexpr double cCbrtEpsilon<double> = 6.0554544523933395e-6;
+inline constexpr double cCbrtEpsilon<double> = 6.0554544523933395e-6;
 
 } //namespace detail
 

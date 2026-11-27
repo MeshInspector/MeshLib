@@ -97,6 +97,27 @@ TEST( MRMesh, SymMatrix3PseudoinversePrecision )
     EXPECT_EQ( rank, 1 );
     EXPECT_NEAR( cross( space, w.normalized() ).length(), 0, 1e-12 );
     EXPECT_NEAR( ( inv1 * ( rank1 * w ) - w ).length(), 0, 1e-12 );
+
+    // the determinant and the minors of a rank-1 matrix are rounding errors, which must not let it be inverted directly;
+    // the pseudoinverse of outerSquare( n ) for unit n is the same matrix
+    for ( int i = 0; i < 1000; ++i )
+    {
+        const auto n = Vector3d( std::sin( 1.1 * i ), std::cos( 1.7 * i ), std::sin( 2.3 * i + 1 ) ).normalized();
+        const auto m1 = outerSquare( n );
+        for ( double tol : { eps, 0.01 } )
+        {
+            EXPECT_NEAR( ( m1.pseudoinverse( tol, &rank ) * n - n ).length(), 0, 1e-12 );
+            EXPECT_EQ( rank, 1 );
+        }
+
+        // in float the rounding errors are relatively larger, but they must not let it be inverted directly either
+        const auto nf = Vector3f( n ).normalized();
+        const auto m1f = outerSquare( nf );
+        (void)m1f.pseudoinverse( std::numeric_limits<float>::epsilon(), &rank );
+        EXPECT_LT( rank, 3 );
+        EXPECT_NEAR( ( m1f.pseudoinverse( 0.01f, &rank ) * nf - nf ).length(), 0, 1e-5f );
+        EXPECT_EQ( rank, 1 );
+    }
 }
 
 // eigensJacobi returns the same as eigens, with small eigenvalues found much more precisely

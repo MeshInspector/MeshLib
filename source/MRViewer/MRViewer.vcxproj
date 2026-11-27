@@ -47,7 +47,7 @@
     <ClCompile Include="MRBestView.cpp" />
     <ClCompile Include="MRRayWidget.cpp" />
     <ClCompile Include="MRScannerSchemaUi.cpp" />
-    <ClCompile Include="MRScannerPlugin.cpp" />
+    <ClCompile Include="MRScannerBackend.cpp" />
     <ClCompile Include="MRDragDropHandler.cpp" />
     <ClCompile Include="MRDragDropWasmHandler.cpp" />
     <ClCompile Include="MRDragDropWin32Handler.cpp" />
@@ -221,7 +221,6 @@
     <ClInclude Include="MRBestView.h" />
     <ClInclude Include="MRRayWidget.h" />
     <ClInclude Include="MRScannerSchemaUi.h" />
-    <ClInclude Include="MRScannerPlugin.h" />
     <ClInclude Include="MRScannerBackend.h" />
     <ClInclude Include="MRFitData.h" />
     <ClInclude Include="MRGLTexture.h" />

@@ -4,6 +4,7 @@
 #include "MRViewer/MRICPDialog.h"
 #include "MRViewer/MRStatePlugin.h"
 #include "MRViewer/MRViewer.h"
+#include "MRViewer/MRViewerSignals.h"
 #include "MRViewer/MRViewport.h"
 #include "MRViewer/MRFileDialog.h"
 #include "MRViewer/MRAppendHistory.h"
@@ -232,17 +233,23 @@ class ScannerPlugin : public StatePlugin
 public:
     ScannerPlugin() : StatePlugin( "Scanner", StatePluginTabs::Other )
     {
-        getScannerBackendRegistry().onUnregister = [this] ( const IScannerBackend& b ) { onUnregister_( b ); };
+        // close before the menu shuts down, and destroy the backends while their modules are loaded
+        shutdownConnection_ = viewer->signals().preShutdownSignal.connect( [this]
+        {
+            enable( false );
+            backend_ = nullptr;
+            unregisterScannerBackends();
+        } );
     }
-    ~ScannerPlugin() { getScannerBackendRegistry().onUnregister = {}; }
     virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const override
     {
-        return getScannerBackendRegistry().backends.empty() ? _tr( "No scanner backend is registered" ) : std::string();
+        return getScannerBackends().empty() ? _tr( "No scanner backend is registered" ) : std::string();
     }
     virtual void drawDialog( ImGuiContext* ) override;
 
 private:
     IScannerBackend* backend_ = nullptr; // the selected backend, chosen on the first opening; only its runtime is loaded
+    boost::signals2::scoped_connection shutdownConnection_;
     bool loadCancelled_ = false; // Shift was held when the tool opened, so the runtime was not loaded
     std::string error_;          // why the last operation failed, empty after one succeeded
     ProcessingSettings settings_; // persist in the backend's Config object
@@ -291,9 +298,6 @@ private:
     void openBackend_( bool skipLoad ); // loads the runtime of backend_ unless skipLoad
     void closeBackend_();               // unloads it and drops its images and stream
     void selectBackend_( IScannerBackend& backend );
-    // called before the backend is unregistered and destroyed: if it is the selected one,
-    // closes the tool (saving its settings and unloading its runtime) and forgets it
-    void onUnregister_( const IScannerBackend& backend );
     void loadRuntime_( const std::string& dir ); // then connect
     void onScanProduced_( std::shared_ptr<VisualObject> obj );
     void onLiveFrame_( ScannerLiveFrame&& frame );
@@ -319,7 +323,7 @@ private:
 
 bool ScannerPlugin::onEnable_()
 {
-    const auto& backends = getScannerBackendRegistry().backends;
+    const auto& backends = getScannerBackends();
     if ( backends.empty() )
         return false;
     if ( !backend_ )
@@ -334,7 +338,7 @@ bool ScannerPlugin::onEnable_()
             if ( backend->name() == selected )
                 backend_ = backend.get();
         }
-        settings_ = {}; // load() keeps the fields missing in the Config, e.g. from a backend unregistered since
+        settings_ = {}; // load() keeps the fields missing in the Config
         settings_.load( configKey_() );
     }
     // hold Shift while opening the tool to skip loading the SDK, e.g. one that crashes the application
@@ -392,15 +396,6 @@ void ScannerPlugin::closeBackend_()
         image.update( {} );
     clearStream_();
     isWindowOpen_ = false;
-}
-
-void ScannerPlugin::onUnregister_( const IScannerBackend& backend )
-{
-    if ( &backend != backend_ )
-        return;
-    if ( isEnabled() )
-        enable( false );
-    backend_ = nullptr; // the next opening selects among the remaining backends
 }
 
 void ScannerPlugin::selectBackend_( IScannerBackend& backend )
@@ -703,7 +698,7 @@ void ScannerPlugin::drawBackendCombo_()
 {
     std::vector<std::string> names;
     int selected = 0;
-    const auto& backends = getScannerBackendRegistry().backends;
+    const auto& backends = getScannerBackends();
     for ( const auto& backend : backends )
     {
         if ( backend.get() == backend_ )

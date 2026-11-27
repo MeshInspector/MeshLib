@@ -3,24 +3,36 @@
 namespace MR
 {
 
-ScannerBackendRegistry& getScannerBackendRegistry()
+namespace
 {
-    static ScannerBackendRegistry registry;
-    return registry;
+
+std::vector<std::unique_ptr<IScannerBackend>>& scannerBackends()
+{
+    static std::vector<std::unique_ptr<IScannerBackend>> backends;
+    return backends;
 }
+
+} // namespace
 
 ScannerBackendAdder::ScannerBackendAdder( std::unique_ptr<IScannerBackend> backend ) :
     backend_( backend.get() )
 {
-    getScannerBackendRegistry().backends.push_back( std::move( backend ) );
+    scannerBackends().push_back( std::move( backend ) );
 }
 
 ScannerBackendAdder::~ScannerBackendAdder()
 {
-    auto& registry = getScannerBackendRegistry();
-    if ( registry.onUnregister )
-        registry.onUnregister( *backend_ );
-    std::erase_if( registry.backends, [this] ( const auto& b ) { return b.get() == backend_; } );
+    std::erase_if( scannerBackends(), [this] ( const auto& b ) { return b.get() == backend_; } );
+}
+
+const std::vector<std::unique_ptr<IScannerBackend>>& getScannerBackends()
+{
+    return scannerBackends();
+}
+
+void unregisterScannerBackends()
+{
+    scannerBackends().clear();
 }
 
 } // namespace MR

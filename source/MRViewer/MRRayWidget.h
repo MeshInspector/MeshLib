@@ -1,5 +1,6 @@
 #pragma once
 
+#include "exports.h"
 #include "MRViewerEventsListener.h"
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRLine3.h"
@@ -10,7 +11,7 @@ namespace MR
 
 /// Widget for visualizing a ray or axis (origin point and direction)
 /// Based on DirectionWidget
-class RayWidget : public MultiListener<DragStartListener, DragListener, DragEndListener, MouseClickListener>
+class MRVIEWER_CLASS RayWidget : public MultiListener<DragStartListener, DragListener, DragEndListener, MouseClickListener>
 {
 public:
     /// This callback is invoked every time when the ray is changed by mouse
@@ -45,34 +46,34 @@ public:
     /// @param ray initial ray
     /// @param length length of the visual object
     /// @param onRayChanged callback for the ray change
-    void create( const Line3f& ray, float length, OnRayChangedCallback onRayChanged );
+    MRVIEWER_API void create( const Line3f& ray, float length, OnRayChangedCallback onRayChanged );
 
     /// Removes the widget from the scene
     /// unsubscribes from viewer events
-    void reset();
+    MRVIEWER_API void reset();
 
     /// Updates the ray
-    void updateRay( const Line3f& ray );
-    void updateDirection( const Vector3f& dir );
-    void updateOrigin( const Vector3f& org );
+    MRVIEWER_API void updateRay( const Line3f& ray );
+    MRVIEWER_API void updateDirection( const Vector3f& dir );
+    MRVIEWER_API void updateOrigin( const Vector3f& org );
 
     /// Updates the length of the visual object
-    void updateLength( float length );
+    MRVIEWER_API void updateLength( float length );
 
     /// Sets the visibility of the widget
-    void setVisible( bool visible );
+    MRVIEWER_API void setVisible( bool visible );
 
     /// Pick point mode
-    void setPickMode( bool pickMode );
+    MRVIEWER_API void setPickMode( bool pickMode );
     bool isPickMode() const { return pickingPoint_; }
 
     /// Returns the ray origin
     const Vector3f& getOrg() const { return line_.p; }
 private:
-    virtual bool onDragStart_( MouseButton button, int modifiers ) override;
-    virtual bool onDrag_( int x, int y ) override;
-    virtual bool onDragEnd_( MouseButton button, int modifiers ) override;
-    virtual bool onMouseClick_( MouseButton button, int modifiers ) override;
+    MRVIEWER_API virtual bool onDragStart_( MouseButton button, int modifiers ) override;
+    MRVIEWER_API virtual bool onDrag_( int x, int y ) override;
+    MRVIEWER_API virtual bool onDragEnd_( MouseButton button, int modifiers ) override;
+    MRVIEWER_API virtual bool onMouseClick_( MouseButton button, int modifiers ) override;
 };
 
 }

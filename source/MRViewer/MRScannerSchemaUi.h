@@ -1,5 +1,6 @@
 #pragma once
 
+#include "exports.h"
 #include "MRScannerBackend.h"
 
 #include <functional>
@@ -17,18 +18,18 @@ namespace MR
 using ScannerOnScan = std::function<void( std::shared_ptr<VisualObject> )>;
 
 // The schema's parameter groups.
-void drawScannerParams( IScannerBackend& backend );
+MRVIEWER_API void drawScannerParams( IScannerBackend& backend );
 
 // The schema's backend-specific action groups, each with its status line.
 // Returns true when an action ran, e.g. to refresh a preview of the backend's state.
-bool drawScannerActions( IScannerBackend& backend, const ScannerOnScan& onScan, std::string& error );
+MRVIEWER_API bool drawScannerActions( IScannerBackend& backend, const ScannerOnScan& onScan, std::string& error );
 
 // The common verbs: capture (also on Space), connect / disconnect and live preview as the
 // backend's capabilities allow, then the error.
 // Returns true when a capture ran, successful or not, e.g. to refresh a preview of the backend's state.
-bool drawScannerCapture( IScannerBackend& backend, const ScannerOnScan& onScan, std::string& error );
+MRVIEWER_API bool drawScannerCapture( IScannerBackend& backend, const ScannerOnScan& onScan, std::string& error );
 
 // A block title, with the tighter spacing the scanner tools use around it.
-void drawScannerSeparator( const std::string& title );
+MRVIEWER_API void drawScannerSeparator( const std::string& title );
 
 } // namespace MR

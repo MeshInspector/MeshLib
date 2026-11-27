@@ -89,7 +89,7 @@ var drop_files_or_dir = function (event) {
         else if (typeof (dynCall_vjij) == 'function')
             dynCall_vjij(GLFW.active.dropFunc, BigInt(GLFW.active.id), length, BigInt(filenamesPtr));
         else
-            getWasmTableEntry(GLFW.active.dropFunc)(toPointer(GLFW.active.id), length, filenamesPtr);
+            getWasmTableEntry(GLFW.active.dropFunc)(toPointer(GLFW.active.id), length, toPointer(filenamesPtr));
     };
 
     if (!GLFW.active || !GLFW.active.dropFunc) return;

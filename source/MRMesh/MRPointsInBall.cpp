@@ -1,8 +1,9 @@
 #include "MRPointsInBall.h"
 #include "MRPointCloud.h"
 #include "MRMesh.h"
-#include "MRAABBTreePoints.h"
+#include "MRAABBTreePointsTraversal.hpp"
 #include "MRInplaceStack.h"
+#include <limits>
 
 namespace MR
 {
@@ -49,39 +50,75 @@ void findPointsInBall( const AABBTreePoints& tree, Ball3f ball,
         return;
     }
 
-    if ( tree.nodes().empty() )
+    if ( tree.empty() )
         return;
 
+    using namespace Simd4;
     const auto& orderedPoints = tree.orderedPoints();
+    const auto& simdNodes = tree.simdNodes();
 
-    InplaceStack<NoInitNodeId, 32> subtasks;
-
-    auto boxDistSq = [&]( NodeId n ) // squared distance from ball center to the transformed box with interior
+    // a node is pushed if its box is not farther than the ball, and checked again when visited only if the ball has changed since then
+    struct SubTask
     {
-        const auto & box = tree.nodes()[n].box;
+        int ref;
+        int parent; // the index of its parent, or -1 for the root
+        int slot; // its index in the children of the parent
+        int ballVersion;
+    };
+    // every level adds at most MaxChildren - 1 tasks
+    InplaceStack<SubTask, 3 * AABBTreePoints::MaxDepth + 1> subtasks;
+    int ballVersion = 0;
+
+    auto boxDistSq = [&]( const Box3f & box ) // squared distance from ball center to the transformed box with interior
+    {
         return xf ? transformed( box, *xf ).getDistanceSq( ball.center ) : box.getDistanceSq( ball.center );
     };
 
-    auto addSubTask = [&]( NodeId n )
-    {
-        subtasks.push( n );
-    };
-
-    addSubTask( tree.rootNodeId() );
+    if ( boxDistSq( tree.getBoundingBox() ) <= ball.radiusSq )
+        subtasks.push( { tree.rootRef(), -1, 0, ballVersion } );
 
     while ( !subtasks.empty() )
     {
-        const auto n = subtasks.top();
+        const auto s = subtasks.top();
         subtasks.pop();
-        const auto& node = tree[n];
-        if ( !( boxDistSq( n ) <= ball.radiusSq ) )
+        if ( s.ballVersion != ballVersion &&
+            !( boxDistSq( s.parent < 0 ? tree.getBoundingBox() : simdNodes[s.parent].get( s.slot ) ) <= ball.radiusSq ) )
             continue;
 
-        if ( node.leaf() )
+        if ( s.ref < 0 )
         {
-            auto [first, last] = node.getLeafPointRange();
-            for ( int i = first; i < last; ++i )
+            auto [first, last] = tree.leafPointRange( ~s.ref );
+            int i = first;
+            while ( i < last )
             {
+                if ( !xf && i + 4 <= last )
+                {
+                    // the candidates among four points at once, while the ball stays the same
+                    const Ball3f ball0 = ball;
+                    const F dv = mul( pointsDistSq( orderedPoints.data() + i, set1( ball0.center.x ), set1( ball0.center.y ), set1( ball0.center.z ) ),
+                        set1( cSimdDistLow ) );
+                    const int m = bits( le( dv, set1( ball0.radiusSq ) ) );
+                    int j = 0;
+                    while ( j < 4 )
+                    {
+                        const int k = j++;
+                        if ( !( m & ( 1 << k ) ) )
+                            continue;
+                        const auto & p = orderedPoints[i + k];
+                        const PointsProjectionResult candidate{ .distSq = distanceSq( p.coord, ball.center ), .vId = p.id };
+                        if ( !( candidate.distSq <= ball.radiusSq ) )
+                            continue;
+                        if ( foundCallback( candidate, p.coord, ball ) == Processing::Stop )
+                            return;
+                        if ( ball.center != ball0.center || ball.radiusSq != ball0.radiusSq )
+                        {
+                            ++ballVersion;
+                            break;
+                        }
+                    }
+                    i += j;
+                    continue;
+                }
                 auto coord = xf ? ( *xf )( orderedPoints[i].coord ) : orderedPoints[i].coord;
 
                 const PointsProjectionResult candidate
@@ -91,26 +128,41 @@ void findPointsInBall( const AABBTreePoints& tree, Ball3f ball,
                 };
                 if ( candidate.distSq <= ball.radiusSq )
                 {
+                    const Ball3f ball0 = ball;
                     if ( foundCallback( candidate, coord, ball ) == Processing::Stop )
                         return;
+                    if ( ball.center != ball0.center || ball.radiusSq != ball0.radiusSq )
+                        ++ballVersion;
                 }
+                ++i;
             }
             continue;
         }
 
-        auto lDistSq = boxDistSq( node.l );
-        auto rDistSq = boxDistSq( node.r );
         /// first go in the node located closer to ball's center (in case the ball will shrink and the other node will be away)
-        if ( lDistSq <= rDistSq )
+        const auto & node = simdNodes[s.ref];
+        alignas( 16 ) float d[4];
+        if ( xf )
         {
-            addSubTask( node.r );
-            addSubTask( node.l );
+            for ( int i = 0; i < AABBTreePoints::MaxChildren; ++i )
+                d[i] = node.child[i] ? boxDistSq( node.get( i ) ) : std::numeric_limits<float>::infinity();
         }
         else
+            store( d, mul( Simd4::boxDistSq( node.box, set1( ball.center.x ), set1( ball.center.y ), set1( ball.center.z ) ), set1( cSimdDistLow ) ) );
+        // the children in the ball in the order of increasing distance (the first child first for equal ones), pushed from the farthest
+        int order[4];
+        int numCh = 0;
+        for ( int i = 0; i < AABBTreePoints::MaxChildren && node.child[i]; ++i )
         {
-            addSubTask( node.l );
-            addSubTask( node.r );
+            if ( !( d[i] <= ball.radiusSq ) )
+                continue;
+            int k = numCh++;
+            for ( ; k > 0 && d[order[k - 1]] > d[i]; --k )
+                order[k] = order[k - 1];
+            order[k] = i;
         }
+        for ( int k = numCh - 1; k >= 0; --k )
+            subtasks.push( { node.child[order[k]], s.ref, order[k], ballVersion } );
     }
 }
 

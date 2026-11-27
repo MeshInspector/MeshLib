@@ -63,6 +63,7 @@ protected:
 using ItemMap = HashMap<std::string, MenuItemInfo>;
 using TabsGroupsMap = HashMap<std::string, std::vector<std::string>>;
 using GroupsItemsMap = TabsGroupsMap;
+using GroupsPriorityMap = HashMap<std::string, int>;
 using MenuItemsList = std::vector<std::string>;
 struct RibbonTab
 {
@@ -78,6 +79,7 @@ struct RibbonSchema
     std::vector<RibbonTab> tabsOrder;
     TabsGroupsMap tabsMap;
     GroupsItemsMap groupsMap;
+    GroupsPriorityMap groupsPriority; // same keys as groupsMap
     ItemMap items;
     MenuItemsList defaultQuickAccessList;
     MenuItemsList headerQuickAccessList;
@@ -86,7 +88,7 @@ struct RibbonSchema
     /// deletes empty groups (and references on them from tabs)
     MRVIEWER_API void eliminateEmptyGroups();
 
-    /// re-order items in tabsOrder according to their priority, the order of items having same priority is preserved
+    /// re-order items in tabsOrder and groups in each tab according to their priority, the order of items having same priority is preserved
     MRVIEWER_API void sortTabsByPriority();
 
     /// updates inner caption for all StateBasePlugins in schema

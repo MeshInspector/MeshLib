@@ -1,4 +1,6 @@
 #include "MRPointOnFace.h"
+#include "MRMeshTriPoint.h"
+#include "MRMeshTopology.h"
 
 #include <iostream>
 
@@ -16,6 +18,13 @@ std::istream& operator>>( std::istream& s, PointOnFace& pof )
     s >> a >> pof.point;
     pof.face = FaceId( a );
     return s;
+}
+
+MeshTriPoint PointOnFaceBary::mtp( const MeshTopology & topology ) const
+{
+    if ( !proj.valid() )
+        return {};
+    return { topology.edgeWithLeft( proj.face ), tp };
 }
 
 }

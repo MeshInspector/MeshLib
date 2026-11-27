@@ -1,11 +1,6 @@
 boost-algorithm
-boost-dynamic-bitset
-boost-functional
-boost-integer
 boost-locale
-boost-move
 boost-program-options
-boost-range
 boost-serialization
 boost-signals2
 boost-stacktrace

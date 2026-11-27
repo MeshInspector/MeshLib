@@ -6,23 +6,21 @@
 namespace MR
 {
 
-/// base class for most AABB-trees (except for AABBTreePoints)
+/// base class for the AABB-trees of polylines and objects
 template <typename T>
 class MRMESH_CLASS AABBTreeBase
 {
 public:
     using Traits = T;
-    using Node = typename AABBTreeNodeType<Traits>::type;
+    using Node = AABBTreeNode<Traits>;
     using NodeVec = Vector<Node, NodeId>;
     using LeafTag = typename T::LeafTag;
     using LeafId = typename T::LeafId;
     using LeafBitSet = TaggedBitSet<LeafTag>;
     using LeafBMap = BMap<LeafId, LeafId>;
     using BoxT = typename T::BoxT;
-    using Leaf = typename AABBTreeLeaf<T>::type;
+    using Leaf = BoxedLeaf<T>;
     using Leaves = Vector<Leaf>;
-    /// whether the boxes of leaves are stored in the tree (all trees except AABBTree of a mesh)
-    static constexpr bool leavesHaveBoxes = !std::is_same_v<Leaf, FaceLeaf>;
 
 public:
     /// const-access to all not-leaf nodes, a tree with N leaves has N-1 nodes
@@ -44,7 +42,7 @@ public:
     [[nodiscard]] LeafId leafId( NodeId n ) const { return leaf( n ).leafId; }
 
     /// returns the bounding box of given node or leaf
-    [[nodiscard]] const BoxT & box( NodeId n ) const requires leavesHaveBoxes { return isLeaf( n ) ? leaf( n ).box : nodes_[n].box; }
+    [[nodiscard]] const BoxT & box( NodeId n ) const { return isLeaf( n ) ? leaf( n ).box : nodes_[n].box; }
 
     /// returns true if the tree has no leaves
     [[nodiscard]] bool empty() const { return leaves_.empty(); }
@@ -54,7 +52,7 @@ public:
     [[nodiscard]] NodeId rootNodeId() const { assert( !empty() ); return nodes_.empty() ? Node::leafChild( 0 ) : NodeId( 0 ); }
 
     /// returns the root node bounding box
-    [[nodiscard]] BoxT getBoundingBox() const requires leavesHaveBoxes { return empty() ? BoxT{} : box( rootNodeId() ); }
+    [[nodiscard]] BoxT getBoundingBox() const { return empty() ? BoxT{} : box( rootNodeId() ); }
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] size_t heapBytes() const { return nodes_.heapBytes() + leaves_.capacity() * sizeof( Leaf ); }
@@ -81,7 +79,7 @@ public:
 
 protected:
     /// builds the tree from given leaves with their boxes
-    void build_( Vector<BoxedLeaf<T>> leaves ) requires leavesHaveBoxes;
+    void build_( Vector<BoxedLeaf<T>> leaves );
 
     NodeVec nodes_;
     Leaves leaves_;

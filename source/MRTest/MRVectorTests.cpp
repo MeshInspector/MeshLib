@@ -1,6 +1,8 @@
 #include <MRMesh/MRVector.h>
 #include <MRMesh/MRId.h>
 #include <gtest/gtest.h>
+#include <cstdint>
+#include <vector>
 
 namespace MR
 {
@@ -42,6 +44,71 @@ TEST( MRMesh, VectorStdMethods )
     for ( int x : std::as_const( v ) )
         sum += x;
     EXPECT_EQ( sum, 16 );
+}
+
+TEST( MRMesh, VectorResizeNoInit )
+{
+    Vector<EdgeId, VertId> v;
+    v.resizeNoInit( 1000 );
+    EXPECT_EQ( v.size(), 1000 );
+    EXPECT_EQ( v.capacity(), 1000 );
+    for ( int i = 0; i < 1000; ++i )
+        v[VertId( i )] = EdgeId( i );
+
+    v.resizeNoInit( 1001, ReserveMode::Grow );
+    EXPECT_EQ( v.size(), 1001 );
+    const auto cap = v.capacity();
+    EXPECT_GE( cap, 1500 );
+    v.resizeNoInit( 1002, ReserveMode::Grow );
+    EXPECT_EQ( v.size(), 1002 );
+    EXPECT_EQ( v.capacity(), cap );
+    for ( int i = 0; i < 1000; ++i )
+        EXPECT_EQ( v[VertId( i )], EdgeId( i ) );
+
+    v.resizeNoInit( 5 );
+    EXPECT_EQ( v.size(), 5 );
+    for ( int i = 0; i < 5; ++i )
+        EXPECT_EQ( v[VertId( i )], EdgeId( i ) );
+}
+
+namespace
+{
+struct AlignedRec
+{
+    static constexpr std::size_t cAllocAlignment = 64;
+    int a = 0;
+};
+
+struct LaterRec;
+struct LaterRecHolder { std::vector<LaterRec, Allocator<LaterRec>> v; }; // the allocator of an incomplete type
+struct LaterRec { int a = 0; };
+} //anonymous namespace
+
+TEST( MRMesh, VectorAllocAlignment )
+{
+    using Rec = AlignedRec;
+    static_assert( cAllocatorAlignment<Rec> == 64 && cAllocatorAlignment<int> == alignof( int ) );
+    const auto aligned = [] ( const Rec * p ) { return reinterpret_cast<std::uintptr_t>( p ) % 64 == 0; };
+
+    Vector<Rec, VertId> v;
+    for ( int i = 0; i < 1000; ++i )
+    {
+        v.push_back( { i } );
+        EXPECT_TRUE( aligned( v.data() ) );
+    }
+    v.resize( 3'000'000 ); // a large block
+    EXPECT_TRUE( aligned( v.data() ) );
+    EXPECT_EQ( v[VertId( 999 )].a, 999 );
+    const auto copy = v;
+    EXPECT_TRUE( aligned( copy.data() ) );
+    v.clear();
+    v.shrink_to_fit();
+    v.resize( 3 );
+    EXPECT_TRUE( aligned( v.data() ) );
+
+    LaterRecHolder h;
+    h.v.push_back( { 5 } );
+    EXPECT_EQ( h.v[0].a, 5 );
 }
 
 } //namespace MR

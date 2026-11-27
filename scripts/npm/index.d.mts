@@ -1,5 +1,5 @@
 /**
- * TypeScript surface for @meshinspector/meshlib (this file is the package's `types` entry).
+ * TypeScript surface for @meshinspector/meshlib-light (this file is the package's `types` entry).
  *
  * Everything that crosses the JS boundary is precisely typed in `bindings.d.mts`, generated from the
  * embind registry by Emscripten's `--emit-tsd`, and re-exported unchanged by the `export *` below.
@@ -8,7 +8,7 @@
  * name with typed options.
  *
  * The specifier `./bindings.mjs` resolves (type-only) to `bindings.d.mts`; there is no runtime
- * `bindings.mjs` and none is needed — the actual runtime exports come from `meshlib.mjs` (the package
+ * `bindings.mjs` and none is needed — the actual runtime exports come from `meshlib-light.mjs` (the package
  * `exports.import`).
  */
 import type { MainModule } from './bindings.mjs';

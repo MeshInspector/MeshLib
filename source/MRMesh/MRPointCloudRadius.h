@@ -10,8 +10,10 @@ struct PointCloud;
 /// \ingroup PointCloudGroup
 MRMESH_API float findAvgPointsRadius( const PointCloud& pointCloud, int avgPoints, int samples = 1024 );
 
-/// expands the region on given euclidian distance. returns false if callback also returns false
+/// expands the region on given euclidian distance: adds every point located within \p dilation from a point of the region;
+/// returns false if callback also returns false
 MRMESH_API bool dilateRegion( const PointCloud& pointCloud, VertBitSet& region, float dilation, ProgressCallback cb = {}, const AffineXf3f* xf = nullptr );
-/// shrinks the region on given euclidian distance. returns false if callback also returns false
+/// shrinks the region on given euclidian distance: removes every point located within \p erosion from a valid point not in the region;
+/// returns false if callback also returns false
 MRMESH_API bool erodeRegion( const PointCloud& pointCloud, VertBitSet& region, float erosion, ProgressCallback cb = {}, const AffineXf3f* xf = nullptr );
 }

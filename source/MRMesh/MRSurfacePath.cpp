@@ -1,5 +1,6 @@
 #include "MRSurfacePath.h"
 #include "MRBitSetParallelFor.h"
+#include "MREdgeMetric.h"
 #include "MREdgePaths.h"
 #include "MRExtractIsolines.h"
 #include "MRLaplacian.h"
@@ -11,6 +12,7 @@
 #include "MRRingIterator.h"
 #include "MRSurfaceDistance.h"
 #include "MRTimer.h"
+#include "MRPch/MRSpdlog.h"
 #include "MRTriMath.h"
 
 namespace MR
@@ -343,20 +345,40 @@ MeshEdgePoint findSteepestDescentPoint( const MeshPart & mp, const VertScalars &
     return res;
 }
 
-Expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mesh,
-    const MeshTriPoint & start, const MeshTriPoint & end, GeodesicPathApprox atype )
+namespace
 {
-    MR_TIMER;
-    if ( atype == GeodesicPathApprox::FastMarching )
-        return computeFastMarchingPath( mesh, start, end );
 
+// computes the path along mesh edges by Dijkstra or A* method, and converts it in SurfacePath;
+// the region (by faces in mp or by vertices) is supported only by DijkstraBiDir
+Expected<SurfacePath, PathError> computeEdgeGeodesicPathApprox( const MeshPart & mp,
+    const MeshTriPoint & start, const MeshTriPoint & end, GeodesicPathApprox atype, const VertBitSet * vertRegion = nullptr )
+{
+    assert( atype != GeodesicPathApprox::FastMarching );
+    assert( !( mp.region || vertRegion ) || atype == GeodesicPathApprox::DijkstraBiDir );
+    const auto & mesh = mp.mesh;
+    const auto & topology = mesh.topology;
     SurfacePath res;
-    if ( !fromSameTriangle( mesh.topology, MeshTriPoint{ start }, MeshTriPoint{ end } ) )
+    if ( !fromSameTriangle( topology, MeshTriPoint{ start }, MeshTriPoint{ end } ) )
     {
         VertId v1, v2;
-        EdgePath edgePath = ( atype == GeodesicPathApprox::DijkstraBiDir ) ?
-            buildShortestPathBiDir( mesh, start, end, &v1, &v2 ) :
-            buildShortestPathAStar( mesh, start, end, &v1, &v2 );
+        EdgePath edgePath;
+        if ( mp.region || vertRegion )
+        {
+            // the edges outside of the region get infinite metric and are never passed
+            auto inRegion = [&]( EdgeId e )
+            {
+                if ( !mp.region )
+                    return vertRegion->test( topology.org( e ) ) && vertRegion->test( topology.dest( e ) );
+                const auto l = topology.left( e ), r = topology.right( e );
+                return ( l && mp.region->test( l ) ) || ( r && mp.region->test( r ) );
+            };
+            edgePath = buildSmallestMetricPathBiDir( mesh, [&, len = edgeLengthMetric( mesh )]( EdgeId e )
+                { return inRegion( e ) ? len( e ) : FLT_MAX; }, start, end, &v1, &v2 );
+        }
+        else
+            edgePath = ( atype == GeodesicPathApprox::DijkstraBiDir ) ?
+                buildShortestPathBiDir( mesh, start, end, &v1, &v2 ) :
+                buildShortestPathAStar( mesh, start, end, &v1, &v2 );
         if ( !v1 || !v2 )
             return unexpected( PathError::StartEndNotConnected );
 
@@ -390,6 +412,30 @@ Expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mesh,
         }
     }
     return res;
+}
+
+} // anonymous namespace
+
+Expected<SurfacePath, PathError> computeShortestEdgePath( const MeshPart & mp,
+    const MeshTriPoint & start, const MeshTriPoint & end, const VertBitSet* vertRegion )
+{
+    MR_TIMER;
+    return computeEdgeGeodesicPathApprox( mp, start, end, GeodesicPathApprox::DijkstraBiDir, vertRegion );
+}
+
+Expected<SurfacePath, PathError> computeGeodesicPathApprox( const Mesh & mesh,
+    const MeshTriPoint & start, const MeshTriPoint & end, GeodesicPathApprox atype )
+{
+    MR_TIMER;
+    if ( atype == GeodesicPathApprox::FastMarching )
+    {
+        auto res = computeFastMarchingPath( mesh, start, end );
+        if ( res.has_value() || res.error() != PathError::InternalError )
+            return res;
+        spdlog::warn( "computeGeodesicPathApprox: fast-marching descent stopped before reaching end, using the shortest edge path" );
+        atype = GeodesicPathApprox::DijkstraBiDir;
+    }
+    return computeEdgeGeodesicPathApprox( mesh, start, end, atype );
 }
 
 SurfacePath computeSteepestDescentPath( const MeshPart & mp, const VertScalars & field,
@@ -504,18 +550,30 @@ Expected<SurfacePath, PathError> computeFastMarchingPath( const MeshPart & mp,
         vertRegion = &myVertRegion;
     }
 
-    // build distances from end to start, so to get correct path in reverse order
+    // build distances from end to start, so to get correct path in reverse order;
+    // without local minima in the distances, the steepest descent from start always reaches end
     bool connected = false;
-    auto distances = computeSurfaceDistances( mp.mesh, end, start, vertRegion, &connected );
+    auto distances = computeSurfaceDistances( mp.mesh, end, start, vertRegion, &connected, 3, true );
     if ( !connected )
         return unexpected( PathError::StartEndNotConnected );
 
+    const auto & topology = mp.mesh.topology;
     res = computeSteepestDescentPath( mp.mesh, distances, start, { .end = end } );
-    if ( res.empty() ) // no edge is crossed only if start and end are from the same triangle
-        return unexpected( PathError::InternalError );
-
+    if ( res.empty() && !start.inVertex( topology ) )
+    {
+        // the descent cannot start inside a triangle (or on an edge) with equal distances in all its vertices,
+        // then it starts from the vertex there with the smallest distance, which has a neighbor with even smaller distance
+        VertId best;
+        topology.forEachVertex( start, [&]( VertId v ) { if ( !best || distances[v] < distances[best] ) best = v; } );
+        res.emplace_back( topology.edgeWithOrg( best ), 0.0f );
+        computeSteepestDescentPath( mp.mesh, distances, MeshTriPoint( topology, best ), &res, { .end = end } );
+    }
     if ( outSurfaceDistances )
         *outSurfaceDistances = std::move( distances );
+    // no edge is crossed only if start and end are from the same triangle;
+    // the descent can stop before reaching end only if the distances have local minima, which setNoLocalMinima prevents
+    if ( res.empty() || !fromSameTriangle( topology, MeshTriPoint{ end }, MeshTriPoint{ res.back() } ) )
+        return unexpected( PathError::InternalError );
     return res;
 }
 
@@ -525,8 +583,20 @@ Expected<SurfacePath, PathError> computeSurfacePath( const MeshPart & mp,
 {
     MR_TIMER;
     auto res = computeFastMarchingPath( mp, start, end, vertRegion, outSurfaceDistances );
+    if ( res.has_value() )
+    {
+        if ( !res.value().empty() )
+            reducePath( mp.mesh, start, res.value(), end, maxGeodesicIters );
+        return res;
+    }
+    if ( res.error() != PathError::InternalError )
+        return res;
+
+    spdlog::warn( "computeSurfacePath: fast-marching descent stopped before reaching end, using the shortest edge path in the region" );
+    res = computeShortestEdgePath( mp, start, end, vertRegion );
+    // a path along edges needs more iterations to become as straight as fast-marching paths
     if ( res.has_value() && !res.value().empty() )
-        reducePath( mp.mesh, start, res.value(), end, maxGeodesicIters );
+        reducePath( mp.mesh, start, res.value(), end, maxGeodesicIters > 0 ? std::max( maxGeodesicIters, 100 ) : 0 );
     return res;
 }
 
@@ -614,6 +684,18 @@ SurfacePaths getSurfacePathsViaVertices( const Mesh & mesh, const VertBitSet & v
     res = extractIsolines( mesh.topology, scalarField, 0 );
 
     return res;
+}
+
+bool isConnectedPath( const MeshTopology& topology, const MeshTriPoint& start, const SurfacePath& path, const MeshTriPoint& end )
+{
+    if ( path.empty() )
+        return fromSameTriangle( topology, MeshTriPoint( start ), MeshTriPoint( end ) );
+    if ( !fromSameTriangle( topology, MeshTriPoint( start ), MeshTriPoint( path.front() ) ) )
+        return false;
+    for ( size_t i = 0; i + 1 < path.size(); ++i )
+        if ( !fromSameTriangle( topology, MeshEdgePoint( path[i] ), MeshEdgePoint( path[i + 1] ) ) )
+            return false;
+    return fromSameTriangle( topology, MeshTriPoint( path.back() ), MeshTriPoint( end ) );
 }
 
 float surfacePathLength( const Mesh& mesh, const SurfacePath& surfacePath )

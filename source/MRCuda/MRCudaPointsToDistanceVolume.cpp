@@ -5,8 +5,8 @@
 #include "MRCudaBasic.h"
 #include "MRCudaMath.h"
 #include "MRCudaPipeline.h"
+#include "MRCudaPointCloud.h"
 
-#include "MRMesh/MRAABBTreePoints.h"
 #include "MRMesh/MRChunkIterator.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRStringConvert.h"
@@ -25,35 +25,20 @@ Expected<MR::SimpleVolumeMinMax> pointsToDistanceVolume( const PointCloud& cloud
 {
     MR_TIMER;
 
-    const auto& tree = cloud.getAABBTree();
-    const auto& nodes = tree.nodes();
-
-    DynamicArray<Node3> cudaNodes;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaNodes.fromVector( nodes ) );
-
-    DynamicArray<OrderedPoint> cudaPoints;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaPoints.fromVector( tree.orderedPoints() ) );
-
-    DynamicArray<float3> cudaNormals;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaNormals.fromVector( params.ptNormals ? *params.ptNormals : cloud.normals ) );
+    auto cudaCloud = copyDataFrom( cloud, true, params.ptNormals );
+    if ( !cudaCloud )
+        return unexpected( std::move( cudaCloud.error() ) );
 
     PointsToDistanceVolumeParams cudaParams
     {
+        .origin = fromVec( params.origin ),
+        .voxelSize = fromVec( params.voxelSize ),
+        .dimensions = fromVec( params.dimensions ),
         .sigma = params.sigma,
-        .minWeight = params.minWeight
+        .minWeight = params.minWeight,
+        .invSigmaModifier = params.invSigmaModifier,
+        .sqrtAngleWeight = params.sqrtAngleWeight
     };
-
-    cudaParams.origin.x = params.origin.x;
-    cudaParams.origin.y = params.origin.y;
-    cudaParams.origin.z = params.origin.z;
-
-    cudaParams.voxelSize.x = params.voxelSize.x;
-    cudaParams.voxelSize.y = params.voxelSize.y;
-    cudaParams.voxelSize.z = params.voxelSize.z;
-
-    cudaParams.dimensions.x = params.dimensions.x;
-    cudaParams.dimensions.y = params.dimensions.y;
-    cudaParams.dimensions.z = params.dimensions.z;
 
     const auto totalSize = (size_t)params.dimensions.x * params.dimensions.y * params.dimensions.z;
     const auto bufferSize = maxBufferSizeAlignedByBlock( getCudaSafeMemoryLimit(), params.dimensions, sizeof( float ) );
@@ -70,7 +55,7 @@ Expected<MR::SimpleVolumeMinMax> pointsToDistanceVolume( const PointCloud& cloud
 
     for ( const auto [offset, size] : splitByChunks( totalSize, bufferSize ) )
     {
-        pointsToDistanceVolumeKernel( cudaNodes.data(), cudaPoints.data(), cudaNormals.data(), cudaVolume.data(), cudaParams, size, offset );
+        pointsToDistanceVolumeKernel( ( *cudaCloud )->data(), cudaVolume.data(), cudaParams, size, offset );
         CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
 
         CUDA_LOGE_RETURN_UNEXPECTED( cudaVolume.copyTo( res.data.data() + offset, size ) );
@@ -84,17 +69,9 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
 {
     MR_TIMER;
 
-    const auto& tree = cloud.getAABBTree();
-    const auto& nodes = tree.nodes();
-
-    DynamicArray<Node3> cudaNodes;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaNodes.fromVector( nodes ) );
-
-    DynamicArray<OrderedPoint> cudaPoints;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaPoints.fromVector( tree.orderedPoints() ) );
-
-    DynamicArray<float3> cudaNormals;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaNormals.fromVector( params.ptNormals ? *params.ptNormals : cloud.normals ) );
+    auto cudaCloud = copyDataFrom( cloud, true, params.ptNormals );
+    if ( !cudaCloud )
+        return unexpected( std::move( cudaCloud.error() ) );
 
     PointsToDistanceVolumeParams cudaParams
     {
@@ -134,7 +111,7 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
     return cudaPipeline( part, begin, end,
         [&] ( MR::SimpleVolumeMinMax& part, Chunk chunk ) -> Expected<void>
         {
-            pointsToDistanceVolumeKernel( cudaNodes.data(), cudaPoints.data(), cudaNormals.data(), cudaVolume.data(), cudaParams, chunk.size, chunk.offset );
+            pointsToDistanceVolumeKernel( ( *cudaCloud )->data(), cudaVolume.data(), cudaParams, chunk.size, chunk.offset );
             CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
 
             CUDA_LOGE_RETURN_UNEXPECTED( cudaVolume.toVector( part.data ) );
@@ -153,12 +130,8 @@ size_t pointsToDistanceVolumeMemory( const PointCloud& cloud, const Vector3i& di
 {
     constexpr size_t cMinLayerCount = 10;
 
-    const auto& tree = cloud.getAABBTree();
-
     return
-        tree.nodes().size() * sizeof( Node3 )
-        + tree.orderedPoints().size() * sizeof( OrderedPoint )
-        + ( ptNormals ? ptNormals->size() : cloud.normals.size() ) * sizeof( float3 )
+        pointCloudHeapBytes( cloud, true, ptNormals )
         + std::min( (size_t)dims.z, cMinLayerCount ) * dims.x * dims.y * sizeof( float )
     ;
 }

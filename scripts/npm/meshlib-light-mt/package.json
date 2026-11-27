@@ -1,0 +1,59 @@
+{
+  "name": "@meshinspector/meshlib-light-mt",
+  "version": "0.0.0",
+  "description": "MeshLib geometry library compiled to WebAssembly (multi-threaded).",
+  "type": "module",
+  "main": "./meshlib-light-mt.mjs",
+  "types": "./index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./index.d.mts",
+      "node": "./meshlib-light-mt.node.mjs",
+      "browser": "./meshlib-light-mt.mjs",
+      "import": "./meshlib-light-mt.mjs",
+      "default": "./meshlib-light-mt.mjs"
+    },
+    "./meshlib-light-mt.wasm": "./meshlib-light-mt.wasm",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "meshlib-light-mt.mjs",
+    "meshlib-light-mt.wasm",
+    "meshlib-light-mt.node.mjs",
+    "meshlib-light-mt.node.wasm",
+    "index.d.mts",
+    "bindings.d.mts",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=21"
+  },
+  "author": "MeshLib Team <support@meshinspector.com>",
+  "license": "SEE LICENSE IN LICENSE",
+  "homepage": "https://meshlib.io/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MeshInspector/MeshLib.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MeshInspector/MeshLib/issues"
+  },
+  "keywords": [
+    "mesh",
+    "geometry",
+    "wasm",
+    "webassembly",
+    "meshlib",
+    "3d",
+    "mesh-processing",
+    "mesh-repair",
+    "boolean-operations",
+    "geometry-processing",
+    "3d-printing",
+    "stl",
+    "remeshing",
+    "cad",
+    "point-cloud"
+  ]
+}

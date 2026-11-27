@@ -15,6 +15,7 @@
 #include "MRImGuiImage.h"
 #include "MRRibbonButtonDrawer.h"
 #include "MRRayWidget.h"
+#include "MRRibbonRegisterItem.h"
 #include "MRI18n.h"
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRObjectMesh.h"
@@ -236,12 +237,18 @@ std::vector<std::unique_ptr<IScannerBackend>>& scannerBackends()
 class ScannerPlugin : public StatePlugin
 {
 public:
-    ScannerPlugin() : StatePlugin( "Scanner", StatePluginTabs::Other ) {}
+    ScannerPlugin() : StatePlugin( "Scanner", StatePluginTabs::Other ) { instance = this; }
+    ~ScannerPlugin() { instance = nullptr; }
+    static inline ScannerPlugin* instance = nullptr; // for ScannerBackendAdder to report an unregistered backend
     virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const override
     {
         return scannerBackends().empty() ? _tr( "No scanner backend is registered" ) : std::string();
     }
     virtual void drawDialog( ImGuiContext* ) override;
+
+    // called before the backend is unregistered and destroyed: if it is the selected one,
+    // closes the tool (saving its settings and unloading its runtime) and forgets it
+    void removeBackend( const IScannerBackend& backend );
 
 private:
     IScannerBackend* backend_ = nullptr; // the selected backend, chosen on the first opening; only its runtime is loaded
@@ -333,6 +340,7 @@ bool ScannerPlugin::onEnable_()
             if ( backend->name() == selected )
                 backend_ = backend.get();
         }
+        settings_ = {}; // after an unregistered backend
         settings_.load( configKey_() );
     }
     // hold Shift while opening the tool to skip loading the SDK, e.g. one that crashes the application
@@ -390,6 +398,15 @@ void ScannerPlugin::closeBackend_()
         image.update( {} );
     clearStream_();
     isWindowOpen_ = false;
+}
+
+void ScannerPlugin::removeBackend( const IScannerBackend& backend )
+{
+    if ( &backend != backend_ )
+        return;
+    if ( isEnabled() )
+        enable( false );
+    backend_ = nullptr; // the next opening selects among the remaining backends
 }
 
 void ScannerPlugin::selectBackend_( IScannerBackend& backend )
@@ -1005,12 +1022,11 @@ ScannerBackendAdder::ScannerBackendAdder( std::unique_ptr<IScannerBackend> backe
 
 ScannerBackendAdder::~ScannerBackendAdder()
 {
+    if ( ScannerPlugin::instance )
+        ScannerPlugin::instance->removeBackend( *backend_ );
     std::erase_if( scannerBackends(), [this] ( const auto& b ) { return b.get() == backend_; } );
 }
 
-std::shared_ptr<RibbonMenuItem> makeScannerPlugin()
-{
-    return std::make_shared<ScannerPlugin>();
-}
+MR_REGISTER_RIBBON_ITEM( ScannerPlugin )
 
 } // namespace MR

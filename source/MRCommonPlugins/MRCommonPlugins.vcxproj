@@ -35,7 +35,6 @@
     <ClCompile Include="Basic\MRDrawViewportWidgetsItem.cpp" />
     <ClCompile Include="Basic\MRToggleProjectionMode.cpp" />
     <ClCompile Include="Basic\MRFeatureAlignment.cpp" />
-    <ClCompile Include="Basic\MRScannerItem.cpp" />
     <ClCompile Include="Selectors\MRSelectObjectByClick.cpp" />
     <ClCompile Include="ViewerButtons\MRHistoryMenuItems.cpp" />
     <ClCompile Include="ViewerButtons\MRViewerSettingsPlugin.cpp" />

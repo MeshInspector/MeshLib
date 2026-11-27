@@ -6,8 +6,9 @@
 namespace MR
 {
 
-/// Registers a scanner backend for the Scanner tool on module loading, and unregisters it on module unloading;
-/// the tool lists the backends in registration order, and opens the first one unless another is saved
+/// Registers a scanner backend for MeshLib's Scanner tool on module loading, and unregisters it on module unloading,
+/// closing the tool first if it works with that backend; the tool lists the backends in registration order,
+/// opens the first one unless another is saved, and is unavailable while no backend is registered
 class ScannerBackendAdder
 {
 public:
@@ -17,10 +18,5 @@ public:
 private:
     const IScannerBackend* backend_;
 };
-
-/// Creates the Scanner tool: it lists the registered backends, communicates with the selected one only through
-/// IScannerBackend, renders its parameter schema, and processes the scans (clip / rotate / register, scene insertion);
-/// it is unavailable while no backend is registered
-MRVIEWER_API std::shared_ptr<RibbonMenuItem> makeScannerPlugin();
 
 } // namespace MR

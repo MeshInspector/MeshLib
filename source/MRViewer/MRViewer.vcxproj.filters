@@ -343,7 +343,7 @@
     <ClCompile Include="MRScannerSchemaUi.cpp">
       <Filter>Scanner</Filter>
     </ClCompile>
-    <ClCompile Include="MRScannerPlugin.cpp">
+    <ClCompile Include="MRScannerBackend.cpp">
       <Filter>Scanner</Filter>
     </ClCompile>
     <ClCompile Include="MRRibbonNotification.cpp">
@@ -864,9 +864,6 @@
       <Filter>Helpers</Filter>
     </ClInclude>
     <ClInclude Include="MRScannerSchemaUi.h">
-      <Filter>Scanner</Filter>
-    </ClInclude>
-    <ClInclude Include="MRScannerPlugin.h">
       <Filter>Scanner</Filter>
     </ClInclude>
     <ClInclude Include="MRScannerBackend.h">

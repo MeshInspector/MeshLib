@@ -6,6 +6,11 @@
       "Icon": ""
     },
     {
+      "Name": "Scanner",
+      "Tooltip": "Open the Scanner window to capture 3D data from a 3D scanner or a camera.",
+      "Icon": ""
+    },
+    {
       "Name": "Undo",
       "Tooltip": "Undo the last action.",
       "Icon": "\uF0E2",

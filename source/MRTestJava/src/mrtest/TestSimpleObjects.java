@@ -29,7 +29,7 @@ public final class TestSimpleObjects
 
     public static void makeTorus()
     {
-        Mesh torus = Functions.makeTorus(2.0f, 0.5f, 32, 32, null);
+        Mesh torus = Functions.makeTorus(2.0f, 0.5f, 32, 32, null, null);
         checkApprox(area(torus), 39.257, 0.1);
     }
 

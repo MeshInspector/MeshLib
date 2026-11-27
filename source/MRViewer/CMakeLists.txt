@@ -198,6 +198,8 @@ install(
   RUNTIME DESTINATION "${MR_BIN_DIR}"
 )
 
+# internal to MRViewer: their symbols are not exported
+list(REMOVE_ITEM HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/MRRayWidget.h" "${CMAKE_CURRENT_SOURCE_DIR}/MRScannerSchemaUi.h")
 install(
   FILES ${HEADERS}
   DESTINATION "${MR_INCLUDE_DIR}/${PROJECT_NAME}"

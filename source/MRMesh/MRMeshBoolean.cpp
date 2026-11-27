@@ -80,22 +80,19 @@ void gatherEdgeInfo( const MeshTopology& topology, EdgeId e, FaceBitSet& faces, 
     dests.set( topology.dest( e ) );
 }
 
-// removes the closed contours of two points, which have zero area, as their two segments coincide
-void removeTwoPointLoops( ContinuousContours& contours )
-{
-    erase_if( contours, [] ( const ContinuousContour& c ) { return c.size() == 3 && isClosed( c ); } );
-}
-
-// removes the closed lone contours (inside one face of a mesh) of zero area that cross two edges of the other mesh joining different vertices
-// at the same points, as where a fin of the other mesh without thickness pokes through the face: only the perturbation orients such a contour,
-// by the order of the coincident vertices, and it can turn against the other contours, leaving no inside and outside parts
-void removeZeroAreaLoneContours( ContinuousContours& contours, const Mesh& meshA, const Mesh& meshB, const CoordinateConverters& converters,
-    const AffineXf3f* rigidB2A )
+// removes the closed contours of zero area: those of two points, as their two segments coincide, and the lone ones (inside one face of a mesh)
+// that cross two edges of the other mesh joining different vertices at the same points, as where a fin of the other mesh without thickness
+// pokes through the face: only the perturbation orients such a contour, by the order of the coincident vertices, and it can turn against
+// the other contours, leaving no inside and outside parts
+void removeZeroAreaLoops( ContinuousContours& contours, const Mesh& meshA, const Mesh& meshB, const CoordinateConverters& converters,
+    const AffineXf3f* rigidB2A = nullptr )
 {
     erase_if( contours, [&] ( const ContinuousContour& c )
     {
         if ( !isClosed( c ) )
             return false;
+        if ( c.size() == 3 )
+            return true;
         const bool onB = c.front().isEdgeATriB(); // edges of A crossing a face of B
         if ( !std::all_of( c.begin(), c.end(), [onB] ( const VarEdgeTri& p ) { return p.isEdgeATriB() == onB; } ) )
             return false;
@@ -295,7 +292,7 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh, FaceMap* outNew2Old )
     auto contours = orderSelfIntersectionContours( mesh.topology, intersections );
     if ( contours.empty() && !intersections.empty() )
         return unexpected( "Self-Boolean cannot order the intersections: the mesh has a face that is not a triangle" );
-    removeTwoPointLoops( contours ); // both contours of a pair together, as they have the same points
+    removeZeroAreaLoops( contours, mesh, mesh, converters ); // both contours of a pair together, as they have the same points and edges
 
     auto holePairs = detail::findSelfContoursMapping( contours );
     auto intContours = getOneMeshSelfIntersectionContours( mesh, contours, converters );
@@ -638,8 +635,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         if ( contours.empty() && !intersections.empty() )
             return { .errorString = "Boolean cannot order the intersections: a mesh has a face that is not a triangle" };
     }
-    removeTwoPointLoops( contours );
-    removeZeroAreaLoneContours( contours, srcA, srcB, converters, params.rigidB2A );
+    removeZeroAreaLoops( contours, srcA, srcB, converters, params.rigidB2A );
 
     if ( params.cb && !params.cb( 0.0f ) )
         return { .errorString = stringOperationCanceled() };

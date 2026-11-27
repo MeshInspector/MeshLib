@@ -21,10 +21,10 @@ public:
     constexpr static const char* StaticTypeName() noexcept { return "ObjectPoints"; }
     virtual const char* typeName() const override { return StaticTypeName(); }
 
-    constexpr static const char* StaticClassName() noexcept { return "Point Cloud"; }
+    constexpr static const char* StaticClassName() noexcept { return _t( "Point Cloud" ); }
     virtual std::string className() const override { return StaticClassName(); }
 
-    constexpr static const char* StaticClassNameInPlural() noexcept { return "Point Clouds"; }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return _t( "Point Clouds" ); }
     virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     /// returns variable point cloud, if const point cloud is needed use `pointCloudPtr()` instead

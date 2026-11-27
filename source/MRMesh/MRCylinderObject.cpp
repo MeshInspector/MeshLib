@@ -98,7 +98,7 @@ CylinderObject::CylinderObject( const std::vector<Vector3f>& pointsToApprox )
     // calculate cylinder parameters.
     Cylinder3<float> result;
     auto fit = Cylinder3Approximation<float>();
-    auto approxResult = fit.solveGeneral( pointsToApprox, result, phiResolution, thetaResolution );
+    auto approxResult = fit.solveGeneral( pointsToApprox, result, thetaResolution, phiResolution );
     if ( approxResult < 0 )
     {
         spdlog::warn( "CylinderObject :: unable to creater feature object cylinder." );

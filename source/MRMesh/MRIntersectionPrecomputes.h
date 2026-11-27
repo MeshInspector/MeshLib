@@ -1,15 +1,8 @@
 #pragma once
 
 #include "MRVector3.h"
+#include "MRSimd4.hpp"
 #include "MRPch/MRBindingMacros.h"
-
-#if defined(__x86_64__) || defined(_M_X64)
-#include <xmmintrin.h> //SSE instructions
-#elif defined(__aarch64__) || defined(_M_ARM64)
-#include <arm_neon.h> //NEON instructions
-#elif defined(__wasm_simd128__)
-#include <wasm_simd128.h> //Wasm SIMD instructions
-#endif
 
 namespace MR
 {
@@ -152,55 +145,12 @@ struct IntersectionPrecomputes
 
 };
 
-/* CPU(X86_64) - AMD64 / Intel64 / x86_64 64-bit */
-#if defined(__x86_64__) || defined(_M_X64)
-template<>
-struct IntersectionPrecomputes<float>
-{
-    // {1.f / dir} in the first three lanes, the last one is unused
-    MR_BIND_IGNORE __m128 invDir;
-    // [0]max, [1]next, [2]next-next
-    // f.e. {1,2,-3} => {2,1,0}
-    int maxDimIdxZ = 2;
-    int idxX = 0;
-    int idxY = 1;
-
-    /// precomputed factors
-    MR_BIND_IGNORE float Sx, Sy, Sz;
-
-    IntersectionPrecomputes() = default;
-    IntersectionPrecomputes( const Vector3<float>& dir )
-    {
-        findMaxVectorDim( idxX, idxY, maxDimIdxZ, dir );
-
-        Sx = dir[idxX] / dir[maxDimIdxZ];
-        Sy = dir[idxY] / dir[maxDimIdxZ];
-        Sz = float( 1 ) / dir[maxDimIdxZ];
-
-        invDir = _mm_set_ps(
-            1,
-            ( dir.z == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.z,
-            ( dir.y == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.y,
-            ( dir.x == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.x );
-    }
-
-};
-
-/* CPU(ARM64) - AArch64 */
-#elif defined(__aarch64__) || defined(_M_ARM64)
-
-/// packs three coordinates and one extra component in a NEON register
-MR_BIND_IGNORE inline float32x4_t toFloat32x4( float x, float y, float z, float w )
-{
-    const float a[4] = { x, y, z, w };
-    return vld1q_f32( a );
-}
-
+#ifdef MR_SIMD4_HW
 template<>
 struct IntersectionPrecomputes<float>
 {
     // {1.f / dir} in the first three lanes, 1 in the last one
-    MR_BIND_IGNORE float32x4_t invDir;
+    MR_BIND_IGNORE Simd4::F invDir;
     // [0]max, [1]next, [2]next-next
     // f.e. {1,2,-3} => {2,1,0}
     int maxDimIdxZ = 2;
@@ -219,7 +169,7 @@ struct IntersectionPrecomputes<float>
         Sy = dir[idxY] / dir[maxDimIdxZ];
         Sz = float( 1 ) / dir[maxDimIdxZ];
 
-        invDir = toFloat32x4(
+        invDir = Simd4::make(
             ( dir.x == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.x,
             ( dir.y == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.y,
             ( dir.z == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.z,
@@ -227,43 +177,6 @@ struct IntersectionPrecomputes<float>
     }
 
 };
-
-/* Wasm SIMD */
-#elif defined(__wasm_simd128__)
-template<>
-struct IntersectionPrecomputes<float>
-{
-    // {1.f / dir} in the first three lanes, the last one is unused
-    MR_BIND_IGNORE v128_t invDir;
-    // [0]max, [1]next, [2]next-next
-    // f.e. {1,2,-3} => {2,1,0}
-    int maxDimIdxZ = 2;
-    int idxX = 0;
-    int idxY = 1;
-
-    /// precomputed factors
-    MR_BIND_IGNORE float Sx, Sy, Sz;
-
-    IntersectionPrecomputes() = default;
-    IntersectionPrecomputes( const Vector3<float>& dir )
-    {
-        findMaxVectorDim( idxX, idxY, maxDimIdxZ, dir );
-
-        Sx = dir[idxX] / dir[maxDimIdxZ];
-        Sy = dir[idxY] / dir[maxDimIdxZ];
-        Sz = float( 1 ) / dir[maxDimIdxZ];
-
-        invDir = wasm_f32x4_make(
-            ( dir.x == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.x,
-            ( dir.y == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.y,
-            ( dir.z == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.z,
-            1 );
-    }
-
-};
-
-#else
-    #pragma message("IntersectionPrecomputes<float>: no hardware optimized instructions")
 #endif
 
 /// \}

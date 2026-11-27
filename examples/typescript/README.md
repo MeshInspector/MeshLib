@@ -2,7 +2,7 @@
 
 A single-file TypeScript program that uses the `@meshinspector/meshlib` WebAssembly bindings:
 builds meshes from typed arrays, runs a boolean and a nearest-point query, and reads geometry
-back — all fully typed.
+back — all fully typed, with the declarations of the complete MeshLib API that the package ships.
 
 ## Build and run
 

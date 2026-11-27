@@ -5,9 +5,8 @@
 #include "MRPch/MRJson.h"
 #include "MRConstants.h"
 #include "MRBestFit.h"
+#include "MRVector.h"
 #include "MRIRenderObject.h"
-#include <MRPch/MREigenCore.h>
-#include <Eigen/QR>
 
 namespace MR
 {
@@ -86,43 +85,27 @@ CircleObject::CircleObject( const std::vector<Vector3f>& pointsToApprox )
     for ( const auto& p : pointsToApprox )
         pa.addPoint( p );
 
+    // the best plane passes through the centroid of the points;
     // make a normal vector from center directed against a point (0, 0, 0)
-    Plane3f plane = pa.getBestPlanef();
-    Vector3f normal = plane.n.normalized();
-    if ( plane.d < 0 )
-        normal *= -1.f;
+    Vector3d centroid, eigenvalues;
+    Matrix3d eigenvectors;
+    pa.getCenteredCovarianceEigen( centroid, eigenvectors, eigenvalues );
+    const Vector3d normal = dot( eigenvectors.x, centroid ) < 0 ? -eigenvectors.x : eigenvectors.x;
 
-    AffineXf3f toPlaneXf = AffineXf3f( Matrix3f::rotation( Vector3f::plusZ(), normal ), plane.n * plane.d ).inverse();
-
-    std::vector<Vector3f> pointsProj( pointsToApprox.size() );
-    for ( int i = 0; i < pointsProj.size(); ++i )
-        pointsProj[i] = toPlaneXf( plane.project( pointsToApprox[i] ) );
-
-
-    // find best radius and center
-    Eigen::Matrix<double, 3, 3> accumA_;
-    Eigen::Matrix<double, 3, 1> accumB_;
-    accumA_.setZero();
-    accumB_.setZero();
-    for ( const auto& pta : pointsProj )
+    // the points relative to the centroid in an orthonormal basis of the plane
+    const auto [u, v] = normal.perpendicular();
+    Vector<Vector2d> proj( pointsToApprox.size() );
+    for ( size_t i = 0; i < proj.size(); ++i )
     {
-        Eigen::Matrix<double, 3, 1> vec;
-        vec[0] = 2.0 * pta.x;
-        vec[1] = 2.0 * pta.y;
-        vec[2] = -1.0;
-
-        accumA_ += ( vec * vec.transpose() );
-        accumB_ += ( vec * ( pta.x * pta.x + pta.y * pta.y ) );
+        const Vector3d d = Vector3d( pointsToApprox[i] ) - centroid;
+        proj[i] = Vector2d( dot( d, u ), dot( d, v ) );
     }
-    Eigen::Matrix<double, 3, 1> res = Eigen::Matrix<double, 3, 1>( accumA_.colPivHouseholderQr().solve( accumB_ ) );
-    Vector3f center{ float( res[0] ), float( res[1] ), 0.f };
-    double rSq = res[0] * res[0] + res[1] * res[1] - res[2];
-    assert( rSq >= 0.0 );
-    float radius = float( sqrt( std::max( rSq, 0.0 ) ) );
-
-    setNormal( normal );
-    setCenter( toPlaneXf.inverse()( center ) );
-    setRadius( radius );
+    setNormal( Vector3f( normal ) );
+    if ( const auto circle = findBestCircle( proj ) )
+    {
+        setCenter( Vector3f( centroid + circle->center.x * u + circle->center.y * v ) );
+        setRadius( float( circle->radius ) );
+    }
 }
 
 std::shared_ptr<Object> CircleObject::shallowClone() const

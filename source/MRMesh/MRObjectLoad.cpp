@@ -23,6 +23,7 @@
 #include "MRDirectory.h"
 #include "MRSceneSettings.h"
 #include "MRMeshLoadSettings.h"
+#include "MRTextureColors.h"
 #include "MRZip.h"
 #include "MRVoxels/MRDicom.h"
 #include "MRPch/MRTBB.h"
@@ -153,14 +154,17 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
     LoadedMeshData data;
     VertNormals normals;
     std::optional<Edges> edges;
+    TriCornerUVCoords triCornerUvCoords;
     MeshLoadSettings settings
     {
         .edges = &edges,
         .colors = &data.vertColors,
         .faceColors = &data.faceColors,
         .uvCoords = &data.uvCoordinates,
+        .triCornerUvCoords = &triCornerUvCoords,
         .normals = returnOnlyMesh ? nullptr : &normals,
         .texture = &data.texture,
+        .solidColor = &data.solidColor,
         .skippedFaceCount = &data.skippedFaceCount,
         .duplicatedVertexCount = &data.duplicatedVertexCount,
         .xf = &data.xf,
@@ -169,6 +173,8 @@ Expected<LoadedObject> makeObjectFromMeshFile( const std::filesystem::path& file
     auto mesh = MeshLoad::fromAnySupportedFormat( file, settings );
     if ( !mesh.has_value() )
         return unexpected( mesh.error() );
+
+    convertTriCornerUVs( *mesh, triCornerUvCoords, data.uvCoordinates, data.vertColors, data.texture );
 
     if ( !mesh->points.empty() && mesh->topology.numValidFaces() <= 0 )
     {
@@ -284,6 +290,12 @@ LoadedObject makeObjectMesh( std::string objName, LoadedMeshData data )
         objectMesh->setColoringType( ColoringType::VertsColorMap );
     else if ( hasFaceColors )
         objectMesh->setColoringType( ColoringType::PrimitivesColorMap );
+
+    if ( data.solidColor )
+    {
+        objectMesh->setFrontColor( *data.solidColor, true );
+        objectMesh->setFrontColor( *data.solidColor, false );
+    }
 
     warnings = makeWarningString( data.skippedFaceCount, data.duplicatedVertexCount, int( objectMesh->numHoles() ) ) + warnings;
 

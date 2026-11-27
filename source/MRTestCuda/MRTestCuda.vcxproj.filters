@@ -19,6 +19,9 @@
     <ClCompile Include="MRCudaPointsProject.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRCudaPointsToDistanceVolumeTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRCudaSolarRadiationTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

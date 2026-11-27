@@ -1,6 +1,6 @@
-import createMeshLib from '@meshinspector/meshlib';
+import * as ml from '@meshinspector/meshlib';
 
-const ml = await createMeshLib();
+await ml.init();
 
 // Load meshes
 using mesh = ml.MeshLoad.fromAnySupportedFormat('meshAwithHole.stl');
@@ -10,16 +10,14 @@ using meshB = ml.MeshLoad.fromAnySupportedFormat('meshBwithHole.stl');
 mesh.addMesh(meshB);
 
 // Find holes (expect that there are exactly 2 holes)
-using topology = mesh.topology;
-const edges = topology.findHoleRepresentiveEdges();
-if (edges.length !== 2)
-  throw new Error(`expected exactly 2 holes, found ${edges.length}`);
+using edges = mesh.topology.findHoleRepresentiveEdges();
+if (edges.size() !== 2)
+  throw new Error(`expected exactly 2 holes, found ${edges.size()}`);
 
 // Connect two holes
 using params = new ml.StitchHolesParams();
-using metric = ml.getUniversalMetric(mesh);
-params.metric = metric;
-ml.stitchHoles(mesh, edges[0], edges[1], params);
+params.metric = ml.getUniversalMetric(mesh);
+ml.stitchHoles(mesh, edges.at(0), edges.at(1), params);
 
 // Save result
 ml.MeshSave.toAnySupportedFormat(mesh, 'stitchedMesh.stl');

@@ -16,7 +16,7 @@ def _make_spline(mesh):
     contour_points = mm.Contour3f()
     contour_normals = mm.Contour3f()
     for point in control_points:
-        mtp = mm.findProjection(point, mesh).mtp
+        mtp = mm.findProjection(point, mesh).mtp(mesh.topology)
         contour_points.append(mesh.triPoint(mtp))
         contour_normals.append(mesh.normal(mtp))
 

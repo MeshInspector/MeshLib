@@ -482,9 +482,9 @@ static Expected<void> fixDegeneracies( Mesh& mesh, ObjectMeshData* data, const F
             {
                 const auto a = refToVert[v0], b = refToVert[v1], c = refToVert[v2];
                 if ( auto uv = attributes.uvCoords )
-                    ( *uv )[v] = res.mtp.bary.interpolate( ( *uv )[a], ( *uv )[b], ( *uv )[c] );
+                    ( *uv )[v] = res.tp.interpolate( ( *uv )[a], ( *uv )[b], ( *uv )[c] );
                 if ( auto colors = attributes.colorMap )
-                    ( *colors )[v] = res.mtp.bary.interpolate( ( *colors )[a], ( *colors )[b], ( *colors )[c] );
+                    ( *colors )[v] = res.tp.interpolate( ( *colors )[a], ( *colors )[b], ( *colors )[c] );
             } );
         }
     }

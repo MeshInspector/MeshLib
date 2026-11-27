@@ -54,7 +54,8 @@ IF(MESHLIB_BUILD_MRVIEWER)
     "-s FULL_ES3=1"
   )
 
-  IF(NOT MR_DISABLE_EMSCRIPTEN_ASYNCIFY)
+  option(MR_EMSCRIPTEN_ASYNCIFY "Run the viewer's main loop with Asyncify (emscripten_sleep) instead of emscripten_set_main_loop" OFF)
+  IF(MR_EMSCRIPTEN_ASYNCIFY)
     string(JOIN " " EXTRA_EXE_LINKER_FLAGS ${EXTRA_EXE_LINKER_FLAGS}
       "-s ASYNCIFY"
       # FIXME: comment required

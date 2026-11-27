@@ -45,8 +45,9 @@ MRMESH_API VertScalars computeSurfaceDistances( const Mesh& mesh, const Undirect
 /// distances are from the point
 /// \details considered paths can go either along edges or straightly within triangles
 /// \param endReached if pointer provided it will receive whether a path from start to end exists
+/// \param noLocalMinima see SurfaceDistanceBuilder::setNoLocalMinima
 MRMESH_API VertScalars computeSurfaceDistances( const Mesh& mesh, const MeshTriPoint & start, const MeshTriPoint & end, 
-    const VertBitSet* region = nullptr, bool * endReached = nullptr, int maxVertUpdates = 3 );
+    const VertBitSet* region = nullptr, bool * endReached = nullptr, int maxVertUpdates = 3, bool noLocalMinima = false );
 
 /// computes path distances in mesh vertices from given start point, stopping when maxDist is reached;
 /// distances are from the point;

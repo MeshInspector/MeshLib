@@ -83,9 +83,7 @@ EdgeId MeshTopology::makeEdges( int num )
     assert( edges_.size() % 2 == 0 );
     const EdgeId first( int( edges_.size() ) );
     const auto newSize = edges_.size() + 2 * size_t( num );
-    if ( edges_.capacity() < newSize )
-        edges_.reserve( std::max( newSize, 2 * edges_.capacity() ) ); // as push_back, not to reallocate on every call
-    edges_.resizeNoInit( newSize );
+    edges_.resizeNoInit( newSize, ReserveMode::Grow ); // not to reallocate on every call
     for ( auto e = first; e < edges_.endId(); ++e )
     {
         auto& r = edges_[e];
@@ -426,17 +424,6 @@ bool MeshTopology::isLeftTri( EdgeId a ) const
     return a == d;
 }
 
-void MeshTopology::getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const
-{
-    assert( isLeftTri( a ) );
-    v0 = org( a );
-    EdgeId b = prev( a.sym() );
-    v1 = org( b );
-    // same as org( prev( b.sym() ) ), but reads only b's sibling record (typically in the same cache line as b's)
-    // instead of the record of the third edge, which is usually far away in memory
-    v2 = dest( b );
-}
-
 void MeshTopology::getLeftTriEdges( EdgeId e0, EdgeId & e1, EdgeId & e2 ) const
 {
     e1 = prev( e0.sym() );
@@ -444,18 +431,22 @@ void MeshTopology::getLeftTriEdges( EdgeId e0, EdgeId & e1, EdgeId & e2 ) const
     assert( e0 == prev( e2.sym() ) );
 }
 
-std::vector<ThreeVertIds> MeshTopology::getAllTriVerts() const
+Vector<ThreeVertIds> MeshTopology::getAllTriVerts() const
 {
     MR_TIMER;
-    std::vector<ThreeVertIds> res;
     assert( updateValids_ );
-    res.reserve( numValidFaces_ );
-    for ( auto f : validFaces_ )
+    Vector<ThreeVertIds> res;
+    if ( numValidFaces_ == (int)edgePerFace_.size() ) // no invalid faces: the triangle of face f goes to position f
     {
-        VertId vs[3];
-        getTriVerts( f, vs );
-        res.push_back( { vs[0], vs[1], vs[2] } );
+        res.vec = std::move( getTriangulation().vec );
+        return res;
     }
+    res.resizeNoInit( numValidFaces_ );
+    size_t i = 0;
+    for ( auto e : edgePerFace_ )
+        if ( e ) // a face is valid if and only if it has an edge
+            getLeftTriVerts( e, res[i++] );
+    assert( i == res.size() );
 
     return res;
 }
@@ -464,11 +455,14 @@ Triangulation MeshTopology::getTriangulation() const
 {
     MR_TIMER;
     Triangulation res;
-    res.resize( faceSize() ); //TODO: resizeNoInit
-    assert( updateValids_ );
-    BitSetParallelFor( validFaces_, [&]( FaceId f )
+    res.resizeNoInit( faceSize() );
+    ParallelFor( res, [&]( FaceId f )
     {
-        getTriVerts( f, res[f] );
+        // a face is valid if and only if it has an edge
+        if ( auto e = edgePerFace_[f] )
+            getLeftTriVerts( e, res[f] );
+        else
+            res[f] = {};
     } );
 
     return res;
@@ -1006,16 +1000,19 @@ void MeshTopology::deleteFace( FaceId f, const UndirectedEdgeBitSet * keepEdges 
         if ( !right( e1 ) && !( keepEdges && keepEdges->test( e1 ) ) )
         {
             // delete e1 since it has no right face as well (and not in keepEdges);
-            // also delete any end-vertex of e1 if e1 was the last edge from it
-            if ( prev( e1 ) == e1 )
-                setOrg( e1, VertId{} );
-            else
-                splice( prev( e1 ), e1 );
-
-            if ( prev( e1.sym() ) == e1.sym() )
-                setOrg( e1.sym(), VertId{} );
-            else
-                splice( prev( e1.sym() ), e1.sym() );
+            // also delete any end-vertex of e1 if e1 was the last edge from it,
+            // otherwise the vertex passes to its next edge, as in deleteFaces_
+            for ( auto x : { e1, e1.sym() } )
+            {
+                if ( prev( x ) == x )
+                    setOrg( x, VertId{} );
+                else
+                {
+                    if ( auto v = org( x ); v && edgePerVertex_[v] == x )
+                        edgePerVertex_[v] = next( x );
+                    splice( prev( x ), x );
+                }
+            }
 
             assert( isLoneEdge( e1 ) );
         }
@@ -1038,7 +1035,7 @@ void MeshTopology::deleteFacesKeepEdges( const FaceBitSet & fs )
     }
 }
 
-auto MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges ) -> VacantElements
+auto MeshTopology::deleteFaces_( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges, bool keepFaceless ) -> VacantElements
 {
     MR_TIMER;
     VacantElements vacant;
@@ -1055,50 +1052,49 @@ auto MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSe
         }
         if ( keepEdges && keepEdges->test( ue ) )
             return;
-        if ( auto l = left( ue ); l && !fs.test( l ) )
+        const auto l = left( ue ), r = right( ue );
+        if ( l && !fs.test( l ) )
             return; // left face exists and will not be deleted
-        if ( auto r = right( ue ); r && !fs.test( r ) )
+        if ( r && !fs.test( r ) )
             return; // right face exists and will not be deleted
+        if ( keepFaceless && !l && !r )
+            return;
         vacant.edges.set( ue );
     } );
 
     assert( updateValids_ );
 
+    const auto fsValid = fs & validFaces_;
+    const auto numDeletedFaces = fsValid.count();
+    // if few faces are deleted, then only the elements around them change, and they are visited (in one thread) instead of
+    // passing over all vertices and edges (in parallel); the result is the same;
+    // in one thread this way is faster up to 1/16 of the faces at least, but with all threads the parallel passes
+    // were faster from about 1/32 on some meshes and machines, and 1/64 was faster on all measured ones
+    const bool few = numDeletedFaces * 64 < size_t( numValidFaces_ );
+
     vacant.verts.resize( vertSize(), true );
     vacant.verts -= validVerts_;
-    BitSetParallelFor( validVerts_, [&]( VertId v )
+
+    // given the first not-deleted edge in orgRing( v ) or invalid id if there is none, updates the vertex and returns true if it is deleted
+    auto updateVert = [&]( VertId v, EdgeId kept )
     {
-        for ( auto e : orgRing( *this, v ) )
-            if ( !vacant.edges.test( e ) )
-            {
-                // at least one edge incident to this vertex is not deleted
-                if ( vacant.edges.test( edgePerVertex_[v] ) )
-                    edgePerVertex_[v] = e;
-                return;
-            }
+        if ( kept )
+        {
+            if ( vacant.edges.test( edgePerVertex_[v] ) )
+                edgePerVertex_[v] = kept;
+            return false;
+        }
         validVerts_.reset( v );
         vacant.verts.set( v );
         edgePerVertex_[v] = EdgeId();
-    } );
-    numValidVerts_ = (int)validVerts_.count();
+        return true;
+    };
 
-    const auto fsValid = fs & validFaces_;
-    BitSetParallelFor( fsValid, [&]( FaceId f )
+    // updates the record of an edge that remains, assuming that the records of vacant edges are not changed yet
+    auto updateEdge = [&]( EdgeId e )
     {
-        edgePerFace_[f] = EdgeId();
-    } );
-    validFaces_ -= fsValid;
-    numValidFaces_ = (int)validFaces_.count();
-    vacant.faces.resize( faceSize(), true );
-    vacant.faces -= validFaces_;
-
-    // pass 1: update edges that will remain
-    ParallelFor( edges_, [&]( EdgeId e )
-    {
-        if ( vacant.edges.test( e ) )
-            return;
+        assert( !vacant.edges.test( e ) );
         assert( !oldLoneEdge.test( e ) );
-
         HalfEdgeRecord he = edges_[e];
         while ( vacant.edges.test( he.next ) )
             he.next = next( he.next );
@@ -1108,22 +1104,135 @@ auto MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSe
         if ( vacant.faces.test( he.left ) )
             he.left = FaceId{};
         edges_[e] = he;
-    } );
+    };
 
-    // pass 2: make new lone edges
+    auto makeLone = [&]( UndirectedEdgeId ue )
+    {
+        for ( EdgeId e : { EdgeId( ue ), EdgeId( ue ).sym() } )
+        {
+            HalfEdgeRecord he;
+            he.next = he.prev = e;
+            edges_[e] = he;
+        }
+    };
+
+    auto newLone = vacant.edges; // the edges that become lone in this call
+    newLone -= oldLoneEdge;
+    EdgeBitSet changed; // the remaining half-edges with possibly changed records, only if few faces are deleted
+    if ( few )
+    {
+        changed.resize( edgeSize() );
+        // marks the remaining edges in the ring of e0 and returns the first of them
+        auto markRing = [&]( EdgeId e0 )
+        {
+            EdgeId kept;
+            EdgeId x = e0;
+            do
+            {
+                if ( !vacant.edges.test( x ) )
+                {
+                    if ( !kept )
+                        kept = x;
+                    changed.set( x );
+                }
+                x = edges_[x].next;
+            } while ( x != e0 );
+            return kept;
+        };
+
+        // the rings around the ends of new lone edges, also of the ends without vertex
+        VertBitSet visited( vertSize() );
+        int numDeletedVerts = 0;
+        for ( auto ue : newLone )
+        {
+            for ( EdgeId e : { EdgeId( ue ), EdgeId( ue ).sym() } )
+            {
+                const VertId v = edges_[e].org;
+                if ( !v || !validVerts_.test( v ) )
+                {
+                    markRing( e );
+                    continue;
+                }
+                if ( visited.test_set( v ) )
+                    continue;
+                if ( updateVert( v, markRing( edgePerVertex_[v] ) ) )
+                    ++numDeletedVerts;
+            }
+        }
+        numValidVerts_ -= numDeletedVerts;
+
+        // the rings of deleted faces
+        for ( auto f : fsValid )
+            for ( auto e : leftRing( *this, f ) )
+                if ( !vacant.edges.test( e ) )
+                    changed.set( e );
+    }
+    else
+    {
+        BitSetParallelFor( validVerts_, [&]( VertId v )
+        {
+            EdgeId kept;
+            for ( auto e : orgRing( *this, v ) )
+                if ( !vacant.edges.test( e ) )
+                {
+                    kept = e;
+                    break;
+                }
+            updateVert( v, kept );
+        } );
+        numValidVerts_ = (int)validVerts_.count();
+    }
+
+    BitSetParallelFor( fsValid, [&]( FaceId f )
+    {
+        edgePerFace_[f] = EdgeId();
+    } );
+    validFaces_ -= fsValid;
+    numValidFaces_ -= int( numDeletedFaces );
+    vacant.faces.resize( faceSize(), true );
+    vacant.faces -= validFaces_;
+
+    if ( few )
+    {
+        // new lone edges keep their records till the next loop
+        for ( auto e : changed )
+            updateEdge( e );
+        for ( auto ue : newLone )
+            makeLone( ue );
+        return vacant;
+    }
+
+    // pass 1: update edges that will remain
     ParallelFor( edges_, [&]( EdgeId e )
     {
         if ( !vacant.edges.test( e ) )
-            return;
-        if ( oldLoneEdge.test( e ) )
-            return; // quick path for the edges that were already lone before
-
-        HalfEdgeRecord he;
-        he.next = he.prev = e;
-        edges_[e] = he;
+            updateEdge( e );
     } );
 
+    // pass 2: make new lone edges
+    BitSetParallelFor( newLone, makeLone );
+
     return vacant;
+}
+
+auto MeshTopology::deleteFacesFindVacant( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges ) -> VacantElements
+{
+    return deleteFaces_( fs, keepEdges, false );
+}
+
+void MeshTopology::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
+{
+    assert( updateValids_ );
+    // deleting faces one by one gives the same result; with 1 to 24 threads it was faster than the parallel deletion up to 1/20 of the faces
+    // at least, and the parallel deletion is limited by memory (only 1.1 times faster with 24 threads than with 8),
+    // so the limit 1/128 leaves a margin for machines with many more threads
+    const auto maxSerialFaces = std::max( size_t( 64 ), faceSize() / 128 );
+    if ( fs.countBitsAndBlocks( maxSerialFaces ).bits > maxSerialFaces )
+        deleteFaces_( fs, keepEdges, true );
+    else
+        for ( auto f : fs )
+            if ( edgeWithLeft( f ) ) // skip the faces deleted already
+                deleteFace( f, keepEdges );
 }
 
 template<typename FM, typename VM, typename WEM>
@@ -2233,7 +2342,9 @@ namespace
 template <typename I, typename F>
 I assignNewIds( const TypedBitSet<I> & from, TypedBitSet<I> * vacant, I end, bool parallel, F && set )
 {
-    if ( !parallel )
+    static constexpr size_t chunkBlocks = 1024;
+    // a set of one chunk has nothing to split between threads, and the parallel passes cost more than this loop
+    if ( !parallel || from.size() <= chunkBlocks * BitSet::bits_per_block )
     {
         I last = vacant ? I{} : end - 1;
         for ( auto fromId : from )
@@ -2258,16 +2369,13 @@ I assignNewIds( const TypedBitSet<I> & from, TypedBitSet<I> * vacant, I end, boo
     }
 
     // the rank of a set bit is found from the numbers of set bits in all preceding chunks of blocks
-    static constexpr size_t chunkBlocks = 1024;
     auto chunkStarts = [] ( const auto & blocks )
     {
         std::vector<size_t> starts( ( blocks.size() + chunkBlocks - 1 ) / chunkBlocks + 1, 0 );
         ParallelFor( size_t( 0 ), starts.size() - 1, [&] ( size_t c )
         {
-            size_t n = 0;
-            for ( size_t b = c * chunkBlocks, bEnd = std::min( b + chunkBlocks, blocks.size() ); b < bEnd; ++b )
-                n += std::popcount( blocks[b] );
-            starts[c + 1] = n;
+            const auto b = c * chunkBlocks;
+            starts[c + 1] = countSetBits( blocks.data() + b, std::min( chunkBlocks, blocks.size() - b ) );
         } );
         std::partial_sum( starts.begin(), starts.end(), starts.begin() );
         return starts;
@@ -2553,7 +2661,7 @@ bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             {
                 if ( updateValids_ )
                     validVerts_.autoResizeSet( edgePerVertex_.endId(), lastNewVert + 1 - edgePerVertex_.size(), true );
-                edgePerVertex_.resizeNoInit( lastNewVert + 1 );
+                edgePerVertex_.resizeNoInit( lastNewVert + 1, ReserveMode::Grow ); // not to reallocate on every addPart
             }
         } );
 
@@ -2581,7 +2689,7 @@ bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             {
                 if ( updateValids_ )
                     validFaces_.autoResizeSet( edgePerFace_.endId(), lastNewFace + 1 - edgePerFace_.size(), true );
-                edgePerFace_.resizeNoInit( lastNewFace + 1 );
+                edgePerFace_.resizeNoInit( lastNewFace + 1, ReserveMode::Grow );
             }
         } );
 
@@ -2602,7 +2710,7 @@ bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
                 map.tgt2srcEdges->pushBack( ue, EdgeId{ fromUe } );
         } );
         if ( edges_.size() < 2 * ( lastNewEdge + 1 ) )
-            edges_.resizeNoInit( 2 * ( lastNewEdge + 1 ) );
+            edges_.resizeNoInit( 2 * ( lastNewEdge + 1 ), ReserveMode::Grow );
         taskGroup.wait();
     }
 

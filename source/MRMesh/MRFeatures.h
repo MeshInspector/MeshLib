@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MRMesh/MRAffineXf.h"
+#include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRCone3.h"
 #include "MRMesh/MRCylinder3.h"
 #include "MRMesh/MRPlane3.h"
@@ -10,6 +10,7 @@
 #include <cassert>
 #include <optional>
 #include <variant>
+#include <vector>
 
 namespace MR
 {
@@ -376,5 +377,34 @@ template <typename A>
 }
 // Same, but with variants as both argument.
 [[nodiscard]] MRMESH_API MeasureResult measure( const Primitives::Variant& a, const Primitives::Variant& b );
+
+//! A feature of the moving part and the matching feature of the fixed part, both in world space.
+struct AlignPair
+{
+    Primitives::Variant moving, fixed;
+};
+
+struct AlignParams
+{
+    //! Their centers are matched in the least squares sense by the motion the primary pair leaves free:
+    //! spin about the primary direction and, for planes, translation along them.
+    //! For a point primary, the first locator sets the direction to spin about.
+    //! A locator's lever arm (its distance from the primary axis, or for planes from the locator centroid)
+    //! should be well above its fitting noise, otherwise the noise sets the spin.
+    std::vector<AlignPair> locators;
+    //! If set, its directions (projected on the plane orthogonal to the primary direction) set the spin instead of the locators.
+    std::optional<AlignPair> clocking;
+    //! Planes: same normals instead of opposite ones; axes: the farther direction instead of the closer one.
+    bool flip = false;
+    //! Signed distance between the matched planes or axis centers along the fixed primary normal or axis.
+    double gap = 0;
+    //! Optional output: the number of rigid degrees of freedom the features leave free (0 - the placement is fully defined).
+    int* freeDofs = nullptr;
+};
+
+//! Returns the rigid transformation in world space that moves the moving features onto the fixed ones.
+//! The `primary` pair is matched exactly: planes are seated against each other, axes (line, circle, cylinder, cone)
+//! become coaxial with coinciding centers, points (point, sphere) coincide; see `AlignParams` for the rest.
+[[nodiscard]] MRMESH_API AffineXf3d align( const AlignPair& primary, const AlignParams& params = {} );
 
 }

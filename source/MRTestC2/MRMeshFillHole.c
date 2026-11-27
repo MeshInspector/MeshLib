@@ -25,11 +25,11 @@ MR_Mesh* createMeshWithHoles( void )
     *MR_VertCoords_index_mut( pointsVec, (MR_VertId){5} ) = (MR_Vector3f){ 0.f, 1.f, 1.f };
 
     MR_Triangulation* triangulation = MR_Triangulation_Construct( 5 );
-    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){0} ) = (MR_std_array_MR_VertId_3){{ {0}, {2}, {1} }};
-    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){1} ) = (MR_std_array_MR_VertId_3){{ {3}, {4}, {5} }};
-    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){2} ) = (MR_std_array_MR_VertId_3){{ {0}, {1}, {3} }};
-    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){3} ) = (MR_std_array_MR_VertId_3){{ {2}, {5}, {4} }};
-    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){4} ) = (MR_std_array_MR_VertId_3){{ {2}, {3}, {5} }};
+    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){0} ) = (MR_ThreeVertIds){{ {0}, {2}, {1} }};
+    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){1} ) = (MR_ThreeVertIds){{ {3}, {4}, {5} }};
+    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){2} ) = (MR_ThreeVertIds){{ {0}, {1}, {3} }};
+    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){3} ) = (MR_ThreeVertIds){{ {2}, {5}, {4} }};
+    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){4} ) = (MR_ThreeVertIds){{ {2}, {3}, {5} }};
 
     MR_Mesh* ret = MR_Mesh_fromTriangles( MR_PassBy_Copy, pointsVec, triangulation, NULL, MR_PassBy_DefaultArgument, NULL );
 

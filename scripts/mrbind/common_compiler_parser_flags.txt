@@ -1,4 +1,3 @@
 -std=c++23
 -Wno-nonportable-include-path
 -Wno-deprecated-enum-enum-conversion
--D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH

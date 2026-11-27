@@ -1,0 +1,17 @@
+{
+  "name": "meshlib-light-typescript-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "prestart": "npm run build",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@meshinspector/meshlib-light": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0"
+  }
+}

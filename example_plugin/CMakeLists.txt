@@ -65,7 +65,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
         )
         mr_emscripten_pack_directory("${HTML_DIR}/assets" "/")
 
-        # enable Asyncify
+        # used only if MeshLib was built with MR_EMSCRIPTEN_ASYNCIFY=ON (then MESHLIB_EMSCRIPTEN_EXE_LINKER_FLAGS has -s ASYNCIFY)
         mr_emscripten_set_async_func_list("${MESHLIB_DATA_DIR}/wasm/wasm_async_func_list.txt")
     endif()
 endif()

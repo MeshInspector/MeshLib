@@ -138,6 +138,15 @@
     <ClInclude Include="MRBestFit.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRBSpline.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MRConformalMap.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFittedBSplineSurface.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
     <ClInclude Include="MRAffineXf3.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
@@ -179,6 +188,9 @@
     </ClInclude>
     <ClInclude Include="MRMeshSave.h">
       <Filter>Source Files\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="MRMeshOrTriMesh.h">
+      <Filter>Source Files\Mesh</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshLoad.h">
       <Filter>Source Files\IO</Filter>
@@ -232,6 +244,18 @@
       <Filter>Source Files\Math</Filter>
     </ClInclude>
     <ClInclude Include="MRAABBTree.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAABBTreeSimd.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAABBTreePointsTraversal.hpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRAABBTreeTraversal.hpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSimd4.hpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshDistance.h">
@@ -1038,6 +1062,9 @@
     <ClInclude Include="MRRigidXfRansac.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRGlobalRegistration.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
     <ClInclude Include="MRPointToPlaneAligningTransform.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
@@ -1051,6 +1078,9 @@
       <Filter>Source Files\Math</Filter>
     </ClInclude>
     <ClInclude Include="MRCylinder3.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MRTorus3.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
     <ClInclude Include="MRConeObject.h">
@@ -1125,6 +1155,12 @@
     <ClInclude Include="MRTriMesh.h">
       <Filter>Source Files\Mesh</Filter>
     </ClInclude>
+    <ClInclude Include="MRTriMeshPart.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFaceSoup.h">
+      <Filter>Source Files\Mesh</Filter>
+    </ClInclude>
     <ClInclude Include="MRAddNoise.h">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
@@ -1170,6 +1206,15 @@
     <ClInclude Include="MRAABBTreeMaker.hpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
+    <ClInclude Include="MRAABBTreeCenters.hpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSelectByKey.hpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRTriBox.hpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
     <ClInclude Include="MRLevelOfDetails.h">
       <Filter>Source Files\Decimation</Filter>
     </ClInclude>
@@ -1213,6 +1258,9 @@
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
     <ClInclude Include="MRMacros.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRPrefetch.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
     <ClInclude Include="MRStacktrace.h">
@@ -1327,9 +1375,6 @@
       <Filter>Source Files\DataModel</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshDoubleLayer.h">
-      <Filter>Source Files\AABBTree</Filter>
-    </ClInclude>
-    <ClInclude Include="MRProcessSelfTreeSubtasks.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
     <ClInclude Include="MRParallelMinMax.h">
@@ -1482,6 +1527,15 @@
     <ClInclude Include="MRSegmentMesh.h">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshSegmenter.h">
+      <Filter>Source Files\Algorithms</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSimpleSegmentPolicy.h">
+      <Filter>Source Files\Algorithms</Filter>
+    </ClInclude>
+    <ClInclude Include="MRNarrowNeckSegmentPolicy.h">
+      <Filter>Source Files\Algorithms</Filter>
+    </ClInclude>
     <ClInclude Include="MRHexPalette.h">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
@@ -1523,6 +1577,15 @@
     <ClCompile Include="MRBestFit.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
+    <ClCompile Include="MRBSpline.cpp">
+      <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MRConformalMap.cpp">
+      <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFittedBSplineSurface.cpp">
+      <Filter>Source Files\Math</Filter>
+    </ClCompile>
     <ClCompile Include="MRBitSet.cpp">
       <Filter>Source Files\Basic</Filter>
     </ClCompile>
@@ -1543,6 +1606,12 @@
     </ClCompile>
     <ClCompile Include="MRMeshSave.cpp">
       <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRTriMesh.cpp">
+      <Filter>Source Files\Mesh</Filter>
+    </ClCompile>
+    <ClCompile Include="MRTriMeshPart.cpp">
+      <Filter>Source Files\Mesh</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshLoad.cpp">
       <Filter>Source Files\IO</Filter>
@@ -1578,6 +1647,9 @@
       <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRAABBTree.cpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAABBTreeCenters.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshDistance.cpp">
@@ -1626,6 +1698,9 @@
       <Filter>Source Files\DataModel</Filter>
     </ClCompile>
     <ClCompile Include="MRPointsLoad.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointsLoadPcdPtx.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRPointsSave.cpp">
@@ -1883,6 +1958,9 @@
     <ClCompile Include="MRPointCloudTriangulation.cpp">
       <Filter>Source Files\Triangulation</Filter>
     </ClCompile>
+    <ClCompile Include="MRAllocator.cpp">
+      <Filter>Source Files\Basic</Filter>
+    </ClCompile>
     <ClCompile Include="MRAlphaShape.cpp">
       <Filter>Source Files\Triangulation</Filter>
     </ClCompile>
@@ -2124,6 +2202,9 @@
       <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRRigidXfRansac.cpp">
+      <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MRGlobalRegistration.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRPointToPlaneAligningTransform.cpp">

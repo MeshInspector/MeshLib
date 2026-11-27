@@ -23,7 +23,8 @@ struct SaveSettings
     /// if packPrimitives=true, then ids of invalid primitives are reused by valid primitives
     /// and higher compression (in .ctm format) can be reached if the order of triangles is changed;
     /// if packPrimitives=false then all primitives maintain their ids, and invalid primitives are saved with all vertex ids equal to zero;
-    /// currently this flag affects the saving in .ctm and .ply formats only
+    /// in .obj format with several textures, packPrimitives=true groups triangles by texture to write one material switch per texture;
+    /// currently this flag affects the saving in .ctm, .ply and .obj formats only
     bool packPrimitives = true;
 
     /// optional per-vertex color to save with the geometry
@@ -42,6 +43,11 @@ struct SaveSettings
     /// optional texture to save with the geometry
     const MeshTexture * texture = nullptr;
 
+    /// optional several textures and the texture of each face;
+    /// if both are given and the format supports several textures (.OBJ), they are saved instead of \ref texture
+    const Vector<MeshTexture, TextureId> * textures = nullptr;
+    const TexturePerFace * texturePerFace = nullptr;
+
     /// the name of file (UTF8 encoded) without extension to save texture in some formats (e.g. .OBJ, .PLY)
     std::string materialName = "Default";
 
@@ -51,7 +57,8 @@ struct SaveSettings
     /// units of input coordinates and transformation, to be serialized if the format supports it
     std::optional<LengthUnit> lengthUnit;
 
-    /// the color of whole object
+    /// the color of whole object, saved only in the formats having object color:
+    /// .3mf (if neither per-vertex nor per-triangle colors are given), .obj (Kd in .mtl file), binary .stl (COLOR= in the header)
     std::optional<Color> solidColor;
 
     /// permit telemetry signal about saving

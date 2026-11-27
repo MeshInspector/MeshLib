@@ -3,7 +3,9 @@
 #include "MRVector3.h"
 #include "MRMatrix3.h"
 #include "MRConstants.h"
+#include <cmath>
 #include <limits>
+#include <utility>
 
 namespace MR
 {
@@ -54,6 +56,9 @@ struct SymMatrix3
     /// optionally returns corresponding unit eigenvectors in the rows of orthogonal matrix V,
     /// M*V^T = V^T*L; M = V^T*L*V
     Vector3<T> eigens( Matrix3<T> * eigenvectors = nullptr ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> );
+    /// same as eigens(), but by cyclic Jacobi method: somewhat slower, and precise also for tiny eigenvalues of an ill-conditioned matrix,
+    /// where eigens() has the absolute error proportional to the largest eigenvalue
+    Vector3<T> eigensJacobi( Matrix3<T> * eigenvectors = nullptr ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> );
     /// computes not-unit eigenvector corresponding to a not-repeating eigenvalue
     Vector3<T> eigenvector( T eigenvalue ) const MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> );
 
@@ -245,6 +250,76 @@ Vector3<T> SymMatrix3<T>::eigens( Matrix3<T> * eigenvectors ) const MR_REQUIRES_
 }
 
 template <typename T>
+Vector3<T> SymMatrix3<T>::eigensJacobi( Matrix3<T> * eigenvectors ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> )
+{
+    // each rotation zeroes one off-diagonal element, see SymMatrix4::eigens
+    T a[3][3] =
+    {
+        { xx, xy, xz },
+        { xy, yy, yz },
+        { xz, yz, zz }
+    };
+    Matrix3<T> v; // eigenvectors in rows
+    constexpr T eps2 = std::numeric_limits<T>::epsilon() * std::numeric_limits<T>::epsilon() / 64;
+    // the pair (p,q) of each rotation and the other index r
+    constexpr int P[3] = { 0, 0, 1 }, Q[3] = { 1, 2, 2 }, R[3] = { 2, 1, 0 };
+    for ( int sweep = 0; sweep < 32; ++sweep )
+    {
+        bool rotated = false;
+        for ( int i = 0; i < 3; ++i )
+        {
+            const int p = P[i], q = Q[i], k = R[i];
+            const T apq = a[p][q];
+            // the rotation is skipped if it cannot change the diagonal elements
+            if ( apq * apq <= eps2 * std::abs( a[p][p] * a[q][q] ) )
+            {
+                a[p][q] = a[q][p] = 0;
+                continue;
+            }
+            rotated = true;
+            // t = tan, c = cos, s = sin of the rotation angle
+            const T d = a[q][q] - a[p][p];
+            T t, c;
+            if ( std::abs( d ) > T( 1 << 28 ) * std::abs( apq ) )
+            {
+                // tiny angle: t = apq / d and c = 1 within the precision
+                t = apq / d;
+                c = 1;
+            }
+            else
+            {
+                const T h = std::sqrt( d * d + 4 * apq * apq );
+                const T u = std::abs( d ) + h;
+                t = 2 * apq / std::copysign( u, d );
+                c = std::sqrt( u / ( 2 * h ) );
+            }
+            const T s = t * c;
+            a[p][p] -= t * apq;
+            a[q][q] += t * apq;
+            a[p][q] = a[q][p] = 0;
+            const T akp = a[k][p], akq = a[k][q];
+            a[k][p] = a[p][k] = c * akp - s * akq;
+            a[k][q] = a[q][k] = s * akp + c * akq;
+            const Vector3<T> vp = v[p], vq = v[q];
+            v[p] = c * vp - s * vq;
+            v[q] = s * vp + c * vq;
+        }
+        if ( !rotated )
+            break;
+    }
+    int i0 = 0, i1 = 1, i2 = 2;
+    if ( a[i0][i0] > a[i1][i1] )
+        std::swap( i0, i1 );
+    if ( a[i1][i1] > a[i2][i2] )
+        std::swap( i1, i2 );
+    if ( a[i0][i0] > a[i1][i1] )
+        std::swap( i0, i1 );
+    if ( eigenvectors )
+        *eigenvectors = Matrix3<T>( v[i0], v[i1], v[i2] );
+    return { a[i0][i0], a[i1][i1], a[i2][i2] };
+}
+
+template <typename T>
 Vector3<T> SymMatrix3<T>::eigenvector( T eigenvalue ) const MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> )
 {
     const Vector3<T> row0( xx - eigenvalue, xy, xz );
@@ -303,9 +378,10 @@ SymMatrix3<T> SymMatrix3<T>::pseudoinverse( T tol, int * rank, Vector3<T> * spac
         }
     }
 
+    // Jacobi method keeps the small eigenvalues precise: eigens() can make them wrong in all digits or even not zero for a singular matrix
     SymMatrix3<T> res;
     Matrix3<T> eigenvectors;
-    const auto eigenvalues = eigens( &eigenvectors );
+    const auto eigenvalues = eigensJacobi( &eigenvectors );
     const auto threshold = std::max( std::abs( eigenvalues[0] ), std::abs( eigenvalues[2] ) ) * tol;
     int myRank = 0;
     for ( int i = 0; i < 3; ++i )

@@ -1,7 +1,6 @@
 #include "MRMeshToStepData.hpp"
 #include "MRBitSet.h"
 #include "MRFittedBSplineSurface.h"
-#include "MRMatrix3.h"
 #include "MRMeshTopology.h"
 #include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
@@ -201,13 +200,7 @@ double snapPoint( V3& p, const Data& d, const Vector<int>& regions )
             jtj += outerSquare( n );
             jtf += n * s.dist( p );
         }
-        // not SymMatrix3::pseudoinverse: its direct inverse branch takes a rank-1 matrix (a vertex on one surface) for a regular one
-        Matrix3d vecs;
-        const V3 vals = jtj.eigensJacobi( &vecs );
-        V3 step;
-        for ( int k = 0; k < 3; ++k )
-            if ( vals[k] > 0.01 * vals[2] )
-                step += vecs[k] * ( dot( vecs[k], jtf ) / vals[k] );
+        const V3 step = jtj.pseudoinverse( 0.01 ) * jtf;
         p -= step;
         if ( step.lengthSq() <= sqr( 1e-12 * d.diag ) )
             break;

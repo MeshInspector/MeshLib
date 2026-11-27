@@ -5,6 +5,7 @@
 #include "MRMesh/MRDistanceMapLoad.h"
 #include "MRMesh/MRDistanceMapSave.h"
 #include "MRMesh/MRImage.h"
+#include "MRMesh/MRIOParsing.h"
 #include "MRMesh/MRLog.h"
 #include "MRMesh/MRRasterLoad.h"
 #include "MRMesh/MRRasterSave.h"
@@ -20,7 +21,6 @@
 #include <cmath>
 #include <cstring>
 #include <fstream>
-#include <iterator>
 #include <sstream>
 
 namespace MR
@@ -271,8 +271,8 @@ static bool hasTiffTag( const std::filesystem::path& path, uint16_t tag, uint16_
     // the tag, its type SHORT, the count of values and the value padded to 4 bytes
     const struct { uint16_t tag, type; uint32_t count; uint16_t value, padding; } entry{ tag, 3, 1, value, 0 };
     std::ifstream in( path, std::ios::binary );
-    const std::string file( ( std::istreambuf_iterator<char>( in ) ), std::istreambuf_iterator<char>() );
-    return file.find( std::string( ( const char* )&entry, sizeof( entry ) ) ) != std::string::npos;
+    const auto file = readString( in );
+    return file && file->find( std::string( ( const char* )&entry, sizeof( entry ) ) ) != std::string::npos;
 }
 
 TEST( MRMesh, TiffTiledPartialTiles )

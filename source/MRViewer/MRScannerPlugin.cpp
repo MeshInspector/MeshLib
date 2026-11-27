@@ -443,7 +443,7 @@ void ScannerPlugin::rotateScans_()
     for ( std::shared_ptr<VisualObject> scan : validScans_() )
     {
         AppendHistory<ChangeXfAction>( _t( "Rotate scan" ), scan );
-        scan->setXf( xf * scan->xf() );
+        scan->setWorldXf( xf * scan->worldXf() );
     }
 }
 
@@ -556,7 +556,7 @@ void ScannerPlugin::onScanProduced_( std::shared_ptr<VisualObject> obj )
     if ( firstScan_ )
     {
         getViewerInstance().preciseFitDataViewport();
-        if ( Box3f box = obj->getBoundingBox(); box.valid() )
+        if ( Box3f box = obj->getWorldBox(); box.valid() )
         {
             axisWidget_.updateLength( box.diagonal() * 0.8f );
             if ( !settings_.rotateOrgSet )
@@ -817,7 +817,7 @@ void ScannerPlugin::drawRotReg_()
     UI::setTooltipIfHovered( _tr( "Automatically align a new scan to previous scans" ) );
     UI::checkboxValid( _tr( "Try RANSAC initial position" ), &icp_.ransac, settings_.registration && icp_.rigidMode() );
     UI::setTooltipIfHovered( _tr( "Also align a new scan from any position by matching shape descriptors (RANSAC), then ICP from that position, "
-        "and keep that pose if it has at least a quarter more samples within Sampling Spacing of the other surface than ICP alone. "
+        "and keep that pose if it has more than a quarter more samples within Sampling Spacing of the other surface than ICP alone. "
         "Needs normals and the Rigid Body or Rigid + Scale Transformation" ) );
     if ( RibbonButtonDrawer::CustomCollapsingHeader( _tr( "ICP Parameters" ) ) )
     {

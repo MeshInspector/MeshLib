@@ -8,6 +8,11 @@ namespace MR
 MRMESH_API Mesh makeTorus( float primaryRadius = 1.0f, float secondaryRadius = 0.1f, int primaryResolution = 16, int secondaryResolution = 16,
 						   std::vector<Vector3f>* points = nullptr );
 
+/// creates torus with Z symmetry axis and square profile of side 2 * secondaryRadius,
+/// rotated by profileAngle (in radians) around its center;
+/// with zero angle it has flat top and bottom and cylindrical inner and outer sides
+MRMESH_API Mesh makeSquareTorus( float primaryRadius = 1.0f, float secondaryRadius = 0.1f, int primaryResolution = 16, float profileAngle = 0.0f );
+
 // creates torus without inner half faces
 // main application - testing fillHole and Stitch
 MRMESH_API Mesh makeOuterHalfTorus( float primaryRadius = 1.0f, float secondaryRadius = 0.1f, int primaryResolution = 16, int secondaryResolution = 16,

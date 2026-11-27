@@ -86,6 +86,44 @@ void removeTwoPointLoops( ContinuousContours& contours )
     erase_if( contours, [] ( const ContinuousContour& c ) { return c.size() == 3 && isClosed( c ); } );
 }
 
+// removes the closed lone contours (inside one face of a mesh) of zero area that cross two edges of the other mesh joining different vertices
+// at the same points, as where a fin of the other mesh without thickness pokes through the face: only the perturbation orients such a contour,
+// by the order of the coincident vertices, and it can turn against the other contours, leaving no inside and outside parts
+void removeZeroAreaLoneContours( ContinuousContours& contours, const Mesh& meshA, const Mesh& meshB, const CoordinateConverters& converters,
+    const AffineXf3f* rigidB2A )
+{
+    erase_if( contours, [&] ( const ContinuousContour& c )
+    {
+        if ( !isClosed( c ) )
+            return false;
+        const bool onB = c.front().isEdgeATriB(); // edges of A crossing a face of B
+        if ( !std::all_of( c.begin(), c.end(), [onB] ( const VarEdgeTri& p ) { return p.isEdgeATriB() == onB; } ) )
+            return false;
+        const auto& tp = ( onB ? meshA : meshB ).topology;
+        const auto& pts = ( onB ? meshA : meshB ).points;
+        auto coincident = [&] ( EdgeId a, EdgeId b )
+        {
+            const VertId a0 = tp.org( a ), a1 = tp.dest( a );
+            VertId b0 = tp.org( b ), b1 = tp.dest( b );
+            if ( pts[a0] != pts[b0] )
+                std::swap( b0, b1 );
+            return pts[a0] == pts[b0] && pts[a1] == pts[b1] && ( a0 != b0 || a1 != b1 );
+        };
+        bool found = false;
+        for ( int i = 0; !found && i + 1 < c.size(); ++i ) // the last point repeats the first one
+            for ( int j = i + 1; !found && j + 1 < c.size(); ++j )
+                found = coincident( c[i].edge, c[j].edge );
+        if ( !found )
+            return false;
+        OneMeshContours points;
+        getOneMeshIntersectionContours( meshA, meshB, { c }, onB ? nullptr : &points, onB ? &points : nullptr, converters, rigidB2A );
+        Vector3f dblArea;
+        for ( int i = 0; i + 1 < points.intersections.size(); ++i )
+            dblArea += cross( points.intersections[i].coordinate, points.intersections[i + 1].coordinate );
+        return dblArea == Vector3f();
+    } );
+}
+
 // cuts the surface along the given edges as cutAlongEdgeLoop does along a loop: every edge loses its left face to a new edge next to it,
 // returned at the same index; then every vertex of the edges is split in its parts between the holes that this and earlier cuts marked in holes,
 // one vertex per part: also where several loops cross, or where earlier stitches have separated the edges of a loop at a crossing
@@ -601,6 +639,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
             return { .errorString = "Boolean cannot order the intersections: a mesh has a face that is not a triangle" };
     }
     removeTwoPointLoops( contours );
+    removeZeroAreaLoneContours( contours, srcA, srcB, converters, params.rigidB2A );
 
     if ( params.cb && !params.cb( 0.0f ) )
         return { .errorString = stringOperationCanceled() };

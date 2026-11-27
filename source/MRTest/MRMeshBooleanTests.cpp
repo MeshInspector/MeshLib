@@ -768,6 +768,30 @@ TEST( MRMesh, BooleanTwoPointLoneContour )
     EXPECT_EQ( res->topology.findNumHoles(), 0 );
 }
 
+// mesh A has a fin without thickness: vertices x1 and x2 have the same coordinates, so the four triangles around tip t are two pairs
+// of coincident triangles with opposite orientations; a big triangle of mesh B cuts the fin along a closed lone contour of zero area,
+// which only the perturbation orients, by the order of x1 and x2: in one order against the contour of a cube of A in the other triangle
+// of B, so that B had no inside and outside parts; such contours are dropped, and every operation succeeds in both orders
+TEST( MRMesh, BooleanZeroAreaLoneContour )
+{
+    const Mesh b = Mesh::fromTriangles( { Vector3f( -10.f, -10.f, 0.f ), Vector3f( 10.f, -10.f, 0.f ), Vector3f( 10.f, 10.f, 0.f ),
+        Vector3f( -10.f, 10.f, 0.f ) }, { { 0_v, 1_v, 2_v }, { 0_v, 2_v, 3_v } } );
+    for ( bool swap : { false, true } )
+    {
+        const VertId t( 0 ), p( 1 ), x1( swap ? 4 : 2 ), c( 3 ), x2( swap ? 2 : 4 );
+        const Vector3f x( -5.f, 0.f, -1.f );
+        Mesh a = Mesh::fromTriangles( { Vector3f( -5.f, 0.f, 1.f ), Vector3f( -6.f, 0.f, -1.f ), x, Vector3f( -4.f, 0.f, -1.f ), x },
+            { { t, p, x1 }, { t, x1, c }, { t, c, x2 }, { t, x2, p }, { x1, p, x2 }, { x1, x2, c } } );
+        a.addMesh( makeCube( Vector3f::diagonal( 2.f ), Vector3f( 2.f, -1.f, -1.f ) ) );
+        for ( auto op : { BooleanOperation::Union, BooleanOperation::Intersection, BooleanOperation::DifferenceAB, BooleanOperation::DifferenceBA } )
+        {
+            const auto res = boolean( a, b, op );
+            ASSERT_TRUE( res.valid() ) << res.errorString;
+            EXPECT_TRUE( res.mesh.topology.checkValidity() );
+        }
+    }
+}
+
 // a corner of a small cube, or the lowest vertex of a small sphere, lies exactly on a big triangle of a cube, the rest of it outside;
 // the edges from that vertex meet the triangle at one point, so simulation of simplicity makes a lone contour of points that are all
 // the same in float (here with the big cube as mesh A), or no contact (as mesh B); either way the results are valid closed meshes

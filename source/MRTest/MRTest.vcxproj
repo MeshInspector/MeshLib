@@ -65,6 +65,7 @@
     <ClCompile Include="MRMeshTests.cpp" />
     <ClCompile Include="MRMeshToPointCloudTests.cpp" />
     <ClCompile Include="MRMeshTopologyTests.cpp" />
+    <ClCompile Include="MRMeshToStepTests.cpp" />
     <ClCompile Include="MRMultiwayICPTests.cpp" />
     <ClCompile Include="MRNaNTest.cpp" />
     <ClCompile Include="MRObjectTests.cpp" />

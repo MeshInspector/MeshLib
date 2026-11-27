@@ -347,10 +347,11 @@ SymMatrix3<T> SymMatrix3<T>::pseudoinverse( T tol, int * rank, Vector3<T> * spac
 {
     // a positive definite matrix (all leading principal minors are positive) is inverted directly, which is several times faster,
     // if lambdaMin > tol * lambdaMax is guaranteed: lambdaMin >= det / m2 (m2 is the sum of principal 2x2 minors >= lambdaMax * lambdaMid),
-    // and lambdaMax <= trace; the tolerance is at least 1e-4 to keep the direct inverse accurate;
-    // rounding errors (about eps * trace^3) can make the determinant and the minors of a rank-1 matrix positive and pass that check,
-    // so also det > tol^2 * (trace/3)^3 is required: it holds if lambdaMin > tol * lambdaMax, since then det > tol^2 * lambdaMax^3
-    const auto dirTol = std::max( tol, T( 1e-4 ) );
+    // and lambdaMax <= trace; rounding errors (about eps * trace^3) can make the determinant and the minors of a rank-1 matrix positive
+    // and pass that check, so also det > tol^2 * (trace/3)^3 is required: it holds if lambdaMin > tol * lambdaMax, since then det > tol^2 * lambdaMax^3;
+    // the tolerance here is at least cbrt(eps): the error of the direct inverse is about eps / tol <= eps^(2/3),
+    // and tol^2 / 27 >= eps^(2/3) / 27 is far above the rounding errors of a rank-1 matrix
+    const auto dirTol = std::max( tol, std::cbrt( std::numeric_limits<T>::epsilon() ) );
     if ( xx > 0 )
     {
         const auto mxy = xx * yy - xy * xy;

@@ -109,6 +109,14 @@ TEST( MRMesh, SymMatrix3PseudoinversePrecision )
             EXPECT_NEAR( ( m1.pseudoinverse( tol, &rank ) * n - n ).length(), 0, 1e-12 );
             EXPECT_EQ( rank, 1 );
         }
+
+        // in float the rounding errors are relatively larger, but they must not let it be inverted directly either
+        const auto nf = Vector3f( n ).normalized();
+        const auto m1f = outerSquare( nf );
+        (void)m1f.pseudoinverse( std::numeric_limits<float>::epsilon(), &rank );
+        EXPECT_LT( rank, 3 );
+        EXPECT_NEAR( ( m1f.pseudoinverse( 0.01f, &rank ) * nf - nf ).length(), 0, 1e-5f );
+        EXPECT_EQ( rank, 1 );
     }
 }
 

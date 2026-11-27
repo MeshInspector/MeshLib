@@ -33,6 +33,22 @@ namespace MRTest
             foreach (var p in points)
                 sum += p.Value.x;
             Assert.That(sum, Is.EqualTo(5));
+
+            // the non-const vector enumerates mutable references
+            foreach (var p in points)
+                p.Value.x = 0;
+            foreach (var p in points)
+                Assert.That(p.Value.x, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void TestMutableElements()
+        {
+            var mesh = makeCube(Vector3f.diagonal(1), Vector3f.diagonal(-0.5f));
+            using var components = MeshComponents.getAllComponents(mesh);
+            foreach (FaceBitSet comp in components)
+                comp.reset(new FaceId(0));
+            Assert.That(!components[0].test(new FaceId(0)));
         }
 
         [Test]

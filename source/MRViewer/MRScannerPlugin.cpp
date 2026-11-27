@@ -490,13 +490,12 @@ void ScannerPlugin::registerScan_( std::shared_ptr<VisualObject> scan )
             icp_.result += "\nRANSAC: no overlap with the previous scans found";
         else
         {
-            // the ICP pose refined with the threshold globalRegistration refines its pose with,
-            // then the pose with clearly more samples within one voxel of the other surface wins
+            // the same ICP from the RANSAC position; its pose wins only with clearly more samples
+            // within one voxel of the other surface than the pose of ICP from the current position
+            icp.setFloatXf( res->xfs[ObjId( 1 )] );
+            const AffineXf3f ransacXf = icp.calculateTransformation();
+            const std::string ransacStatus = icp.getStatusInfo();
             ICPProperties params = icp_.params;
-            params.distThresholdSq = sqr( 5 * icp_.samplingVoxelSize );
-            icp.setParams( params );
-            icp.setFloatXf( xf );
-            xf = icp.calculateTransformation();
             params.distThresholdSq = sqr( icp_.samplingVoxelSize );
             params.farDistFactor = std::numeric_limits<float>::max();
             icp.setParams( params );
@@ -506,12 +505,12 @@ void ScannerPlugin::registerScan_( std::shared_ptr<VisualObject> scan )
                 icp.updatePointPairs();
                 return icp.getNumActivePairs();
             };
-            const size_t icpClose = numClose( xf ), ransacClose = numClose( res->xfs[ObjId( 1 )] );
+            const size_t icpClose = numClose( xf ), ransacClose = numClose( ransacXf );
             const bool applied = ransacClose > icpClose + icpClose / 4; // a tie or a small gain keeps the ICP pose
             if ( applied )
-                xf = res->xfs[ObjId( 1 )];
-            icp_.result += fmt::format( "\nRANSAC initial position {}:\n{} close pairs vs {} by ICP alone",
-                applied ? "applied" : "discarded", ransacClose, icpClose );
+                xf = ransacXf;
+            icp_.result = fmt::format( "{}\nRANSAC initial position {}:\n{} close pairs vs {} by ICP alone",
+                applied ? ransacStatus : icp_.result, applied ? "applied" : "discarded", ransacClose, icpClose );
             icp.setParams( icp_.params );
             icp.setFloatXf( xf );
             icp.updatePointPairs();
@@ -820,7 +819,7 @@ void ScannerPlugin::drawRotReg_()
     UI::checkbox( _tr( "Auto register" ), &settings_.registration );
     UI::setTooltipIfHovered( _tr( "Automatically align a new scan to previous scans" ) );
     UI::checkboxValid( _tr( "Try RANSAC initial position" ), &icp_.ransac, settings_.registration && icp_.rigidMode() );
-    UI::setTooltipIfHovered( _tr( "Also align a new scan from any position by matching shape descriptors (RANSAC), then ICP, "
+    UI::setTooltipIfHovered( _tr( "Also align a new scan from any position by matching shape descriptors (RANSAC), then ICP from that position, "
         "and keep that pose if it has at least a quarter more samples within Sampling Spacing of the other surface than ICP alone. "
         "Needs normals and the Rigid Body or Rigid + Scale Transformation" ) );
     if ( RibbonButtonDrawer::CustomCollapsingHeader( _tr( "ICP Parameters" ) ) )

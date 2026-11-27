@@ -271,8 +271,8 @@ static bool hasTiffTag( const std::filesystem::path& path, uint16_t tag, uint16_
     // the tag, its type SHORT, the count of values and the value padded to 4 bytes
     const struct { uint16_t tag, type; uint32_t count; uint16_t value, padding; } entry{ tag, 3, 1, value, 0 };
     std::ifstream in( path, std::ios::binary );
-    const auto file = readString( in );
-    return file && file->find( std::string( ( const char* )&entry, sizeof( entry ) ) ) != std::string::npos;
+    const auto file = readCharBuffer( in );
+    return file && std::string_view( file->data(), file->size() ).find( std::string_view( ( const char* )&entry, sizeof( entry ) ) ) != std::string_view::npos;
 }
 
 TEST( MRMesh, TiffTiledPartialTiles )

@@ -117,6 +117,8 @@ class ScannerBackendAdder
 public:
     MRVIEWER_API explicit ScannerBackendAdder( std::unique_ptr<IScannerBackend> backend );
     MRVIEWER_API ~ScannerBackendAdder();
+    ScannerBackendAdder( const ScannerBackendAdder& ) = delete;
+    ScannerBackendAdder& operator=( const ScannerBackendAdder& ) = delete;
 
 private:
     const IScannerBackend* backend_;

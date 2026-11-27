@@ -155,6 +155,7 @@ struct ProcessingSettings
 
     // After each capture, register the scan to the previous scans using ICP
     bool registration = false;
+    bool ransac = false; // also try the RANSAC initial position by shape descriptors, then ICP
 
     void load( const std::string& configKey )
     {
@@ -171,9 +172,11 @@ struct ProcessingSettings
             deserializeFromJson( json["rotateAxis"], rotateAxis );
         if ( json["registration"] )
             registration = json["registration"].asBool();
+        if ( json["ransac"] )
+            ransac = json["ransac"].asBool();
     }
 
-    // rotationOnly keeps the saved registration flag (the Rot/Reg tab's Save)
+    // rotationOnly keeps the saved registration flags (the Rot/Reg tab's Save)
     void save( const std::string& configKey, bool rotationOnly = false ) const
     {
         Config& config = Config::instance();
@@ -184,7 +187,10 @@ struct ProcessingSettings
         json["rotateOrgSet"] = rotateOrgSet;
         serializeToJson( rotateAxis, json["rotateAxis"] );
         if ( !rotationOnly )
+        {
             json["registration"] = registration;
+            json["ransac"] = ransac;
+        }
         config.setJsonValue( configKey, json );
     }
 
@@ -265,7 +271,6 @@ private:
         ICPProperties params = { .method = ICPMethod::Combined, .farDistFactor = 1.5f, .iterLimit = 100, .badIterStopCount = 20 };
         float samplingVoxelSize = 0.0f;
         float objectSize = 0.0f;
-        bool ransac = false; // also try the RANSAC initial position by shape descriptors, then ICP
         // the modes that accept the rigid pose RANSAC finds; the others constrain each step from the current pose
         bool rigidMode() const { return params.icpMode == ICPMode::RigidScale || params.icpMode == ICPMode::AnyRigidXf; }
         std::string result;
@@ -474,7 +479,7 @@ void ScannerPlugin::registerScan_( std::shared_ptr<VisualObject> scan )
     icp.setParams( icp_.params );
     AffineXf3f xf = icp.calculateTransformation();
     icp_.result = icp.getStatusInfo();
-    if ( icp_.ransac && icp_.rigidMode() )
+    if ( settings_.ransac && icp_.rigidMode() )
     {
         // also from any position; the merged previous scans are object 0, which keeps its place
         Vector<MeshOrPointsXf, ObjId> objs;
@@ -815,7 +820,7 @@ void ScannerPlugin::drawRotReg_()
     drawScannerSeparator( _tr( "Registration" ) );
     UI::checkbox( _tr( "Auto register" ), &settings_.registration );
     UI::setTooltipIfHovered( _tr( "Automatically align a new scan to previous scans" ) );
-    UI::checkboxValid( _tr( "Try RANSAC initial position" ), &icp_.ransac, settings_.registration && icp_.rigidMode() );
+    UI::checkboxValid( _tr( "Try RANSAC initial position" ), &settings_.ransac, settings_.registration && icp_.rigidMode() );
     UI::setTooltipIfHovered( _tr( "Also align a new scan from any position by matching shape descriptors (RANSAC), then ICP from that position, "
         "and keep that pose if it has more than a quarter more samples within Sampling Spacing of the other surface than ICP alone. "
         "Needs normals and the Rigid Body or Rigid + Scale Transformation" ) );

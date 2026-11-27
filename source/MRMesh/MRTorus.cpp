@@ -7,7 +7,7 @@
 namespace MR
 {
 MR::Mesh makeTorus( float primaryRadius, float secondaryRadius, int primaryResolution, int secondaryResolution,
-                    std::vector<Vector3f>* pointsOut )
+                    std::vector<Vector3f>* pointsOut, float profileAngle )
 {
     int i, j, k;
     float a, b;
@@ -20,7 +20,7 @@ MR::Mesh makeTorus( float primaryRadius, float secondaryRadius, int primaryResol
     k = 0;
     for ( i = 0; i < secondaryResolution; ++i )
     {
-        a = 2 * i * PI_F / secondaryResolution;
+        a = 2 * i * PI_F / secondaryResolution + profileAngle;
         for ( j = 0; j < primaryResolution; ++j )
         {
             b = 2 * j * PI_F / primaryResolution;

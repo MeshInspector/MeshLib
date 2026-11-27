@@ -88,6 +88,9 @@
     <ClCompile Include="MRMeshIntersectTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRTorusTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRTriMathTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

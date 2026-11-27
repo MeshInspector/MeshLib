@@ -29,13 +29,13 @@ void testMeshBoolean( void )
     float secondaryRadiusA = 0.5f;
     int primaryResolutionA = 8;
     int secondaryResolutionA = 8;
-    MR_Mesh* meshA = MR_makeTorus( &primaryRadiusA, &secondaryRadiusA, &primaryResolutionA, &secondaryResolutionA, NULL );
+    MR_Mesh* meshA = MR_makeTorus( &primaryRadiusA, &secondaryRadiusA, &primaryResolutionA, &secondaryResolutionA, NULL, NULL );
 
     float primaryRadiusB = 1.0f;
     float secondaryRadiusB = 0.2f;
     int primaryResolutionB = 8;
     int secondaryResolutionB = 8;
-    MR_Mesh* meshB = MR_makeTorus( &primaryRadiusB, &secondaryRadiusB, &primaryResolutionB, &secondaryResolutionB, NULL );
+    MR_Mesh* meshB = MR_makeTorus( &primaryRadiusB, &secondaryRadiusB, &primaryResolutionB, &secondaryResolutionB, NULL, NULL );
 
     {
         const MR_Vector3f plusZ = MR_Vector3f_plusZ();
@@ -176,13 +176,13 @@ void testBooleanMapper( void )
     float secondaryRadiusA = 0.5f;
     int primaryResolutionA = 8;
     int secondaryResolutionA = 8;
-    MR_Mesh* meshA = MR_makeTorus(&primaryRadiusA, &secondaryRadiusA, &primaryResolutionA, &secondaryResolutionA, NULL);
+    MR_Mesh* meshA = MR_makeTorus(&primaryRadiusA, &secondaryRadiusA, &primaryResolutionA, &secondaryResolutionA, NULL, NULL);
 
     float primaryRadiusB = 1.0f;
     float secondaryRadiusB = 0.2f;
     int primaryResolutionB = 8;
     int secondaryResolutionB = 8;
-    MR_Mesh* meshB = MR_makeTorus(&primaryRadiusB, &secondaryRadiusB, &primaryResolutionB, &secondaryResolutionB, NULL);
+    MR_Mesh* meshB = MR_makeTorus(&primaryRadiusB, &secondaryRadiusB, &primaryResolutionB, &secondaryResolutionB, NULL, NULL);
 
     {
         const MR_Vector3f plusZ = MR_Vector3f_plusZ();

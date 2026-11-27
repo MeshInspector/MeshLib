@@ -8,7 +8,7 @@ pub fn create_cube() -> meshlib::Owned<meshlib::Mesh>
 /// Creates a torus with the given radii and resolutions.
 pub fn make_torus(primary_radius: f32, secondary_radius: f32, primary_resolution: i32, secondary_resolution: i32) -> meshlib::Owned<meshlib::Mesh>
 {
-    meshlib::make_torus(Some(primary_radius), Some(secondary_radius), Some(primary_resolution), Some(secondary_resolution), None)
+    meshlib::make_torus(Some(primary_radius), Some(secondary_radius), Some(primary_resolution), Some(secondary_resolution), None, None)
 }
 
 #[macro_export]

@@ -18,7 +18,7 @@ fn make_cylinder_advanced()
 #[test]
 fn make_torus()
 {
-    let torus = meshlib::make_torus(Some(2.0), Some(0.5), Some(32), Some(32), None);
+    let torus = meshlib::make_torus(Some(2.0), Some(0.5), Some(32), Some(32), None, None);
     assert_approx!(torus.area_const_mr_face_bit_set_ptr(None), 39.257, 0.1);
 }
 

@@ -22,7 +22,7 @@ int main( void )
 {
     int rc = EXIT_FAILURE;
     // Create some mesh
-    MR_Mesh* mesh = MR_makeTorus( NULL, NULL, NULL, NULL, NULL );
+    MR_Mesh* mesh = MR_makeTorus( NULL, NULL, NULL, NULL, NULL, NULL );
 
     // Create VertScalars obj with weights for every vertex
     size_t vertSize = MR_MeshTopology_vertSize( MR_Mesh_Get_topology( mesh ) );

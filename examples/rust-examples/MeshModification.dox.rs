@@ -2,7 +2,7 @@ use meshlib::{AffineXf3f, Matrix3f, MeshRelaxParams, SubdivideSettings, Vector3f
 
 fn main()
 {
-    let mut mesh = meshlib::make_torus(None, None, None, None, None);
+    let mut mesh = meshlib::make_torus(None, None, None, None, None, None);
 
     // Relax mesh (5 iterations)
     let mut relax_params = MeshRelaxParams::new();

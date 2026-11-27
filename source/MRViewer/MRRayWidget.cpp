@@ -128,6 +128,7 @@ void RayWidget::updateXf_()
 
 bool RayWidget::onDragStart_( Viewer::MouseButton button, int modifiers )
 {
+    pressed_ = false; // even if a drag end was missed
     if ( button != Viewer::MouseButton::Left || modifiers != 0 )
         return false;
 
@@ -143,11 +144,19 @@ bool RayWidget::onDragStart_( Viewer::MouseButton button, int modifiers )
     Vector3f projectedStartPoint = line_.project( worldStartPoint_ );
     startDirRotation_ = Matrix3f::rotation( worldStartPoint_ - worldStartOrg_, projectedStartPoint - worldStartOrg_ );
     viewportStartPointZ_ = viewer->viewport().projectToViewportSpace( worldStartPoint_ ).z;
+    pressed_ = true;
     return true;
+}
+
+bool RayWidget::onDragEnd_( Viewer::MouseButton, int )
+{
+    return std::exchange( pressed_, false );
 }
 
 bool RayWidget::onDrag_( int x, int y )
 {
+    if ( !pressed_ )
+        return false;
     Viewer * viewer = Viewer::instance();
     Vector3f viewportEnd = viewer->screenToViewport( Vector3f( float( x ), float( y ), 0.f ), viewer->viewport().id );
     Vector3f worldEndPoint = viewer->viewport().unprojectFromViewportSpace( { viewportEnd.x, viewportEnd.y, viewportStartPointZ_ } );

@@ -10,7 +10,7 @@ namespace MR
 
 /// Widget for visualizing a ray or axis (origin point and direction)
 /// Based on DirectionWidget
-class RayWidget : public MultiListener<DragStartListener, DragListener, MouseClickListener>
+class RayWidget : public MultiListener<DragStartListener, DragListener, DragEndListener, MouseClickListener>
 {
 public:
     /// This callback is invoked every time when the ray is changed by mouse
@@ -28,6 +28,7 @@ private:
     Line3f line_;
     float length_ = 0.0f;
     bool settingDir_ = false;
+    bool pressed_ = false; // this widget accepted the current drag start
     // Dragging parameters
     Vector3f worldStartOrg_;
     Vector3f worldStartPoint_;
@@ -70,6 +71,7 @@ public:
 private:
     virtual bool onDragStart_( MouseButton button, int modifiers ) override;
     virtual bool onDrag_( int x, int y ) override;
+    virtual bool onDragEnd_( MouseButton button, int modifiers ) override;
     virtual bool onMouseClick_( MouseButton button, int modifiers ) override;
 };
 

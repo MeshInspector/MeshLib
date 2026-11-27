@@ -350,8 +350,10 @@ SymMatrix3<T> SymMatrix3<T>::pseudoinverse( T tol, int * rank, Vector3<T> * spac
     // and lambdaMax <= trace; rounding errors (about eps * trace^3) can make the determinant and the minors of a rank-1 matrix positive
     // and pass that check, so also det > tol^2 * (trace/3)^3 is required: it holds if lambdaMin > tol * lambdaMax, since then det > tol^2 * lambdaMax^3;
     // the tolerance here is at least cbrt(eps): the error of the direct inverse is about eps / tol <= eps^(2/3),
-    // and tol^2 / 27 >= eps^(2/3) / 27 is far above the rounding errors of a rank-1 matrix
-    const auto dirTol = std::max( tol, std::cbrt( std::numeric_limits<T>::epsilon() ) );
+    // and tol^2 / 27 >= eps^(2/3) / 27 is far above the rounding errors of a rank-1 matrix;
+    // eps = 2^(1 - digits), and its cube root is rounded up to a power of two to be computed at compile time
+    constexpr T cMinDirTol = T( 1 ) / T( 1ull << ( ( std::numeric_limits<T>::digits - 1 ) / 3 ) );
+    const auto dirTol = std::max( tol, cMinDirTol );
     if ( xx > 0 )
     {
         const auto mxy = xx * yy - xy * xy;

@@ -378,7 +378,7 @@ SymMatrix3<T> SymMatrix3<T>::pseudoinverse( T tol, int * rank, Vector3<T> * spac
             const auto mxz = xx * zz - xz * xz;
             const auto tr = trace();
             const auto dirTol = std::max( tol, detail::cCbrtEpsilon<T> );
-            if ( d > 0 && d > dirTol * tr * ( mxy + mxz + myz ) && d > sqr( dirTol ) * tr * tr * tr / 27 )
+            if ( d > 0 && d > dirTol * tr * ( mxy + mxz + myz ) && 27 * d > sqr( dirTol ) * tr * tr * tr )
             {
                 if ( rank )
                     *rank = 3;

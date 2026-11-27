@@ -1,5 +1,6 @@
 #pragma once
 
+#include "exports.h"
 #include <MRMesh/MRMeshFwd.h>
 #include <MRMesh/MRExpected.h>
 #include <MRMesh/MRImage.h>
@@ -107,5 +108,27 @@ inline Json::Value scannerParam( std::string key, std::string label, std::string
     p["value"] = std::move( value );
     return p;
 }
+
+/// The scanner backends registered by ScannerBackendAdder, for the Scanner tool
+struct ScannerBackendRegistry
+{
+    /// in registration order: the tool lists them so, and opens the first one unless another is saved
+    std::vector<std::unique_ptr<IScannerBackend>> backends;
+    /// set by the Scanner tool: called before a backend is unregistered and destroyed
+    std::function<void( const IScannerBackend& )> onUnregister;
+};
+MRVIEWER_API ScannerBackendRegistry& getScannerBackendRegistry();
+
+/// Registers a scanner backend for the Scanner tool on module loading, and unregisters it on module unloading,
+/// closing the tool first if it works with that backend; the tool is unavailable while no backend is registered
+class ScannerBackendAdder
+{
+public:
+    MRVIEWER_API explicit ScannerBackendAdder( std::unique_ptr<IScannerBackend> backend );
+    MRVIEWER_API ~ScannerBackendAdder();
+
+private:
+    const IScannerBackend* backend_;
+};
 
 } // namespace MR

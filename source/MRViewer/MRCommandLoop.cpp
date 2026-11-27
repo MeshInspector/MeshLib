@@ -182,8 +182,7 @@ Expected<bool> CommandLoop::addCommand_( CommandFunc func, bool blockThread, Sta
         return true;
     }
     // no `setMainThreadId` yet: nobody will ever call `processCommands`, so the wait below cannot end
-    const bool loopStarted = inst.mainThreadId_ != std::thread::id{};
-    if ( blockThread && !loopStarted )
+    if ( blockThread && inst.mainThreadId_ == std::thread::id{} )
     {
         spdlog::debug( "CommandLoop::addCommand_: cannot block on a command loop that was never started" );
         return unexpected( std::string( "Viewer command loop is not running, cannot run the command" ) );
@@ -193,10 +192,7 @@ Expected<bool> CommandLoop::addCommand_( CommandFunc func, bool blockThread, Sta
     // post with the mutex released: on Emscripten `postEmptyEvent` locks the viewer event queue,
     // which runs its callbacks under that lock, and a callback may call into CommandLoop
     lock.unlock();
-    // before `setMainThreadId` there is no loop to wake and no GL yet, so do not construct the viewer:
-    // a tool registered in MRViewer's own static initialization appends a command from its constructor
-    if ( loopStarted )
-        getViewerInstance().postEmptyEvent();
+    getViewerInstance().postEmptyEvent();
     if ( blockThread )
     {
         lock.lock();

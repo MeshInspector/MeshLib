@@ -12,6 +12,12 @@ msgstr ""
 msgid "Move one object so that its fitted features meet the matching features of another object."
 msgstr ""
 
+msgid "Scanner"
+msgstr ""
+
+msgid "Open the Scanner window to capture 3D data from a 3D scanner or a camera."
+msgstr ""
+
 msgid "Undo"
 msgstr ""
 
@@ -328,5 +334,9 @@ msgstr ""
 
 msgctxt "Tab name"
 msgid "Test"
+msgstr ""
+
+msgctxt "Tab name"
+msgid "Experimental"
 msgstr ""
 

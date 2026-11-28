@@ -10,46 +10,70 @@
 namespace MR
 {
 
-float findMaxDistanceSqOneWay( const Polyline3& a, const Polyline3& b, const AffineXf3f* rigidB2A, float maxDistanceSq )
+PolylinePolylineDistanceResult findMaxDistanceOneWay( const Polyline3& a, const Polyline3& b, const AffineXf3f* rigidB2A, float maxDistanceSq )
 {
     MR_TIMER;
 
+    PolylinePolylineDistanceResult res;
     const auto& validVerts = b.topology.getValidVerts();
-    if ( !a.topology.lastNotLoneEdge().valid() )
-        return validVerts.any() ? maxDistanceSq : 0.0f; // nothing to measure the distance to
+    const auto firstVert = validVerts.find_first();
+    if ( !firstVert )
+        return res;
 
+    if ( !a.topology.lastNotLoneEdge().valid() )
+    {
+        // nothing to measure the distance to
+        res.b = b.toEdgePoint( firstVert );
+        res.distSq = maxDistanceSq;
+        return res;
+    }
+
+    auto inA = [&]( VertId v ) { return rigidB2A ? ( *rigidB2A )( b.points[v] ) : b.points[v]; };
+
+    struct VertDist
+    {
+        VertId v;
+        float distSq = -1;
+    };
     a.getAABBTree(); // prepare the tree before the parallel region
-    return tbb::parallel_reduce
+    // of several equally distant vertices, the one with the smallest id is taken
+    const auto best = tbb::parallel_reduce
     (
-        tbb::blocked_range( 0_v, validVerts.endId() ),
-        0.0f,
-        [&] ( const tbb::blocked_range<VertId>& range, float init )
+        tbb::blocked_range( firstVert, validVerts.find_last() + 1 ),
+        VertDist{},
+        [&] ( const tbb::blocked_range<VertId>& range, VertDist init )
         {
             for ( VertId i = range.begin(); i < range.end(); ++i )
             {
                 if ( !validVerts.test( i ) )
                     continue;
-
-                auto distSq = findProjectionOnPolyline( rigidB2A ? (*rigidB2A)( b.points[i] ) : b.points[i], a, maxDistanceSq ).distSq;
-                if ( distSq > init )
-                    init = distSq;
+                const auto distSq = findProjectionOnPolyline( inA( i ), a, maxDistanceSq ).distSq;
+                if ( distSq > init.distSq )
+                    init = { i, distSq };
             }
-
             return init;
         },
-        [] ( float a, float b ) -> float
-        {
-            return a > b ? a : b;
-        }
+        [] ( const VertDist& x, const VertDist& y ) { return y.distSq > x.distSq ? y : x; }
     );
+
+    const auto proj = findProjectionOnPolyline( inA( best.v ), a, maxDistanceSq );
+    if ( proj.valid() )
+        res.a = a.toEdgePoint( EdgeId( proj.line ), proj.point );
+    res.b = b.toEdgePoint( best.v );
+    res.distSq = proj.distSq;
+    return res;
 }
 
-float findMaxDistanceSq( const Polyline3& a, const Polyline3& b, const AffineXf3f* rigidB2A, float maxDistanceSq )
+PolylinePolylineDistanceResult findMaxDistance( const Polyline3& a, const Polyline3& b, const AffineXf3f* rigidB2A, float maxDistanceSq )
 {
     std::optional<AffineXf3f> rigidA2B;
     if ( rigidB2A )
         rigidA2B = rigidB2A->inverse();
-    return std::max( findMaxDistanceSqOneWay( a, b, rigidB2A, maxDistanceSq ), findMaxDistanceSqOneWay( b, a, rigidA2B ? &*rigidA2B : nullptr, maxDistanceSq ) );
+    auto res = findMaxDistanceOneWay( a, b, rigidB2A, maxDistanceSq );
+    const auto ba = findMaxDistanceOneWay( b, a, rigidA2B ? &*rigidA2B : nullptr, maxDistanceSq );
+    if ( ba.distSq > res.distSq )
+        res = { ba.b, ba.a, ba.distSq };
+    return res;
 }
 
 } //namespace MR

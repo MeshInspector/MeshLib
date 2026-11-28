@@ -12,6 +12,8 @@
 
 #include <tinyxml2.h>
 
+#include <fstream>
+
 #include <variant>
 
 // required for parsing lists of points
@@ -373,11 +375,6 @@ void close( Contour2f& contour )
 class SvgLoader
 {
 public:
-    explicit SvgLoader( const std::filesystem::path& path )
-    {
-        const auto pathStr = utf8string( path );
-        doc_.LoadFile( pathStr.c_str() );
-    }
     explicit SvgLoader( const char* data, size_t size )
     {
         doc_.Parse( data, size );
@@ -712,16 +709,14 @@ private:
 
 } // namespace
 
-Expected<Polyline3> fromSvg( const std::filesystem::path& file, const LinesLoadSettings& )
+Expected<Polyline3> fromSvg( const std::filesystem::path& file, const LinesLoadSettings& settings )
 {
-    SvgLoader loader( file );
-    if ( !loader )
-        return unexpected( loader.error() );
+    // tinyxml2 opens a file by narrow name, which does not support Unicode names on Windows
+    std::ifstream in( file, std::ifstream::binary );
+    if ( !in )
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
 
-    return loader.parse().transform( [] ( Polyline2&& polyline2 )
-    {
-        return polyline2.toPolyline<Vector3f>();
-    } );
+    return addFileNameInError( fromSvg( in, settings ), file );
 }
 
 Expected<Polyline3> fromSvg( std::istream& in, const LinesLoadSettings& settings )

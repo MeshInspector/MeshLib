@@ -6,6 +6,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRMesh/MRUniqueTemporaryFolder.h"
 #include "MRMesh/MRImageSave.h"
+#include "MRMesh/MRIOParsing.h"
 #include "MRPng.h"
 #include "MRPch/MRFmt.h"
 
@@ -489,7 +490,16 @@ void Pdf::addImageFromFile( const std::filesystem::path& imagePath, const ImageP
         return;
     }
 
-    HPDF_Image pdfImage = MR_HPDF_CHECK_ERROR( HPDF_LoadPngImageFromFile( state_->document, utf8string( imagePath ).c_str() ) );
+    // libharu opens a file by narrow name, which does not support Unicode names on Windows
+    std::ifstream in( imagePath, std::ifstream::binary );
+    const auto data = readCharBuffer( in );
+    if ( !data || data->empty() )
+    {
+        spdlog::warn( "Pdf: can't add image from file: cannot read {}", utf8string( imagePath ) );
+        return;
+    }
+
+    HPDF_Image pdfImage = MR_HPDF_CHECK_ERROR( HPDF_LoadPngImageFromMem( state_->document, (const HPDF_BYTE*) data->data(), (HPDF_UINT) data->size() ) );
     addImage_( { pdfImage }, params );
 }
 

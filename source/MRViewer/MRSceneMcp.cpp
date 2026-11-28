@@ -12,6 +12,7 @@
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRConstants.h"
 #include "MRMesh/MRExpected.h"
+#include "MRMesh/MRIOParsing.h"
 #include "MRMesh/MRMatrix3Decompose.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MROnInit.h"
@@ -422,9 +423,9 @@ static nlohmann::json mcpSceneGetObject( const nlohmann::json& args )
             if ( !saved )
                 throw std::runtime_error( saved.error() );
             std::ifstream in( path, std::ios::binary );
-            if ( !in )
+            const auto bytes = readCharBuffer( in );
+            if ( !bytes )
                 throw std::runtime_error( fmt::format( "Could not read back temp file {}", utf8string( path ) ) );
-            std::vector<std::uint8_t> bytes( ( std::istreambuf_iterator<char>( in ) ), std::istreambuf_iterator<char>() );
 
             // MCP-spec embedded-resource block. URN form because the resource is
             // ephemeral (regenerated per call) — the URI is an identity label, not
@@ -440,7 +441,7 @@ static nlohmann::json mcpSceneGetObject( const nlohmann::json& args )
                         { "resource", {
                             { "uri",      urn },
                             { "mimeType", mimeForExt( ext ) },
-                            { "blob",     encode64( bytes.data(), bytes.size() ) },
+                            { "blob",     encode64( ( const std::uint8_t* )bytes->data(), bytes->size() ) },
                         } },
                     },
                 } ) },

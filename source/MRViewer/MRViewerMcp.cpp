@@ -5,6 +5,7 @@
 #include "MRMesh/MRBase64.h"
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRFinally.h"
+#include "MRMesh/MRIOParsing.h"
 #include "MRMesh/MRImage.h"
 #include "MRMesh/MRImageLoad.h"
 #include "MRMesh/MRImageSave.h"
@@ -340,16 +341,16 @@ static nlohmann::json mcpViewerCaptureScreenshot( const nlohmann::json& args )
     if ( !saved )
         throw std::runtime_error( saved.error() );
     std::ifstream in( path, std::ios::binary );
-    if ( !in )
+    const auto bytes = readCharBuffer( in );
+    if ( !bytes )
         throw std::runtime_error( fmt::format( "Could not read back temp file {}", utf8string( path ) ) );
-    std::vector<std::uint8_t> bytes( ( std::istreambuf_iterator<char>( in ) ), std::istreambuf_iterator<char>() );
 
     // MCP image content block + structured {width, height}.
     return nlohmann::json{
         { "content", nlohmann::json::array( {
             {
                 { "type", "image" },
-                { "data", encode64( bytes.data(), bytes.size() ) },
+                { "data", encode64( ( const std::uint8_t* )bytes->data(), bytes->size() ) },
                 { "mimeType", "image/png" },
             },
         } ) },

@@ -50,6 +50,8 @@ public:
     Line3<T> mainAxis;
     T radius = 0;
     T length = 0;
+
+    friend bool operator ==( const Cylinder3& a, const Cylinder3& b ) = default;
 };
 
 } // namespace MR

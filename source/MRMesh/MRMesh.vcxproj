@@ -431,6 +431,7 @@
     <ClInclude Include="MRMeshEigen.h" />
     <ClInclude Include="MRMeshFillHole.h" />
     <ClInclude Include="MRMeshNormals.h" />
+    <ClInclude Include="MRMeshSmoothSurfaces.h" />
     <ClInclude Include="MRMeshRelax.h" />
     <ClInclude Include="MRMeshSave.h" />
     <ClInclude Include="MRMeshOrTriMesh.h" />
@@ -792,6 +793,7 @@
     <ClCompile Include="MRMeshEigen.cpp" />
     <ClCompile Include="MRMeshFillHole.cpp" />
     <ClCompile Include="MRMeshNormals.cpp" />
+    <ClCompile Include="MRMeshSmoothSurfaces.cpp" />
     <ClCompile Include="MRMeshRelax.cpp" />
     <ClCompile Include="MRMeshSave.cpp" />
     <ClCompile Include="MRTriMesh.cpp" />

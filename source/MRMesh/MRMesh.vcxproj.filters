@@ -723,6 +723,9 @@
     <ClInclude Include="MRRelaxParams.h">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
+    <ClInclude Include="MRMeshSmoothSurfaces.h">
+      <Filter>Source Files\Algorithms</Filter>
+    </ClInclude>
     <ClInclude Include="MRMeshRelax.h">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
@@ -1981,6 +1984,9 @@
     </ClCompile>
     <ClCompile Include="MRPolylineSubdivide.cpp">
       <Filter>Source Files\Polyline</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshSmoothSurfaces.cpp">
+      <Filter>Source Files\Algorithms</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshRelax.cpp">
       <Filter>Source Files\Algorithms</Filter>

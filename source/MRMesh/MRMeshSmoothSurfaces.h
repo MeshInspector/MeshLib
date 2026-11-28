@@ -1,0 +1,87 @@
+#pragma once
+
+#include "MRMeshFwd.h"
+#include "MRCone3.h"
+#include "MRCylinder3.h"
+#include "MRExpected.h"
+#include "MRId.h"
+#include "MRPlane3.h"
+#include "MRProgressCallback.h"
+#include "MRSphere.h"
+#include "MRTorus3.h"
+#include "MRVector.h"
+
+#include <memory>
+#include <variant>
+
+namespace MR
+{
+
+struct FittedBSplineSurface;
+
+/// a smooth surface fitted to a region of a mesh:
+/// - the plane has unit normal;
+/// - the cylinder has unit direction, and its center and length span the vertices of the region along the axis;
+/// - the cone has unit direction from its apex to the region, and its height spans the vertices of the region;
+/// - the torus has unit axis;
+/// - the B-spline surface is fitted to a region with one boundary loop, where analytic surfaces are far from the vertices
+using SmoothSurface = std::variant<Plane3d, Cylinder3d, Cone3d, Sphere3d, Torus3d, std::shared_ptr<const FittedBSplineSurface>>;
+
+struct FittedSmoothSurface
+{
+    SmoothSurface surface;
+
+    /// root-mean-square distance from the vertices of the region to the surface
+    float rms = 0;
+
+    /// maximum distance from the vertices of the region to the surface
+    float maxDist = 0;
+
+    friend bool operator ==( const FittedSmoothSurface& a, const FittedSmoothSurface& b ) = default;
+};
+
+struct FitSmoothSurfacesSettings
+{
+    /// if the root-mean-square distance from the vertices of a region to its best analytic surface is above this value,
+    /// then a B-spline surface is fitted to the region with this maximum distance from the vertices, and taken if it is 1.5 times closer;
+    /// if not positive, then 2.5 times the median of these distances over all regions is taken:
+    /// most regions are expected to be analytic, and then the distances are the noise of the mesh;
+    /// fitSmoothSurface of a single region does not try B-spline surfaces if this value is not positive
+    float bsplineThreshold = 0;
+
+    /// if false, then only analytic surfaces are fitted
+    bool allowBSplines = true;
+};
+
+struct MeshSmoothSurfaces
+{
+    /// the surface of every region; the regions without faces get planes with zero normals
+    Vector<FittedSmoothSurface, RegionId> surfaces;
+
+    /// the threshold actually used, see FitSmoothSurfacesSettings::bsplineThreshold
+    float bsplineThreshold = 0;
+};
+
+/// fits a surface to every region of the mesh: the simplest of plane, cylinder, cone, sphere and torus, unless a more complex one
+/// is 1.5 times closer to the vertices of the region; curved surfaces fitted to a different shape are rejected (if the normals of more than 20%
+/// of the area of the region differ by more than 45 degrees from the normals of the surface, or if a surface of revolution is cut
+/// by the region only on one side, e.g. a cylinder fitted to a small bump); the regions far from all analytic surfaces get B-spline surfaces;
+/// the regions are given by the faces of the mesh, e.g. selected by the user or found by MeshComponents::getAllComponentsMap with separating edges;
+/// \param face2region the region of every valid face of the mesh
+/// \return an error if the mesh has no triangles or zero size, or the operation is canceled
+[[nodiscard]] MRMESH_API Expected<MeshSmoothSurfaces> fitSmoothSurfaces( const Mesh& mesh, const Face2RegionMap& face2region,
+    const FitSmoothSurfacesSettings& settings = {}, const ProgressCallback& progress = {} );
+
+/// fits a surface to one region of the mesh in the same way as fitSmoothSurfaces;
+/// \param mp the mesh and its region, the whole mesh if the region is null
+/// \return an error if the region has no triangles or the mesh has zero size
+[[nodiscard]] MRMESH_API Expected<FittedSmoothSurface> fitSmoothSurface( const MeshPart& mp, const FitSmoothSurfacesSettings& settings = {} );
+
+/// signed distance from the point to the surface: positive outside of sphere, torus, cylinder and cone (away from the axis),
+/// and in the direction of the normal of plane and B-spline surface; cylinder and cone are infinite here
+[[nodiscard]] MRMESH_API double signedDistance( const SmoothSurface& s, const Vector3d& p );
+
+/// unit normal of the surface at its point closest to given one, directed as in signedDistance
+[[nodiscard]] MRMESH_API Vector3d surfaceNormal( const SmoothSurface& s, const Vector3d& p );
+
+} //namespace MR

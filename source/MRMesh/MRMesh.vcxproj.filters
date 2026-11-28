@@ -723,7 +723,7 @@
     <ClInclude Include="MRRelaxParams.h">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
-    <ClInclude Include="MRMeshRegionSurfaces.h">
+    <ClInclude Include="MRMeshSmoothSurfaces.h">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshRelax.h">
@@ -1248,7 +1248,7 @@
     <ClInclude Include="MRNewValuesStorage.hpp">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
-    <ClInclude Include="MRMeshRegionSurfacesSurf.hpp">
+    <ClInclude Include="MRSmoothSurfaceFit.hpp">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshRelax.hpp">
@@ -1988,10 +1988,10 @@
     <ClCompile Include="MRPolylineSubdivide.cpp">
       <Filter>Source Files\Polyline</Filter>
     </ClCompile>
-    <ClCompile Include="MRMeshRegionSurfaces.cpp">
+    <ClCompile Include="MRMeshSmoothSurfaces.cpp">
       <Filter>Source Files\Algorithms</Filter>
     </ClCompile>
-    <ClCompile Include="MRMeshRegionSurfacesSurf.cpp">
+    <ClCompile Include="MRSmoothSurfaceFit.cpp">
       <Filter>Source Files\Algorithms</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshRelax.cpp">

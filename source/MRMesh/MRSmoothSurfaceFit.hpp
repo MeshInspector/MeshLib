@@ -15,7 +15,7 @@
 namespace MR
 {
 
-namespace RegionSurfaces
+namespace SmoothSurfaceFit
 {
 
 using V3 = Vector3d;
@@ -122,6 +122,6 @@ std::optional<Surf> fitRevolution( const Vector<V3>& pts, const Vector<V3>& pc, 
 /// minimizes the sum of squared distances from the points to the surface by Levenberg-Marquardt method
 Surf refine( const Surf& s0, const Vector<V3>& pts );
 
-} //namespace RegionSurfaces
+} //namespace SmoothSurfaceFit
 
 } //namespace MR

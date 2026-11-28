@@ -1,5 +1,5 @@
-#include "MRMeshRegionSurfaces.h"
-#include "MRMeshRegionSurfacesSurf.hpp"
+#include "MRMeshSmoothSurfaces.h"
+#include "MRSmoothSurfaceFit.hpp"
 #include "MRBitSet.h"
 #include "MRBox.h"
 #include "MRLine3.h"
@@ -16,7 +16,7 @@ namespace MR
 namespace
 {
 
-using namespace RegionSurfaces;
+using namespace SmoothSurfaceFit;
 
 /// the mesh in the form convenient for the fitting
 struct Data
@@ -208,7 +208,7 @@ std::optional<Fit> fitBSpline( const Data& d, const Vector<FaceId>& faces )
 }
 
 /// the surface in the public form
-RegionSurface toRegionSurface( const Surf& s, const Vector<V3>& pts )
+SmoothSurface toSmoothSurface( const Surf& s, const Vector<V3>& pts )
 {
     switch ( s.type )
     {
@@ -241,8 +241,8 @@ RegionSurface toRegionSurface( const Surf& s, const Vector<V3>& pts )
 
 } //anonymous namespace
 
-Expected<MeshRegionSurfaces> fitRegionSurfaces( const Mesh& mesh, const Face2RegionMap& face2region,
-    const FitRegionSurfacesSettings& settings, const ProgressCallback& progress )
+Expected<MeshSmoothSurfaces> fitSmoothSurfaces( const Mesh& mesh, const Face2RegionMap& face2region,
+    const FitSmoothSurfacesSettings& settings, const ProgressCallback& progress )
 {
     MR_TIMER;
     const auto& topology = mesh.topology;
@@ -306,7 +306,7 @@ Expected<MeshRegionSurfaces> fitRegionSurfaces( const Mesh& mesh, const Face2Reg
     }, subprogress( progress, 0.5f, 1.0f ) ) )
         return unexpectedOperationCanceled();
 
-    MeshRegionSurfaces res;
+    MeshSmoothSurfaces res;
     res.bsplineThreshold = float( d.bsplineThreshold );
     res.surfaces.resize( faces.size(), { .surface = Plane3d() } );
     for ( RegionId r( 0 ); r < fits.endId(); ++r )
@@ -314,7 +314,7 @@ Expected<MeshRegionSurfaces> fitRegionSurfaces( const Mesh& mesh, const Face2Reg
         if ( faces[r].empty() )
             continue;
         res.surfaces[r] = {
-            .surface = toRegionSurface( fits[r].surf, d.pointsOf( faces[r] ) ),
+            .surface = toSmoothSurface( fits[r].surf, d.pointsOf( faces[r] ) ),
             .rms = float( fits[r].rms ),
             .maxDist = float( fits[r].maxDist )
         };

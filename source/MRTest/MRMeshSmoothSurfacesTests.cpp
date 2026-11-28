@@ -1,4 +1,4 @@
-#include <MRMesh/MRMeshRegionSurfaces.h>
+#include <MRMesh/MRMeshSmoothSurfaces.h>
 #include <MRMesh/MRCylinder.h>
 #include <MRMesh/MRFittedBSplineSurface.h>
 #include <MRMesh/MRMakePlane.h>
@@ -13,13 +13,13 @@
 namespace MR
 {
 
-TEST( MRMesh, FitRegionSurfaces )
+TEST( MRMesh, FitSmoothSurfaces )
 {
     // regions separated by the sharp edges
     const auto cyl = makeCylinder( 1.0f, 3.0f, 32 );
     const auto [cylRegions, numCylRegions] = MeshComponents::getAllComponentsMapBySharpEdges( cyl );
     EXPECT_EQ( numCylRegions, 3 );
-    auto res = fitRegionSurfaces( cyl, cylRegions );
+    auto res = fitSmoothSurfaces( cyl, cylRegions );
     ASSERT_TRUE( res.has_value() );
     ASSERT_EQ( res->surfaces.size(), 3 );
     int planes = 0, cylinders = 0;
@@ -43,7 +43,7 @@ TEST( MRMesh, FitRegionSurfaces )
     auto sphere = makeUVSphere( 1.0f, 32, 32 );
     for ( VertId v : sphere.topology.getValidVerts() )
         sphere.points[v] += 0.01f * Vector3f( std::sin( 12.9898f * float( v ) ), std::sin( 78.233f * float( v ) ), std::sin( 37.719f * float( v ) ) );
-    res = fitRegionSurfaces( sphere, Face2RegionMap( sphere.topology.faceSize(), RegionId( 0 ) ) );
+    res = fitSmoothSurfaces( sphere, Face2RegionMap( sphere.topology.faceSize(), RegionId( 0 ) ) );
     ASSERT_TRUE( res.has_value() );
     ASSERT_EQ( res->surfaces.size(), 1 );
     const auto* s = std::get_if<Sphere3d>( &res->surfaces.front().surface );
@@ -53,7 +53,7 @@ TEST( MRMesh, FitRegionSurfaces )
     EXPECT_LT( res->surfaces.front().rms, 0.02f );
 
     const auto torusMesh = makeTorus( 2.0f, 0.5f, 32, 32 );
-    res = fitRegionSurfaces( torusMesh, Face2RegionMap( torusMesh.topology.faceSize(), RegionId( 0 ) ) );
+    res = fitSmoothSurfaces( torusMesh, Face2RegionMap( torusMesh.topology.faceSize(), RegionId( 0 ) ) );
     ASSERT_TRUE( res.has_value() );
     const auto* t = std::get_if<Torus3d>( &res->surfaces.front().surface );
     ASSERT_TRUE( t );
@@ -66,14 +66,14 @@ TEST( MRMesh, FitRegionSurfaces )
     for ( auto& p : wave.points )
         p.z = 0.1f * std::sin( 4 * p.x ) * std::cos( 3 * p.y );
     const Face2RegionMap waveRegions( wave.topology.faceSize(), RegionId( 0 ) );
-    res = fitRegionSurfaces( wave, waveRegions, { .bsplineThreshold = 1e-3f } );
+    res = fitSmoothSurfaces( wave, waveRegions, { .bsplineThreshold = 1e-3f } );
     ASSERT_TRUE( res.has_value() );
     const auto* bs = std::get_if<std::shared_ptr<const FittedBSplineSurface>>( &res->surfaces.front().surface );
     ASSERT_TRUE( bs && *bs );
     EXPECT_LT( res->surfaces.front().maxDist, 1e-3f );
     EXPECT_NEAR( (*bs)->maxError, res->surfaces.front().maxDist, 1e-6 );
 
-    res = fitRegionSurfaces( wave, waveRegions, { .bsplineThreshold = 1e-3f, .allowBSplines = false } );
+    res = fitSmoothSurfaces( wave, waveRegions, { .bsplineThreshold = 1e-3f, .allowBSplines = false } );
     ASSERT_TRUE( res.has_value() );
     EXPECT_FALSE( std::holds_alternative<std::shared_ptr<const FittedBSplineSurface>>( res->surfaces.front().surface ) );
 }

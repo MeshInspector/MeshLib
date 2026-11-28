@@ -43,7 +43,7 @@
     <ClCompile Include="MRChunkIterator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MRMeshRegionSurfacesTests.cpp">
+    <ClCompile Include="MRMeshSmoothSurfacesTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshTests.cpp">

@@ -1,4 +1,4 @@
-#include "MRMeshRegionSurfacesSurf.hpp"
+#include "MRSmoothSurfaceFit.hpp"
 #include "MRBestFit.h"
 #include "MRLine3.h"
 #include "MRMatrix3.h"
@@ -7,7 +7,7 @@
 namespace MR
 {
 
-namespace RegionSurfaces
+namespace SmoothSurfaceFit
 {
 
 namespace
@@ -162,6 +162,6 @@ Surf refine( const Surf& s0, const Vector<V3>& pts )
     return res.finite() ? res : s0;
 }
 
-} //namespace RegionSurfaces
+} //namespace SmoothSurfaceFit
 
 } //namespace MR

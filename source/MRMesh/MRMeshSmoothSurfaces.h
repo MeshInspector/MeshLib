@@ -25,11 +25,11 @@ struct FittedBSplineSurface;
 /// - the cone has unit direction from its apex to the region, and its height spans the vertices of the region;
 /// - the torus has unit axis;
 /// - the B-spline surface is fitted to a region with one boundary loop, where analytic surfaces are far from the vertices
-using RegionSurface = std::variant<Plane3d, Cylinder3d, Cone3d, Sphere3d, Torus3d, std::shared_ptr<const FittedBSplineSurface>>;
+using SmoothSurface = std::variant<Plane3d, Cylinder3d, Cone3d, Sphere3d, Torus3d, std::shared_ptr<const FittedBSplineSurface>>;
 
-struct FittedRegionSurface
+struct FittedSmoothSurface
 {
-    RegionSurface surface;
+    SmoothSurface surface;
 
     /// root-mean-square distance from the vertices of the region to the surface
     float rms = 0;
@@ -37,10 +37,10 @@ struct FittedRegionSurface
     /// maximum distance from the vertices of the region to the surface
     float maxDist = 0;
 
-    friend bool operator ==( const FittedRegionSurface& a, const FittedRegionSurface& b ) = default;
+    friend bool operator ==( const FittedSmoothSurface& a, const FittedSmoothSurface& b ) = default;
 };
 
-struct FitRegionSurfacesSettings
+struct FitSmoothSurfacesSettings
 {
     /// if the root-mean-square distance from the vertices of a region to its best analytic surface is above this value,
     /// then a B-spline surface is fitted to the region with this maximum distance from the vertices, and taken if it is 1.5 times closer;
@@ -52,12 +52,12 @@ struct FitRegionSurfacesSettings
     bool allowBSplines = true;
 };
 
-struct MeshRegionSurfaces
+struct MeshSmoothSurfaces
 {
     /// the surface of every region; the regions without faces get planes with zero normals
-    Vector<FittedRegionSurface, RegionId> surfaces;
+    Vector<FittedSmoothSurface, RegionId> surfaces;
 
-    /// the threshold actually used, see FitRegionSurfacesSettings::bsplineThreshold
+    /// the threshold actually used, see FitSmoothSurfacesSettings::bsplineThreshold
     float bsplineThreshold = 0;
 };
 
@@ -68,7 +68,7 @@ struct MeshRegionSurfaces
 /// the regions are given by the faces of the mesh, e.g. selected by the user or found by MeshComponents::getAllComponentsMap with separating edges;
 /// \param face2region the region of every valid face of the mesh
 /// \return an error if the mesh has no triangles or zero size, or the operation is canceled
-[[nodiscard]] MRMESH_API Expected<MeshRegionSurfaces> fitRegionSurfaces( const Mesh& mesh, const Face2RegionMap& face2region,
-    const FitRegionSurfacesSettings& settings = {}, const ProgressCallback& progress = {} );
+[[nodiscard]] MRMESH_API Expected<MeshSmoothSurfaces> fitSmoothSurfaces( const Mesh& mesh, const Face2RegionMap& face2region,
+    const FitSmoothSurfacesSettings& settings = {}, const ProgressCallback& progress = {} );
 
 } //namespace MR

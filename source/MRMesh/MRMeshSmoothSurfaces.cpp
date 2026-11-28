@@ -486,7 +486,7 @@ Expected<MeshSmoothSurfaces> fitSmoothSurfaces( const Mesh& mesh, const Face2Reg
     if ( !( d->bsplineThreshold > 0 ) )
     {
         // the noise of the mesh: most regions are expected to have analytic surfaces
-        std::vector<double> rms;
+        Vector<double> rms;
         for ( RegionId r( 0 ); r < fits.endId(); ++r )
             if ( !faces[r].empty() )
                 rms.push_back( fits[r].rms );

@@ -19,25 +19,12 @@ static std::string getVolumeShaderCommonFunctions()
     return texture( denseMap, vec2( value, 0.5 ) ).a;
   }
 
-  void swap( inout float a, inout float b )
-  {
-    float c = a;
-    a = b;
-    b = c;
-  }
-
   void rayVoxelIntersection( in vec3 minCorner, inout vec3 voxelCoord, in vec3 voxelSize,inout vec3 rayOrg, in vec3 ray )
   {
     vec3 voxelMin = voxelCoord * voxelSize + minCorner - rayOrg;
     vec3 voxelMax = (voxelCoord + vec3(1.0,1.0,1.0) ) * voxelSize + minCorner - rayOrg;
-    vec3 minInt = voxelMin / ray;
-    vec3 maxInt = voxelMax / ray;
-    if ( ray.x < 0.0 )
-        swap( minInt.x, maxInt.x );
-    if ( ray.y < 0.0 )
-        swap( minInt.y, maxInt.y );
-    if ( ray.z < 0.0 )
-        swap( minInt.z, maxInt.z );
+    vec3 minInt = min( voxelMin / ray, voxelMax / ray );
+    vec3 maxInt = max( voxelMin / ray, voxelMax / ray );
 
     bvec3 goodRayComp = greaterThan( abs( ray ), vec3(0.001,0.001,0.001) ); // discard small ray components
     float absMinInt = -1.0e20; // just some small value
@@ -75,6 +62,37 @@ static std::string getVolumeShaderCommonFunctions()
         voxelCoord.z = voxelCoord.z + sign(ray.z);
     else
         voxelCoord = voxelCoord + vec3(1.0,1.0,1.0);
+  }
+
+  // moves rayOrg to where the ray enters the box, returns false if the ray misses it
+  bool rayBoxEntry( in vec3 boxMin, in vec3 boxMax, inout vec3 rayOrg, in vec3 ray )
+  {
+    float tEnter = 0.0;
+    float tExit = 1.0e20;
+    for ( int i = 0; i < 3; ++i )
+    {
+      if ( abs( ray[i] ) > 1.0e-6 )
+      {
+        float t0 = ( boxMin[i] - rayOrg[i] ) / ray[i];
+        float t1 = ( boxMax[i] - rayOrg[i] ) / ray[i];
+        tEnter = max( tEnter, min( t0, t1 ) );
+        tExit = min( tExit, max( t0, t1 ) );
+      }
+      else if ( rayOrg[i] < boxMin[i] || rayOrg[i] > boxMax[i] )
+        return false;
+    }
+    if ( tEnter > tExit )
+      return false;
+    rayOrg = rayOrg + ray * tEnter;
+    return true;
+  }
+
+  // the voxel walk crosses at most dims.x+dims.y+dims.z voxels, a set step at most |diagonal|/step samples
+  int maxRaySteps( in vec3 dims, in vec3 diagonal, in float step )
+  {
+    if ( step <= 0.0 )
+      return int( 1.01 * ( dims.x + dims.y + dims.z ) ) + 3;
+    return int( length( diagonal ) * 1.01 / step ) + 3;
   }
 )";
 }
@@ -220,6 +238,7 @@ R"(
     vec3 dimStepVoxel = onesVec/dims;
     vec3 minPoint = voxelSize * minCorner;
     vec3 maxPoint = minPoint + vec3( dims.x * voxelSize.x, dims.y * voxelSize.y, dims.z * voxelSize.z );
+    vec3 diagonal = maxPoint - minPoint;
     
     bool firstFound = false;
     vec3 firstOpaque = vec3(0.0,0.0,0.0);
@@ -227,14 +246,17 @@ R"(
     vec3 textCoord = vec3(0.0,0.0,0.0);
     outColor = vec4(0.0,0.0,0.0,0.0);
 
+    if ( any( isnan( rayStart ) ) || any( isnan( normRayDir ) ) || !rayBoxEntry( minPoint - 0.001 * diagonal, maxPoint + 0.001 * diagonal, rayStart, normRayDir ) )
+        discard;
+
     vec3 startVoxel = floor(( rayStart - minPoint ) / voxelSize);
     startVoxel = mix( startVoxel, vec3(0.0,0.0,0.0), lessThan(startVoxel,vec3(0.0,0.0,0.0)) );
     startVoxel = mix( startVoxel, dims - vec3(1.0,1.0,1.0), greaterThan(startVoxel,dims - vec3(1.0,1.0,1.0)) );
 
-    vec3 diagonal = maxPoint - minPoint;
     uint dimsXY = uint( dims.y * dims.x );
     uint dimsX = uint( dims.x );
-    while ( outColor.a < 1.0 )
+    int maxSteps = maxRaySteps( dims, diagonal, step );
+    for ( int i = 0; i < maxSteps && outColor.a < 1.0; ++i )
     {
         if ( step <= 0.0 )
             rayVoxelIntersection( minPoint, startVoxel, voxelSize, rayStart, normRayDir);
@@ -383,18 +405,22 @@ R"(
 
     vec3 minPoint = voxelSize * minCorner;
     vec3 maxPoint = minPoint + vec3( dims.x * voxelSize.x, dims.y * voxelSize.y, dims.z * voxelSize.z );
+    vec3 diagonal = maxPoint - minPoint;
     
     bool firstFound = false;
     vec3 textCoord = vec3(0.0,0.0,0.0);
+
+    if ( any( isnan( rayStart ) ) || any( isnan( normRayDir ) ) || !rayBoxEntry( minPoint - 0.001 * diagonal, maxPoint + 0.001 * diagonal, rayStart, normRayDir ) )
+        discard;
 
     vec3 startVoxel = floor(( rayStart - minPoint ) / voxelSize);
     startVoxel = mix( startVoxel, vec3(0.0,0.0,0.0), lessThan(startVoxel,vec3(0.0,0.0,0.0)) );
     startVoxel = mix( startVoxel, dims - vec3(1.0,1.0,1.0), greaterThan(startVoxel,dims - vec3(1.0,1.0,1.0)) );
 
-    vec3 diagonal = maxPoint - minPoint;
     uint dimsXY = uint( dims.y * dims.x );
     uint dimsX = uint( dims.x );
-    while ( !firstFound )
+    int maxSteps = maxRaySteps( dims, diagonal, step );
+    for ( int i = 0; i < maxSteps && !firstFound; ++i )
     {
         if ( step <= 0.0 )
             rayVoxelIntersection( minPoint, startVoxel, voxelSize, rayStart, normRayDir);

@@ -111,7 +111,7 @@ bool Controller::spaceMouseDown_( int key )
         viewport.preciseFitDataToScreenBorder( { 0.9f } );
         return true;
     }
-	return false;
+    return false;
 }
 
 bool Controller::canDriverSendScroll() const

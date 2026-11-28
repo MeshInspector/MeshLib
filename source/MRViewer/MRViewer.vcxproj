@@ -179,6 +179,7 @@
     <ClCompile Include="MRFileDialogPortal.cpp" />
     <ClCompile Include="MRWin32MessageHandler.cpp" />
     <ClCompile Include="MRI18n.cpp" />
+    <ClCompile Include="MRTranslationFormat.cpp" />
     <ClCompile Include="MRUITestEngineControl.cpp" />
     <ClCompile Include="MRSceneStateCheck.cpp" />
     <ClCompile Include="MRUiMcp.cpp" />
@@ -371,6 +372,7 @@
     <ClInclude Include="MRFileDialogPortal.h" />
     <ClInclude Include="MRWin32MessageHandler.h" />
     <ClInclude Include="MRI18n.h" />
+    <ClInclude Include="MRTranslationFormat.h" />
     <ClInclude Include="MRLocaleMacos.h" />
     <ClInclude Include="MRUITestEngineControl.h" />
     <ClInclude Include="MRMcpCommon.h" />

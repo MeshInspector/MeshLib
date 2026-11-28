@@ -1,5 +1,6 @@
 #include "MRLocale.h"
 #ifndef MRVIEWER_NO_LOCALE
+#include "MRTranslationFormat.h"
 #include "MRMesh/MRDirectory.h"
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRId.h"
@@ -8,15 +9,17 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystemPath.h"
 #include "MRMesh/MRTelemetry.h"
+#include "MRPch/MRSpdlog.h"
 #include "MRPch/MRWasm.h"
 
 #pragma warning( push )
 #pragma warning( disable: 4619 ) // #pragma warning: there is no warning number 'N'
-#include <boost/locale/generator.hpp>
+#include <boost/locale/gnu_gettext.hpp>
+#include <boost/locale/info.hpp>
 #include <boost/locale/message.hpp>
+#include <boost/locale/util.hpp>
 #pragma warning( pop )
 #include <boost/signals2/signal.hpp>
-#include <boost/version.hpp>
 
 #ifdef _WIN32
 #include <WinNls.h>
@@ -26,8 +29,13 @@
 #include "MRLocaleMacos.h"
 #endif
 
+#include <algorithm>
 #include <cassert>
+#include <cstdint>
+#include <cstring>
+#include <fstream>
 #include <map>
+#include <string_view>
 
 namespace MR
 {
@@ -39,7 +47,8 @@ std::locale gLocale = {};
 std::string gLocaleName = "en";
 std::string gLocaleCanonicalName = "en.UTF-8";
 boost::signals2::signal<void ( const std::string& )> gLocaleNameChanged = {};
-boost::locale::generator gLocaleGen = {};
+std::vector<std::string> gLocaleDomains = {};
+std::vector<std::string> gValidatedDomains = {};
 std::vector<std::filesystem::path> gLocaleDirs = {};
 std::vector<LocaleDomainId> gGenericDomains = {};
 
@@ -53,6 +62,133 @@ std::unordered_map<std::string, std::string> gKnownLocales = {
 };
 
 std::map<const char*, LocaleDomainId> gDomainCache = {};
+
+std::uint32_t swapBytes( std::uint32_t v )
+{
+    return ( v >> 24 ) | ( ( v >> 8 ) & 0xff00 ) | ( ( v << 8 ) & 0xff0000 ) | ( v << 24 );
+}
+
+/// makes not findable in the contents of .mo file the translations that cannot replace their originals in fmt::format or printf call
+void disableUnsafeTranslations( std::vector<char>& file, const std::string& fileName )
+{
+    constexpr std::uint32_t cMagic = 0x950412de;
+    if ( file.size() < 28 ) // header
+        return;
+    bool swapped = false; // the file was written with another byte order
+    auto get = [&]( size_t offset )
+    {
+        std::uint32_t v;
+        std::memcpy( &v, file.data() + offset, sizeof( v ) );
+        return swapped ? swapBytes( v ) : v;
+    };
+    if ( get( 0 ) != cMagic )
+    {
+        swapped = true;
+        if ( get( 0 ) != cMagic )
+            return;
+    }
+    // tables of (length, offset) of original and translated strings
+    const std::uint64_t num = get( 8 ), tables[2] = { get( 12 ), get( 16 ) };
+    if ( tables[0] + num * 8 > file.size() || tables[1] + num * 8 > file.size() )
+        return; // an invalid file is rejected by boost
+
+    for ( std::uint64_t i = 0; i < num; ++i )
+    {
+        std::string_view entry[2];
+        for ( int k = 0; k < 2; ++k )
+        {
+            const auto record = size_t( tables[k] + i * 8 );
+            const std::uint64_t length = get( record ), offset = get( record + 4 );
+            if ( offset + length >= file.size() )
+                return;
+            entry[k] = std::string_view( file.data() + size_t( offset ), size_t( length ) );
+        }
+        // the key is [context EOT] original [NUL plural original], the value is one or several forms separated by NUL
+        auto original = entry[0].substr( entry[0].find( '\x04' ) + 1 );
+        std::string_view plural;
+        if ( const auto pos = original.find( '\0' ); pos != std::string_view::npos )
+        {
+            plural = original.substr( pos + 1 );
+            original = original.substr( 0, pos );
+        }
+        bool safe = true;
+        // the entry with empty original is the header of the catalog
+        for ( auto forms = entry[1]; safe && !original.empty(); )
+        {
+            const auto pos = forms.find( '\0' );
+            const auto form = forms.substr( 0, pos );
+            const auto isSafe = Locale::isFormatSafeTranslation;
+            // singular original may be not a format string ("One file"), then the form for it must not be one either
+            safe = plural.empty() ? isSafe( original, form )
+                : isSafe( plural, form ) || ( isSafe( original, form ) && isSafe( form, original ) );
+            if ( !safe )
+                spdlog::warn( "{}: translation \"{}\" of \"{}\" is ignored: its format placeholders do not match the original", fileName, form, original );
+            if ( pos == std::string_view::npos )
+                break;
+            forms = forms.substr( pos + 1 );
+        }
+        // no string to translate starts with this character, and the hash table of the file stays valid
+        if ( !safe )
+            file[size_t( entry[0].data() - file.data() )] = '\x01';
+    }
+}
+
+/// reads .mo file for boost, returns empty vector if there is no such file
+std::vector<char> loadCatalog( const std::string& fileName, const std::string& )
+{
+    std::ifstream in( pathFromUtf8( fileName ), std::ifstream::binary | std::ifstream::ate );
+    if ( !in )
+        return {};
+    const auto size = std::streamoff( in.tellg() );
+    if ( size <= 0 )
+        return {};
+    std::vector<char> res( ( size_t( size ) ) );
+    in.seekg( 0 );
+    if ( !in.read( res.data(), size ) )
+        return {};
+    // <catalog path>/<locale name>/LC_MESSAGES/<domain name>.mo
+    std::string_view domain( fileName );
+    domain.remove_prefix( domain.find_last_of( "/\\" ) + 1 );
+    if ( domain.ends_with( ".mo" ) )
+        domain.remove_suffix( 3 );
+    if ( std::find( gValidatedDomains.begin(), gValidatedDomains.end(), domain ) != gValidatedDomains.end() )
+        disableUnsafeTranslations( res, fileName );
+    return res;
+}
+
+/// makes the active locale again after a change of its name, domains or catalog paths
+void updateLocale()
+{
+    // message facet for narrow characters only, as boost::locale::generator makes it
+    // (no wide-character facets is crucial for Wasm support as we don't use ICU or iconv)
+    const auto infoLocale = boost::locale::util::create_info( std::locale::classic(), gLocaleCanonicalName );
+    const auto& data = std::use_facet<boost::locale::info>( infoLocale );
+    boost::locale::gnu_gettext::messages_info info;
+    info.language = data.language();
+    info.country = data.country();
+    info.variant = data.variant();
+    info.encoding = data.encoding();
+    for ( const auto& domain : gLocaleDomains )
+        info.domains.emplace_back( domain );
+    for ( const auto& dir : gLocaleDirs )
+        info.paths.push_back( utf8string( dir ) );
+    // boost reads the files itself unless some of them are to be validated
+    if ( !gValidatedDomains.empty() )
+        info.callback = loadCatalog;
+    gLocale = std::locale( std::locale::classic(), boost::locale::gnu_gettext::create_messages_facet<char>( info ) );
+}
+
+/// adds new domain and updates the active locale
+void addLocaleDomain( const std::string& domainName, bool validateFormatStrings )
+{
+    if ( std::find( gLocaleDomains.begin(), gLocaleDomains.end(), domainName ) == gLocaleDomains.end() )
+        gLocaleDomains.push_back( domainName );
+    // the name can be followed by the encoding of the original strings: "domain/encoding"
+    const auto fileName = domainName.substr( 0, domainName.find( '/' ) );
+    if ( validateFormatStrings && std::find( gValidatedDomains.begin(), gValidatedDomains.end(), fileName ) == gValidatedDomains.end() )
+        gValidatedDomains.push_back( fileName );
+    updateLocale();
+}
 
 } // namespace
 
@@ -78,7 +214,8 @@ const std::locale& Locale::set( const std::string& localeName )
     // TODO: correct encoding processing
     if ( !gLocaleCanonicalName.ends_with( ".UTF-8" ) )
         gLocaleCanonicalName.append( ".UTF-8" );
-    return ( gLocale = gLocaleGen.generate( gLocaleCanonicalName ) );
+    updateLocale();
+    return gLocale;
 }
 
 boost::signals2::connection Locale::onChanged( const std::function<void ( const std::string& )>& cb )
@@ -106,17 +243,18 @@ void Locale::addCatalogPath( const std::filesystem::path& path )
     if ( std::find( gLocaleDirs.begin(), gLocaleDirs.end(), path ) != gLocaleDirs.end() )
         return;
     gLocaleDirs.emplace_back( path );
-    gLocaleGen.add_messages_path( utf8string( path ) );
-    gLocale = gLocaleGen.generate( gLocaleCanonicalName );
+    updateLocale();
 }
 
-LocaleDomainId Locale::addDomain( const char* domainName, bool generic )
+LocaleDomainId Locale::addDomain( const char* domainName, bool generic, bool validateFormatStrings )
 {
-    if ( auto it = gDomainCache.find( domainName ); it != gDomainCache.end() )
+    const auto it = gDomainCache.find( domainName );
+    if ( it != gDomainCache.end() && !validateFormatStrings )
         return it->second;
 
-    gLocaleGen.add_messages_domain( domainName );
-    gLocale = gLocaleGen.generate( gLocaleCanonicalName );
+    addLocaleDomain( domainName, validateFormatStrings );
+    if ( it != gDomainCache.end() )
+        return it->second;
 
     const auto id = findDomain( std::string{ domainName } );
     if ( id )
@@ -128,10 +266,9 @@ LocaleDomainId Locale::addDomain( const char* domainName, bool generic )
     return id;
 }
 
-LocaleDomainId Locale::addDomain( const std::string& domainName, bool generic )
+LocaleDomainId Locale::addDomain( const std::string& domainName, bool generic, bool validateFormatStrings )
 {
-    gLocaleGen.add_messages_domain( domainName );
-    gLocale = gLocaleGen.generate( gLocaleCanonicalName );
+    addLocaleDomain( domainName, validateFormatStrings );
 
     const auto id = findDomain( domainName );
     if ( id && generic )
@@ -269,22 +406,6 @@ std::vector<std::string> Locale::getSystemLocales()
 
 MR_ON_INIT
 {
-    // generate message facets only
-    gLocaleGen.categories(
-#if BOOST_VERSION >= 108100
-        boost::locale::category_t::message
-#else
-        boost::locale::message_facet
-#endif
-    );
-    // do not generate wide-character facets (this is crucial for Wasm support as we don't use ICU or iconv)
-    gLocaleGen.characters(
-#if BOOST_VERSION >= 108100
-        boost::locale::char_facet_t::char_f
-#else
-        boost::locale::char_facet
-#endif
-    );
     // set MeshLib domain by default
     Locale::addDomain( "MeshLib" );
     Locale::addCatalogPath( getLocaleDir() );

@@ -176,6 +176,7 @@
     <ClInclude Include="MRHexPalette.h" />
     <ClInclude Include="MRMeshPatch.h" />
     <ClInclude Include="MRNewValuesStorage.hpp" />
+    <ClInclude Include="MRMeshRegionSurfacesSurf.hpp" />
     <ClInclude Include="MRMeshRelax.hpp" />
     <ClInclude Include="MRMeshReplicate.h" />
     <ClInclude Include="MRSegmentMesh.h" />
@@ -431,6 +432,7 @@
     <ClInclude Include="MRMeshEigen.h" />
     <ClInclude Include="MRMeshFillHole.h" />
     <ClInclude Include="MRMeshNormals.h" />
+    <ClInclude Include="MRMeshRegionSurfaces.h" />
     <ClInclude Include="MRMeshRelax.h" />
     <ClInclude Include="MRMeshSave.h" />
     <ClInclude Include="MRMeshOrTriMesh.h" />
@@ -792,6 +794,8 @@
     <ClCompile Include="MRMeshEigen.cpp" />
     <ClCompile Include="MRMeshFillHole.cpp" />
     <ClCompile Include="MRMeshNormals.cpp" />
+    <ClCompile Include="MRMeshRegionSurfaces.cpp" />
+    <ClCompile Include="MRMeshRegionSurfacesSurf.cpp" />
     <ClCompile Include="MRMeshRelax.cpp" />
     <ClCompile Include="MRMeshSave.cpp" />
     <ClCompile Include="MRTriMesh.cpp" />

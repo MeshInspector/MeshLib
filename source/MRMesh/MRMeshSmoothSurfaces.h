@@ -45,7 +45,8 @@ struct FitSmoothSurfacesSettings
     /// if the root-mean-square distance from the vertices of a region to its best analytic surface is above this value,
     /// then a B-spline surface is fitted to the region with this maximum distance from the vertices, and taken if it is 1.5 times closer;
     /// if not positive, then 2.5 times the median of these distances over all regions is taken:
-    /// most regions are expected to be analytic, and then the distances are the noise of the mesh
+    /// most regions are expected to be analytic, and then the distances are the noise of the mesh;
+    /// fitSmoothSurface of a single region does not try B-spline surfaces if this value is not positive
     float bsplineThreshold = 0;
 
     /// if false, then only analytic surfaces are fitted
@@ -70,5 +71,10 @@ struct MeshSmoothSurfaces
 /// \return an error if the mesh has no triangles or zero size, or the operation is canceled
 [[nodiscard]] MRMESH_API Expected<MeshSmoothSurfaces> fitSmoothSurfaces( const Mesh& mesh, const Face2RegionMap& face2region,
     const FitSmoothSurfacesSettings& settings = {}, const ProgressCallback& progress = {} );
+
+/// fits a surface to one region of the mesh in the same way as fitSmoothSurfaces;
+/// \param mp the mesh and its region, the whole mesh if the region is null
+/// \return an error if the region has no triangles or the mesh has zero size
+[[nodiscard]] MRMESH_API Expected<FittedSmoothSurface> fitSmoothSurface( const MeshPart& mp, const FitSmoothSurfacesSettings& settings = {} );
 
 } //namespace MR

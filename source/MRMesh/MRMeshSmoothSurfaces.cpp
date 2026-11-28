@@ -239,12 +239,28 @@ SmoothSurface toSmoothSurface( const Surf& s, const Vector<V3>& pts )
     return Plane3d();
 }
 
-} //anonymous namespace
-
-Expected<MeshSmoothSurfaces> fitSmoothSurfaces( const Mesh& mesh, const Face2RegionMap& face2region,
-    const FitSmoothSurfacesSettings& settings, const ProgressCallback& progress )
+/// the public form of the fit
+FittedSmoothSurface toFitted( const Data& d, const Vector<FaceId>& faces, const Fit& fit )
 {
-    MR_TIMER;
+    return {
+        .surface = toSmoothSurface( fit.surf, d.pointsOf( faces ) ),
+        .rms = float( fit.rms ),
+        .maxDist = float( fit.maxDist )
+    };
+}
+
+/// replaces the fit with B-spline surface if the fit is farther than the threshold and the B-spline surface is 1.5 times closer
+void improveByBSpline( const Data& d, const Vector<FaceId>& faces, Fit& fit )
+{
+    if ( fit.rms > d.bsplineThreshold )
+        if ( auto bs = fitBSpline( d, faces ); bs && 1.5 * bs->rms < fit.rms )
+            fit = std::move( *bs );
+}
+
+/// the mesh data for the fitting of the faces of the region (all valid faces if region is null);
+/// the size of the whole mesh is computed in any case
+Expected<Data> makeData( const Mesh& mesh, const FaceBitSet* region )
+{
     const auto& topology = mesh.topology;
     if ( topology.numValidFaces() <= 0 )
         return unexpected( "Mesh is empty" );
@@ -258,36 +274,75 @@ Expected<MeshSmoothSurfaces> fitSmoothSurfaces( const Mesh& mesh, const Face2Reg
     d.centers.resize( topology.faceSize() );
     d.areas.resize( topology.faceSize(), 0.0 );
     Box3d box;
-    Vector<Vector<FaceId>, RegionId> faces;
     for ( FaceId f : topology.getValidFaces() )
     {
         const auto [a, b, c] = topology.getTriVerts( f );
+        for ( VertId v : { a, b, c } )
+            box.include( d.pts[v] );
+        if ( region && !region->test( f ) )
+            continue;
         const V3 n = cross( d.pts[b] - d.pts[a], d.pts[c] - d.pts[a] );
         const double len = n.length();
         d.areas[f] = len / 2;
         d.normals[f] = len > 0 ? n / len : V3();
         d.centers[f] = ( d.pts[a] + d.pts[b] + d.pts[c] ) / 3.0;
-        for ( VertId v : { a, b, c } )
-            box.include( d.pts[v] );
+    }
+    d.diag = box.valid() ? box.diagonal() : 0;
+    if ( !( d.diag > 0 ) )
+        return unexpected( "Mesh is degenerate" );
+    return d;
+}
+
+} //anonymous namespace
+
+Expected<FittedSmoothSurface> fitSmoothSurface( const MeshPart& mp, const FitSmoothSurfacesSettings& settings )
+{
+    MR_TIMER;
+    auto d = makeData( mp.mesh, mp.region );
+    if ( !d )
+        return unexpected( std::move( d.error() ) );
+
+    Vector<FaceId> faces;
+    for ( FaceId f : mp.mesh.topology.getFaceIds( mp.region ) )
+        if ( mp.mesh.topology.hasFace( f ) )
+            faces.push_back( f );
+    if ( faces.empty() )
+        return unexpected( "Region is empty" );
+
+    auto fit = fitAnalytic( *d, faces );
+    d->bsplineThreshold = settings.bsplineThreshold;
+    if ( settings.allowBSplines && d->bsplineThreshold > 0 )
+        improveByBSpline( *d, faces, fit );
+    return toFitted( *d, faces, fit );
+}
+
+Expected<MeshSmoothSurfaces> fitSmoothSurfaces( const Mesh& mesh, const Face2RegionMap& face2region,
+    const FitSmoothSurfacesSettings& settings, const ProgressCallback& progress )
+{
+    MR_TIMER;
+    auto d = makeData( mesh, nullptr );
+    if ( !d )
+        return unexpected( std::move( d.error() ) );
+
+    Vector<Vector<FaceId>, RegionId> faces;
+    for ( FaceId f : mesh.topology.getValidFaces() )
+    {
         const RegionId r = face2region[f];
         if ( r >= faces.size() )
             faces.resize( r + 1 );
         faces[r].push_back( f );
     }
-    d.diag = box.valid() ? box.diagonal() : 0;
-    if ( !( d.diag > 0 ) )
-        return unexpected( "Mesh is degenerate" );
 
     Vector<Fit, RegionId> fits( faces.size() );
     if ( !ParallelFor( fits, [&]( RegionId r )
     {
         if ( !faces[r].empty() )
-            fits[r] = fitAnalytic( d, faces[r] );
+            fits[r] = fitAnalytic( *d, faces[r] );
     }, subprogress( progress, 0.0f, 0.5f ) ) )
         return unexpectedOperationCanceled();
 
-    d.bsplineThreshold = settings.bsplineThreshold;
-    if ( !( d.bsplineThreshold > 0 ) )
+    d->bsplineThreshold = settings.bsplineThreshold;
+    if ( !( d->bsplineThreshold > 0 ) )
     {
         // the noise of the mesh: most regions are expected to have analytic surfaces
         std::vector<double> rms;
@@ -295,30 +350,22 @@ Expected<MeshSmoothSurfaces> fitSmoothSurfaces( const Mesh& mesh, const Face2Reg
             if ( !faces[r].empty() )
                 rms.push_back( fits[r].rms );
         std::nth_element( rms.begin(), rms.begin() + rms.size() / 2, rms.end() );
-        d.bsplineThreshold = std::max( 2.5 * rms[rms.size() / 2], 1e-6 * d.diag );
+        d->bsplineThreshold = std::max( 2.5 * rms[rms.size() / 2], 1e-6 * d->diag );
     }
 
     if ( settings.allowBSplines && !ParallelFor( fits, [&]( RegionId r )
     {
-        if ( fits[r].rms > d.bsplineThreshold )
-            if ( auto bs = fitBSpline( d, faces[r] ); bs && 1.5 * bs->rms < fits[r].rms )
-                fits[r] = std::move( *bs );
+        if ( !faces[r].empty() )
+            improveByBSpline( *d, faces[r], fits[r] );
     }, subprogress( progress, 0.5f, 1.0f ) ) )
         return unexpectedOperationCanceled();
 
     MeshSmoothSurfaces res;
-    res.bsplineThreshold = float( d.bsplineThreshold );
+    res.bsplineThreshold = float( d->bsplineThreshold );
     res.surfaces.resize( faces.size(), { .surface = Plane3d() } );
     for ( RegionId r( 0 ); r < fits.endId(); ++r )
-    {
-        if ( faces[r].empty() )
-            continue;
-        res.surfaces[r] = {
-            .surface = toSmoothSurface( fits[r].surf, d.pointsOf( faces[r] ) ),
-            .rms = float( fits[r].rms ),
-            .maxDist = float( fits[r].maxDist )
-        };
-    }
+        if ( !faces[r].empty() )
+            res.surfaces[r] = toFitted( *d, faces[r], fits[r] );
     reportProgress( progress, 1.0f );
     return res;
 }

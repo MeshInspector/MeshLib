@@ -39,6 +39,19 @@ TEST( MRMesh, FitSmoothSurfaces )
     EXPECT_EQ( planes, 2 );
     EXPECT_EQ( cylinders, 1 );
 
+    // a single region gets the same surface
+    for ( RegionId r( 0 ); r < res->surfaces.endId(); ++r )
+    {
+        FaceBitSet region( cyl.topology.faceSize() );
+        for ( FaceId f : cyl.topology.getValidFaces() )
+            region.set( f, cylRegions[f] == r );
+        const auto single = fitSmoothSurface( { cyl, &region } );
+        ASSERT_TRUE( single.has_value() );
+        EXPECT_EQ( *single, res->surfaces[r] );
+    }
+    const FaceBitSet empty;
+    EXPECT_FALSE( fitSmoothSurface( { cyl, &empty } ).has_value() );
+
     // all vertices are noisy, as in a scanned mesh
     auto sphere = makeUVSphere( 1.0f, 32, 32 );
     for ( VertId v : sphere.topology.getValidVerts() )
@@ -76,6 +89,15 @@ TEST( MRMesh, FitSmoothSurfaces )
     res = fitSmoothSurfaces( wave, waveRegions, { .bsplineThreshold = 1e-3f, .allowBSplines = false } );
     ASSERT_TRUE( res.has_value() );
     EXPECT_FALSE( std::holds_alternative<std::shared_ptr<const FittedBSplineSurface>>( res->surfaces.front().surface ) );
+
+    // single region: B-spline only with given threshold
+    const auto single = fitSmoothSurface( wave, { .bsplineThreshold = 1e-3f } );
+    ASSERT_TRUE( single.has_value() );
+    EXPECT_TRUE( std::holds_alternative<std::shared_ptr<const FittedBSplineSurface>>( single->surface ) );
+    EXPECT_LT( single->maxDist, 1e-3f );
+    const auto analytic = fitSmoothSurface( wave );
+    ASSERT_TRUE( analytic.has_value() );
+    EXPECT_FALSE( std::holds_alternative<std::shared_ptr<const FittedBSplineSurface>>( analytic->surface ) );
 }
 
 } //namespace MR

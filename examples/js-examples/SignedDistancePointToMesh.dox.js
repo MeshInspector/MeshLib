@@ -1,10 +1,11 @@
-import createMeshLib from '@meshinspector/meshlib';
+import * as ml from '@meshinspector/meshlib';
 
-const ml = await createMeshLib();
+await ml.init();
 
-using mesh = ml.MeshLoad.fromAnySupportedFormat('mesh1.ply');
-const point = { x: 1.5, y: 1.0, z: 0.5 };
+using mesh = ml.MeshLoad.fromAnySupportedFormat('mesh1.ctm');
+const point = new ml.Vector3f(1.5, 1.0, 0.5);
 
-const result = ml.findSignedDistanceFromPoint(point, mesh);
-if (result)
-  console.log(`Signed distance from point to mesh ${result.dist}`);
+using result = ml.findSignedDistance(point, new ml.MeshPart(mesh));
+const found = result.value(); // null if nothing was found
+if (found)
+  console.log(`Signed distance from point to mesh ${found.dist}`);

@@ -5,6 +5,7 @@
 #include "MRPointsProject.h"
 #include "MRVector.h"
 #include "MRTimer.h"
+#include "MRPch/MRTBB.h"
 #include <algorithm>
 #include <cmath>
 #include <optional>
@@ -54,13 +55,17 @@ Expected<AffineXf3f> findRigidXfRansac( const VertCoords & srcPoints, const Vert
     if ( tgtToSrc )
         params.overlapSrcCloud->getAABBTree();
     const auto distSq = sqr( params.inlierDistance );
+    // parallel, since only a few samples per batch pass the consistency check
     auto countOverlapping = [distSq]( const VertCoords & points, const AffineXf3f & xf, const PointCloud & cloud )
     {
-        size_t res = 0;
-        for ( const auto & p : points )
-            if ( findProjectionOnPoints( xf( p ), cloud, distSq, nullptr, distSq ).vId )
-                ++res;
-        return res;
+        return tbb::parallel_reduce( tbb::blocked_range( 0_v, points.endId(), 256 ), size_t( 0 ),
+            [&]( const auto & range, size_t res )
+            {
+                for ( auto v = range.begin(); v < range.end(); ++v )
+                    if ( findProjectionOnPoints( xf( points[v] ), cloud, distSq, nullptr, distSq ).vId )
+                        ++res;
+                return res;
+            }, std::plus<size_t>() );
     };
     // the measure of a transformation's quality: the number of inlier matches or of overlapping points
     auto score = [&]( const AffineXf3f & xf ) -> size_t
@@ -106,8 +111,8 @@ Expected<AffineXf3f> findRigidXfRansac( const VertCoords & srcPoints, const Vert
     // samples are processed in batches, and the best one is taken from each batch in the order of indices,
     // so the result does not depend on the number of threads
     constexpr int batchSize = 1024;
-    std::vector<size_t> counts( batchSize );
-    std::vector<AffineXf3f> xfs( batchSize );
+    Vector<size_t> counts( batchSize );
+    Vector<AffineXf3f> xfs( batchSize );
     size_t bestScore = 0;
     size_t bestCount = 0; // the number of inlier matches of the best transformation
     AffineXf3f bestXf;

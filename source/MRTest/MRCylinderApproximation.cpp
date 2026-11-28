@@ -57,6 +57,9 @@ TEST( MRMesh, CylinderApproximation )
     EXPECT_NEAR( result.length, originalLength, 0.1f );
     EXPECT_LE( ( result.center() - center ).length(), 0.1f );
     EXPECT_GT( dot( direction, result.direction() ), 0.9f );
+    // the direction found by the search is refined, so the result is not limited by the step of the search
+    EXPECT_NEAR( result.radius, originalRadius, 1e-4f );
+    EXPECT_GT( dot( direction, result.direction() ), 0.99999f );
 
     ///////////////////////////////////////
     // Compare single thread vs multithread

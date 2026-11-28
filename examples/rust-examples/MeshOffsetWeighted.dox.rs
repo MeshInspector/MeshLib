@@ -3,7 +3,7 @@ use meshlib::{MeshPart, VertId, VertScalars};
 fn main() -> Result<(), String>
 {
     // Create some mesh
-    let mesh = meshlib::make_torus(None, None, None, None, None);
+    let mesh = meshlib::make_torus(None, None, None, None, None, None);
 
     // Create VertScalars obj with weights for every vertex
     let vert_size = mesh.topology().vert_size();

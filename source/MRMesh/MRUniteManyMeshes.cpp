@@ -134,8 +134,10 @@ public:
         upParams.commonParams = params_.commonParams;
         upParams.mapper = params_.collectNewFaces || collectNew2Old ? &mapper : nullptr;
         upParams.shift = params_.shifts ? &shift : nullptr;
-        if ( params_.commonParams.mergeMode )
+        if ( params_.mergeOnFail && !params_.commonParams.forceCut )
         {
+            // a failed boolean leaves the moved meshes cut (with unfilled pseudo faces), so keep the originals for the merge;
+            // forceBoolean does not modify its input meshes
             res = unitePairOfMeshes( Mesh( resultMesh ), Mesh( y.resultMesh ), upParams );
         }
         else
@@ -152,6 +154,8 @@ public:
             else
             {
                 FaceMap fMap;
+                if ( params_.shifts ) // in the frame of this mesh, as the union would place it
+                    y.resultMesh.transform( AffineXf3f::translation( shift ) );
                 resultMesh.addMesh( y.resultMesh, params_.collectNewFaces || collectNew2Old ? &fMap : nullptr );
                 if ( params_.collectNewFaces )
                 {

@@ -16,7 +16,8 @@ class MRMESH_CLASS SphereObject : public AddVisualProperties<FeatureObject, Dime
 public:
     /// Creates simple sphere object with center in zero and radius - 1
     MRMESH_API SphereObject();
-    /// Finds best sphere to approx given points
+    /// Finds best sphere to approx given points;
+    /// no points or coincident ones keep the center in zero and radius 1
     MRMESH_API SphereObject( const std::vector<Vector3f>& pointsToApprox );
 
     SphereObject( SphereObject&& ) noexcept = default;
@@ -25,10 +26,10 @@ public:
     constexpr static const char* StaticTypeName() noexcept { return "SphereObject"; }
     virtual const char* typeName() const override {return StaticTypeName(); }
 
-    constexpr static const char* StaticClassName() noexcept { return "Sphere"; }
+    constexpr static const char* StaticClassName() noexcept { return _t( "Sphere" ); }
     virtual std::string className() const override { return StaticClassName(); }
 
-    constexpr static const char* StaticClassNameInPlural() noexcept { return "Spheres"; }
+    constexpr static const char* StaticClassNameInPlural() noexcept { return _t( "Spheres" ); }
     virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     /// \note this ctor is public only for std::make_shared used inside clone()

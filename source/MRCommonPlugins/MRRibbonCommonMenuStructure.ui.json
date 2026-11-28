@@ -139,6 +139,20 @@
 				}
 			]
 		},
+		{
+			"Name": "Transform",
+			"Priority": 3,
+			"Groups": [
+				{
+					"Name": "Features alignment",
+					"List": [
+						{
+							"Name": "Feature Alignment"
+						}
+					]
+				}
+			]
+		},
 		
 		
 		{
@@ -184,6 +198,22 @@
 					"List": [
 						{
 							"Name": "Camera"
+						}
+					]
+				}
+			]
+		},
+		{
+			"Name": "Experimental",
+			"Priority": 20,
+			"Experimental": true,
+			"Groups": [
+				{
+					"Name": "Scanners",
+					"Priority": 1,
+					"List": [
+						{
+							"Name": "Scanner"
 						}
 					]
 				}

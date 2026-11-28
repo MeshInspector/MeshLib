@@ -6,7 +6,12 @@
 #include "MRPolyline.h"
 #include "MRAffineXf3.h"
 #include "MRPointCloudPart.h"
+#include "MRSphere.h"
+#include "MRCylinder3.h"
+#include "MRCone3.h"
+#include "MRTorus3.h"
 #include <array>
+#include <optional>
 
 namespace MR
 {
@@ -89,5 +94,74 @@ private:
     SymMatrix3d mat_;
     Vector3d rhs_;
 };
+
+/// least squares sphere through the points (algebraic fit of the centered points): exact for the points of a sphere,
+/// but with noisy points of a small cap its radius is biased low (e.g. by 16% if the standard deviation of the noise is 13% of the cap height);
+/// for coplanar points the result is not unique, and the one with the center closest to their centroid is returned (the minimum-norm solution):
+/// e.g. the sphere through the points of a circle is centered at that circle; returns nullopt for no points or coincident ones
+[[nodiscard]] MRMESH_API std::optional<Sphere3d> findBestSphere( const Vector<Vector3d>& points );
+
+/// least squares circle through the points (algebraic fit of the centered points), stable for short arcs: exact for the points of a circle,
+/// but with noisy points of a short arc its radius is biased low (e.g. by 13% if the standard deviation of the noise is 13% of the arc height);
+/// for collinear points the result is not unique, and the one with the center closest to their centroid is returned (the minimum-norm solution):
+/// its center is on their line, e.g. at their centroid for symmetric points; returns nullopt for no points or coincident ones
+[[nodiscard]] MRMESH_API std::optional<Sphere2d> findBestCircle( const Vector<Vector2d>& points );
+
+/// finds the line crossing all given lines in the least squares sense,
+/// e.g. the axis of a surface of revolution from the lines of its normals (lines with unit directions have equal weights);
+/// returns nullopt if the line is not unique: e.g. all lines through the center of a sphere cross its normals,
+/// and any line along the normal of a plane crosses its normals; with noisy normals of such surfaces, one of these lines can be returned
+[[nodiscard]] MRMESH_API std::optional<Line3d> findRevolutionAxis( const Vector<Line3d>& normalLines );
+
+/// cylinder with the axis orthogonal to all given surface normals, and the radius fitted to the points by findBestCircle (biased low for noisy points of a short arc);
+/// the center and the length of the cylinder span the projections of the points on the axis;
+/// returns nullopt if findBestCircle does for the projections of the points, or if the normals do not define the axis:
+/// the two smallest eigenvalues of the sum of their outer squares differ by less than 1e-6 of the largest one, e.g. for the normals of a plane
+/// or of a sphere cap symmetric around its center; other sphere patches and noisy normals of a plane give a cylinder, so check its distances to the points
+[[nodiscard]] MRMESH_API std::optional<Cylinder3d> findBestCylinderByNormals( const Vector<Vector3d>& points, const Vector<Vector3d>& normals );
+
+/// cone with given axis fitted to the points: the line of the distance to the axis against the position along it, fitted orthogonally;
+/// the height of the cone spans the points; returns nullopt if the line is nearly parallel (a cylinder) or orthogonal (a plane) to the axis
+[[nodiscard]] MRMESH_API std::optional<Cone3d> findBestConeWithAxis( const Vector<Vector3d>& points, const Line3d& axis );
+
+/// cone tangent to all given planes (e.g. of mesh triangles) with consistently oriented normals, and the angle fitted to the points;
+/// unlike findRevolutionAxis + findBestConeWithAxis, it works for a single strip of triangles; the planes with zero normals are ignored;
+/// the height of the cone spans the points; returns nullopt if the planes do not define the cone: fewer than 3 distinct normals or the normals
+/// within less than half a degree of a revolution (the two smallest eigenvalues of their covariance differ by less than 1e-6 of the largest one),
+/// all normals orthogonal to one direction (planes tangent to a cylinder), or no unique apex
+[[nodiscard]] MRMESH_API std::optional<Cone3d> findBestConeByTangentPlanes( const Vector<Vector3d>& points, const Vector<Plane3d>& tangentPlanes );
+
+/// torus with given axis fitted to the points: the circle of the tube section fitted by findBestCircle in the plane (distance to the axis, position along it),
+/// so the minor radius is biased low for noisy points of a short arc of the tube, and collinear sections (e.g. of a cylinder) give its minimum-norm circle;
+/// the result can have minorRadius > majorRadius (a spindle torus)
+[[nodiscard]] MRMESH_API std::optional<Torus3d> findBestTorusWithAxis( const Vector<Vector3d>& points, const Line3d& axis );
+
+/// minimizes the sum of squared distances from the points to the torus by Levenberg-Marquardt method starting from given torus;
+/// the result is never worse than given torus (with unit axis and non-negative radii), which is returned for fewer than 8 points;
+/// it can be degenerate, so check its radii: majorRadius is about zero if a sphere fits the points better than any torus,
+/// and both radii can be very large if the points are nearly on a cylinder, a cone or a plane;
+/// if there are more than maxPoints points, then to bound the time only maxPoints of them are used in the minimization: one pseudo-random point
+/// from each of maxPoints equal ranges of the points (at least as many as the minimization has parameters, 8 here),
+/// and the result is still not worse than given torus for all the points;
+/// pass SIZE_MAX to use all the points always
+[[nodiscard]] MRMESH_API Torus3d refineTorus( const Vector<Vector3d>& points, const Torus3d& torus, size_t maxPoints = 10000 );
+
+/// minimizes the sum of squared distances from the points to the infinite cylinder by Levenberg-Marquardt method starting from given cylinder;
+/// the result is never worse than given cylinder; the direction of the result is unit, and its center and length span the projections
+/// of the points on the axis; the radius can be very large if the points are nearly on a plane;
+/// given cylinder is returned as is (e.g. with not-unit direction) for fewer than 7 points, or if the minimization gives not finite values or zero axis;
+/// more than maxPoints points are treated as in refineTorus (the minimization has 7 parameters here)
+[[nodiscard]] MRMESH_API Cylinder3d refineCylinder( const Vector<Vector3d>& points, const Cylinder3d& cylinder, size_t maxPoints = 10000 );
+
+/// minimizes the sum of squared distances from the points to the cone by Levenberg-Marquardt method starting from given cone;
+/// the distances are measured to the lines of the cone surface passing via the apex, so the points are expected at the side of the apex
+/// where the cone is, not behind it; the result is never worse than given cone;
+/// the direction of the result is unit, its angle is in [0, pi/2], and its height spans the points;
+/// it can be degenerate, so check its angle: about zero if the points are nearly on a cylinder (then the apex is far away),
+/// and about pi/2 if they are nearly on a plane;
+/// given cone is returned as is (e.g. with not-unit direction or the angle outside [0, pi/2]) for fewer than 7 points,
+/// or if the minimization gives not finite values or zero axis;
+/// more than maxPoints points are treated as in refineTorus (the minimization has 7 parameters here)
+[[nodiscard]] MRMESH_API Cone3d refineCone( const Vector<Vector3d>& points, const Cone3d& cone, size_t maxPoints = 10000 );
 
 } // namespace MR

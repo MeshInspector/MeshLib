@@ -5,7 +5,6 @@
 #include <MRMesh/MRTorus.h>
 #include <MRMesh/MRCube.h>
 #include <MRMesh/MRBox.h>
-#include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRMatrix3.h>
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRRegionBoundary.h>
@@ -101,6 +100,63 @@ static void expectUnionKeepsBoth( const Mesh& meshA, const Mesh& meshB )
         const auto resXf = boolean( m0, m1xf, BooleanOperation::Union, &xf );
         ASSERT_TRUE( resXf.valid() );
         EXPECT_NEAR( resXf.mesh.volume(), expected, 1e-3 * expected );
+    }
+}
+
+// all four overloads of boolean, keeping or consuming each mesh, give the same result, also with the precut output of either mesh,
+// which leaves that mesh uncut, and in force mode; a kept mesh is not changed and gets the tree of the whole mesh
+TEST( MRMesh, BooleanKeptAndConsumedMeshes )
+{
+    // without cached trees, and they get none below
+    const Mesh cube = makeCube();
+    const Mesh sphere = makeSphere( { .radius = 0.4f, .numMeshVertices = 100 } );
+    const AffineXf3f xf = AffineXf3f::translation( Vector3f( 0.5f, 0.4f, 0.3f ) );
+    enum Mode { Default, PreCutA, PreCutB, ForceCut };
+    struct Run
+    {
+        BooleanResult res;
+        BooleanPreCutResult pre;
+    };
+    for ( auto op : { BooleanOperation::Union, BooleanOperation::Intersection, BooleanOperation::DifferenceAB, BooleanOperation::DifferenceBA,
+        BooleanOperation::InsideA, BooleanOperation::OutsideB } )
+    {
+        for ( Mode mode : { Default, PreCutA, PreCutB, ForceCut } )
+        {
+            const auto run = [&] ( bool keepA, bool keepB )
+            {
+                Run r;
+                const BooleanParameters params{ .rigidB2A = &xf, .outPreCutA = mode == PreCutA ? &r.pre : nullptr,
+                    .outPreCutB = mode == PreCutB ? &r.pre : nullptr, .forceCut = mode == ForceCut };
+                Mesh a = cube, b = sphere;
+                r.res = keepA ? ( keepB ? boolean( a, b, op, params ) : boolean( a, std::move( b ), op, params ) )
+                              : ( keepB ? boolean( std::move( a ), b, op, params ) : boolean( std::move( a ), std::move( b ), op, params ) );
+                if ( keepA )
+                {
+                    EXPECT_TRUE( a.getAABBTreeNotCreate() );
+                    EXPECT_TRUE( a == cube );
+                }
+                if ( keepB )
+                {
+                    EXPECT_TRUE( b.getAABBTreeNotCreate() );
+                    EXPECT_TRUE( b == sphere );
+                }
+                return r;
+            };
+            const Run ref = run( true, true );
+            ASSERT_TRUE( ref.res.valid() ) << ref.res.errorString;
+            const bool preCut = mode == PreCutA || mode == PreCutB;
+            EXPECT_EQ( ref.res.mesh.topology.numValidFaces() > 0, !preCut );
+            EXPECT_EQ( ref.pre.mesh.topology.numValidFaces() > 0, preCut );
+
+            for ( auto [keepA, keepB] : { std::pair{ false, false }, std::pair{ true, false }, std::pair{ false, true } } )
+            {
+                const Run r = run( keepA, keepB );
+                ASSERT_TRUE( r.res.valid() ) << r.res.errorString;
+                EXPECT_TRUE( r.res.mesh == ref.res.mesh );
+                EXPECT_TRUE( r.pre.mesh == ref.pre.mesh );
+                EXPECT_EQ( r.pre.intersections.size(), ref.pre.intersections.size() );
+            }
+        }
     }
 }
 
@@ -952,7 +1008,7 @@ TEST( MRMesh, SubdivideLoneContoursUpdatesAABBTree )
         EXPECT_EQ( meshA.topology.numValidFaces(), numFaces + 2 * int( loneFaces.count() ) );
         const auto * tree = meshA.getAABBTreeNotCreate();
         ASSERT_TRUE( tree );
-        EXPECT_EQ( tree->numLeaves(), size_t( meshA.topology.numValidFaces() ) );
+        EXPECT_EQ( tree->numTris(), meshA.topology.numValidFaces() );
 
         // same intersections as with a new tree
         Mesh rebuiltA = meshA;
@@ -1075,6 +1131,28 @@ TEST( MRMesh, UniteManyMeshesNew2OldFaces )
         if ( src.objId.valid() )
             src.objId = ObjId( 0 );
     checkNew2OldFaces( *res, new2old, { &all } );
+}
+
+// the union of an open sphere with two cubes fails, so mergeOnFail merges the meshes instead
+TEST( MRMesh, UniteManyMeshesMergeOnFail )
+{
+    auto sphere = makeUVSphere( 0.8f, 24, 24 );
+    FaceBitSet hole( sphere.topology.faceSize() );
+    for ( int i = 0; i < 40; ++i )
+        hole.set( FaceId( i ) );
+    sphere.deleteFaces( hole );
+    sphere.pack();
+    const auto cubeA = makeCube( Vector3f::diagonal( 1.0f ), Vector3f( 0.0f, -0.2f, -0.3f ) );
+    const auto cubeB = makeCube( Vector3f::diagonal( 1.0f ), Vector3f( -0.9f, 0.1f, -0.8f ) );
+    const std::vector<const Mesh*> meshes{ &sphere, &cubeA, &cubeB };
+    EXPECT_FALSE( uniteManyMeshes( meshes ).has_value() );
+
+    Vector<ObjFaceId, FaceId> new2old;
+    auto res = uniteManyMeshes( meshes, { .new2oldFaces = &new2old, .mergeOnFail = true } );
+    ASSERT_TRUE( res.has_value() );
+    for ( auto f : res->topology.getValidFaces() )
+        EXPECT_EQ( res->topology.getFaceDegree( f ), 3 );
+    checkNew2OldFaces( *res, new2old, meshes );
 }
 
 } //namespace MR

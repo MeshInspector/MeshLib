@@ -10,7 +10,7 @@
 
 int main( void )
 {
-    MR_Mesh* mesh = MR_makeTorus( NULL, NULL, NULL, NULL, NULL );
+    MR_Mesh* mesh = MR_makeTorus( NULL, NULL, NULL, NULL, NULL, NULL );
 
     // Relax mesh (5 iterations)
     MR_MeshRelaxParams* meshRelaxParams = MR_MeshRelaxParams_DefaultConstruct();

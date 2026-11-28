@@ -403,7 +403,9 @@ jobs:
             @("-D", "MESHLIB_INCLUDE_DIRS=$env:DIST_DIR\install\include", "-D", "MESHLIB_LIB_DIRS=$env:DIST_DIR\install\lib\${{ matrix.config }}") }
           cmake -S . -B build @meshlib `
             -D CMAKE_CXX_FLAGS="/D_ITERATOR_DEBUG_LEVEL=${{ matrix.idl }} /DMR_ITERATOR_DEBUG_LEVEL=${{ matrix.idl }}"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           cmake --build build --config ${{ matrix.config }} --parallel $env:NUMBER_OF_PROCESSORS
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           .\build\${{ matrix.config }}\MeshModification.exe
 
       - name: Build C examples
@@ -415,5 +417,7 @@ jobs:
           $meshlib = if ("${{ matrix.cmake_prefix }}" -eq "true") { @("-D", "CMAKE_PREFIX_PATH=$env:DIST_DIR\install") } else {
             @("-D", "MESHLIB_INCLUDE_DIRS=$env:DIST_DIR\install\include", "-D", "MESHLIB_LIB_DIRS=$env:DIST_DIR\install\lib\${{ matrix.config }}") }
           cmake -S . -B build @meshlib
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           cmake --build build --config ${{ matrix.config }} --parallel $env:NUMBER_OF_PROCESSORS
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           .\build\${{ matrix.config }}\MeshModification.exe

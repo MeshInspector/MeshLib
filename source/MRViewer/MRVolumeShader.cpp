@@ -211,7 +211,7 @@ R"(
 
     vec3 dims = vec3( textureSize( volume, 0 ) );
     vec3 onesVec = vec3(1,1,1);
-    if (voxelSize.x > voxelSize.y && voxelSize.x > voxelSize.y)
+    if (voxelSize.x > voxelSize.y && voxelSize.x > voxelSize.z)
         onesVec.yz = vec2(voxelSize.x/voxelSize.y,voxelSize.x/voxelSize.z);
     else if (voxelSize.y > voxelSize.z)
         onesVec.xz = vec2(voxelSize.y/voxelSize.x,voxelSize.y/voxelSize.z);
@@ -373,7 +373,7 @@ R"(
 
     vec3 dims = vec3( textureSize( volume, 0 ) );
     vec3 onesVec = vec3(1,1,1);
-    if (voxelSize.x > voxelSize.y && voxelSize.x > voxelSize.y)
+    if (voxelSize.x > voxelSize.y && voxelSize.x > voxelSize.z)
         onesVec.yz = vec2(voxelSize.x/voxelSize.y,voxelSize.x/voxelSize.z);
     else if (voxelSize.y > voxelSize.z)
         onesVec.xz = vec2(voxelSize.y/voxelSize.x,voxelSize.y/voxelSize.z);

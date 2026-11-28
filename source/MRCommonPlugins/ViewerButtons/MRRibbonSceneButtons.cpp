@@ -23,7 +23,7 @@ RibbonSceneSortByName::RibbonSceneSortByName() :
 std::string RibbonSceneSortByName::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
     if ( !getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selectable ) )
-        return _tr( "At least one objects should be in scene" );
+        return _tr( "At least one object should be in the scene" );
     return "";
 }
 
@@ -52,7 +52,7 @@ RibbonSceneSelectAll::RibbonSceneSelectAll() :
 std::string RibbonSceneSelectAll::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
     if ( !getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selectable ) )
-        return _tr( "At least one objects should be in scene" );
+        return _tr( "At least one object should be in the scene" );
     return "";
 }
 
@@ -86,7 +86,7 @@ RibbonSceneShowAll::RibbonSceneShowAll() :
 std::string RibbonSceneShowAll::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
     if ( SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selectable>().empty() )
-        return _tr( "At least one objects should be in scene" );
+        return _tr( "At least one object should be in the scene" );
     return "";
 }
 
@@ -107,7 +107,7 @@ RibbonSceneHideAll::RibbonSceneHideAll() :
 std::string RibbonSceneHideAll::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
     if ( SceneCache::getAllObjects<VisualObject, ObjectSelectivityType::Selectable>().empty() )
-        return _tr( "At least one objects should be in scene" );
+        return _tr( "At least one object should be in the scene" );
     return "";
 }
 
@@ -129,7 +129,7 @@ RibbonSceneShowOnlyPrev::RibbonSceneShowOnlyPrev() :
 std::string RibbonSceneShowOnlyPrev::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
     if ( !getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selectable ) )
-        return _tr( "At least one objects should be in scene" );
+        return _tr( "At least one object should be in the scene" );
     return "";
 }
 
@@ -152,7 +152,7 @@ RibbonSceneShowOnlyNext::RibbonSceneShowOnlyNext() :
 std::string RibbonSceneShowOnlyNext::isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const
 {
     if ( !getDepthFirstObject( &SceneRoot::get(), ObjectSelectivityType::Selectable ) )
-        return _tr( "At least one objects should be in scene" );
+        return _tr( "At least one object should be in the scene" );
     return "";
 }
 

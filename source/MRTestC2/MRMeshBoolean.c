@@ -16,7 +16,6 @@
 #include <MRCMesh/MRTorus.h>
 #include <MRCMesh/MRVector.h>
 #include <MRCMesh/MRVector3.h>
-#include <MRCMisc/std_array_MR_VertId_3.h>
 #include <MRCMisc/std_vector_MR_Vector3f.h>
 #include <MRCMisc/std_vector_MR_EdgeId.h>
 #include <MRCMisc/std_vector_std_vector_MR_EdgeId.h>
@@ -30,13 +29,13 @@ void testMeshBoolean( void )
     float secondaryRadiusA = 0.5f;
     int primaryResolutionA = 8;
     int secondaryResolutionA = 8;
-    MR_Mesh* meshA = MR_makeTorus( &primaryRadiusA, &secondaryRadiusA, &primaryResolutionA, &secondaryResolutionA, NULL );
+    MR_Mesh* meshA = MR_makeTorus( &primaryRadiusA, &secondaryRadiusA, &primaryResolutionA, &secondaryResolutionA, NULL, NULL );
 
     float primaryRadiusB = 1.0f;
     float secondaryRadiusB = 0.2f;
     int primaryResolutionB = 8;
     int secondaryResolutionB = 8;
-    MR_Mesh* meshB = MR_makeTorus( &primaryRadiusB, &secondaryRadiusB, &primaryResolutionB, &secondaryResolutionB, NULL );
+    MR_Mesh* meshB = MR_makeTorus( &primaryRadiusB, &secondaryRadiusB, &primaryResolutionB, &secondaryResolutionB, NULL, NULL );
 
     {
         const MR_Vector3f plusZ = MR_Vector3f_plusZ();
@@ -111,11 +110,11 @@ void testBooleanMultipleEdgePropogationSort( void )
     *MR_VertCoords_index_mut( pointsVec, (MR_VertId){5} ) = (MR_Vector3f){ +1.0f, 1.5f, 0.0f };
 
     MR_Triangulation *triangulation = MR_Triangulation_Construct( 5 );
-    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){0} ) = (MR_std_array_MR_VertId_3){{ {0}, {2}, {1} }};
-    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){1} ) = (MR_std_array_MR_VertId_3){{ {1}, {2}, {3} }};
-    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){2} ) = (MR_std_array_MR_VertId_3){{ {3}, {4}, {1} }};
-    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){3} ) = (MR_std_array_MR_VertId_3){{ {2}, {5}, {3} }};
-    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){4} ) = (MR_std_array_MR_VertId_3){{ {3}, {5}, {4} }};
+    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){0} ) = (MR_ThreeVertIds){{ {0}, {2}, {1} }};
+    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){1} ) = (MR_ThreeVertIds){{ {1}, {2}, {3} }};
+    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){2} ) = (MR_ThreeVertIds){{ {3}, {4}, {1} }};
+    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){3} ) = (MR_ThreeVertIds){{ {2}, {5}, {3} }};
+    *MR_Triangulation_index_mut( triangulation, (MR_FaceId){4} ) = (MR_ThreeVertIds){{ {3}, {5}, {4} }};
 
     MR_Mesh* meshA = MR_Mesh_fromTriangles( MR_PassBy_Move, pointsVec, triangulation, NULL, MR_PassBy_DefaultArgument, NULL );
 
@@ -177,13 +176,13 @@ void testBooleanMapper( void )
     float secondaryRadiusA = 0.5f;
     int primaryResolutionA = 8;
     int secondaryResolutionA = 8;
-    MR_Mesh* meshA = MR_makeTorus(&primaryRadiusA, &secondaryRadiusA, &primaryResolutionA, &secondaryResolutionA, NULL);
+    MR_Mesh* meshA = MR_makeTorus(&primaryRadiusA, &secondaryRadiusA, &primaryResolutionA, &secondaryResolutionA, NULL, NULL);
 
     float primaryRadiusB = 1.0f;
     float secondaryRadiusB = 0.2f;
     int primaryResolutionB = 8;
     int secondaryResolutionB = 8;
-    MR_Mesh* meshB = MR_makeTorus(&primaryRadiusB, &secondaryRadiusB, &primaryResolutionB, &secondaryResolutionB, NULL);
+    MR_Mesh* meshB = MR_makeTorus(&primaryRadiusB, &secondaryRadiusB, &primaryResolutionB, &secondaryResolutionB, NULL, NULL);
 
     {
         const MR_Vector3f plusZ = MR_Vector3f_plusZ();

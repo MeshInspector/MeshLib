@@ -8,6 +8,11 @@ on:
         required: false
         type: string
         default: "MeshLib/dev"
+      version:
+        description: "Release tag (v1.2.3.4) whose Rust and Java bindings and version go into the docs"
+        required: false
+        type: string
+        default: ""
 
 jobs:
   create-stubs:
@@ -19,7 +24,8 @@ jobs:
       fail-fast: false
     env:
       CONFIG: Release
-      CXX-COMPILER: /usr/bin/clang++-14
+      # The compiler of the ubuntu22 arm64 job that uploads these bindings in build-test-distribute.yml.
+      CXX-COMPILER: /usr/bin/g++-12
       CXX-STANDARD: 20
       MESHLIB_THIRDPARTY_ROOT_DIR: /usr/local/lib/MeshLib
     permissions:
@@ -93,7 +99,7 @@ jobs:
       - name: Generate and build MRBind bindings
         env:
           CXX: ${{ env.CXX-COMPILER }}
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{ env.CONFIG }}/bin
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace PYTHON_SOURCES_DIR=source/MeshLibC2/temp/python MESHLIB_SHLIB_DIR=build/${{ env.CONFIG }}/bin
 
       - name: Create Python Stubs
         run: python3 ./scripts/wheel/create_stubs.py
@@ -105,22 +111,12 @@ jobs:
           path: ./scripts/wheel/meshlib/meshlib/*.pyi
           retention-days: 1
 
-      - name: Generate C# bindings # generate only sources
-        run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate
-
       - name: Upload C# bindings headers
         uses: actions/upload-artifact@v7
         with:
           name: CsharpBindings
           path: ./source/MRDotNet2/src
           retention-days: 1
-
-  generate-wasm-definitions:
-    uses: ./.github/workflows/build-test-emscripten.yml
-    with:
-      docker_image_tag: latest
-      upload_artifacts: false
-      definitions_only: true
 
   # The `CBindings` artifact comes from the shared workflow, same as in pip-build.yml and
   # build-test-distribute.yml. Generating it inside `create-stubs` doesn't work: `TARGET=c`
@@ -132,10 +128,11 @@ jobs:
       docker_image_tag: latest
 
   update-dev-documentation:
-    needs: [ create-stubs, generate-wasm-definitions, generate-c-bindings ]
+    needs: [ create-stubs, generate-c-bindings ]
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: ${{ inputs.output_folder }}
+      version: ${{ inputs.version }}
     secrets: inherit
 
   delete-artifacts:

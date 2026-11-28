@@ -3,8 +3,8 @@
 #include "MRMesh.h"
 #include "MRObjectFactory.h"
 #include "MRIRenderObject.h"
-#include <MRPch/MREigenCore.h>
-#include <Eigen/QR>
+#include "MRBestFit.h"
+#include "MRVector.h"
 #include <MRPch/MRJson.h>
 
 namespace MR
@@ -65,27 +65,11 @@ SphereObject::SphereObject()
 SphereObject::SphereObject( const std::vector<Vector3f>& pointsToApprox )
     : SphereObject()
 {
-    // find best radius and center
-    Eigen::Matrix<double, 4, 4> accumA_;
-    Eigen::Matrix<double, 4, 1> accumB_;
-    accumA_.setZero();
-    accumB_.setZero();
-    for ( const auto& pta : pointsToApprox )
+    if ( const auto sphere = findBestSphere( Vector<Vector3d>( pointsToApprox.begin(), pointsToApprox.end() ) ) )
     {
-        Eigen::Matrix<double, 4, 1> vec;
-        vec[0] = 2.0 * pta.x;
-        vec[1] = 2.0 * pta.y;
-        vec[2] = 2.0 * pta.z;
-        vec[3] = -1.0;
-
-        accumA_ += ( vec * vec.transpose() );
-        accumB_ += ( vec * ( pta.x * pta.x + pta.y * pta.y + pta.z * pta.z ) );
+        setCenter( Vector3f( sphere->center ) );
+        setRadius( float( sphere->radius ) );
     }
-    Eigen::Matrix<double, 4, 1> res = Eigen::Matrix<double, 4, 1>( accumA_.colPivHouseholderQr().solve( accumB_ ) );
-    setCenter( { float( res[0] ),float( res[1] ),float( res[2] ) } );
-    double rSq = res[0] * res[0] + res[1] * res[1] + res[2] * res[2] - res[3];
-    assert( rSq >= 0.0 );
-    setRadius( float( sqrt( std::max( rSq, 0.0 ) ) ) );
 }
 
 std::shared_ptr<Object> SphereObject::shallowClone() const

@@ -72,7 +72,7 @@ public:
     void resize( size_t newSize, const T & t ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> ) { vec.resize( newSize, t ); }
 
     // resizes the vector skipping initialization of its elements (more precisely initializing them using ( noInit ) constructor )
-    void resizeNoInit( size_t targetSize ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::constructible_from<T, NoInit> ) { MR::resizeNoInit( vec, targetSize ); }
+    void resizeNoInit( size_t targetSize, ReserveMode mode = ReserveMode::Exact ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::constructible_from<T, NoInit> ) { MR::resizeNoInit( vec, targetSize, mode ); }
 
     [[nodiscard]] std::size_t capacity() const { return vec.capacity(); }
 
@@ -204,10 +204,18 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] size_t heapBytes() const { return capacity() * sizeof(T); }
 
+#if MR_PARSING_FOR_C_BINDINGS || MR_COMPILING_C_BINDINGS
+    // plain pointers, since the bindings can't spell std::vector iterators; C# needs these for foreach
+    [[nodiscard]] friend const T* begin( const Vector<T, I> & a MR_LIFETIMEBOUND ) { return a.vec.data(); }
+    [[nodiscard]] friend const T* end( const Vector<T, I> & a MR_LIFETIMEBOUND ) { return a.vec.data() + a.vec.size(); }
+    [[nodiscard]] friend T* begin( Vector<T, I> & a MR_LIFETIMEBOUND ) { return a.vec.data(); }
+    [[nodiscard]] friend T* end( Vector<T, I> & a MR_LIFETIMEBOUND ) { return a.vec.data() + a.vec.size(); }
+#else
     [[nodiscard]] MR_BIND_IGNORE friend const_iterator begin( const Vector<T, I> & a ) { return a.vec.begin(); }
-    [[nodiscard]] MR_BIND_IGNORE friend iterator begin( Vector<T, I> & a ) { return a.vec.begin(); }
     [[nodiscard]] MR_BIND_IGNORE friend const_iterator end( const Vector<T, I> & a ) { return a.vec.end(); }
+    [[nodiscard]] MR_BIND_IGNORE friend iterator begin( Vector<T, I> & a ) { return a.vec.begin(); }
     [[nodiscard]] MR_BIND_IGNORE friend iterator end( Vector<T, I> & a ) { return a.vec.end(); }
+#endif
 
     /// removes all elements equal to \p value, returns the number of removed elements
     template <typename U>

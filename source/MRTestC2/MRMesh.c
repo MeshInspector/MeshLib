@@ -45,7 +45,7 @@ void testShortEdges( void )
     float secondaryRadius = 0.05f;
     int primaryResolution = 16;
     int secondaryResolution = 16;
-    MR_Mesh* mesh = MR_makeTorus(&primaryRadius, &secondaryRadius, &primaryResolution, &secondaryResolution, NULL);
+    MR_Mesh* mesh = MR_makeTorus(&primaryRadius, &secondaryRadius, &primaryResolution, &secondaryResolution, NULL, NULL);
 
     MR_MeshPart *mp = MR_MeshPart_Construct( mesh, NULL );
 
@@ -88,7 +88,7 @@ void testIncidentFacesFromEdges( void )
 
     MR_UndirectedEdgeBitSet* edges = MR_UndirectedEdgeBitSet_DefaultConstruct();
     MR_UndirectedEdgeBitSet_resize( edges, 12, &(bool){false} );
-    MR_UndirectedEdgeBitSet_set( edges, (MR_UndirectedEdgeId){0}, &(bool){true} );
+    MR_UndirectedEdgeBitSet_set( edges, (MR_UndirectedEdgeId){0}, true );
 
     MR_FaceBitSet* faces = MR_getIncidentFaces_MR_UndirectedEdgeBitSet( MR_Mesh_Get_topology( mesh ), edges );
     size_t num = MR_FaceBitSet_count( faces );

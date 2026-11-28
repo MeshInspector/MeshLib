@@ -17,7 +17,7 @@ def test_unite_close_vertices():
 	mesh = mrmesh.Mesh()
 	mesh.points = mrmesh.VertCoords([positions[c] for c in corners])
 	mesh.topology = mrmesh.topologyFromTriangles(
-		[mrmesh.ThreeVertIds([mrmesh.VertId(i*3 + 0),mrmesh.VertId(i*3 + 1),mrmesh.VertId(i*3 + 2)]) for i in range(12)])
+		[mrmesh.ThreeVertIds(mrmesh.VertId(i*3 + 0),mrmesh.VertId(i*3 + 1),mrmesh.VertId(i*3 + 2)) for i in range(12)])
 
 	assert mrmesh.getAllComponents(mesh).size() == 12
 	assert mesh.topology.findHoleRepresentiveEdges().size() == 12

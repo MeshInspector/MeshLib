@@ -38,6 +38,9 @@ TEST( MRMesh, ConeApproximation )
     testXf = AffineXf3f::translation( coneApex );
     testXf.A = Matrix3f::rotation( Vector3f::plusZ(), direction ) * Matrix3f::scale( { radius * coneHeight, radius * coneHeight, coneHeight } );
 
+    // the points below are on the cone with this angle, because their radii are multiplied by cos( coneAngle )
+    const float pointsAngle = std::atan( std::sin( coneAngle ) );
+
     std::vector<Vector3f> points;
 
     float angleStep = archSize / resolution;
@@ -69,10 +72,10 @@ TEST( MRMesh, ConeApproximation )
     //std::cout << "Cone apex: " << resultCone.center() << " direction:" << resultCone.direction() << " heigh:"
     //  << resultCone.height << " angle:" << resultCone.angle * 180.0f / PI_F << " (degree)" << " error:" << error << std::endl;
 
-    EXPECT_NEAR( resultCone.angle, coneAngle, 0.1f );
-    EXPECT_NEAR( resultCone.height, coneHeight, 0.1f );
-    EXPECT_LE( ( resultCone.apex() - coneApex ).length(), 0.1f );
-    EXPECT_GT( dot( direction, resultCone.direction() ), 0.9f );
+    EXPECT_NEAR( resultCone.angle, pointsAngle, 2e-3f );
+    EXPECT_NEAR( resultCone.height, coneHeight, 0.02f );
+    EXPECT_LE( ( resultCone.apex() - coneApex ).length(), 0.02f );
+    EXPECT_GT( dot( direction, resultCone.direction() ), 0.99999f );
 
     //////////////////////////
     //    Hemisphere test   //
@@ -86,10 +89,10 @@ TEST( MRMesh, ConeApproximation )
     //std::cout << "Cone apex (Hem): " << resultCone.center() << " direction:" << resultCone.direction() << " heigh:"
     // << resultCone.height << " angle:" << resultCone.angle * 180.0f / PI_F << " (degree)" << " error:" << error << std::endl;
 
-    EXPECT_NEAR( resultCone.angle, coneAngle, 0.1f );
-    EXPECT_NEAR( resultCone.height, coneHeight, 0.1f );
-    EXPECT_LE( ( resultCone.apex() - coneApex ).length(), 0.1f );
-    EXPECT_GT( dot( direction, resultCone.direction() ), 0.9f );
+    EXPECT_NEAR( resultCone.angle, pointsAngle, 2e-3f );
+    EXPECT_NEAR( resultCone.height, coneHeight, 0.02f );
+    EXPECT_LE( ( resultCone.apex() - coneApex ).length(), 0.02f );
+    EXPECT_GT( dot( direction, resultCone.direction() ), 0.99999f );
 
     //////////////////////////
     // Use cone params test //
@@ -98,6 +101,7 @@ TEST( MRMesh, ConeApproximation )
     Cone3<float> noicedCone;
     Vector3f noiceVector = { 0.3234f , -0.2341f, 0.1234f };
     noicedCone.direction() = ( direction + noiceVector ).normalized();
+    const Vector3f noicedCone2Dir = noicedCone.direction();
     approxiamtorParams.coneFitterType = ConeFitterType::SpecificAxisFit;
     error = fit.solve( points, noicedCone, approxiamtorParams );
 
@@ -105,10 +109,18 @@ TEST( MRMesh, ConeApproximation )
     //std::cout << "Noiced cone apex: " << noicedCone.center() << " direction:" << noicedCone.direction() << " heigh:"
     //  << noicedCone.height << " angle:" << noicedCone.angle * 180.0f / PI_F << " (degree)" << " error:" << error << std::endl;
 
-    EXPECT_NEAR( noicedCone.angle, coneAngle, 0.1f );
-    EXPECT_NEAR( noicedCone.height, coneHeight, 0.1f );
-    EXPECT_LE( ( noicedCone.apex() - coneApex ).length(), 0.1f );
-    EXPECT_GT( dot( direction, noicedCone.direction() ), 0.9f );
+    EXPECT_NEAR( noicedCone.angle, pointsAngle, 2e-3f );
+    EXPECT_NEAR( noicedCone.height, coneHeight, 0.02f );
+    EXPECT_LE( ( noicedCone.apex() - coneApex ).length(), 0.02f );
+    EXPECT_GT( dot( direction, noicedCone.direction() ), 0.99999f );
+
+    // only the axis of the given cone is used: another apex, angle and height give the same result
+    Cone3<float> otherCone( Line3f( Vector3f( 100, -50, 20 ), noicedCone2Dir ), 1.2f, 77 );
+    error = fit.solve( points, otherCone, approxiamtorParams );
+    EXPECT_EQ( otherCone.apex(), noicedCone.apex() );
+    EXPECT_EQ( otherCone.direction(), noicedCone.direction() );
+    EXPECT_EQ( otherCone.angle, noicedCone.angle );
+    EXPECT_EQ( otherCone.height, noicedCone.height );
 }
 
 } //namespace MR

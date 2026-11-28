@@ -44,6 +44,7 @@ private:
     boost::signals2::scoped_connection conn1_;
     boost::signals2::scoped_connection conn2_;
 
+    std::vector<Operation> enabledOpIds_; // operations in the order of the combo box
     std::vector<std::string> enabledOps_;
     std::vector<std::string> enabledOpsTooltips_;
 

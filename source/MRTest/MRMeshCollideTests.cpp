@@ -3,6 +3,7 @@
 #include <MRMesh/MRTorus.h>
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRBitSet.h>
+#include <MRMesh/MRAABBTree.h>
 #include <algorithm>
 #include <array>
 #include <gtest/gtest.h>
@@ -48,6 +49,50 @@ TEST( MRMesh, findSelfCollidingTriangles )
     maybeColl = findSelfCollidingTriangles( mesh, nullptr, ProgressCallback{}, nullptr, true );
     EXPECT_TRUE( maybeColl.has_value() );
     EXPECT_TRUE( *maybeColl );
+}
+
+// the self-collisions take the vertices of the triangles from the tree of the mesh, which keeps them in the order of getTriVerts,
+// also after the flip of the orientation
+TEST( MRMesh, findSelfCollidingTrianglesFlipped )
+{
+    Mesh mesh = makeTorus( 1.0f, 0.3f, 64, 32 );
+    Mesh other = mesh;
+    other.transform( AffineXf3f::translation( { 0.5f, 0.2f, 0.1f } ) );
+    mesh.addMesh( other );
+
+    auto treeHasTriVerts = [&]
+    {
+        const auto & tree = mesh.getAABBTree();
+        for ( const auto & lt : tree.leafTris() )
+            if ( lt.face && lt.verts != mesh.topology.getTriVerts( lt.face ) )
+                return false;
+        return true;
+    };
+    auto collisions = [&]
+    {
+        std::vector<FaceFace> pairs;
+        EXPECT_TRUE( findSelfCollidingTriangles( mesh, &pairs ).has_value() );
+        std::sort( pairs.begin(), pairs.end(), []( const FaceFace & x, const FaceFace & y )
+            { return std::make_pair( x.aFace, x.bFace ) < std::make_pair( y.aFace, y.bFace ); } );
+        return pairs;
+    };
+
+    EXPECT_TRUE( treeHasTriVerts() );
+    const auto before = collisions();
+    EXPECT_FALSE( before.empty() );
+
+    mesh.flipOrientation(); // flips the tree too
+    EXPECT_TRUE( treeHasTriVerts() );
+    const auto flipped = collisions();
+    mesh.invalidateCaches();
+    const auto rebuilt = collisions();
+    ASSERT_EQ( flipped.size(), rebuilt.size() );
+    for ( size_t i = 0; i < flipped.size(); ++i )
+    {
+        EXPECT_EQ( flipped[i].aFace, rebuilt[i].aFace );
+        EXPECT_EQ( flipped[i].bFace, rebuilt[i].bFace );
+    }
+    EXPECT_EQ( flipped.size(), before.size() );
 }
 
 TEST( MRMesh, findCollidingTrianglesFirstOnly )

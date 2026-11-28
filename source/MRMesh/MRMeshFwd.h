@@ -365,6 +365,11 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> class), Cone3,
     ( Cone3d, Cone3<double> )
 )
 
+MR_CANONICAL_TYPEDEFS( (template <typename T> struct), Torus3,
+    ( Torus3f, Torus3<float>  )
+    ( Torus3d, Torus3<double> )
+)
+
 // No canonical typedefs here, because those ultimately boil to `std::vector`, which isn't under our control.
 template <typename V> using Contour = std::vector<V>;
 template <typename T> using Contour2 = Contour<Vector2<T>>;
@@ -533,8 +538,7 @@ using UVCoord = Vector2f;
 /// two vertex ids describing an edge with the ends in vertices given by their ids
 using TwoVertIds = std::array<VertId, 2>;
 
-/// three vertex ids describing a triangle with the corners in vertices given by their ids
-using ThreeVertIds = std::array<VertId, 3>;
+struct ThreeVertIds;
 
 /// three UV-coordinates describing texturing of a triangle
 using ThreeUVCoords = std::array<UVCoord, 3>;
@@ -667,6 +671,8 @@ struct GridSettings;
 struct FillHoleParams;
 struct FillHoleNicelySettings;
 struct TriMesh;
+struct TriMeshPart;
+struct FaceSoup;
 
 MR_CANONICAL_TYPEDEFS( ( template <typename T> struct ), MRMESH_CLASS MeshRegion,
     ( MeshPart, MeshRegion<FaceTag> )

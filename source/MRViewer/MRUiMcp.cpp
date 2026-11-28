@@ -5,6 +5,7 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRPch/MRFmt.h"
 #include "MRViewer/MRCommandLoop.h"
+#include "MRViewer/MRLocale.h"
 #include "MRViewer/MRMcpCommon.h"
 #include "MRViewer/MRProgressBar.h"
 #include "MRViewer/MRUITestEngine.h"
@@ -229,6 +230,39 @@ static nlohmann::json mcpToolProgressStatus( const nlohmann::json& args )
     }
 }
 
+#ifndef MRVIEWER_NO_LOCALE
+static nlohmann::json mcpToolGetLanguage( const nlohmann::json& )
+{
+    nlohmann::json out;
+    runOnMainThread( [&]
+    {
+        auto available = nlohmann::json::array();
+        for ( const auto& locale : Locale::getAvailableLocales() )
+            available.push_back( { { "language", locale }, { "name", Locale::getDisplayName( locale ) } } );
+        out = { { "language", Locale::getName() }, { "available", std::move( available ) } };
+    } );
+    return out;
+}
+
+static nlohmann::json mcpToolSetLanguage( const nlohmann::json& args )
+{
+    const auto language = args.at( "language" ).get<std::string>();
+    runOnMainThread( [&]
+    {
+        const auto available = Locale::getAvailableLocales();
+        if ( std::find( available.begin(), available.end(), language ) == available.end() )
+        {
+            std::string list;
+            for ( const auto& locale : available )
+                list += ( list.empty() ? "" : ", " ) + locale;
+            throw std::runtime_error( fmt::format( "Unknown language \"{}\", available: {}", language, list ) );
+        }
+        Locale::set( language );
+    } );
+    return nlohmann::json::object();
+}
+#endif
+
 MR_ON_INIT{
     Server& server = getDefaultServer();
 
@@ -337,10 +371,10 @@ MR_ON_INIT{
         );
     };
 
-    handleValueType.operator()<std::int64_t >( "Int",    "int"    );
-    handleValueType.operator()<std::uint64_t>( "Uint",   "uint"   );
-    handleValueType.operator()<double       >( "Real",   "float"  );
-    handleValueType.operator()<std::string  >( "String", "string" );
+    handleValueType.template operator()<std::int64_t >( "Int",    "int"    );
+    handleValueType.template operator()<std::uint64_t>( "Uint",   "uint"   );
+    handleValueType.template operator()<double       >( "Real",   "float"  );
+    handleValueType.template operator()<std::string  >( "String", "string" );
 
     server.addTool(
         /*id*/"ui_progressStatus",
@@ -364,6 +398,35 @@ MR_ON_INIT{
         /*func*/mcpToolProgressStatus,
         /*readOnly*/true
     );
+
+#ifndef MRVIEWER_NO_LOCALE
+    server.addTool(
+        /*id*/"ui_getLanguage",
+        /*name*/"Read UI language",
+        /*desc*/"Returns `{language: string, available: [{language: string, name: string}]}`: the locale of the user "
+                "interface, e.g. `\"en\"` or `\"ru\"`, and all locales with translations, each with its display name "
+                "as shown in the Language combo of Settings.",
+        /*input_schema*/Schema::Object{},
+        /*output_schema*/Schema::Object{}
+            .addMember( "language",  Schema::String{} )
+            .addMember( "available", Schema::Array( Schema::Object{}
+                .addMember( "language", Schema::String{} )
+                .addMember( "name",     Schema::String{} ) ) ),
+        /*func*/mcpToolGetLanguage,
+        /*readOnly*/true
+    );
+
+    server.addTool(
+        /*id*/"ui_setLanguage",
+        /*name*/"Change UI language",
+        /*desc*/"Switches the user interface to `language`, one of the locales returned by `ui_getLanguage`, "
+                "as the Language combo of Settings does; the language is saved in the settings on exit. "
+                "UI entry names are translated, so list them again with `ui_listEntries` after the change.",
+        /*input_schema*/Schema::Object{}.addMember( "language", Schema::String{} ),
+        /*output_schema*/Schema::Object{},
+        /*func*/mcpToolSetLanguage
+    );
+#endif
 }; // MR_ON_INIT
 
 } // namespace MR::Mcp

@@ -9,4 +9,5 @@
  - \ref ExamplePluginOverview
  - \ref StatePluginsHelp
  - \ref HowtoAddPluginOverview
+ - \ref ScannerBackendGuide
  - \ref I18nGuide

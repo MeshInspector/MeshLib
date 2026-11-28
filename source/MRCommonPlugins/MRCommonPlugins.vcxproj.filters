@@ -60,6 +60,12 @@
     <ClCompile Include="Voxels\MROpenRawVoxelsPlugin.cpp">
       <Filter>Voxels</Filter>
     </ClCompile>
+    <ClCompile Include="Basic\MRFeatureAlignment.cpp">
+      <Filter>Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="Basic\MRScannerPlugin.cpp">
+      <Filter>Basic</Filter>
+    </ClCompile>
     <ClCompile Include="Basic\MRCameraOrientationPlugin.cpp">
       <Filter>Basic</Filter>
     </ClCompile>

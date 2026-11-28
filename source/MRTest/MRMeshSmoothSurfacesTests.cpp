@@ -34,6 +34,9 @@ TEST( MRMesh, FitSmoothSurfaces )
             EXPECT_NEAR( c->radius, 1, 1e-5 );
             EXPECT_NEAR( c->length, 3, 1e-5 );
             EXPECT_NEAR( std::abs( c->direction().z ), 1, 1e-6 );
+            const Vector3d p( 2, 0, c->center().z );
+            EXPECT_NEAR( signedDistance( s.surface, p ), 1, 1e-5 );
+            EXPECT_NEAR( ( surfaceNormal( s.surface, p ) - Vector3d( 1, 0, 0 ) ).length(), 0, 1e-5 );
         }
     }
     EXPECT_EQ( planes, 2 );

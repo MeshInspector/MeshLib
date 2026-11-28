@@ -176,7 +176,6 @@
     <ClInclude Include="MRHexPalette.h" />
     <ClInclude Include="MRMeshPatch.h" />
     <ClInclude Include="MRNewValuesStorage.hpp" />
-    <ClInclude Include="MRSmoothSurfaceFit.hpp" />
     <ClInclude Include="MRMeshRelax.hpp" />
     <ClInclude Include="MRMeshReplicate.h" />
     <ClInclude Include="MRSegmentMesh.h" />
@@ -795,7 +794,6 @@
     <ClCompile Include="MRMeshFillHole.cpp" />
     <ClCompile Include="MRMeshNormals.cpp" />
     <ClCompile Include="MRMeshSmoothSurfaces.cpp" />
-    <ClCompile Include="MRSmoothSurfaceFit.cpp" />
     <ClCompile Include="MRMeshRelax.cpp" />
     <ClCompile Include="MRMeshSave.cpp" />
     <ClCompile Include="MRTriMesh.cpp" />

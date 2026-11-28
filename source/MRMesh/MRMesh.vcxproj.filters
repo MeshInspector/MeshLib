@@ -1248,9 +1248,6 @@
     <ClInclude Include="MRNewValuesStorage.hpp">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
-    <ClInclude Include="MRSmoothSurfaceFit.hpp">
-      <Filter>Source Files\Algorithms</Filter>
-    </ClInclude>
     <ClInclude Include="MRMeshRelax.hpp">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
@@ -1989,9 +1986,6 @@
       <Filter>Source Files\Polyline</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshSmoothSurfaces.cpp">
-      <Filter>Source Files\Algorithms</Filter>
-    </ClCompile>
-    <ClCompile Include="MRSmoothSurfaceFit.cpp">
       <Filter>Source Files\Algorithms</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshRelax.cpp">

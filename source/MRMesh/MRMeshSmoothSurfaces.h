@@ -77,4 +77,11 @@ struct MeshSmoothSurfaces
 /// \return an error if the region has no triangles or the mesh has zero size
 [[nodiscard]] MRMESH_API Expected<FittedSmoothSurface> fitSmoothSurface( const MeshPart& mp, const FitSmoothSurfacesSettings& settings = {} );
 
+/// signed distance from the point to the surface: positive outside of sphere, torus, cylinder and cone (away from the axis),
+/// and in the direction of the normal of plane and B-spline surface; cylinder and cone are infinite here
+[[nodiscard]] MRMESH_API double signedDistance( const SmoothSurface& s, const Vector3d& p );
+
+/// unit normal of the surface at its point closest to given one, directed as in signedDistance
+[[nodiscard]] MRMESH_API Vector3d surfaceNormal( const SmoothSurface& s, const Vector3d& p );
+
 } //namespace MR

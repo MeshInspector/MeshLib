@@ -435,9 +435,9 @@ void GLStaticHolder::createShader_( ShaderType type )
 // made as macro to have it inline
 #define swapNodesInd(a, b) \
 { \
-	uint tmp = a; \
-	a = b; \
-	b = tmp; \
+    uint tmp = a; \
+    a = b; \
+    b = tmp; \
 }
 
 // no early_fragment_tests: the depth test must use gl_FragDepth
@@ -461,25 +461,25 @@ layout (binding = 0, std430 ) buffer Lists
 
 void sortedInsert(inout uint fragsInds[MAX_FRAGMENTS], uint nodeInd, inout int count) 
 {
-	if (count == MAX_FRAGMENTS) 
-	{
-		if (nodes[nodeInd].depth < nodes[fragsInds[count - 1]].depth) 
-		{
-			swapNodesInd(nodeInd, fragsInds[count - 1]);
-		}
-	}
-	else 
-	{
-		fragsInds[count] = nodeInd;
-		count++;
-	}
+    if (count == MAX_FRAGMENTS) 
+    {
+        if (nodes[nodeInd].depth < nodes[fragsInds[count - 1]].depth) 
+        {
+            swapNodesInd(nodeInd, fragsInds[count - 1]);
+        }
+    }
+    else 
+    {
+        fragsInds[count] = nodeInd;
+        count++;
+    }
 
-	uint i = count - 1;
-	while (i > 0 && nodes[fragsInds[i]].depth < nodes[fragsInds[i - 1]].depth)
-	{
-		swapNodesInd(fragsInds[i], fragsInds[i - 1]);
-		i--;
-	}
+    uint i = count - 1;
+    while (i > 0 && nodes[fragsInds[i]].depth < nodes[fragsInds[i - 1]].depth)
+    {
+        swapNodesInd(fragsInds[i], fragsInds[i - 1]);
+        i--;
+    }
 }
 
 // separate function to work-around weird behavior on AMD video cards

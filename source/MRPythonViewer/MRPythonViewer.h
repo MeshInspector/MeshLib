@@ -104,7 +104,7 @@ class Viewer
 {
 public:
     /// Return the current viewport, or the viewport corresponding to a given unique identifier
-    /// 	viewportId - unique identifier corresponding to the desired viewport (current viewport if 0)
+    ///     viewportId - unique identifier corresponding to the desired viewport (current viewport if 0)
     [[nodiscard]] Viewport viewport( ViewportId viewportId = {} ) const;
 
     /// Increment number of forced frames to redraw in event loop

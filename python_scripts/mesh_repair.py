@@ -133,19 +133,19 @@ def has_issues(mesh : mm.Mesh,minAreaRatio,maxHolePerimeter,tolerance):
     return False
 
 def has_overhangs( mesh : mm.Mesh, layerStep : float, width : float )->bool:
-	oParams = mm.FindOverhangsSettings()
-	oParams.layerHeight = layerStep
-	oParams.maxOverhangDistance = width
-	return mm.findOverhangs(mesh,oParams).size() > 0
+    oParams = mm.FindOverhangsSettings()
+    oParams.layerHeight = layerStep
+    oParams.maxOverhangDistance = width
+    return mm.findOverhangs(mesh,oParams).size() > 0
 
 def has_big_holes(mesh : mm.Mesh, critHoleLength : float)->bool:
-	if ( critHoleLength < 0 ):
-		return False
-	holeIds = mesh.topology.findHoleRepresentiveEdges()
-	for holeId in holeIds:
-		if ( mesh.holePerimeter( holeId ) >= critHoleLength ):
-			return True
-	return False
+    if ( critHoleLength < 0 ):
+        return False
+    holeIds = mesh.topology.findHoleRepresentiveEdges()
+    for holeId in holeIds:
+        if ( mesh.holePerimeter( holeId ) >= critHoleLength ):
+            return True
+    return False
 
 # one can use default tolerance as "mesh.computeBoundingBox().diagonal()*2.5e-3"
 def iterative_repair(mesh : mm.Mesh, tolerance: float):

@@ -1282,7 +1282,7 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth )
         }
 
         ImGui::SetCursorPosX( menuWidth - 120.0f * UI::scale() );
-		ImGui::SetCursorPosY( posY - cRibbonButtonWindowPaddingY * UI::scale() / 2.f );
+        ImGui::SetCursorPosY( posY - cRibbonButtonWindowPaddingY * UI::scale() / 2.f );
         UI::buttonCommonSize( fmt::format( "{}##{}", _tr( "Set other" ), i ).c_str(), Vector2f( 80 * UI::scale(), 0 ) );
         if ( ImGui::IsItemHovered() )
         {

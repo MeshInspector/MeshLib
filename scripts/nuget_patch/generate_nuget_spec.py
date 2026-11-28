@@ -22,16 +22,16 @@ shutil.copy(LICENSE_FILE, "LICENSE.txt" )
 
 COPYRIGHT_FILE = WORK_DIR / "scripts" / "copyright_header.txt"
 with open(COPYRIGHT_FILE,'r') as copyright_file:
-    COPYRIGHT = copyright_file.read()[3:]
+	COPYRIGHT = copyright_file.read()[3:]
 
 def add_files( folder : Path, target ):
-    global FILES
-    for address, dirs, files in os.walk(folder):
-        for file in files:
-            fname = Path(folder/file)
-            if not fname.is_file():
-                continue
-            FILES += f'\t\t<file src="{str(fname)}" target="{target}"></file>\n'
+	global FILES
+	for address, dirs, files in os.walk(folder):
+		for file in files:
+			fname = Path(folder/file)
+			if not fname.is_file():
+				continue
+			FILES += f'\t\t<file src="{str(fname)}" target="{target}"></file>\n'
 
 FILES = ""
 add_files( DOTNET_DLL_DIR, "lib/netstandard2.0/" )
@@ -48,19 +48,19 @@ shutil.copy(WORK_DIR / "thirdparty" / "licenses" / "THIRD-PARTY-NOTICES.txt", "T
 
 # the citation in the readme names the version of the package
 with open(WORK_DIR / "source" / "MRDotNet2" / "readme.md", 'r', encoding='utf-8') as readme_file:
-    readme = readme_file.read()
+	readme = readme_file.read()
 assert readme.count("{1.2.3.4}") == 1
 readme = readme.replace("{1.2.3.4}", "{" + VERSION + "}")
 readme = re.sub(r"(year\s*= )\{\d{4}\}", r"\g<1>{" + str(datetime.date.today().year) + "}", readme)
 os.makedirs("nuget_readme", exist_ok=True)
 with open(Path("nuget_readme") / "readme.md", 'w', encoding='utf-8', newline='\n') as f:
-    f.write(readme)
+	f.write(readme)
 
 with open(Path(__file__).parent / "template.nuspec", 'r') as template_file:
-    updated_nuspec = Template(template_file.read()).substitute(
-        VERSION=VERSION,
-        COPYRIGHT=COPYRIGHT,
-        FILES=FILES
-    )
+	updated_nuspec = Template(template_file.read()).substitute(
+		VERSION=VERSION,
+		COPYRIGHT=COPYRIGHT,
+		FILES=FILES
+	)
 with open(SPEC_FILE, 'w') as f:
-    f.write(updated_nuspec)
+	f.write(updated_nuspec)

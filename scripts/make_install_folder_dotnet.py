@@ -14,9 +14,9 @@ it.path_to_objects = os.path.join(os.path.join(it.base_path,'source'), 'x64')
 excluded_modules = ['MRCommonPlugins', 'MRCuda', 'MRViewer', 'MRMeshViewer', 'MRTest', 'MRTestC','c-sharp-examples']
 
 def create_directories():
-    os.makedirs(it.path_to_app,exist_ok=True)
-    os.makedirs(os.path.join(it.path_to_app, 'Debug'),exist_ok=True)
-    os.makedirs(os.path.join(it.path_to_app, 'Release'),exist_ok=True)
+	os.makedirs(it.path_to_app,exist_ok=True)
+	os.makedirs(os.path.join(it.path_to_app, 'Debug'),exist_ok=True)
+	os.makedirs(os.path.join(it.path_to_app, 'Release'),exist_ok=True)
     
 it.create_directories = create_directories
         

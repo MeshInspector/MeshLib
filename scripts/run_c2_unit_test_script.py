@@ -4,8 +4,8 @@ import sys
 
 configuration = 'Release'
 if (len(sys.argv)>1):
-    if (sys.argv[1]=='Debug'):
-        configuration = 'Debug'
+	if (sys.argv[1]=='Debug'):
+		configuration = 'Debug'
 
 arch = sys.argv[2] if len(sys.argv) > 2 else 'x64'
 
